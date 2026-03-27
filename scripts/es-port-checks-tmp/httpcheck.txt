@@ -1,0 +1,18 @@
+﻿--- HTTP connectivity to publish IP (parsed from log) ---
+
+Found publish IP: 10.192.37.11:9200
+Test-NetConnection:
+
+
+ComputerName     : 10.192.37.11
+RemoteAddress    : 10.192.37.11
+RemotePort       : 9200
+InterfaceAlias   : Ethernet 2
+SourceAddress    : 10.192.37.11
+TcpTestSucceeded : True
+
+
+
+
+curl response (insecure):
+curl error: A parameter cannot be found that matches parameter name 'k'.

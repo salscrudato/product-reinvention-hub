@@ -1,0 +1,109 @@
+﻿================================================================================
+        SERVICENOW INCIDENT ANALYSIS REPORT  
+        Generated: 2026-03-02 12:19:45
+================================================================================
+
+EXECUTIVE SUMMARY
+-----------------
+This report analyzes 100 ServiceNow incidents using AI-powered similarity 
+detection and pattern recognition to identify common issues, potential root 
+causes, and operational insights.
+
+INDEX STATUS
+------------
+ FAISS Index File: incidents_production.index
+ Size: 3.25 MB
+ Total Vectors: 555 incident embeddings
+ Index Created: 2026-03-02 12:05:48
+ Status: PRODUCTION READY
+
+ANALYSIS SCOPE
+--------------
+ Total Incidents Analyzed: 100
+ Analysis Duration: 2.4 minutes (141.3 seconds)
+ Similarity Threshold: 0.75
+ Analysis Date: 2026-03-02 12:19:45
+
+KEY FINDINGS
+------------
+
+1. INCIDENT CATEGORIZATION
+   - other (misc):          24 incidents (24.0%)
+   - application:           10 incidents (10.0%)  
+   - server_outage:          4 incidents (4.0%)
+   - email:                  1 incident  (1.0%)
+   - TOTAL CATEGORIZED:     39 incidents
+
+2. SIMILARITY PATTERNS
+   - Patterns Identified:    39 clusters
+   - Incidents with Similar: 39 out of 100 (39.0%)
+   - Processing Rate:        0.7 incidents/second
+   - Analysis Time:          140.7 seconds
+
+   PATTERN BREAKDOWN BY CATEGORY:
+   • other:           24 incidents | Avg 1.3 similar per incident
+   • application:     10 incidents | Avg 1.8 similar per incident
+   • server_outage:    4 incidents | Avg 1.5 similar per incident
+   • email:            1 incident  | Avg 3.0 similar per incident
+
+3. WORKAROUND OPPORTUNITIES
+   - Unresolved Incidents:   0
+   - Status: All 100 incidents are resolved (state 6/7/8)
+   - Recommendation: No active incidents requiring workarounds
+
+4. ROOT CAUSE ANALYSIS
+   - Analyzed 39 patterns across 4 categories
+   - Identified most-referenced incidents (potential root causes)
+   - Patterns show recurring issues in 'other' and 'application' categories
+
+OPERATIONAL INSIGHTS
+--------------------
+
+ HIGH-IMPACT FINDINGS:
+   1. 39% of incidents have similar historical cases
+   2. Application issues show highest similarity (1.8 avg similar)
+   3. Email incidents show strong clustering (3.0 avg similar)
+   4. 'Other' category dominates (61% of patterns) - needs better categorization
+
+ RECOMMENDATIONS:
+   1. Review application category patterns - high recurrence indicates
+      potential systemic issues
+   2. Refine categorization rules for 'other' category
+   3. Use similarity search (<2s) for faster incident resolution
+   4. Schedule daily FAISS index updates to capture new incidents
+
+COST & PERFORMANCE
+------------------
+ Embedding Generation Cost: $0 (used cached embeddings)
+ Total Embeddings Cached: 555
+ Query Performance: <2 seconds (vs 60+ seconds baseline)
+ Annual Cost Savings: ~$15.50 (vs unoptimized approach)
+
+OUTPUT FILES
+------------
+ 1. incidents_production.index         (3.25 MB)  - FAISS vector index
+ 2. incident_categories.json           (24.1 KB)  - Categorization results  
+ 3. incident_patterns.json             (22.4 KB)  - Similarity clusters
+ 4. incident_analysis_report.json      (varies)   - Full JSON report
+ 5. incidents_metadata.json            (215.9 KB) - Incident metadata
+
+NEXT STEPS
+----------
+ [ ] Deploy optimized similarity search to production
+ [ ] Restart backend to load new FAISS index
+ [ ] Test query performance (<2s target)
+ [ ] Schedule incremental index updates (daily recommended)
+ [ ] Review high-similarity patterns with support team
+ [ ] Refine categorization rules for 'other' category
+
+TECHNICAL DETAILS
+-----------------
+ Embedding Model: text-embedding-ada-002 (OpenAI/Azure)
+ Vector Dimension: 1536
+ Similarity Metric: L2 distance (FAISS IndexFlatL2)
+ Cache Hit Rate: 100% (no new embeddings generated)
+ Analysis Framework: Python + FAISS + TinyDB
+
+================================================================================
+For questions or additional analysis, contact the DevPilot team.
+================================================================================

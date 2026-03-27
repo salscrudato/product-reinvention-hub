@@ -1,0 +1,158 @@
+/* General styles for the body */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  background-color: #f4f4f4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /*background-image: url('./background.png');  Use logo512.png for testing */
+  background-size: cover; /* Ensure the image covers the entire viewport */
+  background-repeat: no-repeat; /* Prevent the image from repeating */
+  background-attachment: fixed; /* Keep the background fixed during scrolling */
+  background-position: center center; /* Center the image */
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh; /* Ensure the root element takes the full viewport height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Centered banner styling */
+.banner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Full viewport height */
+  background-color: rgba(0, 0, 0, 0.5); /* Optional overlay for better text contrast */
+  color: white;
+  font-size: 2.5rem; /* Adjust font size */
+  font-weight: bold;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  margin: 0;
+}
+
+/* Styles for the form container */
+.incident-form-container {
+  padding: 20px;
+  max-width: 600px;
+  margin: 20px auto;
+  background: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Styles for the form labels and inputs */
+.incident-form-container label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.incident-form-container input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Styles for the submit button */
+.incident-form-container button {
+  background-color: #004aad;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.incident-form-container button:hover {
+  background-color: #003580;
+}
+
+/* Styles for the response container */
+.response-container {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+/* Styles for error messages */
+.error-message {
+  color: red;
+  margin-top: 10px;
+}
+
+/* Styles for the tabs container */
+.tabs-container {
+  margin-top: 20px;
+  background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Styles for the active tab indicator */
+.MuiTabs-indicator {
+  background-color: #004aad !important; /* Accenture blue */
+}
+
+/* Styles for individual tabs */
+.MuiTab-root {
+  font-weight: bold;
+  text-transform: none;
+  color: #004aad; /* Blue text for tabs */
+}
+
+.MuiTab-root.Mui-selected {
+  color: #003580; /* Darker blue for selected tab */
+}
+
+/* Styles for the tab content container */
+.tab-content-container {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Typography styles for tab content */
+.tab-content-container h2 {
+  color: #004aad;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.tab-content-container p {
+  color: #333;
+  line-height: 1.6;
+}
+
+/* Button styles inside tab content */
+.tab-content-container button {
+  background-color: #004aad;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.tab-content-container button:hover {
+  background-color: #003580;
+}

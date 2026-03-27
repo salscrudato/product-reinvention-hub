@@ -1,0 +1,358 @@
+2025-12-26T02:55:13.2361585Z - Starting Elasticsearch diagnostics
+
+2025-12-26T02:55:13.2669483Z - 1) Processes named elasticsearch
+No process named "elasticsearch" found.
+
+2025-12-26T02:55:13.3726886Z - 2) Java processes with elasticsearch in command line (Win32_Process)
+
+
+2025-12-26T02:55:13.5606748Z - 3) Listening TCP ports for 9200
+No TCP listener on port 9200.
+
+2025-12-26T02:55:14.3700815Z - 4) Check connectivity to localhost:9200
+
+
+ComputerName           : localhost
+RemoteAddress          : 127.0.0.1
+RemotePort             : 9200
+InterfaceAlias         : Loopback Pseudo-Interface 1
+SourceAddress          : 127.0.0.1
+PingSucceeded          : True
+PingReplyDetails (RTT) : 0 ms
+TcpTestSucceeded       : False
+
+
+
+
+
+2025-12-26T02:55:21.3710043Z - 5) Verify PEM files exist
+local-es.pem exists: True
+local-es-key.pem exists: True
+
+2025-12-26T02:55:21.4267648Z - 6) Tail of elasticsearch.yml (last 120 lines)
+#cluster.name: my-application
+#
+# ------------------------------------ Node ------------------------------------
+#
+# Use a descriptive name for the node:
+#
+#node.name: node-1
+#
+# Add custom attributes to the node:
+#
+#node.attr.rack: r1
+#
+# ----------------------------------- Paths ------------------------------------
+#
+# Path to directory where to store the data (separate multiple locations by comma):
+#
+#path.data: /path/to/data
+#
+# Path to log files:
+#
+#path.logs: /path/to/logs
+#
+# ----------------------------------- Memory -----------------------------------
+#
+# Lock the memory on startup:
+#
+#bootstrap.memory_lock: true
+#
+# Make sure that the heap size is set to about half the memory available
+# on the system and that the owner of the process is allowed to use this
+# limit.
+#
+# Elasticsearch performs poorly when the system is swapping the memory.
+#
+# ---------------------------------- Network -----------------------------------
+#
+# By default Elasticsearch is only accessible on localhost. Set a different
+# address here to expose this node on the network:
+#
+#network.host: 192.168.0.1
+#
+# By default Elasticsearch listens for HTTP traffic on the first free port it
+# finds starting at 9200. Set a specific HTTP port here:
+#
+#http.port: 9200
+#
+# For more information, consult the network module documentation.
+#
+# --------------------------------- Discovery ----------------------------------
+#
+# Pass an initial list of hosts to perform discovery when this node is started:
+# The default list of hosts is ["127.0.0.1", "[::1]"]
+#
+#discovery.seed_hosts: ["host1", "host2"]
+#
+# Bootstrap the cluster using an initial set of master-eligible nodes:
+#
+#cluster.initial_master_nodes: ["node-1", "node-2"]
+#
+# For more information, consult the discovery and cluster formation module documentation.
+#
+# ---------------------------------- Various -----------------------------------
+#
+# Allow wildcard deletion of indices:
+#
+#action.destructive_requires_name: false
+
+#----------------------- BEGIN SECURITY AUTO CONFIGURATION -----------------------
+#
+# The following settings, TLS certificates, and keys have been automatically      
+# generated to configure Elasticsearch security features on 10-10-2025 03:21:38
+#
+# --------------------------------------------------------------------------------
+
+# Enable security features
+
+
+# Enable encryption for HTTP API client connections, such as Kibana, Logstash, and Agents
+
+# Enable encryption and mutual authentication between cluster nodes
+# Create a new cluster with the current node only
+# Additional nodes can still join the cluster later
+cluster.initial_master_nodes: ["LLMCOEAZHIJMP01"]
+
+# Allow HTTP API connections from anywhere
+# Connections are encrypted and require user authentication
+http.host: 0.0.0.0
+
+# Allow other nodes to join the cluster from anywhere
+# Connections are encrypted and mutually authenticated
+#transport.host: 0.0.0.0
+
+#----------------------- END SECURITY AUTO CONFIGURATION -------------------------
+
+
+xpack.security:
+  enabled: true
+  transport:
+    ssl:
+      enabled: true
+  http:
+    ssl:
+      enabled: true
+
+
+xpack.security.enabled: true
+xpack.security.transport.ssl.enabled: true
+
+xpack.security.http.ssl.enabled: true
+
+
+
+        
+# Added by convert-pfx-to-pem-and-configure-es-clean.ps1
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.certificate: "C:/dev/elasticsearch-9.1.4/config/certs/local-es.pem"
+xpack.security.http.ssl.key: "C:/dev/elasticsearch-9.1.4/config/certs/local-es-key.pem"
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.certificate: "C:/dev/elasticsearch-9.1.4/config/certs/local-es.pem"
+xpack.security.transport.ssl.key: "C:/dev/elasticsearch-9.1.4/config/certs/local-es-key.pem"
+
+
+2025-12-26T02:55:21.5735786Z - 7) Tail of elasticsearch.log (last 200 lines)
+[2025-12-17T15:47:11,112][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53003}
+[2025-12-17T15:47:13,229][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53004}
+[2025-12-17T15:47:16,674][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53006}
+[2025-12-17T15:47:18,151][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53007}
+[2025-12-17T15:47:20,955][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53016}
+[2025-12-17T15:47:23,261][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53017}
+[2025-12-17T15:47:26,675][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53018}
+[2025-12-17T15:47:28,365][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53019}
+[2025-12-17T15:47:31,156][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53022}
+[2025-12-17T15:47:34,335][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53024}
+[2025-12-17T15:47:36,678][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53031}
+[2025-12-17T15:47:38,147][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53032}
+[2025-12-17T15:47:41,746][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53033}
+[2025-12-17T15:47:45,490][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53035}
+[2025-12-17T15:47:46,680][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53036}
+[2025-12-17T15:47:48,518][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53037}
+[2025-12-17T15:47:50,752][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53039}
+[2025-12-17T15:47:54,162][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53045}
+[2025-12-17T15:47:56,681][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53046}
+[2025-12-17T15:47:58,317][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53047}
+[2025-12-17T15:48:02,187][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53049}
+[2025-12-17T15:48:05,665][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53052}
+[2025-12-17T15:48:06,682][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53058}
+[2025-12-17T15:48:08,515][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53059}
+[2025-12-17T15:48:11,257][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53060}
+[2025-12-17T15:48:14,624][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53063}
+[2025-12-17T15:48:16,683][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53064}
+[2025-12-17T15:48:18,564][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53065}
+[2025-12-17T15:48:21,594][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53073}
+[2025-12-17T15:48:25,018][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53074}
+[2025-12-17T15:48:26,684][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53075}
+[2025-12-17T15:48:27,728][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53076}
+[2025-12-17T15:48:31,554][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53078}
+[2025-12-17T15:48:34,808][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53081}
+[2025-12-17T15:48:36,685][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53087}
+[2025-12-17T15:48:38,211][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53088}
+[2025-12-17T15:48:40,610][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53089}
+[2025-12-17T15:48:43,739][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53090}
+[2025-12-17T15:48:46,684][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53092}
+[2025-12-17T15:48:48,172][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53093}
+[2025-12-17T15:48:51,258][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53102}
+[2025-12-17T15:48:53,764][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53103}
+[2025-12-17T15:48:56,687][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53104}
+[2025-12-17T15:48:58,547][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53106}
+[2025-12-17T15:49:02,278][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53108}
+[2025-12-17T15:49:04,874][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53111}
+[2025-12-17T15:49:06,687][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53118}
+[2025-12-17T15:49:08,249][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53119}
+[2025-12-17T15:49:12,242][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53120}
+[2025-12-17T15:49:15,350][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53122}
+[2025-12-17T15:49:16,689][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53123}
+[2025-12-17T15:49:18,628][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53124}
+[2025-12-17T15:49:21,206][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53132}
+[2025-12-17T15:49:24,655][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53133}
+[2025-12-17T15:49:26,690][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53134}
+[2025-12-17T15:49:27,757][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53135}
+[2025-12-17T15:49:31,451][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53137}
+[2025-12-17T15:49:33,576][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53139}
+[2025-12-17T15:49:36,690][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53146}
+[2025-12-17T15:49:37,993][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53147}
+[2025-12-17T15:49:40,590][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53148}
+[2025-12-17T15:49:42,979][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53150}
+[2025-12-17T15:49:46,692][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53152}
+[2025-12-17T15:49:47,781][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53153}
+[2025-12-17T15:49:50,274][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53155}
+[2025-12-17T15:49:53,643][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53161}
+[2025-12-17T15:49:56,693][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53163}
+[2025-12-17T15:49:58,490][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53164}
+[2025-12-17T15:50:01,833][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53166}
+[2025-12-17T15:50:04,965][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53169}
+[2025-12-17T15:50:06,694][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53176}
+[2025-12-17T15:50:07,847][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53177}
+[2025-12-17T15:50:11,262][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53178}
+[2025-12-17T15:50:13,986][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53179}
+[2025-12-17T15:50:16,694][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53181}
+[2025-12-17T15:50:17,725][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53182}
+[2025-12-17T15:50:21,021][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53185}
+[2025-12-17T15:50:23,140][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53192}
+[2025-12-17T15:50:26,694][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53194}
+[2025-12-17T15:50:27,807][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53195}
+[2025-12-17T15:50:31,302][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53197}
+[2025-12-17T15:50:33,950][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53199}
+[2025-12-17T15:50:36,695][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53207}
+[2025-12-17T15:50:38,003][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53208}
+[2025-12-17T15:50:40,879][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53209}
+[2025-12-17T15:50:44,817][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53211}
+[2025-12-17T15:50:46,697][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53213}
+[2025-12-17T15:50:48,559][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53214}
+[2025-12-17T15:50:51,550][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53221}
+[2025-12-17T15:50:54,334][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53222}
+[2025-12-17T15:50:56,697][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53223}
+[2025-12-17T15:50:57,762][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53224}
+[2025-12-17T15:51:00,705][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53226}
+[2025-12-17T15:51:04,399][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53229}
+[2025-12-17T15:51:06,698][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53236}
+[2025-12-17T15:51:08,322][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53237}
+[2025-12-17T15:51:10,554][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53238}
+[2025-12-17T15:51:14,344][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53240}
+[2025-12-17T15:51:16,699][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53241}
+[2025-12-17T15:51:18,476][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53242}
+[2025-12-17T15:51:20,765][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53245}
+[2025-12-17T15:51:24,225][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53252}
+[2025-12-17T15:51:26,701][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53254}
+[2025-12-17T15:51:28,280][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53256}
+[2025-12-17T15:51:30,630][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53258}
+[2025-12-17T15:51:33,151][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53260}
+[2025-12-17T15:51:36,702][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53267}
+[2025-12-17T15:51:38,261][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53268}
+[2025-12-17T15:51:42,223][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53269}
+[2025-12-17T15:51:44,270][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53271}
+[2025-12-17T15:51:46,704][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53272}
+[2025-12-17T15:51:48,665][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53273}
+[2025-12-17T15:51:50,742][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53275}
+[2025-12-17T15:51:54,679][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53282}
+[2025-12-17T15:51:56,706][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53283}
+[2025-12-17T15:51:57,930][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53284}
+[2025-12-17T15:52:00,197][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53286}
+[2025-12-17T15:52:04,176][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53288}
+[2025-12-17T15:52:06,706][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53297}
+[2025-12-17T15:52:08,279][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53298}
+[2025-12-17T15:52:10,465][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53299}
+[2025-12-17T15:52:13,822][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53301}
+[2025-12-17T15:52:16,707][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53303}
+[2025-12-17T15:52:18,591][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53304}
+[2025-12-17T15:52:20,678][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53307}
+[2025-12-17T15:52:23,921][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53313}
+[2025-12-17T15:52:26,708][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53314}
+[2025-12-17T15:52:27,765][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53315}
+[2025-12-17T15:52:31,059][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53322}
+[2025-12-17T15:52:33,740][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53329}
+[2025-12-17T15:52:36,710][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53336}
+[2025-12-17T15:52:38,402][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53337}
+[2025-12-17T15:52:41,326][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53338}
+[2025-12-17T15:52:43,447][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53339}
+[2025-12-17T15:52:46,714][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53341}
+[2025-12-17T15:52:48,615][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53342}
+[2025-12-17T15:52:51,691][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53349}
+[2025-12-17T15:52:55,500][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53350}
+[2025-12-17T15:52:56,714][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53351}
+[2025-12-17T15:52:58,587][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53352}
+[2025-12-17T15:53:00,842][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53354}
+[2025-12-17T15:53:04,216][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53356}
+[2025-12-17T15:53:06,714][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53364}
+[2025-12-17T15:53:08,447][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53365}
+[2025-12-17T15:53:11,242][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53366}
+[2025-12-17T15:53:14,973][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53368}
+[2025-12-17T15:53:16,715][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53369}
+[2025-12-17T15:53:17,932][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53370}
+[2025-12-17T15:53:21,778][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53379}
+[2025-12-17T15:53:24,780][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53380}
+[2025-12-17T15:53:26,716][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53381}
+[2025-12-17T15:53:27,741][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53382}
+[2025-12-17T15:53:29,850][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53384}
+[2025-12-17T15:53:33,282][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53386}
+[2025-12-17T15:53:36,717][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53388}
+[2025-12-17T15:53:37,989][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53394}
+[2025-12-17T15:53:40,360][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53396}
+[2025-12-17T15:53:43,846][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53399}
+[2025-12-17T15:53:46,718][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53403}
+[2025-12-17T15:53:48,056][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53404}
+[2025-12-17T15:53:50,373][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53406}
+[2025-12-17T15:53:54,119][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53413}
+[2025-12-17T15:53:56,719][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53415}
+[2025-12-17T15:53:58,591][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53417}
+[2025-12-17T15:54:02,404][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53422}
+[2025-12-17T15:54:04,933][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53431}
+[2025-12-17T15:54:06,723][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53437}
+[2025-12-17T15:54:08,669][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53461}
+[2025-12-17T15:54:11,319][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53494}
+[2025-12-17T15:54:14,815][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53498}
+[2025-12-17T15:54:16,722][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53500}
+[2025-12-17T15:54:17,855][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53502}
+[2025-12-17T15:54:20,354][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53504}
+[2025-12-17T15:54:23,924][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53513}
+[2025-12-17T15:54:26,724][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53514}
+[2025-12-17T15:54:28,003][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53515}
+[2025-12-17T15:54:30,389][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53518}
+[2025-12-17T15:54:34,167][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53520}
+[2025-12-17T15:54:36,725][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53522}
+[2025-12-17T15:54:38,269][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53528}
+[2025-12-17T15:54:40,920][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53529}
+[2025-12-17T15:54:44,120][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53530}
+[2025-12-17T15:54:46,726][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53532}
+[2025-12-17T15:54:47,945][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53533}
+[2025-12-17T15:54:50,778][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53535}
+[2025-12-17T15:54:53,417][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53541}
+[2025-12-17T15:54:56,728][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53542}
+[2025-12-17T15:54:58,329][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53543}
+[2025-12-17T15:55:00,589][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53545}
+[2025-12-17T15:55:02,945][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53547}
+[2025-12-17T15:55:06,728][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53550}
+[2025-12-17T15:55:07,843][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53556}
+[2025-12-17T15:55:10,957][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53559}
+[2025-12-17T15:55:13,021][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53560}
+[2025-12-17T15:55:16,729][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53562}
+[2025-12-17T15:55:17,939][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53563}
+[2025-12-17T15:55:20,363][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53566}
+[2025-12-17T15:55:23,416][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53573}
+[2025-12-17T15:55:26,729][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53574}
+[2025-12-17T15:55:27,797][WARN ][o.e.h.n.Netty4HttpServerTransport] [LLMCOEAZHIJMP01] received plaintext http traffic on an https channel, closing connection Netty4HttpChannel{localAddress=/127.0.0.1:9200, remoteAddress=/127.0.0.1:53575}
+
+
+2025-12-26T02:55:21.6414318Z - Diagnostics complete

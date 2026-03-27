@@ -1,0 +1,10 @@
+{
+  "embedding_model": "text-embedding-ada-002",
+  "dimension": 1536,
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+  "created_at": "2026-02-04T22:13:43.400848Z",
+  "faiss_index_path": "C:\\dev\\snowchat\\Embeddings_Lookup_cache.index",
+  "docs_path": "C:\\\\dev\\\\snowchat\\\\faiss_docs.pkl",
+  "num_chunks": 26
+}

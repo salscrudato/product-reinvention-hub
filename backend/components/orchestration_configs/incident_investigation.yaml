@@ -1,0 +1,187 @@
+# Incident Investigation and Resolution Workflow
+# Domain: ServiceNow Incident Management
+# Version: 1.0
+
+domain: "servicenow_incidents"
+enabled: true
+version: 1
+
+metadata:
+  description: "Multi-stage incident investigation and resolution orchestration"
+  created_by: "system"
+  created_at: "2026-03-13"
+  tags: ["servicenow", "incident", "investigation", "resolution"]
+
+# Multi-stage workflow definition
+stages:
+  # Stage 1: Deep Investigation
+  - name: "investigation"
+    description: "Forensic incident analysis with log correlation"
+    max_iterations: 15
+    vfs_workspace: "/investigation/{incident_number}/"
+    
+    tools:
+      - fetch_servicenow_incident
+      - get_similar_incidents_simple
+      - splunk_query
+      - datadog_get_user_logs
+      - datadog_get_service_traces
+      - get_incident_work_notes
+      - analyze_bulk_work_notes
+    
+    prompt: |
+      You are a forensic incident investigator specializing in IT operations and infrastructure issues.
+      
+      METHODOLOGY:
+      1. Fetch complete incident details (number, description, priority, assignment group, timeline)
+      2. Analyze error patterns and symptoms from incident description
+      3. Query relevant logs from Splunk/DataDog for the timeframe
+      4. Correlate with similar historical incidents to find patterns
+      5. Review work notes for troubleshooting steps already attempted
+      6. Identify potential root causes based on evidence
+      
+      CONSTRAINTS:
+      - Maximum 15 tool invocations for this stage
+      - Store large log outputs in VFS using vfs_write tool, NOT in context
+      - Example: vfs_write("/investigation/{incident_number}/splunk_logs.json", log_data)
+      - Focus on ROOT CAUSE identification, not temporary workarounds
+      - Document your reasoning step-by-step
+      
+      VFS USAGE:
+      - Store investigation findings: /investigation/{incident_number}/analysis.md
+      - Store log excerpts: /investigation/{incident_number}/logs.json
+      - Store similar incidents: /investigation/{incident_number}/similar_incidents.json
+      
+      OUTPUT REQUIREMENTS:
+      - Clear statement of suspected root cause
+      - Supporting evidence from logs/traces
+      - List of similar incidents and their resolutions
+      - Confidence score (0-1) for root cause hypothesis
+  
+  # Stage 2: Solution Recommendation
+  - name: "resolution"
+    description: "Solution architecture and knowledge base search"
+    max_iterations: 10
+    vfs_workspace: "/resolution/{incident_number}/"
+    
+    tools:
+      - wiki_rag_tool
+      - get_similar_incidents_simple
+      - fetch_kb_articles
+    
+    prompt: |
+      You are a solution architect specializing in incident remediation and knowledge management.
+      
+      CONTEXT RETRIEVAL:
+      - Read investigation results from: /investigation/{incident_number}/analysis.md
+      - Use vfs_read tool to load previous stage findings
+      
+      METHODOLOGY:
+      1. Extract root cause from investigation stage results
+      2. Search knowledge base (wiki) for documented solutions
+      3. Query similar incidents for successful resolution patterns
+      4. Rank solutions by:
+         - Relevance to root cause
+         - Historical success rate
+         - Implementation complexity
+         - Risk level
+      5. Generate actionable resolution steps with rollback plan
+      
+      CONSTRAINTS:
+      - Maximum 10 tool invocations
+      - Prioritize proven solutions over experimental approaches
+      - Include verification steps to confirm fix
+      - Always provide rollback procedure
+      
+      VFS USAGE:
+      - Store resolution plan: /resolution/{incident_number}/plan.md
+      - Store KB articles: /resolution/{incident_number}/kb_references.json
+      
+      OUTPUT REQUIREMENTS:
+      - Primary recommended solution with step-by-step instructions
+      - Alternative solutions (if primary fails)
+      - Verification checklist
+      - Rollback procedure
+      - Estimated time to resolution
+      - Risk assessment (low/medium/high)
+
+# Activation configuration
+activation:
+  # Keywords that suggest this workflow
+  keywords:
+    - "investigate incident"
+    - "root cause"
+    - "incident analysis"
+    - "why is"
+    - "what caused"
+    - "troubleshoot"
+    - "diagnose"
+  
+  # Entity patterns for automatic detection
+  entity_patterns:
+    - regex: '\b(INC\d{7}|INC\d{4,})\b'
+      type: "incident_number"
+      description: "ServiceNow incident number pattern"
+  
+  # Persona restrictions (empty = all personas)
+  personas:
+    - "developer"
+    - "engineering_lead"
+    - "*"
+
+# Synthesis strategy (how to combine stage results)
+synthesis:
+  # Template for final answer (uses Jinja2-like syntax)
+  template: |
+    # Incident Investigation and Resolution Summary
+    
+    ## Investigation Findings
+    
+    **Root Cause Analysis:**
+    {stage_results.investigation.root_cause}
+    
+    **Supporting Evidence:**
+    {stage_results.investigation.evidence}
+    
+    **Similar Incidents:**
+    {stage_results.investigation.similar_count} historical incidents found with similar patterns.
+    
+    ---
+    
+    ## Recommended Resolution
+    
+    **Primary Solution:**
+    {stage_results.resolution.primary_solution}
+    
+    **Implementation Steps:**
+    {stage_results.resolution.steps}
+    
+    **Verification:**
+    {stage_results.resolution.verification}
+    
+    **Rollback Plan:**
+    {stage_results.resolution.rollback}
+    
+    **Estimated Resolution Time:**
+    {stage_results.resolution.eta}
+    
+    ---
+    
+    ## Knowledge Base References
+    {stage_results.resolution.kb_articles}
+    
+    ## Next Steps
+    1. Review and approve the recommended solution
+    2. Schedule implementation during appropriate change window
+    3. Execute solution steps in sequence
+    4. Verify resolution using checklist
+    5. Update incident with resolution notes
+  
+  # Fallback message if any stage fails
+  error_template: |
+    Investigation could not be completed. Please check:
+    - Incident number is valid
+    - Required integrations (ServiceNow, Splunk, DataDog) are accessible
+    - You have appropriate permissions
+    
+    Error details: {error_message}

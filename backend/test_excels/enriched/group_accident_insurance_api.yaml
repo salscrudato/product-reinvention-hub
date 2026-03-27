@@ -1,0 +1,679 @@
+openapi: 3.0.3
+info:
+  title: Group Accident Insurance API
+  description: |
+    Comprehensive API for managing group accident insurance policies, proposals, 
+    and claims. Supports policy creation, premium calculation, coverage management,
+    and beneficiary administration.
+  version: 2.1.0
+  contact:
+    name: Insurance API Support
+    email: api-support@insurancetech.com
+
+servers:
+  - url: https://api.insurancetech.com/v2
+    description: Production server
+  - url: https://sandbox.insurancetech.com/v2
+    description: Sandbox server
+
+tags:
+  - name: Proposals
+    description: Policy proposal and quote operations
+  - name: Policies
+    description: Active policy management
+  - name: Premiums
+    description: Premium calculation and billing
+  - name: Coverage
+    description: Coverage options and riders
+  - name: Beneficiaries
+    description: Beneficiary management
+  - name: Claims
+    description: Accident claims processing
+
+paths:
+  /proposals:
+    post:
+      operationId: createProposal
+      summary: Create new group accident insurance proposal
+      description: Submit a new proposal for group accident coverage with employer and coverage details
+      tags:
+        - Proposals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - employer_name
+                - broker_name
+                - eligible_lives
+                - sic_code
+                - situs_state
+                - effective_date
+              properties:
+                employer_name:
+                  type: string
+                  description: Legal name of the employer organization
+                  example: "Acme Corporation"
+                broker_name:
+                  type: string
+                  description: Insurance broker facilitating the proposal
+                  example: "ABC Insurance Brokers"
+                eligible_lives:
+                  type: integer
+                  description: Total number of eligible employees
+                  minimum: 1
+                  example: 1250
+                sic_code:
+                  type: string
+                  description: Standard Industrial Classification code
+                  pattern: "^\\d{4}$"
+                  example: "7372"
+                sic_description:
+                  type: string
+                  description: Description of SIC code
+                  example: "Prepackaged Software"
+                situs_state:
+                  type: string
+                  description: State where the group is located
+                  pattern: "^[A-Z]{2}$"
+                  example: "CA"
+                effective_date:
+                  type: string
+                  format: date
+                  description: Policy effective date (MM/DD/YYYY)
+                  example: "01/15/2026"
+                hours_per_week_requirement:
+                  type: integer
+                  description: Minimum hours per week for eligibility
+                  minimum: 1
+                  maximum: 40
+                  default: 20
+                  example: 20
+                employee_minimum_age:
+                  type: integer
+                  description: Minimum employee age for coverage
+                  minimum: 18
+                  maximum: 99
+                  default: 18
+                  example: 18
+                spouse_minimum_age:
+                  type: integer
+                  description: Minimum spouse age for coverage
+                  minimum: 18
+                  maximum: 99
+                  default: 18
+                  example: 18
+                child_minimum_age:
+                  type: integer
+                  description: Minimum child age for coverage
+                  minimum: 0
+                  maximum: 25
+                  default: 0
+                  example: 0
+                child_maximum_age:
+                  type: integer
+                  description: Maximum child age for coverage
+                  minimum: 0
+                  maximum: 26
+                  default: 25
+                  example: 25
+                employee_engagement_requirement:
+                  type: number
+                  format: float
+                  description: Minimum percentage of employee participation required
+                  minimum: 0.0
+                  maximum: 1.0
+                  default: 0.70
+                  example: 0.70
+                underwriting_type:
+                  type: string
+                  enum:
+                    - Simplified Issue
+                    - Guaranteed Issue
+                    - Full Medical Underwriting
+                  description: Type of underwriting process
+                  example: "Simplified Issue"
+      responses:
+        '201':
+          description: Proposal created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  proposal_id:
+                    type: string
+                    format: uuid
+                    example: "550e8400-e29b-41d4-a716-446655440000"
+                  employer_name:
+                    type: string
+                    example: "Acme Corporation"
+                  status:
+                    type: string
+                    enum:
+                      - Draft
+                      - Submitted
+                      - Under Review
+                    example: "Submitted"
+                  created_at:
+                    type: string
+                    format: date-time
+                    example: "2026-01-12T10:30:00Z"
+
+  /proposals/{proposal_id}/coverage-options:
+    post:
+      operationId: addCoverageOption
+      summary: Add coverage option to proposal
+      description: Define a coverage plan option with specific benefits and premiums
+      tags:
+        - Proposals
+        - Coverage
+      parameters:
+        - name: proposal_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - option_number
+                - plan_name
+                - coverage_type
+                - frequency
+              properties:
+                option_number:
+                  type: integer
+                  description: Option identifier (1, 2, 3, etc.)
+                  minimum: 1
+                  example: 1
+                plan_name:
+                  type: string
+                  description: Name of the coverage plan
+                  example: "Comprehensive Accident Plan"
+                coverage_type:
+                  type: string
+                  enum:
+                    - 24 Hour
+                    - Off The Job
+                    - On The Job Only
+                  description: Type of accident coverage
+                  example: "24 Hour"
+                frequency:
+                  type: string
+                  enum:
+                    - Monthly
+                    - Semi-Monthly
+                    - Bi-Weekly
+                    - Weekly
+                  description: Premium payment frequency
+                  example: "Monthly"
+                accident_death_benefit:
+                  type: number
+                  format: decimal
+                  description: Benefit amount for accidental death
+                  minimum: 0
+                  example: 50000.00
+                dismemberment_benefit:
+                  type: number
+                  format: decimal
+                  description: Benefit for loss of limb
+                  minimum: 0
+                  example: 25000.00
+                hospital_admission_benefit:
+                  type: number
+                  format: decimal
+                  description: Per-admission hospital benefit
+                  minimum: 0
+                  example: 1000.00
+                daily_hospital_confinement:
+                  type: number
+                  format: decimal
+                  description: Daily benefit for hospital stay
+                  minimum: 0
+                  example: 200.00
+                emergency_room_treatment:
+                  type: number
+                  format: decimal
+                  description: ER visit benefit
+                  minimum: 0
+                  example: 150.00
+                ambulance_benefit:
+                  type: number
+                  format: decimal
+                  description: Ambulance transportation benefit
+                  minimum: 0
+                  example: 300.00
+                physical_therapy_benefit:
+                  type: number
+                  format: decimal
+                  description: Per-visit physical therapy benefit
+                  minimum: 0
+                  example: 50.00
+                riders:
+                  type: array
+                  description: Optional rider benefits
+                  items:
+                    type: object
+                    properties:
+                      rider_name:
+                        type: string
+                        example: "Accidental Death Enhanced Benefit"
+                      rider_cost:
+                        type: number
+                        format: decimal
+                        example: 5.00
+      responses:
+        '201':
+          description: Coverage option added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coverage_option_id:
+                    type: string
+                    format: uuid
+                  option_number:
+                    type: integer
+                    example: 1
+                  plan_name:
+                    type: string
+                    example: "Comprehensive Accident Plan"
+
+  /premiums/calculate:
+    post:
+      operationId: calculatePremium
+      summary: Calculate premium for coverage option
+      description: Calculate monthly premium based on coverage amounts and employee demographics
+      tags:
+        - Premiums
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - coverage_option_id
+                - employee_count
+                - average_age
+              properties:
+                coverage_option_id:
+                  type: string
+                  format: uuid
+                  description: ID of the coverage option
+                employee_count:
+                  type: integer
+                  description: Number of employees to be covered
+                  minimum: 1
+                  example: 500
+                average_age:
+                  type: number
+                  format: float
+                  description: Average age of covered employees
+                  minimum: 18
+                  maximum: 99
+                  example: 42.5
+                spouse_coverage:
+                  type: boolean
+                  description: Whether spouse coverage is included
+                  default: false
+                  example: true
+                child_coverage:
+                  type: boolean
+                  description: Whether child coverage is included
+                  default: false
+                  example: true
+                industry_risk_factor:
+                  type: number
+                  format: float
+                  description: Risk multiplier based on industry (1.0 = baseline)
+                  minimum: 0.5
+                  maximum: 3.0
+                  default: 1.0
+                  example: 1.2
+      responses:
+        '200':
+          description: Premium calculation completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  premium_id:
+                    type: string
+                    format: uuid
+                  base_premium:
+                    type: number
+                    format: decimal
+                    description: Base monthly premium per employee
+                    example: 12.50
+                  spouse_premium:
+                    type: number
+                    format: decimal
+                    description: Additional premium for spouse coverage
+                    example: 8.00
+                  child_premium:
+                    type: number
+                    format: decimal
+                    description: Additional premium for child coverage
+                    example: 5.00
+                  total_monthly_premium:
+                    type: number
+                    format: decimal
+                    description: Total monthly premium for all employees
+                    example: 6250.00
+                  effective_date:
+                    type: string
+                    format: date
+                    example: "01/15/2026"
+
+  /policies:
+    post:
+      operationId: createPolicy
+      summary: Create active policy from approved proposal
+      description: Convert an approved proposal into an active insurance policy
+      tags:
+        - Policies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - proposal_id
+                - policy_number
+              properties:
+                proposal_id:
+                  type: string
+                  format: uuid
+                  description: ID of the approved proposal
+                policy_number:
+                  type: string
+                  description: Unique policy identifier
+                  pattern: "^POL-[0-9]{8}$"
+                  example: "POL-20260115"
+                billing_start_date:
+                  type: string
+                  format: date
+                  description: Date when billing begins
+                  example: "02/01/2026"
+      responses:
+        '201':
+          description: Policy created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policy_id:
+                    type: string
+                    format: uuid
+                  policy_number:
+                    type: string
+                    example: "POL-20260115"
+                  employer_name:
+                    type: string
+                    example: "Acme Corporation"
+                  status:
+                    type: string
+                    enum:
+                      - Active
+                      - Pending
+                      - Suspended
+                      - Terminated
+                    example: "Active"
+
+  /policies/{policy_number}:
+    get:
+      operationId: getPolicyDetails
+      summary: Retrieve policy details
+      description: Get comprehensive details of an active insurance policy
+      tags:
+        - Policies
+      parameters:
+        - name: policy_number
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^POL-[0-9]{8}$"
+      responses:
+        '200':
+          description: Policy details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policy_id:
+                    type: string
+                    format: uuid
+                  policy_number:
+                    type: string
+                    example: "POL-20260115"
+                  employer_name:
+                    type: string
+                    example: "Acme Corporation"
+                  broker_name:
+                    type: string
+                    example: "ABC Insurance Brokers"
+                  effective_date:
+                    type: string
+                    format: date
+                    example: "01/15/2026"
+                  termination_date:
+                    type: string
+                    format: date
+                    nullable: true
+                    example: null
+                  status:
+                    type: string
+                    example: "Active"
+                  eligible_lives:
+                    type: integer
+                    example: 1250
+                  enrolled_employees:
+                    type: integer
+                    example: 900
+                  total_monthly_premium:
+                    type: number
+                    format: decimal
+                    example: 11250.00
+
+  /policies/{policy_number}/beneficiaries:
+    post:
+      operationId: addBeneficiary
+      summary: Add beneficiary to policy
+      description: Register a beneficiary for an insured member
+      tags:
+        - Beneficiaries
+      parameters:
+        - name: policy_number
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - member_id
+                - first_name
+                - last_name
+                - relationship
+                - percentage
+              properties:
+                member_id:
+                  type: string
+                  description: ID of the insured member
+                  example: "MEM-123456"
+                first_name:
+                  type: string
+                  example: "Jane"
+                last_name:
+                  type: string
+                  example: "Doe"
+                middle_initial:
+                  type: string
+                  maxLength: 1
+                  example: "M"
+                relationship:
+                  type: string
+                  enum:
+                    - Spouse
+                    - Child
+                    - Parent
+                    - Sibling
+                    - Other
+                  example: "Spouse"
+                date_of_birth:
+                  type: string
+                  format: date
+                  example: "05/20/1985"
+                percentage:
+                  type: integer
+                  description: Percentage of benefit allocation
+                  minimum: 1
+                  maximum: 100
+                  example: 100
+                address:
+                  type: object
+                  properties:
+                    street:
+                      type: string
+                    city:
+                      type: string
+                    state:
+                      type: string
+                    zip_code:
+                      type: string
+      responses:
+        '201':
+          description: Beneficiary added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  beneficiary_id:
+                    type: string
+                    format: uuid
+                  member_id:
+                    type: string
+                  full_name:
+                    type: string
+                    example: "Jane M. Doe"
+
+  /claims:
+    post:
+      operationId: submitClaim
+      summary: Submit accident claim
+      description: File a new claim for accident benefits under an active policy
+      tags:
+        - Claims
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - policy_number
+                - member_id
+                - accident_date
+                - claim_type
+              properties:
+                policy_number:
+                  type: string
+                  example: "POL-20260115"
+                member_id:
+                  type: string
+                  example: "MEM-123456"
+                accident_date:
+                  type: string
+                  format: date
+                  description: Date when accident occurred
+                  example: "01/20/2026"
+                claim_type:
+                  type: string
+                  enum:
+                    - Accidental Death
+                    - Dismemberment
+                    - Hospital Admission
+                    - Hospital Confinement
+                    - Emergency Room
+                    - Ambulance
+                    - Physical Therapy
+                  example: "Hospital Admission"
+                description:
+                  type: string
+                  description: Description of the accident
+                  example: "Slip and fall at workplace resulting in broken ankle"
+                hospital_name:
+                  type: string
+                  example: "City General Hospital"
+                admission_date:
+                  type: string
+                  format: date
+                  example: "01/20/2026"
+                discharge_date:
+                  type: string
+                  format: date
+                  nullable: true
+                  example: "01/22/2026"
+                treatment_cost:
+                  type: number
+                  format: decimal
+                  description: Total cost of treatment
+                  example: 5000.00
+      responses:
+        '201':
+          description: Claim submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  claim_id:
+                    type: string
+                    format: uuid
+                  claim_number:
+                    type: string
+                    pattern: "^CLM-[0-9]{8}$"
+                    example: "CLM-20260120"
+                  status:
+                    type: string
+                    enum:
+                      - Submitted
+                      - Under Review
+                      - Approved
+                      - Denied
+                      - Paid
+                    example: "Submitted"
+                  estimated_benefit:
+                    type: number
+                    format: decimal
+                    example: 1000.00
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

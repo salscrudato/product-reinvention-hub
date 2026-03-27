@@ -1,0 +1,11 @@
+﻿--- Listeners (9200,9300) ---
+
+
+LocalAddress LocalPort  State OwningProcess
+------------ ---------  ----- -------------
+::1               9300 Listen         27440
+::                9200 Listen         27440
+127.0.0.1         9300 Listen         27440
+
+
+

@@ -1,0 +1,14 @@
+{
+  "train_accuracy": 0.9487179487179487,
+  "test_accuracy": 0.7,
+  "num_training_examples": 49,
+  "num_intents": 5,
+  "intents": [
+    "incident_triage",
+    "incident_work_notes",
+    "incidents_today",
+    "jira_user_story",
+    "similar_incidents"
+  ],
+  "random_state": 42
+}

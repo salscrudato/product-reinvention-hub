@@ -1,0 +1,1042 @@
+{
+  "body.success.associations[].entityNumber": {
+    "Type": "Dynamic Field",
+    "Field Name": "entityNumber",
+    "Parent Array": "body.success.associations[4]",
+    "LLM Description": "",
+    "API": "Post - /api/opportunity/Opportunity/v1/load/{rootID}",
+    "Façade": "Opportunity facade module"
+  },
+  "   body.success.benefitPackagingDetail.plans[].planName": {
+    "Type": "Dynamic Field",
+    "Field Name": "planName",
+    "Parent Array": "   body.success.benefitPackagingDetail.plans[0]",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  " body.success.benefitPackagingDetail.plans[].planName": {
+    "Type": "Dynamic Field",
+    "Field Name": "planName",
+    "Parent Array": " body.success.benefitPackagingDetail.plans[1]",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.coverageBasisCd": {
+    "Type": "Dynamic Field",
+    "Field Name": "coverageBasisCd",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isHospitalAdmissionApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isHospitalAdmissionApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.hospitalAdmissionDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.hospitalAdmissionDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isHospitalConfinementApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isHospitalConfinementApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.hospitalConfinementDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.hospitalConfinementDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isIntensiveCareUnitConfinementApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isIntensiveCareUnitConfinementApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.intensiveCareUnitConfinementDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.intensiveCareUnitConfinementDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isStepDownIntensiveCareUnitConfinementApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isStepDownIntensiveCareUnitConfinementApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.stepDownIntensiveCareUnitConfinementDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.stepDownIntensiveCareUnitConfinementDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isRehabilitationFacilityApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isRehabilitationFacilityApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.rehabilitationFacilityDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.rehabilitationFacilityDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isBrainInjuryDiagnosisApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isBrainInjuryDiagnosisApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.brainInjuryDiagnosisDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.brainInjuryDiagnosisDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isBrokenToothApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isBrokenToothApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.brokenToothDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.brokenToothDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isBurnApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isBurnApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.burnDetails.burnDegreeDetails[].burnSize1Amount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.burnDetails.burnDegreeDetails[1].burnSize1Amount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.burnDetails.burnDegreeDetails[].burnSize2Amount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.burnDetails.burnDegreeDetails[1].burnSize2Amount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.burnDetails.burnDegreeDetails[].burnSize3Amount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.burnDetails.burnDegreeDetails[1].burnSize3Amount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isBurnSkinGraftApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isBurnSkinGraftApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.burnSkinGraftDetails.burnsBenefitPct": {
+    "Type": "Dynamic Field",
+    "Field Name": "burnsBenefitPct",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.burnSkinGraftDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isComaApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isComaApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.comaDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.comaDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isLacerationApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isLacerationApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.lacerationDetails.lacerationLength1Amount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.lacerationDetails.lacerationLength1Amount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.lacerationDetails.lacerationLength2Amount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.lacerationDetails.lacerationLength2Amount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.lacerationDetails.lacerationLength3Amount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.lacerationDetails.lacerationLength3Amount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.lacerationDetails.withoutRepairAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.lacerationDetails.withoutRepairAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isParalysisApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isParalysisApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.paralysisDetails.oneOrTwoLimbsAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.paralysisDetails.oneOrTwoLimbsAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.paralysisDetails.threeOrFourLimbsAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.paralysisDetails.threeOrFourLimbsAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isGunshotWoundApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isGunshotWoundApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.gunshotWoundDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.gunshotWoundDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isPunctureWoundApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isPunctureWoundApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.punctureWoundDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.punctureWoundDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isFollowUpTreatmentApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isFollowUpTreatmentApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.followUpTreatmentDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.followUpTreatmentDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isAccidentPhysicianTreatmentApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isAccidentPhysicianTreatmentApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.ambulanceUrgentCareBenefit.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.ambulanceUrgentCareBenefit.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isAmbulanceAirApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isAmbulanceAirApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.ambulanceAirDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.ambulanceAirDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isAmbulanceGroundOrWaterApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isAmbulanceGroundOrWaterApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.ambulanceGroundOrWaterDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.ambulanceGroundOrWaterDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isUrgentCareApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isUrgentCareApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.urgentCareDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.urgentCareDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isXRayApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isXRayApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.xRayDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.xRayDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isEmergencyRoomServicesApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isEmergencyRoomServicesApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.emergencyRoomServicesDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.emergencyRoomServicesDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isBloodPlasmaPlateletsApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isBloodPlasmaPlateletsApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.bloodPlasmaPlateletsDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.bloodPlasmaPlateletsDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isEyeInjuryApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isEyeInjuryApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.eyeInjuryDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.eyeInjuryDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isGeneralAnesthesiaApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isGeneralAnesthesiaApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.generalAnesthesiaDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.generalAnesthesiaDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isTendonLigamentRotatorCuffApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isTendonLigamentRotatorCuffApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.tendonLigamentRotatorCuffDetails.withRepairAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.tendonLigamentRotatorCuffDetails.withRepairAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.tendonLigamentRotatorCuffDetails.withoutRepairAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.tendonLigamentRotatorCuffDetails.withoutRepairAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isMiscellaneousOutpatientSurgeryApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isMiscellaneousOutpatientSurgeryApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.miscellaneousOutpatientSurgeryDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.miscellaneousOutpatientSurgeryDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isOpenAbdominalOrThoracicSurgeryApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isOpenAbdominalOrThoracicSurgeryApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.openAbdominalOrThoracicSurgeryDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.openAbdominalOrThoracicSurgeryDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isRupturedDiscApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isRupturedDiscApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.rupturedDiscDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.rupturedDiscDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isMajorDiagnosticExamApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isMajorDiagnosticExamApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.majorDiagnosticExamDetails.cATBenefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.majorDiagnosticExamDetails.cATBenefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.majorDiagnosticExamDetails.eEGBenefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.majorDiagnosticExamDetails.eEGBenefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.majorDiagnosticExamDetails.mRIBenefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.majorDiagnosticExamDetails.mRIBenefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.majorDiagnosticExamDetails.pETBenefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.majorDiagnosticExamDetails.pETBenefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.majorDiagnosticExamDetails.ultrasoundBenefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.majorDiagnosticExamDetails.ultrasoundBenefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isPainManagementApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isPainManagementApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.painManagementDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.painManagementDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isPainManagementCorticosteroidInjectionApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isPainManagementCorticosteroidInjectionApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.painManagementCorticosteroidInjectionBenefit.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.painManagementCorticosteroidInjectionBenefit.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isCompanionNonLocalLodgingApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isCompanionNonLocalLodgingApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.companionNonLocalLodgingDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.companionNonLocalLodgingDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isMedicalEquipmentApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isMedicalEquipmentApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.medicalEquipmentDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.medicalEquipmentDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isMedicalSuppliesApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isMedicalSuppliesApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.medicalSuppliesDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.medicalSuppliesDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isMedicationApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isMedicationApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.medicationDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.medicationDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isNonLocalTransportationApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isNonLocalTransportationApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.nonLocalTransportationDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.nonLocalTransportationDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isPostAccidentCommonCarrierTransportationApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isPostAccidentCommonCarrierTransportationApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.postAccidentCommonCarrierTransportationDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.postAccidentCommonCarrierTransportationDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isProsthesisApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isProsthesisApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.prosthesisDetails.oneDeviceAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.prosthesisDetails.oneDeviceAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.prosthesisDetails.twoOrMoreDevicesAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.prosthesisDetails.twoOrMoreDevicesAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isResidenceAutomobileModificationApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isResidenceAutomobileModificationApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.residenceAutomobileModificationDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.residenceAutomobileModificationDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isTherapyApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isTherapyApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.therapyDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.therapyDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.therapyDetails.isAlternateTherapyApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isAlternateTherapyApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.therapyDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isAccidentalDeathApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isAccidentalDeathApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.accidentalDeathDetails.benefitAmount": {
+    "Type": "Dynamic Field",
+    "Field Name": "benefitAmount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.accidentalDeathDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isAccidentalDeathCommonCarrierApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isAccidentalDeathCommonCarrierApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.accidentalDeathCommonCarrierDetails.benefitAmount": {
+    "Type": "Dynamic Field",
+    "Field Name": "benefitAmount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.accidentalDeathCommonCarrierDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isAccidentalDismembermentApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isAccidentalDismembermentApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.accidentalDismembermentDetails.maximumBenefitAmount": {
+    "Type": "Dynamic Field",
+    "Field Name": "maximumBenefitAmount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.accidentalDismembermentDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isFunctionalLossApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isFunctionalLossApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.functionalLossDetails.maximumBenefitAmount": {
+    "Type": "Dynamic Field",
+    "Field Name": "maximumBenefitAmount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.functionalLossDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isAutomobileAccidentalDeathApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isAutomobileAccidentalDeathApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.automobileAccidentalDeathDetails.benefitAmount": {
+    "Type": "Dynamic Field",
+    "Field Name": "benefitAmount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.automobileAccidentalDeathDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.dislocationFractureRiderDetails.dependentChildOfDislocationRider": {
+    "Type": "Dynamic Field",
+    "Field Name": "dependentChildOfDislocationRider",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.dislocationFractureRiderDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.dislocationFractureRiderDetails.maximumClosedReductionBenefit.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.dislocationFractureRiderDetails.maximumClosedReductionBenefit",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.dislocationFractureRiderDetails.maximumOpenReductionBenefit.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.dislocationFractureRiderDetails.maximumOpenReductionBenefit",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.FractureDetails.chipFracture": {
+    "Type": "Dynamic Field",
+    "Field Name": "chipFracture",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.FractureDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.fractureDetails.chipFracturesAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.fractureDetails.chipFracturesAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.dislocationDetails.partialDislocation": {
+    "Type": "Dynamic Field",
+    "Field Name": "partialDislocation",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.dislocationDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.dislocationDetails.partialDislocationAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.dislocationDetails.partialDislocationAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.fractureDetails.stressFractures": {
+    "Type": "Dynamic Field",
+    "Field Name": "stressFractures",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.fractureDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.fractureDetails.stressFracturesAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.fractureDetails.stressFracturesAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isAutomobileAccidentRiderApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isAutomobileAccidentRiderApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.automobileAccidentRiderDetails.benefitPct": {
+    "Type": "Dynamic Field",
+    "Field Name": "benefitPct",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.automobileAccidentRiderDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.isOrganizedSportsActivityInjuryRiderApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isOrganizedSportsActivityInjuryRiderApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.organizedSportsActivityInjuryRiderDetails.benefitPct": {
+    "Type": "Dynamic Field",
+    "Field Name": "benefitPct",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.organizedSportsActivityInjuryRiderDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.successbenefitPackagingDetail.plans[].covDef.benefitStructure.isGroupPolicyFacilityRiderApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isGroupPolicyFacilityRiderApplied",
+    "Parent Array": "body.successbenefitPackagingDetail.plans[1].covDef.benefitStructure",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.successbenefitPackagingDetail.plans[].covDef.benefitStructure.groupPolicyFacilityRiderDetails.benefitPct": {
+    "Type": "Dynamic Field",
+    "Field Name": "benefitPct",
+    "Parent Array": "body.successbenefitPackagingDetail.plans[1].covDef.benefitStructure.groupPolicyFacilityRiderDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.healthScreeningServicesRiderDetails.healthScreeningType": {
+    "Type": "Dynamic Field",
+    "Field Name": "healthScreeningType",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.healthScreeningServicesRiderDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.healthScreeningServicesRiderDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.healthScreeningServicesRiderDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.healthScreeningServicesRiderDetails.isPreventativeEnabled": {
+    "Type": "Dynamic Field",
+    "Field Name": "isPreventativeEnabled",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.healthScreeningServicesRiderDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.healthScreeningServicesRiderDetails.options[].isOptionApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isOptionApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.healthScreeningServicesRiderDetails.options[8]",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.healthScreeningServicesRiderDetails.optionCategories[].isApplied": {
+    "Type": "Dynamic Field",
+    "Field Name": "isApplied",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.healthScreeningServicesRiderDetails.optionCategories[0]",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.healthScreeningServicesRiderDetails.optionCategories[].value.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.healthScreeningServicesRiderDetails.optionCategories[0].value",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.outpatientPhysicianTreatmentsDetails.typeOfRider": {
+    "Type": "Dynamic Field",
+    "Field Name": "typeOfRider",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.outpatientPhysicianTreatmentsDetails",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  },
+  "body.success.benefitPackagingDetail.plans[].covDef.benefitStructure.outpatientPhysicianTreatmentsDetails.benefitAmount.amount": {
+    "Type": "Dynamic Field",
+    "Field Name": "amount",
+    "Parent Array": "body.success.benefitPackagingDetail.plans[1].covDef.benefitStructure.outpatientPhysicianTreatmentsDetails.benefitAmount",
+    "LLM Description": "",
+    "API": "Acc Master Façade",
+    "Façade": "GET -> /api​/policy​/AccMaster​/v1​/entities​/quote/{rootID}/{revisionNo}"
+  }
+}

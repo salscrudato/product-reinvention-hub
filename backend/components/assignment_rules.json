@@ -1,0 +1,145 @@
+{
+  "version": "1.0",
+  "description": "Assignment rules for intelligent incident routing based on category, keywords, and functionality",
+  "metadata": {
+    "instructions": "UPDATE THIS FILE: Replace placeholder group names (e.g., 'REPLACE_WITH_YOUR_NETWORK_TEAM') with actual assignment_group values from your ServiceNow instance",
+    "last_updated": "2026-01-23",
+    "status": "AUTO-GENERATED from production data",
+    "data_source": "ServiceNow instance: dev192699.service-now.com",
+    "total_groups": 10,
+    "all_assignment_groups": [
+      "Database",
+      "Hardware",
+      "ITSM App-Dev",
+      "Network",
+      "Openspace",
+      "PAS_APP_AO_DIRECT",
+      "PAS_RETAIL_L1",
+      "PAS_RETAIL_UW_L1",
+      "Service Desk",
+      "Software"
+    ]
+  },
+  "rules": {
+    "category_rules": {
+      "description": "Direct category-to-team mappings",
+      "mappings": [
+        {
+          "category": "software",
+          "assignment_group": "Software",
+          "confidence": 0.67,
+          "sample_size": 9
+        },
+        {
+          "category": "hardware",
+          "assignment_group": "Hardware",
+          "confidence": 0.67,
+          "sample_size": 6
+        },
+        {
+          "category": "SAAS",
+          "assignment_group": "PAS_RETAIL_L1",
+          "confidence": 0.8,
+          "sample_size": 10
+        }
+      ]
+    },
+    "keyword_rules": {
+      "description": "Keyword-based routing when category is not available",
+      "mappings": [
+        {
+          "keyword": "server",
+          "assignment_group": "Hardware",
+          "confidence": 0.5,
+          "sample_size": 8
+        },
+        {
+          "keyword": "password",
+          "assignment_group": "Service Desk",
+          "confidence": 1.0,
+          "sample_size": 3
+        },
+        {
+          "keyword": "vin",
+          "assignment_group": "PAS_RETAIL_L1",
+          "confidence": 0.5,
+          "sample_size": 4
+        },
+        {
+          "keyword": "network",
+          "assignment_group": "Network",
+          "confidence": 0.67,
+          "sample_size": 6
+        },
+        {
+          "keyword": "policy",
+          "assignment_group": "PAS_RETAIL_L1",
+          "confidence": 1.0,
+          "sample_size": 5
+        },
+        {
+          "keyword": "application",
+          "assignment_group": "Software",
+          "confidence": 0.6,
+          "sample_size": 5
+        }
+      ]
+    },
+    "functionality_rules": {
+      "description": "Context-based routing for triage vs resolution",
+      "mappings": [
+        {
+          "context": "triage",
+          "description": "Initial incident routing for first response",
+          "assignment_groups": [
+            "Service Desk",
+            "First Response Team"
+          ],
+          "priority": 3,
+          "confidence": 0.7
+        },
+        {
+          "context": "resolution",
+          "description": "Expert escalation for complex resolution",
+          "assignment_groups": [
+            "Subject Matter Experts",
+            "Specialized Teams"
+          ],
+          "priority": 3,
+          "confidence": 0.65
+        },
+        {
+          "context": "high_priority",
+          "description": "Critical incidents requiring immediate attention",
+          "assignment_groups": [
+            "Incident Management",
+            "Major Incident Team"
+          ],
+          "priority": 3,
+          "confidence": 0.85
+        }
+      ]
+    },
+    "priority_order": [
+      "category_rules",
+      "keyword_rules",
+      "functionality_rules"
+    ],
+    "fallback": {
+      "description": "Default assignment when no rules match",
+      "assignment_groups": [
+        "Service Desk",
+        "General Support"
+      ],
+      "confidence": 0.5
+    }
+  },
+  "learning_config": {
+    "enabled": true,
+    "description": "Configuration for learning from historical assignments",
+    "min_similar_incidents": 3,
+    "similarity_threshold": 0.75,
+    "historical_weight": 0.3,
+    "rules_weight": 0.7
+  }
+}

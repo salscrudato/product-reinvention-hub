@@ -1,0 +1,11 @@
+﻿{
+    "timestamp":  "2025-10-08T14:03:09.6133441-05:00",
+    "username":  "dev1",
+    "realm":  "devpilot",
+    "roles":  [
+                  "offline_access",
+                  "default-roles-devpilot",
+                  "uma_authorization"
+              ],
+    "token_preview":  "eyJhbGciOiJSUzI1NiIsInR5c..."
+}

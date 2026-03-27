@@ -1,0 +1,3969 @@
+{
+  "generated_at": "2026-03-02T13:51:50.999732",
+  "analysis_type": "FAISS-Based Comprehensive Analysis",
+  "total_incidents": 100,
+  "faiss_index_vectors": 555,
+  "summary": {
+    "categories": 2,
+    "patterns_identified": 39,
+    "business_phases": 9,
+    "root_cause_candidates": 0
+  },
+  "categories": {
+    "policy_management": {
+      "incident_count": 86,
+      "percentage": 86.0,
+      "incidents": [
+        {
+          "number": "INC9064102",
+          "short_description": "working on a rush quote- uw is requesting the attached rates be used for loc 1 building 1. I've tried deleting/readding risks and the system won't update the ra",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9066088",
+          "short_description": "Premium and Premium Written not the same on audit transaction",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9067869",
+          "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC0013485",
+          "short_description": "BAW - issues with emails being sent through CL processing",
+          "category": "policy_management",
+          "state": "8",
+          "priority": "5",
+          "created_at": "2026-02-25 03:41:27"
+        },
+        {
+          "number": "INC9088161",
+          "short_description": "Trying to get the renewal documents to generate and I cannot get into the policy pricing screen",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9089756",
+          "short_description": "Getting premium charge without making any changes",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9090784",
+          "short_description": "444435R  This policy went pending cancellation and DNOC was sent on 1/16/2026 with a cancel effective date of 2/5/2026. Payment has not been received and policy",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9093089",
+          "short_description": "Receiving error: \"Agency commission service is currently down.\"",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "3",
+          "created_at": "2026-02-27 20:34:54"
+        },
+        {
+          "number": "INC0013604",
+          "short_description": "I cannot generate the documents for the renewal 2/24/2026. I keep getting an error when I hit generate documents since they did not print.",
+          "category": "policy_management",
+          "state": "8",
+          "priority": "5",
+          "created_at": "2026-02-25 03:41:30"
+        },
+        {
+          "number": "INC9021295",
+          "short_description": "Agency Commission Error on Pricing screen - endt won't issue.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9022063",
+          "short_description": "QMM:New:488431F - Duplicate quote id for same policy number",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9022898",
+          "short_description": "Property tab showing all buildings and having no drop down for additional buildings",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9023867",
+          "short_description": "I am getting a rating message, and to clear that I 've followed the workaround but unable to clear that as the field is still showing greyed out. Please review ",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9025334",
+          "short_description": "QMM:New:275023V-Renewal is Out Of Balance.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9042212",
+          "short_description": "I am getting an agency commission error when trying to issue the endorsement.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9047443",
+          "short_description": "I am receiving the attached error when attempting to cancel to then rewrite. External Request failed",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9065402",
+          "short_description": "Policy won't allow me to issue endorsement.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9068334",
+          "short_description": "We had a request to amend the EMOD for the 24/25 term, final audit was removed to make the change and when going into the policy after the endorsement was start",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9069343",
+          "short_description": "I am encountering an error screen whenever I try and click on any page in this WCP starting at State Details and including every single one of the following tab",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC0010066",
+          "short_description": "PAS-Application incorrectly generates MIB Requirement - Term Life - NJ",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "5",
+          "created_at": "2026-01-29 13:52:32"
+        },
+        {
+          "number": "INC9087428",
+          "short_description": "127078V  This policy went pending cancellation and DNOC was sent on 1/5/2026 with a cancel effective date of 1/20/2026. Payment has not been received and policy",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9088331",
+          "short_description": "Agent received DEC amending Business Income limit on multiple locations, the DEC page cuts off the limit on location 2, 8, and 11.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9090001",
+          "short_description": "Server Error in '/Policy' Application.Runtime ErrorDescription: An application error occurred on the server. The current custom error settings for this appl",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9091388",
+          "short_description": "QMM:New:480342X - Session Id is NULL",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:54"
+        },
+        {
+          "number": "INC9020292",
+          "short_description": "This renewal referred to underwriting as an authority 10 due to the rule message: REF1119 Removal of IL7090 requires Authority 10 approval (I uploaded this as a",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9021577",
+          "short_description": "Good afternoon. We received an edoc download for 389498G – which is in a code for ‘Connect Insurance Group’. This is not a service center code. Can you look int",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9023404",
+          "short_description": "Agent states there are \"duplicate forms\" Please see request - \"Delete Duplicate forms, page 122 & 124:Unscheduled Building Property Tenant's Policy for Locati",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9042023",
+          "short_description": "QMM:New:362228H-Multiple issues on the policy.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9042323",
+          "short_description": "Unable to issue renewal, getting error.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9046258",
+          "short_description": "ECM is not loading emails that I am saving. It is happening on several policies, this one and 275066V",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9064475",
+          "short_description": "Audit non-compliance charge incorrect.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9066371",
+          "short_description": "system error on property tab",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9067637",
+          "short_description": "When the quote is referred, it is showing to contact Dani Oglesby, and the BAW task is going to Dani Oglesby instead of me. Eastern Carolina (32-0040) is my age",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9070161",
+          "short_description": "Added Class Codes not calculating correctly on Final Audit Statement.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC9089369",
+          "short_description": "QMM:New:3691295 - Renew is Out Of Balance",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9090426",
+          "short_description": "QMM:New:126843K - DUPLCATE SEQUENCE AND INDEX",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9092206",
+          "short_description": "This was a AOR re-write, however the effective date is wrong. When I go to transaction type, cancel, to correct it myself, I get an error message",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:54"
+        },
+        {
+          "number": "INC0014504",
+          "short_description": "Prod commercial lines job failed for the policy 4037779",
+          "category": "policy_management",
+          "state": "8",
+          "priority": "5",
+          "created_at": "2026-02-25 03:53:36"
+        },
+        {
+          "number": "INC9023096",
+          "short_description": "This ticket is a copy ticket of IN-517706 from Easy vista..",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9024550",
+          "short_description": "Schedule mod is being removed from the audit",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9025493",
+          "short_description": "I sent the agent the quote and the premium printing on the dec page is not adding up correctly. Are we able to get this corrected? When adding the building prem",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9040685",
+          "short_description": "Schedule mod drops from endorsement adding merit mod.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9042048",
+          "short_description": "The property premium on the declarations does not add up to the total property premium. It totals $2,678 instead of $5,122.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9043678",
+          "short_description": "The renewal quote proposal isn't printing out correctly. It is showing the building on location 1 twice and two different limits. The individual property dec wh",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9047519",
+          "short_description": "Attempting to backdate address change to 7/5/25 - UW approved - Unable to issue endorsement due to Agency Commission Error on pricing screen. Can you please ass",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9065183",
+          "short_description": "Hi, Nadene – unfortunately, no. We received both of those downloads as both of those were generated while we were receiving policy download for the code.Whe",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9068413",
+          "short_description": "Non-Renewal transaction removing schedule mod from policy",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9087867",
+          "short_description": "QMM:New:280788Y - Multiple issues on the policy",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9088841",
+          "short_description": "I am trying to pull the property rating worksheet to process a Premium Breakdown for the agent on the policy pricing screen, it will spin for 30 minutes then ge",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9089643",
+          "short_description": "confirm the BG2 net rate is calculating properly and pulling the right rates, and showing BI duplicated, this was an automatic renewal",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9090620",
+          "short_description": "The agent reached out to us on the above renewal, and asked why the amounts shown on the property dec page breakdown does not match/add up to the total shown on",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:53"
+        },
+        {
+          "number": "INC9092001",
+          "short_description": "Policy 063344Q has been cancelled flat and is in the process of being rewritten.  The flat cancel did not return enough premium.  Since it is a flat cancel, the",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:54"
+        },
+        {
+          "number": "INC9092831",
+          "short_description": "Trying to go to policy pricing to issue endorsement and when I click on policy pricing, I keep getting this error that I have attached.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:54"
+        },
+        {
+          "number": "INC9022584",
+          "short_description": "Commission is showing 0%.  Commission department states that it was overrode in Express.  The process is to check a box to override and it was not checked.  The",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "3",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9023267",
+          "short_description": "Wrong UW showing on AP",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9024564",
+          "short_description": "Quoting a cancel/rewrite to add property lob back onto policy. Once in the rewrite there are no LOBs showing",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:41"
+        },
+        {
+          "number": "INC9042137",
+          "short_description": "RUSH-----I went in on the committed 11/21/2025 endorsement to verify a driver.  Robert Beatty- he is an EXCLUDED driver.  By mistake I hit the Delete button i",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9043890",
+          "short_description": "Working an endorsement to delete/add property and locations but noticed a premium change to the IM AAIS and that it had been removed 11/06/25 (I did not remove ",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9047122",
+          "short_description": "The BPP on the property at location 1 went from $581 to $1056.  Same info used.  Why is the rate up 82%?",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9070337",
+          "short_description": "Class code premiums do not calculate on the Final Audit Statement.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC9070845",
+          "short_description": "The property premiums are not adding up to the total property premium.  See attached.  Please advise.  Thank you.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC9073193",
+          "short_description": "112684P  This policy went pending cancellation and DNOC was sent on 12/29/2025 with a cancel effective date of 01/14/2026. Payment has not been received and pol",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC9094087",
+          "short_description": "I submitted a ticket once for this already-RITM0019991 and it was closed out when it shouldn't have been. 300k in limited pollution liability -ca7047-was added ",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:54"
+        },
+        {
+          "number": "INC9095377",
+          "short_description": "Liquor Liability and CG7164 premiums change on the non-renewal transaction.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:54"
+        },
+        {
+          "number": "INC0010027",
+          "short_description": "Payment declined due to insufficient balance on the credit card",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "5",
+          "created_at": "2026-01-28 09:07:12"
+        },
+        {
+          "number": "INC9026036",
+          "short_description": "Agent is requesting that the transit catastrophe limit be changed to 80,000 but im getting the attached screen error that will only allow it to be between 0-2",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:42"
+        },
+        {
+          "number": "INC9027120",
+          "short_description": "Schedule mod does not display correctly on Final Audit Statement.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:42"
+        },
+        {
+          "number": "INC9025684",
+          "short_description": "Agent requesting specific values for the weigh of Vehicles 15-17. Integration is either not pulling the weight or it is showing as 0 in the system/ different fr",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:42"
+        },
+        {
+          "number": "INC9049070",
+          "short_description": "Schedule mod drops from audit.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:46"
+        },
+        {
+          "number": "INC9049735",
+          "short_description": "Unable to issue endorsement. Getting error when attempting to issue. See attached.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:46"
+        },
+        {
+          "number": "INC9051482",
+          "short_description": "FAS is showing estimated exposure instead of actual exposure.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:46"
+        },
+        {
+          "number": "INC9052261",
+          "short_description": "For policy 8911976 - the reinstatement effective 12/10/2025 was processed twice on the policy UI and policy XML. This is causing billing to have double the writ",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:47"
+        },
+        {
+          "number": "INC9070888",
+          "short_description": "Exposure on audit is incorrect",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC9073265",
+          "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC0012673",
+          "short_description": "I cannot generate the documents for the renewal 2/24/2026. I keep getting an error when I hit generate documents since they did not print.",
+          "category": "policy_management",
+          "state": "8",
+          "priority": "5",
+          "created_at": "2026-02-25 03:31:38"
+        },
+        {
+          "number": "INC9094466",
+          "short_description": "Julie Barbados /  eDoc not received at the Service Center / 294483J -  - Renewal Edoc Download Needed",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:54"
+        },
+        {
+          "number": "INC0012484",
+          "short_description": "receiving error message when trying to issue the renewal.",
+          "category": "policy_management",
+          "state": "8",
+          "priority": "5",
+          "created_at": "2026-02-25 03:31:29"
+        },
+        {
+          "number": "INC9026062",
+          "short_description": "I could make all the changes on the policy, but when attempting to go to the policy pricing page I get an error code. I restarted the endorsement, cleared my co",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:42"
+        },
+        {
+          "number": "INC9027572",
+          "short_description": "An endorsement was processed on 8/8/25, but the dec page never downloaded. I went into duck creek and tried to hit generate documents on the policy pricing scre",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:42"
+        },
+        {
+          "number": "INC9028532",
+          "short_description": "For policy 006048Y - The change premium does not equal the new premium for the endorsement transaction effective 11/1/2025 with history ID 3353861. The premium ",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:42"
+        },
+        {
+          "number": "INC9050108",
+          "short_description": "Receiving Page Break when attempting to navigate to Policy Pricing and when attempting to add email under Applicant Information on Account tab.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "3",
+          "created_at": "2026-02-27 20:34:46"
+        },
+        {
+          "number": "INC9050944",
+          "short_description": "Unable to access policy at all, getting system error.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:46"
+        },
+        {
+          "number": "INC9053249",
+          "short_description": "The agency is questioning the renewal property premium VS expiring property premium. The expiring shows $397 and the renewal is now showing $0 for property",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:47"
+        },
+        {
+          "number": "INC9070902",
+          "short_description": "The agent is trying to get a quote proposal for the insured as the system indicates that the policy is bindable, but she's getting an error when trying to gener",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC9071805",
+          "short_description": "Renewal initiation failed through batch processing.",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC9074599",
+          "short_description": "Renewal initiation failed through batch processing",
+          "category": "policy_management",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:51"
+        }
+      ]
+    },
+    "other": {
+      "incident_count": 14,
+      "percentage": 14.000000000000002,
+      "incidents": [
+        {
+          "number": "INC9066741",
+          "short_description": "QMM:New:466923X-Session id is Null.",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9068643",
+          "short_description": "QMM:New:466923X-Renew is Out Of Balance.",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC0013990",
+          "short_description": "QMM:Old:238587V - PRIOR SESSIONS SENT TO MONTH END, MISSING IN WF_SHRED_QUEUE",
+          "category": "other",
+          "state": "8",
+          "priority": "5",
+          "created_at": "2026-02-25 03:53:19"
+        },
+        {
+          "number": "INC9041538",
+          "short_description": "QMM:New:141424T  - Out of Balance",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9043035",
+          "short_description": "QMM:New:5168063  - Out of Balance",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:45"
+        },
+        {
+          "number": "INC9065798",
+          "short_description": "QMM:New:459175Q-MISSING CLASS",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC0012381",
+          "short_description": "QMM:New:420400C-Cancel is Out Of Balance.",
+          "category": "other",
+          "state": "8",
+          "priority": "5",
+          "created_at": "2026-02-25 03:31:25"
+        },
+        {
+          "number": "INC9063675",
+          "short_description": "QMM:New:053839Q-Final Audit is Out Of Balance. ",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:49"
+        },
+        {
+          "number": "INC9048498",
+          "short_description": "QMM:New:1309718-Offset amount mismatch between current and prior session.",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:46"
+        },
+        {
+          "number": "INC9071566",
+          "short_description": "QMM:New-111191T-OFFSET AMOUNT LESS THAN ZERO",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC0014144",
+          "short_description": "QMM:New:202709K-Renew is Out Of Balance.",
+          "category": "other",
+          "state": "8",
+          "priority": "5",
+          "created_at": "2026-02-25 03:53:24"
+        },
+        {
+          "number": "INC9070607",
+          "short_description": "QMM:New:115002R-CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:50"
+        },
+        {
+          "number": "INC9028912",
+          "short_description": "QMM:New:5396234 - CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:42"
+        },
+        {
+          "number": "INC9073361",
+          "short_description": "QMM:New:469874D-Endorse is Out Of Balance",
+          "category": "other",
+          "state": "7",
+          "priority": "4",
+          "created_at": "2026-02-27 20:34:51"
+        }
+      ]
+    }
+  },
+  "similarity_patterns": [
+    {
+      "incident_number": "INC9064102",
+      "short_description": "working on a rush quote- uw is requesting the attached rates be used for loc 1 building 1. I've tried deleting/readding risks and the system won't update the ra",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9049070",
+          "short_description": "Schedule mod drops from audit.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:32.828974"
+    },
+    {
+      "incident_number": "INC9066088",
+      "short_description": "Premium and Premium Written not the same on audit transaction",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9049735",
+          "short_description": "Unable to issue endorsement. Getting error when attempting to issue. See attached.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:34.318961"
+    },
+    {
+      "incident_number": "INC9066741",
+      "short_description": "QMM:New:466923X-Session id is Null.",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9051482",
+          "short_description": "FAS is showing estimated exposure instead of actual exposure.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "other",
+      "analyzed_at": "2026-03-02T13:49:35.792025"
+    },
+    {
+      "incident_number": "INC9067869",
+      "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9052261",
+          "short_description": "For policy 8911976 - the reinstatement effective 12/10/2025 was processed twice on the policy UI and policy XML. This is causing billing to have double the writ",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:37.210193"
+    },
+    {
+      "incident_number": "INC9068643",
+      "short_description": "QMM:New:466923X-Renew is Out Of Balance.",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9070607",
+          "short_description": "QMM:New:115002R-CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC9053249",
+          "short_description": "The agency is questioning the renewal property premium VS expiring property premium. The expiring shows $397 and the renewal is now showing $0 for property",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9412665733869868
+        }
+      ],
+      "category": "other",
+      "analyzed_at": "2026-03-02T13:49:38.636687"
+    },
+    {
+      "incident_number": "INC0013485",
+      "short_description": "BAW - issues with emails being sent through CL processing",
+      "similar_count": 3,
+      "similar_incidents": [
+        {
+          "number": "INC9070888",
+          "short_description": "Exposure on audit is incorrect",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC9088841",
+          "short_description": "I am trying to pull the property rating worksheet to process a Premium Breakdown for the agent on the policy pricing screen, it will spin for 30 minutes then ge",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7819756126214376
+        },
+        {
+          "number": "INC9047519",
+          "short_description": "Attempting to backdate address change to 7/5/25 - UW approved - Unable to issue endorsement due to Agency Commission Error on pricing screen. Can you please ass",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7561972830524429
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:40.048768"
+    },
+    {
+      "incident_number": "INC9088161",
+      "short_description": "Trying to get the renewal documents to generate and I cannot get into the policy pricing screen",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9073265",
+          "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:41.462869"
+    },
+    {
+      "incident_number": "INC9089756",
+      "short_description": "Getting premium charge without making any changes",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC0012673",
+          "short_description": "I cannot generate the documents for the renewal 2/24/2026. I keep getting an error when I hit generate documents since they did not print.",
+          "state": "8",
+          "priority": "5",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:42.928283"
+    },
+    {
+      "incident_number": "INC9090784",
+      "short_description": "444435R  This policy went pending cancellation and DNOC was sent on 1/16/2026 with a cancel effective date of 2/5/2026. Payment has not been received and policy",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9094466",
+          "short_description": "Julie Barbados /  eDoc not received at the Service Center / 294483J -  - Renewal Edoc Download Needed",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:44.362204"
+    },
+    {
+      "incident_number": "INC9093089",
+      "short_description": "Receiving error: \"Agency commission service is currently down.\"",
+      "similar_count": 3,
+      "similar_incidents": [
+        {
+          "number": "INC0012484",
+          "short_description": "receiving error message when trying to issue the renewal.",
+          "state": "8",
+          "priority": "5",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC9071805",
+          "short_description": "Renewal initiation failed through batch processing.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.806477318225606
+        },
+        {
+          "number": "INC9028532",
+          "short_description": "For policy 006048Y - The change premium does not equal the new premium for the endorsement transaction effective 11/1/2025 with history ID 3353861. The premium ",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7680361188860841
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:45.745923"
+    },
+    {
+      "incident_number": "INC0013604",
+      "short_description": "I cannot generate the documents for the renewal 2/24/2026. I keep getting an error when I hit generate documents since they did not print.",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9026062",
+          "short_description": "I could make all the changes on the policy, but when attempting to go to the policy pricing page I get an error code. I restarted the endorsement, cleared my co",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC9073265",
+          "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.8056269946538404
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:47.137327"
+    },
+    {
+      "incident_number": "INC0013990",
+      "short_description": "QMM:Old:238587V - PRIOR SESSIONS SENT TO MONTH END, MISSING IN WF_SHRED_QUEUE",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9027572",
+          "short_description": "An endorsement was processed on 8/8/25, but the dec page never downloaded. I went into duck creek and tried to hit generate documents on the policy pricing scre",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "other",
+      "analyzed_at": "2026-03-02T13:49:48.524143"
+    },
+    {
+      "incident_number": "INC9021295",
+      "short_description": "Agency Commission Error on Pricing screen - endt won't issue.",
+      "similar_count": 3,
+      "similar_incidents": [
+        {
+          "number": "INC9028532",
+          "short_description": "For policy 006048Y - The change premium does not equal the new premium for the endorsement transaction effective 11/1/2025 with history ID 3353861. The premium ",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC9071805",
+          "short_description": "Renewal initiation failed through batch processing.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7992203117200146
+        },
+        {
+          "number": "INC0012484",
+          "short_description": "receiving error message when trying to issue the renewal.",
+          "state": "8",
+          "priority": "5",
+          "similarity_score": 0.7680361188860841
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:49.906174"
+    },
+    {
+      "incident_number": "INC9022063",
+      "short_description": "QMM:New:488431F - Duplicate quote id for same policy number",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9028912",
+          "short_description": "QMM:New:5396234 - CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:51.298785"
+    },
+    {
+      "incident_number": "INC9022898",
+      "short_description": "Property tab showing all buildings and having no drop down for additional buildings",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9050108",
+          "short_description": "Receiving Page Break when attempting to navigate to Policy Pricing and when attempting to add email under Applicant Information on Account tab.",
+          "state": "7",
+          "priority": "3",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:52.723334"
+    },
+    {
+      "incident_number": "INC9023867",
+      "short_description": "I am getting a rating message, and to clear that I 've followed the workaround but unable to clear that as the field is still showing greyed out. Please review ",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9050944",
+          "short_description": "Unable to access policy at all, getting system error.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:54.138413"
+    },
+    {
+      "incident_number": "INC9025334",
+      "short_description": "QMM:New:275023V-Renewal is Out Of Balance.",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9053249",
+          "short_description": "The agency is questioning the renewal property premium VS expiring property premium. The expiring shows $397 and the renewal is now showing $0 for property",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC9070607",
+          "short_description": "QMM:New:115002R-CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9412665733869868
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:55.554144"
+    },
+    {
+      "incident_number": "INC9041538",
+      "short_description": "QMM:New:141424T  - Out of Balance",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9070902",
+          "short_description": "The agent is trying to get a quote proposal for the insured as the system indicates that the policy is bindable, but she's getting an error when trying to gener",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC9073361",
+          "short_description": "QMM:New:469874D-Endorse is Out Of Balance",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9445463443118871
+        }
+      ],
+      "category": "other",
+      "analyzed_at": "2026-03-02T13:49:56.968806"
+    },
+    {
+      "incident_number": "INC9042212",
+      "short_description": "I am getting an agency commission error when trying to issue the endorsement.",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9071805",
+          "short_description": "Renewal initiation failed through batch processing.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC0012484",
+          "short_description": "receiving error message when trying to issue the renewal.",
+          "state": "8",
+          "priority": "5",
+          "similarity_score": 0.806477318225606
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:49:58.371774"
+    },
+    {
+      "incident_number": "INC9043035",
+      "short_description": "QMM:New:5168063  - Out of Balance",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9073361",
+          "short_description": "QMM:New:469874D-Endorse is Out Of Balance",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC9070902",
+          "short_description": "The agent is trying to get a quote proposal for the insured as the system indicates that the policy is bindable, but she's getting an error when trying to gener",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9445463443118871
+        }
+      ],
+      "category": "other",
+      "analyzed_at": "2026-03-02T13:49:59.784997"
+    },
+    {
+      "incident_number": "INC9047443",
+      "short_description": "I am receiving the attached error when attempting to cancel to then rewrite. External Request failed",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9074599",
+          "short_description": "Renewal initiation failed through batch processing",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:01.382303"
+    },
+    {
+      "incident_number": "INC9065402",
+      "short_description": "Policy won't allow me to issue endorsement.",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9071805",
+          "short_description": "Renewal initiation failed through batch processing.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.8118843982865719
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:02.795773"
+    },
+    {
+      "incident_number": "INC9087428",
+      "short_description": "127078V  This policy went pending cancellation and DNOC was sent on 1/5/2026 with a cancel effective date of 1/20/2026. Payment has not been received and policy",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9094466",
+          "short_description": "Julie Barbados /  eDoc not received at the Service Center / 294483J -  - Renewal Edoc Download Needed",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9586484573564225
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:08.360714"
+    },
+    {
+      "incident_number": "INC9091388",
+      "short_description": "QMM:New:480342X - Session Id is NULL",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9051482",
+          "short_description": "FAS is showing estimated exposure instead of actual exposure.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9245064665782775
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:12.549041"
+    },
+    {
+      "incident_number": "INC9042023",
+      "short_description": "QMM:New:362228H-Multiple issues on the policy.",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9053249",
+          "short_description": "The agency is questioning the renewal property premium VS expiring property premium. The expiring shows $397 and the renewal is now showing $0 for property",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7883420666024642
+        },
+        {
+          "number": "INC9028912",
+          "short_description": "QMM:New:5396234 - CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7878247633938229
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:18.148447"
+    },
+    {
+      "incident_number": "INC9042323",
+      "short_description": "Unable to issue renewal, getting error.",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9026062",
+          "short_description": "I could make all the changes on the policy, but when attempting to go to the policy pricing page I get an error code. I restarted the endorsement, cleared my co",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.8018622349878716
+        },
+        {
+          "number": "INC9073265",
+          "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.794878465514388
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:19.548082"
+    },
+    {
+      "incident_number": "INC9089369",
+      "short_description": "QMM:New:3691295 - Renew is Out Of Balance",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9070607",
+          "short_description": "QMM:New:115002R-CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9468790753258195
+        },
+        {
+          "number": "INC9053249",
+          "short_description": "The agency is questioning the renewal property premium VS expiring property premium. The expiring shows $397 and the renewal is now showing $0 for property",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9249305091294571
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:29.453271"
+    },
+    {
+      "incident_number": "INC9092206",
+      "short_description": "This was a AOR re-write, however the effective date is wrong. When I go to transaction type, cancel, to correct it myself, I get an error message",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9074599",
+          "short_description": "Renewal initiation failed through batch processing",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7721868300783264
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:32.303567"
+    },
+    {
+      "incident_number": "INC0012381",
+      "short_description": "QMM:New:420400C-Cancel is Out Of Balance.",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9070902",
+          "short_description": "The agent is trying to get a quote proposal for the insured as the system indicates that the policy is bindable, but she's getting an error when trying to gener",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.8645004348597106
+        }
+      ],
+      "category": "other",
+      "analyzed_at": "2026-03-02T13:50:33.704740"
+    },
+    {
+      "incident_number": "INC9063675",
+      "short_description": "QMM:New:053839Q-Final Audit is Out Of Balance. ",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9070902",
+          "short_description": "The agent is trying to get a quote proposal for the insured as the system indicates that the policy is bindable, but she's getting an error when trying to gener",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.8607914528413686
+        }
+      ],
+      "category": "other",
+      "analyzed_at": "2026-03-02T13:50:46.355943"
+    },
+    {
+      "incident_number": "INC9087867",
+      "short_description": "QMM:New:280788Y - Multiple issues on the policy",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9028912",
+          "short_description": "QMM:New:5396234 - CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.8055557906283407
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:50.478031"
+    },
+    {
+      "incident_number": "INC9092831",
+      "short_description": "Trying to go to policy pricing to issue endorsement and when I click on policy pricing, I keep getting this error that I have attached.",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9071805",
+          "short_description": "Renewal initiation failed through batch processing.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.810036540738032
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:50:57.435016"
+    },
+    {
+      "incident_number": "INC9070337",
+      "short_description": "Class code premiums do not calculate on the Final Audit Statement.",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9049735",
+          "short_description": "Unable to issue endorsement. Getting error when attempting to issue. See attached.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7585743868306997
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:51:08.106529"
+    },
+    {
+      "incident_number": "INC9073193",
+      "short_description": "112684P  This policy went pending cancellation and DNOC was sent on 12/29/2025 with a cancel effective date of 01/14/2026. Payment has not been received and pol",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9094466",
+          "short_description": "Julie Barbados /  eDoc not received at the Service Center / 294483J -  - Renewal Edoc Download Needed",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.8965280505210591
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:51:12.081375"
+    },
+    {
+      "incident_number": "INC0014144",
+      "short_description": "QMM:New:202709K-Renew is Out Of Balance.",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9053249",
+          "short_description": "The agency is questioning the renewal property premium VS expiring property premium. The expiring shows $397 and the renewal is now showing $0 for property",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9589597743895697
+        },
+        {
+          "number": "INC9070607",
+          "short_description": "QMM:New:115002R-CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.9356800342299328
+        }
+      ],
+      "category": "other",
+      "analyzed_at": "2026-03-02T13:51:21.594416"
+    },
+    {
+      "incident_number": "INC9049735",
+      "short_description": "Unable to issue endorsement. Getting error when attempting to issue. See attached.",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9071805",
+          "short_description": "Renewal initiation failed through batch processing.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.8463261797571745
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:51:24.385098"
+    },
+    {
+      "incident_number": "INC9073265",
+      "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+      "similar_count": 1,
+      "similar_incidents": [
+        {
+          "number": "INC9052261",
+          "short_description": "For policy 8911976 - the reinstatement effective 12/10/2025 was processed twice on the policy UI and policy XML. This is causing billing to have double the writ",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:51:31.278133"
+    },
+    {
+      "incident_number": "INC0012673",
+      "short_description": "I cannot generate the documents for the renewal 2/24/2026. I keep getting an error when I hit generate documents since they did not print.",
+      "similar_count": 2,
+      "similar_incidents": [
+        {
+          "number": "INC9026062",
+          "short_description": "I could make all the changes on the policy, but when attempting to go to the policy pricing page I get an error code. I restarted the endorsement, cleared my co",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 1.0
+        },
+        {
+          "number": "INC9073265",
+          "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.8056269946538404
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:51:32.644370"
+    },
+    {
+      "incident_number": "INC0012484",
+      "short_description": "receiving error message when trying to issue the renewal.",
+      "similar_count": 3,
+      "similar_incidents": [
+        {
+          "number": "INC9026062",
+          "short_description": "I could make all the changes on the policy, but when attempting to go to the policy pricing page I get an error code. I restarted the endorsement, cleared my co",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.771946153020423
+        },
+        {
+          "number": "INC9071805",
+          "short_description": "Renewal initiation failed through batch processing.",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7638096991519941
+        },
+        {
+          "number": "INC9073265",
+          "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+          "state": "7",
+          "priority": "4",
+          "similarity_score": 0.7621525815547731
+        }
+      ],
+      "category": "policy_management",
+      "analyzed_at": "2026-03-02T13:51:35.325411"
+    }
+  ],
+  "root_cause_analysis": {
+    "generated_at": "2026-03-02T13:51:50.930732",
+    "total_incidents": 100,
+    "faiss_vectors": 555,
+    "categories": 100,
+    "patterns": 39,
+    "workaround_opportunities": 0,
+    "summary": {
+      "incidents_analyzed": 100,
+      "patterns_identified": 39,
+      "workaround_candidates": 0
+    }
+  },
+  "business_phase_analysis": {
+    "generated_at": "2026-03-02T13:51:50.917732",
+    "total_incidents": 100,
+    "phases": {
+      "new_business": {
+        "incident_count": 11,
+        "percentage": 11.0,
+        "incidents": [
+          "INC9064102",
+          "INC0013485",
+          "INC9022063",
+          "INC9069343",
+          "INC0010066",
+          "INC9090001",
+          "INC9067637",
+          "INC9025493",
+          "INC9043678",
+          "INC9023267",
+          "INC9070902"
+        ],
+        "categories": {
+          "policy_management": 11
+        },
+        "solution_types": {
+          "data_correction": 7,
+          "configuration_change": 1
+        },
+        "components": {
+          "document": 1,
+          "portal": 1
+        },
+        "problems": [
+          {
+            "incident": "INC9064102",
+            "description": "working on a rush quote- uw is requesting the attached rates be used for loc 1 b",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "I've tried deleting/readding risks and the system won't update the rates\nRoot Cause Analysis:\nAs per Scott Meredith, \"The user is updating address and there are two buildings at the address, the syste",
+            "has_solution": true,
+            "solution": "Solution:\nInserting correct value of \"PrometrixId\"  as per Prometrix Report",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC0013485",
+            "description": "BAW - issues with emails being sent through CL processing",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9022063",
+            "description": "QMM:New:488431F - Duplicate quote id for same policy number",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nThe policy was in Withheld status, and two quotes were created for the same policy",
+            "has_solution": true,
+            "solution": "Solution: \nThe Withheld policy record was updated with withheld = 0 and the corresponding history entry was marked as deleted (deleted = 1)",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9069343",
+            "description": "I am encountering an error screen whenever I try and click on any page in this W",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "01-16-2026 11:56:04 AM - Jash Thomas (Work notes)\nDefect: SBFF-178#Category: Controlling ID#Sub-Category: Defect#Pattern: XML Data Issues\n\nIssue Reported by User: \nPage break on State details page, Lo",
+            "has_solution": true,
+            "solution": "Solution:  \nAbort and reinitiate the endorsement",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC0010066",
+            "description": "PAS-Application incorrectly generates MIB Requirement - Term Life - NJ",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9090001",
+            "description": "Server Error in '/Policy' Application.Runtime ErrorDescription: An application e",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nThe error occurred due to a misconfiguration in the new load balancer node",
+            "has_solution": true,
+            "solution": "Solution:\nWe have validated all three applications and confirmed that they are currently operational",
+            "solution_type": "configuration_change"
+          },
+          {
+            "incident": "INC9067637",
+            "description": "When the quote is referred, it is showing to contact Dani Oglesby, and the BAW t",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): In this policy, incorrect data was stored in the Production DC_PLT_UserEntityMemberships table, which resulted in the Agent UW Assignment request returning the wrong value, ",
+            "has_solution": true,
+            "solution": "We also confirmed with Seneca that this service cannot be invoked again for the same policy once it has already been executed\nSolution: Since this is a new business transaction, the only available opt",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9025493",
+            "description": "I sent the agent the quote and the premium printing on the dec page is not addin",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): \nThe discrepancy occurs because the Earthquake coverage premium is not reflected in the premium calculation of Risks in Quote Proposal",
+            "has_solution": true,
+            "solution": "Solution: Users have been advised to refer to the rating worksheet for accurate premium verification based on the provided explanation",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9043678",
+            "description": "The renewal quote proposal isn't printing out correctly. It is showing the build",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): Although the risks were deleted in the Rewrite transaction, they still display in the Quote Proposal because the XSLT file does not contain a condition to exclude risks flag",
+            "has_solution": true,
+            "solution": "Solution: Perform a hard delete of the risks and their associated coverages to ensure they are fully removed and no longer reflected in the Quote Proposal\nAzure Data Fix Number:\n124539",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9023267",
+            "description": "Wrong UW showing on AP",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): In this quote, the Agency UW assignment service was triggered for Correct Underwriter; however, the AP XML data contains producer details for Grace which is showing on Quote",
+            "has_solution": true,
+            "solution": "Solution:\nRequesting a jira card for now and it should be resolved through defect",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9070902",
+            "description": "The agent is trying to get a quote proposal for the insured as the system indica",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "01-30-2026 04:17:15 AM - Deepak Tiwari (Work notes)\nDefect: N/A#Category: Data Corruption#Sub-Category: Data Issue#Pattern: XML Data Issues\nIssue Reported by User: unable to create Quote proposal for ",
+            "has_solution": true,
+            "solution": "Solution: The quote data is corrupted, and the attempted workarounds did not resolve the issue",
+            "solution_type": "data_correction"
+          }
+        ]
+      },
+      "cancellation": {
+        "incident_count": 9,
+        "percentage": 9.0,
+        "incidents": [
+          "INC9066088",
+          "INC9090784",
+          "INC9047443",
+          "INC9087428",
+          "INC9092206",
+          "INC0012381",
+          "INC9065183",
+          "INC9092001",
+          "INC9073193"
+        ],
+        "categories": {
+          "policy_management": 8,
+          "other": 1
+        },
+        "solution_types": {
+          "code_fix": 1,
+          "data_correction": 6
+        },
+        "components": {},
+        "problems": [
+          {
+            "incident": "INC9066088",
+            "description": "Premium and Premium Written not the same on audit transaction",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "01-14-2026 09:45:57 AM - Jash Thomas (Work notes)\nDefect: SBWNW-6509#Category: Rating#Sub-Category: Defect#Pattern: Requirement Alignment\n\nIssue Reported by User:\nPremium and Premium Written not the s",
+            "has_solution": true,
+            "solution": "Solution:\nSeveral data fixes were attempted to align the premium values; however, the changes did not persist and reverted upon revisiting the pricing page",
+            "solution_type": "code_fix"
+          },
+          {
+            "incident": "INC9090784",
+            "description": "444435R  This policy went pending cancellation and DNOC was sent on 1/16/2026 wi",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Payment has not been received and policy\nRoot Cause Analysis (RCA):\nThis policy went pending cancellation and DNOC was sent on 1/16/2026 with a cancel effective date of 2/5/2026",
+            "has_solution": true,
+            "solution": "Solution:\nCancelling the policy from backend with the reason code of non-payment of premium as requested",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9047443",
+            "description": "I am receiving the attached error when attempting to cancel to then rewrite. Ext",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): The following coverages: BREquipmentBreakdown, Terrorism, BusinessIncomeMonthlyLimitOfIndemnity, BG1, RatingGroupBG1Risk, FineArts, RatingGroupBG2Risk, TerrorismRisk, Busine",
+            "has_solution": true,
+            "solution": "Solution: Deleting these extra coverages from AllCoverageContainer \nAzure Data Fix Number: 125103",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9087428",
+            "description": "127078V  This policy went pending cancellation and DNOC was sent on 1/5/2026 wit",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nDeleted buildings was tagged to 9 IM LOB risks and their coverages remained, resulting in unexpected token error with missing or invalid references",
+            "has_solution": true,
+            "solution": "Solution:\nHard-deleted these 9 risks from History XML, Risk Fragment, and coverages in all coverage containers where these risks had references",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9092206",
+            "description": "This was a AOR re-write, however the effective date is wrong. When I go to trans",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nDeleted buildingI id (b76D8E66FEEB2491E8598D206764354BD) was tagged to 3 IM LOB risks and their coverages remained, resulting in unexpected token error with missing or inval",
+            "has_solution": true,
+            "solution": "Solution:\nHard-deleted these 3 risks from History XML, Risk Fragment, and coverages in all coverage containers where these risks had references",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC0012381",
+            "description": "QMM:New:420400C-Cancel is Out Of Balance.",
+            "category": "other",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9065183",
+            "description": "Hi, Nadene – unfortunately, no. We received both of those downloads as both of t",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): 45-0068 agency code was not setup for some reason to receive CL download",
+            "has_solution": true,
+            "solution": "Solution: Manually reprocessing the downloads\nAzure Data Fix Number:128013",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9092001",
+            "description": "Policy 063344Q has been cancelled flat and is in the process of being rewritten.",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9073193",
+            "description": "112684P  This policy went pending cancellation and DNOC was sent on 12/29/2025 w",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nFor non-payment reason code policy is using current date +30 days logic due to which effective date is changing",
+            "has_solution": true,
+            "solution": "Solution:\nCancelling the policy from backend with the reason code of non-payment of premium as requested",
+            "solution_type": "data_correction"
+          }
+        ]
+      },
+      "other_phase": {
+        "incident_count": 22,
+        "percentage": 22.0,
+        "incidents": [
+          "INC9066741",
+          "INC9093089",
+          "INC0013990",
+          "INC9021295",
+          "INC9041538",
+          "INC9043035",
+          "INC9091388",
+          "INC9021577",
+          "INC9023404",
+          "INC9042023",
+          "INC9064475",
+          "INC9065798",
+          "INC9066371",
+          "INC9090426",
+          "INC9063675",
+          "INC9087867",
+          "INC9022584",
+          "INC9048498",
+          "INC9071566",
+          "INC9049070",
+          "INC9051482",
+          "INC9073361"
+        ],
+        "categories": {
+          "other": 9,
+          "policy_management": 13
+        },
+        "solution_types": {
+          "configuration_change": 2,
+          "data_correction": 15
+        },
+        "components": {
+          "underwriting": 1,
+          "document": 2
+        },
+        "problems": [
+          {
+            "incident": "INC9066741",
+            "description": "QMM:New:466923X-Session id is Null.",
+            "category": "other",
+            "has_root_cause": true,
+            "root_cause": "- Nivedita\n\n01-13-2026 01:08:51 AM - Gyanjee Ojha (Work notes)\nDefect: SBFF-158/ SBWNM-13904\n#Category: Shred Error\n#Sub-Category: XML field length\n#Pattern: XML Data Issues\n\nIssue: Session id is NULL",
+            "has_solution": true,
+            "solution": "The desired length is 80\nSolution: Updating the field with the correct value\nTask: Azure-128011\n\n01-12-2026 06:54:46 AM - Gyanjee Ojha (Work notes)\n1/12 - Started the analysis",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9093089",
+            "description": "Receiving error: \"Agency commission service is currently down.\"",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Hence putting this ticket on hold\n\n02-13-2026 02:16:47 PM - Ryan Malone (Work notes)\nEscalated to P3\nReason: New Business",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC0013990",
+            "description": "QMM:Old:238587V - PRIOR SESSIONS SENT TO MONTH END, MISSING IN WF_SHRED_QUEUE",
+            "category": "other",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9021295",
+            "description": "Agency Commission Error on Pricing screen - endt won't issue.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "RCA: The agency commission error is occurring because, during the OOS endorsement process, the system is incorrectly retrieving the agency code from the Reissue transaction and also setting the <IsFai",
+            "has_solution": true,
+            "solution": "Solution:  Updated agency to original one in Pending Endorsement, also updating <IsFailed> tag to 0",
+            "solution_type": "configuration_change"
+          },
+          {
+            "incident": "INC9041538",
+            "description": "QMM:New:141424T  - Out of Balance",
+            "category": "other",
+            "has_root_cause": true,
+            "root_cause": "12-11-2025 12:42:18 AM - Vartika Sachan (Work notes)\nIssue Reported by User:\nEndorse is OOB\nRoot Cause Analysis (RCA):\nIn coverages charge was not calculated correctly and also incorrect change on XML",
+            "has_solution": true,
+            "solution": "12-11-2025 12:42:18 AM - Vartika Sachan (Work notes)\nIssue Reported by User:\nEndorse is OOB\nRoot Cause Analysis (RCA):\nIn coverages charge was not calculated correctly and also incorrect change on XML",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9043035",
+            "description": "QMM:New:5168063  - Out of Balance",
+            "category": "other",
+            "has_root_cause": true,
+            "root_cause": "12-11-2025 10:16:47 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Renew is OOB\n\n \n\nRoot Cause Analysis (RCA): Incorrect offset amount on NonOwnedEmployee coverage\n\n \n\nSolution: History ID_3",
+            "has_solution": true,
+            "solution": "12-11-2025 10:16:47 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Renew is OOB\n\n \n\nRoot Cause Analysis (RCA): Incorrect offset amount on NonOwnedEmployee coverage\n\n \n\nSolution: History ID_3",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9091388",
+            "description": "QMM:New:480342X - Session Id is NULL",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "02-17-2026 02:26:58 AM - Gyanjee Ojha (Work notes)\nDefect: SBFF-158/ SBWNW-13904#Category: Shred Error#Sub-Category: XML field length#Pattern: XML Data Issues\nIssue: Session id is NULL due to data tru",
+            "has_solution": true,
+            "solution": "The desired length is 80\nSolution: Updating the field with the correct value\n\nTask: Azure-130624\n\n02-12-2026 01:38:50 AM - Gyanjee Ojha (Work notes)\n2/12 - Started the analysis",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9021577",
+            "description": "Good afternoon. We received an edoc download for 389498G – which is in a code fo",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\n-The document in question was manually entered into ECM with an incorrect agency code in the metadata",
+            "has_solution": true,
+            "solution": "Solution:\n-The agency code in ECM metadata was updated to reflect the correct value",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9023404",
+            "description": "Agent states there are \"duplicate forms\" Please see request - \"Delete Duplicate ",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nThe duplication was caused by a manual error during the document assembly process, leading to the same form being inserted twice",
+            "has_solution": true,
+            "solution": "Solution:\nRegina Funk removed the duplicate pages and submitted the corrected document via the Help Hub",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9042023",
+            "description": "QMM:New:362228H-Multiple issues on the policy.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "- Nivedita\n\n12-09-2025 09:58:42 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Multiple issues on the policy\n\n \n\nRoot Cause Analysis (RCA): Missing class value of HiredAndBorrowedUMBI covera",
+            "has_solution": true,
+            "solution": "- Nivedita\n\n12-09-2025 09:58:42 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Multiple issues on the policy\n\n \n\nRoot Cause Analysis (RCA): Missing class value of HiredAndBorrowedUMBI covera",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9064475",
+            "description": "Audit non-compliance charge incorrect.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "01-09-2026 12:03:44 PM - Jash Thomas (Work notes)\nDefect: Defect Requested#Category: Rating#Sub-Category: Defect#Pattern: Requirement Alignment\n\nIssue Reported by User: \nIndiana estimated audit not ap",
+            "has_solution": true,
+            "solution": "Solution:  \nSetting the Unit of exposure final as blank so that it may re run the default field\nAzure Data Fix Number:\n127912",
+            "solution_type": "configuration_change"
+          },
+          {
+            "incident": "INC9065798",
+            "description": "QMM:New:459175Q-MISSING CLASS",
+            "category": "other",
+            "has_root_cause": true,
+            "root_cause": "- Nivedita\n\n01-11-2026 10:37:17 PM - Anshuman Nayak (Work notes)\nDefect: SBFF-182#Category: SessionError#Sub-Category: Missing Class/Stat Codes/ECT#Pattern: XML Data Issues\n\n \n\nIssue Reported by User:",
+            "has_solution": true,
+            "solution": "- Nivedita\n\n01-11-2026 10:37:17 PM - Anshuman Nayak (Work notes)\nDefect: SBFF-182#Category: SessionError#Sub-Category: Missing Class/Stat Codes/ECT#Pattern: XML Data Issues\n\n \n\nIssue Reported by User:",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9066371",
+            "description": "system error on property tab",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis:\nIncorrect key was getting picked up in one of the risks of Type 'Special Class' under dropdown 'Item Description' in property LOB",
+            "has_solution": true,
+            "solution": "Solution:\nCorrected to a valid key from Table in the risk fragment, only present in Fragment xml",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9090426",
+            "description": "QMM:New:126843K - DUPLCATE SEQUENCE AND INDEX",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "02-13-2026 12:40:30 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-186/SBWNW-13902#Category: Shred Error#Sub-Category: Duplicate Sequence/Index#Pattern: Sequence integrity (duplicate/missing)\n\n \n\nIssue",
+            "has_solution": true,
+            "solution": "02-13-2026 12:40:30 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-186/SBWNW-13902#Category: Shred Error#Sub-Category: Duplicate Sequence/Index#Pattern: Sequence integrity (duplicate/missing)\n\n \n\nIssue",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9063675",
+            "description": "QMM:New:053839Q-Final Audit is Out Of Balance. ",
+            "category": "other",
+            "has_root_cause": true,
+            "root_cause": "- Nivedita\n\n01-07-2026 10:36:37 PM - Anshuman Nayak (Work notes)\nDefect: SBWNW-7830#Category: Out of Balance#Sub-Category: N/A#Pattern: Miscellaneous\n\n \n\nIssue Reported by User: FinalAudit is OOB\n\n \n\n",
+            "has_solution": true,
+            "solution": "- Nivedita\n\n01-07-2026 10:36:37 PM - Anshuman Nayak (Work notes)\nDefect: SBWNW-7830#Category: Out of Balance#Sub-Category: N/A#Pattern: Miscellaneous\n\n \n\nIssue Reported by User: FinalAudit is OOB\n\n \n\n",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9087867",
+            "description": "QMM:New:280788Y - Multiple issues on the policy",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": true,
+            "solution": "Stat codes are missing for Coverage BG1 and BG2\nSolution: Updating the stat codes in affected coverages",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9022584",
+            "description": "Commission is showing 0%.  Commission department states that it was overrode in ",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): The Xml from the NB transaction shows the “AgencyCommissionSuccess” indicator set to ‘1’ and the “IsFailed” tag (for the error message) set to ‘0’, suggesting that there see",
+            "has_solution": true,
+            "solution": "Solution: Perform a Flat Cancel as Do not print on the NB transaction and then initiate Reissue transaction as Do not print",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9048498",
+            "description": "QMM:New:1309718-Offset amount mismatch between current and prior session.",
+            "category": "other",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):  \nAs the policy is still under review with the ETL team, after our analysis we got to know that the error they reported is not accurate",
+            "has_solution": true,
+            "solution": "Solution: \nClosing out the ticket \nAzure Data Fix Number:  \nN/A\n\n12-17-2025 03:53:17 AM - Vartika Sachan (Work notes)\nAs the policy is still under review with the ETL team, after our analysis we got t",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9071566",
+            "description": "QMM:New-111191T-OFFSET AMOUNT LESS THAN ZERO",
+            "category": "other",
+            "has_root_cause": true,
+            "root_cause": "01-20-2026 12:42:50 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-51\n\n#Category: Session Error\n\n#Sub-Category: Change/Onset/Offset rule mismatch\n\n#Pattern: Change/Onset/Offset validation failure\n\n \n\nI",
+            "has_solution": true,
+            "solution": "01-20-2026 12:42:50 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-51\n\n#Category: Session Error\n\n#Sub-Category: Change/Onset/Offset rule mismatch\n\n#Pattern: Change/Onset/Offset validation failure\n\n \n\nI",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9049070",
+            "description": "Schedule mod drops from audit.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "12-17-2025 09:04:45 AM - Sreekeerthi Samala (Work notes)\nDefect:  SBWNW-12958#Category: Controlling ID#Sub-Category: Defect#Pattern:  XML Data Issues\n\nIssue Reported by User:Schedule mod dropping on e",
+            "has_solution": true,
+            "solution": "Solution:The EndorseScheduleMod tag was inserted and corrected in prior Renew, Cancel Pending, Cancel, Reinstate, Cancel & Reinstate transactions to accurately reflect the schedule modifications",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9051482",
+            "description": "FAS is showing estimated exposure instead of actual exposure.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nDuring policy processing, the system wrongly resets the audit value to the estimated premium",
+            "has_solution": true,
+            "solution": "As a result, it picks up the wrong value from a previous term and causes issues\nSolution:\nAs a temporary Fix, updating the Final Audit reason code to “Annual Audit” to ensure correct premium calculati",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9073361",
+            "description": "QMM:New:469874D-Endorse is Out Of Balance",
+            "category": "other",
+            "has_root_cause": true,
+            "root_cause": "01-24-2026 12:03:09 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-219\n\n#Category: Out of Balance\n\n#Sub-Category: Rating Issue\n\n#Pattern: Line vs Coverage premium misalignment\n\n \n\nIssue Reported by Use",
+            "has_solution": true,
+            "solution": "01-24-2026 12:03:09 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-219\n\n#Category: Out of Balance\n\n#Sub-Category: Rating Issue\n\n#Pattern: Line vs Coverage premium misalignment\n\n \n\nIssue Reported by Use",
+            "solution_type": "data_correction"
+          }
+        ]
+      },
+      "data_interface": {
+        "incident_count": 2,
+        "percentage": 2.0,
+        "incidents": [
+          "INC9067869",
+          "INC9073265"
+        ],
+        "categories": {
+          "policy_management": 2
+        },
+        "solution_types": {
+          "data_correction": 2
+        },
+        "components": {},
+        "problems": [
+          {
+            "incident": "INC9067869",
+            "description": "In Agency Download, even after reprocessing the downloads are not reflected at d",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):Due to the size limit is exceeded to 43000000 downloads are not sent through batch process",
+            "has_solution": true,
+            "solution": "Solution: Related DCOD has been raised CS2255377,received the session xml's and sent them package to Download team",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9073265",
+            "description": "In Agency Download, even after reprocessing the downloads are not reflected at d",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):Due to the size limit is exceeded to 43000000 downloads are not sent through batch process",
+            "has_solution": true,
+            "solution": "Solution: Related DCOD  CS2274949has been raised ,received the session xml's and sent them package to Download team",
+            "solution_type": "data_correction"
+          }
+        ]
+      },
+      "renewal": {
+        "incident_count": 22,
+        "percentage": 22.0,
+        "incidents": [
+          "INC9068643",
+          "INC9088161",
+          "INC0013604",
+          "INC9025334",
+          "INC9020292",
+          "INC9042323",
+          "INC9089369",
+          "INC0014504",
+          "INC9068413",
+          "INC9089643",
+          "INC9090620",
+          "INC9070845",
+          "INC9095377",
+          "INC0010027",
+          "INC0014144",
+          "INC0012673",
+          "INC9094466",
+          "INC0012484",
+          "INC9050944",
+          "INC9053249",
+          "INC9071805",
+          "INC9074599"
+        ],
+        "categories": {
+          "other": 2,
+          "policy_management": 20
+        },
+        "solution_types": {
+          "data_correction": 13
+        },
+        "components": {
+          "underwriting": 1,
+          "document": 2
+        },
+        "problems": [
+          {
+            "incident": "INC9068643",
+            "description": "QMM:New:466923X-Renew is Out Of Balance.",
+            "category": "other",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9088161",
+            "description": "Trying to get the renewal documents to generate and I cannot get into the policy",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": true,
+            "solution": "Solution: Updated occupancy id with the valid one which are present in rest of the Crime Risks",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC0013604",
+            "description": "I cannot generate the documents for the renewal 2/24/2026. I keep getting an err",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9025334",
+            "description": "QMM:New:275023V-Renewal is Out Of Balance.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "11-19-2025 10:13:32 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Renew is OOB\n\n \n\nRoot Cause Analysis (RCA): Premium mismatch between coverage level and line level of Auto lob\n\n \n\nSolution",
+            "has_solution": true,
+            "solution": "11-19-2025 10:13:32 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Renew is OOB\n\n \n\nRoot Cause Analysis (RCA): Premium mismatch between coverage level and line level of Auto lob\n\n \n\nSolution",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9020292",
+            "description": "This renewal referred to underwriting as an authority 10 due to the rule message",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): DC sends data to BAW for every change",
+            "has_solution": true,
+            "solution": "Solution: Not applicable, since the referral has already been removed from the policy by unselecting the IL7090 form and the renewal has been committed",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9042323",
+            "description": "Unable to issue renewal, getting error.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): Deleted location Id is tagged under 'LocationOtherInterest id' node , even 'LocationOtherInterest id' node is also deleted one",
+            "has_solution": true,
+            "solution": "Solution: replaced location id with the other correct ID present in xml under this transaction",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9089369",
+            "description": "QMM:New:3691295 - Renew is Out Of Balance",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "02-12-2026 02:46:01 AM - Anshuman Nayak (Work notes)\nDefect: SBWNW-13873#Category: Out of Balance#Sub-Category: Rating Issue#Pattern: Line vs Coverage premium misalignment\n\nIssue Reported by User: Ren",
+            "has_solution": true,
+            "solution": "However, it can not be corrected in the renewal as the premium should be coming through integration and it has not being done on renewal due to which coverage level premium is not calculating\nSolution",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC0014504",
+            "description": "Prod commercial lines job failed for the policy 4037779",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9068413",
+            "description": "Non-Renewal transaction removing schedule mod from policy",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):  Schedule mod is dropping off during Non-Renew which is causing schedule mod dropping in subsequent Final Audit transaction",
+            "has_solution": true,
+            "solution": "Solution: Updated dropped Schedule Mod coverage tags from previous transaction",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9089643",
+            "description": "confirm the BG2 net rate is calculating properly and pulling the right rates, an",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": true,
+            "solution": "Solution: Updating the CoreRiskPremium within the Risk Fragment XML and its associated tags to reflect the correct premium values",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9090620",
+            "description": "The agent reached out to us on the above renewal, and asked why the amounts show",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": true,
+            "solution": "Solution: Updating the CoreRiskPremium within the Risk Fragment XML and its associated tags to reflect the correct premium values",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9070845",
+            "description": "The property premiums are not adding up to the total property premium.  See atta",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nThe CoreRiskPremium is not calculating correctly, resulting in inaccurate values on the CPDS73 form",
+            "has_solution": true,
+            "solution": "Solution:\nThe CoreRiskPremium has been updated within the Risk Fragment XML and its associated tags to ensure accurate premium values",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9095377",
+            "description": "Liquor Liability and CG7164 premiums change on the non-renewal transaction.",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC0010027",
+            "description": "Payment declined due to insufficient balance on the credit card",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": true,
+            "solution": "Resolved as the Transaction was replayed from backend (Integrated Payment System)",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC0014144",
+            "description": "QMM:New:202709K-Renew is Out Of Balance.",
+            "category": "other",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC0012673",
+            "description": "I cannot generate the documents for the renewal 2/24/2026. I keep getting an err",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9094466",
+            "description": "Julie Barbados /  eDoc not received at the Service Center / 294483J -  - Renewal",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC0012484",
+            "description": "receiving error message when trying to issue the renewal.",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9050944",
+            "description": "Unable to access policy at all, getting system error.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "12-18-2025 06:56:58 AM - Anushka Kedar (Work notes)\nDefect: SBWNW-12785 and SBFF-163#Category: Controlling ID#Sub-Category: Defect#Pattern: XML Data Issues\n \nIssue Reported by User: Unable to open the",
+            "has_solution": true,
+            "solution": "Solution: Deleting extra duplicate all coverage container from XML and also deleting duplicate allcoverage fragment",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9053249",
+            "description": "The agency is questioning the renewal property premium VS expiring property prem",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): To test the premium discrepancy in the lower environment the renewal was initiated and issued manually, no tags were impacted, and no premium discrepancies were observed",
+            "has_solution": true,
+            "solution": "Solution: Update the TargetScheduleMod tag value to 1 to reinstate the Schedule Mod and ensure that all other rating factors are applied correctly in the premium calculation in the correction endorsem",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9071805",
+            "description": "Renewal initiation failed through batch processing.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "01-21-2026 11:22:49 AM - Vaibhav Saxena (Work notes)\nDefect :SBWNW-7152#Category: Defect#Sub-Category: Controlling ID#Pattern: XML Data Issues\nIssue Reported\nUnable to initiate the Renewal transaction",
+            "has_solution": true,
+            "solution": "Solution\nDeleted and inserted the coverages with deleted=1 in xml data",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9074599",
+            "description": "Renewal initiation failed through batch processing",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "01-27-2026 08:38:42 AM - Monika Mahakal (Work notes)\nDefect: Defect Requested#Category: Controlling ID#Sub-Category: Defect#Pattern: XML Data Issues\nIssue Reported by User: Unable to initiate renew du",
+            "has_solution": true,
+            "solution": "Solution: Please follow the steps below to resolve the issue:\n1",
+            "solution_type": "data_correction"
+          }
+        ]
+      },
+      "endorsement": {
+        "incident_count": 25,
+        "percentage": 25.0,
+        "incidents": [
+          "INC9089756",
+          "INC9022898",
+          "INC9042212",
+          "INC9065402",
+          "INC9068334",
+          "INC9070161",
+          "INC9024550",
+          "INC9040685",
+          "INC9042048",
+          "INC9047519",
+          "INC9092831",
+          "INC9024564",
+          "INC9042137",
+          "INC9043890",
+          "INC9094087",
+          "INC9026036",
+          "INC9025684",
+          "INC9049735",
+          "INC9070607",
+          "INC9070888",
+          "INC9026062",
+          "INC9027572",
+          "INC9028532",
+          "INC9028912",
+          "INC9050108"
+        ],
+        "categories": {
+          "policy_management": 23,
+          "other": 2
+        },
+        "solution_types": {
+          "data_correction": 19,
+          "workaround": 1,
+          "configuration_change": 1,
+          "user_training": 1
+        },
+        "components": {
+          "document": 1
+        },
+        "problems": [
+          {
+            "incident": "INC9089756",
+            "description": "Getting premium charge without making any changes",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "02-16-2026 10:27:12 AM - Monika Mahakal (Work notes)\nDefect: SBWNW-12795#Category: Defect#Sub-Category: Alignment#Pattern: Requirement Alignment\nIssue Reported by User: \nGetting premium charge without",
+            "has_solution": true,
+            "solution": "Solution:\nSuggested workaround to platformhelp -\nplease abort pending endorsements then initiate a correction endorsement effective 02/05/2026, using the reason code “Datafix DNP” and the description ",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9022898",
+            "description": "Property tab showing all buildings and having no drop down for additional buildi",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nN/A\nSolution:N/A \nNotes: Requestor has confirmed that the reported issue no longer persists",
+            "has_solution": true,
+            "solution": "Root Cause Analysis (RCA):\nN/A\nSolution:N/A \nNotes: Requestor has confirmed that the reported issue no longer persists",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9042212",
+            "description": "I am getting an agency commission error when trying to issue the endorsement.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "12-22-2025 06:07:34 AM - Anushka Kedar (Work notes)\nThe ticket could not be resolved due to insufficient details from the Agent",
+            "has_solution": true,
+            "solution": "12-22-2025 06:07:34 AM - Anushka Kedar (Work notes)\nThe ticket could not be resolved due to insufficient details from the Agent",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9065402",
+            "description": "Policy won't allow me to issue endorsement.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nInvalid relationship context on group Risk, id=\"rF78E716E232749559A888DD4443EC7F6\", missing or invalid foreign key\n\nThe specified building Id (b645C636B3A8B4578A55E23948B080",
+            "has_solution": true,
+            "solution": "Solution:\nSuggested below workaround steps to remove the corrupted IM & IMAAIS risks from UI",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9068334",
+            "description": "We had a request to amend the EMOD for the 24/25 term, final audit was removed t",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "84\nRoot Cause Analysis (RCA):\nThe EMOD field on the WC Product page was found to be un-editable, which did not match the expected value",
+            "has_solution": true,
+            "solution": "Solution:\nThe EMOD value was successfully updated to 0",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9070161",
+            "description": "Added Class Codes not calculating correctly on Final Audit Statement.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nThe premium for the newly added class codes is calculating as $1 because these codes were added on the last day of the policy term",
+            "has_solution": true,
+            "solution": "Solution: \nThere is a workaround to address this issue",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9024550",
+            "description": "Schedule mod is being removed from the audit",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "11-19-2025 01:04:16 AM - Vartika Sachan (Work notes)\nIssue Reported by User:\nSchedule mod is being removed from the audit\nRoot Cause Analysis (RCA):\nThe EndorseScheduleMod tag was missing in the prior",
+            "has_solution": true,
+            "solution": "Solution:\nThe EndorseScheduleMod tag was inserted and corrected in prior Cancel Pending, Cancel and Reinstate transaction to accurately reflect the schedule modifications",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9040685",
+            "description": "Schedule mod drops from endorsement adding merit mod.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nThe EndorseScheduleMod tag was present with value 1 which was incorrect in the prior Endorse transaction, which caused the schedule modification to drop during the initiatio",
+            "has_solution": true,
+            "solution": "Solution:\nThe existing EndorseScheduleMod tag was deleted which was showing value as 1 and inserted correct in prior Endorse transaction to accurately reflect the schedule modifications",
+            "solution_type": "workaround"
+          },
+          {
+            "incident": "INC9042048",
+            "description": "The property premium on the declarations does not add up to the total property p",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): \nThe CoreRiskPremium is not calculating correctly, resulting in inaccurate values on the CPDS73 form",
+            "has_solution": true,
+            "solution": "Solution: \nThe CoreRiskPremium has been updated within the Risk Fragment XML and its associated tags to ensure accurate premium values",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9047519",
+            "description": "Attempting to backdate address change to 7/5/25 - UW approved - Unable to issue ",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis:\nThe agency commission error is occurring because, during the OOS endorsement process, the system is incorrectly retrieving the agency code from the Information transaction and als",
+            "has_solution": true,
+            "solution": "Solution:\nUpdated agency to original one in Pending Endorsement, also updating <IsFailed> tag to 0",
+            "solution_type": "configuration_change"
+          },
+          {
+            "incident": "INC9092831",
+            "description": "Trying to go to policy pricing to issue endorsement and when I click on policy p",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "The root cause is that Builders Risk is being generated inside the Electronic Data Processing (EDP) risk, specifically for Location #6",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": "user_training"
+          },
+          {
+            "incident": "INC9024564",
+            "description": "Quoting a cancel/rewrite to add property lob back onto policy. Once in the rewri",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nDue to the tags <StartedInCPP> and <CurrentlyInCPP> are FALSE for the said Rewrite, it is not showing the LOB section on Policy LOB & Info page",
+            "has_solution": true,
+            "solution": "Solution:\nSet the value of the StartedInCPP and CurrentlyInCPP indicator to 1 in the XML data of the Rewrite transaction",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9042137",
+            "description": "RUSH-----I went in on the committed 11/21/2025 endorsement to verify a driver.  ",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): Due to unintended actions, the user accidentally deleted one of the drivers, and it was removed from the system",
+            "has_solution": true,
+            "solution": "Solution: Deleted the current driver node that was marked as deleted=1, and inserting it again from the previous transaction where it was active",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9043890",
+            "description": "Working an endorsement to delete/add property and locations but noticed a premiu",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nRoot cause seems to be fields triggered by expanded indicators when landing on the Property screen",
+            "has_solution": true,
+            "solution": "Solution:\nUser performed the workaround that was suggested post that contractor equipment got deleted as CP7181 was added",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9094087",
+            "description": "I submitted a ticket once for this already-RITM0019991 and it was closed out whe",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nForm CA7047 is no longer applicable under the current system setup",
+            "has_solution": true,
+            "solution": "Solution / Current Behavior:\nThe system is functioning correctly according to the new implementation and enhancement",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9026036",
+            "description": "Agent is requesting that the transit catastrophe limit be changed to 80,000 but ",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): \nThe catastrophe limit is determined by the “TransitInput",
+            "has_solution": true,
+            "solution": "Solution: update TransitInput",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9025684",
+            "description": "Agent requesting specific values for the weigh of Vehicles 15-17. Integration is",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): The integration was returning a weight of 0 for vehicles 15 and 16, and 52,000 for vehicle 17",
+            "has_solution": true,
+            "solution": "Solution: Inserting the VIN to the Risk fragment for vehicles 16 and 17, as the VIN in the decs is retrieved from RiskVehicleInput",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9049735",
+            "description": "Unable to issue endorsement. Getting error when attempting to issue. See attache",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): The error arises because the user is deleting the primary location in the reported endorsement",
+            "has_solution": true,
+            "solution": "Solution: To resolve the issue, the user should first remove all risks associated with the primary location across all Lines of Business and then delete the building",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9070607",
+            "description": "QMM:New:115002R-CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+            "category": "other",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": true,
+            "solution": "Solution: Updating the onset tag with correct value to validate onset minus offset equals to change\nTask: Azure-128357\n\n01-16-2026 05:14:55 AM - Gyanjee Ojha (Work notes)\n1/16 - Started the analysis",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9070888",
+            "description": "Exposure on audit is incorrect",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):The incorrect exposure display is occurring due to a previous audit on this policy that was processed as an Estimated Audit",
+            "has_solution": true,
+            "solution": "Solution: Since this is purely a display issue, and the system is already using the correct exposure for premium calculation, no functional impact is present",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9026062",
+            "description": "I could make all the changes on the policy, but when attempting to go to the pol",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "\"\nRoot Cause Analysis (RCA):\nWhen adding a new location with IM AAIS risk, the system throws a page break error on the Policy Pricing screen",
+            "has_solution": true,
+            "solution": "Solution: Please follow the below workaround\n1",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9027572",
+            "description": "An endorsement was processed on 8/8/25, but the dec page never downloaded. I wen",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nThe referenced building exists only in the XML data with deleted attribute =1 and is not found in any fragment or prior transaction",
+            "has_solution": true,
+            "solution": "Solution: Remove the building node from the XML data, as no other instances of this building are present in the policy",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9028532",
+            "description": "For policy 006048Y - The change premium does not equal the new premium for the e",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "11-27-2025 05:50:32 AM - Jash Thomas (Work notes)\nIssue Reported by User:\nAfter applying credits, it did not return the premium rather changed the prior premium\nRoot Cause Analysis (RCA):\nIn the previ",
+            "has_solution": true,
+            "solution": "Solution:\nUpdated the prior and prior term and accordingly correct the change premium for coverage level, line level and policy level",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9028912",
+            "description": "QMM:New:5396234 - CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+            "category": "other",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": true,
+            "solution": "Solution: Updating the onset tag for the affected coverage ManualPremium",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9050108",
+            "description": "Receiving Page Break when attempting to navigate to Policy Pricing and when atte",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): The incomplete information displayed on Express was caused by a technical glitch with the Party Service yesterday between 1:00 and 3:00 p",
+            "has_solution": true,
+            "solution": "Solution: The issue has been resolved automatically once glitch was resolved",
+            "solution_type": "data_correction"
+          }
+        ]
+      },
+      "inquiry_servicing": {
+        "incident_count": 4,
+        "percentage": 4.0,
+        "incidents": [
+          "INC9023867",
+          "INC9088331",
+          "INC9047122",
+          "INC9027120"
+        ],
+        "categories": {
+          "policy_management": 4
+        },
+        "solution_types": {
+          "data_correction": 3,
+          "workaround": 1
+        },
+        "components": {
+          "document": 2
+        },
+        "problems": [
+          {
+            "incident": "INC9023867",
+            "description": "I am getting a rating message, and to clear that I 've followed the workaround b",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nNo rating message observed in the transaction and also confirmed with requester, sending ticket for closure",
+            "has_solution": true,
+            "solution": "Solution:\nNA\nAzure Data Fix Number:\nNA\nDefect:\nN/A\nCategory: Invalid\nSub-Category: Invalid\nPattern: Invalid",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9088331",
+            "description": "Agent received DEC amending Business Income limit on multiple locations, the DEC",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):BIEE coverage details (Cause of Loss, Limit of Insurance, Premium) are missing for location 2,8,11 due to space constraints in the form",
+            "has_solution": true,
+            "solution": "Solution:INC0091808-A new ticket has been raised and assigned to the ECM team",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9047122",
+            "description": "The BPP on the property at location 1 went from $581 to $1056.  Same info used. ",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "12-18-2025 12:29:04 AM - Jash Thomas (Work notes)\nIssue Reported by User:\nDrastic premium increase in BPP at Location #1\nRoot Cause Analysis (RCA):\nThe premium for BPP at Location #1 is high due to an",
+            "has_solution": true,
+            "solution": "Solution: \nPlease follow the below workaround to resolve the issue:\n1",
+            "solution_type": "workaround"
+          },
+          {
+            "incident": "INC9027120",
+            "description": "Schedule mod does not display correctly on Final Audit Statement.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nIn rating requirement 6",
+            "has_solution": true,
+            "solution": "Solution:\nMockup the Final Audit Statement document once policy is committed to siplay the correct value as 1",
+            "solution_type": "data_correction"
+          }
+        ]
+      },
+      "document_generation": {
+        "incident_count": 2,
+        "percentage": 2.0,
+        "incidents": [
+          "INC9046258",
+          "INC9023096"
+        ],
+        "categories": {
+          "policy_management": 2
+        },
+        "solution_types": {
+          "data_correction": 1
+        },
+        "components": {
+          "smartcomm": 1,
+          "underwriting": 1,
+          "document": 1
+        },
+        "problems": [
+          {
+            "incident": "INC9046258",
+            "description": "ECM is not loading emails that I am saving. It is happening on several policies,",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):SmartComm had a session with Lori and identified the issue:  \nThe policy number was entered incorrectly due to case sensitivity",
+            "has_solution": true,
+            "solution": "Solution:User corrected the policy number to uppercase `V`",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9023096",
+            "description": "This ticket is a copy ticket of IN-517706 from Easy vista..",
+            "category": "policy_management",
+            "has_root_cause": false,
+            "root_cause": "",
+            "has_solution": false,
+            "solution": "",
+            "solution_type": ""
+          }
+        ]
+      },
+      "billing_cycle": {
+        "incident_count": 3,
+        "percentage": 3.0,
+        "incidents": [
+          "INC9088841",
+          "INC9070337",
+          "INC9052261"
+        ],
+        "categories": {
+          "policy_management": 3
+        },
+        "solution_types": {
+          "data_correction": 2
+        },
+        "components": {},
+        "problems": [
+          {
+            "incident": "INC9088841",
+            "description": "I am trying to pull the property rating worksheet to process a Premium Breakdown",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA): It is getting timeout while extracting property rating worksheet due to high number of Locations, buildings and risks",
+            "has_solution": true,
+            "solution": "Solution: Manually trigger rating worksheet through script in UAT",
+            "solution_type": "data_correction"
+          },
+          {
+            "incident": "INC9070337",
+            "description": "Class code premiums do not calculate on the Final Audit Statement.",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nThe issue occurs because the final audit is still in a pending state",
+            "has_solution": true,
+            "solution": "Solution:  \nThe system is functioning as intended",
+            "solution_type": ""
+          },
+          {
+            "incident": "INC9052261",
+            "description": "For policy 8911976 - the reinstatement effective 12/10/2025 was processed twice ",
+            "category": "policy_management",
+            "has_root_cause": true,
+            "root_cause": "Root Cause Analysis (RCA):\nA system glitch allowed two reinstatement transactions to occur simultaneously: one by user action and the other by an automated batch process",
+            "has_solution": true,
+            "solution": "Solution:\nAfter performing the cancellation transaction, we will reposition the transaction node to the correct sequence, placing it appropriately within the reinstatement transaction flow",
+            "solution_type": "data_correction"
+          }
+        ]
+      }
+    }
+  },
+  "all_incidents_detailed": [
+    {
+      "incident_number": "INC9064102",
+      "category": "policy_management",
+      "short_description": "working on a rush quote- uw is requesting the attached rates be used for loc 1 building 1. I've tried deleting/readding risks and the system won't update the ra",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "new_business",
+      "root_cause": "I've tried deleting/readding risks and the system won't update the rates\nRoot Cause Analysis:\nAs per Scott Meredith, \"The user is updating address and there are two buildings at the address, the syste",
+      "resolution": "Solution:\nInserting correct value of \"PrometrixId\"  as per Prometrix Report",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9066088",
+      "category": "policy_management",
+      "short_description": "Premium and Premium Written not the same on audit transaction",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "cancellation",
+      "root_cause": "01-14-2026 09:45:57 AM - Jash Thomas (Work notes)\nDefect: SBWNW-6509#Category: Rating#Sub-Category: Defect#Pattern: Requirement Alignment\n\nIssue Reported by User:\nPremium and Premium Written not the s",
+      "resolution": "Solution:\nSeveral data fixes were attempted to align the premium values; however, the changes did not persist and reverted upon revisiting the pricing page",
+      "solution_type": "code_fix"
+    },
+    {
+      "incident_number": "INC9066741",
+      "category": "other",
+      "short_description": "QMM:New:466923X-Session id is Null.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "- Nivedita\n\n01-13-2026 01:08:51 AM - Gyanjee Ojha (Work notes)\nDefect: SBFF-158/ SBWNM-13904\n#Category: Shred Error\n#Sub-Category: XML field length\n#Pattern: XML Data Issues\n\nIssue: Session id is NULL",
+      "resolution": "The desired length is 80\nSolution: Updating the field with the correct value\nTask: Azure-128011\n\n01-12-2026 06:54:46 AM - Gyanjee Ojha (Work notes)\n1/12 - Started the analysis",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9067869",
+      "category": "policy_management",
+      "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "data_interface",
+      "root_cause": "Root Cause Analysis (RCA):Due to the size limit is exceeded to 43000000 downloads are not sent through batch process",
+      "resolution": "Solution: Related DCOD has been raised CS2255377,received the session xml's and sent them package to Download team",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9068643",
+      "category": "other",
+      "short_description": "QMM:New:466923X-Renew is Out Of Balance.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC0013485",
+      "category": "policy_management",
+      "short_description": "BAW - issues with emails being sent through CL processing",
+      "state": "8",
+      "priority": "5",
+      "business_phase": "new_business",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9088161",
+      "category": "policy_management",
+      "short_description": "Trying to get the renewal documents to generate and I cannot get into the policy pricing screen",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "Solution: Updated occupancy id with the valid one which are present in rest of the Crime Risks",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9089756",
+      "category": "policy_management",
+      "short_description": "Getting premium charge without making any changes",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "02-16-2026 10:27:12 AM - Monika Mahakal (Work notes)\nDefect: SBWNW-12795#Category: Defect#Sub-Category: Alignment#Pattern: Requirement Alignment\nIssue Reported by User: \nGetting premium charge without",
+      "resolution": "Solution:\nSuggested workaround to platformhelp -\nplease abort pending endorsements then initiate a correction endorsement effective 02/05/2026, using the reason code “Datafix DNP” and the description ",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9090784",
+      "category": "policy_management",
+      "short_description": "444435R  This policy went pending cancellation and DNOC was sent on 1/16/2026 with a cancel effective date of 2/5/2026. Payment has not been received and policy",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "cancellation",
+      "root_cause": "Payment has not been received and policy\nRoot Cause Analysis (RCA):\nThis policy went pending cancellation and DNOC was sent on 1/16/2026 with a cancel effective date of 2/5/2026",
+      "resolution": "Solution:\nCancelling the policy from backend with the reason code of non-payment of premium as requested",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9093089",
+      "category": "policy_management",
+      "short_description": "Receiving error: \"Agency commission service is currently down.\"",
+      "state": "7",
+      "priority": "3",
+      "business_phase": "other_phase",
+      "root_cause": "Hence putting this ticket on hold\n\n02-13-2026 02:16:47 PM - Ryan Malone (Work notes)\nEscalated to P3\nReason: New Business",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC0013604",
+      "category": "policy_management",
+      "short_description": "I cannot generate the documents for the renewal 2/24/2026. I keep getting an error when I hit generate documents since they did not print.",
+      "state": "8",
+      "priority": "5",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC0013990",
+      "category": "other",
+      "short_description": "QMM:Old:238587V - PRIOR SESSIONS SENT TO MONTH END, MISSING IN WF_SHRED_QUEUE",
+      "state": "8",
+      "priority": "5",
+      "business_phase": "other_phase",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9021295",
+      "category": "policy_management",
+      "short_description": "Agency Commission Error on Pricing screen - endt won't issue.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "RCA: The agency commission error is occurring because, during the OOS endorsement process, the system is incorrectly retrieving the agency code from the Reissue transaction and also setting the <IsFai",
+      "resolution": "Solution:  Updated agency to original one in Pending Endorsement, also updating <IsFailed> tag to 0",
+      "solution_type": "configuration_change"
+    },
+    {
+      "incident_number": "INC9022063",
+      "category": "policy_management",
+      "short_description": "QMM:New:488431F - Duplicate quote id for same policy number",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "new_business",
+      "root_cause": "Root Cause Analysis (RCA):\nThe policy was in Withheld status, and two quotes were created for the same policy",
+      "resolution": "Solution: \nThe Withheld policy record was updated with withheld = 0 and the corresponding history entry was marked as deleted (deleted = 1)",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9022898",
+      "category": "policy_management",
+      "short_description": "Property tab showing all buildings and having no drop down for additional buildings",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA):\nN/A\nSolution:N/A \nNotes: Requestor has confirmed that the reported issue no longer persists",
+      "resolution": "Root Cause Analysis (RCA):\nN/A\nSolution:N/A \nNotes: Requestor has confirmed that the reported issue no longer persists",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9023867",
+      "category": "policy_management",
+      "short_description": "I am getting a rating message, and to clear that I 've followed the workaround but unable to clear that as the field is still showing greyed out. Please review ",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "inquiry_servicing",
+      "root_cause": "Root Cause Analysis (RCA):\nNo rating message observed in the transaction and also confirmed with requester, sending ticket for closure",
+      "resolution": "Solution:\nNA\nAzure Data Fix Number:\nNA\nDefect:\nN/A\nCategory: Invalid\nSub-Category: Invalid\nPattern: Invalid",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9025334",
+      "category": "policy_management",
+      "short_description": "QMM:New:275023V-Renewal is Out Of Balance.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "11-19-2025 10:13:32 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Renew is OOB\n\n \n\nRoot Cause Analysis (RCA): Premium mismatch between coverage level and line level of Auto lob\n\n \n\nSolution",
+      "resolution": "11-19-2025 10:13:32 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Renew is OOB\n\n \n\nRoot Cause Analysis (RCA): Premium mismatch between coverage level and line level of Auto lob\n\n \n\nSolution",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9041538",
+      "category": "other",
+      "short_description": "QMM:New:141424T  - Out of Balance",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "12-11-2025 12:42:18 AM - Vartika Sachan (Work notes)\nIssue Reported by User:\nEndorse is OOB\nRoot Cause Analysis (RCA):\nIn coverages charge was not calculated correctly and also incorrect change on XML",
+      "resolution": "12-11-2025 12:42:18 AM - Vartika Sachan (Work notes)\nIssue Reported by User:\nEndorse is OOB\nRoot Cause Analysis (RCA):\nIn coverages charge was not calculated correctly and also incorrect change on XML",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9042212",
+      "category": "policy_management",
+      "short_description": "I am getting an agency commission error when trying to issue the endorsement.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "12-22-2025 06:07:34 AM - Anushka Kedar (Work notes)\nThe ticket could not be resolved due to insufficient details from the Agent",
+      "resolution": "12-22-2025 06:07:34 AM - Anushka Kedar (Work notes)\nThe ticket could not be resolved due to insufficient details from the Agent",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9043035",
+      "category": "other",
+      "short_description": "QMM:New:5168063  - Out of Balance",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "12-11-2025 10:16:47 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Renew is OOB\n\n \n\nRoot Cause Analysis (RCA): Incorrect offset amount on NonOwnedEmployee coverage\n\n \n\nSolution: History ID_3",
+      "resolution": "12-11-2025 10:16:47 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Renew is OOB\n\n \n\nRoot Cause Analysis (RCA): Incorrect offset amount on NonOwnedEmployee coverage\n\n \n\nSolution: History ID_3",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9047443",
+      "category": "policy_management",
+      "short_description": "I am receiving the attached error when attempting to cancel to then rewrite. External Request failed",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "cancellation",
+      "root_cause": "Root Cause Analysis (RCA): The following coverages: BREquipmentBreakdown, Terrorism, BusinessIncomeMonthlyLimitOfIndemnity, BG1, RatingGroupBG1Risk, FineArts, RatingGroupBG2Risk, TerrorismRisk, Busine",
+      "resolution": "Solution: Deleting these extra coverages from AllCoverageContainer \nAzure Data Fix Number: 125103",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9065402",
+      "category": "policy_management",
+      "short_description": "Policy won't allow me to issue endorsement.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA):\nInvalid relationship context on group Risk, id=\"rF78E716E232749559A888DD4443EC7F6\", missing or invalid foreign key\n\nThe specified building Id (b645C636B3A8B4578A55E23948B080",
+      "resolution": "Solution:\nSuggested below workaround steps to remove the corrupted IM & IMAAIS risks from UI",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9068334",
+      "category": "policy_management",
+      "short_description": "We had a request to amend the EMOD for the 24/25 term, final audit was removed to make the change and when going into the policy after the endorsement was start",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "84\nRoot Cause Analysis (RCA):\nThe EMOD field on the WC Product page was found to be un-editable, which did not match the expected value",
+      "resolution": "Solution:\nThe EMOD value was successfully updated to 0",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9069343",
+      "category": "policy_management",
+      "short_description": "I am encountering an error screen whenever I try and click on any page in this WCP starting at State Details and including every single one of the following tab",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "new_business",
+      "root_cause": "01-16-2026 11:56:04 AM - Jash Thomas (Work notes)\nDefect: SBFF-178#Category: Controlling ID#Sub-Category: Defect#Pattern: XML Data Issues\n\nIssue Reported by User: \nPage break on State details page, Lo",
+      "resolution": "Solution:  \nAbort and reinitiate the endorsement",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC0010066",
+      "category": "policy_management",
+      "short_description": "PAS-Application incorrectly generates MIB Requirement - Term Life - NJ",
+      "state": "7",
+      "priority": "5",
+      "business_phase": "new_business",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9087428",
+      "category": "policy_management",
+      "short_description": "127078V  This policy went pending cancellation and DNOC was sent on 1/5/2026 with a cancel effective date of 1/20/2026. Payment has not been received and policy",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "cancellation",
+      "root_cause": "Root Cause Analysis (RCA):\nDeleted buildings was tagged to 9 IM LOB risks and their coverages remained, resulting in unexpected token error with missing or invalid references",
+      "resolution": "Solution:\nHard-deleted these 9 risks from History XML, Risk Fragment, and coverages in all coverage containers where these risks had references",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9088331",
+      "category": "policy_management",
+      "short_description": "Agent received DEC amending Business Income limit on multiple locations, the DEC page cuts off the limit on location 2, 8, and 11.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "inquiry_servicing",
+      "root_cause": "Root Cause Analysis (RCA):BIEE coverage details (Cause of Loss, Limit of Insurance, Premium) are missing for location 2,8,11 due to space constraints in the form",
+      "resolution": "Solution:INC0091808-A new ticket has been raised and assigned to the ECM team",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9090001",
+      "category": "policy_management",
+      "short_description": "Server Error in '/Policy' Application.Runtime ErrorDescription: An application error occurred on the server. The current custom error settings for this appl",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "new_business",
+      "root_cause": "Root Cause Analysis (RCA):\nThe error occurred due to a misconfiguration in the new load balancer node",
+      "resolution": "Solution:\nWe have validated all three applications and confirmed that they are currently operational",
+      "solution_type": "configuration_change"
+    },
+    {
+      "incident_number": "INC9091388",
+      "category": "policy_management",
+      "short_description": "QMM:New:480342X - Session Id is NULL",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "02-17-2026 02:26:58 AM - Gyanjee Ojha (Work notes)\nDefect: SBFF-158/ SBWNW-13904#Category: Shred Error#Sub-Category: XML field length#Pattern: XML Data Issues\nIssue: Session id is NULL due to data tru",
+      "resolution": "The desired length is 80\nSolution: Updating the field with the correct value\n\nTask: Azure-130624\n\n02-12-2026 01:38:50 AM - Gyanjee Ojha (Work notes)\n2/12 - Started the analysis",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9020292",
+      "category": "policy_management",
+      "short_description": "This renewal referred to underwriting as an authority 10 due to the rule message: REF1119 Removal of IL7090 requires Authority 10 approval (I uploaded this as a",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "Root Cause Analysis (RCA): DC sends data to BAW for every change",
+      "resolution": "Solution: Not applicable, since the referral has already been removed from the policy by unselecting the IL7090 form and the renewal has been committed",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9021577",
+      "category": "policy_management",
+      "short_description": "Good afternoon. We received an edoc download for 389498G – which is in a code for ‘Connect Insurance Group’. This is not a service center code. Can you look int",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "Root Cause Analysis (RCA):\n-The document in question was manually entered into ECM with an incorrect agency code in the metadata",
+      "resolution": "Solution:\n-The agency code in ECM metadata was updated to reflect the correct value",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9023404",
+      "category": "policy_management",
+      "short_description": "Agent states there are \"duplicate forms\" Please see request - \"Delete Duplicate forms, page 122 & 124:Unscheduled Building Property Tenant's Policy for Locati",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "Root Cause Analysis (RCA):\nThe duplication was caused by a manual error during the document assembly process, leading to the same form being inserted twice",
+      "resolution": "Solution:\nRegina Funk removed the duplicate pages and submitted the corrected document via the Help Hub",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9042023",
+      "category": "policy_management",
+      "short_description": "QMM:New:362228H-Multiple issues on the policy.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "- Nivedita\n\n12-09-2025 09:58:42 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Multiple issues on the policy\n\n \n\nRoot Cause Analysis (RCA): Missing class value of HiredAndBorrowedUMBI covera",
+      "resolution": "- Nivedita\n\n12-09-2025 09:58:42 PM - Anshuman Nayak (Work notes)\nIssue Reported by User: Multiple issues on the policy\n\n \n\nRoot Cause Analysis (RCA): Missing class value of HiredAndBorrowedUMBI covera",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9042323",
+      "category": "policy_management",
+      "short_description": "Unable to issue renewal, getting error.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "Root Cause Analysis (RCA): Deleted location Id is tagged under 'LocationOtherInterest id' node , even 'LocationOtherInterest id' node is also deleted one",
+      "resolution": "Solution: replaced location id with the other correct ID present in xml under this transaction",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9046258",
+      "category": "policy_management",
+      "short_description": "ECM is not loading emails that I am saving. It is happening on several policies, this one and 275066V",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "document_generation",
+      "root_cause": "Root Cause Analysis (RCA):SmartComm had a session with Lori and identified the issue:  \nThe policy number was entered incorrectly due to case sensitivity",
+      "resolution": "Solution:User corrected the policy number to uppercase `V`",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9064475",
+      "category": "policy_management",
+      "short_description": "Audit non-compliance charge incorrect.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "01-09-2026 12:03:44 PM - Jash Thomas (Work notes)\nDefect: Defect Requested#Category: Rating#Sub-Category: Defect#Pattern: Requirement Alignment\n\nIssue Reported by User: \nIndiana estimated audit not ap",
+      "resolution": "Solution:  \nSetting the Unit of exposure final as blank so that it may re run the default field\nAzure Data Fix Number:\n127912",
+      "solution_type": "configuration_change"
+    },
+    {
+      "incident_number": "INC9065798",
+      "category": "other",
+      "short_description": "QMM:New:459175Q-MISSING CLASS",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "- Nivedita\n\n01-11-2026 10:37:17 PM - Anshuman Nayak (Work notes)\nDefect: SBFF-182#Category: SessionError#Sub-Category: Missing Class/Stat Codes/ECT#Pattern: XML Data Issues\n\n \n\nIssue Reported by User:",
+      "resolution": "- Nivedita\n\n01-11-2026 10:37:17 PM - Anshuman Nayak (Work notes)\nDefect: SBFF-182#Category: SessionError#Sub-Category: Missing Class/Stat Codes/ECT#Pattern: XML Data Issues\n\n \n\nIssue Reported by User:",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9066371",
+      "category": "policy_management",
+      "short_description": "system error on property tab",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "Root Cause Analysis:\nIncorrect key was getting picked up in one of the risks of Type 'Special Class' under dropdown 'Item Description' in property LOB",
+      "resolution": "Solution:\nCorrected to a valid key from Table in the risk fragment, only present in Fragment xml",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9067637",
+      "category": "policy_management",
+      "short_description": "When the quote is referred, it is showing to contact Dani Oglesby, and the BAW task is going to Dani Oglesby instead of me. Eastern Carolina (32-0040) is my age",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "new_business",
+      "root_cause": "Root Cause Analysis (RCA): In this policy, incorrect data was stored in the Production DC_PLT_UserEntityMemberships table, which resulted in the Agent UW Assignment request returning the wrong value, ",
+      "resolution": "We also confirmed with Seneca that this service cannot be invoked again for the same policy once it has already been executed\nSolution: Since this is a new business transaction, the only available opt",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9070161",
+      "category": "policy_management",
+      "short_description": "Added Class Codes not calculating correctly on Final Audit Statement.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA):\nThe premium for the newly added class codes is calculating as $1 because these codes were added on the last day of the policy term",
+      "resolution": "Solution: \nThere is a workaround to address this issue",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9089369",
+      "category": "policy_management",
+      "short_description": "QMM:New:3691295 - Renew is Out Of Balance",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "02-12-2026 02:46:01 AM - Anshuman Nayak (Work notes)\nDefect: SBWNW-13873#Category: Out of Balance#Sub-Category: Rating Issue#Pattern: Line vs Coverage premium misalignment\n\nIssue Reported by User: Ren",
+      "resolution": "However, it can not be corrected in the renewal as the premium should be coming through integration and it has not being done on renewal due to which coverage level premium is not calculating\nSolution",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9090426",
+      "category": "policy_management",
+      "short_description": "QMM:New:126843K - DUPLCATE SEQUENCE AND INDEX",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "02-13-2026 12:40:30 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-186/SBWNW-13902#Category: Shred Error#Sub-Category: Duplicate Sequence/Index#Pattern: Sequence integrity (duplicate/missing)\n\n \n\nIssue",
+      "resolution": "02-13-2026 12:40:30 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-186/SBWNW-13902#Category: Shred Error#Sub-Category: Duplicate Sequence/Index#Pattern: Sequence integrity (duplicate/missing)\n\n \n\nIssue",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9092206",
+      "category": "policy_management",
+      "short_description": "This was a AOR re-write, however the effective date is wrong. When I go to transaction type, cancel, to correct it myself, I get an error message",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "cancellation",
+      "root_cause": "Root Cause Analysis (RCA):\nDeleted buildingI id (b76D8E66FEEB2491E8598D206764354BD) was tagged to 3 IM LOB risks and their coverages remained, resulting in unexpected token error with missing or inval",
+      "resolution": "Solution:\nHard-deleted these 3 risks from History XML, Risk Fragment, and coverages in all coverage containers where these risks had references",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC0012381",
+      "category": "other",
+      "short_description": "QMM:New:420400C-Cancel is Out Of Balance.",
+      "state": "8",
+      "priority": "5",
+      "business_phase": "cancellation",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC0014504",
+      "category": "policy_management",
+      "short_description": "Prod commercial lines job failed for the policy 4037779",
+      "state": "8",
+      "priority": "5",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9023096",
+      "category": "policy_management",
+      "short_description": "This ticket is a copy ticket of IN-517706 from Easy vista..",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "document_generation",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9024550",
+      "category": "policy_management",
+      "short_description": "Schedule mod is being removed from the audit",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "11-19-2025 01:04:16 AM - Vartika Sachan (Work notes)\nIssue Reported by User:\nSchedule mod is being removed from the audit\nRoot Cause Analysis (RCA):\nThe EndorseScheduleMod tag was missing in the prior",
+      "resolution": "Solution:\nThe EndorseScheduleMod tag was inserted and corrected in prior Cancel Pending, Cancel and Reinstate transaction to accurately reflect the schedule modifications",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9025493",
+      "category": "policy_management",
+      "short_description": "I sent the agent the quote and the premium printing on the dec page is not adding up correctly. Are we able to get this corrected? When adding the building prem",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "new_business",
+      "root_cause": "Root Cause Analysis (RCA): \nThe discrepancy occurs because the Earthquake coverage premium is not reflected in the premium calculation of Risks in Quote Proposal",
+      "resolution": "Solution: Users have been advised to refer to the rating worksheet for accurate premium verification based on the provided explanation",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9040685",
+      "category": "policy_management",
+      "short_description": "Schedule mod drops from endorsement adding merit mod.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA):\nThe EndorseScheduleMod tag was present with value 1 which was incorrect in the prior Endorse transaction, which caused the schedule modification to drop during the initiatio",
+      "resolution": "Solution:\nThe existing EndorseScheduleMod tag was deleted which was showing value as 1 and inserted correct in prior Endorse transaction to accurately reflect the schedule modifications",
+      "solution_type": "workaround"
+    },
+    {
+      "incident_number": "INC9042048",
+      "category": "policy_management",
+      "short_description": "The property premium on the declarations does not add up to the total property premium. It totals $2,678 instead of $5,122.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA): \nThe CoreRiskPremium is not calculating correctly, resulting in inaccurate values on the CPDS73 form",
+      "resolution": "Solution: \nThe CoreRiskPremium has been updated within the Risk Fragment XML and its associated tags to ensure accurate premium values",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9043678",
+      "category": "policy_management",
+      "short_description": "The renewal quote proposal isn't printing out correctly. It is showing the building on location 1 twice and two different limits. The individual property dec wh",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "new_business",
+      "root_cause": "Root Cause Analysis (RCA): Although the risks were deleted in the Rewrite transaction, they still display in the Quote Proposal because the XSLT file does not contain a condition to exclude risks flag",
+      "resolution": "Solution: Perform a hard delete of the risks and their associated coverages to ensure they are fully removed and no longer reflected in the Quote Proposal\nAzure Data Fix Number:\n124539",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9047519",
+      "category": "policy_management",
+      "short_description": "Attempting to backdate address change to 7/5/25 - UW approved - Unable to issue endorsement due to Agency Commission Error on pricing screen. Can you please ass",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis:\nThe agency commission error is occurring because, during the OOS endorsement process, the system is incorrectly retrieving the agency code from the Information transaction and als",
+      "resolution": "Solution:\nUpdated agency to original one in Pending Endorsement, also updating <IsFailed> tag to 0",
+      "solution_type": "configuration_change"
+    },
+    {
+      "incident_number": "INC9063675",
+      "category": "other",
+      "short_description": "QMM:New:053839Q-Final Audit is Out Of Balance. ",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "- Nivedita\n\n01-07-2026 10:36:37 PM - Anshuman Nayak (Work notes)\nDefect: SBWNW-7830#Category: Out of Balance#Sub-Category: N/A#Pattern: Miscellaneous\n\n \n\nIssue Reported by User: FinalAudit is OOB\n\n \n\n",
+      "resolution": "- Nivedita\n\n01-07-2026 10:36:37 PM - Anshuman Nayak (Work notes)\nDefect: SBWNW-7830#Category: Out of Balance#Sub-Category: N/A#Pattern: Miscellaneous\n\n \n\nIssue Reported by User: FinalAudit is OOB\n\n \n\n",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9065183",
+      "category": "policy_management",
+      "short_description": "Hi, Nadene – unfortunately, no. We received both of those downloads as both of those were generated while we were receiving policy download for the code.Whe",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "cancellation",
+      "root_cause": "Root Cause Analysis (RCA): 45-0068 agency code was not setup for some reason to receive CL download",
+      "resolution": "Solution: Manually reprocessing the downloads\nAzure Data Fix Number:128013",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9068413",
+      "category": "policy_management",
+      "short_description": "Non-Renewal transaction removing schedule mod from policy",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "Root Cause Analysis (RCA):  Schedule mod is dropping off during Non-Renew which is causing schedule mod dropping in subsequent Final Audit transaction",
+      "resolution": "Solution: Updated dropped Schedule Mod coverage tags from previous transaction",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9087867",
+      "category": "policy_management",
+      "short_description": "QMM:New:280788Y - Multiple issues on the policy",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "",
+      "resolution": "Stat codes are missing for Coverage BG1 and BG2\nSolution: Updating the stat codes in affected coverages",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9088841",
+      "category": "policy_management",
+      "short_description": "I am trying to pull the property rating worksheet to process a Premium Breakdown for the agent on the policy pricing screen, it will spin for 30 minutes then ge",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "billing_cycle",
+      "root_cause": "Root Cause Analysis (RCA): It is getting timeout while extracting property rating worksheet due to high number of Locations, buildings and risks",
+      "resolution": "Solution: Manually trigger rating worksheet through script in UAT",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9089643",
+      "category": "policy_management",
+      "short_description": "confirm the BG2 net rate is calculating properly and pulling the right rates, and showing BI duplicated, this was an automatic renewal",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "Solution: Updating the CoreRiskPremium within the Risk Fragment XML and its associated tags to reflect the correct premium values",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9090620",
+      "category": "policy_management",
+      "short_description": "The agent reached out to us on the above renewal, and asked why the amounts shown on the property dec page breakdown does not match/add up to the total shown on",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "Solution: Updating the CoreRiskPremium within the Risk Fragment XML and its associated tags to reflect the correct premium values",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9092001",
+      "category": "policy_management",
+      "short_description": "Policy 063344Q has been cancelled flat and is in the process of being rewritten.  The flat cancel did not return enough premium.  Since it is a flat cancel, the",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "cancellation",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9092831",
+      "category": "policy_management",
+      "short_description": "Trying to go to policy pricing to issue endorsement and when I click on policy pricing, I keep getting this error that I have attached.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "The root cause is that Builders Risk is being generated inside the Electronic Data Processing (EDP) risk, specifically for Location #6",
+      "resolution": "",
+      "solution_type": "user_training"
+    },
+    {
+      "incident_number": "INC9022584",
+      "category": "policy_management",
+      "short_description": "Commission is showing 0%.  Commission department states that it was overrode in Express.  The process is to check a box to override and it was not checked.  The",
+      "state": "7",
+      "priority": "3",
+      "business_phase": "other_phase",
+      "root_cause": "Root Cause Analysis (RCA): The Xml from the NB transaction shows the “AgencyCommissionSuccess” indicator set to ‘1’ and the “IsFailed” tag (for the error message) set to ‘0’, suggesting that there see",
+      "resolution": "Solution: Perform a Flat Cancel as Do not print on the NB transaction and then initiate Reissue transaction as Do not print",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9023267",
+      "category": "policy_management",
+      "short_description": "Wrong UW showing on AP",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "new_business",
+      "root_cause": "Root Cause Analysis (RCA): In this quote, the Agency UW assignment service was triggered for Correct Underwriter; however, the AP XML data contains producer details for Grace which is showing on Quote",
+      "resolution": "Solution:\nRequesting a jira card for now and it should be resolved through defect",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9024564",
+      "category": "policy_management",
+      "short_description": "Quoting a cancel/rewrite to add property lob back onto policy. Once in the rewrite there are no LOBs showing",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA):\nDue to the tags <StartedInCPP> and <CurrentlyInCPP> are FALSE for the said Rewrite, it is not showing the LOB section on Policy LOB & Info page",
+      "resolution": "Solution:\nSet the value of the StartedInCPP and CurrentlyInCPP indicator to 1 in the XML data of the Rewrite transaction",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9042137",
+      "category": "policy_management",
+      "short_description": "RUSH-----I went in on the committed 11/21/2025 endorsement to verify a driver.  Robert Beatty- he is an EXCLUDED driver.  By mistake I hit the Delete button i",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA): Due to unintended actions, the user accidentally deleted one of the drivers, and it was removed from the system",
+      "resolution": "Solution: Deleted the current driver node that was marked as deleted=1, and inserting it again from the previous transaction where it was active",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9043890",
+      "category": "policy_management",
+      "short_description": "Working an endorsement to delete/add property and locations but noticed a premium change to the IM AAIS and that it had been removed 11/06/25 (I did not remove ",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA):\nRoot cause seems to be fields triggered by expanded indicators when landing on the Property screen",
+      "resolution": "Solution:\nUser performed the workaround that was suggested post that contractor equipment got deleted as CP7181 was added",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9047122",
+      "category": "policy_management",
+      "short_description": "The BPP on the property at location 1 went from $581 to $1056.  Same info used.  Why is the rate up 82%?",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "inquiry_servicing",
+      "root_cause": "12-18-2025 12:29:04 AM - Jash Thomas (Work notes)\nIssue Reported by User:\nDrastic premium increase in BPP at Location #1\nRoot Cause Analysis (RCA):\nThe premium for BPP at Location #1 is high due to an",
+      "resolution": "Solution: \nPlease follow the below workaround to resolve the issue:\n1",
+      "solution_type": "workaround"
+    },
+    {
+      "incident_number": "INC9048498",
+      "category": "other",
+      "short_description": "QMM:New:1309718-Offset amount mismatch between current and prior session.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "Root Cause Analysis (RCA):  \nAs the policy is still under review with the ETL team, after our analysis we got to know that the error they reported is not accurate",
+      "resolution": "Solution: \nClosing out the ticket \nAzure Data Fix Number:  \nN/A\n\n12-17-2025 03:53:17 AM - Vartika Sachan (Work notes)\nAs the policy is still under review with the ETL team, after our analysis we got t",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9070337",
+      "category": "policy_management",
+      "short_description": "Class code premiums do not calculate on the Final Audit Statement.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "billing_cycle",
+      "root_cause": "Root Cause Analysis (RCA):\nThe issue occurs because the final audit is still in a pending state",
+      "resolution": "Solution:  \nThe system is functioning as intended",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9070845",
+      "category": "policy_management",
+      "short_description": "The property premiums are not adding up to the total property premium.  See attached.  Please advise.  Thank you.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "Root Cause Analysis (RCA):\nThe CoreRiskPremium is not calculating correctly, resulting in inaccurate values on the CPDS73 form",
+      "resolution": "Solution:\nThe CoreRiskPremium has been updated within the Risk Fragment XML and its associated tags to ensure accurate premium values",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9071566",
+      "category": "other",
+      "short_description": "QMM:New-111191T-OFFSET AMOUNT LESS THAN ZERO",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "01-20-2026 12:42:50 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-51\n\n#Category: Session Error\n\n#Sub-Category: Change/Onset/Offset rule mismatch\n\n#Pattern: Change/Onset/Offset validation failure\n\n \n\nI",
+      "resolution": "01-20-2026 12:42:50 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-51\n\n#Category: Session Error\n\n#Sub-Category: Change/Onset/Offset rule mismatch\n\n#Pattern: Change/Onset/Offset validation failure\n\n \n\nI",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9073193",
+      "category": "policy_management",
+      "short_description": "112684P  This policy went pending cancellation and DNOC was sent on 12/29/2025 with a cancel effective date of 01/14/2026. Payment has not been received and pol",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "cancellation",
+      "root_cause": "Root Cause Analysis (RCA):\nFor non-payment reason code policy is using current date +30 days logic due to which effective date is changing",
+      "resolution": "Solution:\nCancelling the policy from backend with the reason code of non-payment of premium as requested",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9094087",
+      "category": "policy_management",
+      "short_description": "I submitted a ticket once for this already-RITM0019991 and it was closed out when it shouldn't have been. 300k in limited pollution liability -ca7047-was added ",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA):\nForm CA7047 is no longer applicable under the current system setup",
+      "resolution": "Solution / Current Behavior:\nThe system is functioning correctly according to the new implementation and enhancement",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9095377",
+      "category": "policy_management",
+      "short_description": "Liquor Liability and CG7164 premiums change on the non-renewal transaction.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC0010027",
+      "category": "policy_management",
+      "short_description": "Payment declined due to insufficient balance on the credit card",
+      "state": "7",
+      "priority": "5",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "Resolved as the Transaction was replayed from backend (Integrated Payment System)",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9026036",
+      "category": "policy_management",
+      "short_description": "Agent is requesting that the transit catastrophe limit be changed to 80,000 but im getting the attached screen error that will only allow it to be between 0-2",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA): \nThe catastrophe limit is determined by the “TransitInput",
+      "resolution": "Solution: update TransitInput",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9027120",
+      "category": "policy_management",
+      "short_description": "Schedule mod does not display correctly on Final Audit Statement.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "inquiry_servicing",
+      "root_cause": "Root Cause Analysis (RCA):\nIn rating requirement 6",
+      "resolution": "Solution:\nMockup the Final Audit Statement document once policy is committed to siplay the correct value as 1",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9025684",
+      "category": "policy_management",
+      "short_description": "Agent requesting specific values for the weigh of Vehicles 15-17. Integration is either not pulling the weight or it is showing as 0 in the system/ different fr",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA): The integration was returning a weight of 0 for vehicles 15 and 16, and 52,000 for vehicle 17",
+      "resolution": "Solution: Inserting the VIN to the Risk fragment for vehicles 16 and 17, as the VIN in the decs is retrieved from RiskVehicleInput",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC0014144",
+      "category": "other",
+      "short_description": "QMM:New:202709K-Renew is Out Of Balance.",
+      "state": "8",
+      "priority": "5",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9049070",
+      "category": "policy_management",
+      "short_description": "Schedule mod drops from audit.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "12-17-2025 09:04:45 AM - Sreekeerthi Samala (Work notes)\nDefect:  SBWNW-12958#Category: Controlling ID#Sub-Category: Defect#Pattern:  XML Data Issues\n\nIssue Reported by User:Schedule mod dropping on e",
+      "resolution": "Solution:The EndorseScheduleMod tag was inserted and corrected in prior Renew, Cancel Pending, Cancel, Reinstate, Cancel & Reinstate transactions to accurately reflect the schedule modifications",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9049735",
+      "category": "policy_management",
+      "short_description": "Unable to issue endorsement. Getting error when attempting to issue. See attached.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA): The error arises because the user is deleting the primary location in the reported endorsement",
+      "resolution": "Solution: To resolve the issue, the user should first remove all risks associated with the primary location across all Lines of Business and then delete the building",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9051482",
+      "category": "policy_management",
+      "short_description": "FAS is showing estimated exposure instead of actual exposure.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "Root Cause Analysis (RCA):\nDuring policy processing, the system wrongly resets the audit value to the estimated premium",
+      "resolution": "As a result, it picks up the wrong value from a previous term and causes issues\nSolution:\nAs a temporary Fix, updating the Final Audit reason code to “Annual Audit” to ensure correct premium calculati",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9052261",
+      "category": "policy_management",
+      "short_description": "For policy 8911976 - the reinstatement effective 12/10/2025 was processed twice on the policy UI and policy XML. This is causing billing to have double the writ",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "billing_cycle",
+      "root_cause": "Root Cause Analysis (RCA):\nA system glitch allowed two reinstatement transactions to occur simultaneously: one by user action and the other by an automated batch process",
+      "resolution": "Solution:\nAfter performing the cancellation transaction, we will reposition the transaction node to the correct sequence, placing it appropriately within the reinstatement transaction flow",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9070607",
+      "category": "other",
+      "short_description": "QMM:New:115002R-CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "",
+      "resolution": "Solution: Updating the onset tag with correct value to validate onset minus offset equals to change\nTask: Azure-128357\n\n01-16-2026 05:14:55 AM - Gyanjee Ojha (Work notes)\n1/16 - Started the analysis",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9070888",
+      "category": "policy_management",
+      "short_description": "Exposure on audit is incorrect",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA):The incorrect exposure display is occurring due to a previous audit on this policy that was processed as an Estimated Audit",
+      "resolution": "Solution: Since this is purely a display issue, and the system is already using the correct exposure for premium calculation, no functional impact is present",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9073265",
+      "category": "policy_management",
+      "short_description": "In Agency Download, even after reprocessing the downloads are not reflected at download end due the size limit is exceeded to 43000000Will raise DCOD to send ",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "data_interface",
+      "root_cause": "Root Cause Analysis (RCA):Due to the size limit is exceeded to 43000000 downloads are not sent through batch process",
+      "resolution": "Solution: Related DCOD  CS2274949has been raised ,received the session xml's and sent them package to Download team",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC0012673",
+      "category": "policy_management",
+      "short_description": "I cannot generate the documents for the renewal 2/24/2026. I keep getting an error when I hit generate documents since they did not print.",
+      "state": "8",
+      "priority": "5",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9094466",
+      "category": "policy_management",
+      "short_description": "Julie Barbados /  eDoc not received at the Service Center / 294483J -  - Renewal Edoc Download Needed",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC0012484",
+      "category": "policy_management",
+      "short_description": "receiving error message when trying to issue the renewal.",
+      "state": "8",
+      "priority": "5",
+      "business_phase": "renewal",
+      "root_cause": "",
+      "resolution": "",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9026062",
+      "category": "policy_management",
+      "short_description": "I could make all the changes on the policy, but when attempting to go to the policy pricing page I get an error code. I restarted the endorsement, cleared my co",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "\"\nRoot Cause Analysis (RCA):\nWhen adding a new location with IM AAIS risk, the system throws a page break error on the Policy Pricing screen",
+      "resolution": "Solution: Please follow the below workaround\n1",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9027572",
+      "category": "policy_management",
+      "short_description": "An endorsement was processed on 8/8/25, but the dec page never downloaded. I went into duck creek and tried to hit generate documents on the policy pricing scre",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA):\nThe referenced building exists only in the XML data with deleted attribute =1 and is not found in any fragment or prior transaction",
+      "resolution": "Solution: Remove the building node from the XML data, as no other instances of this building are present in the policy",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9028532",
+      "category": "policy_management",
+      "short_description": "For policy 006048Y - The change premium does not equal the new premium for the endorsement transaction effective 11/1/2025 with history ID 3353861. The premium ",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "11-27-2025 05:50:32 AM - Jash Thomas (Work notes)\nIssue Reported by User:\nAfter applying credits, it did not return the premium rather changed the prior premium\nRoot Cause Analysis (RCA):\nIn the previ",
+      "resolution": "Solution:\nUpdated the prior and prior term and accordingly correct the change premium for coverage level, line level and policy level",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9028912",
+      "category": "other",
+      "short_description": "QMM:New:5396234 - CHANGE AMOUNT NOT EQUAL TO ONSET MINUS OFFSET",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "endorsement",
+      "root_cause": "",
+      "resolution": "Solution: Updating the onset tag for the affected coverage ManualPremium",
+      "solution_type": ""
+    },
+    {
+      "incident_number": "INC9050108",
+      "category": "policy_management",
+      "short_description": "Receiving Page Break when attempting to navigate to Policy Pricing and when attempting to add email under Applicant Information on Account tab.",
+      "state": "7",
+      "priority": "3",
+      "business_phase": "endorsement",
+      "root_cause": "Root Cause Analysis (RCA): The incomplete information displayed on Express was caused by a technical glitch with the Party Service yesterday between 1:00 and 3:00 p",
+      "resolution": "Solution: The issue has been resolved automatically once glitch was resolved",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9050944",
+      "category": "policy_management",
+      "short_description": "Unable to access policy at all, getting system error.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "12-18-2025 06:56:58 AM - Anushka Kedar (Work notes)\nDefect: SBWNW-12785 and SBFF-163#Category: Controlling ID#Sub-Category: Defect#Pattern: XML Data Issues\n \nIssue Reported by User: Unable to open the",
+      "resolution": "Solution: Deleting extra duplicate all coverage container from XML and also deleting duplicate allcoverage fragment",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9053249",
+      "category": "policy_management",
+      "short_description": "The agency is questioning the renewal property premium VS expiring property premium. The expiring shows $397 and the renewal is now showing $0 for property",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "Root Cause Analysis (RCA): To test the premium discrepancy in the lower environment the renewal was initiated and issued manually, no tags were impacted, and no premium discrepancies were observed",
+      "resolution": "Solution: Update the TargetScheduleMod tag value to 1 to reinstate the Schedule Mod and ensure that all other rating factors are applied correctly in the premium calculation in the correction endorsem",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9070902",
+      "category": "policy_management",
+      "short_description": "The agent is trying to get a quote proposal for the insured as the system indicates that the policy is bindable, but she's getting an error when trying to gener",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "new_business",
+      "root_cause": "01-30-2026 04:17:15 AM - Deepak Tiwari (Work notes)\nDefect: N/A#Category: Data Corruption#Sub-Category: Data Issue#Pattern: XML Data Issues\nIssue Reported by User: unable to create Quote proposal for ",
+      "resolution": "Solution: The quote data is corrupted, and the attempted workarounds did not resolve the issue",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9071805",
+      "category": "policy_management",
+      "short_description": "Renewal initiation failed through batch processing.",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "01-21-2026 11:22:49 AM - Vaibhav Saxena (Work notes)\nDefect :SBWNW-7152#Category: Defect#Sub-Category: Controlling ID#Pattern: XML Data Issues\nIssue Reported\nUnable to initiate the Renewal transaction",
+      "resolution": "Solution\nDeleted and inserted the coverages with deleted=1 in xml data",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9073361",
+      "category": "other",
+      "short_description": "QMM:New:469874D-Endorse is Out Of Balance",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "other_phase",
+      "root_cause": "01-24-2026 12:03:09 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-219\n\n#Category: Out of Balance\n\n#Sub-Category: Rating Issue\n\n#Pattern: Line vs Coverage premium misalignment\n\n \n\nIssue Reported by Use",
+      "resolution": "01-24-2026 12:03:09 AM - Anshuman Nayak (Work notes)\nDefect: SBFF-219\n\n#Category: Out of Balance\n\n#Sub-Category: Rating Issue\n\n#Pattern: Line vs Coverage premium misalignment\n\n \n\nIssue Reported by Use",
+      "solution_type": "data_correction"
+    },
+    {
+      "incident_number": "INC9074599",
+      "category": "policy_management",
+      "short_description": "Renewal initiation failed through batch processing",
+      "state": "7",
+      "priority": "4",
+      "business_phase": "renewal",
+      "root_cause": "01-27-2026 08:38:42 AM - Monika Mahakal (Work notes)\nDefect: Defect Requested#Category: Controlling ID#Sub-Category: Defect#Pattern: XML Data Issues\nIssue Reported by User: Unable to initiate renew du",
+      "resolution": "Solution: Please follow the steps below to resolve the issue:\n1",
+      "solution_type": "data_correction"
+    }
+  ]
+}

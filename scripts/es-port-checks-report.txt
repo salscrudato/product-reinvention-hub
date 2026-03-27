@@ -1,0 +1,57 @@
+﻿ES port checks report - 2025-12-25T23:23:37.0272622-06:00
+--- Listeners (9200,9300) ---
+
+
+LocalAddress LocalPort  State OwningProcess
+------------ ---------  ----- -------------
+::1               9300 Listen         27440
+::                9200 Listen         27440
+127.0.0.1         9300 Listen         27440
+
+
+
+--- Owning Processes (if any) ---
+
+
+   Id ProcessName Path                                       
+   -- ----------- ----                                       
+27440 java        C:\dev\elasticsearch-9.1.4\jdk\bin\java.exe
+
+
+
+--- Publish/Bound lines (last 40 matches) ---
+
+
+--- HTTP connectivity to publish IP (parsed from log) ---
+
+Found publish IP: 10.192.37.11:9200
+Test-NetConnection:
+
+
+ComputerName     : 10.192.37.11
+RemoteAddress    : 10.192.37.11
+RemotePort       : 9200
+InterfaceAlias   : Ethernet 2
+SourceAddress    : 10.192.37.11
+TcpTestSucceeded : True
+
+
+
+
+curl response (insecure):
+curl error: A parameter cannot be found that matches parameter name 'k'.
+--- Transport TCP check (127.0.0.1:9300) ---
+
+
+
+ComputerName     : 127.0.0.1
+RemoteAddress    : 127.0.0.1
+RemotePort       : 9300
+InterfaceAlias   : Loopback Pseudo-Interface 1
+SourceAddress    : 127.0.0.1
+TcpTestSucceeded : True
+
+
+
+
+Report written to: C:\dev\snowchat\scripts\es-port-checks-report.txt

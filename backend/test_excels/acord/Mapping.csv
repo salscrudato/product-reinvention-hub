@@ -1,0 +1,249 @@
+Field,ACORD Path,Repeating?,Meaning,Sample,Kind
+TXLifeRequest,/TXLife/TXLifeRequest,No,Overall ACORD Root Element,,element
+OLifE,/TXLife/TXLifeRequest/OLifE,No,"Per a single Application, this remains one element",,element
+@Version,/TXLife/TXLifeRequest/OLifE/@Version,No,,2.21.01,attribute
+Holding,/TXLife/TXLifeRequest/OLifE/Holding,Yes,Per every Application this Holding block repeats. All the other elements underneath this are considered single Life and Annuity policy related data. If there are more applications in one single ACORD request then this will repeat per each of those Applications and link the Elements underneath it through the Originating Object ID Attribute value to matchi this Holding's ID. Thus the remaining blocks under this are interlinked.,,element
+@DataRep,/TXLife/TXLifeRequest/OLifE/Holding/@DataRep,No,,ReadOnly,attribute
+AccountDesignation,/TXLife/TXLifeRequest/OLifE/Holding/AccountDesignation,No,Based  on the TC Value and Description seems Trust related info,Trust,element
+/TXLife/TXLifeRequest/OLifE/Holding/AccountDesignation/@tc,/TXLife/TXLifeRequest/OLifE/Holding/AccountDesignation/@tc,No,Based  on the TC Value and Description seems Trust related info,7,attribute
+Arrangement,/TXLife/TXLifeRequest/OLifE/Holding/Arrangement,No,This implies Scheduled Events or Transactions occurrenceo n the pol which can be Premiums or Withdrawals,,element
+ArrMode,/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/ArrMode,No,"Based on the TC Code for this ArrMode, this description changes and value is found in the Sample field but this relates to Scheduled evnets/transactions.",Quarterly; Monthly,element
+/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/ArrMode/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/ArrMode/@tc,No,"Based on the TC Code for this ArrMode, this description changes and value is found in the Sample field but this relates to Scheduled evnets/transactions.",4; 3,attribute
+ArrSource,/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/ArrSource,No,"As per the Arragnment Defentiion, this would mean different Scheduled event and can be payment or withdraawal and you will find related data underneath like Banking etc..",,element
+@BankingInfoID,/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/ArrSource/@BankingInfoID,No,this would represent Scheduled Event Payment related Bank Info block tying ID attribute value.,Holding_EFT,attribute
+ArrType,/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/ArrType,No,This implies the type of scheduled event / transaction based on the tc,Auto Payment/Bank Drafting,element
+/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/ArrType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/ArrType/@tc,No,,22,attribute
+DayOfMonth,/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/DayOfMonth,No,This is the day on which the scheduled event/transaction to take place,15; 0,element
+ModalAmt,/TXLife/TXLifeRequest/OLifE/Holding/Arrangement/ModalAmt,No,,1500; 500,element
+Banking,/TXLife/TXLifeRequest/OLifE/Holding/Banking,No,This block represents the Banking information of the Applicant for this Policy. You should use the ID attribute on this to tie this appropriately with the linked items like Arragement block in the same document,,element
+AccountNumber,/TXLife/TXLifeRequest/OLifE/Holding/Banking/AccountNumber,No,,11111111; 234567,element
+AcctHolderName,/TXLife/TXLifeRequest/OLifE/Holding/Banking/AcctHolderName,No,,Mr. Automation Testcase2; Ms. Automation Testcase1,element
+BankAcctType,/TXLife/TXLifeRequest/OLifE/Holding/Banking/BankAcctType,No,,Checking Account; Savings Account,element
+/TXLife/TXLifeRequest/OLifE/Holding/Banking/BankAcctType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Banking/BankAcctType/@tc,No,,2; 1,attribute
+BankName,/TXLife/TXLifeRequest/OLifE/Holding/Banking/BankName,No,,ACME Trust Bank; ACME Savings and Loan,element
+OLifEExtension,/TXLife/TXLifeRequest/OLifE/Holding/Banking/OLifEExtension,No,,,element
+@VendorCode,/TXLife/TXLifeRequest/OLifE/Holding/Banking/OLifEExtension/@VendorCode,No,,313,attribute
+BankPhone,/TXLife/TXLifeRequest/OLifE/Holding/Banking/OLifEExtension/BankPhone,No,,8888888888,element
+RoutingNum,/TXLife/TXLifeRequest/OLifE/Holding/Banking/RoutingNum,No,,123456789,element
+HoldingStatus,/TXLife/TXLifeRequest/OLifE/Holding/HoldingStatus,No,,Proposed; Active,element
+/TXLife/TXLifeRequest/OLifE/Holding/HoldingStatus/@tc,/TXLife/TXLifeRequest/OLifE/Holding/HoldingStatus/@tc,No,,1; 3,attribute
+HoldingTypeCode,/TXLife/TXLifeRequest/OLifE/Holding/HoldingTypeCode,No,,Policy; Banking,element
+/TXLife/TXLifeRequest/OLifE/Holding/HoldingTypeCode/@tc,/TXLife/TXLifeRequest/OLifE/Holding/HoldingTypeCode/@tc,No,,2; 7,attribute
+Investment,/TXLife/TXLifeRequest/OLifE/Holding/Investment,No,,,element
+OLifEExtension,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension,No,,,element
+@VendorCode,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/@VendorCode,No,,313,attribute
+SetUpExt,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt,No,,,element
+DCAFromMethodRule,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/DCAFromMethodRule,No,,Amount,element
+/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/DCAFromMethodRule/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/DCAFromMethodRule/@tc,No,,1,attribute
+DCAToMethodRule,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/DCAToMethodRule,No,,Percent,element
+/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/DCAToMethodRule/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/DCAToMethodRule/@tc,No,,2,attribute
+FinactivityType,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/FinactivityType,No,,Dollar Cost Average; Asset Rebalancing,element
+/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/FinactivityType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/FinactivityType/@tc,No,,18; 22,attribute
+Mode,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/Mode,No,,Annually; Quarterly,element
+/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/Mode/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/Mode/@tc,No,,1; 3,attribute
+StartDate,/TXLife/TXLifeRequest/OLifE/Holding/Investment/OLifEExtension/SetUpExt/StartDate,No,,2015-11-15; 2015-12-01,element
+SubAccount,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount,Yes,,,element
+AllocPercent,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/AllocPercent,No,,25; 12; 11,element
+AllocationAmt,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/AllocationAmt,No,,450,element
+FinancialActivity,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/FinancialActivity,No,,,element
+FinActivityType,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/FinancialActivity/FinActivityType,No,,Premium Payment; Asset Rebalancing; DCA Transfer From,element
+/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/FinancialActivity/FinActivityType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/FinancialActivity/FinActivityType/@tc,No,,18; 1; 374,attribute
+InvestType,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/InvestType,No,,Money Market Fund; Segregated Fund,element
+/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/InvestType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/InvestType/@tc,No,,19; 20,attribute
+ProductCode,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/ProductCode,No,,VALSC; VADIV; VADSC,element
+ProductFullName,/TXLife/TXLifeRequest/OLifE/Holding/Investment/SubAccount/ProductFullName,No,,Vanguard VIF High Yield Bond Portfolio; ING Clarion Global Real Estate Portfolio-Class I; MFS Utilities-Initial Class,element
+OLifEExtension,/TXLife/TXLifeRequest/OLifE/Holding/OLifEExtension,No,,,element
+Policy,/TXLife/TXLifeRequest/OLifE/Holding/Policy,No,,,element
+@BankHoldingID,/TXLife/TXLifeRequest/OLifE/Holding/Policy/@BankHoldingID,No,,Holding_EFT,attribute
+@CarrierPartyID,/TXLife/TXLifeRequest/OLifE/Holding/Policy/@CarrierPartyID,No,,Party_Carrier; Party_Carrier_ReplacedIns_2; Party_Carrier_ReplacedIns_1,attribute
+Annuity,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity,No,,,element
+InitDepositAmt,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/InitDepositAmt,No,,5000; 15000,element
+LockedInInd,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/LockedInInd,No,,FALSE,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/LockedInInd/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/LockedInInd/@tc,No,,0,attribute
+Payout,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout,No,,,element
+Participant,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant,Yes,,,element
+@PartyID,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/@PartyID,No,,Party_JointOwner; Party_PrimaryAnnuitant; Party_PrimaryBeneficiary_1,attribute
+BeneficiaryDesignation,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/BeneficiaryDesignation,No,,Named,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/BeneficiaryDesignation/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/BeneficiaryDesignation/@tc,No,,1,attribute
+BeneficiaryPercentDistribution,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/BeneficiaryPercentDistribution,No,,100; 50,element
+IrrevokableInd,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/IrrevokableInd,No,,FALSE,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/IrrevokableInd/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/IrrevokableInd/@tc,No,,0,attribute
+ParticipantRoleCode,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/ParticipantRoleCode,No,,Beneficiary; Primary Insured,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/ParticipantRoleCode/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Payout/Participant/ParticipantRoleCode/@tc,No,,7; 1,attribute
+RequestedMaturityAge,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/RequestedMaturityAge,No,,95,element
+RequestedMaturityDate,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/RequestedMaturityDate,No,,12/1/2016,element
+Rider,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider,Yes,,,element
+CovNumber,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/CovNumber,No,,001; 002,element
+CovOption,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/CovOption,No,,,element
+LivesType,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/CovOption/LivesType,No,,Unknown,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/CovOption/LivesType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/CovOption/LivesType/@tc,No,,0,attribute
+EffDate,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/EffDate,No,,9/30/2015,element
+Participant,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/Participant,No,,,element
+@PartyID,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/Participant/@PartyID,No,,Party_PrimaryAnnuitant,attribute
+ParticipantRoleCode,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/Participant/ParticipantRoleCode,No,,Primary Insured,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/Participant/ParticipantRoleCode/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/Participant/ParticipantRoleCode/@tc,No,,1,attribute
+RiderCode,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Annuity/Rider/RiderCode,No,,GDB; GLW,element
+ApplicationInfo,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo,No,,,element
+ApplicationJurisdiction,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/ApplicationJurisdiction,No,,LA; KS,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/ApplicationJurisdiction/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/ApplicationJurisdiction/@tc,No,,22; 20,attribute
+ApplicationType,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/ApplicationType,No,,New Application,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/ApplicationType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/ApplicationType/@tc,No,,1,attribute
+FormalAppInd,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/FormalAppInd,No,,TRUE,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/FormalAppInd/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/FormalAppInd/@tc,No,,1,attribute
+OLifEExtension,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/OLifEExtension,No,,,element
+ReplacementInd,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/ReplacementInd,No,,False; True,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/ReplacementInd/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/ReplacementInd/@tc,No,,1; 0,attribute
+SignatureInfo,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SignatureInfo,Yes,,,element
+@SignaturePartyID,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SignatureInfo/@SignaturePartyID,No,,Party_JointOwner; Party_PrimaryAnnuitant; Party_Owner,attribute
+SignatureCity,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SignatureInfo/SignatureCity,No,,New Orleans; Charlotte; Kansas City,element
+SignatureDate,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SignatureInfo/SignatureDate,No,,9/30/2015,element
+SignatureState,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SignatureInfo/SignatureState,No,,LA; NC; KS,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SignatureInfo/SignatureState/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SignatureInfo/SignatureState/@tc,No,,38; 22; 20,attribute
+SignedDate,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SignedDate,No,,9/30/2015,element
+SubmissionType,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SubmissionType,No,,Electronic,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SubmissionType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/SubmissionType/@tc,No,,2,attribute
+TrackingID,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ApplicationInfo/TrackingID,No,,d7758032-2b7a-4ca0-965f-46d7cccccd1c; 03d8e4d5-5b2f-4e88-bb13-ad98befdf4a2,element
+CarrierCode,/TXLife/TXLifeRequest/OLifE/Holding/Policy/CarrierCode,No,,AGL_LIFE_ASSURANCE_COMPANY; WESTERN_SOUTHERN_LIFE_ASSURANCE_COMPANY; TIA,element
+EffDate,/TXLife/TXLifeRequest/OLifE/Holding/Policy/EffDate,No,,9/30/2015,element
+FinancialActivity,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity,No,,,element
+FinActivityGrossAmt,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/FinActivityGrossAmt,No,,5000; 15000,element
+FinActivityType,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/FinActivityType,No,,Initial Premium,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/FinActivityType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/FinActivityType/@tc,No,,7,attribute
+Payment,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/Payment,No,,,element
+@BankHoldingID,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/Payment/@BankHoldingID,No,,Holding_EFT,attribute
+PaymentAmt,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/Payment/PaymentAmt,No,,5000; 15000,element
+PaymentForm,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/Payment/PaymentForm,No,,Check; Electronic Funds Transfer,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/Payment/PaymentForm/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/Payment/PaymentForm/@tc,No,,7; 6,attribute
+SourceOfFundsTC,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/Payment/SourceOfFundsTC,No,,Voluntary Cash,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/Payment/SourceOfFundsTC/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/FinancialActivity/Payment/SourceOfFundsTC/@tc,No,,1,attribute
+IssueDate,/TXLife/TXLifeRequest/OLifE/Holding/Policy/IssueDate,No,,1999-01-01; 2000-01-01; 2015-09-30,element
+Jurisdiction,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Jurisdiction,No,,LA; KS,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/Jurisdiction/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Jurisdiction/@tc,No,,22; 20,attribute
+Life,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Life,No,,,element
+FaceAmt,/TXLife/TXLifeRequest/OLifE/Holding/Policy/Life/FaceAmt,No,,125000; 250000,element
+LineOfBusiness,/TXLife/TXLifeRequest/OLifE/Holding/Policy/LineOfBusiness,No,,Annuity,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/LineOfBusiness/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/LineOfBusiness/@tc,No,,2,attribute
+MoneyTransferType,/TXLife/TXLifeRequest/OLifE/Holding/Policy/MoneyTransferType,No,,Ordinary/Non-Qualified,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/MoneyTransferType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/MoneyTransferType/@tc,No,,4,attribute
+OLifEExtension,/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension,No,,,element
+@VendorCode,/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/@VendorCode,No,,313,attribute
+Exchange1035,/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/Exchange1035,No,,External Replacement,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/Exchange1035/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/Exchange1035/@tc,No,,3,attribute
+ExemptInd,/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/ExemptInd,No,,FALSE,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/ExemptInd/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/ExemptInd/@tc,No,,0,attribute
+PaymentStatus,/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/PaymentStatus,No,,PP; PI,element
+SurrenderInd,/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/SurrenderInd,No,,TRUE,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/SurrenderInd/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/OLifEExtension/SurrenderInd/@tc,No,,1,attribute
+PlanName,/TXLife/TXLifeRequest/OLifE/Holding/Policy/PlanName,No,,Variable Annuity - Nonqualified,element
+PolNumber,/TXLife/TXLifeRequest/OLifE/Holding/Policy/PolNumber,No,,1234567; 98765432,element
+PolicyStatus,/TXLife/TXLifeRequest/OLifE/Holding/Policy/PolicyStatus,No,,Applied For,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/PolicyStatus/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/PolicyStatus/@tc,No,,21,attribute
+ProductCode,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ProductCode,No,,520,element
+ProductType,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ProductType,No,,Indexed Annuity; Immediate Annuity (SPIA); Variable Annuity,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/ProductType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/ProductType/@tc,No,,11; 10; 2147483647,attribute
+RequirementInfo,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo,Yes,,,element
+Attachment,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment,No,,,element
+AttachmentBasicType,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/AttachmentBasicType,No,,Image,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/AttachmentBasicType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/AttachmentBasicType/@tc,No,,2,attribute
+AttachmentType,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/AttachmentType,No,,Document,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/AttachmentType/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/AttachmentType/@tc,No,,1,attribute
+Description,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/Description,No,,Dollar Cost Avg. - Auto Rebalancing; IVA Application; Investment Profile,element
+MimeTypeTC,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/MimeTypeTC,No,,PDF,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/MimeTypeTC/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/MimeTypeTC/@tc,No,,17,attribute
+SignatureInfo,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/SignatureInfo,No,,,element
+SignatureOK,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/SignatureInfo/SignatureOK,No,,TRUE,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/SignatureInfo/SignatureOK/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/SignatureInfo/SignatureOK/@tc,No,,1,attribute
+TransferEncodingTypeTC,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/TransferEncodingTypeTC,No,,Base64,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/TransferEncodingTypeTC/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/Attachment/TransferEncodingTypeTC/@tc,No,,4,attribute
+FormNo,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/FormNo,No,,TCL-VA (DCA-AAR); F11467; TCL-VA3-APP-RP,element
+HORequirementRefID,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/HORequirementRefID,No,,TIVIQP; TBD; IGC,element
+ReqSubStatus,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/ReqSubStatus,No,,Completed without Issue,element
+/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/ReqSubStatus/@tc,/TXLife/TXLifeRequest/OLifE/Holding/Policy/RequirementInfo/ReqSubStatus/@tc,No,,6,attribute
+Party,/TXLife/TXLifeRequest/OLifE/Party,Yes,,,element
+Address,/TXLife/TXLifeRequest/OLifE/Party/Address,Yes,,,element
+AddressCountryTC,/TXLife/TXLifeRequest/OLifE/Party/Address/AddressCountryTC,No,,USA,element
+/TXLife/TXLifeRequest/OLifE/Party/Address/AddressCountryTC/@tc,/TXLife/TXLifeRequest/OLifE/Party/Address/AddressCountryTC/@tc,No,,1,attribute
+AddressStateTC,/TXLife/TXLifeRequest/OLifE/Party/Address/AddressStateTC,No,,LA; PA; OH,element
+/TXLife/TXLifeRequest/OLifE/Party/Address/AddressStateTC/@tc,/TXLife/TXLifeRequest/OLifE/Party/Address/AddressStateTC/@tc,No,,22; 41; 20,attribute
+AddressTypeCode,/TXLife/TXLifeRequest/OLifE/Party/Address/AddressTypeCode,No,,Residence; Mailing,element
+/TXLife/TXLifeRequest/OLifE/Party/Address/AddressTypeCode/@tc,/TXLife/TXLifeRequest/OLifE/Party/Address/AddressTypeCode/@tc,No,,17; 1,attribute
+City,/TXLife/TXLifeRequest/OLifE/Party/Address/City,No,,Anytown; PHILADELPHIA; New Orleans,element
+Line1,/TXLife/TXLifeRequest/OLifE/Party/Address/Line1,No,,400 BROADWAY; 1650 MARKET STREET  54TH FL; 111 Different Residential St.,element
+Zip,/TXLife/TXLifeRequest/OLifE/Party/Address/Zip,No,,44444; 19103; 33333,element
+Carrier,/TXLife/TXLifeRequest/OLifE/Party/Carrier,No,,,element
+CarrierCode,/TXLife/TXLifeRequest/OLifE/Party/Carrier/CarrierCode,No,,313,element
+EMailAddress,/TXLife/TXLifeRequest/OLifE/Party/EMailAddress,No,,,element
+AddrLine,/TXLife/TXLifeRequest/OLifE/Party/EMailAddress/AddrLine,No,,ajames@tiaa-cref.org; smishak@tiaa-cref.org,element
+FullName,/TXLife/TXLifeRequest/OLifE/Party/FullName,No,,Ms. Automation Testcase1; WESTERN SOUTHERN LIFE ASSURANCE COMPANY; Mr. Joint Owner,element
+GovtID,/TXLife/TXLifeRequest/OLifE/Party/GovtID,No,,656546546; 343242342; 897987987,element
+GovtIDTC,/TXLife/TXLifeRequest/OLifE/Party/GovtIDTC,No,,Social Security Number; Social Security Number US; TIN,element
+/TXLife/TXLifeRequest/OLifE/Party/GovtIDTC/@tc,/TXLife/TXLifeRequest/OLifE/Party/GovtIDTC/@tc,No,,2; 1,attribute
+Organization,/TXLife/TXLifeRequest/OLifE/Party/Organization,No,,,element
+EstabDate,/TXLife/TXLifeRequest/OLifE/Party/Organization/EstabDate,No,,2/20/2000,element
+IrrevokableInd,/TXLife/TXLifeRequest/OLifE/Party/Organization/IrrevokableInd,No,,TRUE,element
+/TXLife/TXLifeRequest/OLifE/Party/Organization/IrrevokableInd/@tc,/TXLife/TXLifeRequest/OLifE/Party/Organization/IrrevokableInd/@tc,No,,1,attribute
+OLifEExtension,/TXLife/TXLifeRequest/OLifE/Party/Organization/OLifEExtension,No,,,element
+@VendorCode,/TXLife/TXLifeRequest/OLifE/Party/Organization/OLifEExtension/@VendorCode,No,,313,attribute
+Grantor,/TXLife/TXLifeRequest/OLifE/Party/Organization/OLifEExtension/Grantor,No,,Test Grantor,element
+OrgForm,/TXLife/TXLifeRequest/OLifE/Party/Organization/OrgForm,No,,Trust,element
+/TXLife/TXLifeRequest/OLifE/Party/Organization/OrgForm/@tc,/TXLife/TXLifeRequest/OLifE/Party/Organization/OrgForm/@tc,No,,16,attribute
+PartyTypeCode,/TXLife/TXLifeRequest/OLifE/Party/PartyTypeCode,No,,Person; Organization,element
+/TXLife/TXLifeRequest/OLifE/Party/PartyTypeCode/@tc,/TXLife/TXLifeRequest/OLifE/Party/PartyTypeCode/@tc,No,,2; 1,attribute
+Person,/TXLife/TXLifeRequest/OLifE/Party/Person,No,,,element
+Age,/TXLife/TXLifeRequest/OLifE/Party/Person/Age,No,,65; 55; 40,element
+BirthDate,/TXLife/TXLifeRequest/OLifE/Party/Person/BirthDate,No,,1950-01-18; 2000-02-20; 1960-08-22,element
+Citizenship,/TXLife/TXLifeRequest/OLifE/Party/Person/Citizenship,No,,USA,element
+/TXLife/TXLifeRequest/OLifE/Party/Person/Citizenship/@tc,/TXLife/TXLifeRequest/OLifE/Party/Person/Citizenship/@tc,No,,1,attribute
+FirstName,/TXLife/TXLifeRequest/OLifE/Party/Person/FirstName,No,,STEPHANIE; Trust; Test,element
+Gender,/TXLife/TXLifeRequest/OLifE/Party/Person/Gender,No,,Female; Male,element
+/TXLife/TXLifeRequest/OLifE/Party/Person/Gender/@tc,/TXLife/TXLifeRequest/OLifE/Party/Person/Gender/@tc,No,,2; 1,attribute
+LastName,/TXLife/TXLifeRequest/OLifE/Party/Person/LastName,No,,Reviewer; Testcase1; Manager,element
+Prefix,/TXLife/TXLifeRequest/OLifE/Party/Person/Prefix,No,,Mr.; Ms.; Miss,element
+Phone,/TXLife/TXLifeRequest/OLifE/Party/Phone,No,,,element
+AreaCode,/TXLife/TXLifeRequest/OLifE/Party/Phone/AreaCode,No,,777; 344; 555,element
+DialNumber,/TXLife/TXLifeRequest/OLifE/Party/Phone/DialNumber,No,,2343424; 3423432; 5555555,element
+PhoneTypeCode,/TXLife/TXLifeRequest/OLifE/Party/Phone/PhoneTypeCode,No,,Business,element
+/TXLife/TXLifeRequest/OLifE/Party/Phone/PhoneTypeCode/@tc,/TXLife/TXLifeRequest/OLifE/Party/Phone/PhoneTypeCode/@tc,No,,2,attribute
+Producer,/TXLife/TXLifeRequest/OLifE/Party/Producer,No,,,element
+NIPRNumber,/TXLife/TXLifeRequest/OLifE/Party/Producer/NIPRNumber,No,,6735127,element
+ResidenceCountry,/TXLife/TXLifeRequest/OLifE/Party/ResidenceCountry,No,,USA,element
+/TXLife/TXLifeRequest/OLifE/Party/ResidenceCountry/@tc,/TXLife/TXLifeRequest/OLifE/Party/ResidenceCountry/@tc,No,,1,attribute
+ResidenceState,/TXLife/TXLifeRequest/OLifE/Party/ResidenceState,No,,LA; KS,element
+/TXLife/TXLifeRequest/OLifE/Party/ResidenceState/@tc,/TXLife/TXLifeRequest/OLifE/Party/ResidenceState/@tc,No,,22; 20,attribute
+Relation,/TXLife/TXLifeRequest/OLifE/Relation,Yes,,,element
+@OriginatingObjectID,/TXLife/TXLifeRequest/OLifE/Relation/@OriginatingObjectID,No,,Holding_ProposedPolicy; Party_PrimaryAnnuitant; Holding_ReplacedIns_2,attribute
+@RelatedObjectID,/TXLife/TXLifeRequest/OLifE/Relation/@RelatedObjectID,No,,Party_JointOwner; Holding_ProposedPolicy; Party_PrimaryAnnuitant,attribute
+BeneficiaryDesignation,/TXLife/TXLifeRequest/OLifE/Relation/BeneficiaryDesignation,No,,Named,element
+/TXLife/TXLifeRequest/OLifE/Relation/BeneficiaryDesignation/@tc,/TXLife/TXLifeRequest/OLifE/Relation/BeneficiaryDesignation/@tc,No,,1,attribute
+InterestPercent,/TXLife/TXLifeRequest/OLifE/Relation/InterestPercent,No,,100; 50,element
+IrrevokableInd,/TXLife/TXLifeRequest/OLifE/Relation/IrrevokableInd,No,,FALSE,element
+/TXLife/TXLifeRequest/OLifE/Relation/IrrevokableInd/@tc,/TXLife/TXLifeRequest/OLifE/Relation/IrrevokableInd/@tc,No,,0,attribute
+OriginatingObjectType,/TXLife/TXLifeRequest/OLifE/Relation/OriginatingObjectType,No,,Party; Holding,element
+/TXLife/TXLifeRequest/OLifE/Relation/OriginatingObjectType/@tc,/TXLife/TXLifeRequest/OLifE/Relation/OriginatingObjectType/@tc,No,,4; 6,attribute
+RelatedObjectType,/TXLife/TXLifeRequest/OLifE/Relation/RelatedObjectType,No,,Party; Holding,element
+/TXLife/TXLifeRequest/OLifE/Relation/RelatedObjectType/@tc,/TXLife/TXLifeRequest/OLifE/Relation/RelatedObjectType/@tc,No,,4; 6,attribute
+RelationRoleCode,/TXLife/TXLifeRequest/OLifE/Relation/RelationRoleCode,No,,Suitability and Compliance Reviewer; Child; Trustee,element
+/TXLife/TXLifeRequest/OLifE/Relation/RelationRoleCode/@tc,/TXLife/TXLifeRequest/OLifE/Relation/RelationRoleCode/@tc,No,,38; 64; 115,attribute
+SourceInfo,/TXLife/TXLifeRequest/OLifE/SourceInfo,No,,,element
+CreationDate,/TXLife/TXLifeRequest/OLifE/SourceInfo/CreationDate,No,,9/30/2015,element
+CreationTime,/TXLife/TXLifeRequest/OLifE/SourceInfo/CreationTime,No,,14:29:02; 14:16:58,element
+SourceInfoName,/TXLife/TXLifeRequest/OLifE/SourceInfo/SourceInfoName,No,,iPipeline,element
+TransExeDate,/TXLife/TXLifeRequest/TransExeDate,No,,9/30/2015,element
+TransExeTime,/TXLife/TXLifeRequest/TransExeTime,No,,14:29:02; 14:16:58,element
+TransMode,/TXLife/TXLifeRequest/TransMode,No,,Original,element
+/TXLife/TXLifeRequest/TransMode/@tc,/TXLife/TXLifeRequest/TransMode/@tc,No,,2,attribute
+TransRefGUID,/TXLife/TXLifeRequest/TransRefGUID,No,,d7758032-2b7a-4ca0-965f-46d7cccccd1c; 03d8e4d5-5b2f-4e88-bb13-ad98befdf4a2,element
+TransType,/TXLife/TXLifeRequest/TransType,No,,New Business Submission,element
+/TXLife/TXLifeRequest/TransType/@tc,/TXLife/TXLifeRequest/TransType/@tc,No,,103,attribute
+UserAuthRequest,/TXLife/UserAuthRequest,No,,,element
+UserDate,/TXLife/UserAuthRequest/UserDate,No,,9/30/2015,element
+UserLoginName,/TXLife/UserAuthRequest/UserLoginName,No,,ipipeline_igo_tiaa_cref_annuity,element
+UserPswd,/TXLife/UserAuthRequest/UserPswd,No,,,element
+CryptType,/TXLife/UserAuthRequest/UserPswd/CryptType,No,,NONE,element
+Pswd,/TXLife/UserAuthRequest/UserPswd/Pswd,No,,Z9rztkFjcJ4f7DYWoUem,element
+UserTime,/TXLife/UserAuthRequest/UserTime,No,,14:29:02; 14:16:58,element
+VendorApp,/TXLife/UserAuthRequest/VendorApp,No,,,element
+AppName,/TXLife/UserAuthRequest/VendorApp/AppName,No,,iGo Forms,element
+AppVer,/TXLife/UserAuthRequest/VendorApp/AppVer,No,,8.1,element
+VendorName,/TXLife/UserAuthRequest/VendorApp/VendorName,No,,iPipeline,element
+@VendorCode,/TXLife/UserAuthRequest/VendorApp/VendorName/@VendorCode,No,,220,attribute

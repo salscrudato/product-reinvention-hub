@@ -1,0 +1,22 @@
+﻿{
+    "timestamp":  "2025-11-13T09:06:39.2876679-06:00",
+    "persona":  "business_owner",
+    "realm":  "devpilot",
+    "keycloak_url":  "http://localhost:8080",
+    "client_id":  "devpilot-frontend",
+    "username":  "business.owner@example.com",
+    "roles":  [
+                  "offline_access",
+                  "default-roles-devpilot",
+                  "uma_authorization"
+              ],
+    "plan_intent":  "login_governance",
+    "jira_issue_key":  "IN-201",
+    "telemetry_window":  "14",
+    "frontend_env":  {
+                         "backend":  "http://localhost:5001",
+                         "realm":  "devpilot",
+                         "keycloak":  "http://localhost:8080",
+                         "client":  "devpilot-frontend"
+                     }
+}

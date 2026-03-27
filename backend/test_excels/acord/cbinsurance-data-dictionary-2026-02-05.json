@@ -1,0 +1,1911 @@
+{
+  "sourceSystem": "CBInsurance Life & Annuity Portal",
+  "version": "1.0.0",
+  "exportDate": "2026-02-05T20:05:19.044Z",
+  "totalFields": 125,
+  "fields": [
+    {
+      "fieldName": "Application ID",
+      "jsonPath": "application.id",
+      "dataType": "string",
+      "description": "Unique identifier for the application before policy conversion",
+      "validation": "Required, format: \"APP-XXXX\" where X is a digit",
+      "sampleValue": "APP-0001",
+      "required": true,
+      "mappingNotes": "Map to ApplicationNumber in external systems. Remove \"APP-\" prefix if needed.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Policy & Application"
+    },
+    {
+      "fieldName": "Policy Number",
+      "jsonPath": "policy.policyNumber",
+      "dataType": "string",
+      "description": "Unique identifier for the policy after conversion from application",
+      "validation": "Format: \"PSPI-YYYY-XXXXXX\" where YYYY is year and X is sequential",
+      "sampleValue": "PSPI-2024-000001",
+      "required": true,
+      "mappingNotes": "Primary key for policy records. Map to PolicyID in legacy systems.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Policy & Application"
+    },
+    {
+      "fieldName": "Product Type",
+      "jsonPath": "application.productType",
+      "dataType": "string",
+      "description": "Type of insurance product selected",
+      "validation": "Must match product catalog",
+      "sampleValue": "Power Select Plus Income® Index Annuity",
+      "required": true,
+      "mappingNotes": "Map to ProductName. Ensure product codes are synchronized.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Policy & Application"
+    },
+    {
+      "fieldName": "Product ID",
+      "jsonPath": "application.productId",
+      "dataType": "string",
+      "description": "Internal product identifier from product catalog",
+      "validation": "Must exist in PRODUCT_CATALOG",
+      "sampleValue": "PSPI-001",
+      "required": true,
+      "mappingNotes": "Map to ProductCode. Use for product lookup and feature availability.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Policy & Application"
+    },
+    {
+      "fieldName": "Application Status",
+      "jsonPath": "application.status",
+      "dataType": "string",
+      "description": "Current status of the application/policy in the workflow",
+      "validation": "One of: \"Submitted\", \"Underwriter Review\", \"Additional Requirements\", \"Approved\", \"Converted to Policy\"",
+      "sampleValue": "Approved",
+      "required": true,
+      "mappingNotes": "Map to StatusCode. Status transitions must follow workflow rules.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Policy & Application"
+    },
+    {
+      "fieldName": "Submitted Date",
+      "jsonPath": "application.submittedDate",
+      "dataType": "date",
+      "description": "Date when the application was initially submitted",
+      "validation": "ISO 8601 date format (YYYY-MM-DD)",
+      "sampleValue": "2024-03-15",
+      "required": true,
+      "mappingNotes": "Convert to target system date format. Use for aging calculations.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Policy & Application"
+    },
+    {
+      "fieldName": "Issue Date",
+      "jsonPath": "policy.issueDate",
+      "dataType": "date",
+      "description": "Date when the policy was officially issued",
+      "validation": "ISO 8601 date format, must be >= submittedDate",
+      "sampleValue": "2024-03-20",
+      "required": false,
+      "mappingNotes": "Policy effective date. Important for anniversary calculations.",
+      "tags": [
+        "system-generated",
+        "regulatory"
+      ],
+      "category": "Policy & Application"
+    },
+    {
+      "fieldName": "Policy Status",
+      "jsonPath": "policy.status",
+      "dataType": "string",
+      "description": "Current status of an issued policy",
+      "validation": "One of: \"Active\", \"Lapsed\", \"Surrendered\", \"Matured\"",
+      "sampleValue": "Active",
+      "required": false,
+      "mappingNotes": "Different from application status. Only applies to converted policies.",
+      "tags": [
+        "system-generated"
+      ],
+      "category": "Policy & Application"
+    },
+    {
+      "fieldName": "Owner Name",
+      "jsonPath": "application.ownerName",
+      "dataType": "string",
+      "description": "Full legal name of the policy owner",
+      "validation": "Required, 2-100 characters",
+      "sampleValue": "John Anderson",
+      "required": true,
+      "mappingNotes": "Primary policyholder. Map to OwnerFullName or split into FirstName/LastName.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Owner Date of Birth",
+      "jsonPath": "application.ownerDOB",
+      "dataType": "date",
+      "description": "Date of birth of the policy owner",
+      "validation": "ISO 8601 format, must be at least 18 years old",
+      "sampleValue": "1975-06-15",
+      "required": true,
+      "mappingNotes": "Use for age calculations and eligibility. Convert to MM/DD/YYYY for some systems.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Owner Email",
+      "jsonPath": "application.ownerEmail",
+      "dataType": "email",
+      "description": "Primary email address for the policy owner",
+      "validation": "Valid email format",
+      "sampleValue": "john.anderson@email.com",
+      "required": true,
+      "mappingNotes": "Used for authentication and communications. Must be unique per customer.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Owner Phone",
+      "jsonPath": "application.ownerPhone",
+      "dataType": "phone",
+      "description": "Primary phone number for the policy owner",
+      "validation": "Format: (XXX) XXX-XXXX",
+      "sampleValue": "(555) 123-4567",
+      "required": false,
+      "mappingNotes": "Remove formatting for numeric-only systems: 5551234567",
+      "tags": [
+        "user-input",
+        "pii"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Owner SSN",
+      "jsonPath": "application.clients[0].ssn",
+      "dataType": "ssn",
+      "description": "Social Security Number of the policy owner",
+      "validation": "Format: XXX-XX-XXXX, must be valid SSN",
+      "sampleValue": "***-**-1234",
+      "required": true,
+      "mappingNotes": "Highly sensitive PII. Encrypt in transit and at rest. Show only last 4 digits in UI.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii",
+        "regulatory"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Permanent Address - Street",
+      "jsonPath": "application.permanentAddress.street",
+      "dataType": "string",
+      "description": "Street address line of the owner's permanent residence",
+      "validation": "Required, 5-200 characters",
+      "sampleValue": "123 Main Street",
+      "required": true,
+      "mappingNotes": "Map to AddressLine1. May need to split apartment/suite to AddressLine2.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Permanent Address - City",
+      "jsonPath": "application.permanentAddress.city",
+      "dataType": "string",
+      "description": "City of the owner's permanent residence",
+      "validation": "Required, 2-100 characters",
+      "sampleValue": "Springfield",
+      "required": true,
+      "mappingNotes": "Validate against state/zip for accuracy.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Permanent Address - State",
+      "jsonPath": "application.permanentAddress.state",
+      "dataType": "string",
+      "description": "State code of the owner's permanent residence",
+      "validation": "Required, 2-letter US state code",
+      "sampleValue": "IL",
+      "required": true,
+      "mappingNotes": "Use for licensing and regulatory compliance. Convert to full state name if needed.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii",
+        "regulatory"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Permanent Address - ZIP",
+      "jsonPath": "application.permanentAddress.zip",
+      "dataType": "string",
+      "description": "ZIP code of the owner's permanent residence",
+      "validation": "Format: XXXXX or XXXXX-XXXX",
+      "sampleValue": "62701",
+      "required": true,
+      "mappingNotes": "Use 5-digit format for most systems. ZIP+4 for precision if available.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Has Seasonal Address",
+      "jsonPath": "application.hasSeasonalAddress",
+      "dataType": "boolean",
+      "description": "Indicates if the owner has a secondary/seasonal residence",
+      "validation": "true or false",
+      "sampleValue": "false",
+      "required": true,
+      "mappingNotes": "If true, seasonal address fields will be populated.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Clients Array",
+      "jsonPath": "application.clients",
+      "dataType": "array",
+      "description": "Array of all individuals associated with the policy (owner, joint owner, annuitant)",
+      "validation": "Array of ClientInfo objects, minimum 1 entry",
+      "sampleValue": "[{name: \"John Doe\", dob: \"1975-01-01\", ssn: \"***-**-1234\", relationship: \"owner\"}]",
+      "required": true,
+      "mappingNotes": "Iterate through array to extract all parties. Relationship field determines role.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Customer/Owner"
+    },
+    {
+      "fieldName": "Clients Array",
+      "jsonPath": "application.clients",
+      "dataType": "array",
+      "description": "Array of client objects including owner, joint owner, annuitant, and joint annuitant",
+      "validation": "Array of ClientInfo objects with name, dob, ssn, relationship",
+      "sampleValue": "[{\"name\": \"John Doe\", \"dob\": \"1965-05-15\", \"ssn\": \"***-**-1234\", \"relationship\": \"owner\"}]",
+      "required": true,
+      "mappingNotes": "Replaces single owner fields. Supports joint ownership and separate annuitants.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Client Name",
+      "jsonPath": "application.clients[].name",
+      "dataType": "string",
+      "description": "Full legal name of client (owner, annuitant, etc.)",
+      "validation": "String, 2-100 characters, must match legal ID",
+      "sampleValue": "John Michael Doe",
+      "required": true,
+      "mappingNotes": "Must match name on driver license or government ID. Required for each client in array.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Client Date of Birth",
+      "jsonPath": "application.clients[].dob",
+      "dataType": "date",
+      "description": "Date of birth for client",
+      "validation": "ISO 8601 date format: YYYY-MM-DD, must be 18+ years old",
+      "sampleValue": "1965-05-15",
+      "required": true,
+      "mappingNotes": "Used for age-based calculations (annuity rates, RMDs, etc.). Must verify with ID.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Client SSN",
+      "jsonPath": "application.clients[].ssn",
+      "dataType": "ssn",
+      "description": "Social Security Number for client",
+      "validation": "Format: XXX-XX-XXXX, must be valid SSN",
+      "sampleValue": "***-**-1234",
+      "required": true,
+      "mappingNotes": "Required for tax reporting (1099-R, etc.). Highly sensitive PII. Store encrypted.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii",
+        "regulatory"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Client Relationship",
+      "jsonPath": "application.clients[].relationship",
+      "dataType": "string",
+      "description": "Role of client in policy (owner, joint-owner, annuitant, joint-annuitant)",
+      "validation": "Values: \"owner\", \"joint-owner\", \"annuitant\", \"joint-annuitant\"",
+      "sampleValue": "owner",
+      "required": true,
+      "mappingNotes": "Determines control rights and payment obligations. Owner controls policy; annuitant affects payout calculations.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Permanent Address",
+      "jsonPath": "application.permanentAddress",
+      "dataType": "object",
+      "description": "Primary residential address object with street, city, state, zip",
+      "validation": "Object with required fields: street, city, state (2-letter code), zip (5 or 9 digits)",
+      "sampleValue": "{\"street\": \"123 Main St\", \"city\": \"Springfield\", \"state\": \"IL\", \"zip\": \"62701\"}",
+      "required": true,
+      "mappingNotes": "Used for mailing, state tax withholding determination, and regulatory compliance.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Permanent Address Street",
+      "jsonPath": "application.permanentAddress.street",
+      "dataType": "string",
+      "description": "Street address line including number and street name",
+      "validation": "String, max 100 characters",
+      "sampleValue": "123 Main Street",
+      "required": true,
+      "mappingNotes": "Do not include city/state/zip in this field.",
+      "tags": [
+        "required",
+        "user-input",
+        "pii"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Permanent Address City",
+      "jsonPath": "application.permanentAddress.city",
+      "dataType": "string",
+      "description": "City name for permanent address",
+      "validation": "String, max 50 characters",
+      "sampleValue": "Springfield",
+      "required": true,
+      "mappingNotes": "Standard city name, no abbreviations.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Permanent Address State",
+      "jsonPath": "application.permanentAddress.state",
+      "dataType": "string",
+      "description": "State code for permanent address",
+      "validation": "Two-letter US state abbreviation",
+      "sampleValue": "IL",
+      "required": true,
+      "mappingNotes": "Determines state-specific regulations and tax withholding. Use USPS state codes.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Permanent Address Zip",
+      "jsonPath": "application.permanentAddress.zip",
+      "dataType": "string",
+      "description": "ZIP code for permanent address",
+      "validation": "Format: XXXXX or XXXXX-XXXX",
+      "sampleValue": "62701",
+      "required": true,
+      "mappingNotes": "Use 5-digit or ZIP+4 format. Validate against USPS database if possible.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Has Seasonal Address",
+      "jsonPath": "application.hasSeasonalAddress",
+      "dataType": "boolean",
+      "description": "Indicates if owner has a seasonal/secondary address",
+      "validation": "Boolean: true or false",
+      "sampleValue": "false",
+      "required": false,
+      "mappingNotes": "If true, seasonalAddress object must be populated. Used for snowbirds, etc.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Seasonal Address",
+      "jsonPath": "application.seasonalAddress",
+      "dataType": "object",
+      "description": "Secondary address object for seasonal residents",
+      "validation": "Object with same structure as permanentAddress",
+      "sampleValue": "{\"street\": \"456 Beach Blvd\", \"city\": \"Miami\", \"state\": \"FL\", \"zip\": \"33101\"}",
+      "required": false,
+      "mappingNotes": "Used for correspondence during winter months, etc. Not used for tax purposes.",
+      "tags": [
+        "user-input",
+        "pii"
+      ],
+      "category": "Client Information"
+    },
+    {
+      "fieldName": "Premium Amount",
+      "jsonPath": "application.premiumAmount",
+      "dataType": "currency",
+      "description": "Initial premium payment amount for the annuity",
+      "validation": "Numeric, minimum $10,000, maximum $1,000,000",
+      "sampleValue": "250000",
+      "required": true,
+      "mappingNotes": "Store as numeric value without currency symbols. Format with $ and commas for display.",
+      "tags": [
+        "required",
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Selected GLB Rider",
+      "jsonPath": "application.selectedGLBRider",
+      "dataType": "string",
+      "description": "ID of the selected Guaranteed Lifetime Benefit rider",
+      "validation": "Must match a GLB rider ID from product catalog",
+      "sampleValue": "GLB-ENHANCED-6",
+      "required": false,
+      "mappingNotes": "Reference to GLB rider configuration. Lookup full details from rider catalog.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "GLB Rider Coverage Option",
+      "jsonPath": "application.glbRiderCoverageOption",
+      "dataType": "string",
+      "description": "Coverage type for GLB rider",
+      "validation": "One of: \"Single Life\", \"Joint Life (Spouses)\"",
+      "sampleValue": "Single Life",
+      "required": false,
+      "mappingNotes": "Determines payout structure. Joint life requires spouse information.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Selected Index Accounts",
+      "jsonPath": "application.selectedIndexAccounts",
+      "dataType": "array",
+      "description": "Array of index account allocations with strategies and percentages",
+      "validation": "Array of objects with accountId, indexId, term, allocationPercentage",
+      "sampleValue": "[{accountId: \"IXA-001\", indexId: \"SP500-PTP\", term: 1, allocationPercentage: \"50\"}]",
+      "required": false,
+      "mappingNotes": "Each entry represents an index strategy allocation. Sum of allocations + fixed must equal 100%.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Index Account ID",
+      "jsonPath": "application.selectedIndexAccounts[].accountId",
+      "dataType": "string",
+      "description": "Unique identifier for an index account within the allocation array",
+      "validation": "Auto-generated UUID",
+      "sampleValue": "IXA-550e8400-e29b-41d4",
+      "required": true,
+      "mappingNotes": "Internal tracking ID for each index account selection.",
+      "tags": [
+        "system-generated"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Index Strategy ID",
+      "jsonPath": "application.selectedIndexAccounts[].indexId",
+      "dataType": "string",
+      "description": "Code for the selected index strategy (e.g., S&P 500 Point-to-Point)",
+      "validation": "Must exist in available indices catalog",
+      "sampleValue": "SP500-PTP",
+      "required": true,
+      "mappingNotes": "Reference to index strategy configuration with cap rates and participation.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Index Account Term",
+      "jsonPath": "application.selectedIndexAccounts[].term",
+      "dataType": "number",
+      "description": "Term length in years for the index crediting strategy",
+      "validation": "Integer, typically 1, 2, or 3 years",
+      "sampleValue": "1",
+      "required": true,
+      "mappingNotes": "Determines crediting period. Affects cap rates and renewal terms.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Index Allocation Percentage",
+      "jsonPath": "application.selectedIndexAccounts[].allocationPercentage",
+      "dataType": "percentage",
+      "description": "Percentage of premium allocated to this index account",
+      "validation": "Numeric 0-100, sum of all allocations must equal 100%",
+      "sampleValue": "50",
+      "required": true,
+      "mappingNotes": "Store as numeric. Total allocation validation includes fixed account.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Fixed Account Allocation",
+      "jsonPath": "application.fixedAccountAllocation",
+      "dataType": "percentage",
+      "description": "Percentage of premium allocated to the fixed interest account",
+      "validation": "Numeric 0-100, combined with index allocations must equal 100%",
+      "sampleValue": "20",
+      "required": true,
+      "mappingNotes": "Guaranteed fixed rate allocation. May have minimum/maximum restrictions.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Extended Care Rider",
+      "jsonPath": "application.extendedCareRider",
+      "dataType": "boolean",
+      "description": "Indicates if Extended Care Rider is selected",
+      "validation": "true or false",
+      "sampleValue": "true",
+      "required": true,
+      "mappingNotes": "Additional benefit for long-term care needs. May have age restrictions.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Terminal Illness Rider",
+      "jsonPath": "application.terminalIllnessRider",
+      "dataType": "boolean",
+      "description": "Indicates if Terminal Illness Rider is selected",
+      "validation": "true or false",
+      "sampleValue": "false",
+      "required": true,
+      "mappingNotes": "Allows accelerated benefit access for terminal diagnosis.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Enhanced Income Rider",
+      "jsonPath": "application.enhancedIncomeRider",
+      "dataType": "boolean",
+      "description": "Indicates if Enhanced Income Rider is selected",
+      "validation": "true or false",
+      "sampleValue": "false",
+      "required": true,
+      "mappingNotes": "Provides enhanced income benefits. May affect fees.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Extended Care Rider",
+      "jsonPath": "application.extendedCareRider",
+      "dataType": "boolean",
+      "description": "Indicates if Extended Care (long-term care) rider is elected",
+      "validation": "Boolean: true or false",
+      "sampleValue": "false",
+      "required": false,
+      "mappingNotes": "Provides enhanced withdrawals for qualifying long-term care expenses. May require medical underwriting.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Terminal Illness Rider",
+      "jsonPath": "application.terminalIllnessRider",
+      "dataType": "boolean",
+      "description": "Indicates if Terminal Illness rider is elected",
+      "validation": "Boolean: true or false",
+      "sampleValue": "false",
+      "required": false,
+      "mappingNotes": "Allows accelerated death benefit if owner is diagnosed with terminal illness (12-24 month life expectancy).",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Enhanced Income Rider",
+      "jsonPath": "application.enhancedIncomeRider",
+      "dataType": "boolean",
+      "description": "Indicates if Enhanced Income rider is elected",
+      "validation": "Boolean: true or false",
+      "sampleValue": "false",
+      "required": false,
+      "mappingNotes": "Provides higher guaranteed lifetime withdrawal percentages. Usually has additional cost.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Income Rider Selection",
+      "jsonPath": "application.incomeRider",
+      "dataType": "string",
+      "description": "Specific income rider product selected (if applicable)",
+      "validation": "String matching available income rider products",
+      "sampleValue": "Standard Income Benefit Rider",
+      "required": false,
+      "mappingNotes": "Maps to product catalog. Affects guaranteed withdrawal rates and fees.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Income Rider Value",
+      "jsonPath": "application.incomeRiderValue",
+      "dataType": "currency",
+      "description": "Benefit base or guaranteed value for income rider",
+      "validation": "Numeric, positive value, may be calculated based on premium and bonuses",
+      "sampleValue": "100000",
+      "required": false,
+      "mappingNotes": "Initial benefit base for lifetime income calculations. May grow annually.",
+      "tags": [
+        "calculated",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Death Benefit Rider Selection",
+      "jsonPath": "application.deathBenefitRider",
+      "dataType": "string",
+      "description": "Type of death benefit rider elected",
+      "validation": "String: \"Standard\", \"Enhanced\", \"Return of Premium\", or null",
+      "sampleValue": "Standard",
+      "required": false,
+      "mappingNotes": "Determines death benefit calculation (account value, highest anniversary value, return of premium, etc.).",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Death Benefit Amount",
+      "jsonPath": "application.deathBenefitAmount",
+      "dataType": "currency",
+      "description": "Guaranteed death benefit amount (if applicable)",
+      "validation": "Numeric, positive value",
+      "sampleValue": "100000",
+      "required": false,
+      "mappingNotes": "Minimum death benefit payable to beneficiaries. May be higher of guaranteed amount or account value.",
+      "tags": [
+        "calculated",
+        "financial"
+      ],
+      "category": "Coverage & Riders"
+    },
+    {
+      "fieldName": "Total Annual Income",
+      "jsonPath": "application.totalAnnualIncome",
+      "dataType": "string",
+      "description": "Total annual household gross income range",
+      "validation": "One of predefined ranges: \"Less than $25,000\", \"$25,000-$50,000\", etc.",
+      "sampleValue": "$100,000-$250,000",
+      "required": true,
+      "mappingNotes": "Suitability requirement. Convert ranges to numeric for calculations if needed.",
+      "tags": [
+        "required",
+        "user-input",
+        "financial",
+        "regulatory"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Annual Living Expenses",
+      "jsonPath": "application.annualLivingExpenses",
+      "dataType": "string",
+      "description": "Annual household living expenses range",
+      "validation": "One of predefined ranges matching income format",
+      "sampleValue": "$50,000-$100,000",
+      "required": true,
+      "mappingNotes": "Used for suitability analysis. Compare with income for cash flow adequacy.",
+      "tags": [
+        "required",
+        "user-input",
+        "financial",
+        "regulatory"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Net Worth",
+      "jsonPath": "application.netWorth",
+      "dataType": "string",
+      "description": "Total household net worth range",
+      "validation": "One of predefined ranges",
+      "sampleValue": "$500,000-$1,000,000",
+      "required": true,
+      "mappingNotes": "Critical for suitability. Premium should be reasonable percentage of net worth.",
+      "tags": [
+        "required",
+        "user-input",
+        "financial",
+        "regulatory"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Household Income Sources",
+      "jsonPath": "application.householdIncomeSources",
+      "dataType": "array",
+      "description": "Array of income source types",
+      "validation": "Array of strings from predefined list (Salary, Social Security, Pension, etc.)",
+      "sampleValue": "[\"Salary/Wages\", \"Social Security\", \"Investment Income\"]",
+      "required": true,
+      "mappingNotes": "Multiple selections allowed. If includes \"Other\", see householdIncomeSourcesOther field.",
+      "tags": [
+        "required",
+        "user-input",
+        "financial"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Federal Tax Bracket",
+      "jsonPath": "application.federalTaxBracket",
+      "dataType": "string",
+      "description": "Owner's federal income tax bracket",
+      "validation": "One of: \"Less than 12%\", \"12%-24%\", \"Greater than 24%\"",
+      "sampleValue": "12%-24%",
+      "required": true,
+      "mappingNotes": "Important for tax-deferred annuity suitability. Higher bracket = more tax advantage.",
+      "tags": [
+        "required",
+        "user-input",
+        "financial",
+        "regulatory"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Sufficient Cash for Emergencies",
+      "jsonPath": "application.sufficientCashForEmergencies",
+      "dataType": "string",
+      "description": "Whether owner has adequate liquid reserves for emergencies",
+      "validation": "One of: \"Yes\", \"No\"",
+      "sampleValue": "Yes",
+      "required": true,
+      "mappingNotes": "Suitability requirement. \"No\" may require additional review or decline.",
+      "tags": [
+        "required",
+        "user-input",
+        "financial",
+        "regulatory"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Expected Premium Amount",
+      "jsonPath": "application.expectedPremiumAmount",
+      "dataType": "currency",
+      "description": "Expected premium amount from suitability section",
+      "validation": "Numeric, should match premiumAmount field",
+      "sampleValue": "250000",
+      "required": true,
+      "mappingNotes": "Cross-reference with premiumAmount for consistency validation.",
+      "tags": [
+        "required",
+        "user-input",
+        "financial"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Asset Inventory - Cash/Checking/Savings (Qualified)",
+      "jsonPath": "application.assetInventory.cashCheckingSavings.qualified",
+      "dataType": "currency",
+      "description": "Value of qualified cash accounts (IRA, 401k cash)",
+      "validation": "Numeric, >= 0",
+      "sampleValue": "50000",
+      "required": false,
+      "mappingNotes": "Part of comprehensive asset inventory. Sum all qualified assets for total.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Asset Inventory - Cash/Checking/Savings (Non-Qualified)",
+      "jsonPath": "application.assetInventory.cashCheckingSavings.nonQualified",
+      "dataType": "currency",
+      "description": "Value of non-qualified cash accounts",
+      "validation": "Numeric, >= 0",
+      "sampleValue": "75000",
+      "required": false,
+      "mappingNotes": "Taxable cash reserves. Important for liquidity assessment.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Source of Funds - Accounts",
+      "jsonPath": "application.sourceOfFundsAccounts",
+      "dataType": "array",
+      "description": "Array of account types being used to fund the annuity",
+      "validation": "Array of strings from predefined list",
+      "sampleValue": "[\"Savings Account\", \"Brokerage Account\"]",
+      "required": true,
+      "mappingNotes": "Regulatory requirement. Track origin of funds for anti-money laundering.",
+      "tags": [
+        "required",
+        "user-input",
+        "financial",
+        "regulatory"
+      ],
+      "category": "Financial Information"
+    },
+    {
+      "fieldName": "Experience Level",
+      "jsonPath": "application.experienceLevel",
+      "dataType": "string",
+      "description": "Owner's experience level with annuities and investment products",
+      "validation": "One of: \"None\", \"Limited\", \"Moderate\", \"Extensive\"",
+      "sampleValue": "Moderate",
+      "required": true,
+      "mappingNotes": "Suitability factor. Lower experience requires more disclosure.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Suitability"
+    },
+    {
+      "fieldName": "Risk Tolerance",
+      "jsonPath": "application.riskTolerance",
+      "dataType": "string",
+      "description": "Owner's tolerance for investment risk",
+      "validation": "One of: \"Conservative\", \"Moderate\", \"Aggressive\"",
+      "sampleValue": "Moderate",
+      "required": true,
+      "mappingNotes": "Critical for product suitability. Affects index account recommendations.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Suitability"
+    },
+    {
+      "fieldName": "Financial Objectives",
+      "jsonPath": "application.financialObjectives",
+      "dataType": "array",
+      "description": "Array of owner's financial goals for this annuity",
+      "validation": "Array of strings: \"Retirement Income\", \"Asset Protection\", \"Growth\", etc.",
+      "sampleValue": "[\"Retirement Income\", \"Tax Deferral\"]",
+      "required": true,
+      "mappingNotes": "Multiple selections allowed. Validates product appropriateness.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Suitability"
+    },
+    {
+      "fieldName": "Withdrawal Timeline",
+      "jsonPath": "application.withdrawalTimeline",
+      "dataType": "string",
+      "description": "When owner anticipates needing to access funds",
+      "validation": "One of: \"Less than 1 year\", \"1-5 years\", \"5-10 years\", \"Longer than 10 years\", \"None Anticipated\"",
+      "sampleValue": "5-10 years",
+      "required": true,
+      "mappingNotes": "Must align with surrender period. Early withdrawal needs may indicate unsuitability.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Suitability"
+    },
+    {
+      "fieldName": "Anticipated Withdrawal Methods",
+      "jsonPath": "application.anticipatedWithdrawalMethods",
+      "dataType": "array",
+      "description": "How owner plans to take withdrawals",
+      "validation": "Array from: \"Systematic Withdrawals\", \"Lump Sum\", \"RMDs\", \"Annuitization\", etc.",
+      "sampleValue": "[\"Systematic Withdrawals\", \"RMDs\"]",
+      "required": true,
+      "mappingNotes": "Multiple methods possible. Affects rider recommendations.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Suitability"
+    },
+    {
+      "fieldName": "Product Time Horizon",
+      "jsonPath": "application.productTimeHorizon",
+      "dataType": "string",
+      "description": "Expected holding period for the annuity",
+      "validation": "One of: \"less than 3 years\", \"3-7 years\", \"7-10 years\", \"longer than 10 years\"",
+      "sampleValue": "7-10 years",
+      "required": true,
+      "mappingNotes": "Must be consistent with surrender period and withdrawal timeline.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Suitability"
+    },
+    {
+      "fieldName": "Withdrawal Prior to Age 59½",
+      "jsonPath": "application.withdrawalPriorTo59",
+      "dataType": "string",
+      "description": "Whether owner expects withdrawals before age 59½",
+      "validation": "One of: \"Yes\", \"No\", \"N/A (Owner has attained age 59½ or older)\"",
+      "sampleValue": "No",
+      "required": true,
+      "mappingNotes": "Tax penalty warning. \"Yes\" requires explanation field.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Suitability"
+    },
+    {
+      "fieldName": "Access More Than Penalty-Free Amount",
+      "jsonPath": "application.accessMoreThanPenaltyFree",
+      "dataType": "string",
+      "description": "Whether owner may need to exceed penalty-free withdrawal limits",
+      "validation": "One of: \"Yes\", \"No\", \"N/A\"",
+      "sampleValue": "No",
+      "required": true,
+      "mappingNotes": "Surrender charge warning. \"Yes\" requires explanation and may indicate unsuitability.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Suitability"
+    },
+    {
+      "fieldName": "Replacing Existing Policy",
+      "jsonPath": "application.replacingExisting",
+      "dataType": "string",
+      "description": "Whether this purchase replaces an existing annuity or life insurance",
+      "validation": "One of: \"Yes\", \"No\"",
+      "sampleValue": "No",
+      "required": true,
+      "mappingNotes": "Triggers replacement documentation requirements. Must compare products.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Suitability"
+    },
+    {
+      "fieldName": "Replacing Existing",
+      "jsonPath": "application.replacingExisting",
+      "dataType": "string",
+      "description": "Indicates if this application replaces an existing contract",
+      "validation": "Values: \"Yes\", \"No\"",
+      "sampleValue": "No",
+      "required": true,
+      "mappingNotes": "Regulatory requirement. If \"Yes\", must complete replacement form and provide existing contract details.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Existing Contract Company",
+      "jsonPath": "application.existingContracts[].company",
+      "dataType": "string",
+      "description": "Name of insurance company for existing contract being replaced",
+      "validation": "String, company name from dropdown or free text",
+      "sampleValue": "XYZ Life Insurance Company",
+      "required": false,
+      "mappingNotes": "Required if replacingExisting is \"Yes\". May trigger state-specific replacement forms.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Existing Contract Product Name",
+      "jsonPath": "application.existingContracts[].productName",
+      "dataType": "string",
+      "description": "Product name of existing contract being replaced",
+      "validation": "String, max 200 characters",
+      "sampleValue": "Flexible Premium Deferred Annuity",
+      "required": false,
+      "mappingNotes": "Helps identify if replacement is suitable (e.g., similar products, surrender charges).",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Existing Contract Number",
+      "jsonPath": "application.existingContracts[].contractNumber",
+      "dataType": "string",
+      "description": "Policy/contract number of existing contract",
+      "validation": "String, alphanumeric",
+      "sampleValue": "ABC-123456789",
+      "required": false,
+      "mappingNotes": "Used for verification and exchange forms (1035 exchanges).",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Existing Contract Value",
+      "jsonPath": "application.existingContracts[].existingValue",
+      "dataType": "currency",
+      "description": "Current cash value of existing contract",
+      "validation": "Numeric, positive value",
+      "sampleValue": "125000",
+      "required": false,
+      "mappingNotes": "May be used for 1035 tax-free exchange calculations.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Existing Contract Qualified Value",
+      "jsonPath": "application.existingContracts[].qualifiedValue",
+      "dataType": "currency",
+      "description": "Portion of existing contract value that is qualified (IRA, 401k, etc.)",
+      "validation": "Numeric, positive value, must be <= existingValue",
+      "sampleValue": "0",
+      "required": false,
+      "mappingNotes": "Determines if replacement involves qualified or non-qualified funds. Affects tax treatment.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Surrender Charge Period Remaining",
+      "jsonPath": "application.surrenderChargePeriod",
+      "dataType": "string",
+      "description": "Years remaining in surrender charge period for existing contract",
+      "validation": "Numeric string, 0-15",
+      "sampleValue": "3",
+      "required": false,
+      "mappingNotes": "Key suitability factor. Agent must justify replacement if surrender charges apply.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Surrender Charge Percentage",
+      "jsonPath": "application.surrenderChargePercent",
+      "dataType": "percentage",
+      "description": "Percentage of surrender charge if contract is surrendered now",
+      "validation": "Numeric 0-100",
+      "sampleValue": "7",
+      "required": false,
+      "mappingNotes": "Used to calculate cost of replacement. If high, may not be suitable.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Bonus Interest on Existing Contract",
+      "jsonPath": "application.bonusInterest",
+      "dataType": "percentage",
+      "description": "Bonus interest rate on existing contract that may be forfeited",
+      "validation": "Numeric 0-100",
+      "sampleValue": "0",
+      "required": false,
+      "mappingNotes": "Some contracts have bonus interest that is lost upon early surrender. Factor in suitability.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Bonus Amount on Existing Contract",
+      "jsonPath": "application.bonusAmount",
+      "dataType": "currency",
+      "description": "Dollar amount of bonus that would be forfeited on existing contract",
+      "validation": "Numeric, positive value",
+      "sampleValue": "0",
+      "required": false,
+      "mappingNotes": "Calculated as bonusInterest * existingValue. Helps assess replacement cost.",
+      "tags": [
+        "user-input",
+        "financial"
+      ],
+      "category": "Replacement & Existing Contracts"
+    },
+    {
+      "fieldName": "Health Questions",
+      "jsonPath": "application.healthQuestions",
+      "dataType": "string",
+      "description": "Indicator if health questions were asked during application",
+      "validation": "Values: \"Yes\", \"No\", \"Not Applicable\"",
+      "sampleValue": "No",
+      "required": false,
+      "mappingNotes": "Most annuities do not require health underwriting. If \"Yes\", additional medical records may be needed.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Underwriting & Health"
+    },
+    {
+      "fieldName": "Underwriter Notes",
+      "jsonPath": "application.underwriterNotes",
+      "dataType": "string",
+      "description": "Internal notes added by underwriting department during review",
+      "validation": "Free text, max 2000 characters",
+      "sampleValue": "Application approved with standard terms. No exceptions required.",
+      "required": false,
+      "mappingNotes": "For internal use only. Not visible to agents or clients.",
+      "tags": [
+        "user-input",
+        "system-generated"
+      ],
+      "category": "Underwriting & Health"
+    },
+    {
+      "fieldName": "Additional Requirements",
+      "jsonPath": "application.additionalRequirements",
+      "dataType": "string",
+      "description": "List of additional documents or information needed from applicant",
+      "validation": "Free text, max 1000 characters",
+      "sampleValue": "Need clarification on source of funds for account XYZ",
+      "required": false,
+      "mappingNotes": "Used when application status is \"Additional Requirements\". Agent notified via email.",
+      "tags": [
+        "user-input",
+        "system-generated"
+      ],
+      "category": "Underwriting & Health"
+    },
+    {
+      "fieldName": "Approval Date",
+      "jsonPath": "application.approvalDate",
+      "dataType": "date",
+      "description": "Date application was approved by underwriter",
+      "validation": "ISO 8601 date format: YYYY-MM-DD",
+      "sampleValue": "2024-01-15",
+      "required": false,
+      "mappingNotes": "Automatically set when status changes to \"Approved\". Used for aging reports.",
+      "tags": [
+        "system-generated"
+      ],
+      "category": "Underwriting & Health"
+    },
+    {
+      "fieldName": "Rejection Reason",
+      "jsonPath": "application.rejectionReason",
+      "dataType": "string",
+      "description": "Reason for application rejection if not approved",
+      "validation": "Free text, max 500 characters",
+      "sampleValue": "",
+      "required": false,
+      "mappingNotes": "Only populated if application is rejected. Agent receives notification.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Underwriting & Health"
+    },
+    {
+      "fieldName": "Agent Acknowledgements",
+      "jsonPath": "application.agentAcknowledgements",
+      "dataType": "array",
+      "description": "List of agent acknowledgement statements confirmed",
+      "validation": "Array of strings matching predefined acknowledgements",
+      "sampleValue": "[\"I have completed suitability analysis\", \"I have verified client identity\"]",
+      "required": false,
+      "mappingNotes": "Regulatory compliance tracking. Each acknowledgement must be checked before submission.",
+      "tags": [
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Replacement Involved Acknowledgement",
+      "jsonPath": "application.replacementInvolved",
+      "dataType": "string",
+      "description": "Agent acknowledgement that replacement process was followed if applicable",
+      "validation": "Values: \"Yes\", \"No\", \"N/A\"",
+      "sampleValue": "N/A",
+      "required": false,
+      "mappingNotes": "Required if replacingExisting is \"Yes\". Agent confirms replacement forms completed.",
+      "tags": [
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "AML Verification",
+      "jsonPath": "application.amlVerification",
+      "dataType": "string",
+      "description": "Agent confirmation of Anti-Money Laundering verification completed",
+      "validation": "Values: \"Yes\", \"No\"",
+      "sampleValue": "Yes",
+      "required": false,
+      "mappingNotes": "Required for large premiums ($10,000+). Agent verifies source of funds is legitimate.",
+      "tags": [
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Agent Comments",
+      "jsonPath": "application.agentComments",
+      "dataType": "string",
+      "description": "Additional comments or notes from agent about application",
+      "validation": "Free text, max 1000 characters",
+      "sampleValue": "Client is using proceeds from CD maturity. Conservative investor.",
+      "required": false,
+      "mappingNotes": "Optional field for agent to provide context to underwriters.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Agent Signature",
+      "jsonPath": "application.agentSignature",
+      "dataType": "string",
+      "description": "Digital signature or acknowledgement from agent",
+      "validation": "String representing signature data or \"SIGNED\" indicator",
+      "sampleValue": "SIGNED",
+      "required": false,
+      "mappingNotes": "E-signature or checkbox confirmation. Timestamp recorded separately.",
+      "tags": [
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Agent Signature Date",
+      "jsonPath": "application.agentDate",
+      "dataType": "date",
+      "description": "Date agent signed/submitted application",
+      "validation": "ISO 8601 date format: YYYY-MM-DD",
+      "sampleValue": "2024-01-10",
+      "required": false,
+      "mappingNotes": "Auto-populated at submission. Used for compliance and audit trails.",
+      "tags": [
+        "system-generated"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Owner Acknowledgements",
+      "jsonPath": "application.ownerAcknowledgements",
+      "dataType": "array",
+      "description": "List of owner acknowledgement statements confirmed",
+      "validation": "Array of strings matching predefined acknowledgements",
+      "sampleValue": "[\"I understand surrender charges apply\", \"I acknowledge state guarantee limits\"]",
+      "required": false,
+      "mappingNotes": "Client must confirm understanding of product features and limitations.",
+      "tags": [
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "State Guarantee Fund Understanding",
+      "jsonPath": "application.stateGuaranteed",
+      "dataType": "string",
+      "description": "Owner acknowledgement of state guarantee fund coverage limits",
+      "validation": "Values: \"Yes\", \"No\"",
+      "sampleValue": "Yes",
+      "required": false,
+      "mappingNotes": "Required disclosure. Owner must understand coverage limits (typically $250,000).",
+      "tags": [
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Understand Annuity Features",
+      "jsonPath": "application.understandAnnuity",
+      "dataType": "string",
+      "description": "Owner confirmation they understand annuity features and risks",
+      "validation": "Values: \"Yes\", \"No\"",
+      "sampleValue": "Yes",
+      "required": false,
+      "mappingNotes": "Suitability requirement. Owner confirms they received and understand product disclosures.",
+      "tags": [
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Owner Comments",
+      "jsonPath": "application.ownerComments",
+      "dataType": "string",
+      "description": "Optional comments from policy owner",
+      "validation": "Free text, max 500 characters",
+      "sampleValue": "",
+      "required": false,
+      "mappingNotes": "Rarely used. May contain special instructions or clarifications.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Owner Signature",
+      "jsonPath": "application.ownerSignature",
+      "dataType": "string",
+      "description": "Digital signature or acknowledgement from policy owner",
+      "validation": "String representing signature data or \"SIGNED\" indicator",
+      "sampleValue": "SIGNED",
+      "required": false,
+      "mappingNotes": "Required for application submission. E-signature with IP tracking.",
+      "tags": [
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Owner Signature Date",
+      "jsonPath": "application.ownerDate",
+      "dataType": "date",
+      "description": "Date owner signed application",
+      "validation": "ISO 8601 date format: YYYY-MM-DD",
+      "sampleValue": "2024-01-10",
+      "required": false,
+      "mappingNotes": "Must be same day or before agent signature date. Free-look period starts from this date.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Acknowledgements & Signatures"
+    },
+    {
+      "fieldName": "Transaction ID",
+      "jsonPath": "transaction.id",
+      "dataType": "string",
+      "description": "Unique identifier for the transaction",
+      "validation": "Format: \"TXN-XXXXXXXXXX\" (UUID)",
+      "sampleValue": "TXN-550e8400-e29b-41d4-a716-446655440000",
+      "required": true,
+      "mappingNotes": "Primary key for transaction records. Use for reconciliation.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Transactions"
+    },
+    {
+      "fieldName": "Transaction Policy Number",
+      "jsonPath": "transaction.policyNumber",
+      "dataType": "string",
+      "description": "Policy number associated with this transaction",
+      "validation": "Must be valid policy number",
+      "sampleValue": "PSPI-2024-000001",
+      "required": true,
+      "mappingNotes": "Foreign key to policy record. Use for transaction history queries.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Transactions"
+    },
+    {
+      "fieldName": "Transaction Date",
+      "jsonPath": "transaction.date",
+      "dataType": "date",
+      "description": "Date when the transaction occurred",
+      "validation": "ISO 8601 date format",
+      "sampleValue": "2024-06-15",
+      "required": true,
+      "mappingNotes": "Posted date. Use for statement periods and reporting.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Transactions"
+    },
+    {
+      "fieldName": "Transaction Type",
+      "jsonPath": "transaction.type",
+      "dataType": "string",
+      "description": "Type of transaction",
+      "validation": "One of: \"Premium Payment\", \"Withdrawal\", \"Loan\", \"Interest Credit\", \"Fee\", \"Distribution\"",
+      "sampleValue": "Premium Payment",
+      "required": true,
+      "mappingNotes": "Affects accounting treatment. Map to general ledger codes.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Transactions"
+    },
+    {
+      "fieldName": "Transaction Description",
+      "jsonPath": "transaction.description",
+      "dataType": "string",
+      "description": "Human-readable description of the transaction",
+      "validation": "String, 5-200 characters",
+      "sampleValue": "Initial Premium Payment",
+      "required": true,
+      "mappingNotes": "Display in transaction history and statements.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Transactions"
+    },
+    {
+      "fieldName": "Transaction Amount",
+      "jsonPath": "transaction.amount",
+      "dataType": "currency",
+      "description": "Dollar amount of the transaction (positive or negative)",
+      "validation": "Numeric, can be negative for debits",
+      "sampleValue": "250000",
+      "required": true,
+      "mappingNotes": "Positive = credit, Negative = debit. Store as cents for precision.",
+      "tags": [
+        "required",
+        "system-generated",
+        "financial"
+      ],
+      "category": "Transactions"
+    },
+    {
+      "fieldName": "Transaction Balance",
+      "jsonPath": "transaction.balance",
+      "dataType": "currency",
+      "description": "Account balance after this transaction",
+      "validation": "Numeric, >= 0",
+      "sampleValue": "265000",
+      "required": false,
+      "mappingNotes": "Running balance. Calculate cumulatively for account value.",
+      "tags": [
+        "calculated",
+        "financial"
+      ],
+      "category": "Transactions"
+    },
+    {
+      "fieldName": "Transaction Status",
+      "jsonPath": "transaction.status",
+      "dataType": "string",
+      "description": "Processing status of the transaction",
+      "validation": "One of: \"Completed\", \"Pending\", \"Failed\"",
+      "sampleValue": "Completed",
+      "required": true,
+      "mappingNotes": "Only \"Completed\" transactions affect balance. Track \"Pending\" separately.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Transactions"
+    },
+    {
+      "fieldName": "Commission ID",
+      "jsonPath": "commission.id",
+      "dataType": "string",
+      "description": "Unique identifier for the commission record",
+      "validation": "Format: \"COM-XXXXXXXXXXXX\" (UUID)",
+      "sampleValue": "COM-550e8400-e29b",
+      "required": true,
+      "mappingNotes": "Primary key for commission tracking.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Commissions"
+    },
+    {
+      "fieldName": "Commission Policy Number",
+      "jsonPath": "commission.policyNumber",
+      "dataType": "string",
+      "description": "Policy number that generated this commission",
+      "validation": "Valid policy number",
+      "sampleValue": "PSPI-2024-000001",
+      "required": true,
+      "mappingNotes": "Link to policy for commission calculations.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Commissions"
+    },
+    {
+      "fieldName": "Commission Client Name",
+      "jsonPath": "commission.clientName",
+      "dataType": "string",
+      "description": "Name of the client for this commission",
+      "validation": "String, matches policy owner",
+      "sampleValue": "John Anderson",
+      "required": true,
+      "mappingNotes": "For agent reporting and commission statements.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Commissions"
+    },
+    {
+      "fieldName": "First Year Commission Rate",
+      "jsonPath": "commission.firstYearRate",
+      "dataType": "percentage",
+      "description": "Commission percentage for first year",
+      "validation": "Decimal 0-1 (e.g., 0.05 = 5%)",
+      "sampleValue": "0.05",
+      "required": true,
+      "mappingNotes": "Store as decimal. Multiply by premium for commission amount.",
+      "tags": [
+        "required",
+        "system-generated",
+        "financial"
+      ],
+      "category": "Commissions"
+    },
+    {
+      "fieldName": "First Year Commission Amount",
+      "jsonPath": "commission.firstYearCommission",
+      "dataType": "currency",
+      "description": "Dollar amount of first year commission",
+      "validation": "Numeric, calculated from rate * premium",
+      "sampleValue": "12500",
+      "required": true,
+      "mappingNotes": "Calculated field. May be paid immediately or at policy anniversary.",
+      "tags": [
+        "required",
+        "calculated",
+        "financial"
+      ],
+      "category": "Commissions"
+    },
+    {
+      "fieldName": "First Year Paid",
+      "jsonPath": "commission.firstYearPaid",
+      "dataType": "boolean",
+      "description": "Whether first year commission has been paid",
+      "validation": "true or false",
+      "sampleValue": "true",
+      "required": true,
+      "mappingNotes": "Payment tracking. Use with firstYearPaidDate.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Commissions"
+    },
+    {
+      "fieldName": "Renewal Commission Rate",
+      "jsonPath": "commission.renewalRate",
+      "dataType": "percentage",
+      "description": "Annual commission percentage for renewal years",
+      "validation": "Decimal 0-1, typically lower than first year",
+      "sampleValue": "0.003",
+      "required": true,
+      "mappingNotes": "Trail commission. Applied to account value annually.",
+      "tags": [
+        "required",
+        "system-generated",
+        "financial"
+      ],
+      "category": "Commissions"
+    },
+    {
+      "fieldName": "Total Commission Earned",
+      "jsonPath": "commission.totalEarned",
+      "dataType": "currency",
+      "description": "Cumulative total of all commissions earned on this policy",
+      "validation": "Numeric, sum of first year + all renewals",
+      "sampleValue": "13250",
+      "required": true,
+      "mappingNotes": "Running total. Update annually with renewal payments.",
+      "tags": [
+        "required",
+        "calculated",
+        "financial"
+      ],
+      "category": "Commissions"
+    },
+    {
+      "fieldName": "Commission Status",
+      "jsonPath": "commission.status",
+      "dataType": "string",
+      "description": "Status of commission payments",
+      "validation": "One of: \"Active\", \"Paid\", \"Pending\", \"Cancelled\"",
+      "sampleValue": "Active",
+      "required": true,
+      "mappingNotes": "\"Active\" = generating renewals. \"Cancelled\" = policy lapsed/surrendered.",
+      "tags": [
+        "required",
+        "system-generated"
+      ],
+      "category": "Commissions"
+    },
+    {
+      "fieldName": "Agent Writing Code",
+      "jsonPath": "application.agentWritingCode",
+      "dataType": "string",
+      "description": "Unique agent identifier/writing code",
+      "validation": "Alphanumeric, 5-10 characters",
+      "sampleValue": "AGT-12345",
+      "required": true,
+      "mappingNotes": "Primary agent identifier. Use for commission routing and reporting.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Agent/Advisor"
+    },
+    {
+      "fieldName": "Agent Name",
+      "jsonPath": "application.agentName",
+      "dataType": "string",
+      "description": "Full name of the agent",
+      "validation": "String, 2-100 characters",
+      "sampleValue": "Michael Chen",
+      "required": true,
+      "mappingNotes": "Agent of record. Display on policy documents.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Agent/Advisor"
+    },
+    {
+      "fieldName": "Agent Email",
+      "jsonPath": "application.agentEmail",
+      "dataType": "email",
+      "description": "Agent's business email address",
+      "validation": "Valid email format",
+      "sampleValue": "michael.chen@agency.com",
+      "required": true,
+      "mappingNotes": "For commission statements and policy notifications.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Agent/Advisor"
+    },
+    {
+      "fieldName": "Agent Phone",
+      "jsonPath": "application.agentPhone",
+      "dataType": "phone",
+      "description": "Agent's business phone number",
+      "validation": "Format: (XXX) XXX-XXXX",
+      "sampleValue": "(555) 987-6543",
+      "required": true,
+      "mappingNotes": "Primary contact for application questions.",
+      "tags": [
+        "required",
+        "user-input"
+      ],
+      "category": "Agent/Advisor"
+    },
+    {
+      "fieldName": "Agent License Number",
+      "jsonPath": "application.agentLicense",
+      "dataType": "string",
+      "description": "State insurance license number",
+      "validation": "Alphanumeric, state-specific format",
+      "sampleValue": "CA-1234567",
+      "required": true,
+      "mappingNotes": "Verify license is active and state-appropriate before policy issue.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Agent/Advisor"
+    },
+    {
+      "fieldName": "Agent State",
+      "jsonPath": "application.agentState",
+      "dataType": "string",
+      "description": "State where agent is licensed",
+      "validation": "2-letter state code, must match owner state",
+      "sampleValue": "CA",
+      "required": true,
+      "mappingNotes": "Must be licensed in policy owner's state of residence.",
+      "tags": [
+        "required",
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Agent/Advisor"
+    },
+    {
+      "fieldName": "Agent NPN",
+      "jsonPath": "application.agentNPN",
+      "dataType": "string",
+      "description": "National Producer Number",
+      "validation": "Numeric, 8-10 digits",
+      "sampleValue": "12345678",
+      "required": false,
+      "mappingNotes": "NAIC identifier. Use for cross-state licensing verification.",
+      "tags": [
+        "user-input",
+        "regulatory"
+      ],
+      "category": "Agent/Advisor"
+    },
+    {
+      "fieldName": "Primary Beneficiary Name",
+      "jsonPath": "application.primaryBeneficiary.name",
+      "dataType": "string",
+      "description": "Full legal name of primary beneficiary",
+      "validation": "String, 2-100 characters",
+      "sampleValue": "Jane Anderson",
+      "required": false,
+      "mappingNotes": "Receives policy value upon owner's death. Can be individual, trust, or estate.",
+      "tags": [
+        "user-input",
+        "pii"
+      ],
+      "category": "Beneficiary"
+    },
+    {
+      "fieldName": "Primary Beneficiary Relationship",
+      "jsonPath": "application.primaryBeneficiary.relationship",
+      "dataType": "string",
+      "description": "Relationship of primary beneficiary to owner",
+      "validation": "String from predefined list (Spouse, Child, Sibling, Trust, Estate, etc.)",
+      "sampleValue": "Spouse",
+      "required": false,
+      "mappingNotes": "May affect spousal continuation options.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Beneficiary"
+    },
+    {
+      "fieldName": "Primary Beneficiary SSN/TIN",
+      "jsonPath": "application.primaryBeneficiary.ssn",
+      "dataType": "ssn",
+      "description": "Social Security Number or Tax ID of primary beneficiary",
+      "validation": "Format: XXX-XX-XXXX or XX-XXXXXXX",
+      "sampleValue": "***-**-5678",
+      "required": false,
+      "mappingNotes": "Required for tax reporting upon death claim. Highly sensitive PII.",
+      "tags": [
+        "user-input",
+        "pii",
+        "regulatory"
+      ],
+      "category": "Beneficiary"
+    },
+    {
+      "fieldName": "Primary Beneficiary Percentage",
+      "jsonPath": "application.primaryBeneficiary.percentage",
+      "dataType": "percentage",
+      "description": "Percentage of benefit allocated to primary beneficiary",
+      "validation": "Numeric 0-100, total of all primary beneficiaries must equal 100",
+      "sampleValue": "100",
+      "required": false,
+      "mappingNotes": "If multiple primary beneficiaries, percentages must sum to 100%.",
+      "tags": [
+        "user-input"
+      ],
+      "category": "Beneficiary"
+    },
+    {
+      "fieldName": "Contingent Beneficiary Name",
+      "jsonPath": "application.contingentBeneficiary.name",
+      "dataType": "string",
+      "description": "Full legal name of contingent (secondary) beneficiary",
+      "validation": "String, 2-100 characters",
+      "sampleValue": "Robert Anderson Jr.",
+      "required": false,
+      "mappingNotes": "Receives benefit if all primary beneficiaries predecease owner.",
+      "tags": [
+        "user-input",
+        "pii"
+      ],
+      "category": "Beneficiary"
+    }
+  ]
+}
