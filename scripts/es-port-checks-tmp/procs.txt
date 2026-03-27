@@ -1,9 +1,0 @@
-﻿--- Owning Processes (if any) ---
-
-
-   Id ProcessName Path                                       
-   -- ----------- ----                                       
-27440 java        C:\dev\elasticsearch-9.1.4\jdk\bin\java.exe
-
-
-
