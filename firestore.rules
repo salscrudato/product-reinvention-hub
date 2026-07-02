@@ -1,32 +1,107 @@
-// Firestore security rules — locked by default.
-// Full role matrix (VIEWER/EDITOR/ADMIN) implemented in Prompt 2.
+// Firestore security rules — role matrix per docs/DATA_MODEL.md Access section.
+// Role is read from the verified JWT custom claim (set via setUserRole callable).
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: read the role claim from the verified JWT.
-    function role() {
-      return request.auth != null ? request.auth.token.get('role', '') : '';
-    }
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
-    // Share links are never accessible client-side (served via Functions Admin SDK).
+    function isAuthed()  { return request.auth != null; }
+    function role()      { return isAuthed() ? request.auth.token.get('role', '') : ''; }
+    function isViewer()  { return role() == 'VIEWER'; }
+    function isEditor()  { return role() == 'EDITOR'; }
+    function isAdmin()   { return role() == 'ADMIN'; }
+    function canEdit()   { return isEditor() || isAdmin(); }
+    function myUid()     { return request.auth.uid; }
+
+    // ── Share links — no client access; Admin SDK only ────────────────────────
     match /shareLinks/{token} {
       allow read, write: if false;
     }
 
-    // Audit events and versions are append-only from authenticated clients.
+    // ── Audit events — create-only from authenticated users ───────────────────
     match /auditEvents/{id} {
-      allow create: if request.auth != null;
-      allow read:   if role() == 'ADMIN';
-      allow update, delete: if false;
-    }
-    match /versions/{id} {
-      allow create: if request.auth != null;
-      allow read:   if role() == 'ADMIN';
+      allow create: if isAuthed();
+      allow read:   if isAdmin();
       allow update, delete: if false;
     }
 
-    // All other documents: deny everything until the full matrix is implemented.
+    // ── Versions — create-only from authenticated users ───────────────────────
+    match /versions/{id} {
+      allow create: if isAuthed();
+      allow read:   if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ── Users — ADMIN reads + writes; others read own doc only ────────────────
+    match /users/{uid} {
+      allow read:  if isAdmin() || myUid() == uid;
+      allow write: if isAdmin();
+    }
+
+    // ── Products + sub-collections ────────────────────────────────────────────
+    match /products/{pid} {
+      allow read:  if isAuthed();
+      allow write: if canEdit();
+
+      match /coverages/{cid}      { allow read: if isAuthed(); allow write: if canEdit(); }
+      match /rules/{rid}          { allow read: if isAuthed(); allow write: if canEdit(); }
+      match /formRules/{id}       { allow read: if isAuthed(); allow write: if canEdit(); }
+      match /ratingPrograms/{gid} { allow read: if isAuthed(); allow write: if canEdit(); }
+    }
+
+    // ── Forms, LD/RT tables, Dictionary — EDITOR/ADMIN write; all read ────────
+    match /forms/{formKey}        { allow read: if isAuthed(); allow write: if canEdit(); }
+    match /ldTables/{refId}       { allow read: if isAuthed(); allow write: if canEdit(); }
+    match /rtTables/{refId}       { allow read: if isAuthed(); allow write: if canEdit(); }
+    match /dictionary/{id}        { allow read: if isAuthed(); allow write: if canEdit(); }
+
+    // ── Tasks — EDITOR/ADMIN write; all read ─────────────────────────────────
+    match /tasks/{id}             { allow read: if isAuthed(); allow write: if canEdit(); }
+
+    // ── Feedback — special: VIEWER may submit + vote; EDITOR/ADMIN manage ────
+    match /feedback/{id} {
+      allow read:   if isAuthed();
+      // VIEWER may create feedback
+      allow create: if isAuthed();
+      // VIEWER may cast exactly one vote (arrayUnion own uid to voters)
+      allow update: if isAuthed() &&
+        (canEdit() ||
+          // Vote-only path: only votes.count and votes.voters change
+          (request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['votes']) &&
+           request.resource.data.votes.voters.toSet().difference(
+             resource.data.votes.voters.toSet()).hasOnly([myUid()]) &&
+           request.resource.data.votes.count ==
+             resource.data.votes.count + 1));
+      allow delete: if canEdit();
+    }
+
+    // ── Comments — any auth user may create; VIEWER cannot edit others ────────
+    match /comments/{id} {
+      allow read:   if isAuthed();
+      allow create: if isAuthed();
+      allow update, delete: if canEdit();
+    }
+
+    // ── News + prefs — read all; write prefs own; news via Functions ──────────
+    match /news/{id}              { allow read: if isAuthed(); allow write: if isAdmin(); }
+    match /newsPrefs/{uid}        { allow read: if isAuthed() && myUid() == uid;
+                                    allow write: if isAuthed() && myUid() == uid; }
+
+    // ── Search index — maintained by seed + mutate(); read by all authed ──────
+    match /searchIndex/{id}       { allow read: if isAuthed(); allow write: if canEdit(); }
+
+    // ── Seed reports — read-only for all authed; write via Admin SDK ──────────
+    match /seedReports/{id}       { allow read: if isAuthed(); allow write: if false; }
+
+    // ── Presence heartbeats ───────────────────────────────────────────────────
+    match /presence/{pid}/viewers/{uid} {
+      allow read:  if isAuthed();
+      allow write: if isAuthed() && myUid() == uid;
+    }
+
+    // ── Deny everything not explicitly matched ────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }

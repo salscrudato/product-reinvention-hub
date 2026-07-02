@@ -8,13 +8,17 @@
     "dev:all": "concurrently \"pnpm emulators\" \"pnpm --filter app dev\"",
     "seed": "tsx scripts/seed.ts",
     "test": "vitest run",
+    "test:rules": "firebase emulators:exec --only firestore --project productreinvention \"vitest run --config vitest.rules.config.ts\"",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "build": "pnpm --filter app build",
     "deploy": "pnpm build && firebase deploy"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "concurrently": "^9.1.2",
+    "firebase": "^11.10.0",
+    "firebase-admin": "^13.10.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^3.1.4"

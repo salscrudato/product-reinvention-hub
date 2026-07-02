@@ -1,4 +1,11 @@
 {
-  "indexes": [],
+  "indexes": [
+    { "collectionGroup": "tasks",       "queryScope": "COLLECTION", "fields": [{ "fieldPath": "column", "order": "ASCENDING" }, { "fieldPath": "order", "order": "ASCENDING" }] },
+    { "collectionGroup": "feedback",    "queryScope": "COLLECTION", "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "priorityScore", "order": "DESCENDING" }] },
+    { "collectionGroup": "news",        "queryScope": "COLLECTION", "fields": [{ "fieldPath": "fetchedAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "versions",    "queryScope": "COLLECTION", "fields": [{ "fieldPath": "entityPath", "order": "ASCENDING" }, { "fieldPath": "at", "order": "DESCENDING" }] },
+    { "collectionGroup": "auditEvents", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "productId", "order": "ASCENDING" }, { "fieldPath": "at", "order": "DESCENDING" }] },
+    { "collectionGroup": "searchIndex", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "type", "order": "ASCENDING" }, { "fieldPath": "title", "order": "ASCENDING" }] }
+  ],
   "fieldOverrides": []
 }
