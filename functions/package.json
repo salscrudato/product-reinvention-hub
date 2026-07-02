@@ -1,0 +1,23 @@
+{
+  "name": "functions",
+  "private": true,
+  "version": "0.0.1",
+  "engines": { "node": "20" },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no linter configured for functions'"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
+    "@pf/shared": "workspace:*",
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.7.3"
+  }
+}

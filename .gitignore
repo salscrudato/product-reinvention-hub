@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build outputs
+dist/
+build/
+lib/
+.svelte-kit/
+
+# secrets — NEVER commit
+.env
+.env.*
+*.local
+apikeys.md
+
+# Firebase
+.firebase/
+firebase-debug*.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+storage.rules.swp
+.firebaserc.backup
+
+# emulator export dirs
+emulator-data/
+.emulator/
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db

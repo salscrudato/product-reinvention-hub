@@ -1,0 +1,22 @@
+{
+  "name": "product-reinvention-hub",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "pnpm --filter app dev",
+    "emulators": "firebase emulators:start",
+    "dev:all": "concurrently \"pnpm emulators\" \"pnpm --filter app dev\"",
+    "seed": "tsx scripts/seed.ts",
+    "test": "vitest run",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "build": "pnpm --filter app build",
+    "deploy": "pnpm build && firebase deploy"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.1.4"
+  }
+}
