@@ -128,12 +128,16 @@ async function main(): Promise<void> {
   for (const [refId, tbl] of Object.entries(HO3_LD_TABLES)) {
     await db.doc(`ldTables/${refId}`).set(tbl as Doc)
     inc('ldTables')
+    addIdx({ type: 'ldTable', refId, title: tbl.name, subtitle: refId,
+      path: `ldTables/${refId}`, keywords: [...keywords(tbl.name), ...keywords(refId)] })
   }
 
   // ── RT Tables ─────────────────────────────────────────────────────────────
   for (const [refId, tbl] of Object.entries(HO3_RT_TABLES)) {
     await db.doc(`rtTables/${refId}`).set(tbl as Doc)
     inc('rtTables')
+    addIdx({ type: 'rtTable', refId, title: tbl.name, subtitle: refId,
+      path: `rtTables/${refId}`, keywords: [...keywords(tbl.name), ...keywords(refId)] })
   }
 
   // ── Rating Program ────────────────────────────────────────────────────────
