@@ -9,8 +9,9 @@ lib/
 .svelte-kit/
 
 # secrets — NEVER commit
-.env
-.env.*
+# .env.local and .env.*.local are overrides (secret); .env.development etc. are shared (committed)
+.env.local
+.env.*.local
 *.local
 apikeys.md
 
