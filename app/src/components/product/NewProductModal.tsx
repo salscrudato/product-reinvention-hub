@@ -7,6 +7,7 @@ import { Dialog } from '../ui/Dialog'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { HO3_DEFAULT_TASK_TEMPLATES } from '@pf/shared'
+import { PRODUCT_NAME_SUGGESTIONS, MARKET_SEGMENTS } from '../../lib/insurance/vocab'
 
 interface Props { onClose: () => void; onCreated: (id: string) => void }
 
@@ -65,15 +66,14 @@ export function NewProductModal({ onClose, onCreated }: Props) {
   return (
     <Dialog open title="New product" onClose={onClose} width="max-w-md">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Input label="Product name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Homeowners HO-3 Special Form" required />
+        <datalist id="np-names">{PRODUCT_NAME_SUGGESTIONS.map(n => <option key={n} value={n} />)}</datalist>
+        <Input label="Product name" value={name} onChange={e => setName(e.target.value)}
+          placeholder="e.g. Homeowners — HO-3 Special Form" list="np-names" autoComplete="off" required />
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-text">Market segment</label>
           <select className="h-9 px-3 rounded-[10px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25"
             value={seg} onChange={e => setSeg(e.target.value)}>
-            <option>Personal Lines / Property</option>
-            <option>Personal Lines / Liability</option>
-            <option>Commercial Lines / Property</option>
-            <option>Commercial Lines / Liability</option>
+            {MARKET_SEGMENTS.map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}

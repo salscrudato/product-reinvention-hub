@@ -2,9 +2,10 @@
 // a visual range track showing where the selected default sits, the standard
 // options as selectable chips (add your own, remove custom ones), and editable
 // min/max bounds. Emits partial term patches; the parent persists via mutate().
-import { useState } from 'react'
+import { useState, useId } from 'react'
 import { Plus, X, Check } from 'lucide-react'
 import type { CoverageTerm, LDTable } from '@pf/shared'
+import { LIMIT_AMOUNTS, PERCENT_OPTIONS } from '../../lib/insurance/vocab'
 
 function fmt(n: number, pct: boolean): string {
   if (pct) return `${n}%`
@@ -24,6 +25,7 @@ interface Props {
 export function LimitEditor({ term, ldTable, isBlocked, canEdit, onChange }: Props) {
   const [adding, setAdding] = useState(false)
   const [draft, setDraft]   = useState('')
+  const listId = useId()
 
   const pct = term.unit === '%' || term.basis?.toLowerCase().includes('percent')
   const numericDefault = typeof term.default === 'number'
@@ -126,9 +128,10 @@ export function LimitEditor({ term, ldTable, isBlocked, canEdit, onChange }: Pro
 
         {canEdit && (adding ? (
           <span className="inline-flex items-center gap-1">
-            <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+            <datalist id={listId}>{(pct ? PERCENT_OPTIONS : LIMIT_AMOUNTS).map(v => <option key={v} value={String(v)} />)}</datalist>
+            <input autoFocus value={draft} onChange={e => setDraft(e.target.value)} list={listId}
               onKeyDown={e => { if (e.key === 'Enter') addOption(); if (e.key === 'Escape') { setAdding(false); setDraft('') } }}
-              placeholder={pct ? '10' : '25000'} aria-label="New option value"
+              placeholder={pct ? '10' : '25000'} aria-label="New option value" autoComplete="off"
               className="w-20 h-7 px-2 rounded-[7px] bg-surface border border-accent font-mono text-xs focus:outline-none focus:ring-2 focus:ring-accent/25" />
             <button onClick={addOption} className="w-6 h-6 rounded-[6px] bg-accent text-white flex items-center justify-center" aria-label="Add option"><Check size={13} /></button>
           </span>
