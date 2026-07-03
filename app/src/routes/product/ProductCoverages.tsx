@@ -1,5 +1,6 @@
 // Coverages tab — hierarchy tree + node editor with live LD-table pickers and F/E constraint.
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Save, AlertTriangle } from 'lucide-react'
 import { useProductCtx } from '../../context/useProductCtx'
@@ -206,7 +207,9 @@ function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
 
 export default function ProductCoverages() {
   const { coverages, loading } = useProductCtx()
-  const [selected, setSelected] = useState<string | null>(null)
+  const [params] = useSearchParams()
+  // Honour a deep link from the Overview (e.g. …/coverages?cov=<id>).
+  const [selected, setSelected] = useState<string | null>(() => params.get('cov'))
 
   if (loading) return <div className="grid grid-cols-[240px_1fr] gap-5"><Skeleton className="h-64" /><Skeleton className="h-64" /></div>
 
