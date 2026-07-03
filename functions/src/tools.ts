@@ -5,8 +5,9 @@
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
 import {
-  evaluate, makeHO3RtGetter, makeHO3LdGetter, HO3_WORKED_EXAMPLE,
+  evaluate, makeHO3RtGetter, makeHO3LdGetter, HO3_WORKED_EXAMPLE, rankDocuments,
 } from '@pf/shared'
+import type { RankDoc } from '@pf/shared'
 import type {
   RatingInputs, RatingProgram, RTTable, LDTable, Coverage, Rule, Form,
   Product, DictionaryEntry, SearchIndexEntry,
@@ -159,21 +160,23 @@ async function resolveProductId(given?: string): Promise<string | null> {
 }
 
 async function searchEntities(query: string, type?: string): Promise<ToolOutput> {
-  const snap    = await getFirestore().collection('searchIndex').get()
-  const tokens  = query.toLowerCase().split(/\W+/).filter(t => t.length > 1)
-  const scored: Array<{ score: number; e: SearchIndexEntry }> = []
+  const snap = await getFirestore().collection('searchIndex').get()
+  const entries = snap.docs
+    .map(d => d.data() as SearchIndexEntry)
+    .filter(e => !type || e.type === type)
 
-  for (const d of snap.docs) {
-    const e = d.data() as SearchIndexEntry
-    if (type && e.type !== type) continue
-    const hay = `${e.title} ${e.subtitle} ${e.refId ?? ''} ${(e.keywords ?? []).join(' ')}`.toLowerCase()
-    let score = 0
-    for (const t of tokens) if (hay.includes(t)) score++
-    if (score > 0 || tokens.length === 0) scored.push({ score, e })
-  }
-  scored.sort((a, b) => b.score - a.score)
+  // Vector-space (TF-IDF cosine) retrieval so the model gets the most relevant
+  // entities, not merely ones containing a token. refId is repeated to weight it.
+  const docs: RankDoc[] = entries.map((e, i) => ({
+    id: String(i),
+    text: `${e.title} ${e.subtitle} ${e.refId ?? ''} ${e.refId ?? ''} ${(e.keywords ?? []).join(' ')}`,
+  }))
+  const ranked = rankDocuments(query, docs, 15).filter(r => r.score > 0 || !query.trim())
 
-  const hits = scored.slice(0, 15).map(({ e }) => ({ type: e.type, refId: e.refId ?? null, title: e.title, subtitle: e.subtitle, path: e.path }))
+  const hits = ranked.map(r => {
+    const e = entries[Number(r.id)]!
+    return { type: e.type, refId: e.refId ?? null, title: e.title, subtitle: e.subtitle, path: e.path, score: Math.round(r.score * 1000) / 1000 }
+  })
   return { content: JSON.stringify(hits), summary: `${hits.length} result${hits.length === 1 ? '' : 's'}` }
 }
 
