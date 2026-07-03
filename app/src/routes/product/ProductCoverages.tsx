@@ -7,6 +7,7 @@ import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { Badge, StatusPill, Button, Skeleton, RefChip } from '../../components/ui'
+import { LimitEditor } from '../../components/product/LimitEditor'
 import type { Coverage, CoverageTerm } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
@@ -40,47 +41,6 @@ function buildForest(cov: WithId<Coverage>, all: WithId<Coverage>[], selected: s
   )
 }
 
-// ─── LD-table option picker ───────────────────────────────────────────────────
-
-function LDPicker({ term, ldTable, covFGated, canEdit, onChange }: {
-  term: CoverageTerm
-  ldTable?: { rows: { label: string; value: number; constraintNote?: string }[]; defaultValue?: number }
-  covFGated?: boolean  // true = Coverage F 5k blocked because E < 300k
-  canEdit: boolean
-  onChange: (value: number | string) => void
-}) {
-  if (!ldTable) return <span className="text-sm text-faint">No LD table</span>
-
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-faint">{term.label}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {ldTable.rows.map(row => {
-          const isDefault = row.value === ldTable.defaultValue
-          const isSelected = row.value === term.default
-          const blocked = covFGated && row.value === 5000
-
-          return (
-            <button
-              key={row.value}
-              disabled={!canEdit || blocked}
-              onClick={() => onChange(row.value)}
-              title={row.constraintNote ?? (blocked ? 'Requires Coverage E ≥ $300,000' : undefined)}
-              className={`px-2.5 py-1 rounded-[6px] text-xs font-medium border transition-colors
-                ${isSelected ? 'bg-accent text-white border-accent' : 'bg-surface border-border-strong text-dim hover:border-accent hover:text-accent'}
-                ${blocked ? 'opacity-40 cursor-not-allowed' : ''}
-                ${isDefault && !isSelected ? 'font-bold' : ''}`}
-            >
-              {row.label}
-              {blocked && <AlertTriangle size={10} className="inline ml-1" />}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 // ─── Coverage node editor (right pane) ───────────────────────────────────────
 
 function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
@@ -99,8 +59,8 @@ function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
   const covEDefault = covE?.terms?.[0]?.default as number | undefined
   const covFGated   = cov.refId === 'HO.COV.006' && (covEDefault ?? 300000) < 300000
 
-  function updateTermDefault(termId: string, value: number | string) {
-    setTerms(prev => prev.map(t => t.id === termId ? { ...t, default: value } : t))
+  function updateTerm(termId: string, patch: Partial<CoverageTerm>) {
+    setTerms(prev => prev.map(t => t.id === termId ? { ...t, ...patch } : t))
     setDirty(true)
   }
 
@@ -155,34 +115,22 @@ function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
         </div>
       )}
 
-      {/* Coverage terms */}
-      <div className="flex flex-col gap-4">
+      {/* Coverage terms — editable limits (range + standard options) */}
+      <div className="flex flex-col gap-5">
         <p className="text-xs font-medium text-faint uppercase tracking-wide">Coverage terms</p>
         {terms.length === 0 && <p className="text-sm text-faint">No terms defined.</p>}
-        {terms.map(term => {
-          if (term.ldTableRef && ldTables[term.ldTableRef]) {
-            return (
-              <div key={term.id} className="flex flex-col gap-2">
-                <LDPicker
-                  term={term}
-                  ldTable={ldTables[term.ldTableRef]}
-                  covFGated={covFGated}
-                  canEdit={canEdit}
-                  onChange={v => updateTermDefault(term.id, v)}
-                />
-                {term.notes && (
-                  <p className="text-xs text-faint">{term.notes}</p>
-                )}
-              </div>
-            )
-          }
-          return (
-            <div key={term.id} className="flex flex-col gap-1">
-              <span className="text-xs text-faint">{term.label}</span>
-              <p className="text-sm text-dim">{String(term.default)}</p>
-            </div>
-          )
-        })}
+        {terms.map(term => (
+          <div key={term.id} className="flex flex-col gap-1.5">
+            <LimitEditor
+              term={term}
+              ldTable={term.ldTableRef ? ldTables[term.ldTableRef] : undefined}
+              isBlocked={covFGated && term.kind === 'LIMIT' ? (v => v === 5000 ? 'Requires Coverage E ≥ $300,000 [HO.RU.006]' : undefined) : undefined}
+              canEdit={canEdit}
+              onChange={patch => updateTerm(term.id, patch)}
+            />
+            {term.notes && <p className="text-xs text-faint">{term.notes}</p>}
+          </div>
+        ))}
       </div>
 
       {/* Linked forms — click to open in the Forms tab (two-way link) */}
