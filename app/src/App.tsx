@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { UserProvider } from './context/UserContext'
 import { Skeleton } from './components/ui'
-import { Wand2, CheckSquare, Newspaper, BarChart3, BookOpen, MessageSquare, Shield } from 'lucide-react'
+import { Wand2, Newspaper, BarChart3, BookOpen, MessageSquare, Shield } from 'lucide-react'
 import { StubRoute } from './routes/stub/StubRoute'
 
 const Landing            = lazy(() => import('./routes/Landing'))
@@ -21,6 +21,7 @@ const ProductForms       = lazy(() => import('./routes/product/ProductForms'))
 const ProductPricing     = lazy(() => import('./routes/product/ProductPricing'))
 const ProductStates      = lazy(() => import('./routes/product/ProductStates'))
 const ProductRules       = lazy(() => import('./routes/product/ProductRules'))
+const Tasks              = lazy(() => import('./routes/Tasks'))
 
 function PageLoader() {
   return (
@@ -58,7 +59,7 @@ export default function App() {
 
               <Route path="builder"    element={<StubRoute title="AI Builder" description="Generate product structures, draft coverage language and validate rules with Claude — coming soon." icon={Wand2} />} />
               <Route path="explorer"   element={<Explorer />} />
-              <Route path="tasks"      element={<StubRoute title="Task Board" description="Kanban tracking for the product development lifecycle." icon={CheckSquare} />} />
+              <Route path="tasks"      element={<Tasks />} />
               <Route path="news"       element={<StubRoute title="Market News" description="AI-curated regulatory updates and competitor filings." icon={Newspaper} />} />
               <Route path="claims"     element={<StubRoute title="Claims Analysis" description="Loss-ratio trends and emerging risk signals." icon={BarChart3} />} />
               <Route path="dictionary" element={<StubRoute title="Data Dictionary" description="Canonical field definitions for data governance." icon={BookOpen} />} />
