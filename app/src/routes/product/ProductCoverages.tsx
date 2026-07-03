@@ -8,8 +8,14 @@ import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { Badge, StatusPill, Button, Skeleton, RefChip } from '../../components/ui'
 import { LimitEditor } from '../../components/product/LimitEditor'
+import { StateTileMap } from '../../components/product/StateTileMap'
+import { HO3_COASTAL_STATES } from '@pf/shared'
+import { US_TILE_GRID } from '../../lib/geo/usTileGrid'
 import type { Coverage, CoverageTerm } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
+
+const COV_COASTAL = new Set<string>(HO3_COASTAL_STATES)
+const ALL_TILE_STATES = Object.keys(US_TILE_GRID)
 
 // ─── Coverage tree (left pane) ────────────────────────────────────────────────
 
@@ -50,9 +56,16 @@ function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
   const canEdit   = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const actor     = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
 
-  // Local draft of terms
-  const [terms, setTerms] = useState<CoverageTerm[]>(() => cov.terms ?? [])
+  // Local draft of terms + state scope
+  const [terms, setTerms]         = useState<CoverageTerm[]>(() => cov.terms ?? [])
+  const [states, setStates]       = useState<string[]>(() => cov.states ?? [])
+  const [allStates, setAllStates] = useState<boolean>(() => cov.allStates ?? false)
   const [dirty, setDirty] = useState(false)
+
+  function toggleCovState(s: string) {
+    setStates(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+    setDirty(true)
+  }
 
   // For Coverage F gate: find Coverage E's current default limit
   const covE        = coverages.find(c => c.refId === 'HO.COV.005')
@@ -69,7 +82,7 @@ function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
     try {
       await adapter.db.mutate({
         op: 'update', path: `products/${pid}/coverages/${cov.id}`,
-        data: { terms },
+        data: { terms, states, allStates },
         entityType: 'coverage', productId: pid, actor,
         expectedRev: (cov as { rev?: number }).rev,
       })
@@ -146,10 +159,25 @@ function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
         </div>
       )}
 
-      {/* State scope */}
+      {/* State scope — the US map, editable per coverage */}
       <div>
-        <p className="text-xs font-medium text-faint uppercase tracking-wide mb-2">States</p>
-        <p className="text-sm text-dim">{cov.allStates ? 'All states' : (cov.states?.join(', ') || 'None configured')}</p>
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <p className="text-xs font-medium text-faint uppercase tracking-wide">State scope</p>
+          <label className="flex items-center gap-1.5 text-xs text-dim cursor-pointer">
+            <input type="checkbox" className="accent-accent" checked={allStates} disabled={!canEdit}
+              onChange={e => { setAllStates(e.target.checked); setDirty(true) }} />
+            All footprint states
+          </label>
+        </div>
+        <div className="bg-page rounded-[12px] p-3" style={{ border: '1px solid var(--color-border)' }}>
+          <StateTileMap
+            active={allStates ? new Set(ALL_TILE_STATES) : new Set(states)}
+            coastal={COV_COASTAL}
+            onToggle={toggleCovState}
+            canEdit={canEdit && !allStates}
+            labels={{ active: 'In scope', coastal: 'Coastal wind/hail', inactive: 'Out of scope' }}
+          />
+        </div>
       </div>
     </div>
   )
