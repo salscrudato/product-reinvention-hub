@@ -29,6 +29,8 @@ export const adapter: BackendAdapter = {
     subscribe: (_pathOrQuery, _cb) => notImplemented('db.subscribe'),
     // AWS-SWAP: DynamoDB TransactWriteItems (entity + auditEvent + version + searchIndex)
     mutate: (_m) => notImplemented('db.mutate'),
+    // AWS-SWAP: DynamoDB UpdateItem with ADD (votes.voters, votes.count)
+    vote: (_path, _uid) => notImplemented('db.vote'),
     // AWS-SWAP: DynamoDB TransactGetItems + condition expressions for optimistic lock
     tx: (_fn) => notImplemented('db.tx'),
   },

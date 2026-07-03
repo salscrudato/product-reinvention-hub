@@ -8,7 +8,8 @@ import {
 } from 'firebase/auth'
 import {
   getFirestore, doc, collection, getDoc, getDocs, onSnapshot,
-  writeBatch, serverTimestamp, setDoc, deleteDoc,
+  writeBatch, serverTimestamp, setDoc, deleteDoc, updateDoc,
+  arrayUnion, increment,
   query as fbQuery, where, orderBy, limit as fbLimit,
   runTransaction, connectFirestoreEmulator,
 } from 'firebase/firestore'
@@ -66,6 +67,11 @@ function buildQuery(collRef: ReturnType<typeof collection>, q: Query) {
   if (q.limit != null) constraints.push(fbLimit(q.limit))
   return fbQuery(collRef, ...constraints)
 }
+
+// Entity types that belong in the ⌘K search index. Others (feedback, comment,
+// newsPrefs…) skip the searchIndex write — which also keeps VIEWER feedback
+// submissions within their allowed rule surface (searchIndex is EDITOR+ write).
+const INDEXABLE = new Set(['product', 'coverage', 'rule', 'form', 'ldTable', 'rtTable', 'dictionary', 'task'])
 
 export const adapter: BackendAdapter = {
   auth: {
@@ -174,7 +180,7 @@ export const adapter: BackendAdapter = {
 
       // SearchIndex upsert: derive title/keywords from entity data for ⌘K palette.
       // AWS-SWAP: becomes a DynamoDB put on the searchIndex table.
-      if (m.op !== 'delete' && m.data) {
+      if (m.op !== 'delete' && m.data && INDEXABLE.has(m.entityType)) {
         const d = m.data
         const indexId  = m.path.replace(/\//g, '_')
         const title    = (d['name'] as string | undefined) ?? (d['title'] as string | undefined) ?? ''
@@ -193,12 +199,21 @@ export const adapter: BackendAdapter = {
           path:     m.path,
           keywords: [...new Set(keywords)],
         })
-      } else if (m.op === 'delete') {
+      } else if (m.op === 'delete' && INDEXABLE.has(m.entityType)) {
         const indexId = m.path.replace(/\//g, '_')
         batch.delete(doc(db, `searchIndex/${indexId}`))
       }
 
       await batch.commit()
+    },
+
+    async vote(path: string, uid: string): Promise<void> {
+      // Narrow, un-audited write matching the VIEWER vote-only rule: only `votes`
+      // changes (arrayUnion the uid, +1 count). AWS-SWAP: DynamoDB UpdateItem ADD.
+      await updateDoc(doc(db, path), {
+        'votes.voters': arrayUnion(uid),
+        'votes.count':  increment(1),
+      })
     },
 
     async tx<T>(fn: (helpers: { get: BackendAdapter['db']['get'] }) => Promise<T>): Promise<T> {

@@ -53,6 +53,9 @@ export interface BackendAdapter {
     subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void): Unsubscribe
     /** Atomic entity + audit + version + searchIndex write. */
     mutate(m: MutationPayload): Promise<void>
+    /** Narrow, un-audited vote: arrayUnion the uid into votes.voters and +1 votes.count.
+     *  Matches the VIEWER vote-only path in firestore.rules (only `votes` may change). */
+    vote(path: string, uid: string): Promise<void>
     /** Rev-checked transaction wrapper for optimistic concurrency. */
     tx<T>(fn: (helpers: { get: BackendAdapter['db']['get'] }) => Promise<T>): Promise<T>
   }

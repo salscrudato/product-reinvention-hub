@@ -1,15 +1,18 @@
 ﻿// Authenticated app shell â€” route guard, sidebar, topbar, command palette, outlet.
 import { useState, useEffect } from 'react'
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { KeyRound } from 'lucide-react'
 import { useUser } from '../context/useUser'
 import { Sidebar } from '../components/shell/Sidebar'
 import { Topbar } from '../components/shell/Topbar'
 import { CommandPalette } from '../components/palette/CommandPalette'
+import { FeedbackProvider } from '../components/feedback/FeedbackProvider'
 import { Skeleton } from '../components/ui'
 
 export default function AppShell() {
   const { user, profile, loading } = useUser()
+  const navigate = useNavigate()
   const [collapsed,    setCollapsed]    = useState(false)
   const [paletteOpen, setPaletteOpen]   = useState(false)
 
@@ -35,22 +38,31 @@ export default function AppShell() {
 
   if (!user) return <Navigate to="/sign-in" state={{ from: location.pathname }} replace />
 
-  if (profile?.mustChangePassword) return <Navigate to="/must-change-password" replace />
-
   return (
-    <div className="flex h-svh overflow-hidden bg-page">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+    <FeedbackProvider>
+      <div className="flex h-svh overflow-hidden bg-page">
+        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
 
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Topbar onOpenPalette={() => setPaletteOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
-        </main>
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <Topbar onOpenPalette={() => setPaletteOpen(true)} />
+
+          {/* Persistent banner until the seeded/temp password is changed */}
+          {profile?.mustChangePassword && (
+            <div className="flex items-center justify-between gap-3 px-6 py-2 text-sm" style={{ background: 'rgba(180,83,9,.08)', borderBottom: '1px solid rgba(180,83,9,.2)' }}>
+              <span className="flex items-center gap-2 text-warn"><KeyRound size={14} /> You're using a temporary password. Please set a new one.</span>
+              <button onClick={() => navigate('/must-change-password')} className="font-medium text-warn hover:underline shrink-0">Change password →</button>
+            </div>
+          )}
+
+          <main className="flex-1 overflow-y-auto p-6">
+            <Outlet />
+          </main>
+        </div>
+
+        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+        <Toaster richColors position="bottom-right" />
       </div>
-
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
-      <Toaster richColors position="bottom-right" />
-    </div>
+    </FeedbackProvider>
   )
 }
 

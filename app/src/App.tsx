@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { UserProvider } from './context/UserContext'
 import { Skeleton } from './components/ui'
-import { Wand2, Newspaper, BarChart3, MessageSquare, Shield } from 'lucide-react'
+import { Wand2, Newspaper, BarChart3 } from 'lucide-react'
 import { StubRoute } from './routes/stub/StubRoute'
 
 const Landing            = lazy(() => import('./routes/Landing'))
@@ -23,6 +23,8 @@ const ProductStates      = lazy(() => import('./routes/product/ProductStates'))
 const ProductRules       = lazy(() => import('./routes/product/ProductRules'))
 const Tasks              = lazy(() => import('./routes/Tasks'))
 const Dictionary         = lazy(() => import('./routes/Dictionary'))
+const Admin              = lazy(() => import('./routes/Admin'))
+const Feedback           = lazy(() => import('./routes/Feedback'))
 
 function PageLoader() {
   return (
@@ -64,8 +66,8 @@ export default function App() {
               <Route path="news"       element={<StubRoute title="Market News" description="AI-curated regulatory updates and competitor filings." icon={Newspaper} />} />
               <Route path="claims"     element={<StubRoute title="Claims Analysis" description="Loss-ratio trends and emerging risk signals." icon={BarChart3} />} />
               <Route path="dictionary" element={<Dictionary />} />
-              <Route path="feedback"   element={<StubRoute title="Feedback" description="Ideas, issues and praise from the team." icon={MessageSquare} />} />
-              <Route path="admin"      element={<StubRoute title="Settings" description="User management and system configuration." icon={Shield} />} />
+              <Route path="feedback"   element={<Feedback />} />
+              <Route path="admin"      element={<Admin />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -3,3 +3,4 @@
 export { hello } from './health'
 export { createShareLink, getShareSnapshot } from './share'
 export { chat } from './ai'
+export { setUserRole } from './admin'
