@@ -18,25 +18,49 @@ const NEWS_SYSTEM = `You are a P&C insurance news scout for a product manager. U
 {"url": string, "source": string, "title": string, "summary": string (1–2 sentences), "tags": string[] (2–4 short topical labels)}.
 If you find nothing relevant, return [].`
 
-/** Run one instruction through Claude + web search and parse the JSON items. */
+/** Pull the first balanced JSON array out of text (tolerant of prose + [1] citations). */
+function extractJsonArray(text: string): unknown[] {
+  const candidates: string[] = []
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fence) candidates.push(fence[1]!)
+  const start = text.indexOf('[')
+  if (start >= 0) {
+    let depth = 0
+    for (let i = start; i < text.length; i++) {
+      if (text[i] === '[') depth++
+      else if (text[i] === ']' && --depth === 0) { candidates.push(text.slice(start, i + 1)); break }
+    }
+  }
+  candidates.push(text.trim())
+  for (const c of candidates) {
+    try { const a = JSON.parse(c.trim()); if (Array.isArray(a)) return a } catch { /* try next */ }
+  }
+  return []
+}
+
+/** Run one instruction through Claude + web search and parse the JSON items.
+ *  Handles the server-tool `pause_turn` continuation loop. */
 async function fetchForInstruction(instruction: string): Promise<NewsItem[]> {
-  const res = await anthropic().messages.create({
-    model:      MODEL,
-    max_tokens: 2048,
-    system:     NEWS_SYSTEM,
-    tools:      [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }] as unknown as Anthropic.Tool[],
-    messages:   [{ role: 'user', content: instruction }],
-  })
-  const text = res.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n')
-  const match = text.match(/\[[\s\S]*\]/)
-  if (!match) return []
-  try {
-    const arr = JSON.parse(match[0]) as unknown[]
-    return (Array.isArray(arr) ? arr : [])
-      .map(x => x as Partial<NewsItem>)
-      .filter(x => x.url && x.title)
-      .map(x => ({ url: x.url!, source: x.source ?? '', title: x.title!, summary: x.summary ?? '', tags: x.tags ?? [] }))
-  } catch { return [] }
+  const client = anthropic()
+  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: instruction }]
+  let finalText = ''
+  for (let turn = 0; turn < 6; turn++) {
+    const res = await client.messages.create({
+      model:      MODEL,
+      max_tokens: 2048,
+      system:     NEWS_SYSTEM,
+      tools:      [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }] as unknown as Anthropic.Tool[],
+      messages,
+    })
+    const text = res.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n')
+    if (text.trim()) finalText = text
+    if (res.stop_reason === 'pause_turn') { messages.push({ role: 'assistant', content: res.content }); continue }
+    break
+  }
+  return extractJsonArray(finalText)
+    .map(x => x as Partial<NewsItem>)
+    .filter(x => x.url && x.title)
+    .map(x => ({ url: x.url!, source: x.source ?? '', title: x.title!, summary: x.summary ?? '', tags: x.tags ?? [] }))
 }
 
 /** Store items, deduped by a hash of the URL. Returns how many were newly stored. */
