@@ -24,15 +24,17 @@ interface Crumb { label: string; to: string }
 function useCrumbs(): Crumb[] {
   const { pathname } = useLocation()
   const [names, setNames] = useState<Record<string, string>>({})
+  const onProductPage = pathname.startsWith('/app/products/')
 
   // Lightweight id→name map so a product crumb reads "Homeowners HO-3", not its id.
+  // Subscribe once while in product-land (not per tab switch) to avoid listener churn.
   useEffect(() => {
-    if (!pathname.startsWith('/app/products/')) return
+    if (!onProductPage) return
     const unsub = adapter.db.subscribe<Product & { id?: string }>('products', d => {
       if (Array.isArray(d)) setNames(Object.fromEntries(d.map(p => [p.id ?? '', p.name])))
     })
     return unsub
-  }, [pathname])
+  }, [onProductPage])
 
   const parts = pathname.split('/').filter(Boolean).slice(1) // drop 'app'
   const crumbs: Crumb[] = []
