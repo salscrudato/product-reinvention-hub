@@ -1,10 +1,15 @@
 // Rules tab — grouped product rules + live Simulate panel (form attachment + violations).
 import { useState, useMemo } from 'react'
-import { CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { CheckCircle, AlertTriangle, AlertCircle, Plus } from 'lucide-react'
 import { evaluateRules } from '@pf/shared'
 import { useProductCtx } from '../../context/useProductCtx'
+import { useUser } from '../../context/useUser'
+import { adapter, MutationConflictError } from '../../lib/backend'
 import { Badge, Skeleton, EmptyState } from '../../components/ui'
 import { Button } from '../../components/ui/Button'
+import { RuleFlowCard, RuleComposer, type NewRule } from '../../components/product/RuleBuilder'
 import type { RuleCategory, SelectionContext } from '@pf/shared'
 import { HO3_COASTAL_STATES } from '@pf/shared'
 
@@ -132,11 +137,37 @@ function SimulatePanel() {
 
 export default function ProductRules() {
   const ctx = useProductCtx()
-  const rules = ctx.rules
-  const formRules = ctx.formRules
-  const loading = ctx.loading
+  const { pid, rules, formRules, coverages, loading } = ctx
+  const { user } = useUser()
+  const navigate = useNavigate()
+  const canEdit  = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const [query,  setQuery]  = useState('')
   const [simOpen, setSimOpen] = useState(false)
+  const [composerOpen, setComposerOpen] = useState(false)
+
+  // Deep-link helpers so a rule links to the coverages / forms it governs.
+  const openCoverage = (refId: string) => {
+    const c = coverages.find(x => x.refId === refId)
+    navigate(`/app/products/${pid}/coverages?cov=${c?.id ?? refId}`)
+  }
+  const openForm = (num: string) => navigate(`/app/products/${pid}/forms?form=${encodeURIComponent(num)}`)
+
+  async function createRule(nr: NewRule) {
+    if (!user) return
+    const next = Math.max(10, ...rules.map(r => Number(/HO\.RU\.(\d+)/.exec(r.refId ?? '')?.[1] ?? 0))) + 1
+    const refId = `HO.RU.${String(next).padStart(3, '0')}`
+    try {
+      await adapter.db.mutate({
+        op: 'create', path: `products/${pid}/rules/${crypto.randomUUID()}`,
+        data: { ...nr, refId, allStates: true, states: [], status: 'ACTIVE', lifecycle: 'DRAFT', reviewStatus: 'NOT_STARTED' },
+        entityType: 'rule', productId: pid, actor: { uid: user.uid, name: user.name ?? user.email ?? 'User' },
+      })
+      toast.success(`Rule ${refId} created`)
+      setComposerOpen(false)
+    } catch (err) {
+      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not create rule.')
+    }
+  }
 
   const grouped = useMemo(() => {
     const filtered = query ? rules.filter(r => `${r.refId} ${r.condition} ${r.outcome}`.toLowerCase().includes(query.toLowerCase())) : rules
@@ -153,13 +184,24 @@ export default function ProductRules() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <input className="flex-1 max-w-sm h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
           placeholder="Search rules..." value={query} onChange={e => setQuery(e.target.value)} />
-        <Button variant="primary" size="sm" onClick={() => setSimOpen(s => !s)}>
-          {simOpen ? 'Hide simulate' : 'Simulate...'}
-        </Button>
+        <div className="flex items-center gap-2 ml-auto">
+          <Button variant="ghost" size="sm" onClick={() => setSimOpen(s => !s)}>
+            {simOpen ? 'Hide simulate' : 'Simulate…'}
+          </Button>
+          {canEdit && (
+            <Button variant="primary" size="sm" onClick={() => setComposerOpen(o => !o)}>
+              <Plus size={14} />New rule
+            </Button>
+          )}
+        </div>
       </div>
+
+      {composerOpen && canEdit && (
+        <RuleComposer forms={ctx.forms.map(f => f.number)} onCreate={createRule} onCancel={() => setComposerOpen(false)} />
+      )}
 
       {simOpen && (
         <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
@@ -168,32 +210,16 @@ export default function ProductRules() {
         </div>
       )}
 
-      {/* Product rules */}
+      {/* Product rules — rendered as logical IF → THEN flows */}
       {Object.entries(grouped).map(([cat, catRules]) => (
         <div key={cat}>
           <div className="flex items-center gap-2 mb-2">
             <Badge label={cat} color={CAT_COLOR[cat as RuleCategory] ?? 'default'} />
             <span className="text-xs text-faint">{catRules.length} rule{catRules.length !== 1 ? 's' : ''}</span>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
             {catRules.map(rule => (
-              <div key={rule.id} className="bg-surface rounded-[12px] px-4 py-3" style={{ border: '1px solid var(--color-border)' }}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-col gap-1 flex-1">
-                    <div className="flex items-center gap-2">
-                      {rule.refId && <span className="text-xs font-mono text-accent">{rule.refId}</span>}
-                      {rule.ldTableRef && <Badge label={rule.ldTableRef} color="blue" mono />}
-                    </div>
-                    <p className="text-sm text-text"><span className="text-dim">If</span> {rule.condition}</p>
-                    <p className="text-sm text-text"><span className="text-dim">Then</span> {rule.outcome}</p>
-                    {rule.formNumbers?.length > 0 && (
-                      <div className="flex gap-1 flex-wrap mt-1">
-                        {rule.formNumbers.map(fn => <Badge key={fn} label={fn} color="default" mono />)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <RuleFlowCard key={rule.id} rule={rule} onOpenCoverage={openCoverage} onOpenForm={openForm} />
             ))}
           </div>
         </div>
@@ -206,19 +232,11 @@ export default function ProductRules() {
             <Badge label="FORM ATTACHMENT" color="warn" />
             <span className="text-xs text-faint">{formRules.length} rule{formRules.length !== 1 ? 's' : ''}</span>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
             {formRules.map(fr => (
-              <div key={fr.id} className="bg-surface rounded-[12px] px-4 py-3" style={{ border: '1px solid var(--color-border)' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  {fr.refId && <span className="text-xs font-mono text-accent">{fr.refId}</span>}
-                  {fr.mandatory && <Badge label="Mandatory" color="purple" />}
-                </div>
-                <p className="text-sm text-text"><span className="text-dim">If</span> {fr.condition}</p>
-                <p className="text-sm text-text"><span className="text-dim">Then</span> {fr.outcome}</p>
-                <div className="flex gap-1 flex-wrap mt-1">
-                  {fr.formNumbers?.map(fn => <Badge key={fn} label={fn} color="blue" mono />)}
-                </div>
-              </div>
+              <RuleFlowCard key={fr.id}
+                rule={{ id: fr.id, refId: fr.refId, category: 'FORMS', subCategory: fr.mandatory ? 'Mandatory' : undefined, condition: fr.condition, outcome: fr.outcome, formNumbers: fr.formNumbers }}
+                onOpenForm={openForm} />
             ))}
           </div>
         </div>

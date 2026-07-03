@@ -194,7 +194,8 @@ export default function ProductCoverages() {
   if (loading) return <div className="grid grid-cols-[240px_1fr] gap-5"><Skeleton className="h-64" /><Skeleton className="h-64" /></div>
 
   const roots = coverages.filter(c => !c.parentId)
-  const selectedCov = coverages.find(c => c.id === selected) ?? (roots[0] ? coverages[0] ?? null : null)
+  // Deep links may arrive as a coverage id OR a refId (e.g. from a rule).
+  const selectedCov = coverages.find(c => c.id === selected || c.refId === selected) ?? coverages[0] ?? null
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-5">
