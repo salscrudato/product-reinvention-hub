@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <defs>
     <linearGradient id="prh" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#9333EA"/>
-      <stop offset="0.55" stop-color="#C026D3"/>
-      <stop offset="1" stop-color="#DB2777"/>
+      <stop stop-color="#A100FF"/>
+      <stop offset="0.55" stop-color="#8B1FE0"/>
+      <stop offset="1" stop-color="#6D28D9"/>
     </linearGradient>
   </defs>
   <rect width="32" height="32" rx="8" fill="url(#prh)"/>

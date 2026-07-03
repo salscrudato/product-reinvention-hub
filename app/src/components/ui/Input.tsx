@@ -30,7 +30,7 @@ export function Input({ label, error, leftIcon, className = '', id, ...props }: 
             focus:outline-none focus:ring-2
             disabled:opacity-50 disabled:cursor-not-allowed
             ${leftIcon ? 'pl-9' : 'pl-3'} pr-3
-            ${error ? 'border-danger focus:ring-danger/30' : 'border-[rgba(19,19,26,.12)] focus:ring-[rgba(192,38,211,.25)] focus:border-accent'}
+            ${error ? 'border-danger focus:ring-danger/30' : 'border-border-strong focus:ring-accent/25 focus:border-accent'}
             ${className}`}
         />
       </div>

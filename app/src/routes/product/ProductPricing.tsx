@@ -22,7 +22,7 @@ function InputSelect({ label, options, value, onChange }: InputSelectProps) {
     <div className="flex flex-col gap-1">
       <span className="text-xs text-dim">{label}</span>
       <select
-        className="h-8 px-2 rounded-[8px] bg-surface border border-[rgba(19,19,26,.12)] text-sm text-text focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)]"
+        className="h-8 px-2 rounded-[8px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25"
         value={String(value)} onChange={e => {
           const opt = options.find(o => String(o.value) === e.target.value)
           onChange(opt?.value ?? e.target.value)
@@ -40,7 +40,7 @@ function InputNumber({ label, value, onChange, min, step }: { label: string; val
       <span className="text-xs text-dim">{label}</span>
       <input
         type="number" min={min} step={step ?? 1000}
-        className="h-8 px-2 rounded-[8px] bg-surface border border-[rgba(19,19,26,.12)] text-sm text-text focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)]"
+        className="h-8 px-2 rounded-[8px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25"
         value={value} onChange={e => onChange(Number(e.target.value))}
       />
     </div>
@@ -49,7 +49,7 @@ function InputNumber({ label, value, onChange, min, step }: { label: string; val
 
 // ─── Trace table + SVG export ─────────────────────────────────────────────────
 
-const OP_COLOR: Record<string, string> = { SET: '#2563eb', MUL: '#C026D3', ADD: '#059669', MIN_FLOOR: '#B45309' }
+const OP_COLOR: Record<string, string> = { SET: '#2563eb', MUL: '#8B1FE0', ADD: '#059669', MIN_FLOOR: '#B45309' }
 
 function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium: number }) {
 
@@ -68,12 +68,12 @@ function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium
       lines.push(`<text x="${PAD + 10}" y="${y + 18}" font-size="9" fill="${col}" font-weight="700">${t.op}</text>`)
       lines.push(`<text x="${PAD + 10}" y="${y + 32}" font-size="10" fill="#131318">${t.label.substring(0,38)}</text>`)
       lines.push(`<text x="${PAD + BOX_W - 10}" y="${y + 32}" font-size="11" fill="${col}" font-weight="700" text-anchor="end">$${t.runningTotal.toLocaleString()}</text>`)
-      if (i < rows.length - 1) lines.push(`<line x1="${PAD + BOX_W / 2}" y1="${y + BOX_H}" x2="${PAD + BOX_W / 2}" y2="${y + BOX_H + GAP}" stroke="#C026D3" stroke-opacity=".3" stroke-width="2"/>`)
+      if (i < rows.length - 1) lines.push(`<line x1="${PAD + BOX_W / 2}" y1="${y + BOX_H}" x2="${PAD + BOX_W / 2}" y2="${y + BOX_H + GAP}" stroke="#8B1FE0" stroke-opacity=".3" stroke-width="2"/>`)
     })
     // Final premium
     const fy = PAD + rows.length * (BOX_H + GAP)
     lines.push(`<rect x="${PAD}" y="${fy}" width="${BOX_W}" height="${BOX_H}" rx="8" fill="url(#grad)"/>`)
-    lines.push(`<defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#C026D3"/><stop offset="100%" stop-color="#EC4899"/></linearGradient></defs>`)
+    lines.push(`<defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8B1FE0"/><stop offset="100%" stop-color="#7A00E6"/></linearGradient></defs>`)
     lines.push(`<text x="${PAD + 16}" y="${fy + 22}" font-size="11" fill="white" font-weight="600">Final Premium</text>`)
     lines.push(`<text x="${PAD + BOX_W - 16}" y="${fy + 22}" font-size="18" fill="white" font-weight="800" text-anchor="end">$${finalPremium.toLocaleString()}</text>`)
     lines.push('</svg>')
@@ -118,11 +118,11 @@ function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium
       {/* Final premium */}
       <div
         className="flex items-center justify-between px-5 py-4 rounded-[12px] mt-3"
-        style={{ background: 'linear-gradient(135deg, rgba(192,38,211,.08), rgba(236,72,153,.06))', border: '1px solid rgba(192,38,211,.2)' }}
+        style={{ background: 'linear-gradient(135deg, rgba(139,31,224,.08), rgba(122,0,230,.06))', border: '1px solid rgba(139,31,224,.2)' }}
       >
         <span className="text-sm font-semibold text-text">Final premium</span>
         <span className="text-2xl font-bold tabular-nums"
-          style={{ background: 'linear-gradient(135deg, #C026D3, #EC4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          style={{ background: 'linear-gradient(135deg, #8B1FE0, #7A00E6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
           ${finalPremium.toLocaleString()}
         </span>
       </div>
@@ -173,7 +173,7 @@ export default function ProductPricing() {
 
           <div className="flex flex-col gap-1">
             <span className="text-xs text-dim">Risk state</span>
-            <select className="h-8 px-2 rounded-[8px] bg-surface border border-[rgba(19,19,26,.12)] text-sm text-text focus:outline-none"
+            <select className="h-8 px-2 rounded-[8px] bg-surface border border-border-strong text-sm text-text focus:outline-none"
               value={riskState} onChange={e => setRiskState(e.target.value)}>
               {['AZ','CA','CO','FL','GA','IL','IN','MI','NC','OH','PA','SC','TN','TX','VA'].map(s => (
                 <option key={s} value={s}>{s}{COASTAL.has(s) ? ' ⚡' : ''}</option>
@@ -183,7 +183,7 @@ export default function ProductPricing() {
 
           <div className="flex flex-col gap-1">
             <span className="text-xs text-dim">Protection class</span>
-            <input type="number" min={1} max={10} className="h-8 px-2 rounded-[8px] bg-surface border border-[rgba(19,19,26,.12)] text-sm text-text focus:outline-none"
+            <input type="number" min={1} max={10} className="h-8 px-2 rounded-[8px] bg-surface border border-border-strong text-sm text-text focus:outline-none"
               value={inputs.pc} onChange={e => upd({ pc: Number(e.target.value) })} />
           </div>
 
@@ -260,12 +260,12 @@ export default function ProductPricing() {
             <div className="col-span-2 flex flex-col gap-2">
               {(inputs.sppItems ?? []).map((item, i) => (
                 <div key={i} className="grid grid-cols-2 gap-2">
-                  <select className="h-7 px-2 rounded-[6px] bg-surface border border-[rgba(19,19,26,.12)] text-xs"
+                  <select className="h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs"
                     value={item.itemClass}
                     onChange={e => { const s = [...(inputs.sppItems ?? [])]; s[i] = { ...s[i]!, itemClass: e.target.value }; upd({ sppItems: s }) }}>
                     {['Jewelry','Furs','Cameras','Fine Arts','Silverware','Musical Instruments'].map(c => <option key={c}>{c}</option>)}
                   </select>
-                  <input type="number" className="h-7 px-2 rounded-[6px] bg-surface border border-[rgba(19,19,26,.12)] text-xs"
+                  <input type="number" className="h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs"
                     value={item.appraisedValue}
                     onChange={e => { const s = [...(inputs.sppItems ?? [])]; s[i] = { ...s[i]!, appraisedValue: Number(e.target.value) }; upd({ sppItems: s }) }} />
                 </div>

@@ -142,14 +142,14 @@ export default function Products() {
       <div className="flex flex-wrap items-center gap-3">
         <Tabs tabs={TABS} active={tab} onChange={setTab} />
         <input
-          className="flex-1 min-w-[200px] h-8 px-3 rounded-[8px] bg-surface border border-[rgba(19,19,26,.12)] text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)] focus:border-accent"
+          className="flex-1 min-w-[200px] h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent"
           placeholder="Search products..."
           value={query}
           onChange={e => setQuery(e.target.value)}
         />
         {lobs.length > 1 && (
           <select
-            className="h-8 px-3 rounded-[8px] bg-surface border border-[rgba(19,19,26,.12)] text-sm text-dim focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)]"
+            className="h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm text-dim focus:outline-none focus:ring-2 focus:ring-accent/25"
             value={lobFilter}
             onChange={e => setLobFilter(e.target.value)}
           >

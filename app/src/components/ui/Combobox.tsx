@@ -67,7 +67,7 @@ export function Combobox<T>({ items, value, onChange, getLabel, getValue, placeh
     <div className={`relative ${className}`}>
       <div
         className={`flex items-center gap-2 h-9 px-3 rounded-[10px] bg-surface border cursor-text
-          ${open ? 'border-accent ring-2 ring-[rgba(192,38,211,.25)]' : 'border-[rgba(19,19,26,.12)] hover:border-[rgba(19,19,26,.22)]'}`}
+          ${open ? 'border-accent ring-2 ring-accent/25' : 'border-border-strong hover:border-[rgba(19,19,26,.22)]'}`}
         onClick={() => { setOpen(true); inputRef.current?.focus() }}
       >
         <input

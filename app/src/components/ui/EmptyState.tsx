@@ -20,8 +20,9 @@ function DotGrid() {
             cx={col * 10 + 5}
             cy={row * 11 + 6}
             r={1.5}
-            fill="rgba(192,38,211,.15)"
-            style={{ opacity: Math.random() > 0.4 ? 1 : 0.3 }}
+            fill="var(--color-accent-line)"
+            // Deterministic scatter (stable across renders — no Math.random flicker).
+            style={{ opacity: ((row * 8 + col) * 37) % 11 > 4 ? 1 : 0.28 }}
           />
         ))
       )}

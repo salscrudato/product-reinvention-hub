@@ -1,4 +1,4 @@
-﻿// Authenticated app shell â€” route guard, sidebar, topbar, command palette, outlet.
+﻿// Authenticated app shell — route guard, sidebar, topbar, command palette, outlet.
 import { useState, useEffect } from 'react'
 import { Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { Toaster } from 'sonner'

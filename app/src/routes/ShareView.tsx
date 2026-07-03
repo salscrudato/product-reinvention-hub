@@ -87,7 +87,7 @@ export default function ShareView() {
 
       <main className="max-w-4xl mx-auto px-6 py-8 flex flex-col gap-6">
         {/* Product hero */}
-        <div className="rounded-[16px] p-6" style={{ background: 'linear-gradient(135deg, rgba(192,38,211,.06), rgba(236,72,153,.04))', border: '1px solid var(--color-border)' }}>
+        <div className="rounded-[16px] p-6" style={{ background: 'linear-gradient(135deg, rgba(139,31,224,.06), rgba(122,0,230,.04))', border: '1px solid var(--color-border)' }}>
           <div className="flex items-center gap-2 mb-2">
             <StatusPill status={product.status} />
             <LifecyclePill lifecycle={product.lifecycle} />

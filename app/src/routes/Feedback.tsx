@@ -244,7 +244,7 @@ function Card({ fb, canEdit, uid, maxHeat, onVote, onPatch, navigate, sortable }
 
       {/* Heat bar */}
       <div className="h-1.5 rounded-full bg-raised overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${Math.max(6, (heat / maxHeat) * 100)}%`, background: 'linear-gradient(90deg,#9333EA,#DB2777)' }} />
+        <div className="h-full rounded-full" style={{ width: `${Math.max(6, (heat / maxHeat) * 100)}%`, background: 'linear-gradient(90deg,#A100FF,#6D28D9)' }} />
       </div>
 
       <div className="flex items-center flex-wrap gap-2">

@@ -83,12 +83,12 @@ export default function ProductForms() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3 flex-wrap">
         <input
-          className="flex-1 min-w-[200px] h-8 px-3 rounded-[8px] bg-surface border border-[rgba(19,19,26,.12)] text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)]"
+          className="flex-1 min-w-[200px] h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
           placeholder="Search forms..."
           value={query} onChange={e => setQuery(e.target.value)}
         />
         <select
-          className="h-8 px-3 rounded-[8px] bg-surface border border-[rgba(19,19,26,.12)] text-sm text-dim focus:outline-none"
+          className="h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm text-dim focus:outline-none"
           value={catFilter} onChange={e => setCat(e.target.value)}
         >
           <option value="">All categories</option>

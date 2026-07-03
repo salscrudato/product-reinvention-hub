@@ -47,8 +47,7 @@ export function DictionaryPicker({ onSelect, placeholder = 'Insert a dictionary 
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           aria-label="Insert dictionary field"
-          className="w-full h-9 rounded-[10px] bg-surface border pl-9 pr-3 text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)] focus:border-accent"
-          style={{ borderColor: 'rgba(19,19,26,.12)' }}
+          className="w-full h-9 rounded-[10px] bg-surface border border-border-strong pl-9 pr-3 text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent"
         />
       </div>
       {open && matches.length > 0 && (

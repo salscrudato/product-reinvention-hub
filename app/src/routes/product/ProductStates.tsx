@@ -43,7 +43,7 @@ function StateMapSVG({ active, coastal, onToggle, canEdit }: {
         const x = PAD + col * (CELL + GAP); const y = PAD + row * (CELL + GAP)
         const isActive  = active.has(st)
         const isCoastal = coastal.has(st)
-        const fill = isActive ? (isCoastal ? '#C026D3' : '#3b82f6') : '#e5e7eb'
+        const fill = isActive ? (isCoastal ? '#8B1FE0' : '#3b82f6') : '#e5e7eb'
         const textFill = isActive ? '#fff' : '#9ca3af'
         return (
           <g key={st} onClick={() => canEdit && onToggle?.(st)} style={{ cursor: canEdit ? 'pointer' : 'default' }}>
@@ -61,7 +61,7 @@ function StateMapSVG({ active, coastal, onToggle, canEdit }: {
       <g>
         <rect x={PAD} y={H - 16} width={CELL} height={10} rx={2} fill="#3b82f6" />
         <text x={PAD + CELL + 4} y={H - 8} fontSize={7} fill="#5B5C6B">Active</text>
-        <rect x={PAD + 70} y={H - 16} width={CELL} height={10} rx={2} fill="#C026D3" />
+        <rect x={PAD + 70} y={H - 16} width={CELL} height={10} rx={2} fill="#8B1FE0" />
         <text x={PAD + 70 + CELL + 4} y={H - 8} fontSize={7} fill="#5B5C6B">Coastal</text>
       </g>
     </svg>
@@ -144,7 +144,7 @@ export default function ProductStates() {
             disabled={!canEdit}
             onClick={() => canEdit && toggleState(st)}
             className={`px-2 py-1 rounded-[6px] text-xs font-mono font-medium border transition-colors
-              ${activeSet.has(st) ? (COASTAL.has(st) ? 'bg-accent text-white border-accent' : 'bg-[#3b82f6] text-white border-[#3b82f6]') : 'bg-surface text-dim border-[rgba(19,19,26,.12)] hover:border-accent hover:text-accent'}
+              ${activeSet.has(st) ? (COASTAL.has(st) ? 'bg-accent text-white border-accent' : 'bg-[#3b82f6] text-white border-[#3b82f6]') : 'bg-surface text-dim border-border-strong hover:border-accent hover:text-accent'}
               ${!canEdit ? 'cursor-default' : 'cursor-pointer'}`}
           >
             {st}

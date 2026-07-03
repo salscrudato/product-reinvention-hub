@@ -11,7 +11,7 @@ const badgeColors: Record<BadgeColor, string> = {
   good:    'bg-[rgba(5,150,105,.1)] text-good',
   warn:    'bg-[rgba(180,83,9,.1)] text-warn',
   danger:  'bg-[rgba(220,38,38,.1)] text-danger',
-  blue:    'bg-[rgba(37,99,235,.08)] text-[#2563eb]',
+  blue:    'bg-[rgba(37,99,235,.08)] text-info',
   purple:  'bg-accent-soft text-accent',
 }
 
@@ -28,7 +28,7 @@ export function Badge({ label, color = 'default', mono = false, className = '' }
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium leading-none
         ${badgeColors[color]} ${mono ? 'font-mono' : ''} ${className}`}
-      style={isAccent ? { background: 'linear-gradient(135deg,#C026D3,#EC4899)', color: '#fff' } : undefined}
+      style={isAccent ? { background: 'var(--gradient-accent)', color: '#fff' } : undefined}
     >
       {label}
     </span>

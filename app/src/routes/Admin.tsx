@@ -90,7 +90,7 @@ function UsersTab() {
       <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
         {users.map(u => (
           <div key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
-            <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#9333EA,#DB2777)' }}>
+            <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#A100FF,#6D28D9)' }}>
               {(u.name || u.email).slice(0, 2).toUpperCase()}
             </span>
             <div className="flex-1 min-w-[160px]">
@@ -260,9 +260,9 @@ function SeedTab() {
         <span className="text-sm font-semibold text-text">Latest seed</span>
         <span className="text-xs text-faint">{fmt(latest.at)}</span>
       </div>
-      <div className="flex items-center justify-between px-4 py-3 rounded-[12px]" style={{ background: 'linear-gradient(135deg, rgba(147,51,234,.08), rgba(219,39,119,.06))', border: '1px solid rgba(192,38,211,.2)' }}>
+      <div className="flex items-center justify-between px-4 py-3 rounded-[12px]" style={{ background: 'linear-gradient(135deg, rgba(161,0,255,.08), rgba(122,0,230,.06))', border: '1px solid rgba(139,31,224,.2)' }}>
         <span className="text-sm text-text">Worked example premium</span>
-        <span className="text-lg font-bold" style={{ background: 'linear-gradient(135deg,#C026D3,#EC4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>${latest.workedExamplePremium?.toLocaleString()}</span>
+        <span className="text-lg font-bold" style={{ background: 'linear-gradient(135deg,#8B1FE0,#7A00E6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>${latest.workedExamplePremium?.toLocaleString()}</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Object.entries(latest.counts ?? {}).map(([k, n]) => (

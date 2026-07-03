@@ -78,7 +78,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         onClick={openCapture}
         title="Capture feedback (⌘.)" aria-label="Capture feedback"
         className="fixed bottom-5 right-5 z-40 w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        style={{ background: 'linear-gradient(135deg,#9333EA,#C026D3,#DB2777)', boxShadow: '0 8px 24px rgba(192,38,211,.4)' }}
+        style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 8px 24px var(--glow-accent-strong)' }}
       >
         <MessageSquarePlus size={20} />
       </button>
@@ -92,7 +92,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
               return (
                 <button key={t.id} onClick={() => setType(t.id)} aria-pressed={active}
                   className={`flex flex-col items-center gap-1 py-2.5 rounded-[10px] text-xs font-medium transition-all ${active ? 'bg-accent-soft text-accent' : 'bg-raised text-dim hover:text-text'}`}
-                  style={active ? { border: '1px solid rgba(192,38,211,.3)' } : { border: '1px solid transparent' }}>
+                  style={active ? { border: '1px solid var(--color-accent-line)' } : { border: '1px solid transparent' }}>
                   <Icon size={16} /> {t.label}
                 </button>
               )
@@ -103,7 +103,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-text" htmlFor="fb-detail">Detail</label>
             <textarea id="fb-detail" value={detail} onChange={e => setDetail(e.target.value)} rows={3} placeholder="What happened, or what would help?"
-              className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)] resize-none" style={{ borderColor: 'rgba(19,19,26,.12)' }} />
+              className="rounded-[10px] bg-surface border border-border-strong text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none" />
           </div>
 
           {/* Auto-attached context */}

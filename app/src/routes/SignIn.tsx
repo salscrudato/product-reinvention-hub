@@ -56,12 +56,12 @@ export default function SignIn() {
       {/* Aurora wash */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="aurora-a absolute -top-40 left-1/2 -translate-x-1/2 w-[680px] h-[380px] rounded-full blur-3xl opacity-20"
-          style={{ background: 'radial-gradient(ellipse, #9333EA, #DB2777)' }} />
+          style={{ background: 'radial-gradient(ellipse, #A100FF, #6D28D9)' }} />
       </div>
 
       <div className="relative w-full max-w-sm rise-in">
         <div className="flex flex-col items-center gap-4 mb-8">
-          <Logo size={48} rounded={14} className="shadow-[0_6px_20px_rgba(192,38,211,.3)]" />
+          <Logo size={48} rounded={14} className="shadow-[0_6px_20px_rgba(139,31,224,.3)]" />
           <div className="text-center">
             <h1 className="text-xl font-bold text-text tracking-tight">Product Reinvention Hub</h1>
             <p className="text-sm text-dim mt-1">Sign in to your workspace</p>

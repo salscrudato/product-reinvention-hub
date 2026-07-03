@@ -25,7 +25,7 @@ function CoverageTreeItem({ cov, children, selected, onSelect }: {
         <span className="flex-1 truncate font-medium">{cov.name}</span>
         {cov.refId && <span className="text-xs font-mono text-faint">{cov.refId.split('.').pop()}</span>}
       </button>
-      {children && <div className="ml-4 border-l border-[rgba(192,38,211,.15)] pl-2">{children}</div>}
+      {children && <div className="ml-4 border-l border-accent/15 pl-2">{children}</div>}
     </div>
   )
 }
@@ -66,7 +66,7 @@ function LDPicker({ term, ldTable, covFGated, canEdit, onChange }: {
               onClick={() => onChange(row.value)}
               title={row.constraintNote ?? (blocked ? 'Requires Coverage E ≥ $300,000' : undefined)}
               className={`px-2.5 py-1 rounded-[6px] text-xs font-medium border transition-colors
-                ${isSelected ? 'bg-accent text-white border-accent' : 'bg-surface border-[rgba(19,19,26,.12)] text-dim hover:border-accent hover:text-accent'}
+                ${isSelected ? 'bg-accent text-white border-accent' : 'bg-surface border-border-strong text-dim hover:border-accent hover:text-accent'}
                 ${blocked ? 'opacity-40 cursor-not-allowed' : ''}
                 ${isDefault && !isSelected ? 'font-bold' : ''}`}
             >

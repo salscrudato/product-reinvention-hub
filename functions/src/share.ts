@@ -21,7 +21,7 @@ function page(opts: { title: string; description: string; image: string; body: s
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<meta name="theme-color" content="#C026D3">
+<meta name="theme-color" content="#8B1FE0">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Product Reinvention Hub">
 <meta property="og:title" content="${esc(title)}">
@@ -38,19 +38,19 @@ function page(opts: { title: string; description: string; image: string; body: s
 body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;background:#F7F7FA;color:#131318;
   min-height:100svh;display:flex;align-items:center;justify-content:center;padding:24px}
 .card{width:100%;max-width:520px;background:#fff;border:1px solid rgba(19,19,26,.08);border-radius:18px;
-  padding:32px;box-shadow:0 1px 2px rgba(19,19,26,.04),0 14px 34px rgba(192,38,211,.08)}
+  padding:32px;box-shadow:0 1px 2px rgba(19,19,26,.04),0 14px 34px rgba(139,31,224,.08)}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px}
-.logo{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#9333EA,#C026D3,#DB2777)}
+.logo{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#A100FF,#8B1FE0,#6D28D9)}
 .brand span{font-weight:600;font-size:15px;letter-spacing:-.2px}
-.pill{display:inline-block;font:600 11px/1.4 'JetBrains Mono',monospace;color:#C026D3;background:rgba(192,38,211,.08);
+.pill{display:inline-block;font:600 11px/1.4 'JetBrains Mono',monospace;color:#8B1FE0;background:rgba(139,31,224,.08);
   padding:4px 10px;border-radius:999px;margin-bottom:14px}
 h1{font-size:26px;font-weight:800;letter-spacing:-.5px;margin:0 0 6px}
 .ref{font:600 13px 'JetBrains Mono',monospace;color:#5B5C6B;margin-bottom:16px}
 .desc{color:#5B5C6B;line-height:1.6;margin:0 0 20px}
 .stats{display:flex;gap:20px;padding:16px 0;border-top:1px solid rgba(19,19,26,.08);border-bottom:1px solid rgba(19,19,26,.08);margin-bottom:20px}
 .stat b{display:block;font-size:20px;font-weight:800}.stat s{display:block;font-size:12px;color:#8E90A0;text-decoration:none}
-.cta{display:inline-block;background:linear-gradient(135deg,#9333EA,#C026D3,#DB2777);color:#fff;text-decoration:none;
-  font-weight:600;font-size:14px;padding:12px 22px;border-radius:12px;box-shadow:0 6px 22px rgba(192,38,211,.3)}
+.cta{display:inline-block;background:linear-gradient(135deg,#A100FF,#8B1FE0,#6D28D9);color:#fff;text-decoration:none;
+  font-weight:600;font-size:14px;padding:12px 22px;border-radius:12px;box-shadow:0 6px 22px rgba(139,31,224,.3)}
 .foot{margin-top:18px;font-size:12px;color:#8E90A0}
 </style></head>
 <body><div class="card">

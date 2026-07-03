@@ -7,9 +7,9 @@ type Size    = 'sm' | 'md' | 'lg'
 const base = 'inline-flex items-center justify-center gap-2 font-medium rounded-[10px] border-0 cursor-pointer transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none'
 
 const variants: Record<Variant, string> = {
-  default:     'bg-raised text-text hover:bg-[#EAEAF0] focus-visible:outline-[#C026D3]',
-  primary:     'text-white focus-visible:outline-[#C026D3]',
-  ghost:       'bg-transparent text-dim hover:bg-raised hover:text-text focus-visible:outline-[#C026D3]',
+  default:     'bg-raised text-text hover:bg-hover focus-visible:outline-accent',
+  primary:     'text-white focus-visible:outline-accent',
+  ghost:       'bg-transparent text-dim hover:bg-raised hover:text-text focus-visible:outline-accent',
   destructive: 'bg-[rgba(220,38,38,.08)] text-danger hover:bg-[rgba(220,38,38,.14)] focus-visible:outline-danger',
 }
 
@@ -31,8 +31,8 @@ export function Button({ variant = 'default', size = 'md', className = '', style
       {...props}
       className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
       style={isPrimary ? {
-        background: 'linear-gradient(135deg, #C026D3 0%, #EC4899 100%)',
-        boxShadow: '0 1px 3px rgba(192,38,211,.3)',
+        background: 'var(--gradient-accent)',
+        boxShadow: '0 1px 3px var(--glow-accent)',
         ...style,
       } : style}
     >

@@ -68,7 +68,7 @@ export function NewProductModal({ onClose, onCreated }: Props) {
         <Input label="Product name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Homeowners HO-3 Special Form" required />
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-text">Market segment</label>
-          <select className="h-9 px-3 rounded-[10px] bg-surface border border-[rgba(19,19,26,.12)] text-sm text-text focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)]"
+          <select className="h-9 px-3 rounded-[10px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25"
             value={seg} onChange={e => setSeg(e.target.value)}>
             <option>Personal Lines / Property</option>
             <option>Personal Lines / Liability</option>

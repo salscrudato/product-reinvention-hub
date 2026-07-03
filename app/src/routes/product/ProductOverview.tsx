@@ -92,7 +92,7 @@ function HierarchyTree({ coverages }: { coverages: WithId<Coverage>[] }) {
           {/* Connector lines */}
           {allEdges.map((e, i) => (
             <line key={i} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-              stroke="rgba(192,38,211,.25)" strokeWidth={1.5} />
+              stroke="rgba(139,31,224,.25)" strokeWidth={1.5} />
           ))}
 
           {/* Coverage nodes */}
@@ -102,8 +102,8 @@ function HierarchyTree({ coverages }: { coverages: WithId<Coverage>[] }) {
             return (
               <g key={cov.id}>
                 <rect x={node.x} y={node.y} width={NODE_W} height={NODE_H}
-                  rx={8} fill="white" stroke="rgba(192,38,211,.2)" strokeWidth={1}
-                  style={{ filter: 'drop-shadow(0 2px 6px rgba(192,38,211,.06))' }} />
+                  rx={8} fill="white" stroke="rgba(139,31,224,.2)" strokeWidth={1}
+                  style={{ filter: 'drop-shadow(0 2px 6px rgba(139,31,224,.06))' }} />
                 {/* Status dot */}
                 <circle cx={node.x + NODE_W - 12} cy={node.y + 12} r={4} fill={dotColor} />
                 {/* Name */}
@@ -190,7 +190,7 @@ function HealthPanel({ navigate: nav }: { navigate: ReturnType<typeof useNavigat
         <div className="flex flex-col gap-2">
           {findings.map((f, i) => (
             <button key={i} onClick={() => nav(f.route)}
-              className="flex items-start gap-2 text-left px-3 py-2 rounded-[8px] bg-raised hover:bg-[rgba(192,38,211,.04)] transition-colors text-sm">
+              className="flex items-start gap-2 text-left px-3 py-2 rounded-[8px] bg-raised hover:bg-accent/5 transition-colors text-sm">
               {f.severity === 'error'
                 ? <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
                 : <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />}

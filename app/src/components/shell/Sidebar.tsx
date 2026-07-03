@@ -63,7 +63,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 {active && (
                   <span
                     className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-                    style={{ background: 'linear-gradient(180deg, #C026D3, #EC4899)' }}
+                    style={{ background: 'var(--gradient-accent)' }}
                     aria-hidden="true"
                   />
                 )}

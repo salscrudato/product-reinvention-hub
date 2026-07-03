@@ -13,11 +13,11 @@ function Aurora() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
       <div className="aurora-a absolute w-[720px] h-[520px] rounded-full opacity-30 -top-48 -left-40"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(147,51,234,.5) 0%, transparent 70%)' }} />
+        style={{ background: 'radial-gradient(ellipse at center, rgba(161,0,255,.5) 0%, transparent 70%)' }} />
       <div className="aurora-b absolute w-[620px] h-[460px] rounded-full opacity-25 top-1/4 -right-32"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(219,39,119,.45) 0%, transparent 70%)' }} />
+        style={{ background: 'radial-gradient(ellipse at center, rgba(122,0,230,.45) 0%, transparent 70%)' }} />
       <div className="aurora-c absolute w-[520px] h-[420px] rounded-full opacity-20 bottom-0 left-1/4"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(192,38,211,.4) 0%, transparent 70%)' }} />
+        style={{ background: 'radial-gradient(ellipse at center, rgba(139,31,224,.4) 0%, transparent 70%)' }} />
     </div>
   )
 }
@@ -91,19 +91,19 @@ function ProductGraph() {
     >
       <defs>
         <radialGradient id="g-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgba(192,38,211,.35)" />
+          <stop offset="0%" stopColor="rgba(139,31,224,.35)" />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
         <linearGradient id="g-edge" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#9333EA" stopOpacity=".55" />
-          <stop offset="100%" stopColor="#DB2777" stopOpacity=".35" />
+          <stop offset="0%" stopColor="#A100FF" stopOpacity=".55" />
+          <stop offset="100%" stopColor="#6D28D9" stopOpacity=".35" />
         </linearGradient>
         <linearGradient id="g-flow" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#C026D3" />
-          <stop offset="100%" stopColor="#EC4899" />
+          <stop offset="0%" stopColor="#8B1FE0" />
+          <stop offset="100%" stopColor="#7A00E6" />
         </linearGradient>
         <linearGradient id="g-node" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#9333EA" /><stop offset="100%" stopColor="#DB2777" />
+          <stop offset="0%" stopColor="#A100FF" /><stop offset="100%" stopColor="#6D28D9" />
         </linearGradient>
       </defs>
 
@@ -130,10 +130,10 @@ function ProductGraph() {
         const p = at(lim.angle, R_LIM)
         return (
           <g key={`l${i}`} className="rise-in" style={{ '--rise-delay': `${700 + i * 80}ms` } as React.CSSProperties}>
-            <circle cx={p.x} cy={p.y} r={RL} fill="rgba(255,255,255,.92)" stroke="rgba(192,38,211,.22)" strokeWidth="1"
-              style={{ filter: 'drop-shadow(0 2px 8px rgba(192,38,211,.1))' }} />
+            <circle cx={p.x} cy={p.y} r={RL} fill="rgba(255,255,255,.92)" stroke="rgba(139,31,224,.22)" strokeWidth="1"
+              style={{ filter: 'drop-shadow(0 2px 8px rgba(139,31,224,.1))' }} />
             <text x={p.x} y={p.y - 2} textAnchor="middle" fontSize="7" fontWeight="600" fill="#5B5C6B">{lim.label}</text>
-            <text x={p.x} y={p.y + 7} textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#C026D3"
+            <text x={p.x} y={p.y + 7} textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#8B1FE0"
               style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>{lim.ref}</text>
           </g>
         )
@@ -146,8 +146,8 @@ function ProductGraph() {
           <g key={cov.id}>
             <circle cx={p.x} cy={p.y} r={RC + 8} fill="url(#g-glow)" className="node-glow"
               style={{ '--breathe-delay': `${i * 500}ms` } as React.CSSProperties} />
-            <circle cx={p.x} cy={p.y} r={RC} fill="rgba(255,255,255,.95)" stroke="rgba(192,38,211,.28)" strokeWidth="1"
-              style={{ filter: 'drop-shadow(0 3px 12px rgba(192,38,211,.14))' }} />
+            <circle cx={p.x} cy={p.y} r={RC} fill="rgba(255,255,255,.95)" stroke="rgba(139,31,224,.28)" strokeWidth="1"
+              style={{ filter: 'drop-shadow(0 3px 12px rgba(139,31,224,.14))' }} />
             <text x={p.x} y={p.y - 3} textAnchor="middle" fontSize="10" fontWeight="700" fill="#131318">{cov.label}</text>
             <text x={p.x} y={p.y + 8} textAnchor="middle" fontSize="7.5" fill="#8E90A0"
               style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>{cov.ref}</text>
@@ -158,7 +158,7 @@ function ProductGraph() {
       {/* Product core */}
       <circle cx={C.x} cy={C.y} r={RP + 14} fill="url(#g-glow)" className="node-glow" />
       <circle cx={C.x} cy={C.y} r={RP} fill="rgba(255,255,255,.97)" stroke="url(#g-node)" strokeWidth="1.5"
-        style={{ filter: 'drop-shadow(0 6px 22px rgba(192,38,211,.24))' }} />
+        style={{ filter: 'drop-shadow(0 6px 22px rgba(139,31,224,.24))' }} />
       <text x={C.x} y={C.y - 5} textAnchor="middle" fontSize="12" fontWeight="700" fill="#131318">Product</text>
       <text x={C.x} y={C.y + 10} textAnchor="middle" fontSize="8" fill="#5B5C6B"
         style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>HO.PROD.001</text>
@@ -195,7 +195,7 @@ function FeatureCard({ icon: Icon, title, body, delay }: { icon: typeof Layers; 
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-card)' }}
     >
       <div className="w-11 h-11 rounded-[13px] flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.06]"
-        style={{ background: 'linear-gradient(135deg, rgba(147,51,234,.12), rgba(219,39,119,.1))' }}>
+        style={{ background: 'linear-gradient(135deg, rgba(161,0,255,.12), rgba(122,0,230,.1))' }}>
         <Icon size={20} className="text-accent" strokeWidth={1.75} aria-hidden="true" />
       </div>
       <h3 className="text-[15px] font-semibold text-text leading-snug">{title}</h3>
@@ -216,7 +216,7 @@ export default function Landing() {
       {/* Nav */}
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">
         <div className="flex items-center gap-2.5">
-          <Logo size={32} rounded={9} className="shadow-[0_2px_10px_rgba(192,38,211,.3)]" />
+          <Logo size={32} rounded={9} className="shadow-[0_2px_10px_rgba(139,31,224,.3)]" />
           <span className="font-semibold text-text text-[15px] tracking-tight">Product Reinvention Hub</span>
         </div>
         <button
@@ -233,7 +233,7 @@ export default function Landing() {
           <h1 className="rise-in text-[2.75rem] leading-[1.05] sm:text-6xl font-bold text-text tracking-[-.02em]"
             style={{ '--rise-delay': '0ms' } as React.CSSProperties}>
             Ship insurance<br />products{' '}
-            <span style={{ background: 'linear-gradient(120deg,#9333EA 0%,#C026D3 45%,#DB2777 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ background: 'linear-gradient(120deg,#A100FF 0%,#8B1FE0 45%,#6D28D9 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               faster.
             </span>
           </h1>
@@ -247,7 +247,7 @@ export default function Landing() {
             <button
               onClick={() => navigate('/sign-in')}
               className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-[13px] text-white font-semibold text-[15px] transition-all duration-200 hover:scale-[1.02] active:scale-[.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-              style={{ background: 'linear-gradient(135deg,#9333EA,#C026D3,#DB2777)', boxShadow: '0 6px 22px rgba(192,38,211,.35)' }}
+              style={{ background: 'linear-gradient(135deg,#A100FF,#8B1FE0,#6D28D9)', boxShadow: '0 6px 22px rgba(139,31,224,.35)' }}
             >
               Enter the Hub
               <ArrowRight size={17} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
@@ -258,7 +258,7 @@ export default function Landing() {
         {/* Product graph */}
         <div className="relative shrink-0 w-[340px] h-[340px] sm:w-[440px] sm:h-[440px] flex items-center justify-center">
           <div className="absolute inset-8 rounded-full blur-3xl opacity-[.18] pointer-events-none"
-            style={{ background: 'radial-gradient(circle,#C026D3,#EC4899)' }} aria-hidden="true" />
+            style={{ background: 'radial-gradient(circle,#8B1FE0,#7A00E6)' }} aria-hidden="true" />
           <ProductGraph />
         </div>
       </main>

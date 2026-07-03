@@ -40,21 +40,21 @@ function SimulatePanel() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-dim w-36">Risk state</span>
-            <select className="h-7 px-2 rounded-[6px] bg-surface border border-[rgba(19,19,26,.12)] text-xs flex-1"
+            <select className="h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs flex-1"
               value={sel.riskState} onChange={e => upd({ riskState: e.target.value })}>
               {['AZ','CA','CO','FL','GA','IL','IN','MI','NC','OH','PA','SC','TN','TX','VA'].map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-dim w-36">Coverage E limit</span>
-            <select className="h-7 px-2 rounded-[6px] bg-surface border border-[rgba(19,19,26,.12)] text-xs flex-1"
+            <select className="h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs flex-1"
               value={sel.covELimit} onChange={e => upd({ covELimit: Number(e.target.value) })}>
               {[{l:'$100k',v:100000},{l:'$300k',v:300000},{l:'$500k',v:500000}].map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-dim w-36">Coverage F limit</span>
-            <select className="h-7 px-2 rounded-[6px] bg-surface border border-[rgba(19,19,26,.12)] text-xs flex-1"
+            <select className="h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs flex-1"
               value={sel.covFLimit} onChange={e => upd({ covFLimit: Number(e.target.value) })}>
               {[{l:'$1k',v:1000},{l:'$2k',v:2000},{l:'$5k',v:5000}].map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
             </select>
@@ -154,7 +154,7 @@ export default function ProductRules() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
-        <input className="flex-1 max-w-sm h-8 px-3 rounded-[8px] bg-surface border border-[rgba(19,19,26,.12)] text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)]"
+        <input className="flex-1 max-w-sm h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
           placeholder="Search rules..." value={query} onChange={e => setQuery(e.target.value)} />
         <Button variant="primary" size="sm" onClick={() => setSimOpen(s => !s)}>
           {simOpen ? 'Hide simulate' : 'Simulate...'}

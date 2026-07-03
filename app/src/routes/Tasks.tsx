@@ -64,7 +64,7 @@ function CardBody({ task, productName }: { task: TaskDoc; productName?: string }
         <span className="text-sm font-medium text-text leading-snug">{task.title}</span>
         {task.assignee && (
           <span className="shrink-0 w-6 h-6 rounded-full text-[10px] font-semibold text-white flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg,#9333EA,#DB2777)' }} title={task.assignee.name}>
+            style={{ background: 'linear-gradient(135deg,#A100FF,#6D28D9)' }} title={task.assignee.name}>
             {initials(task.assignee.name)}
           </span>
         )}
@@ -76,7 +76,7 @@ function CardBody({ task, productName }: { task: TaskDoc; productName?: string }
       {total > 0 && (
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-raised overflow-hidden">
-            <div className="h-full rounded-full transition-all" style={{ width: `${(done / total) * 100}%`, background: 'linear-gradient(90deg,#9333EA,#DB2777)' }} />
+            <div className="h-full rounded-full transition-all" style={{ width: `${(done / total) * 100}%`, background: 'linear-gradient(90deg,#A100FF,#6D28D9)' }} />
           </div>
           <span className="text-[10px] text-faint tabular-nums">{done}/{total}</span>
         </div>
@@ -220,7 +220,7 @@ export default function Tasks() {
         <FilterChip active={overdue} onClick={() => setOverdue(o => !o)}>Overdue</FilterChip>
         <select
           value={productId} onChange={e => setProductId(e.target.value)}
-          className="h-7 px-2 rounded-[8px] bg-surface border text-xs text-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(192,38,211,.25)]"
+          className="h-7 px-2 rounded-[8px] bg-surface border text-xs text-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
           style={{ borderColor: 'var(--color-border)' }} aria-label="Filter by product"
         >
           <option value="">All products</option>

@@ -53,12 +53,12 @@ function WorkspaceInner() {
       {/* Hero header */}
       <div
         className="rounded-[16px] p-6 mb-5 relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, rgba(192,38,211,.08) 0%, rgba(236,72,153,.06) 100%)', border: '1px solid var(--color-border)' }}
+        style={{ background: 'linear-gradient(135deg, rgba(139,31,224,.08) 0%, rgba(122,0,230,.06) 100%)', border: '1px solid var(--color-border)' }}
       >
         {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
           <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full blur-3xl opacity-30"
-            style={{ background: 'radial-gradient(circle, #C026D3, #EC4899)' }} />
+            style={{ background: 'radial-gradient(circle, #8B1FE0, #7A00E6)' }} />
         </div>
 
         <div className="relative">

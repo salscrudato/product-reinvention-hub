@@ -84,7 +84,7 @@ export default function News() {
         <label htmlFor="news-instr" className="flex items-center gap-1.5 text-sm font-medium text-text"><Sparkles size={14} className="text-accent" /> What should the agent track?</label>
         <textarea id="news-instr" value={instruction} onChange={e => setInstr(e.target.value)} rows={2}
           placeholder="e.g. Track homeowners rate filings and competitor HO-3 launches in TX and FL"
-          className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)] resize-none" style={{ borderColor: 'rgba(19,19,26,.12)' }} />
+          className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none" style={{ borderColor: 'rgba(19,19,26,.12)' }} />
         <div className="flex justify-end">
           <Button variant="primary" size="sm" onClick={savePrefs} disabled={!instruction.trim() || instruction.trim() === savedInstr}>Save preference</Button>
         </div>

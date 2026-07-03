@@ -50,7 +50,7 @@ function RichText({ text, onCite }: { text: string; onCite: (cite: string) => vo
       <button
         key={`c${i++}`}
         onClick={() => onCite(cite)}
-        className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-[5px] bg-accent-soft text-accent font-mono text-[11px] font-medium hover:bg-[rgba(192,38,211,.14)] transition-colors align-baseline"
+        className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-[5px] bg-accent-soft text-accent font-mono text-[11px] font-medium hover:bg-accent/15 transition-colors align-baseline"
         title={`Open ${cite}`}
       >
         {cite}
@@ -224,7 +224,7 @@ export default function Home() {
           {empty ? (
             <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-10">
               <div className="w-14 h-14 rounded-[16px] flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg,#C026D3,#EC4899)' }}>
+                style={{ background: 'var(--gradient-accent)' }}>
                 <Sparkles size={26} className="text-white" />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -248,7 +248,7 @@ export default function Home() {
                   <div className={m.role === 'user'
                     ? 'max-w-[85%] rounded-[14px] px-4 py-2.5 text-sm text-white'
                     : 'max-w-[92%] flex flex-col gap-2'}
-                    style={m.role === 'user' ? { background: 'linear-gradient(135deg,#C026D3,#EC4899)' } : undefined}>
+                    style={m.role === 'user' ? { background: 'var(--gradient-accent)' } : undefined}>
                     {m.role === 'assistant' && m.tools.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {m.tools.map((t, ti) => (
@@ -284,7 +284,7 @@ export default function Home() {
           />
           <button type="submit" disabled={streaming || !input.trim()}
             className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white disabled:opacity-40 transition-opacity"
-            style={{ background: 'linear-gradient(135deg,#C026D3,#EC4899)' }} aria-label="Send">
+            style={{ background: 'var(--gradient-accent)' }} aria-label="Send">
             {streaming ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
           </button>
         </form>

@@ -195,14 +195,14 @@ export default function Dictionary() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text" htmlFor="dict-type">Type</label>
               <select id="dict-type" value={draft.type} onChange={e => setDraft({ ...draft, type: e.target.value as DynamicFieldType })}
-                className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)]" style={{ borderColor: 'rgba(19,19,26,.12)' }}>
+                className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25" style={{ borderColor: 'rgba(19,19,26,.12)' }}>
                 {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text" htmlFor="dict-desc">Description</label>
               <textarea id="dict-desc" value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} rows={3}
-                className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)] resize-none" style={{ borderColor: 'rgba(19,19,26,.12)' }} placeholder="What this field means…" />
+                className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none" style={{ borderColor: 'rgba(19,19,26,.12)' }} placeholder="What this field means…" />
             </div>
             <Input label="Allowed values (comma-separated)" value={draft.allowedValues} onChange={e => setDraft({ ...draft, allowedValues: e.target.value })} placeholder="50, 70, 75" />
             <Input label="Format" value={draft.format} onChange={e => setDraft({ ...draft, format: e.target.value })} placeholder="USD, percent, ISO-8601…" />

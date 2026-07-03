@@ -90,7 +90,7 @@ export function CommentsPanel({ onClose, entityPath }: Props) {
         {/* New comment */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-2 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
           <textarea
-            className="w-full h-20 px-3 py-2 rounded-[10px] bg-surface border border-[rgba(19,19,26,.12)] text-sm text-text placeholder:text-faint resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(192,38,211,.25)]"
+            className="w-full h-20 px-3 py-2 rounded-[10px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint resize-none focus:outline-none focus:ring-2 focus:ring-accent/25"
             placeholder="Add a comment..."
             value={body} onChange={e => setBody(e.target.value)}
             disabled={loading}
