@@ -18,12 +18,17 @@ if (!getApps().length) initializeApp()
 // Secrets (prod). Bind via `secrets: [ANTHROPIC_API_KEY]` on every AI function.
 export const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY')
 
-// Single model for both reasoning and bulk/simple generations per spec.
-export const MODEL = 'claude-sonnet-4-6'
+// Two models per spec: a reasoning model for chat/analysis, a fast model for
+// bulk/simple generations. Fable 5 has thinking always on and REJECTS the
+// sampling params (temperature/top_p/top_k → 400) — grounded chat leans on tools,
+// not sampling. Haiku is right-sized for the news scout and accepts temperature.
+export const MODEL      = 'claude-fable-5'    // reasoning: portfolio chat, analysis
+export const MODEL_FAST = 'claude-haiku-4-5'  // bulk/simple: market-news scout
 
-/** Anthropic client — call inside a handler so the bound secret is resolvable. */
+/** Anthropic client — call inside a handler so the bound secret is resolvable.
+ *  maxRetries adds explicit exponential backoff on 429 / 5xx / connection errors. */
 export function anthropic(): Anthropic {
-  return new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() })
+  return new Anthropic({ apiKey: ANTHROPIC_API_KEY.value(), maxRetries: 4 })
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────

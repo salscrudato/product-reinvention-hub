@@ -7,25 +7,11 @@ import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { Button } from '../../components/ui'
 import { HO3_FOOTPRINT_STATES, HO3_COASTAL_STATES } from '@pf/shared'
+import { US_TILE_GRID as STATE_GRID, US_TILE_COLS as GRID_COLS } from '../../lib/geo/usTileGrid'
 
 const COASTAL = new Set<string>(HO3_COASTAL_STATES)
 const FOOTPRINT = new Set<string>(HO3_FOOTPRINT_STATES)
-
-// Geographic US tile grid — each state a tile at its approximate map position.
-// Authored as a visual string grid (easy to verify), parsed to [col,row] coords.
-const TILE_ROWS = [
-  'WA .. .. .. .. .. .. .. .. .. .. ME',
-  'OR ID MT ND MN WI .. MI .. NY VT NH',
-  'NV UT WY SD IA IL IN OH PA NJ CT MA',
-  'CA AZ CO NE MO KY WV VA MD DE RI ..',
-  '.. NM KS OK AR TN NC SC DC .. .. ..',
-  '.. .. TX LA MS AL GA FL .. .. .. ..',
-  'AK HI .. .. .. .. .. .. .. .. .. ..',
-]
-const STATE_GRID: Record<string, [number, number]> = {}
-TILE_ROWS.forEach((row, r) => row.split(/\s+/).forEach((st, c) => { if (st !== '..') STATE_GRID[st] = [c, r] }))
 const ALL_STATES = Object.keys(STATE_GRID)
-const GRID_COLS = 12
 
 function StateMapSVG({ active, coastal, onToggle, canEdit }: {
   active: Set<string>; coastal: Set<string>; onToggle?: (s: string) => void; canEdit: boolean

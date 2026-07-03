@@ -7,7 +7,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { createHash } from 'crypto'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, MODEL, ANTHROPIC_API_KEY } from './runtime'
+import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY } from './runtime'
 
 const DEFAULT_INSTRUCTION =
   'Recent U.S. homeowners insurance rate filings, regulatory changes, and competitor HO-3 product launches.'
@@ -46,10 +46,13 @@ async function fetchForInstruction(instruction: string): Promise<NewsItem[]> {
   let finalText = ''
   for (let turn = 0; turn < 6; turn++) {
     const res = await client.messages.create({
-      model:      MODEL,
-      max_tokens: 2048,
-      system:     NEWS_SYSTEM,
-      tools:      [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }] as unknown as Anthropic.Tool[],
+      model:       MODEL_FAST,
+      max_tokens:  2048,
+      temperature: 0,   // grounded extraction → deterministic, low-variance output
+      system:      NEWS_SYSTEM,
+      // Basic web-search variant — supported on the fast (Haiku) tier; the parser
+      // only reads final text, so it is agnostic to the result-block shape.
+      tools:       [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }] as unknown as Anthropic.Tool[],
       messages,
     })
     const text = res.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n')
