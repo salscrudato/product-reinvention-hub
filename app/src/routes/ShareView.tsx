@@ -32,6 +32,13 @@ export default function ShareView() {
       .finally(() => setLoading(false))
   }, [token])
 
+  // Reflect the shared product in the tab title.
+  useEffect(() => {
+    const name = (data?.product as { name?: string } | undefined)?.name
+    if (name) document.title = `${name} · Product Reinvention Hub`
+    return () => { document.title = 'Product Reinvention Hub' }
+  }, [data])
+
   if (loading) {
     return (
       <div className="min-h-svh bg-page flex items-center justify-center">
