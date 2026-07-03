@@ -1,6 +1,7 @@
 export { Button } from './Button'
 export { Card } from './Card'
 export { Badge, StatusPill, LifecyclePill, ReviewPill } from './Badge'
+export { RefChip } from './RefChip'
 export { Input } from './Input'
 export { Combobox } from './Combobox'
 export { Table } from './Table'

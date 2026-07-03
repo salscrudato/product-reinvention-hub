@@ -6,51 +6,12 @@ import { toast } from 'sonner'
 import { Plus, Package, Download } from 'lucide-react'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
-import { Button, Badge, Skeleton, EmptyState, StatusPill, LifecyclePill, Tabs } from '../components/ui'
+import { Button, Skeleton, EmptyState, Tabs } from '../components/ui'
+import { ProductCard } from '../components/product/ProductCard'
 import { NewProductModal } from '../components/product/NewProductModal'
 import { exportPortfolioExcel, type ProductExport } from '../lib/export/excel'
 import type { Product, Coverage, Rule, Form, LDTable, RTTable, RatingProgram } from '@pf/shared'
 import type { WithId } from '../context/ProductContext'
-
-function ProductCard({ p, onClick }: { p: WithId<Product>; onClick: () => void }) {
-  const score = p.health?.score ?? 100
-  const scoreColor = score >= 80 ? '#059669' : score >= 60 ? '#B45309' : '#DC2626'
-
-  return (
-    <button
-      onClick={onClick}
-      aria-label={`Open ${p.name}`}
-      className="bg-surface rounded-[14px] p-5 text-left flex flex-col gap-3 group hover:shadow-[var(--shadow-card-hover)] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <span className="font-semibold text-text group-hover:text-accent transition-colors truncate">{p.name}</span>
-          {p.refId && <span className="text-xs font-mono text-faint">{p.refId}</span>}
-        </div>
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-          style={{ background: `${scoreColor}18`, color: scoreColor }}
-          title={`Health: ${score}`}
-        >
-          {score}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <StatusPill status={p.status} />
-        <LifecyclePill lifecycle={p.lifecycle} />
-        {p.lob?.name && <Badge label={p.lob.name} color="blue" />}
-      </div>
-
-      <div className="flex items-center gap-4 text-xs text-dim pt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
-        <span>{p.states?.length ?? 0} states</span>
-        <span>{p.marketSegment ?? '—'}</span>
-        <span className="ml-auto">{p.owner?.name ?? '—'}</span>
-      </div>
-    </button>
-  )
-}
 
 const TABS = [
   { id: 'portfolio', label: 'Portfolio' },

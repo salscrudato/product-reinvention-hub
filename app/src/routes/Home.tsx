@@ -5,11 +5,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Send, Sparkles, Wrench, CheckSquare, ClipboardCheck, Activity, Newspaper, Loader2,
+  Sparkles, Wrench, CheckSquare, ClipboardCheck, Activity, Newspaper, Loader2,
 } from 'lucide-react'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Badge } from '../components/ui'
+import { ChatComposer } from '../components/chat/ChatComposer'
 import type { SearchIndexEntry, Task, Product, News } from '@pf/shared'
 
 // ─── Stream protocol (mirror of functions/src/runtime.ts StreamEvent) ───────────
@@ -270,24 +271,9 @@ export default function Home() {
         </div>
 
         {/* Composer */}
-        <form
-          onSubmit={e => { e.preventDefault(); ask(input) }}
-          className="mt-3 flex items-end gap-2 bg-surface rounded-[14px] p-2"
-          style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
-          <textarea
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input) } }}
-            placeholder="Ask your product portfolio…"
-            rows={1}
-            className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-text placeholder:text-faint focus:outline-none max-h-32"
-          />
-          <button type="submit" disabled={streaming || !input.trim()}
-            className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white disabled:opacity-40 transition-opacity"
-            style={{ background: 'var(--gradient-accent)' }} aria-label="Send">
-            {streaming ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-          </button>
-        </form>
+        <div className="mt-3">
+          <ChatComposer value={input} onChange={setInput} onSubmit={() => ask(input)} streaming={streaming} />
+        </div>
       </div>
 
       {/* Today's Focus rail */}
