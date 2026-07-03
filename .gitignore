@@ -5,7 +5,8 @@ node_modules/
 # build outputs
 dist/
 build/
-/functions/lib/   # tsup output; not needed in repo
+# tsup output; not needed in repo
+/functions/lib/
 .svelte-kit/
 
 # secrets — NEVER commit
