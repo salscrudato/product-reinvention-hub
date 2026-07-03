@@ -1,11 +1,12 @@
 // Pricing worksheet — live rating evaluation via the shared engine; defaults to $1,528 worked example.
-import { useState, useMemo } from 'react'
-import { Download, RefreshCw } from 'lucide-react'
+import { useState, useMemo, useRef } from 'react'
+import { Download, RefreshCw, GitBranch, Table2 } from 'lucide-react'
 import { evaluate } from '@pf/shared'
 import { makeHO3RtGetter, makeHO3LdGetter, HO3_WORKED_EXAMPLE, HO3_COASTAL_STATES } from '@pf/shared'
 import type { RatingInputs, TraceEntry } from '@pf/shared'
 import { useProductCtx } from '../../context/useProductCtx'
 import { Button, Badge, Skeleton } from '../../components/ui'
+import { RatingFlow } from '../../lib/svg/ratingFlow'
 
 const COASTAL = new Set<string>(HO3_COASTAL_STATES)
 
@@ -47,85 +48,89 @@ function InputNumber({ label, value, onChange, min, step }: { label: string; val
   )
 }
 
-// ─── Trace table + SVG export ─────────────────────────────────────────────────
-
-const OP_COLOR: Record<string, string> = { SET: '#2563eb', MUL: '#8B1FE0', ADD: '#059669', MIN_FLOOR: '#B45309' }
+// ─── Trace: animated flow diagram + detailed table + clean SVG export ─────────
 
 function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium: number }) {
+  const [view, setView] = useState<'flow' | 'table'>('flow')
+  const flowRef = useRef<HTMLDivElement>(null)
 
+  // Export the on-screen flow SVG verbatim (adds a page-background rect for a
+  // self-contained file). Serialising the rendered node keeps export == on-screen.
   function exportSVG() {
-    const BOX_W = 320; const BOX_H = 50; const GAP = 20; const PAD = 30
-    const rows = trace.filter(t => !t.stepId.startsWith('s11')) // exclude floor step from flow
-    const totalH = rows.length * (BOX_H + GAP) + BOX_H + PAD * 2
-
-    const lines: string[] = [
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${BOX_W + PAD * 2}" height="${totalH}" style="font-family:JetBrains Mono,monospace;background:#F7F7FA">`,
-    ]
-    rows.forEach((t, i) => {
-      const y = PAD + i * (BOX_H + GAP)
-      const col = OP_COLOR[t.op] ?? '#131318'
-      lines.push(`<rect x="${PAD}" y="${y}" width="${BOX_W}" height="${BOX_H}" rx="8" fill="white" stroke="${col}" stroke-opacity=".3"/>`)
-      lines.push(`<text x="${PAD + 10}" y="${y + 18}" font-size="9" fill="${col}" font-weight="700">${t.op}</text>`)
-      lines.push(`<text x="${PAD + 10}" y="${y + 32}" font-size="10" fill="#131318">${t.label.substring(0,38)}</text>`)
-      lines.push(`<text x="${PAD + BOX_W - 10}" y="${y + 32}" font-size="11" fill="${col}" font-weight="700" text-anchor="end">$${t.runningTotal.toLocaleString()}</text>`)
-      if (i < rows.length - 1) lines.push(`<line x1="${PAD + BOX_W / 2}" y1="${y + BOX_H}" x2="${PAD + BOX_W / 2}" y2="${y + BOX_H + GAP}" stroke="#8B1FE0" stroke-opacity=".3" stroke-width="2"/>`)
-    })
-    // Final premium
-    const fy = PAD + rows.length * (BOX_H + GAP)
-    lines.push(`<rect x="${PAD}" y="${fy}" width="${BOX_W}" height="${BOX_H}" rx="8" fill="url(#grad)"/>`)
-    lines.push(`<defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8B1FE0"/><stop offset="100%" stop-color="#7A00E6"/></linearGradient></defs>`)
-    lines.push(`<text x="${PAD + 16}" y="${fy + 22}" font-size="11" fill="white" font-weight="600">Final Premium</text>`)
-    lines.push(`<text x="${PAD + BOX_W - 16}" y="${fy + 22}" font-size="18" fill="white" font-weight="800" text-anchor="end">$${finalPremium.toLocaleString()}</text>`)
-    lines.push('</svg>')
-
-    const blob = new Blob([lines.join('\n')], { type: 'image/svg+xml' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rating-flow.svg'; a.click()
+    const svg = flowRef.current?.querySelector('svg')
+    if (!svg) return
+    const clone = svg.cloneNode(true) as SVGSVGElement
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+    bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%'); bg.setAttribute('fill', '#F7F7FA')
+    clone.insertBefore(bg, clone.firstChild)
+    const str = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone)
+    const url = URL.createObjectURL(new Blob([str], { type: 'image/svg+xml' }))
+    const a = document.createElement('a'); a.href = url; a.download = 'rating-flow.svg'; a.click()
+    URL.revokeObjectURL(url)
   }
 
+  const seg = (v: 'flow' | 'table', icon: React.ReactNode, label: string) => (
+    <button onClick={() => setView(v)} aria-pressed={view === v}
+      className={`inline-flex items-center gap-1.5 px-2.5 h-7 rounded-[7px] text-xs font-medium transition-colors ${view === v ? 'bg-surface text-accent shadow-[var(--shadow-card)]' : 'text-dim hover:text-text'}`}>
+      {icon}{label}
+    </button>
+  )
+
   return (
-    <div className="flex flex-col gap-0">
+    <div className="flex flex-col gap-0 h-full">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-semibold text-text">Rating trace</span>
-        <Button variant="ghost" size="sm" onClick={exportSVG}><Download size={12} />SVG</Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 p-0.5 rounded-[9px] bg-raised" role="tablist" aria-label="Trace view">
+            {seg('flow', <GitBranch size={12} />, 'Flow')}
+            {seg('table', <Table2 size={12} />, 'Table')}
+          </div>
+          <Button variant="ghost" size="sm" onClick={exportSVG} aria-label="Export rating flow as SVG"><Download size={12} />SVG</Button>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse">
-          <thead>
-            <tr className="text-faint uppercase tracking-wide" style={{ borderBottom: '1px solid var(--color-border)' }}>
-              {['Step','Op','Source','Factor / $','Running total'].map(h => <th key={h} className="text-left px-3 py-2">{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {trace.map(t => (
-              <tr key={t.stepId} className="hover:bg-raised" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                <td className="px-3 py-2 font-mono text-text">{t.stepId}</td>
-                <td className="px-3 py-2"><Badge label={t.op} color={t.op === 'MUL' ? 'purple' : t.op === 'ADD' ? 'good' : t.op === 'SET' ? 'blue' : 'warn'} /></td>
-                <td className="px-3 py-2 font-mono text-dim truncate max-w-[140px]">{t.sourceRef}</td>
-                <td className="px-3 py-2 font-mono text-text">
-                  {t.op === 'MUL' ? `×${t.factorOrAmount}` : t.op === 'ADD' ? `+$${t.factorOrAmount.toFixed(2)}` : t.op === 'SET' ? `$${t.factorOrAmount}` : `≥$${t.factorOrAmount}`}
-                </td>
-                <td className="px-3 py-2 font-mono font-bold text-text">
-                  ${t.runningTotal.toLocaleString(undefined, { minimumFractionDigits: t.rounded ? 0 : 2, maximumFractionDigits: 2 })}
-                  {t.rounded && <span className="text-faint text-[10px] ml-1">rounded</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {view === 'flow' ? (
+        <div ref={flowRef} className="flex-1 overflow-y-auto min-h-0 -mx-1 px-1">
+          <RatingFlow trace={trace} finalPremium={finalPremium} />
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="text-faint uppercase tracking-wide" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  {['Step','Op','Source','Factor / $','Running total'].map(h => <th key={h} className="text-left px-3 py-2">{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {trace.map(t => (
+                  <tr key={t.stepId} className="hover:bg-raised" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td className="px-3 py-2 font-mono text-text">{t.stepId}</td>
+                    <td className="px-3 py-2"><Badge label={t.op} color={t.op === 'MUL' ? 'purple' : t.op === 'ADD' ? 'good' : t.op === 'SET' ? 'blue' : 'warn'} /></td>
+                    <td className="px-3 py-2 font-mono text-dim truncate max-w-[140px]">{t.sourceRef}</td>
+                    <td className="px-3 py-2 font-mono text-text">
+                      {t.op === 'MUL' ? `×${t.factorOrAmount}` : t.op === 'ADD' ? `+$${t.factorOrAmount.toFixed(2)}` : t.op === 'SET' ? `$${t.factorOrAmount}` : `≥$${t.factorOrAmount}`}
+                    </td>
+                    <td className="px-3 py-2 font-mono font-bold text-text">
+                      ${t.runningTotal.toLocaleString(undefined, { minimumFractionDigits: t.rounded ? 0 : 2, maximumFractionDigits: 2 })}
+                      {t.rounded && <span className="text-faint text-[10px] ml-1">rounded</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {/* Final premium */}
-      <div
-        className="flex items-center justify-between px-5 py-4 rounded-[12px] mt-3"
-        style={{ background: 'linear-gradient(135deg, rgba(139,31,224,.08), rgba(122,0,230,.06))', border: '1px solid rgba(139,31,224,.2)' }}
-      >
-        <span className="text-sm font-semibold text-text">Final premium</span>
-        <span className="text-2xl font-bold tabular-nums"
-          style={{ background: 'linear-gradient(135deg, #8B1FE0, #7A00E6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-          ${finalPremium.toLocaleString()}
-        </span>
-      </div>
+          {/* Final premium */}
+          <div
+            className="flex items-center justify-between px-5 py-4 rounded-[12px] mt-3"
+            style={{ background: 'var(--gradient-accent-soft)', border: '1px solid var(--color-accent-line)' }}
+          >
+            <span className="text-sm font-semibold text-text">Final premium</span>
+            <span className="text-2xl font-bold tabular-nums gradient-text">${finalPremium.toLocaleString()}</span>
+          </div>
+        </>
+      )}
     </div>
   )
 }

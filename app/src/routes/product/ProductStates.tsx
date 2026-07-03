@@ -11,58 +11,66 @@ import { HO3_FOOTPRINT_STATES, HO3_COASTAL_STATES } from '@pf/shared'
 const COASTAL = new Set<string>(HO3_COASTAL_STATES)
 const FOOTPRINT = new Set<string>(HO3_FOOTPRINT_STATES)
 
-// Simplified US state grid layout [col, row] (0-indexed from top-left)
-const STATE_GRID: Record<string, [number, number]> = {
-  WA:[0,0],MT:[2,0],ND:[4,0],MN:[5,0],WI:[6,0],MI:[7,0],NY:[9,0],VT:[10,0],ME:[11,0],
-  OR:[0,1],ID:[2,1],SD:[4,1],IA:[5,1],IL:[6,1],IN:[6,1],OH:[7,1],PA:[8,1],NJ:[9,1],NH:[10,1],
-  CA:[0,2],NV:[1,2],WY:[3,2],NE:[4,2],MO:[5,2],KY:[6,2],WV:[7,2],VA:[8,2],MD:[9,2],DE:[10,2],
-  AZ:[1,3],UT:[2,3],CO:[3,3],KS:[4,3],TN:[5,3],NC:[6,3],SC:[7,3],
-  NM:[2,4],OK:[4,4],AR:[5,4],GA:[6,4],
-  TX:[3,5],LA:[5,5],AL:[6,5],FL:[7,5],
-  AK:[0,6],HI:[2,6],MS:[5,6],
-}
-
+// Geographic US tile grid — each state a tile at its approximate map position.
+// Authored as a visual string grid (easy to verify), parsed to [col,row] coords.
+const TILE_ROWS = [
+  'WA .. .. .. .. .. .. .. .. .. .. ME',
+  'OR ID MT ND MN WI .. MI .. NY VT NH',
+  'NV UT WY SD IA IL IN OH PA NJ CT MA',
+  'CA AZ CO NE MO KY WV VA MD DE RI ..',
+  '.. NM KS OK AR TN NC SC DC .. .. ..',
+  '.. .. TX LA MS AL GA FL .. .. .. ..',
+  'AK HI .. .. .. .. .. .. .. .. .. ..',
+]
+const STATE_GRID: Record<string, [number, number]> = {}
+TILE_ROWS.forEach((row, r) => row.split(/\s+/).forEach((st, c) => { if (st !== '..') STATE_GRID[st] = [c, r] }))
 const ALL_STATES = Object.keys(STATE_GRID)
+const GRID_COLS = 12
 
 function StateMapSVG({ active, coastal, onToggle, canEdit }: {
   active: Set<string>; coastal: Set<string>; onToggle?: (s: string) => void; canEdit: boolean
 }) {
-  const CELL = 22; const GAP = 2; const PAD = 8
-  const maxCol = Math.max(...Object.values(STATE_GRID).map(([c]) => c)) + 1
-  const maxRow = Math.max(...Object.values(STATE_GRID).map(([,r]) => r)) + 1
-  const W = maxCol * (CELL + GAP) + PAD * 2
-  const H = maxRow * (CELL + GAP) + PAD * 2
+  const CELL = 30, GAP = 4, PAD = 12, LEGEND = 22
+  const maxRow = Math.max(...Object.values(STATE_GRID).map(([, r]) => r)) + 1
+  const W = GRID_COLS * (CELL + GAP) - GAP + PAD * 2
+  const H = maxRow * (CELL + GAP) - GAP + PAD * 2 + LEGEND
 
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="US states map"
-      style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ maxWidth: W, height: 'auto', fontFamily: 'JetBrains Mono Variable, monospace' }}
+      role="img" aria-label={`United States tile map — ${active.size} states in the product footprint, coastal wind/hail states marked.`}>
+      <defs>
+        <linearGradient id="sm-coastal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#A100FF" /><stop offset="100%" stopColor="#7A00E6" />
+        </linearGradient>
+      </defs>
       {ALL_STATES.map(st => {
-        const pos = STATE_GRID[st]
-        if (!pos) return null
-        const [col, row] = pos
-        const x = PAD + col * (CELL + GAP); const y = PAD + row * (CELL + GAP)
-        const isActive  = active.has(st)
-        const isCoastal = coastal.has(st)
-        const fill = isActive ? (isCoastal ? '#8B1FE0' : '#3b82f6') : '#e5e7eb'
-        const textFill = isActive ? '#fff' : '#9ca3af'
+        const [col, row] = STATE_GRID[st]!
+        const x = PAD + col * (CELL + GAP), y = PAD + row * (CELL + GAP)
+        const isActive = active.has(st), isCoastal = coastal.has(st) && isActive
+        const fill = isCoastal ? 'url(#sm-coastal)' : isActive ? '#8B1FE0' : '#F0F0F5'
+        const textFill = isActive ? '#fff' : '#9A9CAC'
         return (
-          <g key={st} onClick={() => canEdit && onToggle?.(st)} style={{ cursor: canEdit ? 'pointer' : 'default' }}>
-            <rect x={x} y={y} width={CELL} height={CELL} rx={3} fill={fill}
-              stroke={isActive ? 'rgba(0,0,0,.15)' : 'transparent'} strokeWidth={1}
-              className={canEdit ? 'hover:opacity-80 transition-opacity' : ''} />
-            {isCoastal && isActive && (
-              <circle cx={x + CELL - 4} cy={y + 4} r={2.5} fill="rgba(255,255,255,.6)" />
+          <g key={st} onClick={() => canEdit && onToggle?.(st)} style={{ cursor: canEdit ? 'pointer' : 'default' }}
+            className={canEdit ? 'hover:opacity-85 transition-opacity' : ''}>
+            <title>{st}{isCoastal ? ' · coastal wind/hail' : isActive ? ' · in footprint' : ''}</title>
+            <rect x={x} y={y} width={CELL} height={CELL} rx={7} fill={fill}
+              stroke={isActive ? 'rgba(19,19,26,.10)' : 'rgba(19,19,26,.05)'} strokeWidth={1} />
+            <text x={x + CELL / 2} y={y + CELL / 2 + 3.5} textAnchor="middle" fontSize={9} fontWeight={600} fill={textFill}>{st}</text>
+            {isCoastal && (
+              <g transform={`translate(${x + CELL - 6} ${y + 6})`}>
+                <circle r={5} fill="#F59E0B" stroke="#fff" strokeWidth={0.75} />
+                <path d="M0.4 -2.6 L-1.8 0.4 L-0.2 0.4 L-0.6 2.6 L1.8 -0.4 L0.2 -0.4 Z" fill="#fff" />
+              </g>
             )}
-            <text x={x + CELL/2} y={y + CELL/2 + 3} textAnchor="middle" fontSize={7} fill={textFill}>{st}</text>
           </g>
         )
       })}
       {/* Legend */}
-      <g>
-        <rect x={PAD} y={H - 16} width={CELL} height={10} rx={2} fill="#3b82f6" />
-        <text x={PAD + CELL + 4} y={H - 8} fontSize={7} fill="#5B5C6B">Active</text>
-        <rect x={PAD + 70} y={H - 16} width={CELL} height={10} rx={2} fill="#8B1FE0" />
-        <text x={PAD + 70 + CELL + 4} y={H - 8} fontSize={7} fill="#5B5C6B">Coastal</text>
+      <g transform={`translate(${PAD} ${H - 10})`} fontSize={9} fill="#5B5C6B">
+        <rect x={0} y={-9} width={12} height={12} rx={3} fill="#8B1FE0" /><text x={17} y={0}>In footprint</text>
+        <rect x={92} y={-9} width={12} height={12} rx={3} fill="url(#sm-coastal)" />
+        <circle cx={101.5} cy={-6.5} r={3} fill="#F59E0B" stroke="#fff" strokeWidth={0.5} /><text x={109} y={0}>Coastal wind/hail</text>
+        <rect x={228} y={-9} width={12} height={12} rx={3} fill="#F0F0F5" /><text x={245} y={0}>Not filed</text>
       </g>
     </svg>
   )
@@ -144,7 +152,7 @@ export default function ProductStates() {
             disabled={!canEdit}
             onClick={() => canEdit && toggleState(st)}
             className={`px-2 py-1 rounded-[6px] text-xs font-mono font-medium border transition-colors
-              ${activeSet.has(st) ? (COASTAL.has(st) ? 'bg-accent text-white border-accent' : 'bg-[#3b82f6] text-white border-[#3b82f6]') : 'bg-surface text-dim border-border-strong hover:border-accent hover:text-accent'}
+              ${activeSet.has(st) ? 'bg-accent text-white border-accent' : 'bg-surface text-dim border-border-strong hover:border-accent hover:text-accent'}
               ${!canEdit ? 'cursor-default' : 'cursor-pointer'}`}
           >
             {st}
