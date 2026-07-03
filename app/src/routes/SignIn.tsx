@@ -1,11 +1,14 @@
-// Sign-in page — email + password, error handling, redirects through the adapter.
+// Sign-in — email + password through the adapter, plus a temporary
+// "Continue as admin" shortcut for demos. Premium, calm, Apple-inspired.
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ShieldCheck } from 'lucide-react'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+
+const DEMO_ADMIN = { email: 'admin@productfactory.app', password: 'admin123' }
 
 export default function SignIn() {
   const navigate  = useNavigate()
@@ -16,17 +19,16 @@ export default function SignIn() {
   const [email,   setEmail]   = useState('')
   const [pass,    setPass]    = useState('')
   const [error,   setError]   = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState<'form' | 'admin' | null>(null)
 
   // Already signed in — redirect
   if (user) { navigate(from, { replace: true }); return null }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  async function doSignIn(e: string, p: string, mode: 'form' | 'admin') {
     setError('')
-    setLoading(true)
+    setLoading(mode)
     try {
-      await adapter.auth.signIn(email.trim(), pass)
+      await adapter.auth.signIn(e.trim(), p)
       navigate(from, { replace: true })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sign-in failed'
@@ -37,57 +39,52 @@ export default function SignIn() {
       } else {
         setError(msg)
       }
-    } finally {
-      setLoading(false)
+      setLoading(null)
     }
   }
 
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    void doSignIn(email, pass, 'form')
+  }
+
+  const busy = loading !== null
+
   return (
     <div className="min-h-svh flex items-center justify-center bg-page px-4">
+      {/* Aurora wash */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full blur-3xl opacity-15"
-          style={{ background: 'radial-gradient(ellipse, #C026D3, #EC4899)' }} />
+        <div className="aurora-a absolute -top-40 left-1/2 -translate-x-1/2 w-[680px] h-[380px] rounded-full blur-3xl opacity-20"
+          style={{ background: 'radial-gradient(ellipse, #9333EA, #DB2777)' }} />
       </div>
 
-      <div className="relative w-full max-w-sm">
+      <div className="relative w-full max-w-sm rise-in">
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="w-12 h-12 rounded-[14px] flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #C026D3, #EC4899)', boxShadow: '0 4px 16px rgba(192,38,211,.3)' }}>
+            style={{ background: 'linear-gradient(135deg, #9333EA, #DB2777)', boxShadow: '0 6px 20px rgba(192,38,211,.3)' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M7 12l4 4 6-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold text-text">Product Factory</h1>
+            <h1 className="text-xl font-bold text-text tracking-tight">Product Reinvention Hub</h1>
             <p className="text-sm text-dim mt-1">Sign in to your workspace</p>
           </div>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-surface rounded-[16px] p-6 flex flex-col gap-4"
+          className="bg-surface rounded-[18px] p-6 flex flex-col gap-4"
           style={{ boxShadow: 'var(--shadow-card)', border: '1px solid var(--color-border)' }}
           noValidate
         >
           <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="you@company.com"
-            autoComplete="email"
-            required
-            disabled={loading}
+            label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="you@company.com" autoComplete="email" required disabled={busy}
           />
           <Input
-            label="Password"
-            type="password"
-            value={pass}
-            onChange={e => setPass(e.target.value)}
-            placeholder="password"
-            autoComplete="current-password"
-            required
-            disabled={loading}
+            label="Password" type="password" value={pass} onChange={e => setPass(e.target.value)}
+            placeholder="password" autoComplete="current-password" required disabled={busy}
           />
 
           {error && (
@@ -96,19 +93,31 @@ export default function SignIn() {
             </p>
           )}
 
+          <Button type="submit" variant="primary" className="w-full mt-1" disabled={busy || !email || !pass}>
+            {loading === 'form' && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
+            {loading === 'form' ? 'Signing in…' : 'Sign in'}
+          </Button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-1" aria-hidden="true">
+            <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
+            <span className="text-[11px] uppercase tracking-wide text-faint">or</span>
+            <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
+          </div>
+
+          {/* Temporary demo shortcut */}
           <Button
-            type="submit"
-            variant="primary"
-            className="w-full mt-1"
-            disabled={loading || !email || !pass}
+            type="button" variant="default" className="w-full"
+            disabled={busy}
+            onClick={() => void doSignIn(DEMO_ADMIN.email, DEMO_ADMIN.password, 'admin')}
           >
-            {loading && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading === 'admin' ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <ShieldCheck size={14} aria-hidden="true" />}
+            {loading === 'admin' ? 'Signing in…' : 'Continue as admin'}
           </Button>
         </form>
 
         <p className="text-center text-xs text-faint mt-4">
-          Demo: <span className="font-mono">admin@productfactory.app / admin123</span>
+          Demo workspace · <span className="font-mono">admin@productfactory.app</span>
         </p>
       </div>
     </div>

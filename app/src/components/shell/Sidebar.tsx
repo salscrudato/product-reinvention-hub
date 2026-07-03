@@ -52,7 +52,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </linearGradient>
           </defs>
         </svg>
-        {!collapsed && <span className="font-semibold text-sm text-text tracking-tight">Product Factory</span>}
+        {!collapsed && <span className="font-semibold text-sm text-text tracking-tight">Product Reinvention Hub</span>}
       </div>
 
       {/* Nav */}

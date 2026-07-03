@@ -81,7 +81,7 @@ export default function ShareView() {
               </linearGradient>
             </defs>
           </svg>
-          <span className="font-semibold text-sm text-text">Product Factory</span>
+          <span className="font-semibold text-sm text-text">Product Reinvention Hub</span>
         </div>
         <Badge label="Read-only snapshot" color="default" />
       </header>
@@ -152,7 +152,7 @@ export default function ShareView() {
         )}
 
         <footer className="text-xs text-faint text-center pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
-          Read-only snapshot · Product Factory · Expires 30 days from creation
+          Read-only snapshot · Product Reinvention Hub · Expires 30 days from creation
         </footer>
       </main>
     </div>

@@ -80,7 +80,7 @@ export default function Explorer() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <h1 className="text-xl font-bold text-text">Explorer</h1>
-        <p className="text-sm text-dim">Browse every entity in the Product Factory.</p>
+        <p className="text-sm text-dim">Browse every entity in the Product Reinvention Hub.</p>
       </div>
 
       {/* Controls */}
