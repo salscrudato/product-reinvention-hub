@@ -2,12 +2,14 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Fuse from 'fuse.js'
-import { Plus, Package } from 'lucide-react'
+import { toast } from 'sonner'
+import { Plus, Package, Download } from 'lucide-react'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Button, Badge, Skeleton, EmptyState, StatusPill, LifecyclePill, Tabs } from '../components/ui'
 import { NewProductModal } from '../components/product/NewProductModal'
-import type { Product } from '@pf/shared'
+import { exportPortfolioExcel, type ProductExport } from '../lib/export/excel'
+import type { Product, Coverage, Rule, Form, LDTable, RTTable, RatingProgram } from '@pf/shared'
 import type { WithId } from '../context/ProductContext'
 
 function ProductCard({ p, onClick }: { p: WithId<Product>; onClick: () => void }) {
@@ -65,6 +67,35 @@ export default function Products() {
   const [tab,      setTab]      = useState('portfolio')
   const [lobFilter, setLobFilter] = useState('')
   const [newOpen,  setNewOpen]  = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  async function exportPortfolio() {
+    if (!products.length) return
+    setExporting(true)
+    try {
+      const [forms, ldList, rtList] = await Promise.all([
+        adapter.db.list<Form & { id: string }>('forms'),
+        adapter.db.list<LDTable & { id: string }>('ldTables'),
+        adapter.db.list<RTTable & { id: string }>('rtTables'),
+      ])
+      const ldTables = Object.fromEntries(ldList.map(t => [t.id, t])) as Record<string, LDTable>
+      const rtTables = Object.fromEntries(rtList.map(t => [t.id, t])) as Record<string, RTTable>
+      const items: ProductExport[] = await Promise.all(products.map(async p => {
+        const [coverages, rules, programs] = await Promise.all([
+          adapter.db.list<Coverage>(`products/${p.id}/coverages`),
+          adapter.db.list<Rule>(`products/${p.id}/rules`),
+          adapter.db.list<RatingProgram>(`products/${p.id}/ratingPrograms`),
+        ])
+        return { product: p, coverages, rules, forms: forms.filter(f => (f.productRefIds ?? []).includes(p.id)), ldTables, rtTables, ratingProgram: programs[0] ?? null }
+      }))
+      await exportPortfolioExcel(items)
+      toast.success('Portfolio exported')
+    } catch {
+      toast.error('Export failed')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   useEffect(() => {
     const unsub = adapter.db.subscribe<WithId<Product>>('products', (data) => {
@@ -93,11 +124,18 @@ export default function Products() {
           <h1 className="text-xl font-bold text-text">Products</h1>
           <p className="text-sm text-dim mt-0.5">{products.length} product{products.length !== 1 ? 's' : ''}</p>
         </div>
-        {canEdit && (
-          <Button variant="primary" size="sm" onClick={() => setNewOpen(true)}>
-            <Plus size={14} />New product
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {products.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={exportPortfolio} disabled={exporting}>
+              <Download size={14} />{exporting ? 'Exporting…' : 'Export'}
+            </Button>
+          )}
+          {canEdit && (
+            <Button variant="primary" size="sm" onClick={() => setNewOpen(true)}>
+              <Plus size={14} />New product
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}

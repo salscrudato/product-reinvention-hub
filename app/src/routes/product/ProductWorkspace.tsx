@@ -9,6 +9,7 @@ import { Skeleton, StatusPill, LifecyclePill, Badge, Button } from '../../compon
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { CommentsPanel } from '../../components/product/CommentsPanel'
 import { ShareModal } from '../../components/product/ShareModal'
+import { ExportMenu } from '../../components/product/ExportMenu'
 
 const TABS = [
   { id: 'overview',  label: 'Overview'  },
@@ -20,7 +21,7 @@ const TABS = [
 ]
 
 function WorkspaceInner() {
-  const { pid, product, coverages, loading } = useProductCtx()
+  const { pid, product, coverages, rules, forms, ldTables, rtTables, ratingProgram, loading } = useProductCtx()
   const navigate     = useNavigate()
   const { pathname } = useLocation()
   const activeTab    = TABS.find(t => pathname.includes(t.id))?.id ?? 'overview'
@@ -100,6 +101,7 @@ function WorkspaceInner() {
               <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
                 <Clock size={14} />History
               </Button>
+              <ExportMenu data={{ product, coverages, rules, forms, ldTables, rtTables, ratingProgram }} />
               <Button variant="ghost" size="sm" onClick={() => setShareOpen(true)}>
                 <Share2 size={14} />Share
               </Button>
