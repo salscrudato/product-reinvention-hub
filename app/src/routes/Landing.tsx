@@ -36,15 +36,15 @@ const RPM = 46           // medallion radius
 const RN  = 22           // feature-node radius
 
 type GlyphId = 'news' | 'ai' | 'cov' | 'rate' | 'task'
-interface Feature { id: GlyphId; label: string; chip: string; x: number; y: number }
+interface Feature { id: GlyphId; label: string; x: number; y: number }
 
 // Capability sources — arranged on a left arc, converging on the PM.
 const FEATURES: Feature[] = [
-  { id: 'news', label: 'Live news',  chip: '12 new',   x: 100, y: 66  },
-  { id: 'ai',   label: 'AI copilot', chip: 'grounded', x: 64,  y: 152 },
-  { id: 'cov',  label: 'Coverages',  chip: 'HO-3',     x: 70,  y: 240 },
-  { id: 'rate', label: 'Rating',     chip: '$1,528',   x: 80,  y: 328 },
-  { id: 'task', label: 'Tasks',      chip: '8 due',    x: 112, y: 410 },
+  { id: 'news', label: 'Live news',  x: 100, y: 66  },
+  { id: 'ai',   label: 'AI copilot', x: 64,  y: 152 },
+  { id: 'cov',  label: 'Coverages',  x: 70,  y: 240 },
+  { id: 'rate', label: 'Rating',     x: 80,  y: 328 },
+  { id: 'task', label: 'Tasks',      x: 112, y: 410 },
 ]
 
 // Coverage leaves that branch out of the Coverages node.
@@ -156,8 +156,6 @@ function InsightGraph() {
             style={{ filter: 'drop-shadow(0 3px 12px rgba(139,31,224,.12))' }} />
           <g transform={`translate(${f.x} ${f.y})`}><Glyph id={f.id} /></g>
           <text x={f.x} y={f.y - RN - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="#131318">{f.label}</text>
-          <text x={f.x} y={f.y + RN + 13} textAnchor="middle" fontSize="8" fontWeight="600" fill="var(--color-accent)"
-            style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>{f.chip}</text>
         </g>
       ))}
 
@@ -174,9 +172,7 @@ function InsightGraph() {
           <circle cx={PM.x} cy={PM.y - 9} r={11} />
           <path d={`M${PM.x - 19} ${PM.y + 22} C${PM.x - 19} ${PM.y + 6} ${PM.x + 19} ${PM.y + 6} ${PM.x + 19} ${PM.y + 22} Z`} />
         </g>
-        <text x={PM.x} y={PM.y + RPM + 20} textAnchor="middle" fontSize="12" fontWeight="700" fill="#131318">Product Manager</text>
-        <text x={PM.x} y={PM.y + RPM + 35} textAnchor="middle" fontSize="8.5" fill="#5B5C6B"
-          style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>informed · in control</text>
+        <text x={PM.x} y={PM.y + RPM + 22} textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#131318">Product Manager</text>
       </g>
     </svg>
   )
