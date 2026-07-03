@@ -1,12 +1,12 @@
 // Coverages tab — hierarchy tree + node editor with live LD-table pickers and F/E constraint.
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Save, AlertTriangle } from 'lucide-react'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
-import { Badge, StatusPill, Button, Skeleton } from '../../components/ui'
+import { Badge, StatusPill, Button, Skeleton, RefChip } from '../../components/ui'
 import type { Coverage, CoverageTerm } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
@@ -85,6 +85,7 @@ function LDPicker({ term, ldTable, covFGated, canEdit, onChange }: {
 
 function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
   const { pid, coverages, ldTables } = useProductCtx()
+  const navigate  = useNavigate()
   const { user }  = useUser()
   const canEdit   = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const actor     = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
@@ -126,9 +127,9 @@ function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="flex flex-col gap-1.5 items-start">
           <h2 className="text-base font-semibold text-text">{cov.name}</h2>
-          {cov.refId && <span className="text-xs font-mono text-faint">{cov.refId}</span>}
+          {cov.refId && <RefChip id={cov.refId} />}
         </div>
         {canEdit && dirty && (
           <Button variant="primary" size="sm" onClick={handleSave}>
@@ -184,12 +185,15 @@ function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
         })}
       </div>
 
-      {/* Linked forms */}
+      {/* Linked forms — click to open in the Forms tab (two-way link) */}
       {cov.formNumbers?.length > 0 && (
         <div>
           <p className="text-xs font-medium text-faint uppercase tracking-wide mb-2">Attached forms</p>
           <div className="flex flex-wrap gap-1.5">
-            {cov.formNumbers.map(fn => <Badge key={fn} label={fn} color="blue" mono />)}
+            {cov.formNumbers.map(fn => (
+              <RefChip key={fn} id={fn} tone="accent" title={`Open ${fn} in Forms`}
+                onClick={() => navigate(`/app/products/${pid}/forms?form=${encodeURIComponent(fn)}`)} />
+            ))}
           </div>
         </div>
       )}
