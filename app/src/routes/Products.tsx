@@ -19,7 +19,8 @@ function ProductCard({ p, onClick }: { p: WithId<Product>; onClick: () => void }
   return (
     <button
       onClick={onClick}
-      className="bg-surface rounded-[14px] p-5 text-left flex flex-col gap-3 group hover:shadow-[var(--shadow-card-hover)] transition-all duration-200"
+      aria-label={`Open ${p.name}`}
+      className="bg-surface rounded-[14px] p-5 text-left flex flex-col gap-3 group hover:shadow-[var(--shadow-card-hover)] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
     >
       <div className="flex items-start justify-between gap-2">

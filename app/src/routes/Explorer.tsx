@@ -65,10 +65,14 @@ export default function Explorer() {
     includeMatches: false,
   }), [entries])
 
-  const visible = useMemo(() => {
+  const matched = useMemo(() => {
     const base = query ? fuse.search(query).map(r => r.item) : entries
     return tab === 'all' ? base : base.filter(e => e.type === tab)
   }, [query, tab, entries, fuse])
+
+  // Cap the DOM to keep rendering cheap if the index grows large.
+  const CAP = 90
+  const visible = matched.slice(0, CAP)
 
   const tabs = TYPES.map(t => ({
     id: t.id,
@@ -125,7 +129,7 @@ export default function Explorer() {
               <button
                 key={entry.path}
                 onClick={() => navigate(toRoute(entry))}
-                className="bg-surface rounded-[14px] p-4 text-left hover:shadow-[var(--shadow-card-hover)] transition-all duration-200 group flex flex-col gap-2"
+                className="bg-surface rounded-[14px] p-4 text-left hover:shadow-[var(--shadow-card-hover)] transition-all duration-200 group flex flex-col gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -144,6 +148,11 @@ export default function Explorer() {
               </button>
             )
           })}
+          {matched.length > CAP && (
+            <p className="col-span-full text-xs text-faint text-center pt-1">
+              Showing {CAP} of {matched.length} — refine your search to narrow results.
+            </p>
+          )}
         </div>
       )}
     </div>

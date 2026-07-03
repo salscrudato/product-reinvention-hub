@@ -83,6 +83,10 @@ body { margin: 0; }
 /* Currency / metric figures line up too. */
 .tnum { font-variant-numeric: tabular-nums lining-nums; }
 
+/* Headings carry a consistent optical tracking + balanced wrapping app-wide. */
+h1, h2, h3 { letter-spacing: var(--tracking-tight); }
+h1, h2 { text-wrap: balance; }
+
 /* Display headings — larger, tighter, balanced wrapping. */
 @utility text-display {
   letter-spacing: var(--tracking-display);

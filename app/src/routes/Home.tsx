@@ -234,7 +234,7 @@ export default function Home() {
               <div className="grid sm:grid-cols-2 gap-2.5 w-full max-w-xl">
                 {SUGGESTIONS.map(s => (
                   <button key={s} onClick={() => ask(s)}
-                    className="text-left text-sm text-dim bg-surface rounded-[12px] px-4 py-3 hover:text-text hover:shadow-[var(--shadow-card-hover)] transition-all"
+                    className="text-left text-sm text-dim bg-surface rounded-[12px] px-4 py-3 hover:text-text hover:shadow-[var(--shadow-card-hover)] transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     style={{ border: '1px solid var(--color-border)' }}>
                     {s}
                   </button>

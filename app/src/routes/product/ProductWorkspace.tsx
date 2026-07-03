@@ -116,7 +116,8 @@ function WorkspaceInner() {
           <button
             key={tab.id}
             onClick={() => navigate(`/app/products/${pid}/${tab.id}`)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            aria-current={activeTab === tab.id ? 'page' : undefined}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px rounded-t-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               activeTab === tab.id
                 ? 'text-accent border-accent'
                 : 'text-dim border-transparent hover:text-text hover:border-[rgba(19,19,26,.2)]'
