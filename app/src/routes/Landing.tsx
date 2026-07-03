@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layers, Sparkles, KanbanSquare, ArrowRight } from 'lucide-react'
+import { Logo } from '../components/ui'
 
 // ─── Aurora background ────────────────────────────────────────────────────────
 
@@ -215,12 +216,7 @@ export default function Landing() {
       {/* Nav */}
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">
         <div className="flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg,#9333EA,#DB2777)', boxShadow: '0 2px 10px rgba(192,38,211,.3)' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M7 12l4 4 6-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
+          <Logo size={32} rounded={9} className="shadow-[0_2px_10px_rgba(192,38,211,.3)]" />
           <span className="font-semibold text-text text-[15px] tracking-tight">Product Reinvention Hub</span>
         </div>
         <button

@@ -1,6 +1,6 @@
 // Sidebar — collapsible nav with gradient active indicator and icon+label layout.
 import { NavLink, useLocation } from 'react-router-dom'
-import { Tooltip } from '../ui'
+import { Tooltip, Logo } from '../ui'
 import {
   LayoutDashboard, Package, Wand2, Telescope, CheckSquare,
   Newspaper, BarChart3, BookOpen, MessageSquare, ChevronLeft,
@@ -43,15 +43,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 h-14 shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect width="24" height="24" rx="6" fill="url(#logo-g)" />
-          <path d="M7 12l4 4 6-8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <defs>
-            <linearGradient id="logo-g" x1="0" y1="0" x2="24" y2="24">
-              <stop stopColor="#C026D3" /><stop offset="1" stopColor="#EC4899" />
-            </linearGradient>
-          </defs>
-        </svg>
+        <Logo size={24} rounded={6} />
         {!collapsed && <span className="font-semibold text-sm text-text tracking-tight">Product Reinvention Hub</span>}
       </div>
 

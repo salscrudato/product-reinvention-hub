@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F7F7FA"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#9333EA"/><stop offset="0.55" stop-color="#C026D3"/><stop offset="1" stop-color="#DB2777"/>
+    </linearGradient>
+    <radialGradient id="aura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(192,38,211,0.16)"/><stop offset="100%" stop-color="rgba(192,38,211,0)"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="980" cy="150" r="420" fill="url(#aura)"/>
+
+  <!-- Brand row -->
+  <g transform="translate(80, 80)">
+    <rect width="56" height="56" rx="14" fill="url(#brand)"/>
+    <g stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.92" transform="translate(28,28) scale(1.75)">
+      <line x1="0" y1="0" x2="0" y2="-8.4"/><line x1="0" y1="0" x2="7.6" y2="4.4"/><line x1="0" y1="0" x2="-7.6" y2="4.4"/>
+    </g>
+    <g fill="#fff" transform="translate(28,28) scale(1.75)">
+      <circle cx="0" cy="0" r="3.2"/><circle cx="0" cy="-9" r="2.3"/><circle cx="7.9" cy="4.5" r="2.3"/><circle cx="-7.9" cy="4.5" r="2.3"/>
+    </g>
+    <text x="76" y="37" font-size="26" font-weight="600" fill="#131318" letter-spacing="-0.5">Product Reinvention Hub</text>
+  </g>
+
+  <!-- Headline -->
+  <text x="80" y="330" font-size="82" font-weight="800" fill="#131318" letter-spacing="-2.5">Ship insurance</text>
+  <text x="80" y="422" font-size="82" font-weight="800" letter-spacing="-2.5">
+    <tspan fill="#131318">products </tspan><tspan fill="url(#brand)">faster.</tspan>
+  </text>
+
+  <!-- Subcopy -->
+  <text x="82" y="486" font-size="27" fill="#5B5C6B">AI-native product management for property &amp; casualty insurers.</text>
+
+  <!-- refId chips -->
+  <g font-family="'JetBrains Mono', monospace" font-size="18" fill="#8E90A0">
+    <g transform="translate(80,540)"><rect width="118" height="34" rx="17" fill="none" stroke="rgba(19,19,26,0.1)"/><text x="59" y="23" text-anchor="middle">HO.RU.006</text></g>
+    <g transform="translate(210,540)"><rect width="104" height="34" rx="17" fill="none" stroke="rgba(19,19,26,0.1)"/><text x="52" y="23" text-anchor="middle">HO 04 90</text></g>
+    <g transform="translate(326,540)"><rect width="112" height="34" rx="17" fill="none" stroke="rgba(19,19,26,0.1)"/><text x="56" y="23" text-anchor="middle">HO.RT.003</text></g>
+    <g transform="translate(450,540)"><rect width="150" height="34" rx="17" fill="none" stroke="rgba(19,19,26,0.1)"/><text x="75" y="23" text-anchor="middle">HO.COV.003.002</text></g>
+  </g>
+</svg>

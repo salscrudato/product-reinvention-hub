@@ -7,6 +7,7 @@ import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { Logo } from '../components/ui'
 
 const DEMO_ADMIN = { email: 'admin@productfactory.app', password: 'admin123' }
 
@@ -60,12 +61,7 @@ export default function SignIn() {
 
       <div className="relative w-full max-w-sm rise-in">
         <div className="flex flex-col items-center gap-4 mb-8">
-          <div className="w-12 h-12 rounded-[14px] flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #9333EA, #DB2777)', boxShadow: '0 6px 20px rgba(192,38,211,.3)' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M7 12l4 4 6-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <Logo size={48} rounded={14} className="shadow-[0_6px_20px_rgba(192,38,211,.3)]" />
           <div className="text-center">
             <h1 className="text-xl font-bold text-text tracking-tight">Product Reinvention Hub</h1>
             <p className="text-sm text-dim mt-1">Sign in to your workspace</p>

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { adapter } from '../lib/backend'
-import { Badge, StatusPill, LifecyclePill, Skeleton } from '../components/ui'
+import { Badge, StatusPill, LifecyclePill, Skeleton, Logo } from '../components/ui'
 import type { Product, Coverage, Form } from '@pf/shared'
 
 interface Snapshot {
@@ -72,15 +72,7 @@ export default function ShareView() {
       {/* Header */}
       <header className="bg-surface px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <div className="flex items-center gap-2.5">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect width="24" height="24" rx="6" fill="url(#sv-g)" />
-            <path d="M7 12l4 4 6-8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <defs>
-              <linearGradient id="sv-g" x1="0" y1="0" x2="24" y2="24">
-                <stop stopColor="#C026D3" /><stop offset="1" stopColor="#EC4899" />
-              </linearGradient>
-            </defs>
-          </svg>
+          <Logo size={24} rounded={6} />
           <span className="font-semibold text-sm text-text">Product Reinvention Hub</span>
         </div>
         <Badge label="Read-only snapshot" color="default" />
