@@ -99,6 +99,7 @@ export default function Dictionary() {
 
   async function remove() {
     if (!draft?.source || !user) return
+    if (!window.confirm(`Delete the “${draft.source.name}” field? This can be restored from version history.`)) return
     setSaving(true)
     try {
       await adapter.db.mutate({

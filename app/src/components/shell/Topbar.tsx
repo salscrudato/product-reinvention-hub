@@ -1,32 +1,70 @@
 // Topbar — breadcrumb, global search (opens palette), presence slot, user menu.
-import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { Search, LogOut, ChevronDown, User } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { Search, LogOut, ChevronDown, User, Home } from 'lucide-react'
 import { useUser } from '../../context/useUser'
 import { adapter } from '../../lib/backend'
+import type { Product } from '@pf/shared'
 
 interface TopbarProps { onOpenPalette: () => void }
 
 const LABELS: Record<string, string> = {
-  app: 'Home', products: 'Products', builder: 'AI Builder', explorer: 'Explorer',
+  products: 'Products', builder: 'AI Builder', explorer: 'Explorer',
   tasks: 'Tasks', news: 'News', claims: 'Claims Analysis', dictionary: 'Data Dictionary',
   feedback: 'Feedback', admin: 'Settings',
 }
+const TAB_LABELS: Record<string, string> = {
+  overview: 'Overview', coverages: 'Coverages', forms: 'Forms',
+  pricing: 'Pricing', states: 'States', rules: 'Rules',
+}
+
+interface Crumb { label: string; to: string }
+
+/** Resolve the current path to labelled, linkable crumbs (product ids → names). */
+function useCrumbs(): Crumb[] {
+  const { pathname } = useLocation()
+  const [names, setNames] = useState<Record<string, string>>({})
+
+  // Lightweight id→name map so a product crumb reads "Homeowners HO-3", not its id.
+  useEffect(() => {
+    if (!pathname.startsWith('/app/products/')) return
+    const unsub = adapter.db.subscribe<Product & { id?: string }>('products', d => {
+      if (Array.isArray(d)) setNames(Object.fromEntries(d.map(p => [p.id ?? '', p.name])))
+    })
+    return unsub
+  }, [pathname])
+
+  const parts = pathname.split('/').filter(Boolean).slice(1) // drop 'app'
+  const crumbs: Crumb[] = []
+  if (parts[0] === 'products' && parts[1]) {
+    crumbs.push({ label: 'Products', to: '/app/products' })
+    crumbs.push({ label: names[parts[1]] ?? 'Product', to: `/app/products/${parts[1]}/overview` })
+    if (parts[2]) crumbs.push({ label: TAB_LABELS[parts[2]] ?? parts[2], to: `/app/products/${parts[1]}/${parts[2]}` })
+  } else if (parts[0]) {
+    crumbs.push({ label: LABELS[parts[0]] ?? parts[0], to: `/app/${parts[0]}` })
+  }
+  return crumbs
+}
 
 function Breadcrumb() {
-  const { pathname } = useLocation()
-  const parts = pathname.split('/').filter(Boolean).slice(1) // skip 'app'
-  if (!parts.length) return <span className="text-sm font-medium text-text">Home</span>
+  const crumbs = useCrumbs()
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm">
-      {parts.map((part, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <span className="text-faint">/</span>}
-          <span className={i === parts.length - 1 ? 'font-medium text-text' : 'text-dim'}>
-            {LABELS[part] ?? part}
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm min-w-0">
+      <Link to="/app" aria-label="Home"
+        className={`flex items-center gap-1.5 shrink-0 rounded-[6px] px-1 -mx-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${crumbs.length ? 'text-dim hover:text-text' : 'text-text font-medium'}`}>
+        <Home size={14} aria-hidden="true" />{!crumbs.length && <span>Home</span>}
+      </Link>
+      {crumbs.map((c, i) => {
+        const last = i === crumbs.length - 1
+        return (
+          <span key={c.to} className="flex items-center gap-1.5 min-w-0">
+            <span className="text-faint shrink-0" aria-hidden="true">/</span>
+            {last
+              ? <span className="font-medium text-text truncate" aria-current="page">{c.label}</span>
+              : <Link to={c.to} className="text-dim hover:text-text truncate rounded-[6px] px-1 -mx-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">{c.label}</Link>}
           </span>
-        </span>
-      ))}
+        )
+      })}
     </nav>
   )
 }

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import { UserProvider } from './context/UserContext'
 import { Skeleton } from './components/ui'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Wand2, BarChart3 } from 'lucide-react'
 import { StubRoute } from './routes/stub/StubRoute'
 
@@ -39,6 +40,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <UserProvider>
+        <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/"                      element={<Landing />} />
@@ -74,6 +76,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </UserProvider>
     </BrowserRouter>
   )
