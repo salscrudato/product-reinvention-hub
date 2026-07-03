@@ -46,7 +46,7 @@ export function LimitEditor({ term, ldTable, isBlocked, canEdit, onChange }: Pro
   function addOption() {
     const v = Number(draft.replace(/[,$%\s]/g, ''))
     if (!Number.isFinite(v) || v <= 0) return
-    const next = Array.from(new Set([...(termOwned ? options : options), v])).sort((a, b) => a - b)
+    const next = Array.from(new Set([...options, v])).sort((a, b) => a - b)
     onChange({ options: next })
     setDraft(''); setAdding(false)
   }
