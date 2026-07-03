@@ -1,7 +1,8 @@
-// Public landing — the showpiece. Aurora background, an AI-inspired product graph
-// (product → coverages → limits) with self-drawing edges and flowing directional
-// pulses, and three elegant feature cards. Pure CSS + inline SVG, zero images,
-// respects prefers-reduced-motion.
+// Public landing — the showpiece. Aurora background + a bespoke "insight graph":
+// an insurance product manager at the focal point, informed by inward-flowing
+// streams from the app's capabilities (live news, coverages & forms, an AI
+// copilot, rating, intelligent tasks). Coverages branch out from their node.
+// Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Layers, Sparkles, KanbanSquare, ArrowRight } from 'lucide-react'
@@ -15,160 +16,175 @@ function Aurora() {
       <div className="aurora-a absolute w-[720px] h-[520px] rounded-full opacity-30 -top-48 -left-40"
         style={{ background: 'radial-gradient(ellipse at center, rgba(161,0,255,.5) 0%, transparent 70%)' }} />
       <div className="aurora-b absolute w-[620px] h-[460px] rounded-full opacity-25 top-1/4 -right-32"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(122,0,230,.45) 0%, transparent 70%)' }} />
+        style={{ background: 'radial-gradient(ellipse at center, rgba(109,40,217,.42) 0%, transparent 70%)' }} />
       <div className="aurora-c absolute w-[520px] h-[420px] rounded-full opacity-20 bottom-0 left-1/4"
         style={{ background: 'radial-gradient(ellipse at center, rgba(139,31,224,.4) 0%, transparent 70%)' }} />
     </div>
   )
 }
 
-// ─── Product graph geometry ─────────────────────────────────────────────────
-
-const C = { x: 240, y: 240 }
-const R_COV = 138   // coverage ring radius
-const R_LIM = 210   // limit leaf radius
-const RP = 44, RC = 26, RL = 18   // node radii: product, coverage, limit
+// ─── Insight-graph geometry ───────────────────────────────────────────────────
 
 interface Vec { x: number; y: number }
-const rad = (deg: number) => (deg * Math.PI) / 180
-const at = (deg: number, r: number): Vec => ({ x: C.x + r * Math.cos(rad(deg)), y: C.y + r * Math.sin(rad(deg)) })
+const dist = (a: Vec, b: Vec) => Math.hypot(b.x - a.x, b.y - a.y)
 const unit = (a: Vec, b: Vec): Vec => { const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1; return { x: dx / d, y: dy / d } }
-const len = (a: Vec, b: Vec) => Math.hypot(b.x - a.x, b.y - a.y)
+const rad = (deg: number) => (deg * Math.PI) / 180
 
-const COVERAGES = [
-  { id: 'A', label: 'Cov A', ref: '001', angle: -90 },
-  { id: 'B', label: 'Cov B', ref: '002', angle: -30 },
-  { id: 'C', label: 'Cov C', ref: '003', angle:  30 },
-  { id: 'D', label: 'Cov D', ref: '004', angle:  90 },
-  { id: 'E', label: 'Cov E', ref: '005', angle: 150 },
-  { id: 'F', label: 'Cov F', ref: '006', angle: 210 },
+// Focal point: the product manager.
+const PM  = { x: 348, y: 234 }
+const RPM = 46           // medallion radius
+const RN  = 22           // feature-node radius
+
+type GlyphId = 'news' | 'ai' | 'cov' | 'rate' | 'task'
+interface Feature { id: GlyphId; label: string; chip: string; x: number; y: number }
+
+// Capability sources — arranged on a left arc, converging on the PM.
+const FEATURES: Feature[] = [
+  { id: 'news', label: 'Live news',  chip: '12 new',   x: 100, y: 66  },
+  { id: 'ai',   label: 'AI copilot', chip: 'grounded', x: 64,  y: 152 },
+  { id: 'cov',  label: 'Coverages',  chip: 'HO-3',     x: 70,  y: 240 },
+  { id: 'rate', label: 'Rating',     chip: '$1,528',   x: 80,  y: 328 },
+  { id: 'task', label: 'Tasks',      chip: '8 due',    x: 112, y: 410 },
 ]
 
-// Limit / term leaves branching off selected coverages.
-const LIMITS = [
-  { parent: 'A', angle: -108, label: 'Dwelling', ref: '$400k' },
-  { parent: 'A', angle:  -72, label: 'Deductible', ref: '$1,000' },
-  { parent: 'C', angle:   48, label: 'Cov C %',  ref: '70%' },
-  { parent: 'E', angle:  132, label: 'Liability', ref: '$300k' },
-  { parent: 'F', angle:  228, label: 'Med Pay',  ref: '$2,000' },
-]
+// Coverage leaves that branch out of the Coverages node.
+const COV = FEATURES.find(f => f.id === 'cov')!
+const COV_LEAVES = ['A', 'B', 'C', 'D', 'E', 'F'].map((letter, i) => {
+  const angle = 108 + i * 22               // fan out to the left, evenly spaced, clear of neighbours
+  return { letter, x: COV.x + 50 * Math.cos(rad(angle)), y: COV.y + 50 * Math.sin(rad(angle)) }
+})
 
-interface Edge { from: Vec; to: Vec; length: number; kind: 'cov' | 'lim'; delay: number }
+interface Edge { d: string; len: number; drawDelay: number; flowDelay: number; head: string }
 
 function buildEdges(): Edge[] {
-  const edges: Edge[] = []
-  COVERAGES.forEach((cov, i) => {
-    const p = at(cov.angle, R_COV)
-    const u = unit(C, p)
-    const from = { x: C.x + u.x * RP, y: C.y + u.y * RP }
-    const to   = { x: p.x - u.x * RC, y: p.y - u.y * RC }
-    edges.push({ from, to, length: len(from, to), kind: 'cov', delay: 150 + i * 70 })
+  return FEATURES.map((n, i) => {
+    const u  = unit(n, PM)
+    const S  = { x: n.x + u.x * RN,   y: n.y + u.y * RN  }  // leaves the node toward PM
+    const E  = { x: PM.x - u.x * RPM, y: PM.y - u.y * RPM } // arrives at the medallion edge
+    const c1 = { x: S.x + (E.x - S.x) * 0.45, y: S.y }
+    const c2 = { x: E.x - 78, y: E.y + (n.y - PM.y) * 0.05 }
+    const d  = `M ${S.x} ${S.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${E.x} ${E.y}`
+    // Arrowhead pointing into the PM (makes the inward direction unmistakable at rest).
+    const p  = { x: -u.y, y: u.x }
+    const b1 = { x: E.x - u.x * 8 + p.x * 4, y: E.y - u.y * 8 + p.y * 4 }
+    const b2 = { x: E.x - u.x * 8 - p.x * 4, y: E.y - u.y * 8 - p.y * 4 }
+    return {
+      d, len: dist(S, E) * 1.18,
+      drawDelay: 200 + i * 90,
+      flowDelay: 600 + i * 140,
+      head: `${E.x},${E.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`,
+    }
   })
-  LIMITS.forEach((lim, i) => {
-    const parent = COVERAGES.find(c => c.id === lim.parent)!
-    const pp = at(parent.angle, R_COV)
-    const lp = at(lim.angle, R_LIM)
-    const u = unit(pp, lp)
-    const from = { x: pp.x + u.x * RC, y: pp.y + u.y * RC }
-    const to   = { x: lp.x - u.x * RL, y: lp.y - u.y * RL }
-    edges.push({ from, to, length: len(from, to), kind: 'lim', delay: 650 + i * 80 })
-  })
-  return edges
 }
-
 const EDGES = buildEdges()
 
-function ProductGraph() {
+// ─── Feature glyphs (hand-drawn, no icon fonts) ───────────────────────────────
+
+function Glyph({ id }: { id: GlyphId }) {
+  const s = { stroke: 'var(--color-accent)', strokeWidth: 1.6, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  switch (id) {
+    case 'news': return <g {...s}><rect x={-7} y={-8} width={14} height={16} rx={2} /><line x1={-4} y1={-4} x2={4} y2={-4} /><line x1={-4} y1={0} x2={4} y2={0} /><line x1={-4} y1={4} x2={1} y2={4} /></g>
+    case 'ai':   return <path d="M0 -9 C1 -3 3 -1 9 0 C3 1 1 3 0 9 C-1 3 -3 1 -9 0 C-3 -1 -1 -3 0 -9 Z" fill="var(--color-accent)" />
+    case 'cov':  return <g {...s}>{[-5, 0, 5].map((dy, i) => <path key={i} d={`M-8 ${dy} L0 ${dy - 4} L8 ${dy} L0 ${dy + 4} Z`} />)}</g>
+    case 'rate': return <g {...s}><line x1={-6} y1={7} x2={-6} y2={1} /><line x1={0} y1={7} x2={0} y2={-3} /><line x1={6} y1={7} x2={6} y2={-7} /></g>
+    case 'task': return <g {...s}><rect x={-7} y={-7} width={14} height={14} rx={3} /><path d="M-3 0 L-0.5 3 L4 -3" /></g>
+  }
+}
+
+// ─── The insight graph ────────────────────────────────────────────────────────
+
+function InsightGraph() {
   const [drawn, setDrawn] = useState(false)
   useEffect(() => { const t = setTimeout(() => setDrawn(true), 150); return () => clearTimeout(t) }, [])
 
   return (
     <svg
-      viewBox="0 0 480 480" width="100%" height="100%" fill="none"
-      className="graph-float max-w-[480px]"
+      viewBox="0 0 470 470" width="100%" height="100%" fill="none"
+      className="graph-float max-w-[500px]"
       role="img"
-      aria-label="Product graph: an HO-3 product branching into coverages A–F and their limits and deductibles."
+      aria-label="An insurance product manager at the focal point, continuously informed by inward-flowing streams from the platform: live market news, the product's coverages and forms branching from a coverages node, an AI copilot, rating, and intelligent tasks."
     >
       <defs>
-        <radialGradient id="g-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgba(139,31,224,.35)" />
-          <stop offset="100%" stopColor="transparent" />
+        <radialGradient id="ig-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--color-accent)" stopOpacity=".32" />
+          <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="g-edge" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#A100FF" stopOpacity=".55" />
-          <stop offset="100%" stopColor="#6D28D9" stopOpacity=".35" />
+        <linearGradient id="ig-edge" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--color-accent-bright)" stopOpacity=".18" />
+          <stop offset="100%" stopColor="var(--color-accent)" stopOpacity=".6" />
         </linearGradient>
-        <linearGradient id="g-flow" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#8B1FE0" />
-          <stop offset="100%" stopColor="#7A00E6" />
+        <linearGradient id="ig-flow" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--color-accent-bright)" />
+          <stop offset="100%" stopColor="var(--color-accent-strong)" />
         </linearGradient>
-        <linearGradient id="g-node" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#A100FF" /><stop offset="100%" stopColor="#6D28D9" />
+        <linearGradient id="ig-medallion" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="var(--color-accent-bright)" />
+          <stop offset="100%" stopColor="var(--color-accent-strong)" />
         </linearGradient>
       </defs>
 
-      {/* Edges: a self-drawing base line + a flowing directional overlay */}
+      {/* Converging edges: self-drawing base + inward-flowing pulse + arrowhead */}
       {EDGES.map((e, i) => (
         <g key={`e${i}`}>
-          <line
-            x1={e.from.x} y1={e.from.y} x2={e.to.x} y2={e.to.y}
-            stroke="url(#g-edge)" strokeWidth={e.kind === 'cov' ? 1.6 : 1.1} strokeLinecap="round"
+          <path d={e.d} stroke="url(#ig-edge)" strokeWidth={1.5} strokeLinecap="round"
             className={`constellation-line ${drawn ? 'drawn' : ''}`}
-            style={{ '--dash-len': `${e.length}px`, '--draw-delay': `${e.delay}ms`, strokeDasharray: e.length } as React.CSSProperties}
-          />
-          <line
-            x1={e.from.x} y1={e.from.y} x2={e.to.x} y2={e.to.y}
-            stroke="url(#g-flow)" strokeWidth={e.kind === 'cov' ? 2.2 : 1.6} strokeLinecap="round"
-            className="edge-flow"
-            style={{ '--flow-delay': `${e.delay + 400}ms` } as React.CSSProperties}
-          />
+            style={{ '--dash-len': `${e.len}px`, '--draw-delay': `${e.drawDelay}ms`, strokeDasharray: e.len } as React.CSSProperties} />
+          <path d={e.d} stroke="url(#ig-flow)" strokeWidth={2} strokeLinecap="round" className="edge-flow"
+            style={{ '--flow-delay': `${e.flowDelay}ms` } as React.CSSProperties} />
+          <polygon points={e.head} fill="var(--color-accent)" opacity={drawn ? 0.75 : 0}
+            style={{ transition: 'opacity .5s ease', transitionDelay: `${e.drawDelay + 700}ms` }} />
         </g>
       ))}
 
-      {/* Limit leaves */}
-      {LIMITS.map((lim, i) => {
-        const p = at(lim.angle, R_LIM)
-        return (
-          <g key={`l${i}`} className="rise-in" style={{ '--rise-delay': `${700 + i * 80}ms` } as React.CSSProperties}>
-            <circle cx={p.x} cy={p.y} r={RL} fill="rgba(255,255,255,.92)" stroke="rgba(139,31,224,.22)" strokeWidth="1"
-              style={{ filter: 'drop-shadow(0 2px 8px rgba(139,31,224,.1))' }} />
-            <text x={p.x} y={p.y - 2} textAnchor="middle" fontSize="7" fontWeight="600" fill="#5B5C6B">{lim.label}</text>
-            <text x={p.x} y={p.y + 7} textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#8B1FE0"
-              style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>{lim.ref}</text>
-          </g>
-        )
-      })}
+      {/* Coverage leaves branching out of the Coverages node */}
+      {COV_LEAVES.map((leaf, i) => (
+        <g key={`cov${leaf.letter}`} className="rise-in" style={{ '--rise-delay': `${1100 + i * 70}ms` } as React.CSSProperties}>
+          <line x1={COV.x} y1={COV.y} x2={leaf.x} y2={leaf.y} stroke="var(--color-accent-line)" strokeWidth={1} />
+          <circle cx={leaf.x} cy={leaf.y} r={9} fill="rgba(255,255,255,.95)" stroke="var(--color-accent-line)" strokeWidth={1}
+            style={{ filter: 'drop-shadow(0 1px 5px rgba(139,31,224,.10))' }} />
+          <text x={leaf.x} y={leaf.y + 3} textAnchor="middle" fontSize="8.5" fontWeight="700" fill="var(--color-accent)"
+            style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>{leaf.letter}</text>
+        </g>
+      ))}
 
-      {/* Coverage nodes */}
-      {COVERAGES.map((cov, i) => {
-        const p = at(cov.angle, R_COV)
-        return (
-          <g key={cov.id}>
-            <circle cx={p.x} cy={p.y} r={RC + 8} fill="url(#g-glow)" className="node-glow"
-              style={{ '--breathe-delay': `${i * 500}ms` } as React.CSSProperties} />
-            <circle cx={p.x} cy={p.y} r={RC} fill="rgba(255,255,255,.95)" stroke="rgba(139,31,224,.28)" strokeWidth="1"
-              style={{ filter: 'drop-shadow(0 3px 12px rgba(139,31,224,.14))' }} />
-            <text x={p.x} y={p.y - 3} textAnchor="middle" fontSize="10" fontWeight="700" fill="#131318">{cov.label}</text>
-            <text x={p.x} y={p.y + 8} textAnchor="middle" fontSize="7.5" fill="#8E90A0"
-              style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>{cov.ref}</text>
-          </g>
-        )
-      })}
+      {/* Feature source nodes */}
+      {FEATURES.map((f, i) => (
+        <g key={f.id} className="rise-in" style={{ '--rise-delay': `${250 + i * 110}ms` } as React.CSSProperties}>
+          <circle cx={f.x} cy={f.y} r={RN + 7} fill="url(#ig-glow)" className="node-glow"
+            style={{ '--breathe-delay': `${i * 420}ms` } as React.CSSProperties} />
+          <circle cx={f.x} cy={f.y} r={RN} fill="rgba(255,255,255,.96)" stroke="var(--color-accent-line)" strokeWidth={1}
+            style={{ filter: 'drop-shadow(0 3px 12px rgba(139,31,224,.12))' }} />
+          <g transform={`translate(${f.x} ${f.y})`}><Glyph id={f.id} /></g>
+          <text x={f.x} y={f.y - RN - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="#131318">{f.label}</text>
+          <text x={f.x} y={f.y + RN + 13} textAnchor="middle" fontSize="8" fontWeight="600" fill="var(--color-accent)"
+            style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>{f.chip}</text>
+        </g>
+      ))}
 
-      {/* Product core */}
-      <circle cx={C.x} cy={C.y} r={RP + 14} fill="url(#g-glow)" className="node-glow" />
-      <circle cx={C.x} cy={C.y} r={RP} fill="rgba(255,255,255,.97)" stroke="url(#g-node)" strokeWidth="1.5"
-        style={{ filter: 'drop-shadow(0 6px 22px rgba(139,31,224,.24))' }} />
-      <text x={C.x} y={C.y - 5} textAnchor="middle" fontSize="12" fontWeight="700" fill="#131318">Product</text>
-      <text x={C.x} y={C.y + 10} textAnchor="middle" fontSize="8" fill="#5B5C6B"
-        style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>HO.PROD.001</text>
+      {/* Focal point — the product manager, aggregating every stream */}
+      <g className="rise-in" style={{ '--rise-delay': '150ms' } as React.CSSProperties}>
+        <circle cx={PM.x} cy={PM.y} r={RPM + 22} fill="url(#ig-glow)" className="node-glow" />
+        {/* Orbiting intake ring (reuses the edge-flow dash animation) */}
+        <circle cx={PM.x} cy={PM.y} r={RPM + 9} fill="none" stroke="var(--color-accent-line)" strokeWidth={1.25}
+          className="edge-flow" style={{ strokeDasharray: '3 9' } as React.CSSProperties} />
+        <circle cx={PM.x} cy={PM.y} r={RPM} fill="url(#ig-medallion)"
+          style={{ filter: 'drop-shadow(0 8px 26px rgba(139,31,224,.34))' }} />
+        {/* Product-manager glyph: head + shoulders */}
+        <g fill="#fff">
+          <circle cx={PM.x} cy={PM.y - 9} r={11} />
+          <path d={`M${PM.x - 19} ${PM.y + 22} C${PM.x - 19} ${PM.y + 6} ${PM.x + 19} ${PM.y + 6} ${PM.x + 19} ${PM.y + 22} Z`} />
+        </g>
+        <text x={PM.x} y={PM.y + RPM + 20} textAnchor="middle" fontSize="12" fontWeight="700" fill="#131318">Product Manager</text>
+        <text x={PM.x} y={PM.y + RPM + 35} textAnchor="middle" fontSize="8.5" fill="#5B5C6B"
+          style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>informed · in control</text>
+      </g>
     </svg>
   )
 }
 
 // ─── Feature cards ────────────────────────────────────────────────────────────
 
-const FEATURES = [
+const CARDS = [
   {
     icon: Layers,
     title: 'Your whole portfolio, one workspace',
@@ -181,8 +197,8 @@ const FEATURES = [
   },
   {
     icon: KanbanSquare,
-    title: 'Every filing, on track',
-    body: 'A living task board carries each product from idea to launch, with owners, due dates and readiness checks — so nothing slips.',
+    title: 'Every signal, aggregated',
+    body: 'Live market news, readiness checks, reviews awaiting you and a living task board — the whole picture converges on you, so nothing slips.',
   },
 ]
 
@@ -195,7 +211,7 @@ function FeatureCard({ icon: Icon, title, body, delay }: { icon: typeof Layers; 
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-card)' }}
     >
       <div className="w-11 h-11 rounded-[13px] flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.06]"
-        style={{ background: 'linear-gradient(135deg, rgba(161,0,255,.12), rgba(122,0,230,.1))' }}>
+        style={{ background: 'var(--gradient-accent-soft)' }}>
         <Icon size={20} className="text-accent" strokeWidth={1.75} aria-hidden="true" />
       </div>
       <h3 className="text-[15px] font-semibold text-text leading-snug">{title}</h3>
@@ -228,26 +244,31 @@ export default function Landing() {
       </header>
 
       {/* Hero */}
-      <main className="relative z-10 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-20 px-6 sm:px-10 pt-10 pb-16 flex-1 max-w-6xl mx-auto w-full">
+      <main className="relative z-10 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16 px-6 sm:px-10 pt-8 pb-16 flex-1 max-w-6xl mx-auto w-full">
         <div className="flex flex-col gap-7 max-w-lg text-center lg:text-left">
-          <h1 className="rise-in text-[2.75rem] leading-[1.05] sm:text-6xl font-bold text-text tracking-[-.02em]"
+          <span className="rise-in inline-flex items-center gap-2 self-center lg:self-start text-xs font-medium text-accent bg-accent-soft rounded-full px-3 py-1"
             style={{ '--rise-delay': '0ms' } as React.CSSProperties}>
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" /> AI-native · P&amp;C insurance
+          </span>
+
+          <h1 className="rise-in text-display text-[2.75rem] leading-[1.04] sm:text-6xl font-bold text-text"
+            style={{ '--rise-delay': '70ms' } as React.CSSProperties}>
             Ship insurance<br />products{' '}
-            <span style={{ background: 'linear-gradient(120deg,#A100FF 0%,#8B1FE0 45%,#6D28D9 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              faster.
-            </span>
+            <span className="gradient-text">faster.</span>
           </h1>
 
           <p className="rise-in text-base sm:text-lg text-dim leading-relaxed max-w-md mx-auto lg:mx-0"
-            style={{ '--rise-delay': '90ms' } as React.CSSProperties}>
-            AI-native product management for property &amp; casualty insurers. Author coverages, price with confidence, and govern with full traceability — from first draft to state filing.
+            style={{ '--rise-delay': '150ms' } as React.CSSProperties}>
+            The product manager sits at the centre. Coverages, rating, live market news,
+            intelligent tasks and an AI copilot all flow to you — grounded, governed and
+            fully traceable, from first draft to state filing.
           </p>
 
-          <div className="rise-in flex justify-center lg:justify-start" style={{ '--rise-delay': '180ms' } as React.CSSProperties}>
+          <div className="rise-in flex justify-center lg:justify-start" style={{ '--rise-delay': '230ms' } as React.CSSProperties}>
             <button
               onClick={() => navigate('/sign-in')}
               className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-[13px] text-white font-semibold text-[15px] transition-all duration-200 hover:scale-[1.02] active:scale-[.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-              style={{ background: 'linear-gradient(135deg,#A100FF,#8B1FE0,#6D28D9)', boxShadow: '0 6px 22px rgba(139,31,224,.35)' }}
+              style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 6px 22px var(--glow-accent)' }}
             >
               Enter the Hub
               <ArrowRight size={17} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
@@ -255,17 +276,17 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Product graph */}
-        <div className="relative shrink-0 w-[340px] h-[340px] sm:w-[440px] sm:h-[440px] flex items-center justify-center">
-          <div className="absolute inset-8 rounded-full blur-3xl opacity-[.18] pointer-events-none"
-            style={{ background: 'radial-gradient(circle,#8B1FE0,#7A00E6)' }} aria-hidden="true" />
-          <ProductGraph />
+        {/* Insight graph */}
+        <div className="relative shrink-0 w-[360px] h-[360px] sm:w-[480px] sm:h-[480px] flex items-center justify-center">
+          <div className="absolute inset-10 rounded-full blur-3xl opacity-[.16] pointer-events-none"
+            style={{ background: 'radial-gradient(circle, var(--color-accent-bright), transparent 70%)' }} aria-hidden="true" />
+          <InsightGraph />
         </div>
       </main>
 
       {/* Feature cards */}
       <section className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-5 px-6 sm:px-10 pb-16 max-w-5xl mx-auto w-full" aria-label="What the Hub does">
-        {FEATURES.map((f, i) => <FeatureCard key={f.title} {...f} delay={280 + i * 90} />)}
+        {CARDS.map((f, i) => <FeatureCard key={f.title} {...f} delay={280 + i * 90} />)}
       </section>
 
       {/* Footer */}
