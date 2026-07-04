@@ -3,5 +3,6 @@
 export * from './types'
 export * from './rating/evaluator'
 export * from './rules/engine'
+export * from './insurance/terms'
 export * from './search/rank'
 export * from './seed/ho3'

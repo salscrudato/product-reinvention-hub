@@ -1,17 +1,21 @@
-// Products list — realtime card grid with facet filters, typeahead, and New Product.
+// Products list — realtime portfolio with card + list views, facet filters,
+// typeahead, and New Product.
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Fuse from 'fuse.js'
 import { toast } from 'sonner'
-import { Plus, Package, Download } from 'lucide-react'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
-import { Button, Skeleton, EmptyState, Tabs } from '../components/ui'
+import { Button, Skeleton, EmptyState, Tabs, ViewToggle, type ViewMode } from '../components/ui'
+import { IconPlus, IconDownload, IconProduct, IconSearch } from '../components/ui/icons'
 import { ProductCard } from '../components/product/ProductCard'
+import { ProductRow } from '../components/product/ProductRow'
 import { NewProductModal } from '../components/product/NewProductModal'
 import { exportPortfolioExcel, type ProductExport } from '../lib/export/excel'
 import type { Product, Coverage, Rule, Form, LDTable, RTTable, RatingProgram } from '@pf/shared'
 import type { WithId } from '../context/ProductContext'
+
+const VIEW_KEY = 'pf.products.view'
 
 const TABS = [
   { id: 'portfolio', label: 'Portfolio' },
@@ -30,6 +34,8 @@ export default function Products() {
   const [lobFilter, setLobFilter] = useState('')
   const [newOpen,  setNewOpen]  = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) as ViewMode) || 'cards')
+  const setViewPersist = (m: ViewMode) => { setView(m); localStorage.setItem(VIEW_KEY, m) }
 
   async function exportPortfolio() {
     if (!products.length) return
@@ -89,12 +95,12 @@ export default function Products() {
         <div className="flex items-center gap-2">
           {products.length > 0 && (
             <Button variant="ghost" size="sm" onClick={exportPortfolio} disabled={exporting}>
-              <Download size={14} />{exporting ? 'Exporting…' : 'Export'}
+              <IconDownload size={14} />{exporting ? 'Exporting…' : 'Export'}
             </Button>
           )}
           {canEdit && (
             <Button variant="primary" size="sm" onClick={() => setNewOpen(true)}>
-              <Plus size={14} />New product
+              <IconPlus size={14} />New product
             </Button>
           )}
         </div>
@@ -103,12 +109,15 @@ export default function Products() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <Tabs tabs={TABS} active={tab} onChange={setTab} />
-        <input
-          className="flex-1 min-w-[200px] h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent"
-          placeholder="Search products..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-        />
+        <div className="relative flex-1 min-w-[200px]">
+          <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
+          <input
+            className="w-full h-8 pl-9 pr-3 rounded-[8px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent"
+            placeholder="Search products…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+        </div>
         {lobs.length > 1 && (
           <select
             className="h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm text-dim focus:outline-none focus:ring-2 focus:ring-accent/25"
@@ -119,6 +128,7 @@ export default function Products() {
             {lobs.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
         )}
+        <ViewToggle mode={view} onChange={setViewPersist} />
       </div>
 
       {loading ? (
@@ -130,15 +140,17 @@ export default function Products() {
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState icon={<Package size={32} />} title={query ? `No results for "${query}"` : `No ${tab === 'portfolio' ? 'launched' : 'draft'} products`}
+        <EmptyState icon={<IconProduct size={32} />} title={query ? `No results for "${query}"` : `No ${tab === 'portfolio' ? 'launched' : 'draft'} products`}
           description={canEdit ? 'Create a new product to get started.' : undefined}
-          action={canEdit ? <Button variant="primary" size="sm" onClick={() => setNewOpen(true)}><Plus size={14} />New product</Button> : undefined}
+          action={canEdit ? <Button variant="primary" size="sm" onClick={() => setNewOpen(true)}><IconPlus size={14} />New product</Button> : undefined}
         />
-      ) : (
+      ) : view === 'cards' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {visible.map(p => (
-            <ProductCard key={p.id} p={p} onClick={() => navigate(`/app/products/${p.id}`)} />
-          ))}
+          {visible.map(p => <ProductCard key={p.id} p={p} />)}
+        </div>
+      ) : (
+        <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
+          {visible.map(p => <ProductRow key={p.id} p={p} />)}
         </div>
       )}
 

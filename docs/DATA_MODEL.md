@@ -33,7 +33,16 @@ products/{pid}
   │    claimsBasis, premiumGenerating, source BUREAU|PROPRIETARY,
   │    formNumbers[], governance, states/allStates,
   │    terms: [{ id, kind LIMIT|DEDUCTIBLE|OPTION, label, ldTableRef?,
-  │             options?[], min?, max?, default, basis, unit, notes? }]
+  │             options?[], min?, max?, default, basis, unit, notes?,
+  │             // canonical typed model (optional; derived from the legacy fields
+  │             // above when absent, mirrored back on save — see shared/insurance/terms.ts):
+  │             structure? (SINGLE|OCCURRENCE_AGGREGATE|EACH_CLAIM_AGGREGATE|SPLIT|
+  │                         CSL|SCHEDULED  for limits · FLAT|PERCENT|PERCENT_MIN_MAX|
+  │                         WAITING_PERIOD|SPLIT  for deductibles),
+  │             limitBasis? (PER_OCCURRENCE|AGGREGATE|PER_PERSON|PER_CLAIM|PER_ITEM|PER_LOCATION),
+  │             optionSet?: [{ id, type FLAT|PERCENT|SPLIT|CSL|SCHEDULED|WAITING_PERIOD,
+  │                           value, parts?[], label?, allStates, states[] (⊆ coverage
+  │                           scope), isDefault (exactly one enabled), enabled, constraintNote? }] }]
   ├─ rules/{rid}
   │    refId, category PRODUCT|RATING|FORMS, subCategory, condition, outcome,
   │    ldTableRef?, coverageRefIds[], formNumbers[], governance, states

@@ -1,215 +1,157 @@
-// Coverages tab — hierarchy tree + node editor with live LD-table pickers and F/E constraint.
-import { useState } from 'react'
+// Coverages — the product's coverages as a browsable collection (cards ⇄ list).
+// Every coverage is a hub whose tiles drill into focused editors: Limits and
+// Deductibles (typed standard options), States (US map), and the Forms/Pricing/
+// Rules tabs — filtered to that coverage so the relationships stay navigable both
+// ways. Create / edit / delete keep the hierarchy consistent.
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import Fuse from 'fuse.js'
 import { toast } from 'sonner'
-import { Save, AlertTriangle } from 'lucide-react'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
-import { Badge, StatusPill, Button, Skeleton, RefChip } from '../../components/ui'
-import { LimitEditor } from '../../components/product/LimitEditor'
-import { StateTileMap } from '../../components/product/StateTileMap'
-import { HO3_COASTAL_STATES } from '@pf/shared'
-import { US_TILE_GRID } from '../../lib/geo/usTileGrid'
-import type { Coverage, CoverageTerm } from '@pf/shared'
+import { Button, Skeleton, EmptyState, ViewToggle, type ViewMode } from '../../components/ui'
+import { IconPlus, IconSearch, IconCoverage } from '../../components/ui/icons'
+import { CoverageHubCard } from '../../components/product/CoverageHubCard'
+import { CoverageRow } from '../../components/product/CoverageRow'
+import type { CoverageAspect } from '../../components/product/coverageAspects'
+import { TermOptionsDialog } from '../../components/product/TermOptionsDialog'
+import { CoverageStatesDialog } from '../../components/product/CoverageStatesDialog'
+import { CoverageEditDialog } from '../../components/product/CoverageEditDialog'
+import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
-const COV_COASTAL = new Set<string>(HO3_COASTAL_STATES)
-const ALL_TILE_STATES = Object.keys(US_TILE_GRID)
+const VIEW_KEY = 'pf.coverages.view'
+const byOrder = (a: WithId<Coverage>, b: WithId<Coverage>) => (a.order ?? 0) - (b.order ?? 0)
 
-// ─── Coverage tree (left pane) ────────────────────────────────────────────────
-
-function CoverageTreeItem({ cov, children, selected, onSelect }: {
-  cov: WithId<Coverage>; children?: React.ReactNode
-  selected: boolean; onSelect: () => void
-}) {
+function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div>
-      <button
-        onClick={onSelect}
-        className={`w-full flex items-center gap-2 px-3 py-2 rounded-[8px] text-sm text-left transition-colors ${selected ? 'bg-accent-soft text-accent' : 'hover:bg-raised text-text'}`}
-      >
-        <StatusPill status={cov.status} />
-        <span className="flex-1 truncate font-medium">{cov.name}</span>
-        {cov.refId && <span className="text-xs font-mono text-faint">{cov.refId.split('.').pop()}</span>}
-      </button>
-      {children && <div className="ml-4 border-l border-accent/15 pl-2">{children}</div>}
+    <div className="flex items-center gap-3">
+      <h3 className="text-[11px] font-semibold uppercase tracking-[.09em] text-faint">{label}</h3>
+      <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
+      <span className="text-[11px] text-faint tnum">{count}</span>
     </div>
   )
 }
 
-function buildForest(cov: WithId<Coverage>, all: WithId<Coverage>[], selected: string | null, onSelect: (id: string) => void): React.ReactNode {
-  const children = all.filter(c => c.parentId === cov.refId)
-  return (
-    <CoverageTreeItem key={cov.id} cov={cov} selected={selected === cov.id} onSelect={() => onSelect(cov.id)}>
-      {children.length > 0 && children.map(ch => buildForest(ch, all, selected, onSelect))}
-    </CoverageTreeItem>
-  )
-}
+export default function ProductCoverages() {
+  const { pid, coverages, loading } = useProductCtx()
+  const { user } = useUser()
+  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
 
-// ─── Coverage node editor (right pane) ───────────────────────────────────────
+  const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) as ViewMode) || 'cards')
+  const setViewPersist = (m: ViewMode) => { setView(m); localStorage.setItem(VIEW_KEY, m) }
+  const [query, setQuery] = useState('')
 
-function CoverageEditor({ cov }: { cov: WithId<Coverage> }) {
-  const { pid, coverages, ldTables } = useProductCtx()
-  const navigate  = useNavigate()
-  const { user }  = useUser()
-  const canEdit   = user?.role === 'EDITOR' || user?.role === 'ADMIN'
-  const actor     = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
+  // Aspect editors (dialogs) + coverage create/edit.
+  const [dialog, setDialog] = useState<{ kind: 'limits' | 'deductibles' | 'states'; cov: WithId<Coverage> } | null>(null)
+  const [editCov, setEditCov] = useState<WithId<Coverage> | 'new' | null>(null)
 
-  // Local draft of terms + state scope
-  const [terms, setTerms]         = useState<CoverageTerm[]>(() => cov.terms ?? [])
-  const [states, setStates]       = useState<string[]>(() => cov.states ?? [])
-  const [allStates, setAllStates] = useState<boolean>(() => cov.allStates ?? false)
-  const [dirty, setDirty] = useState(false)
+  const fuse = useMemo(() => new Fuse(coverages, { keys: ['name', 'refId', 'claimsBasis'], threshold: 0.4 }), [coverages])
+  const filtered = query ? fuse.search(query).map(r => r.item) : coverages
+  const roots = filtered.filter(c => !c.parentId).sort(byOrder)
+  const endorsements = filtered.filter(c => c.parentId).sort(byOrder)
+  const parentName = (refId?: string | null) => coverages.find(c => c.refId === refId)?.name
 
-  function toggleCovState(s: string) {
-    setStates(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
-    setDirty(true)
+  // A deep link (?cov=<id|refId>) auto-opens that coverage's Limits editor once,
+  // after coverages have loaded (guarded so closing it doesn't reopen).
+  const deepLinkDone = useRef(false)
+  useEffect(() => {
+    if (deepLinkDone.current) return
+    const target = params.get('cov')
+    if (!target || !coverages.length) return
+    const cov = coverages.find(c => c.id === target || c.refId === target)
+    if (cov) { setDialog({ kind: 'limits', cov }); deepLinkDone.current = true }
+  }, [coverages, params])
+
+  function onTile(aspect: CoverageAspect, cov: WithId<Coverage>) {
+    if (aspect === 'limits' || aspect === 'deductibles' || aspect === 'states') setDialog({ kind: aspect, cov })
+    else navigate(`/app/products/${pid}/${aspect}?cov=${encodeURIComponent(cov.refId ?? cov.id)}`)
   }
 
-  // For Coverage F gate: find Coverage E's current default limit
-  const covE        = coverages.find(c => c.refId === 'HO.COV.005')
-  const covEDefault = covE?.terms?.[0]?.default as number | undefined
-  const covFGated   = cov.refId === 'HO.COV.006' && (covEDefault ?? 300000) < 300000
-
-  function updateTerm(termId: string, patch: Partial<CoverageTerm>) {
-    setTerms(prev => prev.map(t => t.id === termId ? { ...t, ...patch } : t))
-    setDirty(true)
-  }
-
-  async function handleSave() {
+  async function onDelete(cov: WithId<Coverage>) {
     if (!canEdit) return
+    const children = coverages.filter(c => c.parentId === cov.refId)
+    if (children.length) { toast.error(`Reassign or remove its ${children.length} endorsement${children.length === 1 ? '' : 's'} first.`); return }
+    if (!window.confirm(`Delete "${cov.name}"? This cannot be undone.`)) return
     try {
-      await adapter.db.mutate({
-        op: 'update', path: `products/${pid}/coverages/${cov.id}`,
-        data: { terms, states, allStates },
-        entityType: 'coverage', productId: pid, actor,
-        expectedRev: (cov as { rev?: number }).rev,
-      })
-      setDirty(false)
-      toast.success('Coverage saved')
+      await adapter.db.mutate({ op: 'delete', path: `products/${pid}/coverages/${cov.id}`, entityType: 'coverage', productId: pid, actor })
+      toast.success('Coverage deleted')
     } catch (err) {
-      if (err instanceof MutationConflictError) {
-        toast.error('Conflict — this coverage was updated by someone else. Please refresh.')
-      } else {
-        toast.error(err instanceof Error ? err.message : 'Save failed')
-      }
+      toast.error(err instanceof MutationConflictError ? 'Conflict — please refresh.' : err instanceof Error ? err.message : 'Delete failed')
     }
   }
 
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col gap-1.5 items-start">
-          <h2 className="text-base font-semibold text-text">{cov.name}</h2>
-          {cov.refId && <RefChip id={cov.refId} />}
-        </div>
-        {canEdit && dirty && (
-          <Button variant="primary" size="sm" onClick={handleSave}>
-            <Save size={14} />Save
-          </Button>
-        )}
-      </div>
+  const hubProps = (cov: WithId<Coverage>) => ({ cov, canEdit, onTile, onEdit: setEditCov, onDelete })
 
-      {/* Metadata chips */}
-      <div className="flex flex-wrap gap-1.5">
-        <Badge label={cov.requirement} color={cov.requirement === 'MANDATORY' ? 'purple' : 'default'} />
-        <Badge label={cov.source} color="default" />
-        {cov.premiumGenerating && <Badge label="Premium generating" color="good" />}
-        {cov.claimsBasis && <Badge label={cov.claimsBasis} color="blue" />}
-      </div>
-
-      {/* Coverage F gate warning */}
-      {covFGated && (
-        <div className="flex items-start gap-2 px-3 py-2 rounded-[8px] bg-[rgba(180,83,9,.07)] text-warn text-sm">
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-          Coverage F $5,000 limit is currently blocked because Coverage E default is set below $300,000.
-          <span className="font-mono text-xs">[HO.RU.006]</span>
-        </div>
-      )}
-
-      {/* Coverage terms — editable limits (range + standard options) */}
-      <div className="flex flex-col gap-5">
-        <p className="text-xs font-medium text-faint uppercase tracking-wide">Coverage terms</p>
-        {terms.length === 0 && <p className="text-sm text-faint">No terms defined.</p>}
-        {terms.map(term => (
-          <div key={term.id} className="flex flex-col gap-1.5">
-            <LimitEditor
-              term={term}
-              ldTable={term.ldTableRef ? ldTables[term.ldTableRef] : undefined}
-              isBlocked={covFGated && term.kind === 'LIMIT' ? (v => v === 5000 ? 'Requires Coverage E ≥ $300,000 [HO.RU.006]' : undefined) : undefined}
-              canEdit={canEdit}
-              onChange={patch => updateTerm(term.id, patch)}
-            />
-            {term.notes && <p className="text-xs text-faint">{term.notes}</p>}
-          </div>
-        ))}
-      </div>
-
-      {/* Linked forms — click to open in the Forms tab (two-way link) */}
-      {cov.formNumbers?.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-faint uppercase tracking-wide mb-2">Attached forms</p>
-          <div className="flex flex-wrap gap-1.5">
-            {cov.formNumbers.map(fn => (
-              <RefChip key={fn} id={fn} tone="accent" title={`Open ${fn} in Forms`}
-                onClick={() => navigate(`/app/products/${pid}/forms?form=${encodeURIComponent(fn)}`)} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* State scope — the US map, editable per coverage */}
-      <div>
-        <div className="flex items-center justify-between mb-2 gap-2">
-          <p className="text-xs font-medium text-faint uppercase tracking-wide">State scope</p>
-          <label className="flex items-center gap-1.5 text-xs text-dim cursor-pointer">
-            <input type="checkbox" className="accent-accent" checked={allStates} disabled={!canEdit}
-              onChange={e => { setAllStates(e.target.checked); setDirty(true) }} />
-            All footprint states
-          </label>
-        </div>
-        <div className="bg-page rounded-[12px] p-3" style={{ border: '1px solid var(--color-border)' }}>
-          <StateTileMap
-            active={allStates ? new Set(ALL_TILE_STATES) : new Set(states)}
-            coastal={COV_COASTAL}
-            onToggle={toggleCovState}
-            canEdit={canEdit && !allStates}
-            labels={{ active: 'In scope', coastal: 'Coastal wind/hail', inactive: 'Out of scope' }}
-          />
-        </div>
-      </div>
+  if (loading) return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-44 rounded-[16px]" />)}
     </div>
   )
-}
-
-// ─── Main route ───────────────────────────────────────────────────────────────
-
-export default function ProductCoverages() {
-  const { coverages, loading } = useProductCtx()
-  const [params] = useSearchParams()
-  // Honour a deep link from the Overview (e.g. …/coverages?cov=<id>).
-  const [selected, setSelected] = useState<string | null>(() => params.get('cov'))
-
-  if (loading) return <div className="grid grid-cols-[240px_1fr] gap-5"><Skeleton className="h-64" /><Skeleton className="h-64" /></div>
-
-  const roots = coverages.filter(c => !c.parentId)
-  // Deep links may arrive as a coverage id OR a refId (e.g. from a rule).
-  const selectedCov = coverages.find(c => c.id === selected || c.refId === selected) ?? coverages[0] ?? null
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-5">
-      {/* Tree */}
-      <div className="bg-surface rounded-[14px] p-3" style={{ border: '1px solid var(--color-border)', maxHeight: '70vh', overflowY: 'auto' }}>
-        {roots.map(r => buildForest(r, coverages, selected, setSelected))}
+    <div className="flex flex-col gap-5">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm text-dim tnum shrink-0">{coverages.length} coverage{coverages.length === 1 ? '' : 's'}</span>
+        <div className="relative flex-1 min-w-[200px]">
+          <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search coverages by name or code…"
+            className="w-full h-9 pl-9 pr-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent" />
+        </div>
+        <ViewToggle mode={view} onChange={setViewPersist} />
+        {canEdit && <Button variant="primary" size="sm" onClick={() => setEditCov('new')}><IconPlus size={14} />Add coverage</Button>}
       </div>
 
-      {/* Editor */}
-      <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)', minHeight: 300 }}>
-        {selectedCov
-          ? <CoverageEditor key={selectedCov.id} cov={selectedCov} />
-          : <p className="text-sm text-faint">Select a coverage to edit.</p>}
-      </div>
+      {coverages.length === 0 ? (
+        <EmptyState icon={<IconCoverage size={32} />} title="No coverages yet"
+          description={canEdit ? 'Add the first coverage to start building this product.' : undefined}
+          action={canEdit ? <Button variant="primary" size="sm" onClick={() => setEditCov('new')}><IconPlus size={14} />Add coverage</Button> : undefined} />
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={<IconSearch size={32} />} title={`No coverages match "${query}"`} />
+      ) : (
+        <div className="flex flex-col gap-6">
+          {roots.length > 0 && (
+            <section className="flex flex-col gap-3">
+              <SectionHeader label="Coverages" count={roots.length} />
+              {view === 'cards' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {roots.map(cov => <CoverageHubCard key={cov.id} {...hubProps(cov)} />)}
+                </div>
+              ) : (
+                <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
+                  {roots.map(cov => <CoverageRow key={cov.id} {...hubProps(cov)} />)}
+                </div>
+              )}
+            </section>
+          )}
+
+          {endorsements.length > 0 && (
+            <section className="flex flex-col gap-3">
+              <SectionHeader label="Endorsements" count={endorsements.length} />
+              {view === 'cards' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {endorsements.map(cov => <CoverageHubCard key={cov.id} parentName={parentName(cov.parentId)} {...hubProps(cov)} />)}
+                </div>
+              ) : (
+                <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
+                  {endorsements.map(cov => <CoverageRow key={cov.id} isEndorsement {...hubProps(cov)} />)}
+                </div>
+              )}
+            </section>
+          )}
+        </div>
+      )}
+
+      {/* Aspect editors */}
+      {dialog?.kind === 'limits' && <TermOptionsDialog cov={dialog.cov} mode="LIMIT" onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'deductibles' && <TermOptionsDialog cov={dialog.cov} mode="DEDUCTIBLE" onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'states' && <CoverageStatesDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
+      {editCov !== null && <CoverageEditDialog cov={editCov === 'new' ? null : editCov} onClose={() => setEditCov(null)} />}
     </div>
   )
 }

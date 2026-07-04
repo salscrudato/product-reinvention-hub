@@ -52,18 +52,72 @@ export interface Product extends GovernanceBlock, StateScope {
 
 // ─── Coverages ──────────────────────────────────────────────────────────────
 
+// How a limit/deductible is *shaped* — mirrors how P&C filings express amounts.
+export type LimitStructure =
+  | 'SINGLE'                // one limit applies to all covered loss
+  | 'OCCURRENCE_AGGREGATE'  // per-occurrence limit plus a policy aggregate
+  | 'EACH_CLAIM_AGGREGATE'  // per-claim limit plus aggregate (claims-made lines)
+  | 'SPLIT'                 // component limits, e.g. BI per person / per accident / PD
+  | 'CSL'                   // combined single limit
+  | 'SCHEDULED'             // per-item / scheduled values
+
+export type DeductibleStructure =
+  | 'FLAT'                  // fixed dollar amount
+  | 'PERCENT'              // percentage of insured value or loss
+  | 'PERCENT_MIN_MAX'      // percentage bounded by a dollar min & max
+  | 'WAITING_PERIOD'       // time-based (hours/days), e.g. business income
+  | 'SPLIT'                // separate deductibles by peril/component
+
+// What a limit amount is measured against.
+export type LimitBasis =
+  | 'PER_OCCURRENCE' | 'AGGREGATE' | 'PER_PERSON' | 'PER_CLAIM' | 'PER_ITEM' | 'PER_LOCATION'
+
+// The concrete kind of a single option value.
+export type OptionValueType =
+  | 'FLAT'           // dollar amount (value)
+  | 'PERCENT'        // percentage (value = integer percent)
+  | 'SPLIT'          // components in `parts`, e.g. [100000,300000,100000]
+  | 'CSL'            // combined single limit (value)
+  | 'SCHEDULED'      // scheduled/per-item cap (value)
+  | 'WAITING_PERIOD' // hours (value = hours)
+
+/** One standard, selectable option inside a limit/deductible term. Each option
+ *  carries its own type, applicability (a StateScope), a default flag and an
+ *  enabled flag so the option matrix models real filing variation — a limit
+ *  offered only in some states, one marked the default, some disabled. Integrity
+ *  the editor enforces: exactly one enabled option is the default; each option's
+ *  applicability ⊆ its coverage's state scope; values stay within [min,max].
+ *  (Distinct from `TermOption` below, which is the rules engine's availability I/O.) */
+export interface StandardOption {
+  id:              string
+  type:            OptionValueType
+  value:           number
+  parts?:          number[]
+  label?:          string          // display override; derived from value when absent
+  allStates:       boolean
+  states:          string[]
+  isDefault:       boolean
+  enabled:         boolean
+  constraintNote?: string
+}
+
 export interface CoverageTerm {
   id:          string
   kind:        TermKind
   label:       string
   ldTableRef?: string
-  options?:    (string | number)[]
+  options?:    (string | number)[]   // legacy flat option list (kept in sync w/ optionSet)
   min?:        number
   max?:        number
   default:     string | number | boolean
-  basis:       string
+  basis:       string                // free-text legacy basis (e.g. "per occurrence")
   unit?:       string
   notes?:      string
+  // ── Canonical typed model (optional; derived from the legacy fields above when
+  //    absent, and written back on first edit). See shared/insurance/terms.ts. ──
+  structure?:   LimitStructure | DeductibleStructure
+  limitBasis?:  LimitBasis
+  optionSet?:   StandardOption[]
 }
 
 export interface Coverage extends GovernanceBlock, StateScope {
