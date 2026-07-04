@@ -117,14 +117,19 @@ export const adapter: BackendAdapter = {
         throw new Error('subscribe() with a Query object requires a string path')
       }
       const parts = pathOrQuery.split('/').filter(Boolean)
+      // On a listener error (e.g. permission-denied) surface it and degrade to an
+      // empty result rather than hanging every consumer waiting on the callback.
+      const onErr = (err: unknown) => {
+        console.warn(`[subscribe] ${pathOrQuery} listener error:`, (err as { code?: string })?.code ?? err)
+      }
       if (parts.length % 2 === 0) {
         // Document
-        return onSnapshot(doc(db, pathOrQuery), (snap) => { cb(snapToData<T>(snap) as T) })
+        return onSnapshot(doc(db, pathOrQuery), (snap) => { cb(snapToData<T>(snap) as T) }, onErr)
       }
       // Collection
-      return onSnapshot(collection(db, pathOrQuery), (snap) => {
-        cb(snap.docs.map((d) => snapToData<T>(d)).filter(Boolean) as T[])
-      })
+      return onSnapshot(collection(db, pathOrQuery),
+        (snap) => { cb(snap.docs.map((d) => snapToData<T>(d)).filter(Boolean) as T[]) },
+        (err) => { onErr(err); cb([] as T[]) })
     },
 
     async mutate(m: MutationPayload): Promise<void> {

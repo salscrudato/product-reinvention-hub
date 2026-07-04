@@ -26,10 +26,11 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // ── Versions — create-only from authenticated users ───────────────────────
+    // ── Versions — create-only; readable by any authed user (powers the History
+    //    drawer + restore for EDITORs, and the product workspace context). ───────
     match /versions/{id} {
       allow create: if isAuthed();
-      allow read:   if isAdmin();
+      allow read:   if isAuthed();
       allow update, delete: if false;
     }
 
