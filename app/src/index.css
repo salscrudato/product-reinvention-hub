@@ -59,6 +59,15 @@
 /* ─── Base reset ─────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* ─── Affordance: every actionable element reads as clickable ──────────────────
+   Global mandate — buttons, links, tabs, switches and native summaries get the
+   pointer; custom clickable divs opt in with `cursor-pointer`. Disabled controls
+   fall back to not-allowed so the "you can't do this" state is legible. */
+button, [role="button"], [role="tab"], [role="switch"], [role="option"],
+a[href], summary, label[for] { cursor: pointer; }
+button:disabled, [role="button"][aria-disabled="true"],
+[aria-disabled="true"] { cursor: not-allowed; }
+
 html {
   font-family: var(--font-ui);
   color: var(--color-text);

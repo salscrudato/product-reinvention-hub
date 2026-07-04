@@ -2,11 +2,16 @@
 // an insurance product manager at the focal point, informed by inward-flowing
 // streams from the app's capabilities (live news, coverages & forms, an AI
 // copilot, rating, intelligent tasks). Coverages branch out from their node.
-// Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
+// A Claude-style grounded composer is the hero's primary call-to-action — it
+// previews the copilot's grounded, refId-citing answers, then hands off to
+// sign-in. Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Layers, Sparkles, KanbanSquare, ArrowRight } from 'lucide-react'
 import { Logo } from '../components/ui'
+import { IconArrowUp, IconLayers, IconSparkle, IconTasks } from '../components/ui/icons'
+
+// A glyph accepts size / className / strokeWidth — matches the in-house icon shape.
+type Glyph = (p: { size?: number; className?: string; strokeWidth?: number }) => React.ReactElement
 
 // ─── Aurora background ────────────────────────────────────────────────────────
 
@@ -178,27 +183,93 @@ function InsightGraph() {
   )
 }
 
+// ─── Hero composer — a grounded, Claude-style entry point ─────────────────────
+// Previews the copilot: rotating, domain-true prompts that all cite refIds/forms.
+// Submitting (or picking a suggestion) starts a session by handing off to sign-in.
+
+const PROMPTS = [
+  'Trace how the $1,528 HO-3 premium is built',
+  'Which forms attach to Coverage C — Personal Property?',
+  'What does endorsement HO 04 90 change?',
+  'Where does wind/hail carry a separate deductible?',
+]
+
+function prefersReducedMotion() {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
+
+function HeroComposer() {
+  const navigate = useNavigate()
+  const [value, setValue] = useState('')
+  const [promptIdx, setPromptIdx] = useState(0)
+
+  // Cycle the placeholder through grounded example prompts (frozen if the user
+  // prefers reduced motion, or once they start typing).
+  useEffect(() => {
+    if (prefersReducedMotion() || value) return
+    const t = setInterval(() => setPromptIdx(i => (i + 1) % PROMPTS.length), 3600)
+    return () => clearInterval(t)
+  }, [value])
+
+  // Any attempt to ask hands off to the workspace sign-in — honest: real answers
+  // are grounded in your data, which lives behind auth.
+  function start() { navigate('/sign-in') }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <form
+        onSubmit={e => { e.preventDefault(); start() }}
+        className="group flex items-center gap-2 bg-surface rounded-[16px] pl-4 pr-2 py-2 transition-shadow duration-200"
+        style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+        onFocus={e => { e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)' }}
+        onBlur={e => { e.currentTarget.style.boxShadow = 'var(--shadow-card)' }}
+      >
+        <IconSparkle size={18} className="text-accent shrink-0" aria-hidden="true" />
+        <input
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          placeholder={PROMPTS[promptIdx]}
+          aria-label="Ask your portfolio anything"
+          className="flex-1 min-w-0 bg-transparent text-[15px] text-text placeholder:text-faint outline-none py-1.5"
+        />
+        <button
+          type="submit"
+          aria-label="Ask the copilot"
+          className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-[11px] text-white transition-transform duration-200 hover:scale-[1.05] active:scale-[.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 4px 14px var(--glow-accent)' }}
+        >
+          <IconArrowUp size={17} aria-hidden="true" />
+        </button>
+      </form>
+      <p className="text-xs text-faint px-1 flex items-center gap-1.5">
+        <span className="w-1.5 h-1.5 rounded-full bg-good shrink-0" aria-hidden="true" />
+        Grounded in your data — every answer cites its <span className="font-mono text-dim">refId</span> and form number.
+      </p>
+    </div>
+  )
+}
+
 // ─── Feature cards ────────────────────────────────────────────────────────────
 
-const CARDS = [
+const CARDS: { icon: Glyph; title: string; body: string }[] = [
   {
-    icon: Layers,
+    icon: IconLayers,
     title: 'Your whole portfolio, one workspace',
     body: 'Author coverages, forms, rules and rating side by side — versioned, governed and instantly searchable, from first draft to state filing.',
   },
   {
-    icon: Sparkles,
+    icon: IconSparkle,
     title: 'An AI copilot for product managers',
     body: 'Ask your portfolio anything. Trace a premium, see which forms attach, draft language — every answer grounded in your data and cited to the exact refId.',
   },
   {
-    icon: KanbanSquare,
+    icon: IconTasks,
     title: 'Every signal, aggregated',
     body: 'Live market news, readiness checks, reviews awaiting you and a living task board — the whole picture converges on you, so nothing slips.',
   },
 ]
 
-function FeatureCard({ icon: Icon, title, body, delay }: { icon: typeof Layers; title: string; body: string; delay: number }) {
+function FeatureCard({ icon: Icon, title, body, delay }: { icon: Glyph; title: string; body: string; delay: number }) {
   return (
     <div
       className="group rise-in bg-surface rounded-[18px] p-6 flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1"
@@ -208,7 +279,7 @@ function FeatureCard({ icon: Icon, title, body, delay }: { icon: typeof Layers; 
     >
       <div className="w-11 h-11 rounded-[13px] flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.06]"
         style={{ background: 'var(--gradient-accent-soft)' }}>
-        <Icon size={20} className="text-accent" strokeWidth={1.75} aria-hidden="true" />
+        <Icon size={20} className="text-accent" strokeWidth={1.75} />
       </div>
       <h3 className="text-[15px] font-semibold text-text leading-snug">{title}</h3>
       <p className="text-sm text-dim leading-relaxed">{body}</p>
@@ -260,15 +331,8 @@ export default function Landing() {
             fully traceable, from first draft to state filing.
           </p>
 
-          <div className="rise-in flex justify-center lg:justify-start" style={{ '--rise-delay': '230ms' } as React.CSSProperties}>
-            <button
-              onClick={() => navigate('/sign-in')}
-              className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-[13px] text-white font-semibold text-[15px] transition-all duration-200 hover:scale-[1.02] active:scale-[.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-              style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 6px 22px var(--glow-accent)' }}
-            >
-              Enter the Hub
-              <ArrowRight size={17} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
-            </button>
+          <div className="rise-in" style={{ '--rise-delay': '230ms' } as React.CSSProperties}>
+            <HeroComposer />
           </div>
         </div>
 

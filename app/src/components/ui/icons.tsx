@@ -136,6 +136,9 @@ export const IconFilter = (p: IconProps) => (<Glyph {...p}><path d="M4 5.5h16l-6
 export const IconDownload = (p: IconProps) => (<Glyph {...p}><path d="M12 3.5v11M8 10.5l4 4 4-4M5 20h14" /></Glyph>)
 export const IconDrag = (p: IconProps) => (<Glyph {...p}><path d="M9 6.5h.01M15 6.5h.01M9 12h.01M15 12h.01M9 17.5h.01M15 17.5h.01" strokeWidth={2.4} /></Glyph>)
 export const IconArrowUp = (p: IconProps) => (<Glyph {...p}><path d="M12 20V5M6 11l6-6 6 6" /></Glyph>)
+export const IconArrowRight = (p: IconProps) => (<Glyph {...p}><path d="M4 12h15M13 6l6 6-6 6" /></Glyph>)
+/** Tasks — a kanban board: two columns of stacked cards. */
+export const IconTasks = (p: IconProps) => (<Glyph {...p}><rect x="3.5" y="4" width="7" height="16" rx="1.5" /><rect x="13.5" y="4" width="7" height="10" rx="1.5" /><path d="M6 8h2M17 8h2" /></Glyph>)
 export const IconInfo = (p: IconProps) => (<Glyph {...p}><circle cx="12" cy="12" r="8.4" /><path d="M12 11v5.2" /><circle cx="12" cy="7.9" r="1.05" fill="currentColor" stroke="none" /></Glyph>)
 export const IconBack = (p: IconProps) => (<Glyph {...p}><path d="M15 5 8 12l7 7" /></Glyph>)
 export const IconExpand = (p: IconProps) => (<Glyph {...p}><path d="M9 4H5v4M15 4h4v4M9 20H5v-4M15 20h4v-4" /></Glyph>)
