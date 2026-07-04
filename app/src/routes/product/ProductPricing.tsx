@@ -1,6 +1,6 @@
 // Pricing worksheet — live rating evaluation via the shared engine; defaults to $1,528 worked example.
 import { useState, useMemo, useRef } from 'react'
-import { Download, RefreshCw, GitBranch, Table2 } from 'lucide-react'
+import { IconDownload, IconRefresh, IconRule, IconTable } from '../../components/ui/icons'
 import { evaluate } from '@pf/shared'
 import { makeHO3RtGetter, makeHO3LdGetter, HO3_WORKED_EXAMPLE, HO3_COASTAL_STATES } from '@pf/shared'
 import type { RatingInputs, TraceEntry } from '@pf/shared'
@@ -82,10 +82,10 @@ function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium
         <span className="text-sm font-semibold text-text">Rating trace</span>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-0.5 p-0.5 rounded-[9px] bg-raised" role="tablist" aria-label="Trace view">
-            {seg('flow', <GitBranch size={12} />, 'Flow')}
-            {seg('table', <Table2 size={12} />, 'Table')}
+            {seg('flow', <IconRule size={13} />, 'Flow')}
+            {seg('table', <IconTable size={13} />, 'Table')}
           </div>
-          <Button variant="ghost" size="sm" onClick={exportSVG} aria-label="Export rating flow as SVG"><Download size={12} />SVG</Button>
+          <Button variant="ghost" size="sm" onClick={exportSVG} aria-label="Export rating flow as SVG"><IconDownload size={13} />SVG</Button>
         </div>
       </div>
 
@@ -167,7 +167,7 @@ export default function ProductPricing() {
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm font-semibold text-text">Rating inputs</span>
           <Button variant="ghost" size="sm" onClick={() => setInputs({ ...HO3_WORKED_EXAMPLE })}>
-            <RefreshCw size={12} />Reset to $1,528
+            <IconRefresh size={13} />Reset to $1,528
           </Button>
         </div>
 
@@ -287,7 +287,7 @@ export default function ProductPricing() {
       <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
         {!ratingProgram || !result ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-faint">
-            <RefreshCw size={24} className={!ratingProgram ? '' : 'animate-spin'} />
+            <IconRefresh size={24} className={!ratingProgram ? '' : 'animate-spin'} />
             <span className="text-sm">{!ratingProgram ? 'No rating program found' : 'Loading tables...'}</span>
           </div>
         ) : (
