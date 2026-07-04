@@ -1,7 +1,7 @@
 // States tab — SVG grid choropleth + toggle grid editor + bulk actions.
 import { useState, useRef } from 'react'
 import { toast } from 'sonner'
-import { Download, Globe } from 'lucide-react'
+import { IconDownload, IconStates } from '../../components/ui/icons'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
@@ -66,14 +66,14 @@ export default function ProductStates() {
         {canEdit && (
           <>
             <Button variant="ghost" size="sm" onClick={() => { setStates([...FOOTPRINT]); setDirty(true) }}>
-              <Globe size={12} />All footprint
+              <IconStates size={13} />All footprint
             </Button>
             <Button variant="ghost" size="sm" onClick={() => { setStates([]); setDirty(true) }}>Clear</Button>
             {dirty && <Button variant="primary" size="sm" onClick={handleSave}>Save states</Button>}
           </>
         )}
         <Button variant="ghost" size="sm" onClick={exportSVG} className="ml-auto">
-          <Download size={12} />SVG
+          <IconDownload size={13} />SVG
         </Button>
       </div>
 

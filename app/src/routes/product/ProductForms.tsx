@@ -4,9 +4,9 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import Fuse from 'fuse.js'
-import { FileText } from 'lucide-react'
 import { useProductCtx } from '../../context/useProductCtx'
 import { Badge, Skeleton, EmptyState, RefChip } from '../../components/ui'
+import { IconForm, IconClose } from '../../components/ui/icons'
 import { Drawer } from '../../components/ui/Drawer'
 import type { WithId } from '../../context/ProductContext'
 import type { Form, Coverage } from '@pf/shared'
@@ -86,7 +86,7 @@ function FormDrawer({ form, coverages, onOpenCoverage, onClose }: {
 export default function ProductForms() {
   const { pid, forms, coverages, loading } = useProductCtx()
   const navigate = useNavigate()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const [query, setQuery]     = useState('')
   const [catFilter, setCat]   = useState('')
   const [selected, setSelected] = useState<WithId<Form> | null>(null)
@@ -100,15 +100,30 @@ export default function ProductForms() {
     }
   }, [focusForm, forms])
 
+  // Honour a coverage deep link from its Forms tile (…/forms?cov=<refId>) — scope
+  // the table to just that coverage's attached forms, with a clearable chip.
+  const covFilter = coverages.find(c => c.refId === params.get('cov') || c.id === params.get('cov'))
+  const covForms = covFilter ? new Set(covFilter.formNumbers ?? []) : null
+
   const fuse    = useMemo(() => new Fuse(forms, { keys: ['number', 'name', 'category'], threshold: 0.4 }), [forms])
-  const filtered = catFilter ? (query ? fuse.search(query).map(r => r.item) : forms).filter(f => f.category === catFilter)
-                             : (query ? fuse.search(query).map(r => r.item) : forms)
+  const base    = query ? fuse.search(query).map(r => r.item) : forms
+  const filtered = base
+    .filter(f => !catFilter || f.category === catFilter)
+    .filter(f => !covForms || covForms.has(f.number))
   const cats = [...new Set(forms.map(f => f.category))]
 
   if (loading) return <Skeleton className="h-64 rounded-[14px]" />
 
   return (
     <div className="flex flex-col gap-4">
+      {covFilter && (
+        <div className="flex items-center gap-2 self-start pl-3 pr-1.5 py-1.5 rounded-[9px] bg-accent-soft text-sm">
+          <span className="text-dim">Forms attached to</span>
+          <span className="font-medium text-accent">{covFilter.name}</span>
+          <button onClick={() => { const p = new URLSearchParams(params); p.delete('cov'); setParams(p, { replace: true }) }}
+            aria-label="Clear coverage filter" className="w-6 h-6 rounded-[6px] flex items-center justify-center text-accent hover:bg-surface transition-colors"><IconClose size={14} /></button>
+        </div>
+      )}
       <div className="flex items-center gap-3 flex-wrap">
         <input
           className="flex-1 min-w-[200px] h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
@@ -126,7 +141,7 @@ export default function ProductForms() {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon={<FileText size={32} />} title="No forms" description="Forms appear here once the product is seeded." compact />
+        <EmptyState icon={<IconForm size={32} />} title={covFilter ? `No forms attached to ${covFilter.name}` : 'No forms'} description={covFilter ? undefined : 'Forms appear here once the product is seeded.'} compact />
       ) : (
         <div className="bg-surface rounded-[14px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
           <table className="w-full text-sm border-collapse">

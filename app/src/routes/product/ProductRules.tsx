@@ -1,13 +1,14 @@
 // Rules tab — grouped product rules + live Simulate panel (form attachment + violations).
 import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { CheckCircle, AlertTriangle, AlertCircle, Plus } from 'lucide-react'
+import { CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
 import { evaluateRules } from '@pf/shared'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { Badge, Skeleton, EmptyState } from '../../components/ui'
+import { IconPlus, IconClose } from '../../components/ui/icons'
 import { Button } from '../../components/ui/Button'
 import { RuleFlowCard, RuleComposer, type NewRule } from '../../components/product/RuleBuilder'
 import type { RuleCategory, SelectionContext } from '@pf/shared'
@@ -140,10 +141,16 @@ export default function ProductRules() {
   const { pid, rules, formRules, coverages, loading } = ctx
   const { user } = useUser()
   const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
   const canEdit  = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const [query,  setQuery]  = useState('')
   const [simOpen, setSimOpen] = useState(false)
   const [composerOpen, setComposerOpen] = useState(false)
+
+  // Coverage deep link from its Rules tile (…/rules?cov=<refId>) — show only rules
+  // that govern that coverage, with a clearable chip.
+  const covFilter = coverages.find(c => c.refId === params.get('cov') || c.id === params.get('cov'))
+  const covRef = covFilter?.refId ?? null
 
   // Deep-link helpers so a rule links to the coverages / forms it governs.
   const openCoverage = (refId: string) => {
@@ -170,7 +177,8 @@ export default function ProductRules() {
   }
 
   const grouped = useMemo(() => {
-    const filtered = query ? rules.filter(r => `${r.refId} ${r.condition} ${r.outcome}`.toLowerCase().includes(query.toLowerCase())) : rules
+    let filtered = query ? rules.filter(r => `${r.refId} ${r.condition} ${r.outcome}`.toLowerCase().includes(query.toLowerCase())) : rules
+    if (covRef) filtered = filtered.filter(r => r.coverageRefIds?.includes(covRef))
     const map: Record<string, typeof filtered> = {}
     for (const rule of filtered) {
       const cat = rule.category ?? 'PRODUCT'
@@ -178,12 +186,20 @@ export default function ProductRules() {
       map[cat]!.push(rule)
     }
     return map
-  }, [rules, query])
+  }, [rules, query, covRef])
 
   if (loading) return <Skeleton className="h-64 rounded-[14px]" />
 
   return (
     <div className="flex flex-col gap-5">
+      {covFilter && (
+        <div className="flex items-center gap-2 self-start pl-3 pr-1.5 py-1.5 rounded-[9px] bg-accent-soft text-sm">
+          <span className="text-dim">Rules governing</span>
+          <span className="font-medium text-accent">{covFilter.name}</span>
+          <button onClick={() => { const p = new URLSearchParams(params); p.delete('cov'); setParams(p, { replace: true }) }}
+            aria-label="Clear coverage filter" className="w-6 h-6 rounded-[6px] flex items-center justify-center text-accent hover:bg-surface transition-colors"><IconClose size={14} /></button>
+        </div>
+      )}
       <div className="flex items-center gap-3 flex-wrap">
         <input className="flex-1 max-w-sm h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
           placeholder="Search rules..." value={query} onChange={e => setQuery(e.target.value)} />
@@ -193,7 +209,7 @@ export default function ProductRules() {
           </Button>
           {canEdit && (
             <Button variant="primary" size="sm" onClick={() => setComposerOpen(o => !o)}>
-              <Plus size={14} />New rule
+              <IconPlus size={14} />New rule
             </Button>
           )}
         </div>
@@ -225,8 +241,8 @@ export default function ProductRules() {
         </div>
       ))}
 
-      {/* Form attachment rules */}
-      {formRules.length > 0 && (
+      {/* Form attachment rules (hidden when scoped to a single coverage) */}
+      {!covRef && formRules.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Badge label="FORM ATTACHMENT" color="warn" />
@@ -242,8 +258,10 @@ export default function ProductRules() {
         </div>
       )}
 
-      {!rules.length && !formRules.length && (
-        <EmptyState title="No rules" description="Rules will appear here once the product is seeded." compact />
+      {Object.keys(grouped).length === 0 && (covRef || !formRules.length) && (
+        <EmptyState
+          title={covRef ? `No rules governing ${covFilter?.name}` : 'No rules'}
+          description={covRef ? undefined : 'Rules will appear here once the product is seeded.'} compact />
       )}
     </div>
   )
