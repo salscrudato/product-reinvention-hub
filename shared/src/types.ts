@@ -48,6 +48,8 @@ export interface Product extends GovernanceBlock, StateScope {
   marketSegment: string
   owner:         { uid: string; name: string }
   health:        { score: number; findingCount: number; updatedAt: unknown }
+  // The uploaded base coverage form that gates + grounds AI coverage extraction.
+  baseForm?:     { path: string; url: string; name: string; uploadedAt: unknown; uploadedBy: string } | null
 }
 
 // ─── Coverages ──────────────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ import { Button, Skeleton, EmptyState, ViewToggle, type ViewMode } from '../../c
 import { IconPlus, IconSearch, IconCoverage } from '../../components/ui/icons'
 import { CoverageHubCard } from '../../components/product/CoverageHubCard'
 import { CoverageRow } from '../../components/product/CoverageRow'
+import { BaseFormExtract } from '../../components/product/BaseFormExtract'
 import type { CoverageAspect } from '../../components/product/coverageAspects'
 import { TermOptionsDialog } from '../../components/product/TermOptionsDialog'
 import { CoverageStatesDialog } from '../../components/product/CoverageStatesDialog'
@@ -35,7 +36,7 @@ function SectionHeader({ label, count }: { label: string; count: number }) {
 }
 
 export default function ProductCoverages() {
-  const { pid, coverages, loading } = useProductCtx()
+  const { pid, product, coverages, loading } = useProductCtx()
   const { user } = useUser()
   const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
@@ -104,6 +105,7 @@ export default function ProductCoverages() {
             className="w-full h-9 pl-9 pr-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent" />
         </div>
         <ViewToggle mode={view} onChange={setViewPersist} />
+        {product && <BaseFormExtract product={product} coverages={coverages} canEdit={canEdit} actor={actor} />}
         {canEdit && <Button variant="primary" size="sm" onClick={() => setEditCov('new')}><IconPlus size={14} />Add coverage</Button>}
       </div>
 

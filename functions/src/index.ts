@@ -3,5 +3,6 @@
 export { hello } from './health'
 export { createShareLink, getShareSnapshot, share } from './share'
 export { chat } from './ai'
+export { extractCoverages } from './extract'
 export { setUserRole } from './admin'
 export { refreshNews, nightlyNews } from './news'

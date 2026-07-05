@@ -150,6 +150,8 @@ export const IconBack = (p: IconProps) => (<Glyph {...p}><path d="M15 5 8 12l7 7
 export const IconExpand = (p: IconProps) => (<Glyph {...p}><path d="M9 4H5v4M15 4h4v4M9 20H5v-4M15 20h4v-4" /></Glyph>)
 export const IconRefresh = (p: IconProps) => (<Glyph {...p}><path d="M4.6 12a7.4 7.4 0 0 1 12.6-5.2L20 9.4" /><path d="M20 4v5.5h-5.5" /><path d="M19.4 12a7.4 7.4 0 0 1-12.6 5.2L4 14.6" /><path d="M4 20v-5.5h5.5" /></Glyph>)
 export const IconTable = (p: IconProps) => (<Glyph {...p}><rect x="3.5" y="4.5" width="17" height="15" rx="1.6" /><path d="M3.5 9.6h17M9.2 9.6V19.5" /></Glyph>)
+export const IconUpload = (p: IconProps) => (<Glyph {...p}><path d="M12 15.5v-11M8 8.5l4-4 4 4M5 19.5h14" /></Glyph>)
+export const IconFile = (p: IconProps) => (<Glyph {...p}><path d="M6.5 2.7h7L18.5 8v13a.8.8 0 0 1-.8.8H6.5a.8.8 0 0 1-.8-.8V3.5a.8.8 0 0 1 .8-.8Z" /><path d="M13 2.9V8h5" /></Glyph>)
 /** Spinner — a partial ring; pair with `animate-spin` for loading affordances. */
 export const IconSpinner = (p: IconProps) => (
   <Glyph {...p}><circle cx="12" cy="12" r="8.5" opacity=".22" /><path d="M20.5 12a8.5 8.5 0 0 0-8.5-8.5" /></Glyph>
