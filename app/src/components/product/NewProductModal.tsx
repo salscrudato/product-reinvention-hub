@@ -1,7 +1,7 @@
 // Modal to create a DRAFT product shell and auto-seed the default task set.
 import { useState, type FormEvent } from 'react'
-import { Loader2 } from 'lucide-react'
 import { adapter } from '../../lib/backend'
+import { IconSpinner } from '../ui/icons'
 import { useUser } from '../../context/useUser'
 import { Dialog } from '../ui/Dialog'
 import { Input } from '../ui/Input'
@@ -80,7 +80,7 @@ export function NewProductModal({ onClose, onCreated }: Props) {
         <div className="flex gap-2 justify-end">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
           <Button type="submit" variant="primary" disabled={loading || !name.trim()}>
-            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
             Create product
           </Button>
         </div>

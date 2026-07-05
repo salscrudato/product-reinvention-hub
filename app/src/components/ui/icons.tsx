@@ -132,6 +132,9 @@ export const IconClose = (p: IconProps) => (<Glyph {...p}><path d="M6 6 18 18M18
 export const IconCheck = (p: IconProps) => (<Glyph {...p}><path d="m4.5 12.5 4.5 4.5L19.5 6.5" /></Glyph>)
 export const IconChevronRight = (p: IconProps) => (<Glyph {...p}><path d="m9 5 7 7-7 7" /></Glyph>)
 export const IconChevronDown = (p: IconProps) => (<Glyph {...p}><path d="m5 9 7 7 7-7" /></Glyph>)
+export const IconChevronUp = (p: IconProps) => (<Glyph {...p}><path d="m5 15 7-7 7 7" /></Glyph>)
+/** Sort — a double chevron, the neutral (unsorted) column indicator. */
+export const IconSort = (p: IconProps) => (<Glyph {...p}><path d="m8 9 4-4 4 4M8 15l4 4 4-4" /></Glyph>)
 export const IconEdit = (p: IconProps) => (<Glyph {...p}><path d="M4 20h4L18.5 9.5a2 2 0 0 0-2.83-2.83L5 17.2z" /><path d="m14.5 8.5 2.8 2.8" /></Glyph>)
 export const IconTrash = (p: IconProps) => (<Glyph {...p}><path d="M4.5 6.5h15M9 6.5V5a1.3 1.3 0 0 1 1.3-1.3h3.4A1.3 1.3 0 0 1 15 5v1.5M6.3 6.5l.8 12.6a1.3 1.3 0 0 0 1.3 1.2h7.2a1.3 1.3 0 0 0 1.3-1.2l.8-12.6" /></Glyph>)
 export const IconSearch = (p: IconProps) => (<Glyph {...p}><circle cx="10.5" cy="10.5" r="6.5" /><path d="m20 20-4.7-4.7" /></Glyph>)

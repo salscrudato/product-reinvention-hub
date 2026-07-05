@@ -1,6 +1,6 @@
 // Table — sticky sortable header, alternating row shading, keyboard accessible.
 import type { ReactNode } from 'react'
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { IconChevronUp, IconChevronDown, IconSort } from './icons'
 
 export interface Column<T> {
   key:       string
@@ -36,8 +36,8 @@ export function Table<T>({ columns, rows, rowKey, sortKey, sortDir, onSort, empt
                   {col.header}
                   {col.sortable && (
                     sortKey === col.key
-                      ? sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
-                      : <ChevronsUpDown size={12} className="opacity-40" />
+                      ? sortDir === 'asc' ? <IconChevronUp size={12} aria-hidden="true" /> : <IconChevronDown size={12} aria-hidden="true" />
+                      : <IconSort size={12} className="opacity-40" aria-hidden="true" />
                   )}
                 </span>
               </th>

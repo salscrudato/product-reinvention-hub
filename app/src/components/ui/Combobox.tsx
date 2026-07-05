@@ -1,7 +1,7 @@
 // Combobox — instant Fuse.js typeahead with keyboard nav and match highlighting.
 import { useState, useRef, useEffect, useId } from 'react'
 import Fuse from 'fuse.js'
-import { ChevronDown, X, Loader2 } from 'lucide-react'
+import { IconChevronDown, IconClose, IconSpinner } from './icons'
 
 interface ComboboxProps<T> {
   items:       T[]
@@ -85,13 +85,13 @@ export function Combobox<T>({ items, value, onChange, getLabel, getValue, placeh
           aria-controls={`${id}-list`}
           autoComplete="off"
         />
-        {loading && <Loader2 size={14} className="animate-spin text-faint shrink-0" />}
+        {loading && <IconSpinner size={14} className="animate-spin text-faint shrink-0" aria-hidden="true" />}
         {clearable && value && !loading && (
           <button type="button" className="text-faint hover:text-text shrink-0" onClick={e => { e.stopPropagation(); onChange(null) }} aria-label="Clear">
-            <X size={14} />
+            <IconClose size={14} aria-hidden="true" />
           </button>
         )}
-        {!value && <ChevronDown size={14} className="text-faint shrink-0" />}
+        {!value && <IconChevronDown size={14} className="text-faint shrink-0" aria-hidden="true" />}
       </div>
 
       {open && (

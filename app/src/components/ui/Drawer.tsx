@@ -1,7 +1,7 @@
 // Drawer — right-side panel with backdrop; slides in from the edge.
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { IconClose } from './icons'
 
 interface DrawerProps {
   open:     boolean
@@ -38,7 +38,7 @@ export function Drawer({ open, onClose, title, children, width = 'w-96' }: Drawe
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
           {title && <h2 className="text-base font-semibold text-text">{title}</h2>}
           <button onClick={onClose} className="text-faint hover:text-text rounded-[6px] p-1 ml-auto transition-colors" aria-label="Close">
-            <X size={16} />
+            <IconClose size={16} aria-hidden="true" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-6">{children}</div>

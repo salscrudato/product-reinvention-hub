@@ -1,7 +1,7 @@
 // Dialog — accessible modal with backdrop blur and spring entrance.
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { IconClose } from './icons'
 
 interface DialogProps {
   open:       boolean
@@ -48,7 +48,7 @@ export function Dialog({ open, onClose, title, children, width = 'max-w-lg' }: D
           <div className="flex items-center justify-between mb-4">
             <h2 id="dialog-title" className="text-base font-semibold text-text">{title}</h2>
             <button onClick={onClose} className="text-faint hover:text-text rounded-[6px] p-1 transition-colors" aria-label="Close">
-              <X size={16} />
+              <IconClose size={16} aria-hidden="true" />
             </button>
           </div>
         )}
