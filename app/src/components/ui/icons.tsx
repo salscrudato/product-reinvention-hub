@@ -229,3 +229,11 @@ export const IconHeart = (p: IconProps) => (
 export const IconLink = (p: IconProps) => (
   <Glyph {...p}><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.6 1.6" /><path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.6-1.6" /></Glyph>
 )
+/** Activity — a heartbeat line, for health / readiness. */
+export const IconActivity = (p: IconProps) => (
+  <Glyph {...p}><path d="M3 12h3.5l2-6 4 13 2.5-7H21" /></Glyph>
+)
+/** Clipboard-check — reviews awaiting action. */
+export const IconClipboard = (p: IconProps) => (
+  <Glyph {...p}><path d="M8.5 4.5H6.5A1.5 1.5 0 0 0 5 6v13.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5h-2" /><rect x="8.5" y="2.9" width="7" height="3.6" rx="1.2" /><path d="m9.2 13.5 2 2 3.8-4" /></Glyph>
+)

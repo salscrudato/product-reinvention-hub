@@ -5,8 +5,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Sparkles, Wrench, CheckSquare, ClipboardCheck, Activity, Newspaper, Loader2,
-} from 'lucide-react'
+  IconSparkle, IconCheck, IconTasks, IconClipboard, IconActivity, IconNews, IconSpinner,
+} from '../components/ui/icons'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Badge } from '../components/ui'
@@ -226,7 +226,7 @@ export default function Home() {
             <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-10">
               <div className="w-14 h-14 rounded-[16px] flex items-center justify-center"
                 style={{ background: 'var(--gradient-accent)' }}>
-                <Sparkles size={26} className="text-white" />
+                <IconSparkle size={26} className="text-white" aria-hidden="true" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <h1 className="text-xl font-bold text-text">Ask your product portfolio</h1>
@@ -254,7 +254,7 @@ export default function Home() {
                       <div className="flex flex-wrap gap-1.5">
                         {m.tools.map((t, ti) => (
                           <span key={ti} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-raised text-[11px] text-dim font-mono">
-                            {t.done ? <Wrench size={10} className="text-good" /> : <Loader2 size={10} className="animate-spin text-accent" />}
+                            {t.done ? <IconCheck size={10} className="text-good" aria-hidden="true" /> : <IconSpinner size={10} className="animate-spin text-accent" aria-hidden="true" />}
                             {t.name}{t.done && t.summary ? ` · ${t.summary}` : ''}
                           </span>
                         ))}
@@ -280,7 +280,7 @@ export default function Home() {
       <aside className="hidden lg:flex flex-col gap-6 overflow-y-auto min-h-0 pl-1">
         <h2 className="text-sm font-semibold text-text">Today's Focus</h2>
 
-        <FocusSection icon={<CheckSquare size={13} />} title="My open tasks">
+        <FocusSection icon={<IconTasks size={13} aria-hidden="true" />} title="My open tasks">
           {myTasks.length === 0 ? <EmptyLine text="No open tasks assigned." /> : myTasks.map(t => {
             const due = relativeDue(toMillis(t.dueAt))
             return (
@@ -292,7 +292,7 @@ export default function Home() {
           })}
         </FocusSection>
 
-        <FocusSection icon={<ClipboardCheck size={13} />} title="Awaiting review">
+        <FocusSection icon={<IconClipboard size={13} aria-hidden="true" />} title="Awaiting review">
           {awaitingReview.length === 0 ? <EmptyLine text="Nothing awaiting review." /> : awaitingReview.map(p => (
             <button key={p.id} onClick={() => navigate(`/app/products/${p.id}/overview`)} className="flex items-center justify-between gap-2 text-left w-full group">
               <span className="text-xs text-dim group-hover:text-text truncate">{p.name}</span>
@@ -301,7 +301,7 @@ export default function Home() {
           ))}
         </FocusSection>
 
-        <FocusSection icon={<Activity size={13} />} title="Health findings">
+        <FocusSection icon={<IconActivity size={13} aria-hidden="true" />} title="Health findings">
           {healthFindings.length === 0 ? <EmptyLine text="No products yet." /> : healthFindings.map(p => (
             <button key={p.id} onClick={() => navigate(`/app/products/${p.id}/overview`)} className="flex items-center justify-between gap-2 text-left w-full group">
               <span className="text-xs text-dim group-hover:text-text truncate">{p.name}</span>
@@ -313,7 +313,7 @@ export default function Home() {
           ))}
         </FocusSection>
 
-        <FocusSection icon={<Newspaper size={13} />} title="Latest news">
+        <FocusSection icon={<IconNews size={13} aria-hidden="true" />} title="Latest news">
           {latestNews.length === 0 ? <EmptyLine text="No news items yet." /> : latestNews.map(n => (
             <a key={n.id} href={n.url} target="_blank" rel="noreferrer" className="flex flex-col gap-0.5 group">
               <span className="text-xs text-dim group-hover:text-text line-clamp-2">{n.title}</span>

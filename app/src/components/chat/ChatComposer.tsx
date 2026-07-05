@@ -2,7 +2,7 @@
 // text field in a soft rounded surface, a grounding hint, and a circular up-arrow
 // send. Controlled; Enter sends, Shift+Enter newlines.
 import { useRef, useEffect } from 'react'
-import { ArrowUp, Loader2, Sparkles } from 'lucide-react'
+import { IconArrowUp, IconSpinner, IconSparkle } from '../ui/icons'
 
 interface Props {
   value: string
@@ -44,7 +44,7 @@ export function ChatComposer({ value, onChange, onSubmit, streaming = false, pla
       />
 
       <div className="absolute left-4 bottom-3 flex items-center gap-1.5 text-[11px] text-faint select-none pointer-events-none">
-        <Sparkles size={12} className="text-accent" aria-hidden="true" />
+        <IconSparkle size={12} className="text-accent" aria-hidden="true" />
         Grounded — every answer cites its refId
       </div>
 
@@ -55,7 +55,7 @@ export function ChatComposer({ value, onChange, onSubmit, streaming = false, pla
         className={`absolute right-3 bottom-3 w-8 h-8 rounded-full flex items-center justify-center text-white transition-transform ${canSend ? 'hover:scale-105 active:scale-95' : 'opacity-30 cursor-not-allowed'}`}
         style={{ background: 'var(--gradient-accent)', boxShadow: canSend ? '0 1px 3px var(--glow-accent)' : 'none' }}
       >
-        {streaming ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <ArrowUp size={16} strokeWidth={2.5} aria-hidden="true" />}
+        {streaming ? <IconSpinner size={15} className="animate-spin" aria-hidden="true" /> : <IconArrowUp size={16} strokeWidth={2.5} aria-hidden="true" />}
       </button>
     </form>
   )
