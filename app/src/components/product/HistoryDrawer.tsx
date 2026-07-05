@@ -1,7 +1,7 @@
 // History drawer — versions list with field diffs and confirmed Restore.
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { RotateCcw, ChevronDown, ChevronRight } from 'lucide-react'
+import { IconRestore, IconChevronDown, IconChevronRight } from '../ui/icons'
 import { Drawer } from '../ui/Drawer'
 import { Button } from '../ui/Button'
 import { useProductCtx } from '../../context/useProductCtx'
@@ -82,7 +82,7 @@ export function HistoryDrawer({ onClose, entityPath }: Props) {
                 className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left hover:bg-[rgba(19,19,26,.02)]"
                 onClick={() => setExpanded(e => e === v.id ? null : v.id)}
               >
-                {expanded === v.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                {expanded === v.id ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
                 <div className="flex-1 min-w-0">
                   <span className="font-medium text-text capitalize">{v.entityType}</span>
                   <span className="text-dim"> · {v.actor?.name ?? '—'}</span>
@@ -96,7 +96,7 @@ export function HistoryDrawer({ onClose, entityPath }: Props) {
                   {(user?.role === 'EDITOR' || user?.role === 'ADMIN') && v.snapshot != null && (
                     <Button variant="ghost" size="sm" disabled={restoring === v.id}
                       onClick={() => handleRestore(v)}>
-                      <RotateCcw size={12} />
+                      <IconRestore size={12} />
                       {restoring === v.id ? 'Restoring...' : 'Restore to this version'}
                     </Button>
                   )}

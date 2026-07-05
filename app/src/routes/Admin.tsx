@@ -3,7 +3,7 @@
 // report, and local app settings.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Shield, Plus, UserX, UserCheck, Search, FileClock } from 'lucide-react'
+import { IconShield, IconPlus, IconUserX, IconUserCheck, IconSearch, IconFileClock } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
@@ -30,7 +30,7 @@ export default function Admin() {
   const [tab, setTab] = useState('users')
 
   if (profile && profile.role !== 'ADMIN') {
-    return <EmptyState icon={<Shield size={28} />} title="Admins only" description="You need the ADMIN role to view the admin console." />
+    return <EmptyState icon={<IconShield size={28} />} title="Admins only" description="You need the ADMIN role to view the admin console." />
   }
 
   return (
@@ -85,12 +85,12 @@ function UsersTab() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex justify-end">
-        <Button variant="primary" size="sm" onClick={() => setCreating(true)}><Plus size={14} /> New user</Button>
+        <Button variant="primary" size="sm" onClick={() => setCreating(true)}><IconPlus size={14} /> New user</Button>
       </div>
       <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
         {users.map(u => (
           <div key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
-            <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#A100FF,#6D28D9)' }}>
+            <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'var(--gradient-accent)' }}>
               {(u.name || u.email).slice(0, 2).toUpperCase()}
             </span>
             <div className="flex-1 min-w-[160px]">
@@ -105,8 +105,8 @@ function UsersTab() {
             </select>
             <Badge label={u.role} color={roleColor[u.role]} />
             {u.active
-              ? <Button variant="ghost" size="sm" disabled={busy} onClick={() => call({ action: 'deactivate', uid: u.id }, 'User deactivated')}><UserX size={13} /> Deactivate</Button>
-              : <Button variant="ghost" size="sm" disabled={busy} onClick={() => call({ action: 'reactivate', uid: u.id }, 'User reactivated')}><UserCheck size={13} /> Reactivate</Button>}
+              ? <Button variant="ghost" size="sm" disabled={busy} onClick={() => call({ action: 'deactivate', uid: u.id }, 'User deactivated')}><IconUserX size={13} /> Deactivate</Button>
+              : <Button variant="ghost" size="sm" disabled={busy} onClick={() => call({ action: 'reactivate', uid: u.id }, 'User reactivated')}><IconUserCheck size={13} /> Reactivate</Button>}
           </div>
         ))}
       </div>
@@ -119,7 +119,7 @@ function UsersTab() {
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-text" htmlFor="new-role">Role</label>
             <select id="new-role" value={draft.role} onChange={e => setDraft({ ...draft, role: e.target.value as Role })}
-              className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none" style={{ borderColor: 'rgba(19,19,26,.12)' }}>
+              className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none" style={{ borderColor: 'var(--color-border-strong)' }}>
               {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
@@ -177,7 +177,7 @@ function AuditTab() {
     <div className="flex flex-col gap-3">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <Input value={actor} onChange={e => setActor(e.target.value)} placeholder="Actor…" leftIcon={<Search size={13} />} className="max-w-[180px] h-8" />
+        <Input value={actor} onChange={e => setActor(e.target.value)} placeholder="Actor…" leftIcon={<IconSearch size={13} />} className="max-w-[180px] h-8" />
         <select value={entityType} onChange={e => setEntityType(e.target.value)} className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }} aria-label="Entity type">
           <option value="">All entities</option>
           {entityTypes.map(t => <option key={t} value={t}>{t}</option>)}
@@ -191,7 +191,7 @@ function AuditTab() {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon={<FileClock size={26} />} title="No matching events" description="Adjust the filters, or perform a change to generate audit events." />
+        <EmptyState icon={<IconFileClock size={26} />} title="No matching events" description="Adjust the filters, or perform a change to generate audit events." />
       ) : (
         <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
           {filtered.map(e => (
@@ -252,7 +252,7 @@ function SeedTab() {
 
   if (reports === null) return <Skeleton className="h-40" />
   const latest = [...reports].sort((a, b) => (toMillis(b.at) ?? 0) - (toMillis(a.at) ?? 0))[0]
-  if (!latest) return <EmptyState icon={<FileClock size={26} />} title="No seed reports" description="Run pnpm seed to generate one." />
+  if (!latest) return <EmptyState icon={<IconFileClock size={26} />} title="No seed reports" description="Run pnpm seed to generate one." />
 
   return (
     <div className="flex flex-col gap-4">
@@ -260,9 +260,9 @@ function SeedTab() {
         <span className="text-sm font-semibold text-text">Latest seed</span>
         <span className="text-xs text-faint">{fmt(latest.at)}</span>
       </div>
-      <div className="flex items-center justify-between px-4 py-3 rounded-[12px]" style={{ background: 'linear-gradient(135deg, rgba(161,0,255,.08), rgba(122,0,230,.06))', border: '1px solid rgba(139,31,224,.2)' }}>
+      <div className="flex items-center justify-between px-4 py-3 rounded-[12px]" style={{ background: 'var(--gradient-accent-soft)', border: '1px solid var(--color-accent-line)' }}>
         <span className="text-sm text-text">Worked example premium</span>
-        <span className="text-lg font-bold" style={{ background: 'linear-gradient(135deg,#8B1FE0,#7A00E6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>${latest.workedExamplePremium?.toLocaleString()}</span>
+        <span className="text-lg font-bold gradient-text">${latest.workedExamplePremium?.toLocaleString()}</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Object.entries(latest.counts ?? {}).map(([k, n]) => (

@@ -9,7 +9,7 @@ import {
   type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core'
 import { toast } from 'sonner'
-import { LayoutGrid, List, CheckSquare, Filter } from 'lucide-react'
+import { IconCards, IconList, IconCheckSquare, IconFilter } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Badge, Skeleton, EmptyState } from '../components/ui'
@@ -64,7 +64,7 @@ function CardBody({ task, productName }: { task: TaskDoc; productName?: string }
         <span className="text-sm font-medium text-text leading-snug">{task.title}</span>
         {task.assignee && (
           <span className="shrink-0 w-6 h-6 rounded-full text-[10px] font-semibold text-white flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg,#A100FF,#6D28D9)' }} title={task.assignee.name}>
+            style={{ background: 'var(--gradient-accent)' }} title={task.assignee.name}>
             {initials(task.assignee.name)}
           </span>
         )}
@@ -76,7 +76,7 @@ function CardBody({ task, productName }: { task: TaskDoc; productName?: string }
       {total > 0 && (
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-raised overflow-hidden">
-            <div className="h-full rounded-full transition-all" style={{ width: `${(done / total) * 100}%`, background: 'linear-gradient(90deg,#A100FF,#6D28D9)' }} />
+            <div className="h-full rounded-full transition-all" style={{ width: `${(done / total) * 100}%`, background: 'linear-gradient(90deg, var(--color-accent-bright), var(--color-accent-strong))' }} />
           </div>
           <span className="text-[10px] text-faint tabular-nums">{done}/{total}</span>
         </div>
@@ -203,11 +203,11 @@ export default function Tasks() {
           <div className="flex items-center rounded-[9px] p-0.5 bg-raised" role="tablist" aria-label="View">
             <button onClick={() => setView('board')} aria-pressed={view === 'board'}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-xs font-medium transition-colors ${view === 'board' ? 'bg-surface text-text shadow-sm' : 'text-dim'}`}>
-              <LayoutGrid size={13} /> Board
+              <IconCards size={13} /> Board
             </button>
             <button onClick={() => setView('list')} aria-pressed={view === 'list'}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-xs font-medium transition-colors ${view === 'list' ? 'bg-surface text-text shadow-sm' : 'text-dim'}`}>
-              <List size={13} /> List
+              <IconList size={13} /> List
             </button>
           </div>
         </div>
@@ -215,7 +215,7 @@ export default function Tasks() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <Filter size={14} className="text-faint" aria-hidden="true" />
+        <IconFilter size={14} className="text-faint" aria-hidden="true" />
         <FilterChip active={mine} onClick={() => setMine(m => !m)}>Mine</FilterChip>
         <FilterChip active={overdue} onClick={() => setOverdue(o => !o)}>Overdue</FilterChip>
         <select
@@ -234,7 +234,7 @@ export default function Tasks() {
           {COLUMNS.map(c => <Skeleton key={c.id} className="h-64" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={<CheckSquare size={28} />} title="No tasks match" description="Adjust your filters, or create a product to seed its default task set." />
+        <EmptyState icon={<IconCheckSquare size={28} />} title="No tasks match" description="Adjust your filters, or create a product to seed its default task set." />
       ) : view === 'board' ? (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0">

@@ -19,11 +19,14 @@ if (!getApps().length) initializeApp()
 export const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY')
 
 // Two models per spec: a reasoning model for chat/analysis, a fast model for
-// bulk/simple generations. Fable 5 has thinking always on and REJECTS the
-// sampling params (temperature/top_p/top_k → 400) — grounded chat leans on tools,
-// not sampling. Haiku is right-sized for the news scout and accepts temperature.
-export const MODEL      = 'claude-fable-5'    // reasoning: portfolio chat, analysis
-export const MODEL_FAST = 'claude-haiku-4-5'  // bulk/simple: market-news scout
+// bulk/simple generations. Both are generally available. Sonnet 4.6 accepts the
+// sampling params, so grounded calls may pin a low temperature later — though the
+// grounding still comes from the tools, not from sampling. Haiku is right-sized
+// for the news scout. Operators with Project Glasswing access can swap MODEL on
+// this one line to the gated reasoning model (which keeps thinking always on and
+// rejects the sampling params — so drop any temperature you set for Sonnet).
+export const MODEL      = 'claude-sonnet-4-6'  // reasoning: portfolio chat, analysis
+export const MODEL_FAST = 'claude-haiku-4-5'   // bulk/simple: market-news scout
 
 /** Anthropic client — call inside a handler so the bound secret is resolvable.
  *  maxRetries adds explicit exponential backoff on 429 / 5xx / connection errors. */

@@ -2,13 +2,12 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
 import { evaluateRules } from '@pf/shared'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { Badge, Skeleton, EmptyState } from '../../components/ui'
-import { IconPlus, IconClose } from '../../components/ui/icons'
+import { IconPlus, IconClose, IconCheckCircle, IconWarning, IconAlertCircle } from '../../components/ui/icons'
 import { Button } from '../../components/ui/Button'
 import { RuleFlowCard, RuleComposer, type NewRule } from '../../components/product/RuleBuilder'
 import type { RuleCategory, SelectionContext } from '@pf/shared'
@@ -92,7 +91,7 @@ function SimulatePanel() {
                 <p className="text-xs font-medium text-faint uppercase tracking-wide">Violations</p>
                 {result.violations.map((v, i) => (
                   <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-[8px] bg-[rgba(220,38,38,.06)] text-sm">
-                    <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
+                    <IconAlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
                     <span className="text-danger text-xs">{v.message} <span className="font-mono">[{v.ruleRefId}]</span></span>
                   </div>
                 ))}
@@ -100,7 +99,7 @@ function SimulatePanel() {
             )}
             {result.violations.length === 0 && (
               <div className="flex items-center gap-2 text-sm text-good">
-                <CheckCircle size={14} />No violations
+                <IconCheckCircle size={14} />No violations
               </div>
             )}
 
@@ -121,7 +120,7 @@ function SimulatePanel() {
                   <p className="text-xs font-medium text-faint uppercase tracking-wide mb-1">{tableRef} constraints</p>
                   {blocked.map(o => (
                     <div key={o.value} className="flex items-center gap-2 text-xs text-warn">
-                      <AlertTriangle size={10} />{o.label}: {o.violationReason}
+                      <IconWarning size={10} />{o.label}: {o.violationReason}
                     </div>
                   ))}
                 </div>

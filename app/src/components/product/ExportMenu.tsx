@@ -3,7 +3,7 @@
 // in lib/integrations and lib/export.
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Download, FileSpreadsheet, FileCode2, ChevronDown } from 'lucide-react'
+import { IconDownload, IconFileSpreadsheet, IconFileCode, IconChevronDown } from '../ui/icons'
 import { Button } from '../ui'
 import { exportProductExcel, type ProductExport } from '../../lib/export/excel'
 
@@ -28,18 +28,18 @@ export function ExportMenu({ data }: { data: ProductExport }) {
   return (
     <div ref={ref} className="relative">
       <Button variant="ghost" size="sm" onClick={() => setOpen(o => !o)} disabled={busy}>
-        <Download size={14} /> Export <ChevronDown size={12} />
+        <IconDownload size={14} /> Export <IconChevronDown size={12} />
       </Button>
       {open && (
         <div className="absolute right-0 mt-1 w-56 bg-surface rounded-[12px] py-1 z-30"
           style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }} role="menu">
           <button onClick={toExcel} disabled={busy} role="menuitem"
             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-text hover:bg-raised transition-colors text-left">
-            <FileSpreadsheet size={15} className="text-good" /> Export to Excel
+            <IconFileSpreadsheet size={15} className="text-good" /> Export to Excel
           </button>
           <button disabled aria-disabled title="Coming soon" role="menuitem"
             className="w-full flex items-center justify-between gap-2.5 px-3 py-2 text-sm text-faint cursor-not-allowed text-left">
-            <span className="flex items-center gap-2.5"><FileCode2 size={15} /> Duck Creek XML</span>
+            <span className="flex items-center gap-2.5"><IconFileCode size={15} /> Duck Creek XML</span>
             <span className="text-[10px] uppercase tracking-wide">soon</span>
           </button>
         </div>

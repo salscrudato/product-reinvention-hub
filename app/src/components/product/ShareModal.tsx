@@ -1,6 +1,6 @@
 // Share modal — calls createShareLink function, shows URL + copy button.
 import { useState } from 'react'
-import { Copy, Check, ExternalLink, Loader2 } from 'lucide-react'
+import { IconCopy, IconCheck, IconExternalLink, IconSpinner } from '../ui/icons'
 import { Dialog } from '../ui/Dialog'
 import { Button } from '../ui/Button'
 import { adapter } from '../../lib/backend'
@@ -45,7 +45,7 @@ export function ShareModal({ onClose, productId, productName }: Props) {
 
         {!token ? (
           <Button variant="primary" onClick={handleCreate} disabled={loading}>
-            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading && <IconSpinner size={14} className="animate-spin" />}
             {loading ? 'Creating link...' : 'Create share link'}
           </Button>
         ) : (
@@ -53,10 +53,10 @@ export function ShareModal({ onClose, productId, productName }: Props) {
             <div className="flex items-center gap-2 px-3 py-2 rounded-[10px] bg-raised" style={{ border: '1px solid var(--color-border)' }}>
               <span className="flex-1 text-xs font-mono text-dim truncate">{shareUrl}</span>
               <button onClick={handleCopy} className="text-faint hover:text-accent transition-colors" title="Copy link">
-                {copied ? <Check size={14} className="text-good" /> : <Copy size={14} />}
+                {copied ? <IconCheck size={14} className="text-good" /> : <IconCopy size={14} />}
               </button>
               <a href={shareUrl!} target="_blank" rel="noopener noreferrer" className="text-faint hover:text-accent transition-colors" title="Open">
-                <ExternalLink size={14} />
+                <IconExternalLink size={14} />
               </a>
             </div>
             <p className="text-xs text-faint">Link expires in 30 days. Anyone with the link can view this product.</p>

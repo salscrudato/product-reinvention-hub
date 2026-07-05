@@ -5,7 +5,7 @@
 //    value, then an outcome; it assembles the condition/outcome + links and
 //    hands a complete rule up to be persisted via mutate().
 import { useMemo, useState } from 'react'
-import { ArrowRight, Plus, X } from 'lucide-react'
+import { IconArrowRight, IconPlus, IconClose } from '../ui/icons'
 import { Badge, Button, RefChip } from '../ui'
 import type { Rule, RuleCategory } from '@pf/shared'
 
@@ -62,7 +62,7 @@ export function RuleFlowCard({ rule, onOpenCoverage, onOpenForm }: {
           <p className="text-sm text-text leading-snug">{rule.condition}</p>
         </div>
         <div className="flex items-center justify-center px-1.5 bg-raised shrink-0" aria-hidden="true">
-          <ArrowRight size={15} className="text-accent rotate-90 sm:rotate-0" />
+          <IconArrowRight size={15} className="text-accent rotate-90 sm:rotate-0" />
         </div>
         <div className="flex-1 px-3 py-2 min-w-0" style={{ background: 'var(--color-accent-soft)' }}>
           <span className="block text-[10px] font-semibold uppercase tracking-wider text-accent mb-0.5">Then</span>
@@ -125,7 +125,7 @@ export function RuleComposer({ forms, onCreate, onCancel }: {
     <div className="bg-surface rounded-[14px] p-5 flex flex-col gap-4" style={{ border: '1px solid var(--color-accent-line)', boxShadow: 'var(--shadow-card)' }}>
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-text">New rule</p>
-        <button onClick={onCancel} className="text-faint hover:text-text" aria-label="Cancel"><X size={16} /></button>
+        <button onClick={onCancel} className="text-faint hover:text-text" aria-label="Cancel"><IconClose size={16} /></button>
       </div>
 
       <datalist id="rc-subjects">{SUBJECTS.map(s => <option key={s.label} value={s.label} />)}</datalist>
@@ -169,7 +169,7 @@ export function RuleComposer({ forms, onCreate, onCancel }: {
       {(condition || outcomeText) && (
         <div className="flex items-center gap-2 text-sm rounded-[8px] bg-page px-3 py-2" style={{ border: '1px solid var(--color-border)' }}>
           <span className="text-dim">{condition || '…'}</span>
-          <ArrowRight size={14} className="text-accent shrink-0" />
+          <IconArrowRight size={14} className="text-accent shrink-0" />
           <span className="text-text font-medium">{outcomeText || '…'}</span>
         </div>
       )}
@@ -177,7 +177,7 @@ export function RuleComposer({ forms, onCreate, onCancel }: {
       <div className="flex items-center justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>
         <Button variant="primary" size="sm" onClick={submit} disabled={!valid || saving}>
-          <Plus size={14} />{saving ? 'Creating…' : 'Create rule'}
+          <IconPlus size={14} />{saving ? 'Creating…' : 'Create rule'}
         </Button>
       </div>
     </div>

@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { toast } from 'sonner'
-import { Lightbulb, Bug, Heart, ArrowBigUp, Link2, GripVertical } from 'lucide-react'
+import { IconArrowUp, IconLink, IconDrag } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Badge, Skeleton } from '../components/ui'
@@ -18,10 +18,11 @@ import type { Feedback, FeedbackType, FeedbackStatus } from '@pf/shared'
 
 type FeedbackDoc = Feedback & { id: string }
 
-const TYPE_META: Record<FeedbackType, { icon: typeof Lightbulb; color: 'blue' | 'danger' | 'good' }> = {
-  IDEA:   { icon: Lightbulb, color: 'blue' },
-  ISSUE:  { icon: Bug,       color: 'danger' },
-  PRAISE: { icon: Heart,     color: 'good' },
+// Type → badge colour. (Feedback cards show the type as a coloured chip, not a glyph.)
+const TYPE_META: Record<FeedbackType, { color: 'blue' | 'danger' | 'good' }> = {
+  IDEA:   { color: 'blue' },
+  ISSUE:  { color: 'danger' },
+  PRAISE: { color: 'good' },
 }
 
 function toMillis(v: unknown): number {
@@ -226,7 +227,7 @@ function Card({ fb, canEdit, uid, maxHeat, onVote, onPatch, navigate, sortable }
     >
       <div className="flex items-start gap-2">
         {sortable && canEdit && (
-          <button {...sort.attributes} {...sort.listeners} className="text-faint hover:text-dim cursor-grab active:cursor-grabbing mt-0.5" aria-label="Drag to reorder"><GripVertical size={14} /></button>
+          <button {...sort.attributes} {...sort.listeners} className="text-faint hover:text-dim cursor-grab active:cursor-grabbing mt-0.5" aria-label="Drag to reorder"><IconDrag size={14} /></button>
         )}
         <span className="mt-0.5"><Badge label={fb.type} color={TYPE_META[fb.type].color} /></span>
         <span className="flex-1 min-w-0">
@@ -237,21 +238,21 @@ function Card({ fb, canEdit, uid, maxHeat, onVote, onPatch, navigate, sortable }
         <button onClick={() => onVote(fb)} disabled={voted}
           className={`shrink-0 flex flex-col items-center rounded-[9px] px-2 py-1 transition-colors ${voted ? 'bg-accent-soft text-accent' : 'bg-raised text-dim hover:text-text'}`}
           title={voted ? 'You voted' : 'Vote'} aria-pressed={voted}>
-          <ArrowBigUp size={15} />
+          <IconArrowUp size={15} />
           <span className="text-[11px] font-semibold tabular-nums">{fb.votes?.count ?? 0}</span>
         </button>
       </div>
 
       {/* Heat bar */}
       <div className="h-1.5 rounded-full bg-raised overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${Math.max(6, (heat / maxHeat) * 100)}%`, background: 'linear-gradient(90deg,#A100FF,#6D28D9)' }} />
+        <div className="h-full rounded-full" style={{ width: `${Math.max(6, (heat / maxHeat) * 100)}%`, background: 'linear-gradient(90deg, var(--color-accent-bright), var(--color-accent-strong))' }} />
       </div>
 
       <div className="flex items-center flex-wrap gap-2">
         {chipLabel && (
           <button onClick={() => ctx?.route && navigate(ctx.route)}
             className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline max-w-full truncate" title={ctx?.route}>
-            <Link2 size={10} className="shrink-0" /> <span className="font-mono truncate">{chipLabel}</span>
+            <IconLink size={10} className="shrink-0" /> <span className="font-mono truncate">{chipLabel}</span>
           </button>
         )}
         <span className="flex-1" />

@@ -4,7 +4,7 @@ import { adapter } from '../lib/backend'
 import { useEffect } from 'react'
 import { Tabs, Badge, Skeleton, EmptyState } from '../components/ui'
 import { Input } from '../components/ui/Input'
-import { Search, Database, FileText, Hash, BookOpen, CheckSquare, Package } from 'lucide-react'
+import { IconSearch, IconProduct, IconCoverage, IconForm, IconRule, IconTable, IconBook, type IconType } from '../components/ui/icons'
 import Fuse from 'fuse.js'
 import type { SearchIndexEntry, SearchEntityType } from '@pf/shared'
 import { useNavigate } from 'react-router-dom'
@@ -20,14 +20,14 @@ const TYPES: Array<{ id: SearchEntityType | 'all'; label: string }> = [
   { id: 'dictionary', label: 'Dictionary' },
 ]
 
-const TYPE_ICON: Partial<Record<SearchEntityType, React.FC<{ size?: number; className?: string }>>> = {
-  product:    Package,
-  coverage:   Hash,
-  form:       FileText,
-  rule:       CheckSquare,
-  ldTable:    Database,
-  rtTable:    Database,
-  dictionary: BookOpen,
+const TYPE_ICON: Partial<Record<SearchEntityType, IconType>> = {
+  product:    IconProduct,
+  coverage:   IconCoverage,
+  form:       IconForm,
+  rule:       IconRule,
+  ldTable:    IconTable,
+  rtTable:    IconTable,
+  dictionary: IconBook,
 }
 
 function toRoute(entry: SearchIndexEntry): string {
@@ -93,7 +93,7 @@ export default function Explorer() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search all entities…"
-          leftIcon={<Search size={14} />}
+          leftIcon={<IconSearch size={14} />}
           className="max-w-md"
         />
         <div className="overflow-x-auto pb-1">

@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { BookOpen, Plus, Search, Trash2, Link2 } from 'lucide-react'
+import { IconBook, IconPlus, IconSearch, IconTrash, IconLink } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
@@ -123,14 +123,14 @@ export default function Dictionary() {
         </div>
         {canEdit && (
           <Button variant="primary" size="sm" onClick={() => setDraft({ ...EMPTY_DRAFT })}>
-            <Plus size={14} /> New field
+            <IconPlus size={14} /> New field
           </Button>
         )}
       </div>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
-        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search fields…" leftIcon={<Search size={14} />} className="max-w-xs" />
+        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search fields…" leftIcon={<IconSearch size={14} />} className="max-w-xs" />
         <div className="flex items-center gap-1.5 flex-wrap">
           <button onClick={() => setTypeFilter('')} aria-pressed={typeFilter === ''}
             className={`px-2.5 py-1 rounded-[8px] text-xs font-medium ${typeFilter === '' ? 'bg-accent-soft text-accent' : 'bg-surface text-dim'}`} style={{ border: '1px solid var(--color-border)' }}>All</button>
@@ -147,9 +147,9 @@ export default function Dictionary() {
           {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40" />)}
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState icon={<BookOpen size={28} />} title={query || typeFilter ? 'No matching fields' : 'No dictionary fields yet'}
+        <EmptyState icon={<IconBook size={28} />} title={query || typeFilter ? 'No matching fields' : 'No dictionary fields yet'}
           description={query || typeFilter ? 'Try a different search or type.' : 'Define your first reusable field.'}
-          action={canEdit && !query && !typeFilter ? <Button variant="primary" size="sm" onClick={() => setDraft({ ...EMPTY_DRAFT })}><Plus size={14} /> New field</Button> : undefined} />
+          action={canEdit && !query && !typeFilter ? <Button variant="primary" size="sm" onClick={() => setDraft({ ...EMPTY_DRAFT })}><IconPlus size={14} /> New field</Button> : undefined} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visible.map(e => (
@@ -177,7 +177,7 @@ export default function Dictionary() {
                       onClick={ev => { ev.stopPropagation(); navigate(pathToRoute(u.entityPath)) }}
                       onKeyDown={ev => { if (ev.key === 'Enter') { ev.stopPropagation(); navigate(pathToRoute(u.entityPath)) } }}
                       className="flex items-center gap-1 text-[11px] text-accent hover:underline cursor-pointer">
-                      <Link2 size={10} /> {u.label}
+                      <IconLink size={10} /> {u.label}
                     </span>
                   ))}
                 </div>
@@ -195,14 +195,14 @@ export default function Dictionary() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text" htmlFor="dict-type">Type</label>
               <select id="dict-type" value={draft.type} onChange={e => setDraft({ ...draft, type: e.target.value as DynamicFieldType })}
-                className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25" style={{ borderColor: 'rgba(19,19,26,.12)' }}>
+                className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25" style={{ borderColor: 'var(--color-border-strong)' }}>
                 {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text" htmlFor="dict-desc">Description</label>
               <textarea id="dict-desc" value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} rows={3}
-                className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none" style={{ borderColor: 'rgba(19,19,26,.12)' }} placeholder="What this field means…" />
+                className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none" style={{ borderColor: 'var(--color-border-strong)' }} placeholder="What this field means…" />
             </div>
             <Input label="Allowed values (comma-separated)" value={draft.allowedValues} onChange={e => setDraft({ ...draft, allowedValues: e.target.value })} placeholder="50, 70, 75" />
             <Input label="Format" value={draft.format} onChange={e => setDraft({ ...draft, format: e.target.value })} placeholder="USD, percent, ISO-8601…" />
@@ -210,7 +210,7 @@ export default function Dictionary() {
 
             <div className="flex items-center justify-between pt-2">
               {draft.source
-                ? <Button variant="destructive" size="sm" onClick={remove} disabled={saving}><Trash2 size={14} /> Delete</Button>
+                ? <Button variant="destructive" size="sm" onClick={remove} disabled={saving}><IconTrash size={14} /> Delete</Button>
                 : <span />}
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setDraft(null)} disabled={saving}>Cancel</Button>

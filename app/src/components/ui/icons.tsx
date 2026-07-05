@@ -130,6 +130,10 @@ export const IconList = (p: IconProps) => (
 export const IconPlus = (p: IconProps) => (<Glyph {...p}><path d="M12 5v14M5 12h14" /></Glyph>)
 export const IconClose = (p: IconProps) => (<Glyph {...p}><path d="M6 6 18 18M18 6 6 18" /></Glyph>)
 export const IconCheck = (p: IconProps) => (<Glyph {...p}><path d="m4.5 12.5 4.5 4.5L19.5 6.5" /></Glyph>)
+/** Check in a circle — a resolved / confirmed state. */
+export const IconCheckCircle = (p: IconProps) => (<Glyph {...p}><circle cx="12" cy="12" r="8.4" /><path d="m8.4 12.2 2.5 2.5 4.7-5.2" /></Glyph>)
+/** Check in a rounded square — a checklist / task marker. */
+export const IconCheckSquare = (p: IconProps) => (<Glyph {...p}><rect x="3.8" y="3.8" width="16.4" height="16.4" rx="3.6" /><path d="m8.2 12.2 2.6 2.6 5-5.6" /></Glyph>)
 export const IconChevronRight = (p: IconProps) => (<Glyph {...p}><path d="m9 5 7 7-7 7" /></Glyph>)
 export const IconChevronDown = (p: IconProps) => (<Glyph {...p}><path d="m5 9 7 7 7-7" /></Glyph>)
 export const IconChevronUp = (p: IconProps) => (<Glyph {...p}><path d="m5 15 7-7 7 7" /></Glyph>)
@@ -149,9 +153,21 @@ export const IconInfo = (p: IconProps) => (<Glyph {...p}><circle cx="12" cy="12"
 export const IconBack = (p: IconProps) => (<Glyph {...p}><path d="M15 5 8 12l7 7" /></Glyph>)
 export const IconExpand = (p: IconProps) => (<Glyph {...p}><path d="M9 4H5v4M15 4h4v4M9 20H5v-4M15 20h4v-4" /></Glyph>)
 export const IconRefresh = (p: IconProps) => (<Glyph {...p}><path d="M4.6 12a7.4 7.4 0 0 1 12.6-5.2L20 9.4" /><path d="M20 4v5.5h-5.5" /><path d="M19.4 12a7.4 7.4 0 0 1-12.6 5.2L4 14.6" /><path d="M4 20v-5.5h5.5" /></Glyph>)
+/** Restore — a return arrow looping back, for reverting to a prior version. */
+export const IconRestore = (p: IconProps) => (<Glyph {...p}><path d="m8.5 5.5-4.5 4.5 4.5 4.5" /><path d="M4 10h9a5.5 5.5 0 0 1 0 11H9" /></Glyph>)
+/** Copy — two overlapping sheets. */
+export const IconCopy = (p: IconProps) => (<Glyph {...p}><rect x="8.5" y="8.5" width="11" height="11" rx="2.2" /><path d="M15.5 8.5V6.2A2.2 2.2 0 0 0 13.3 4H6.2A2.2 2.2 0 0 0 4 6.2v7.1a2.2 2.2 0 0 0 2.2 2.2h2.3" /></Glyph>)
+/** External link — a framed box with an out-arrow. */
+export const IconExternalLink = (p: IconProps) => (<Glyph {...p}><path d="M14 4.5h5.5V10" /><path d="M19.5 4.5 11 13" /><path d="M18 13.5V18a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2H11" /></Glyph>)
 export const IconTable = (p: IconProps) => (<Glyph {...p}><rect x="3.5" y="4.5" width="17" height="15" rx="1.6" /><path d="M3.5 9.6h17M9.2 9.6V19.5" /></Glyph>)
 export const IconUpload = (p: IconProps) => (<Glyph {...p}><path d="M12 15.5v-11M8 8.5l4-4 4 4M5 19.5h14" /></Glyph>)
 export const IconFile = (p: IconProps) => (<Glyph {...p}><path d="M6.5 2.7h7L18.5 8v13a.8.8 0 0 1-.8.8H6.5a.8.8 0 0 1-.8-.8V3.5a.8.8 0 0 1 .8-.8Z" /><path d="M13 2.9V8h5" /></Glyph>)
+/** File (code) — a document carrying a code chevron, for XML/markup exports. */
+export const IconFileCode = (p: IconProps) => (<Glyph {...p}><path d="M6.5 2.7h7L18.5 8v13a.8.8 0 0 1-.8.8H6.5a.8.8 0 0 1-.8-.8V3.5a.8.8 0 0 1 .8-.8Z" /><path d="M13 2.9V8h5" /><path d="m10.4 13.6-2 2 2 2M13.6 13.6l2 2-2 2" /></Glyph>)
+/** File (spreadsheet) — a document carrying a mini grid, for Excel exports. */
+export const IconFileSpreadsheet = (p: IconProps) => (<Glyph {...p}><path d="M6.5 2.7h7L18.5 8v13a.8.8 0 0 1-.8.8H6.5a.8.8 0 0 1-.8-.8V3.5a.8.8 0 0 1 .8-.8Z" /><path d="M13 2.9V8h5" /><path d="M8 13.2h8M8 16.6h8M11.6 13.2v6.4" /></Glyph>)
+/** File (clock) — a document with a clock, for audit-log / time-stamped records. */
+export const IconFileClock = (p: IconProps) => (<Glyph {...p}><path d="M6.5 2.7h7L18.5 8v13a.8.8 0 0 1-.8.8H6.5a.8.8 0 0 1-.8-.8V3.5a.8.8 0 0 1 .8-.8Z" /><path d="M13 2.9V8h5" /><circle cx="11.8" cy="14.8" r="3.4" /><path d="M11.8 13.2v1.6l1.3.9" /></Glyph>)
 /** Spinner — a partial ring; pair with `animate-spin` for loading affordances. */
 export const IconSpinner = (p: IconProps) => (
   <Glyph {...p}><circle cx="12" cy="12" r="8.5" opacity=".22" /><path d="M20.5 12a8.5 8.5 0 0 0-8.5-8.5" /></Glyph>
@@ -165,6 +181,11 @@ export const IconStar = (p: IconProps) => (
 /** Sparkle — the AI affordance, a four-point star with a companion twinkle. */
 export const IconSparkle = (p: IconProps) => (
   <Glyph {...p}><path d="M12 3.5c.5 3.4 1.6 4.5 5 5-3.4.5-4.5 1.6-5 5-.5-3.4-1.6-4.5-5-5 3.4-.5 4.5-1.6 5-5Z" /><path d="M18.5 14c.25 1.5.75 2 2.2 2.2-1.45.25-1.95.75-2.2 2.2-.25-1.45-.75-1.95-2.2-2.2 1.45-.2 1.95-.7 2.2-2.2Z" /></Glyph>
+)
+
+/** Wand — a magic wand with sparkles, for generative / AI-authoring affordances. */
+export const IconWand = (p: IconProps) => (
+  <Glyph {...p}><path d="M4 20 12.2 11.8" /><path d="m14.4 7.2 2.1 2.6-2.1 2.6-2.1-2.6z" /><path d="M18.5 3.8v2.8M17.1 5.2h2.8" /><path d="M19.6 10v1.8M18.7 10.9h1.8" /></Glyph>
 )
 
 /** Chat — a speech bubble, for the conversational surface. */
@@ -205,6 +226,18 @@ export const IconSignOut = (p: IconProps) => (
 /** User — head and shoulders. */
 export const IconUser = (p: IconProps) => (
   <Glyph {...p}><circle cx="12" cy="8.5" r="3.7" /><path d="M5 19.5c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" /></Glyph>
+)
+/** User + check — reactivate / grant. */
+export const IconUserCheck = (p: IconProps) => (
+  <Glyph {...p}><circle cx="9.5" cy="8.2" r="3.6" /><path d="M3.8 19.2c0-3.5 2.7-5.3 6-5.3.7 0 1.4.08 2 .25" /><path d="m14.6 16.8 1.9 1.9 3.5-3.7" /></Glyph>
+)
+/** User + cross — deactivate / revoke. */
+export const IconUserX = (p: IconProps) => (
+  <Glyph {...p}><circle cx="9.5" cy="8.2" r="3.6" /><path d="M3.8 19.2c0-3.5 2.7-5.3 6-5.3.7 0 1.4.08 2 .25" /><path d="m15.4 15.4 4.6 4.6M20 15.4l-4.6 4.6" /></Glyph>
+)
+/** Shield — protection / admin authority (plain; cf. IconCoverage which is checked). */
+export const IconShield = (p: IconProps) => (
+  <Glyph {...p}><path d="M12 2.8 19 5.4v5.3c0 4.6-2.9 8-7 10.3-4.1-2.3-7-5.7-7-10.3V5.4z" /></Glyph>
 )
 /** Key — for the temporary-password affordance. */
 export const IconKey = (p: IconProps) => (

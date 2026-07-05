@@ -2,7 +2,7 @@
 // recovery screen (never a raw stack) with a way forward. React error boundaries
 // must be class components; this is the one intentional class in the app.
 import { Component, type ReactNode } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { IconWarning } from './ui/icons'
 
 interface Props { children: ReactNode }
 interface State { error: Error | null }
@@ -26,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="max-w-md w-full bg-surface rounded-[16px] p-8 flex flex-col items-center text-center gap-4"
           style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
           <div className="w-12 h-12 rounded-[14px] flex items-center justify-center" style={{ background: 'var(--gradient-accent-soft)' }}>
-            <AlertTriangle size={22} className="text-accent" aria-hidden="true" />
+            <IconWarning size={22} className="text-accent" aria-hidden="true" />
           </div>
           <h1 className="text-lg font-semibold text-text">Something went wrong</h1>
           <p className="text-sm text-dim leading-relaxed">

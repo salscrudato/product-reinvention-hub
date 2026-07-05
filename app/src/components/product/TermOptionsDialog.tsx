@@ -323,7 +323,7 @@ function OptionRow({ o, mode, scopeStates, canEdit, inRange, onChange, onDefault
 
         {/* Default (star) */}
         <button disabled={!canEdit} onClick={onDefault} aria-pressed={o.isDefault} title="Set as default"
-          className={`w-8 h-8 rounded-[7px] flex items-center justify-center shrink-0 transition-colors ${o.isDefault ? 'text-[#B45309] bg-[rgba(180,83,9,.1)]' : 'text-faint hover:text-dim hover:bg-raised'}`}>
+          className={`w-8 h-8 rounded-[7px] flex items-center justify-center shrink-0 transition-colors ${o.isDefault ? 'text-warn bg-[rgba(180,83,9,.1)]' : 'text-faint hover:text-dim hover:bg-raised'}`}>
           <IconStar size={15} className={o.isDefault ? 'fill-current' : ''} />
         </button>
 

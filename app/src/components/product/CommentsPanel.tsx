@@ -1,7 +1,7 @@
 // Comments panel — add, view and resolve comments for any entity.
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
-import { CheckCircle } from 'lucide-react'
+import { IconCheckCircle } from '../ui/icons'
 import { Drawer } from '../ui/Drawer'
 import { Button } from '../ui/Button'
 import { useProductCtx } from '../../context/useProductCtx'
@@ -78,7 +78,7 @@ export function CommentsPanel({ onClose, entityPath }: Props) {
                 {canEdit && !c.resolved && (
                   <button onClick={() => handleResolve(c.id, (c as { rev?: number }).rev)}
                     className="text-faint hover:text-good transition-colors" title="Resolve">
-                    <CheckCircle size={14} />
+                    <IconCheckCircle size={14} />
                   </button>
                 )}
               </div>

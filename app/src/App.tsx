@@ -4,7 +4,7 @@ import { Suspense, lazy } from 'react'
 import { UserProvider } from './context/UserContext'
 import { Skeleton } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { Wand2, BarChart3 } from 'lucide-react'
+import { IconWand, IconChart } from './components/ui/icons'
 import { StubRoute } from './routes/stub/StubRoute'
 
 const Landing            = lazy(() => import('./routes/Landing'))
@@ -63,11 +63,11 @@ export default function App() {
                 <Route path="rules"         element={<ProductRules />} />
               </Route>
 
-              <Route path="builder"    element={<StubRoute title="AI Builder" description="Generate product structures, draft coverage language and validate rules with Claude — coming soon." icon={Wand2} />} />
+              <Route path="builder"    element={<StubRoute title="AI Builder" description="Generate product structures, draft coverage language and validate rules with Claude — coming soon." icon={IconWand} />} />
               <Route path="explorer"   element={<Explorer />} />
               <Route path="tasks"      element={<Tasks />} />
               <Route path="news"       element={<News />} />
-              <Route path="claims"     element={<StubRoute title="Claims Analysis" description="Loss-ratio trends and emerging risk signals." icon={BarChart3} />} />
+              <Route path="claims"     element={<StubRoute title="Claims Analysis" description="Loss-ratio trends and emerging risk signals." icon={IconChart} />} />
               <Route path="dictionary" element={<Dictionary />} />
               <Route path="feedback"   element={<Feedback />} />
               <Route path="admin"      element={<Admin />} />

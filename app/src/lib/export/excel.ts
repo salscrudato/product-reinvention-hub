@@ -15,7 +15,10 @@ export interface ProductExport {
   ratingProgram: RatingProgram | null
 }
 
-const ACCENT = 'FFC026D3'
+// Brand violet as ARGB. A literal is required — exceljs writes a binary .xlsx and
+// cannot read CSS tokens — so this mirrors `--color-accent` (#8B1FE0), the AA-on-white
+// accent, used both as a header fill (with white text) and as section-title text.
+const ACCENT = 'FF8B1FE0'
 const HEADER_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT } }
 const MONO = 'Consolas'
 

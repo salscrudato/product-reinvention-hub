@@ -28,7 +28,7 @@ export function Badge({ label, color = 'default', mono = false, className = '' }
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium leading-none
         ${badgeColors[color]} ${mono ? 'font-mono' : ''} ${className}`}
-      style={isAccent ? { background: 'var(--gradient-accent)', color: '#fff' } : undefined}
+      style={isAccent ? { background: 'var(--gradient-accent)' } : undefined}
     >
       {label}
     </span>

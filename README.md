@@ -11,7 +11,7 @@ draft to state filing. The reference product is an ISO-style **Homeowners HO-3**
   backend access goes through the adapter seam (`app/src/lib/backend`) — app code
   never imports `firebase/*` directly (`docs/AWS_SWAP.md`).
 - **Functions** — Cloud Functions v2 (Node 20). All Anthropic usage lives here
-  (`claude-fable-5` for reasoning, `claude-haiku-4-5` for bulk): tool-grounded
+  (`claude-sonnet-4-6` for reasoning, `claude-haiku-4-5` for bulk): tool-grounded
   chat (SSE), coverage extraction, share snapshots, role admin, a health check,
   and the nightly news agent. Secrets via `defineSecret`.
 - **Data** — Firestore (realtime via `onSnapshot`), Storage, Auth (email/password +

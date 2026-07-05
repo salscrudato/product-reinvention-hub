@@ -3,7 +3,7 @@
 // "Refresh now" for on-demand fetches. Empty state explains the nightly agent.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Newspaper, RefreshCw, ExternalLink, Sparkles } from 'lucide-react'
+import { IconNews, IconRefresh, IconExternalLink, IconSparkle } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
@@ -75,16 +75,16 @@ export default function News() {
           <p className="text-sm text-dim">Curated nightly by an AI agent from your tracking instruction.</p>
         </div>
         <Button variant="default" size="sm" onClick={refresh} disabled={refreshing}>
-          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> {refreshing ? 'Fetching…' : 'Refresh now'}
+          <IconRefresh size={14} className={refreshing ? 'animate-spin' : ''} /> {refreshing ? 'Fetching…' : 'Refresh now'}
         </Button>
       </div>
 
       {/* Preference box */}
       <div className="bg-surface rounded-[14px] p-4 flex flex-col gap-2" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
-        <label htmlFor="news-instr" className="flex items-center gap-1.5 text-sm font-medium text-text"><Sparkles size={14} className="text-accent" /> What should the agent track?</label>
+        <label htmlFor="news-instr" className="flex items-center gap-1.5 text-sm font-medium text-text"><IconSparkle size={14} className="text-accent" /> What should the agent track?</label>
         <textarea id="news-instr" value={instruction} onChange={e => setInstr(e.target.value)} rows={2}
           placeholder="e.g. Track homeowners rate filings and competitor HO-3 launches in TX and FL"
-          className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none" style={{ borderColor: 'rgba(19,19,26,.12)' }} />
+          className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none" style={{ borderColor: 'var(--color-border-strong)' }} />
         <div className="flex justify-end">
           <Button variant="primary" size="sm" onClick={savePrefs} disabled={!instruction.trim() || instruction.trim() === savedInstr}>Save preference</Button>
         </div>
@@ -94,7 +94,7 @@ export default function News() {
       {items === null ? (
         <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : sorted.length === 0 ? (
-        <EmptyState icon={<Newspaper size={28} />} title="No news yet"
+        <EmptyState icon={<IconNews size={28} />} title="No news yet"
           description="A nightly agent (06:00 ET) searches the web for your tracking instruction and files what it finds here. Set a preference above, then use “Refresh now” to fetch immediately." />
       ) : (
         <div className="flex flex-col gap-3">
@@ -105,7 +105,7 @@ export default function News() {
               <div className="flex items-center gap-2 text-xs text-faint">
                 <span className="font-medium text-dim">{n.source || 'Web'}</span>
                 {n.fetchedAt ? <><span>·</span><span>{new Date(toMillis(n.fetchedAt)).toLocaleDateString()}</span></> : null}
-                <ExternalLink size={12} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                <IconExternalLink size={12} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <h3 className="text-sm font-semibold text-text group-hover:text-accent transition-colors leading-snug">{n.title}</h3>
               {n.summary && <p className="text-sm text-dim leading-relaxed">{n.summary}</p>}

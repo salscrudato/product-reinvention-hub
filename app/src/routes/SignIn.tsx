@@ -56,7 +56,7 @@ export default function SignIn() {
       {/* Aurora wash */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="aurora-a absolute -top-40 left-1/2 -translate-x-1/2 w-[680px] h-[380px] rounded-full blur-3xl opacity-20"
-          style={{ background: 'radial-gradient(ellipse, #A100FF, #6D28D9)' }} />
+          style={{ background: 'radial-gradient(ellipse, var(--color-accent-bright), var(--color-accent-strong))' }} />
       </div>
 
       <div className="relative w-full max-w-sm rise-in">

@@ -20,7 +20,7 @@ export function Tooltip({ content, children, side = 'top' }: TooltipProps) {
       {children}
       <div
         role="tooltip"
-        className={`absolute z-50 px-2 py-1 text-xs text-white bg-[#131318] rounded-[6px]
+        className={`absolute z-50 px-2 py-1 text-xs text-white bg-text rounded-[6px]
           whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100
           transition-opacity duration-150 ${sideStyles[side]}`}
       >

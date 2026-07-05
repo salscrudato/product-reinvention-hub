@@ -65,7 +65,7 @@ function WorkspaceInner() {
         {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
           <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full blur-3xl opacity-30"
-            style={{ background: 'radial-gradient(circle, #8B1FE0, #7A00E6)' }} />
+            style={{ background: 'radial-gradient(circle, var(--color-accent), var(--color-accent-strong))' }} />
         </div>
 
         <div className="relative">
