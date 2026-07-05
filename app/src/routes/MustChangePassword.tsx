@@ -1,8 +1,8 @@
 // Interstitial shown when mustChangePassword=true on the user's Firestore doc.
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
 import { adapter } from '../lib/backend'
+import { IconSpinner } from '../components/ui/icons'
 import { useUser } from '../context/useUser'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
@@ -80,7 +80,7 @@ export default function MustChangePassword() {
           />
           {error && <p role="alert" className="text-sm text-danger bg-[rgba(220,38,38,.06)] rounded-[8px] px-3 py-2">{error}</p>}
           <Button type="submit" variant="primary" className="w-full mt-1" disabled={loading || !next || !confirm}>
-            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
             {loading ? 'Saving...' : 'Set password'}
           </Button>
         </form>

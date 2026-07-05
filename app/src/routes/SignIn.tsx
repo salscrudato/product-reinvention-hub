@@ -2,8 +2,8 @@
 // "Continue as admin" shortcut for demos. Premium, calm, Apple-inspired.
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, ShieldCheck } from 'lucide-react'
 import { adapter } from '../lib/backend'
+import { IconSpinner, IconCoverage } from '../components/ui/icons'
 import { useUser } from '../context/useUser'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
@@ -90,7 +90,7 @@ export default function SignIn() {
           )}
 
           <Button type="submit" variant="primary" className="w-full mt-1" disabled={busy || !email || !pass}>
-            {loading === 'form' && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
+            {loading === 'form' && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
             {loading === 'form' ? 'Signing in…' : 'Sign in'}
           </Button>
 
@@ -107,7 +107,7 @@ export default function SignIn() {
             disabled={busy}
             onClick={() => void doSignIn(DEMO_ADMIN.email, DEMO_ADMIN.password, 'admin')}
           >
-            {loading === 'admin' ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <ShieldCheck size={14} aria-hidden="true" />}
+            {loading === 'admin' ? <IconSpinner size={14} className="animate-spin" aria-hidden="true" /> : <IconCoverage size={14} aria-hidden="true" />}
             {loading === 'admin' ? 'Signing in…' : 'Continue as admin'}
           </Button>
         </form>
