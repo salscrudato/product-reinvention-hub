@@ -2,7 +2,7 @@
 // manager thinks about them: grouped into ISO sections (Section I property,
 // Section II liability), each coverage a card with its headline limit, attached
 // forms and nested endorsements. Click a card to open it in the Coverages tab.
-import { ChevronRight } from 'lucide-react'
+import { IconChevronRight } from '../ui/icons'
 import { Badge, RefChip } from '../ui'
 import type { Coverage, CoverageTerm } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
@@ -57,7 +57,7 @@ function CoverageCard({ cov, endorsements, onOpen }: {
             </div>
             {cov.refId && <div><RefChip id={cov.refId} /></div>}
           </div>
-          <ChevronRight size={16} className="text-faint shrink-0 group-hover:text-accent group-hover:translate-x-0.5 transition-all mt-0.5" aria-hidden="true" />
+          <IconChevronRight size={16} className="text-faint shrink-0 group-hover:text-accent group-hover:translate-x-0.5 transition-all mt-0.5" aria-hidden="true" />
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">

@@ -59,7 +59,7 @@ function Breadcrumb() {
       {crumbs.map((c, i) => {
         const last = i === crumbs.length - 1
         return (
-          <span key={c.to} className="flex items-center gap-1.5 min-w-0">
+          <span key={`${i}-${c.to}`} className="flex items-center gap-1.5 min-w-0">
             <span className="text-faint shrink-0" aria-hidden="true">/</span>
             {last
               ? <span className="font-medium text-text truncate" aria-current="page">{c.label}</span>

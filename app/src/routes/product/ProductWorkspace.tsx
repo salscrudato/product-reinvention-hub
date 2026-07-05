@@ -1,11 +1,12 @@
 // Product workspace — loads product context, renders hero header + tab outlet.
 import { useParams, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { Share2, Clock, MessageSquare, Users } from 'lucide-react'
 import { ProductProvider } from '../../context/ProductContext'
 import { useProductCtx } from '../../context/useProductCtx'
 import { adapter } from '../../lib/backend'
 import { Skeleton, StatusPill, LifecyclePill, Badge, Button } from '../../components/ui'
+import { IconShare, IconRecent, IconChat, IconUsers } from '../../components/ui/icons'
+import { computeProductFindings, healthScore, healthColor } from '../../lib/productHealth'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { CommentsPanel } from '../../components/product/CommentsPanel'
 import { ShareModal } from '../../components/product/ShareModal'
@@ -21,7 +22,7 @@ const TABS = [
 ]
 
 function WorkspaceInner() {
-  const { pid, product, coverages, rules, forms, ldTables, rtTables, ratingProgram, loading } = useProductCtx()
+  const { pid, product, coverages, rules, formRules, forms, ldTables, rtTables, ratingProgram, loading } = useProductCtx()
   const navigate     = useNavigate()
   const { pathname } = useLocation()
   const activeTab    = TABS.find(t => pathname.includes(t.id))?.id ?? 'overview'
@@ -33,7 +34,8 @@ function WorkspaceInner() {
   // Presence
   useEffect(() => {
     const leavePresence = adapter.presence.join(pid)
-    const unwatch = adapter.presence.watch(pid, setViewers)
+    // Dedupe by uid — one avatar per person even with multiple open tabs/sessions.
+    const unwatch = adapter.presence.watch(pid, uids => setViewers([...new Set(uids)]))
     return () => { leavePresence(); unwatch() }
   }, [pid])
 
@@ -47,6 +49,11 @@ function WorkspaceInner() {
   }
 
   if (!product) return <Navigate to="/app/products" replace />
+
+  // Readiness pill — same source as the Overview finding banner, so they agree.
+  const findings = computeProductFindings({ pid, coverages, rules, ratingProgram, ldTables, rtTables, formRules })
+  const score  = healthScore(findings)
+  const hColor = healthColor(score)
 
   return (
     <div className="flex flex-col gap-0">
@@ -68,6 +75,14 @@ function WorkspaceInner() {
                 <StatusPill status={product.status} />
                 <LifecyclePill lifecycle={product.lifecycle} />
                 {product.lob?.name && <Badge label={product.lob.name} color="blue" />}
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full pl-2 pr-2.5 py-0.5 text-xs font-medium tnum"
+                  style={{ background: `color-mix(in srgb, ${hColor} 12%, transparent)`, color: hColor }}
+                  title={findings.length ? `${findings.length} readiness finding${findings.length !== 1 ? 's' : ''}` : 'No issues found'}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: hColor }} aria-hidden="true" />
+                  {score}{findings.length ? ` · ${findings.length} finding${findings.length !== 1 ? 's' : ''}` : ' · Healthy'}
+                </span>
               </div>
               <h1 className="text-2xl font-bold text-text">{product.name}</h1>
               {product.refId && (
@@ -84,7 +99,7 @@ function WorkspaceInner() {
               {/* Presence avatars */}
               {viewers.length > 0 && (
                 <div className="flex items-center gap-1 mr-2">
-                  <Users size={12} className="text-faint" />
+                  <IconUsers size={12} className="text-faint" aria-hidden="true" />
                   <div className="flex -space-x-1">
                     {viewers.slice(0,4).map((uid, i) => (
                       <div key={uid} className="w-6 h-6 rounded-full bg-accent-soft border-2 border-surface flex items-center justify-center text-[9px] font-bold text-accent" title={uid}>
@@ -96,14 +111,14 @@ function WorkspaceInner() {
                 </div>
               )}
               <Button variant="ghost" size="sm" onClick={() => setCommentsOpen(true)}>
-                <MessageSquare size={14} />Comments
+                <IconChat size={14} aria-hidden="true" />Comments
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
-                <Clock size={14} />History
+                <IconRecent size={14} aria-hidden="true" />History
               </Button>
               <ExportMenu data={{ product, coverages, rules, forms, ldTables, rtTables, ratingProgram }} />
               <Button variant="ghost" size="sm" onClick={() => setShareOpen(true)}>
-                <Share2 size={14} />Share
+                <IconShare size={14} aria-hidden="true" />Share
               </Button>
             </div>
           </div>

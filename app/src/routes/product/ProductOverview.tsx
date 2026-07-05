@@ -1,75 +1,37 @@
-// Overview — the product read at a glance: coverages presented as a logically
-// organized collection (ISO Section I / II), plus a health panel and quick stats.
+// Overview — a single-column, focused reading experience: the product's coverages
+// presented as a logically-grouped collection (ISO Section I / II), with generous
+// spacing and elegant refId + limit typography. Health lives in the workspace
+// header pill; the single most important finding (if any) surfaces here as one
+// quiet, dismissible inline banner — never a panel.
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react'
 import { useProductCtx } from '../../context/useProductCtx'
-import { Card, Skeleton } from '../../components/ui'
+import { Skeleton } from '../../components/ui'
+import { IconWarning, IconAlertCircle, IconArrowRight, IconClose } from '../../components/ui/icons'
 import { CoverageCollection } from '../../components/product/CoverageCollection'
+import { computeProductFindings, type Finding } from '../../lib/productHealth'
 
-// ─── Health panel ─────────────────────────────────────────────────────────────
+// ─── Quiet inline finding banner ───────────────────────────────────────────────
 
-function HealthPanel({ navigate: nav }: { navigate: ReturnType<typeof useNavigate> }) {
-  const { pid, coverages, rules, ratingProgram, ldTables, rtTables, formRules } = useProductCtx()
-  const findings: Array<{ severity: 'error'|'warning'; message: string; route: string }> = []
-
-  coverages.forEach(cov => {
-    if (cov.premiumGenerating && !cov.terms?.length) {
-      findings.push({ severity: 'warning', message: `${cov.name} has no terms defined`, route: `/app/products/${pid}/coverages` })
-    }
-  })
-  rules.forEach(rule => {
-    if (rule.ldTableRef && !ldTables[rule.ldTableRef]) {
-      findings.push({ severity: 'error', message: `Rule ${rule.refId} references missing LD table ${rule.ldTableRef}`, route: `/app/products/${pid}/rules` })
-    }
-  })
-  ratingProgram?.steps?.forEach(step => {
-    if (step.source.type === 'RT' && step.source.ref && !rtTables[step.source.ref]) {
-      findings.push({ severity: 'error', message: `Rating step "${step.label}" references missing RT table ${step.source.ref}`, route: `/app/products/${pid}/pricing` })
-    }
-  })
-  coverages.filter(c => c.requirement === 'OPTIONAL').forEach(cov => {
-    const hasRule = formRules.some(fr => fr.formNumbers?.some(fn => cov.formNumbers?.includes(fn)))
-    if (!hasRule && cov.formNumbers?.length) {
-      findings.push({ severity: 'warning', message: `${cov.name} has no form attachment rule`, route: `/app/products/${pid}/forms` })
-    }
-  })
-  coverages.forEach(cov => {
-    if (!cov.allStates && (!cov.states || cov.states.length === 0)) {
-      findings.push({ severity: 'warning', message: `${cov.name} has no states configured`, route: `/app/products/${pid}/states` })
-    }
-  })
-
-  const score = findings.length === 0 ? 100 : Math.max(0, 100 - findings.filter(f => f.severity === 'error').length * 20 - findings.filter(f => f.severity === 'warning').length * 5)
-  const scoreColor = score >= 80 ? 'var(--color-good)' : score >= 60 ? 'var(--color-warn)' : 'var(--color-danger)'
-
+function FindingBanner({ top, more, onReview, onDismiss }: {
+  top: Finding; more: number; onReview: () => void; onDismiss: () => void
+}) {
+  const isError = top.severity === 'error'
+  const Icon = isError ? IconAlertCircle : IconWarning
+  const tint = isError ? 'rgba(220,38,38,' : 'rgba(180,83,9,'
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold tnum border-2"
-          style={{ borderColor: scoreColor, color: scoreColor, background: `color-mix(in srgb, ${scoreColor} 10%, transparent)` }}>
-          {score}
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-text">Health score</p>
-          <p className="text-xs text-dim">{findings.length} finding{findings.length !== 1 ? 's' : ''}</p>
-        </div>
-      </div>
-
-      {findings.length === 0 ? (
-        <div className="flex items-center gap-2 text-sm text-good"><CheckCircle size={14} />No issues found</div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {findings.map((f, i) => (
-            <button key={i} onClick={() => nav(f.route)}
-              className="flex items-start gap-2 text-left px-3 py-2 rounded-[8px] bg-raised hover:bg-accent/5 transition-colors text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
-              {f.severity === 'error'
-                ? <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
-                : <AlertTriangle size={14} className="text-warn shrink-0 mt-0.5" />}
-              <span className="text-dim">{f.message}</span>
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="flex items-center gap-3 rounded-[12px] px-4 py-2.5 text-sm rise-in"
+      style={{ background: `${tint}.05)`, border: `1px solid ${tint}.18)` }}>
+      <Icon size={15} className={isError ? 'text-danger shrink-0' : 'text-warn shrink-0'} aria-hidden="true" />
+      <span className="text-dim flex-1 min-w-0 truncate">{top.message}</span>
+      {more > 0 && <span className="text-xs text-faint shrink-0 hidden sm:inline">+{more} more</span>}
+      <button onClick={onReview}
+        className="text-accent font-medium inline-flex items-center gap-1 shrink-0 rounded-[6px] px-1 hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
+        Review <IconArrowRight size={13} aria-hidden="true" />
+      </button>
+      <button onClick={onDismiss} aria-label="Dismiss" className="text-faint hover:text-text shrink-0 rounded-[6px] p-0.5 transition-colors">
+        <IconClose size={14} aria-hidden="true" />
+      </button>
     </div>
   )
 }
@@ -78,46 +40,46 @@ function HealthPanel({ navigate: nav }: { navigate: ReturnType<typeof useNavigat
 
 export default function ProductOverview() {
   const navigate = useNavigate()
-  const { pid, coverages, ratingProgram, loading, product } = useProductCtx()
+  const ctx = useProductCtx()
+  const { pid, coverages, loading } = ctx
+  const [dismissed, setDismissed] = useState(false)
 
-  if (loading) return <div className="grid grid-cols-1 lg:grid-cols-3 gap-5"><Skeleton className="h-64 lg:col-span-2" /><Skeleton className="h-64" /></div>
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto flex flex-col gap-6">
+        <Skeleton className="h-6 w-40" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-40 rounded-[14px]" />)}
+        </div>
+      </div>
+    )
+  }
+
+  const findings = computeProductFindings({
+    pid, coverages, rules: ctx.rules, ratingProgram: ctx.ratingProgram,
+    ldTables: ctx.ldTables, rtTables: ctx.rtTables, formRules: ctx.formRules,
+  })
+  const top = findings[0]
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-      {/* Left: coverage collection */}
-      <div className="lg:col-span-2 flex flex-col gap-4">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-base font-semibold text-text">Coverages</h2>
-          <span className="text-xs text-dim tnum">{coverages.length} total</span>
-        </div>
-        <CoverageCollection coverages={coverages} onOpen={id => navigate(`/app/products/${pid}/coverages?cov=${id}`)} />
+    <div className="max-w-4xl mx-auto flex flex-col gap-6">
+      {top && !dismissed && (
+        <FindingBanner
+          top={top}
+          more={findings.length - 1}
+          onReview={() => navigate(top.route)}
+          onDismiss={() => setDismissed(true)}
+        />
+      )}
+
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-[15px] font-semibold text-text tracking-tight">Coverages</h2>
+        <span className="text-xs text-dim tnum">
+          {coverages.length} total{findings.length ? ` · ${findings.length} finding${findings.length !== 1 ? 's' : ''}` : ''}
+        </span>
       </div>
 
-      {/* Right: health + stats */}
-      <div className="flex flex-col gap-4">
-        <Card>
-          <p className="text-xs font-medium text-faint uppercase tracking-wide mb-3">Health</p>
-          <HealthPanel navigate={navigate} />
-        </Card>
-
-        <Card>
-          <p className="text-xs font-medium text-faint uppercase tracking-wide mb-3">Quick stats</p>
-          <div className="flex flex-col gap-2 text-sm">
-            {[
-              { label: 'Coverages',   value: coverages.length },
-              { label: 'Rating steps', value: ratingProgram?.steps?.length ?? 0 },
-              { label: 'Min premium',  value: ratingProgram?.minimumPremium ? `$${ratingProgram.minimumPremium.toLocaleString()}` : '—' },
-              { label: 'Owner',        value: product?.owner?.name ?? '—' },
-              { label: 'Market',       value: product?.marketSegment ?? '—' },
-            ].map(s => (
-              <div key={s.label} className="flex justify-between gap-3">
-                <span className="text-dim">{s.label}</span>
-                <span className="font-medium text-text tnum truncate">{s.value}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+      <CoverageCollection coverages={coverages} onOpen={id => navigate(`/app/products/${pid}/coverages?cov=${id}`)} />
     </div>
   )
 }

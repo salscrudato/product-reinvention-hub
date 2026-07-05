@@ -240,3 +240,19 @@ export const IconActivity = (p: IconProps) => (
 export const IconClipboard = (p: IconProps) => (
   <Glyph {...p}><path d="M8.5 4.5H6.5A1.5 1.5 0 0 0 5 6v13.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5h-2" /><rect x="8.5" y="2.9" width="7" height="3.6" rx="1.2" /><path d="m9.2 13.5 2 2 3.8-4" /></Glyph>
 )
+/** Share — three nodes joined by links. */
+export const IconShare = (p: IconProps) => (
+  <Glyph {...p}><circle cx="6" cy="12" r="2.4" /><circle cx="17" cy="6" r="2.4" /><circle cx="17" cy="18" r="2.4" /><path d="m8.1 10.9 6.8-3.8M8.1 13.1l6.8 3.8" /></Glyph>
+)
+/** Users — presence / collaborators. */
+export const IconUsers = (p: IconProps) => (
+  <Glyph {...p}><circle cx="9" cy="8.5" r="3.2" /><path d="M3.5 19c0-3.1 2.5-4.8 5.5-4.8s5.5 1.7 5.5 4.8" /><path d="M16 5.5a3.2 3.2 0 0 1 0 6.1M17.6 14.4c2.1.5 3.8 2 3.8 4.6" /></Glyph>
+)
+/** Warning — a triangle, for a soft (warning) finding. */
+export const IconWarning = (p: IconProps) => (
+  <Glyph {...p}><path d="M12 4.3 20.8 19a1 1 0 0 1-.87 1.5H4.07A1 1 0 0 1 3.2 19z" /><path d="M12 10v4.3" /><circle cx="12" cy="17.4" r="1" fill="currentColor" stroke="none" /></Glyph>
+)
+/** Alert — a circle with a bang, for a hard (error) finding. */
+export const IconAlertCircle = (p: IconProps) => (
+  <Glyph {...p}><circle cx="12" cy="12" r="8.4" /><path d="M12 7.6v5.3" /><circle cx="12" cy="16.4" r="1" fill="currentColor" stroke="none" /></Glyph>
+)
