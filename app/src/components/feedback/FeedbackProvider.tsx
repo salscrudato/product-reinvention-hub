@@ -5,17 +5,17 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
-import { MessageSquarePlus, Lightbulb, Bug, Heart, Link2 } from 'lucide-react'
 import { adapter } from '../../lib/backend'
 import { useUser } from '../../context/useUser'
 import { Dialog, Button, Input } from '../ui'
+import { IconChat, IconIdea, IconBug, IconHeart, IconLink, type IconType } from '../ui/icons'
 import { FeedbackContext, type FeedbackEntity } from './feedbackContext'
 import type { FeedbackType } from '@pf/shared'
 
-const TYPES: { id: FeedbackType; label: string; icon: typeof Lightbulb }[] = [
-  { id: 'IDEA',   label: 'Idea',   icon: Lightbulb },
-  { id: 'ISSUE',  label: 'Issue',  icon: Bug },
-  { id: 'PRAISE', label: 'Praise', icon: Heart },
+const TYPES: { id: FeedbackType; label: string; icon: IconType }[] = [
+  { id: 'IDEA',   label: 'Idea',   icon: IconIdea },
+  { id: 'ISSUE',  label: 'Issue',  icon: IconBug },
+  { id: 'PRAISE', label: 'Praise', icon: IconHeart },
 ]
 
 export function FeedbackProvider({ children }: { children: ReactNode }) {
@@ -80,7 +80,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         className="fixed bottom-5 right-5 z-40 w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 8px 24px var(--glow-accent-strong)' }}
       >
-        <MessageSquarePlus size={20} />
+        <IconChat size={20} aria-hidden="true" />
       </button>
 
       <Dialog open={open} onClose={() => setOpen(false)} title="Quick feedback">
@@ -108,7 +108,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
 
           {/* Auto-attached context */}
           <div className="flex items-center gap-2 text-xs text-faint bg-raised rounded-[8px] px-3 py-2">
-            <Link2 size={12} className="shrink-0" />
+            <IconLink size={12} className="shrink-0" aria-hidden="true" />
             <span className="truncate">Linked to <span className="text-dim font-medium">{contextLabel}</span>{entity?.refId ? <span className="font-mono text-accent"> · {entity.refId}</span> : null}</span>
           </div>
 

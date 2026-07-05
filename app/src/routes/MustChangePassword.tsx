@@ -1,6 +1,6 @@
 // Interstitial shown when mustChangePassword=true on the user's Firestore doc.
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
 import { IconSpinner } from '../components/ui/icons'
 import { useUser } from '../context/useUser'
@@ -16,7 +16,7 @@ export default function MustChangePassword() {
   const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(false)
 
-  if (!user) { navigate('/sign-in', { replace: true }); return null }
+  if (!user) return <Navigate to="/sign-in" replace />
 
   // Capture for async closure — TypeScript cannot narrow closure vars after early return
   const currentUser = user

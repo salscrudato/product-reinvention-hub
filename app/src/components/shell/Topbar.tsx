@@ -1,7 +1,7 @@
 // Topbar — breadcrumb, global search (opens palette), presence slot, user menu.
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { Search, LogOut, ChevronDown, User, Home } from 'lucide-react'
+import { IconSearch, IconSignOut, IconChevronDown, IconUser, IconHome } from '../ui/icons'
 import { useUser } from '../../context/useUser'
 import { adapter } from '../../lib/backend'
 import type { Product } from '@pf/shared'
@@ -54,7 +54,7 @@ function Breadcrumb() {
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm min-w-0">
       <Link to="/app" aria-label="Home"
         className={`flex items-center gap-1.5 shrink-0 rounded-[6px] px-1 -mx-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${crumbs.length ? 'text-dim hover:text-text' : 'text-text font-medium'}`}>
-        <Home size={14} aria-hidden="true" />{!crumbs.length && <span>Home</span>}
+        <IconHome size={14} aria-hidden="true" />{!crumbs.length && <span>Home</span>}
       </Link>
       {crumbs.map((c, i) => {
         const last = i === crumbs.length - 1
@@ -91,11 +91,11 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
       {/* Search field — opens palette */}
       <button
         onClick={onOpenPalette}
-        className="hidden sm:flex items-center gap-2 px-3 h-8 rounded-[8px] text-sm text-faint bg-raised hover:bg-[#EAEAF0] transition-colors"
+        className="hidden sm:flex items-center gap-2 px-3 h-8 rounded-[8px] text-sm text-faint bg-raised hover:bg-hover transition-colors"
         style={{ border: '1px solid var(--color-border)', minWidth: 200 }}
         aria-label="Search (Ctrl+K)"
       >
-        <Search size={14} />
+        <IconSearch size={14} aria-hidden="true" />
         <span>Search...</span>
         <kbd className="ml-auto text-xs bg-surface rounded px-1 py-0.5 font-mono text-faint" style={{ border: '1px solid var(--color-border)' }}>Ctrl+K</kbd>
       </button>
@@ -114,7 +114,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
               {(user.name ?? user.email ?? 'U')[0].toUpperCase()}
             </span>
             <span className="hidden md:block max-w-[120px] truncate">{user.name ?? user.email}</span>
-            <ChevronDown size={12} />
+            <IconChevronDown size={12} aria-hidden="true" />
           </button>
 
           {menuOpen && (
@@ -132,7 +132,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
                   onClick={() => { setMenuOpen(false); void handleSignOut() }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-dim hover:bg-raised hover:text-text transition-colors"
                 >
-                  <LogOut size={14} />
+                  <IconSignOut size={14} aria-hidden="true" />
                   Sign out
                 </button>
               </div>
@@ -143,7 +143,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
 
       {!user && (
         <button onClick={() => navigate('/sign-in')} className="flex items-center gap-1.5 text-sm text-dim hover:text-text">
-          <User size={14} />Sign in
+          <IconUser size={14} aria-hidden="true" />Sign in
         </button>
       )}
     </header>

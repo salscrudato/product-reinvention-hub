@@ -7,6 +7,9 @@ import type { SVGProps } from 'react'
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number; title?: string }
 
+/** Shared shape for every in-house glyph — use where a component takes an icon. */
+export type IconType = (props: IconProps) => React.ReactElement
+
 // Shared frame: fixes the viewBox + stroke defaults; decorative unless a title is
 // given (then it is announced to screen readers as an image).
 function Glyph({ size = 20, title, children, strokeWidth = 1.6, ...rest }: IconProps & { children: React.ReactNode }) {
@@ -162,4 +165,67 @@ export const IconSparkle = (p: IconProps) => (
 /** Chat — a speech bubble, for the conversational surface. */
 export const IconChat = (p: IconProps) => (
   <Glyph {...p}><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H9l-4 3.4V16H6.5A2.5 2.5 0 0 1 4 13.5z" /><path d="M8.5 9.5h7M8.5 12.5h4" /></Glyph>
+)
+
+// ─── Navigation / shell glyphs ────────────────────────────────────────────────
+
+/** Home — a house; the workspace landing. */
+export const IconHome = (p: IconProps) => (
+  <Glyph {...p}><path d="M4 11 12 4l8 7" /><path d="M6 9.6V19a.8.8 0 0 0 .8.8h10.4a.8.8 0 0 0 .8-.8V9.6" /><path d="M9.8 20.8V14.6h4.4v6.2" /></Glyph>
+)
+/** Explorer — a compass, for browsing the hierarchy. */
+export const IconExplorer = (p: IconProps) => (
+  <Glyph {...p}><circle cx="12" cy="12" r="8.5" /><path d="m15.2 8.8-2.4 4-4 2.4 2.4-4z" /></Glyph>
+)
+/** News — a newspaper with a folded side column. */
+export const IconNews = (p: IconProps) => (
+  <Glyph {...p}><path d="M4 6h11.5v12.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M15.5 9H19a.5.5 0 0 1 .5.5v9a1.5 1.5 0 0 1-1.5 1.5" /><path d="M6.8 9.2h6M6.8 12.2h6M6.8 15.2h3.6" /></Glyph>
+)
+/** Chart — grouped bars, for analytics. */
+export const IconChart = (p: IconProps) => (
+  <Glyph {...p}><path d="M4 4v15.2a.8.8 0 0 0 .8.8H20" /><rect x="6.6" y="12" width="3" height="5" rx="1" /><rect x="11.2" y="8.4" width="3" height="8.6" rx="1" /><rect x="15.8" y="10.6" width="3" height="6.4" rx="1" /></Glyph>
+)
+/** Book — an open book, for the data dictionary. */
+export const IconBook = (p: IconProps) => (
+  <Glyph {...p}><path d="M12 6.2C10.3 4.9 7.8 4.4 4.8 5v12.6c3-.6 5.5-.1 7.2 1.2" /><path d="M12 6.2c1.7-1.3 4.2-1.8 7.2-1.2v12.6c-3-.6-5.5-.1-7.2 1.2" /><path d="M12 6.2v12.6" /></Glyph>
+)
+/** Settings — sliders. */
+export const IconSettings = (p: IconProps) => (
+  <Glyph {...p}><path d="M4 8h8M17 8h3M4 16h3M12 16h8" /><circle cx="14.5" cy="8" r="2.3" /><circle cx="9.5" cy="16" r="2.3" /></Glyph>
+)
+/** Sign-out — a door with an out-arrow. */
+export const IconSignOut = (p: IconProps) => (
+  <Glyph {...p}><path d="M14 5.5H6.8A1.8 1.8 0 0 0 5 7.3v9.4a1.8 1.8 0 0 0 1.8 1.8H14" /><path d="M11 12h9M17 8.5l3.5 3.5L17 15.5" /></Glyph>
+)
+/** User — head and shoulders. */
+export const IconUser = (p: IconProps) => (
+  <Glyph {...p}><circle cx="12" cy="8.5" r="3.7" /><path d="M5 19.5c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" /></Glyph>
+)
+/** Key — for the temporary-password affordance. */
+export const IconKey = (p: IconProps) => (
+  <Glyph {...p}><circle cx="8.5" cy="8.5" r="3.8" /><path d="m11.2 11.2 7.3 7.3M15.6 15.6l2-2M17.6 13.6l1.6 1.6" /></Glyph>
+)
+export const IconChevronLeft = (p: IconProps) => (<Glyph {...p}><path d="m15 5-7 7 7 7" /></Glyph>)
+/** Clock — recents / waiting. */
+export const IconRecent = (p: IconProps) => (
+  <Glyph {...p}><circle cx="12" cy="12" r="8.2" /><path d="M12 7.4V12l3.2 1.9" /></Glyph>
+)
+
+// ─── Feedback glyphs ──────────────────────────────────────────────────────────
+
+/** Idea — a lightbulb. */
+export const IconIdea = (p: IconProps) => (
+  <Glyph {...p}><path d="M9 16.3a5 5 0 1 1 6 0 2 2 0 0 0-.8 1.6v.6H9.8v-.6A2 2 0 0 0 9 16.3Z" /><path d="M9.8 20.6h4.4" /></Glyph>
+)
+/** Issue — a bug. */
+export const IconBug = (p: IconProps) => (
+  <Glyph {...p}><rect x="8" y="8" width="8" height="10" rx="4" /><path d="M9.6 6.4 8.3 5M14.4 6.4 15.7 5M8 11H4.6M16 11h3.4M8 15H4.6M16 15h3.4M12 8.2v9.6" /></Glyph>
+)
+/** Praise — a heart. */
+export const IconHeart = (p: IconProps) => (
+  <Glyph {...p}><path d="M12 20.3S3.6 15 3.6 9A4.4 4.4 0 0 1 12 7a4.4 4.4 0 0 1 8.4 2c0 6-8.4 11.3-8.4 11.3Z" /></Glyph>
+)
+/** Link — a chain, for attached context. */
+export const IconLink = (p: IconProps) => (
+  <Glyph {...p}><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.6 1.6" /><path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.6-1.6" /></Glyph>
 )

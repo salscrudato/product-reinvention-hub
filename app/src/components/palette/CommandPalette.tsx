@@ -4,8 +4,10 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Fuse, { type FuseResultMatch, type FuseResult } from 'fuse.js'
 import { createPortal } from 'react-dom'
-import { Search, ArrowRight, Clock, Package, FileText, BookOpen, Tag, Database, CheckSquare, Hash } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import {
+  IconSearch, IconArrowRight, IconRecent, IconProduct, IconForm,
+  IconBook, IconInfo, IconTable, IconRule, IconTasks, IconCoverage, type IconType,
+} from '../ui/icons'
 import { adapter } from '../../lib/backend'
 import { Badge } from '../ui/Badge'
 import type { SearchIndexEntry, SearchEntityType } from '@pf/shared'
@@ -28,15 +30,15 @@ function toRoute(entry: SearchIndexEntry): string {
   }
 }
 
-const TYPE_ICON: Record<SearchEntityType, LucideIcon> = {
-  product:    Package,
-  coverage:   Hash,
-  rule:       CheckSquare,
-  form:       FileText,
-  ldTable:    Database,
-  rtTable:    Database,
-  dictionary: BookOpen,
-  task:       CheckSquare,
+const TYPE_ICON: Record<SearchEntityType, IconType> = {
+  product:    IconProduct,
+  coverage:   IconCoverage,
+  rule:       IconRule,
+  form:       IconForm,
+  ldTable:    IconTable,
+  rtTable:    IconTable,
+  dictionary: IconBook,
+  task:       IconTasks,
 }
 
 const TYPE_LABEL: Record<SearchEntityType, string> = {
@@ -187,7 +189,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       >
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          <Search size={16} className="text-faint shrink-0" aria-hidden="true" />
+          <IconSearch size={16} className="text-faint shrink-0" aria-hidden="true" />
           <input
             ref={inputRef}
             className="flex-1 bg-transparent text-sm text-text placeholder:text-faint outline-none"
@@ -225,7 +227,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                   onMouseEnter={() => setCursor(i)}
                   onClick={() => activate(item)}
                 >
-                  <Clock size={14} className="text-faint shrink-0" />
+                  <IconRecent size={14} className="text-faint shrink-0" aria-hidden="true" />
                   <span className="flex-1 min-w-0">
                     <span className="block font-medium text-text truncate">{item.data.title}</span>
                     <span className="text-xs text-dim truncate">{item.data.subtitle}</span>
@@ -242,7 +244,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                   onMouseEnter={() => setCursor(i)}
                   onClick={() => activate(item)}
                 >
-                  <ArrowRight size={14} className="text-faint shrink-0" />
+                  <IconArrowRight size={14} className="text-faint shrink-0" aria-hidden="true" />
                   <span className="flex-1 min-w-0">
                     <span className="block font-medium text-text">{item.data.label}</span>
                     <span className="text-xs text-dim">{item.data.subtitle}</span>
@@ -254,7 +256,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             // entry
             const entry    = item.data.item
             const entryType = entry.type as SearchEntityType
-            const Icon     = TYPE_ICON[entryType] ?? Tag
+            const Icon     = TYPE_ICON[entryType] ?? IconInfo
             return (
               <button
                 key={entry.path}

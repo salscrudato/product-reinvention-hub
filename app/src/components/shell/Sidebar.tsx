@@ -3,33 +3,32 @@
 // with a gradient rail. Collapsed → icon-only with tooltips.
 import { NavLink, useLocation } from 'react-router-dom'
 import { Tooltip, Logo } from '../ui'
-import type { LucideIcon } from 'lucide-react'
 import {
-  LayoutDashboard, Package, Wand2, Telescope, CheckSquare,
-  Newspaper, BarChart3, BookOpen, MessageSquare, ChevronLeft,
-  ChevronRight, Settings2,
-} from 'lucide-react'
+  IconHome, IconProduct, IconSparkle, IconExplorer, IconTasks,
+  IconNews, IconChart, IconBook, IconChat, IconChevronLeft,
+  IconChevronRight, IconSettings, type IconType,
+} from '../ui/icons'
 
-interface NavItem { to: string; label: string; icon: LucideIcon; exact?: boolean }
+interface NavItem { to: string; label: string; icon: IconType; exact?: boolean }
 
 const SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Workspace',
     items: [
-      { to: '/app',          label: 'Home',       icon: LayoutDashboard, exact: true },
-      { to: '/app/products', label: 'Products',   icon: Package },
-      { to: '/app/builder',  label: 'AI Builder', icon: Wand2 },
-      { to: '/app/explorer', label: 'Explorer',   icon: Telescope },
+      { to: '/app',          label: 'Home',       icon: IconHome, exact: true },
+      { to: '/app/products', label: 'Products',   icon: IconProduct },
+      { to: '/app/builder',  label: 'AI Builder', icon: IconSparkle },
+      { to: '/app/explorer', label: 'Explorer',   icon: IconExplorer },
     ],
   },
   {
     label: 'Intelligence',
     items: [
-      { to: '/app/tasks',      label: 'Tasks',           icon: CheckSquare },
-      { to: '/app/news',       label: 'News',            icon: Newspaper },
-      { to: '/app/claims',     label: 'Claims Analysis', icon: BarChart3 },
-      { to: '/app/dictionary', label: 'Data Dictionary', icon: BookOpen },
-      { to: '/app/feedback',   label: 'Feedback',        icon: MessageSquare },
+      { to: '/app/tasks',      label: 'Tasks',           icon: IconTasks },
+      { to: '/app/news',       label: 'News',            icon: IconNews },
+      { to: '/app/claims',     label: 'Claims Analysis', icon: IconChart },
+      { to: '/app/dictionary', label: 'Data Dictionary', icon: IconBook },
+      { to: '/app/feedback',   label: 'Feedback',        icon: IconChat },
     ],
   },
 ]
@@ -91,13 +90,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Footer */}
       <div className="py-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-        <Item item={{ to: '/app/admin', label: 'Settings', icon: Settings2 }} collapsed={collapsed} active={isActive('/app/admin')} />
+        <Item item={{ to: '/app/admin', label: 'Settings', icon: IconSettings }} collapsed={collapsed} active={isActive('/app/admin')} />
         <button
           onClick={onToggle}
           className={`flex items-center gap-3 mx-2 px-2.5 py-2 rounded-[10px] text-sm text-dim hover:bg-raised hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent w-[calc(100%-16px)] ${collapsed ? 'justify-center' : ''}`}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? <ChevronRight size={18} aria-hidden="true" /> : <><ChevronLeft size={18} aria-hidden="true" /><span>Collapse</span></>}
+          {collapsed ? <IconChevronRight size={18} aria-hidden="true" /> : <><IconChevronLeft size={18} aria-hidden="true" /><span>Collapse</span></>}
         </button>
       </div>
     </aside>

@@ -1,7 +1,7 @@
 // Sign-in — email + password through the adapter, plus a temporary
 // "Continue as admin" shortcut for demos. Premium, calm, Apple-inspired.
 import { useState, type FormEvent } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
 import { IconSpinner, IconCoverage } from '../components/ui/icons'
 import { useUser } from '../context/useUser'
@@ -22,8 +22,8 @@ export default function SignIn() {
   const [error,   setError]   = useState('')
   const [loading, setLoading] = useState<'form' | 'admin' | null>(null)
 
-  // Already signed in — redirect
-  if (user) { navigate(from, { replace: true }); return null }
+  // Already signed in — redirect (render-time <Navigate>, not an in-render call)
+  if (user) return <Navigate to={from} replace />
 
   async function doSignIn(e: string, p: string, mode: 'form' | 'admin') {
     setError('')

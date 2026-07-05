@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react'
 import { Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
-import { KeyRound } from 'lucide-react'
 import { useUser } from '../context/useUser'
+import { IconKey } from '../components/ui/icons'
 import { Sidebar } from '../components/shell/Sidebar'
 import { Topbar } from '../components/shell/Topbar'
 import { CommandPalette } from '../components/palette/CommandPalette'
@@ -49,7 +49,7 @@ export default function AppShell() {
           {/* Persistent banner until the seeded/temp password is changed */}
           {profile?.mustChangePassword && (
             <div className="flex items-center justify-between gap-3 px-6 py-2 text-sm" style={{ background: 'rgba(180,83,9,.08)', borderBottom: '1px solid rgba(180,83,9,.2)' }}>
-              <span className="flex items-center gap-2 text-warn"><KeyRound size={14} /> You're using a temporary password. Please set a new one.</span>
+              <span className="flex items-center gap-2 text-warn"><IconKey size={14} aria-hidden="true" /> You're using a temporary password. Please set a new one.</span>
               <button onClick={() => navigate('/must-change-password')} className="font-medium text-warn hover:underline shrink-0">Change password →</button>
             </div>
           )}
