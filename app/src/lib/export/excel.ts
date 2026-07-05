@@ -133,7 +133,7 @@ async function download(wb: ExcelJS.Workbook, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export function buildWorkbook(items: ProductExport[]): ExcelJS.Workbook {
+function buildWorkbook(items: ProductExport[]): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Product Reinvention Hub'
   wb.created = new Date()

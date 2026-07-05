@@ -1,15 +1,14 @@
 // FeedbackProvider — global quick-capture: a ⌘. shortcut and a floating button
 // open a sheet (Idea / Issue / Praise + title + detail) that auto-attaches the
-// route and any registered entity context, so feedback lands pre-linked. Any
-// signed-in role may submit. Mounted once inside the app shell.
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+// current route, so feedback lands pre-linked. Any signed-in role may submit.
+// Mounted once inside the app shell.
+import { useEffect, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { adapter } from '../../lib/backend'
 import { useUser } from '../../context/useUser'
 import { Dialog, Button, Input } from '../ui'
 import { IconChat, IconIdea, IconBug, IconHeart, IconLink, type IconType } from '../ui/icons'
-import { FeedbackContext, type FeedbackEntity } from './feedbackContext'
 import type { FeedbackType } from '@pf/shared'
 
 const TYPES: { id: FeedbackType; label: string; icon: IconType }[] = [
@@ -21,14 +20,11 @@ const TYPES: { id: FeedbackType; label: string; icon: IconType }[] = [
 export function FeedbackProvider({ children }: { children: ReactNode }) {
   const { user } = useUser()
   const location = useLocation()
-  const [entity, setEntity] = useState<FeedbackEntity | null>(null)
   const [open, setOpen]     = useState(false)
   const [type, setType]     = useState<FeedbackType>('IDEA')
   const [title, setTitle]   = useState('')
   const [detail, setDetail] = useState('')
   const [busy, setBusy]     = useState(false)
-
-  const openCapture = useCallback(() => setOpen(true), [])
 
   // ⌘. / Ctrl+. global shortcut
   useEffect(() => {
@@ -39,8 +35,6 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  const value = useMemo(() => ({ entity, setEntity, openCapture }), [entity, openCapture])
-
   async function submit() {
     if (!title.trim() || !user) return
     setBusy(true)
@@ -50,7 +44,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         op: 'create', path: `feedback/${id}`,
         data: {
           type, title: title.trim(), detail: detail.trim(),
-          context: { route: location.pathname, entityPath: entity?.entityPath ?? null, refId: entity?.refId ?? null, label: entity?.label ?? null },
+          context: { route: location.pathname, entityPath: null, refId: null, label: null },
           votes: { count: 0, voters: [] },
           status: 'NEW', impact: 2, effort: 2, priorityScore: 0,
           author: { uid: user.uid, name: user.name ?? user.email ?? 'User' },
@@ -67,15 +61,13 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const contextLabel = entity?.label ?? location.pathname
-
   return (
-    <FeedbackContext.Provider value={value}>
+    <>
       {children}
 
       {/* Floating capture button */}
       <button
-        onClick={openCapture}
+        onClick={() => setOpen(true)}
         title="Capture feedback (⌘.)" aria-label="Capture feedback"
         className="fixed bottom-5 right-5 z-40 w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 8px 24px var(--glow-accent-strong)' }}
@@ -109,7 +101,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           {/* Auto-attached context */}
           <div className="flex items-center gap-2 text-xs text-faint bg-raised rounded-[8px] px-3 py-2">
             <IconLink size={12} className="shrink-0" aria-hidden="true" />
-            <span className="truncate">Linked to <span className="text-dim font-medium">{contextLabel}</span>{entity?.refId ? <span className="font-mono text-accent"> · {entity.refId}</span> : null}</span>
+            <span className="truncate">Linked to <span className="text-dim font-medium">{location.pathname}</span></span>
           </div>
 
           <div className="flex justify-end gap-2">
@@ -118,6 +110,6 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           </div>
         </div>
       </Dialog>
-    </FeedbackContext.Provider>
+    </>
   )
 }

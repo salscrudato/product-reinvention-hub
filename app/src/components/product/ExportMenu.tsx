@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { Download, FileSpreadsheet, FileCode2, ChevronDown } from 'lucide-react'
 import { Button } from '../ui'
 import { exportProductExcel, type ProductExport } from '../../lib/export/excel'
-import { DUCK_CREEK_ENABLED } from '../../lib/integrations/duckcreek'
 
 export function ExportMenu({ data }: { data: ProductExport }) {
   const [open, setOpen] = useState(false)
@@ -41,7 +40,7 @@ export function ExportMenu({ data }: { data: ProductExport }) {
           <button disabled aria-disabled title="Coming soon" role="menuitem"
             className="w-full flex items-center justify-between gap-2.5 px-3 py-2 text-sm text-faint cursor-not-allowed text-left">
             <span className="flex items-center gap-2.5"><FileCode2 size={15} /> Duck Creek XML</span>
-            <span className="text-[10px] uppercase tracking-wide">{DUCK_CREEK_ENABLED ? '' : 'soon'}</span>
+            <span className="text-[10px] uppercase tracking-wide">soon</span>
           </button>
         </div>
       )}

@@ -1,7 +1,6 @@
 // Data Dictionary (/app/dictionary) — reusable field definitions with audited
 // create/edit/delete. Each card shows type, description, allowed values, format,
-// tags and "used in" backlinks. The DictionaryPicker component (see
-// components/dictionary) lets other editors insert one of these by typeahead.
+// tags and "used in" backlinks.
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'

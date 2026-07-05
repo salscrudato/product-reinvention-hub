@@ -11,8 +11,9 @@ draft to state filing. The reference product is an ISO-style **Homeowners HO-3**
   backend access goes through the adapter seam (`app/src/lib/backend`) — app code
   never imports `firebase/*` directly (`docs/AWS_SWAP.md`).
 - **Functions** — Cloud Functions v2 (Node 20). All Anthropic usage lives here
-  (`claude-sonnet-4-6`): tool-grounded chat (SSE), claims, gap, builder, form
-  descriptions, health, and the nightly news agent. Secrets via `defineSecret`.
+  (`claude-fable-5` for reasoning, `claude-haiku-4-5` for bulk): tool-grounded
+  chat (SSE), coverage extraction, share snapshots, role admin, a health check,
+  and the nightly news agent. Secrets via `defineSecret`.
 - **Data** — Firestore (realtime via `onSnapshot`), Storage, Auth (email/password +
   custom-claim roles). Pure domain logic (types, rating evaluator, rules engine,
   HO-3 seed) lives in `shared/` and is consumed by both.
@@ -88,8 +89,7 @@ app/src
   components/        ui primitives, shell, palette, product, feedback, dictionary
   lib/backend/       the BackendAdapter seam (firebase.adapter.ts is active)
   lib/export/        exceljs workbook (four DOMAIN_HO sheets)
-  lib/integrations/  duckcreek.ts (coming soon) · accenture.ts (env-driven client)
-functions/src        runtime · tools · ai · admin · news · share · health
+functions/src        runtime · tools · ai · extract · admin · news · share · health
 shared/src           types · rating/evaluator · rules/engine · seed/ho3
 docs/                DATA_MODEL.md · DOMAIN_HO.md · AWS_SWAP.md
 ```

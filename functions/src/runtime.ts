@@ -1,7 +1,7 @@
 // runtime.ts — shared AI plumbing: the Anthropic client (secret-bound), Firebase
-// ID-token verification + role guard, SSE helpers, and model constants. Every
-// AI function (ai/builder/claims/gap/describe/health) composes these so secret
-// handling, auth and streaming stay in exactly one place.
+// ID-token verification + role guard, SSE helpers, and model constants. The AI
+// functions (ai/extract/news) compose these so secret handling, auth and
+// streaming stay in exactly one place.
 // AWS-SWAP: secret → Secrets Manager; verifyIdToken → Cognito JWT verify; SSE is
 // plain HTTPS and ports to Lambda URLs unchanged.
 import { defineSecret } from 'firebase-functions/params'

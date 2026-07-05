@@ -67,8 +67,8 @@ app/src
   components/ (ui primitives + feature components)
   lib/backend/ (types.ts, firebase.adapter.ts, aws.adapter.placeholder.ts, index.ts,
   firebase.config.ts) · lib/ (export/excel.ts, svg/, utils)
-functions/src (ai.ts SSE chat · builder.ts · claims.ts · gap.ts · describe.ts ·
-  health.ts · news.ts scheduled · share.ts · admin.ts setUserRole · tools.ts)
+functions/src (ai.ts SSE chat · extract.ts coverage extraction · health.ts ·
+  news.ts scheduled · share.ts · admin.ts setUserRole · tools.ts · runtime.ts)
 shared/src (types.ts · rating/evaluator.ts · rules/engine.ts · seed/ho3.ts)
 docs/ (DATA_MODEL.md · DOMAIN_HO.md · AWS_SWAP.md) · scripts/seed.ts
 firebase.json · firestore.rules · firestore.indexes.json · storage.rules

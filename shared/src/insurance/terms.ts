@@ -14,7 +14,7 @@ export function isPercentTerm(t: Pick<CoverageTerm, 'unit' | 'basis'>): boolean 
 }
 
 /** The default value-type for a term with no explicit typing yet. */
-export function deriveOptionType(t: CoverageTerm): OptionValueType {
+function deriveOptionType(t: CoverageTerm): OptionValueType {
   if (isPercentTerm(t)) return 'PERCENT'
   return 'FLAT'
 }
@@ -101,16 +101,4 @@ export function syncLegacy(opts: StandardOption[]): Pick<CoverageTerm, 'options'
     default: defVal,
     ...(nums.length ? { min: nums[0], max: nums[nums.length - 1] } : {}),
   }
-}
-
-/** A compact "$1k – $25k" range summary for a term, or null when not applicable. */
-export function rangeLabel(t: CoverageTerm, ldTable?: LDTable): string | null {
-  const opts = resolveTermOptions(t, ldTable)
-  const nums = opts.map(numericValue).filter((n): n is number => n !== undefined)
-  const lo = t.min ?? (nums.length ? Math.min(...nums) : undefined)
-  const hi = t.max ?? (nums.length ? Math.max(...nums) : undefined)
-  if (lo === undefined || hi === undefined || lo === hi) return null
-  const pct = isPercentTerm(t)
-  const f = (n: number) => (pct ? `${n}%` : compactMoney(n))
-  return `${f(lo)} – ${f(hi)}`
 }

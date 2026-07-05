@@ -25,21 +25,9 @@ export const MARKET_SEGMENTS = [
   'Commercial Lines / Liability',
 ]
 
-// Common currency limit/deductible amounts and coverage percentages.
-export const LIMIT_AMOUNTS = [500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 300000, 500000, 1000000]
-export const PERCENT_OPTIONS = [1, 2, 5, 10, 25, 30, 50, 70, 75, 100]
-
-// Presets for the richer option types (typed standard options).
-export const SPLIT_PRESETS: number[][] = [
-  [100000, 300000, 100000],   // 100/300/100 — classic BI/PD
-  [250000, 500000, 100000],
-  [500000, 1000000, 500000],
-]
-export const WAITING_PERIOD_HOURS = [24, 48, 72, 120, 168]  // 1d, 2d, 3d, 5d, 7d
-
 // ── Limit / deductible STRUCTURE catalogue (UI copy). `icon` keys into the
 //    editor's structure-icon map; pure term logic lives in @pf/shared/terms. ──
-export interface StructureMeta<T extends string> {
+interface StructureMeta<T extends string> {
   id: T; label: string; blurb: string; sample: string; icon: string
 }
 
