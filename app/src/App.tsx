@@ -4,7 +4,7 @@ import { Suspense, lazy } from 'react'
 import { UserProvider } from './context/UserContext'
 import { Skeleton } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { IconWand, IconChart } from './components/ui/icons'
+import { IconWand } from './components/ui/icons'
 import { StubRoute } from './routes/stub/StubRoute'
 
 const Landing            = lazy(() => import('./routes/Landing'))
@@ -23,6 +23,7 @@ const ProductPricing     = lazy(() => import('./routes/product/ProductPricing'))
 const ProductStates      = lazy(() => import('./routes/product/ProductStates'))
 const ProductRules       = lazy(() => import('./routes/product/ProductRules'))
 const Tasks              = lazy(() => import('./routes/Tasks'))
+const Claims             = lazy(() => import('./routes/Claims'))
 const Dictionary         = lazy(() => import('./routes/Dictionary'))
 const Admin              = lazy(() => import('./routes/Admin'))
 const Feedback           = lazy(() => import('./routes/Feedback'))
@@ -67,7 +68,7 @@ export default function App() {
               <Route path="explorer"   element={<Explorer />} />
               <Route path="tasks"      element={<Tasks />} />
               <Route path="news"       element={<News />} />
-              <Route path="claims"     element={<StubRoute title="Claims Analysis" description="Loss-ratio trends and emerging risk signals." icon={IconChart} />} />
+              <Route path="claims"     element={<Claims />} />
               <Route path="dictionary" element={<Dictionary />} />
               <Route path="feedback"   element={<Feedback />} />
               <Route path="admin"      element={<Admin />} />

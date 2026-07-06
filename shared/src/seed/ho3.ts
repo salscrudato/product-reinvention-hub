@@ -747,6 +747,12 @@ export const HO3_DEFAULT_TASK_TEMPLATES: Array<{
 
 export const HO3_SEED_USERS: Array<Omit<User, 'createdAt'> & { createdAt: null; password: string }> = [
   {
+    // Convenience admin for local sign-in (no forced password change).
+    email: 'admin@admin.com', name: 'Admin',
+    role: 'ADMIN', active: true, mustChangePassword: false,
+    password: 'admin123', createdAt: null,
+  },
+  {
     email: 'admin@productfactory.app', name: 'Product Factory Admin',
     role: 'ADMIN', active: true, mustChangePassword: true,
     password: 'admin123', createdAt: null,

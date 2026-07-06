@@ -90,6 +90,11 @@ service cloud.firestore {
     match /newsPrefs/{uid}        { allow read: if isAuthed() && myUid() == uid;
                                     allow write: if isAuthed() && myUid() == uid; }
 
+    // ── Base forms — Claims Analysis library. Any authed role reads (VIEWER may run
+    //    a read-only analysis); EDITOR/ADMIN upload (create/update/delete). Not domain
+    //    content, so mutate() skips the searchIndex for entityType 'baseForm'. ────────
+    match /baseForms/{id}         { allow read: if isAuthed(); allow write: if canEdit(); }
+
     // ── Search index — maintained by seed + mutate(); read by all authed ──────
     match /searchIndex/{id}       { allow read: if isAuthed(); allow write: if canEdit(); }
 

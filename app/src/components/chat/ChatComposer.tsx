@@ -9,13 +9,15 @@ interface Props {
   onChange: (v: string) => void
   onSubmit: () => void
   streaming?: boolean
+  disabled?: boolean          // hard-disabled (e.g. no context selected yet)
+  hint?: string               // overrides the default grounding hint line
   placeholder?: string
   autoFocus?: boolean
 }
 
-export function ChatComposer({ value, onChange, onSubmit, streaming = false, placeholder = 'Ask your product portfolio…', autoFocus }: Props) {
+export function ChatComposer({ value, onChange, onSubmit, streaming = false, disabled = false, hint, placeholder = 'Ask your product portfolio…', autoFocus }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
-  const canSend = !!value.trim() && !streaming
+  const canSend = !!value.trim() && !streaming && !disabled
 
   // Auto-grow the textarea up to a cap, then scroll.
   useEffect(() => {
@@ -28,7 +30,7 @@ export function ChatComposer({ value, onChange, onSubmit, streaming = false, pla
   return (
     <form
       onSubmit={e => { e.preventDefault(); if (canSend) onSubmit() }}
-      className="relative bg-surface rounded-[22px] transition-shadow focus-within:shadow-[var(--shadow-card-hover)]"
+      className={`relative bg-surface rounded-[22px] transition-shadow focus-within:shadow-[var(--shadow-card-hover)] ${disabled ? 'opacity-60' : ''}`}
       style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
     >
       <textarea
@@ -39,13 +41,14 @@ export function ChatComposer({ value, onChange, onSubmit, streaming = false, pla
         placeholder={placeholder}
         rows={1}
         autoFocus={autoFocus}
+        disabled={disabled}
         aria-label="Message"
-        className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-11 text-[15px] leading-relaxed text-text placeholder:text-faint focus:outline-none"
+        className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-11 text-[15px] leading-relaxed text-text placeholder:text-faint focus:outline-none disabled:cursor-not-allowed"
       />
 
       <div className="absolute left-4 bottom-3 flex items-center gap-1.5 text-[11px] text-faint select-none pointer-events-none">
         <IconSparkle size={12} className="text-accent" aria-hidden="true" />
-        Grounded — every answer cites its refId
+        {hint ?? 'Grounded — every answer cites its refId'}
       </div>
 
       <button

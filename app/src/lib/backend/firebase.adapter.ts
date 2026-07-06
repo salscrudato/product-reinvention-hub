@@ -277,10 +277,14 @@ export const adapter: BackendAdapter = {
 
   storage: {
     async upload(path, file) {
+      // Dev bypass: no real auth token, so Storage rules reject the write — fail with a
+      // clear message rather than a raw 403 (mirrors db.mutate's guard).
+      if (bypassActive) throw new Error('Dev admin bypass — uploads are not saved (no backend). Sign in with a real account.')
       const snap = await uploadBytes(ref(storage, path), file)
       return getDownloadURL(snap.ref)
     },
     async getUrl(path) {
+      if (bypassActive) throw new Error('Dev admin bypass — no backend.')
       return getDownloadURL(ref(storage, path))
     },
   },

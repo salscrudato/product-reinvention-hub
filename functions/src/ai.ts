@@ -7,12 +7,18 @@ import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
 import type { SseResponse } from './runtime'
 import { TOOLS, SYSTEM_PROMPT, runTool } from './tools'
+import type { ToolOutput } from './tools'
 
 export interface AgentOptions {
-  system?:    string             // extra, non-cached system context (e.g. focus product)
-  tools?:     Anthropic.Tool[]   // defaults to the grounding TOOLS
-  maxTokens?: number
-  maxTurns?:  number
+  system?:      string             // extra, non-cached system context (e.g. focus product)
+  tools?:       Anthropic.Tool[]   // defaults to the grounding TOOLS
+  maxTokens?:   number
+  maxTurns?:    number
+  temperature?: number             // Sonnet 4.6 accepts sampling; omit for a thinking model (Glasswing swap)
+  // Custom tool executor — defaults to the shared grounding runTool. Callers (claims.ts)
+  // supply this to handle their own extra tools (e.g. emit_determination) while still
+  // delegating the grounding tools to runTool. Keeps this the single agent loop.
+  runTool?:     (name: string, input: Record<string, unknown>) => Promise<ToolOutput>
 }
 
 /**
@@ -34,12 +40,14 @@ export async function runChatAgent(
 
   const tools    = opts.tools ?? TOOLS
   const maxTurns  = opts.maxTurns ?? 6
+  const exec      = opts.runTool ?? runTool
   const convo: Anthropic.MessageParam[] = [...messages]
 
   for (let turn = 0; turn < maxTurns; turn++) {
     const stream = client.messages.stream({
       model:      MODEL,
       max_tokens: opts.maxTokens ?? 2048,
+      ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
       system,
       tools,
       messages:   convo,
@@ -54,7 +62,7 @@ export async function runChatAgent(
     const results: Anthropic.ToolResultBlockParam[] = []
     for (const tu of toolUses) {
       send(res, { t: 'tool', name: tu.name, phase: 'start' })
-      const out = await runTool(tu.name, (tu.input as Record<string, unknown>) ?? {})
+      const out = await exec(tu.name, (tu.input as Record<string, unknown>) ?? {})
       send(res, { t: 'tool', name: tu.name, phase: 'end', summary: out.summary })
       results.push({ type: 'tool_result', tool_use_id: tu.id, content: out.content })
     }
