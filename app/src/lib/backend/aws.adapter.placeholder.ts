@@ -19,6 +19,8 @@ export const adapter: BackendAdapter = {
     onUser: (_cb) => notImplemented('auth.onUser'),
     // AWS-SWAP: Auth.changePassword(oldPassword, newPassword)
     changePassword: (_next) => notImplemented('auth.changePassword'),
+    // TEMPORARY dev-only admin bypass (no backend auth) — no-op in this placeholder.
+    signInAsDevAdmin: () => { /* dev bypass; see firebase.adapter.ts */ },
   },
   db: {
     // AWS-SWAP: DynamoDB GetItem or Aurora SELECT

@@ -1,5 +1,6 @@
-// Sign-in — email + password through the adapter, plus a temporary
-// "Continue as admin" shortcut for demos. Premium, calm, Apple-inspired.
+// Sign-in — email + password through the adapter. Dev builds also expose a TEMPORARY
+// "Continue as admin" bypass that fakes an ADMIN session with NO backend auth (for
+// testing only; see adapter.auth.signInAsDevAdmin). Premium, calm, Apple-inspired.
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
@@ -9,7 +10,8 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Logo } from '../components/ui'
 
-const DEMO_ADMIN = { email: 'admin@productfactory.app', password: 'admin123' }
+// The dev bypass is only wired into the UI for dev builds — never shipped to production.
+const DEV_BYPASS = import.meta.env.DEV
 
 export default function SignIn() {
   const navigate  = useNavigate()
@@ -20,14 +22,14 @@ export default function SignIn() {
   const [email,   setEmail]   = useState('')
   const [pass,    setPass]    = useState('')
   const [error,   setError]   = useState('')
-  const [loading, setLoading] = useState<'form' | 'admin' | null>(null)
+  const [loading, setLoading] = useState(false)
 
   // Already signed in — redirect (render-time <Navigate>, not an in-render call)
   if (user) return <Navigate to={from} replace />
 
-  async function doSignIn(e: string, p: string, mode: 'form' | 'admin') {
+  async function doSignIn(e: string, p: string) {
     setError('')
-    setLoading(mode)
+    setLoading(true)
     try {
       await adapter.auth.signIn(e.trim(), p)
       navigate(from, { replace: true })
@@ -40,16 +42,23 @@ export default function SignIn() {
       } else {
         setError(msg)
       }
-      setLoading(null)
+      setLoading(false)
     }
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    void doSignIn(email, pass, 'form')
+    void doSignIn(email, pass)
   }
 
-  const busy = loading !== null
+  // TEMPORARY: pure client-side admin bypass — no Firebase auth. Because there is no
+  // real token, the workspace loads without backend data (rules deny). Remove later.
+  function handleDevAdmin() {
+    adapter.auth.signInAsDevAdmin()
+    navigate(from, { replace: true })
+  }
+
+  const busy = loading
 
   return (
     <div className="min-h-svh flex items-center justify-center bg-page px-4">
@@ -90,30 +99,29 @@ export default function SignIn() {
           )}
 
           <Button type="submit" variant="primary" className="w-full mt-1" disabled={busy || !email || !pass}>
-            {loading === 'form' && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
-            {loading === 'form' ? 'Signing in…' : 'Sign in'}
+            {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
+            {loading ? 'Signing in…' : 'Sign in'}
           </Button>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-1" aria-hidden="true">
-            <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
-            <span className="text-[11px] uppercase tracking-wide text-faint">or</span>
-            <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
-          </div>
-
-          {/* Temporary demo shortcut */}
-          <Button
-            type="button" variant="default" className="w-full"
-            disabled={busy}
-            onClick={() => void doSignIn(DEMO_ADMIN.email, DEMO_ADMIN.password, 'admin')}
-          >
-            {loading === 'admin' ? <IconSpinner size={14} className="animate-spin" aria-hidden="true" /> : <IconCoverage size={14} aria-hidden="true" />}
-            {loading === 'admin' ? 'Signing in…' : 'Continue as admin'}
-          </Button>
+          {/* TEMPORARY dev-only admin bypass (no backend auth — testing only) */}
+          {DEV_BYPASS && (
+            <>
+              <div className="flex items-center gap-3 my-1" aria-hidden="true">
+                <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
+                <span className="text-[11px] uppercase tracking-wide text-faint">dev only</span>
+                <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
+              </div>
+              <Button type="button" variant="default" className="w-full" disabled={busy} onClick={handleDevAdmin}>
+                <IconCoverage size={14} aria-hidden="true" />Continue as admin
+              </Button>
+            </>
+          )}
         </form>
 
         <p className="text-center text-xs text-faint mt-4">
-          Demo workspace · <span className="font-mono">admin@productfactory.app</span>
+          {DEV_BYPASS
+            ? <>Admin bypass is a temporary no-auth shortcut · data loads only when signed in</>
+            : <>Demo workspace · <span className="font-mono">admin@productfactory.app</span></>}
         </p>
       </div>
     </div>

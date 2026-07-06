@@ -45,6 +45,11 @@ export interface BackendAdapter {
     /** Fires immediately with current user, then on every change. */
     onUser(cb: (user: AuthUser | null) => void): Unsubscribe
     changePassword(next: string): Promise<void>
+    /** TEMPORARY dev-only admin bypass — sets a fake ADMIN session with NO backend auth.
+     *  Dev builds only (`import.meta.env.DEV`); a no-op otherwise. Because there is no real
+     *  auth token, backend reads/writes are rejected by security rules (data won't load).
+     *  Remove before production. See SignIn.tsx. */
+    signInAsDevAdmin(): void
   }
   db: {
     get<T>(path: string): Promise<T | null>

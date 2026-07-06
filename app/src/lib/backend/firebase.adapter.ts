@@ -73,6 +73,15 @@ function buildQuery(collRef: ReturnType<typeof collection>, q: Query) {
 // submissions within their allowed rule surface (searchIndex is EDITOR+ write).
 const INDEXABLE = new Set(['product', 'coverage', 'rule', 'form', 'ldTable', 'rtTable', 'dictionary', 'task'])
 
+// ─── TEMPORARY dev-only admin bypass (no Firebase auth) ───────────────────────
+// A fake ADMIN session held entirely client-side. Dev builds only; because there is
+// no real ID token, Firestore rules reject every read/write (the workspace loads
+// empty). Persisted in sessionStorage so a reload keeps it. Remove before production.
+const DEV_BYPASS_KEY = 'pf.devAdminBypass'
+const DEV_ADMIN: AuthUser = { uid: 'dev-admin', email: 'dev-admin@local', name: 'Dev Admin (bypass)', role: 'ADMIN' }
+let bypassActive = import.meta.env.DEV && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(DEV_BYPASS_KEY) === '1'
+const bypassListeners = new Set<(u: AuthUser | null) => void>()
+
 export const adapter: BackendAdapter = {
   auth: {
     async signIn(email, password): Promise<Session> {
@@ -83,14 +92,33 @@ export const adapter: BackendAdapter = {
     },
 
     async signOut(): Promise<void> {
+      // Clear the dev bypass first so onUser listeners fall back to the real Firebase state.
+      if (bypassActive) {
+        bypassActive = false
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(DEV_BYPASS_KEY)
+        for (const cb of bypassListeners) cb(null)
+        return
+      }
       await fbSignOut(auth)
     },
 
     onUser(cb) {
-      return onAuthStateChanged(auth, async (fbUser) => {
+      bypassListeners.add(cb)
+      const unsubFb = onAuthStateChanged(auth, async (fbUser) => {
+        if (bypassActive) return   // dev bypass owns the session; ignore Firebase state
         if (!fbUser) { cb(null); return }
         cb(await toAuthUser(fbUser))
       })
+      if (bypassActive) cb(DEV_ADMIN)   // emit the fake session immediately on subscribe
+      return () => { bypassListeners.delete(cb); unsubFb() }
+    },
+
+    // TEMPORARY dev-only admin bypass — see types.ts. No-op outside dev builds.
+    signInAsDevAdmin() {
+      if (!import.meta.env.DEV) return
+      bypassActive = true
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(DEV_BYPASS_KEY, '1')
+      for (const cb of bypassListeners) cb(DEV_ADMIN)
     },
 
     async changePassword(next) {
@@ -123,8 +151,11 @@ export const adapter: BackendAdapter = {
         console.warn(`[subscribe] ${pathOrQuery} listener error:`, (err as { code?: string })?.code ?? err)
       }
       if (parts.length % 2 === 0) {
-        // Document
-        return onSnapshot(doc(db, pathOrQuery), (snap) => { cb(snapToData<T>(snap) as T) }, onErr)
+        // Document — on error (e.g. permission-denied), degrade to null so consumers
+        // resolve their loading state instead of hanging (mirrors the collection path).
+        return onSnapshot(doc(db, pathOrQuery),
+          (snap) => { cb(snapToData<T>(snap) as T) },
+          (err) => { onErr(err); cb(null as T) })
       }
       // Collection
       return onSnapshot(collection(db, pathOrQuery),
