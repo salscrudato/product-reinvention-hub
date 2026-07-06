@@ -130,11 +130,13 @@ export const adapter: BackendAdapter = {
 
   db: {
     async get<T>(path: string): Promise<T | null> {
+      if (bypassActive) return null   // dev bypass: no backend
       const snap = await getDoc(doc(db, path))
       return snapToData<T>(snap)
     },
 
     async list<T>(path: string, q?: Query): Promise<T[]> {
+      if (bypassActive) return []     // dev bypass: no backend
       const collRef = collection(db, path)
       const snap = await getDocs(q ? buildQuery(collRef, q) : collRef)
       return snap.docs.map((d) => snapToData<T>(d)).filter(Boolean) as T[]
@@ -145,6 +147,12 @@ export const adapter: BackendAdapter = {
         throw new Error('subscribe() with a Query object requires a string path')
       }
       const parts = pathOrQuery.split('/').filter(Boolean)
+      // Dev bypass: resolve consumers with empty data and make NO Firestore call, so
+      // the app doesn't flood the console trying to reach a backend that isn't there.
+      if (bypassActive) {
+        queueMicrotask(() => cb((parts.length % 2 === 0 ? null : []) as T | T[]))
+        return () => {}
+      }
       // On a listener error (e.g. permission-denied) surface it and degrade to an
       // empty result rather than hanging every consumer waiting on the callback.
       const onErr = (err: unknown) => {
@@ -164,6 +172,8 @@ export const adapter: BackendAdapter = {
     },
 
     async mutate(m: MutationPayload): Promise<void> {
+      // Dev bypass: no backend to write to. Fail clearly so callers show a friendly toast.
+      if (bypassActive) throw new Error('Dev admin bypass — changes are not saved (no backend).')
       // Atomic batch: entity + auditEvent + version (with field diffs) + searchIndex + rev bump.
       // Rev mismatch throws MutationConflictError → caller shows a friendly conflict toast.
       // AWS-SWAP: becomes a DynamoDB TransactWriteItems call in the Lambda adapter.
@@ -244,6 +254,7 @@ export const adapter: BackendAdapter = {
     },
 
     async vote(path: string, uid: string): Promise<void> {
+      if (bypassActive) throw new Error('Dev admin bypass — voting is not saved (no backend).')
       // Narrow, un-audited write matching the VIEWER vote-only rule: only `votes`
       // changes (arrayUnion the uid, +1 count). AWS-SWAP: DynamoDB UpdateItem ADD.
       await updateDoc(doc(db, path), {
@@ -331,6 +342,7 @@ export const adapter: BackendAdapter = {
     },
 
     watch(pid, cb) {
+      if (bypassActive) { queueMicrotask(() => cb([])); return () => {} }
       return onSnapshot(collection(db, `presence/${pid}/viewers`), (snap) => {
         cb(snap.docs.map((d) => d.id))
       })
