@@ -11,6 +11,7 @@ import type {
   Rule, FormRule, DictionaryEntry, RatingInputField,
 } from '../types'
 import type { RtGetter, LdGetter } from '../rating/evaluator'
+import { genericRtLookup } from '../rating/rtGrid'
 import { GL_LOB } from '../insurance/lobRegistry'
 
 // ─── State footprint ───────────────────────────────────────────────────────────
@@ -179,6 +180,12 @@ export function makeGLRtGetter(tables: Record<string, RTTable>): RtGetter {
   return (tableRef: string, q: Record<string, unknown>): number => {
     const t = tables[tableRef]
     if (!t) throw new Error(`RT table not found: ${tableRef}`)
+
+    // Grid-managed tables resolve through the generic N-D lookup; null for every seeded
+    // table (no `dimensions`), so the bespoke lookups below are untouched.
+    const generic = genericRtLookup(t, q)
+    if (generic !== null) return generic
+
     const rows = t.rows
 
     switch (tableRef) {

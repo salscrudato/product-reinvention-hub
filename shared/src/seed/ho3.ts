@@ -236,11 +236,19 @@ export const HO3_RT_TABLES: Record<string, RTTable> = {
 // ─── RT getter (HO-3 specific) ────────────────────────────────────────────────
 
 import type { RtGetter, LdGetter } from '../rating/evaluator'
+import { genericRtLookup } from '../rating/rtGrid'
 
 export function makeHO3RtGetter(tables: Record<string, RTTable>): RtGetter {
   return (tableRef: string, q: Record<string, unknown>): number => {
     const t = tables[tableRef]
     if (!t) throw new Error(`RT table not found: ${tableRef}`)
+
+    // Grid-managed tables (PM defined dimensions via the grid editor) resolve through the
+    // generic N-D lookup; it returns null for every legacy/seeded table (no `dimensions`),
+    // so the bespoke lookups below — and the $1,528 canary — are untouched.
+    const generic = genericRtLookup(t, q)
+    if (generic !== null) return generic
+
     const rows = t.rows
 
     switch (tableRef) {

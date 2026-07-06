@@ -201,6 +201,20 @@ export interface RTTable {
   name:    string
   columns: string[]
   rows:    Record<string, unknown>[]
+  // Grid-editor metadata — additive; absent on legacy tables handled by line-specific
+  // getters. Setting dimensions does NOT change how existing getters read rows; it only
+  // tells the grid UI how to render and write cells.
+  dimensions?:  RTTableDimension[]
+  valueColumn?: string   // column holding the factor/rate (inferred when absent)
+}
+
+/** Dimension descriptor for a grid-editor-managed RT table.
+ *  Each dimension is a lookup key column; `values` is the PM-defined ordered list.
+ *  Purely additive — absent on legacy hand-authored tables. */
+export interface RTTableDimension {
+  key:    string    // column name used as lookup key
+  label?: string    // display label (falls back to key when absent)
+  values: string[]  // ordered list of distinct values the PM defined
 }
 
 // ─── Forms ───────────────────────────────────────────────────────────────────

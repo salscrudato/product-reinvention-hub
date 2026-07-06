@@ -1,22 +1,69 @@
 // Pricing worksheet — live rating evaluation via the shared engine. The rating kit
 // (getters + worked example + input worksheet) is resolved from the product's LOB, so
 // Homeowners renders its bespoke panel and every other line (GL, imported) renders the
-// data-driven panel — both trace through the same evaluator. Line-agnostic, not HO-only.
+// data-driven panel — both trace through the same evaluator. Changing an input animates
+// the premium counting to its new value and flashes the step(s) that moved (reduced-motion
+// safe). A table-based step opens the Excel-like grid editor, which persists through
+// mutate() so the trace + premium update live. Line-agnostic, not HO-only.
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { IconDownload, IconRefresh, IconRule, IconTable } from '../../components/ui/icons'
-import { evaluate, resolveLob, resolveRatingKit } from '@pf/shared'
-import type { RatingInputs, RatingInputMap, TraceEntry } from '@pf/shared'
+import { evaluate, resolveLob, resolveRatingKit, deriveGridModel } from '@pf/shared'
+import type { RatingInputs, RatingInputMap, TraceEntry, RatingStep, RTTable } from '@pf/shared'
 import { useProductCtx } from '../../context/useProductCtx'
+import { useUser } from '../../context/useUser'
 import { Button, Badge, Skeleton } from '../../components/ui'
 import { HomeownersRatingPanel } from '../../components/product/HomeownersRatingPanel'
 import { GenericRatingPanel } from '../../components/product/GenericRatingPanel'
+import { RatingTableEditor } from '../../components/product/RatingTableEditor'
 import { RatingFlow } from '../../lib/svg/ratingFlow'
+
+// ─── Reduced-motion + count-up premium ────────────────────────────────────────
+
+function prefersReducedMotion() {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
+
+/** Animate a number toward `target` (easeOutCubic); instant under reduced motion. Animates
+ *  from the current displayed value so rapid input changes stay smooth. */
+function useCountUp(target: number): number {
+  const [display, setDisplay] = useState(target)
+  const displayRef = useRef(target)
+  const rafRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (prefersReducedMotion()) { displayRef.current = target; setDisplay(target); return }
+    const from = displayRef.current
+    if (from === target) return
+    const start = performance.now(), dur = 500
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / dur)
+      const eased = 1 - Math.pow(1 - t, 3)
+      const val = from + (target - from) * eased
+      displayRef.current = val; setDisplay(val)
+      if (t < 1) rafRef.current = requestAnimationFrame(step)
+      else { displayRef.current = target; setDisplay(target) }
+    }
+    rafRef.current = requestAnimationFrame(step)
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+  }, [target])
+  return display
+}
 
 // ─── Trace: animated flow diagram + detailed table + clean SVG export ─────────
 
-function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium: number }) {
+interface EditableStep { step: RatingStep; table: RTTable & { id: string; rev?: number } }
+
+function TracePanel({ trace, finalPremium, changedStepIds, editableFor, onEditTable }: {
+  trace: TraceEntry[]
+  finalPremium: number
+  changedStepIds: Set<string>
+  /** Returns the editable step + table for a trace row, or null when not grid-editable. */
+  editableFor: (stepId: string) => EditableStep | null
+  onEditTable: (e: EditableStep) => void
+}) {
   const [view, setView] = useState<'flow' | 'table'>('flow')
   const flowRef = useRef<HTMLDivElement>(null)
+  const animatedPremium = useCountUp(finalPremium)
+  const shownPremium = Math.round(animatedPremium)
 
   // Export the on-screen flow SVG verbatim (adds a page-background rect for a
   // self-contained file). Serialising the rendered node keeps export == on-screen.
@@ -35,7 +82,7 @@ function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium
 
   const seg = (v: 'flow' | 'table', icon: React.ReactNode, label: string) => (
     <button onClick={() => setView(v)} aria-pressed={view === v}
-      className={`inline-flex items-center gap-1.5 px-2.5 h-7 rounded-[7px] text-xs font-medium transition-colors ${view === v ? 'bg-surface text-accent shadow-[var(--shadow-card)]' : 'text-dim hover:text-text'}`}>
+      className={`inline-flex items-center gap-1.5 px-2.5 h-7 rounded-[7px] text-xs font-medium transition-colors cursor-pointer ${view === v ? 'bg-surface text-accent shadow-[var(--shadow-card)]' : 'text-dim hover:text-text'}`}>
       {icon}{label}
     </button>
   )
@@ -55,7 +102,7 @@ function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium
 
       {view === 'flow' ? (
         <div ref={flowRef} className="flex-1 overflow-y-auto min-h-0 -mx-1 px-1">
-          <RatingFlow trace={trace} finalPremium={finalPremium} />
+          <RatingFlow trace={trace} finalPremium={finalPremium} displayPremium={shownPremium} changedStepIds={changedStepIds} />
         </div>
       ) : (
         <>
@@ -63,35 +110,47 @@ function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="text-faint uppercase tracking-wide" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  {['Step','Op','Source','Factor / $','Running total'].map(h => <th key={h} className="text-left px-3 py-2">{h}</th>)}
+                  {['Step','Op','Source','Factor / $','Running total',''].map((h, i) => <th key={i} className="text-left px-3 py-2">{h}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {trace.map(t => (
-                  <tr key={t.stepId} className="hover:bg-raised" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td className="px-3 py-2 font-mono text-text">{t.stepId}</td>
-                    <td className="px-3 py-2"><Badge label={t.op} color={t.op === 'MUL' ? 'purple' : t.op === 'ADD' ? 'good' : t.op === 'SET' ? 'blue' : 'warn'} /></td>
-                    <td className="px-3 py-2 font-mono text-dim truncate max-w-[140px]">{t.sourceRef}</td>
-                    <td className="px-3 py-2 font-mono text-text">
-                      {t.op === 'MUL' ? `×${t.factorOrAmount}` : t.op === 'ADD' ? `+$${t.factorOrAmount.toFixed(2)}` : t.op === 'SET' ? `$${t.factorOrAmount}` : `≥$${t.factorOrAmount}`}
-                    </td>
-                    <td className="px-3 py-2 font-mono font-bold text-text">
-                      ${t.runningTotal.toLocaleString(undefined, { minimumFractionDigits: t.rounded ? 0 : 2, maximumFractionDigits: 2 })}
-                      {t.rounded && <span className="text-faint text-[10px] ml-1">rounded</span>}
-                    </td>
-                  </tr>
-                ))}
+                {trace.map(t => {
+                  const editable = editableFor(t.stepId)
+                  return (
+                    <tr key={t.stepId} className={changedStepIds.has(t.stepId) ? 'flow-changed' : 'hover:bg-raised'} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td className="px-3 py-2 font-mono text-text">{t.stepId}</td>
+                      <td className="px-3 py-2"><Badge label={t.op} color={t.op === 'MUL' ? 'purple' : t.op === 'ADD' ? 'good' : t.op === 'SET' ? 'blue' : 'warn'} /></td>
+                      <td className="px-3 py-2 font-mono text-dim truncate max-w-[140px]">{t.sourceRef}</td>
+                      <td className="px-3 py-2 font-mono text-text">
+                        {t.op === 'MUL' ? `×${t.factorOrAmount}` : t.op === 'ADD' ? `+$${t.factorOrAmount.toFixed(2)}` : t.op === 'SET' ? `$${t.factorOrAmount}` : `≥$${t.factorOrAmount}`}
+                      </td>
+                      <td className="px-3 py-2 font-mono font-bold text-text">
+                        ${t.runningTotal.toLocaleString(undefined, { minimumFractionDigits: t.rounded ? 0 : 2, maximumFractionDigits: 2 })}
+                        {t.rounded && <span className="text-faint text-[10px] ml-1">rounded</span>}
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        {editable && (
+                          <button onClick={() => onEditTable(editable)} title={`Edit ${editable.table.id} as a grid`}
+                            aria-label={`Edit table ${editable.table.id}`}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-[7px] text-faint hover:text-accent hover:bg-accent-soft transition-colors cursor-pointer">
+                            <IconTable size={14} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
 
-          {/* Final premium */}
+          {/* Final premium — counts up to its new value */}
           <div
             className="flex items-center justify-between px-5 py-4 rounded-[12px] mt-3"
             style={{ background: 'var(--gradient-accent-soft)', border: '1px solid var(--color-accent-line)' }}
           >
             <span className="text-sm font-semibold text-text">Final premium</span>
-            <span className="text-2xl font-bold tabular-nums gradient-text">${finalPremium.toLocaleString()}</span>
+            <span className="text-2xl font-bold tabular-nums gradient-text">${shownPremium.toLocaleString()}</span>
           </div>
         </>
       )}
@@ -101,14 +160,28 @@ function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium
 
 // ─── Main route ───────────────────────────────────────────────────────────────
 
+// Friendly labels for the rating-input keys a PM can pick as grid dimensions.
+const DIM_LABELS: Record<string, string> = {
+  territory: 'Territory', pc: 'Protection class', construction: 'Construction',
+  covA: 'Coverage A', allPerilDed: 'All-peril deductible', covCPct: 'Coverage C %',
+  covELimit: 'Coverage E limit', covFLimit: 'Coverage F limit', tier: 'Tier',
+  deviceCredit: 'Device credit', waterBackupLimit: 'Water back-up limit', windHailPct: 'Wind/hail %',
+}
+function humanize(key: string) {
+  return DIM_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim()
+}
+
 export default function ProductPricing() {
   const { product, ratingProgram, ldTables, rtTables, loading } = useProductCtx()
+  const { user } = useUser()
+  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const lob  = useMemo(() => resolveLob(product), [product])
   const kit  = useMemo(() => resolveRatingKit(lob.prefix), [lob.prefix])
   const isHO = lob.prefix === 'HO'
   const coastal = useMemo(() => new Set<string>(lob.peril.eligibleStates), [lob])
   const [inputs, setInputs]       = useState<RatingInputMap>(() => ({ ...kit.workedExample }))
   const [riskState, setRiskState] = useState('OH')
+  const [editing, setEditing]     = useState<EditableStep | null>(null)
 
   // Reset to this line's worked example whenever the line changes (mount + product load).
   useEffect(() => { setInputs({ ...kit.workedExample }) }, [lob.prefix, kit])
@@ -121,6 +194,48 @@ export default function ProductPricing() {
       return evaluate(ratingProgram, inputs, kit.makeRtGetter(rtTables), kit.makeLdGetter(ldTables))
     } catch { return null }
   }, [ratingProgram, rtTables, ldTables, inputs, kit])
+
+  // Detect which step factors moved since the last change → transient highlight.
+  const [changedStepIds, setChangedStepIds] = useState<Set<string>>(new Set())
+  const prevRef = useRef<{ factors: Map<string, number>; final: number } | null>(null)
+  useEffect(() => {
+    if (!result) return
+    const factors = new Map(result.trace.map(t => [t.stepId, t.factorOrAmount]))
+    const prev = prevRef.current
+    const changed = new Set<string>()
+    if (prev) {
+      for (const [id, f] of factors) if (!prev.factors.has(id) || prev.factors.get(id) !== f) changed.add(id)
+      for (const id of prev.factors.keys()) if (!factors.has(id)) changed.add(id)
+      if (prev.final !== result.finalPremium) changed.add('__final__')
+    }
+    prevRef.current = { factors, final: result.finalPremium }
+    if (prev && changed.size) {
+      setChangedStepIds(changed)
+      const to = setTimeout(() => setChangedStepIds(new Set()), 1200)
+      return () => clearTimeout(to)
+    }
+  }, [result])
+
+  // Candidate grid dimensions: scalar rating inputs a PM can pick as lookup keys.
+  const candidateDimensions = useMemo(() => Object.entries(inputs)
+    .filter(([k, v]) => (typeof v === 'number' || typeof v === 'string') && !k.endsWith('Elected'))
+    .map(([k]) => ({ key: k, label: humanize(k) })), [inputs])
+
+  // A trace step is grid-editable when it (EDITOR+) resolves to a grid-representable RT
+  // table. Precomputed once per program/table change so cell rows don't re-derive on every
+  // render (e.g. during the premium count-up). VIEWER gets an empty map → no edit buttons.
+  const editableByStepId = useMemo(() => {
+    const m = new Map<string, EditableStep>()
+    if (!canEdit) return m
+    for (const step of ratingProgram?.steps ?? []) {
+      const ref = step.source.ref
+      if (!ref) continue
+      const table = rtTables[ref] as (RTTable & { id: string; rev?: number }) | undefined
+      if (table && deriveGridModel(table)) m.set(step.id, { step, table })
+    }
+    return m
+  }, [ratingProgram, rtTables, canEdit])
+  const editableFor = (stepId: string): EditableStep | null => editableByStepId.get(stepId) ?? null
 
   if (loading) return <div className="grid grid-cols-1 lg:grid-cols-2 gap-5"><Skeleton className="h-[500px]" /><Skeleton className="h-[500px]" /></div>
 
@@ -150,12 +265,19 @@ export default function ProductPricing() {
         {!ratingProgram || !result ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-faint">
             <IconRefresh size={24} className={!ratingProgram ? '' : 'animate-spin'} />
-            <span className="text-sm">{!ratingProgram ? 'No rating program found' : 'Loading tables...'}</span>
+            <span className="text-sm">{!ratingProgram ? 'No rating program found' : 'Loading tables…'}</span>
           </div>
         ) : (
-          <TracePanel trace={result.trace} finalPremium={result.finalPremium} />
+          <TracePanel trace={result.trace} finalPremium={result.finalPremium}
+            changedStepIds={changedStepIds} editableFor={editableFor} onEditTable={setEditing} />
         )}
       </div>
+
+      {editing && (
+        <RatingTableEditor step={editing.step} table={editing.table}
+          candidateDimensions={candidateDimensions} seedInputs={inputs}
+          onClose={() => setEditing(null)} />
+      )}
     </div>
   )
 }

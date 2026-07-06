@@ -2,6 +2,7 @@
 // Exports types, rating evaluator, rules engine, retrieval ranker, and HO-3 seed.
 export * from './types'
 export * from './rating/evaluator'
+export * from './rating/rtGrid'
 export * from './rating/kits'
 export * from './rules/engine'
 export * from './insurance/terms'
