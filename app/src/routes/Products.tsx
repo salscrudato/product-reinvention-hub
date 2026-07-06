@@ -7,10 +7,11 @@ import { toast } from 'sonner'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Button, Skeleton, EmptyState, Tabs, ViewToggle, type ViewMode } from '../components/ui'
-import { IconPlus, IconDownload, IconProduct, IconSearch } from '../components/ui/icons'
+import { IconPlus, IconDownload, IconUpload, IconProduct, IconSearch } from '../components/ui/icons'
 import { ProductCard } from '../components/product/ProductCard'
 import { ProductRow } from '../components/product/ProductRow'
 import { NewProductModal } from '../components/product/NewProductModal'
+import { ImportWorkbookModal } from '../components/product/ImportWorkbookModal'
 import { exportPortfolioExcel, type ProductExport } from '../lib/export/excel'
 import type { Product, Coverage, Rule, Form, LDTable, RTTable, RatingProgram } from '@pf/shared'
 import type { WithId } from '../context/ProductContext'
@@ -33,6 +34,7 @@ export default function Products() {
   const [tab,      setTab]      = useState('portfolio')
   const [lobFilter, setLobFilter] = useState('')
   const [newOpen,  setNewOpen]  = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) as ViewMode) || 'cards')
   const setViewPersist = (m: ViewMode) => { setView(m); localStorage.setItem(VIEW_KEY, m) }
@@ -99,6 +101,11 @@ export default function Products() {
             </Button>
           )}
           {canEdit && (
+            <Button variant="ghost" size="sm" onClick={() => setImportOpen(true)}>
+              <IconUpload size={14} />Import
+            </Button>
+          )}
+          {canEdit && (
             <Button variant="primary" size="sm" onClick={() => setNewOpen(true)}>
               <IconPlus size={14} />New product
             </Button>
@@ -155,6 +162,7 @@ export default function Products() {
       )}
 
       {newOpen && <NewProductModal onClose={() => setNewOpen(false)} onCreated={id => { setNewOpen(false); navigate(`/app/products/${id}`) }} />}
+      {importOpen && <ImportWorkbookModal onClose={() => setImportOpen(false)} onImported={id => { setImportOpen(false); navigate(`/app/products/${id}`) }} />}
     </div>
   )
 }
