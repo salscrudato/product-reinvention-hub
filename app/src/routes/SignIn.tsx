@@ -10,8 +10,10 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Logo } from '../components/ui'
 
-// The dev bypass is only wired into the UI for dev builds — never shipped to production.
-const DEV_BYPASS = import.meta.env.DEV
+// The dev bypass (fake ADMIN, no backend) is only useful when there's no backend to
+// sign into. Shown for dev builds, but hidden once the app is pointed at a real backend
+// (VITE_USE_EMULATORS=false) — there you sign in for real so writes actually persist.
+const DEV_BYPASS = import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS !== 'false'
 
 export default function SignIn() {
   const navigate  = useNavigate()
