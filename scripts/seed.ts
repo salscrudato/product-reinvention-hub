@@ -48,6 +48,8 @@ interface ProductBundle {
 const args        = process.argv.slice(2)
 const projectFlag = args[args.indexOf('--project') + 1]
 const targetProd  = projectFlag === 'productreinvention'
+// Optional: seed a single line by refId prefix (e.g. --only ho / --only gl). Omit for both.
+const onlyFlag    = args.includes('--only') ? args[args.indexOf('--only') + 1]?.toLowerCase() : undefined
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -116,7 +118,7 @@ async function main(): Promise<void> {
   const addIdx = (e: IndexEntry) => searchEntries.push({ id: e.path.replace(/\//g, '_'), data: e })
 
   // ── Reference product bundles (each seeded identically) ────────────────────
-  const bundles: ProductBundle[] = [
+  let bundles: ProductBundle[] = [
     {
       productKeywords: ['homeowners', 'ho3', 'ho-3'],
       product: HO3_PRODUCT, coverages: HO3_COVERAGES,
@@ -132,6 +134,13 @@ async function main(): Promise<void> {
       forms: GL_FORMS, rules: GL_RULES, formRules: GL_FORM_RULES, dictionary: GL_DICTIONARY,
     },
   ]
+
+  // Optional single-line filter (e.g. --only ho seeds just the Homeowners bundle).
+  if (onlyFlag) {
+    bundles = bundles.filter(b => b.product.refId!.toLowerCase().startsWith(onlyFlag))
+    if (bundles.length === 0) { console.error(`No bundle matches --only ${onlyFlag}`); process.exit(1) }
+    console.log(`🎯 --only ${onlyFlag}: seeding ${bundles.map(b => b.product.refId).join(', ')}`)
+  }
 
   // ── Wipe (idempotent re-seed to a known state) ─────────────────────────────
   console.log('🧹 Wiping…')
