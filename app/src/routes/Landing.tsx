@@ -2,13 +2,12 @@
 // an insurance product manager at the focal point, informed by inward-flowing
 // streams from the app's capabilities (live news, coverages & forms, an AI
 // copilot, rating, intelligent tasks). Coverages branch out from their node.
-// A Claude-style grounded composer is the hero's primary call-to-action — it
-// previews the copilot's grounded, refId-citing answers, then hands off to
-// sign-in. Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
+// The hero's primary call-to-action is a single Sign-in button beneath the copy.
+// Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Logo } from '../components/ui'
-import { IconArrowUp, IconLayers, IconSparkle, IconTasks } from '../components/ui/icons'
+import { IconArrowRight, IconLayers, IconSparkle, IconTasks } from '../components/ui/icons'
 
 // A glyph accepts size / className / strokeWidth — matches the in-house icon shape.
 type Glyph = (p: { size?: number; className?: string; strokeWidth?: number }) => React.ReactElement
@@ -183,67 +182,23 @@ function InsightGraph() {
   )
 }
 
-// ─── Hero composer — a grounded, Claude-style entry point ─────────────────────
-// Previews the copilot: rotating, domain-true prompts that all cite refIds/forms.
-// Submitting (or picking a suggestion) starts a session by handing off to sign-in.
+// ─── Hero call-to-action — a single, calm Sign-in button ──────────────────────
 
-const PROMPTS = [
-  'Trace how the $1,528 HO-3 premium is built',
-  'Which forms attach to Coverage C — Personal Property?',
-  'What does endorsement HO 04 90 change?',
-  'Where does wind/hail carry a separate deductible?',
-]
-
-function prefersReducedMotion() {
-  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-}
-
-function HeroComposer() {
+function HeroCTA() {
   const navigate = useNavigate()
-  const [value, setValue] = useState('')
-  const [promptIdx, setPromptIdx] = useState(0)
-
-  // Cycle the placeholder through grounded example prompts (frozen if the user
-  // prefers reduced motion, or once they start typing).
-  useEffect(() => {
-    if (prefersReducedMotion() || value) return
-    const t = setInterval(() => setPromptIdx(i => (i + 1) % PROMPTS.length), 3600)
-    return () => clearInterval(t)
-  }, [value])
-
-  // Any attempt to ask hands off to the workspace sign-in — honest: real answers
-  // are grounded in your data, which lives behind auth.
-  function start() { navigate('/sign-in') }
-
   return (
-    <div className="flex flex-col gap-3">
-      <form
-        onSubmit={e => { e.preventDefault(); start() }}
-        className="group flex items-center gap-2 bg-surface rounded-[16px] pl-4 pr-2 py-2 transition-shadow duration-200"
-        style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
-        onFocus={e => { e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)' }}
-        onBlur={e => { e.currentTarget.style.boxShadow = 'var(--shadow-card)' }}
+    <div className="flex flex-col gap-3 items-center lg:items-start">
+      <button
+        onClick={() => navigate('/sign-in')}
+        className="group inline-flex items-center justify-center gap-2 h-12 px-7 rounded-[13px] text-white text-[15px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 8px 24px var(--glow-accent)' }}
       >
-        <IconSparkle size={18} className="text-accent shrink-0" aria-hidden="true" />
-        <input
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          placeholder={PROMPTS[promptIdx]}
-          aria-label="Ask your portfolio anything"
-          className="flex-1 min-w-0 bg-transparent text-[15px] text-text placeholder:text-faint outline-none py-1.5"
-        />
-        <button
-          type="submit"
-          aria-label="Ask the copilot"
-          className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-[11px] text-white transition-transform duration-200 hover:scale-[1.05] active:scale-[.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 4px 14px var(--glow-accent)' }}
-        >
-          <IconArrowUp size={17} aria-hidden="true" />
-        </button>
-      </form>
+        Sign in
+        <IconArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
+      </button>
       <p className="text-xs text-faint px-1 flex items-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-good shrink-0" aria-hidden="true" />
-        Grounded in your data — every answer cites its <span className="font-mono text-dim">refId</span> and form number.
+        Grounded, governed and fully traceable — every answer cites its <span className="font-mono text-dim">refId</span>.
       </p>
     </div>
   )
@@ -332,7 +287,7 @@ export default function Landing() {
           </p>
 
           <div className="rise-in" style={{ '--rise-delay': '230ms' } as React.CSSProperties}>
-            <HeroComposer />
+            <HeroCTA />
           </div>
         </div>
 
