@@ -1,14 +1,12 @@
 // Pricing worksheet — live rating evaluation via the shared engine; defaults to $1,528 worked example.
 import { useState, useMemo, useRef } from 'react'
 import { IconDownload, IconRefresh, IconRule, IconTable } from '../../components/ui/icons'
-import { evaluate } from '@pf/shared'
-import { makeHO3RtGetter, makeHO3LdGetter, HO3_WORKED_EXAMPLE, HO3_COASTAL_STATES } from '@pf/shared'
+import { evaluate, resolveLob } from '@pf/shared'
+import { makeHO3RtGetter, makeHO3LdGetter, HO3_WORKED_EXAMPLE } from '@pf/shared'
 import type { RatingInputs, TraceEntry } from '@pf/shared'
 import { useProductCtx } from '../../context/useProductCtx'
 import { Button, Badge, Skeleton } from '../../components/ui'
 import { RatingFlow } from '../../lib/svg/ratingFlow'
-
-const COASTAL = new Set<string>(HO3_COASTAL_STATES)
 
 // ─── Input panel ─────────────────────────────────────────────────────────────
 
@@ -138,7 +136,8 @@ function TracePanel({ trace, finalPremium }: { trace: TraceEntry[]; finalPremium
 // ─── Main route ───────────────────────────────────────────────────────────────
 
 export default function ProductPricing() {
-  const { ratingProgram, ldTables, rtTables, loading } = useProductCtx()
+  const { product, ratingProgram, ldTables, rtTables, loading } = useProductCtx()
+  const coastal = useMemo(() => new Set<string>(resolveLob(product).peril.eligibleStates), [product])
   const [inputs, setInputs]       = useState<RatingInputs>({ ...HO3_WORKED_EXAMPLE })
   const [riskState, setRiskState] = useState('OH')
 
@@ -158,7 +157,7 @@ export default function ProductPricing() {
   // Build LD option arrays from loaded tables
   const ldOpts = (ref: string) => ldTables[ref]?.rows.map(r => ({ label: r.label, value: r.value, note: r.constraintNote })) ?? []
   const covFOpts = ldOpts('HO.LD.002').map(o => ({ ...o, disabled: o.value === 5000 && inputs.covELimit < 300000 }))
-  const windHailCoastal = COASTAL.has(riskState)
+  const windHailCoastal = coastal.has(riskState)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -181,7 +180,7 @@ export default function ProductPricing() {
             <select className="h-8 px-2 rounded-[8px] bg-surface border border-border-strong text-sm text-text focus:outline-none"
               value={riskState} onChange={e => setRiskState(e.target.value)}>
               {['AZ','CA','CO','FL','GA','IL','IN','MI','NC','OH','PA','SC','TN','TX','VA'].map(s => (
-                <option key={s} value={s}>{s}{COASTAL.has(s) ? ' ⚡' : ''}</option>
+                <option key={s} value={s}>{s}{coastal.has(s) ? ' ⚡' : ''}</option>
               ))}
             </select>
           </div>

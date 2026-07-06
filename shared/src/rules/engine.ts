@@ -3,9 +3,11 @@
 import type {
   LDTable, SelectionContext, RulesResult, TermOption, RuleViolation,
 } from '../types'
+import { HO_LOB } from '../insurance/lobRegistry'
 
-// Coastal states for wind/hail eligibility [HO.RU.008]
-const COASTAL_STATES = new Set(['FL', 'GA', 'NC', 'SC', 'TX'])
+// Coastal states for wind/hail eligibility [HO.RU.008] — owned by the LOB registry.
+const COASTAL_STATES = new Set<string>(HO_LOB.peril.eligibleStates)
+const COASTAL_LABEL  = HO_LOB.peril.eligibleStates.join(' ')
 
 export interface RulesEngineInput {
   ldTables:   Record<string, LDTable>
@@ -40,7 +42,7 @@ export function evaluateRules(input: RulesEngineInput): RulesResult {
   // HO.LD.004 — Wind/hail % deductible [HO.RU.008]
   const isCoastal = COASTAL_STATES.has(selection.riskState)
   const windHailOptions = buildOptions(ldTables['HO.LD.004'], (row) => {
-    if (!isCoastal) return 'Available in coastal states only (FL GA NC SC TX)'
+    if (!isCoastal) return `Available in coastal states only (${COASTAL_LABEL})`
     // dollar amount (pct% × covA) must be ≥ all-peril deductible
     const dollarAmt = (row.value / 100) * selection.covA
     if (dollarAmt < selection.allPerilDed) {

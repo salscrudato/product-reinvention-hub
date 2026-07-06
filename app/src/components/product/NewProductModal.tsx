@@ -6,7 +6,7 @@ import { useUser } from '../../context/useUser'
 import { Dialog } from '../ui/Dialog'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
-import { HO3_DEFAULT_TASK_TEMPLATES } from '@pf/shared'
+import { HO3_DEFAULT_TASK_TEMPLATES, DEFAULT_LOB } from '@pf/shared'
 import { PRODUCT_NAME_SUGGESTIONS, MARKET_SEGMENTS } from '../../lib/insurance/vocab'
 
 interface Props { onClose: () => void; onCreated: (id: string) => void }
@@ -30,7 +30,7 @@ export function NewProductModal({ onClose, onCreated }: Props) {
         op: 'create', path: `products/${pid}`,
         data: {
           refId: null, name: name.trim(),
-          lob: { refId: 'HO.LOB.001', name: 'Homeowners' },
+          lob: { refId: DEFAULT_LOB.refId, name: DEFAULT_LOB.name },
           description: '', marketSegment: seg,
           owner: actor, status: 'ACTIVE', lifecycle: 'DRAFT',
           reviewStatus: 'NOT_STARTED', updatedBy: actor.uid,

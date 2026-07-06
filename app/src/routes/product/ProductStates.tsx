@@ -7,15 +7,15 @@ import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { Button } from '../../components/ui'
 import { StateTileMap } from '../../components/product/StateTileMap'
-import { HO3_FOOTPRINT_STATES, HO3_COASTAL_STATES } from '@pf/shared'
+import { HO3_FOOTPRINT_STATES, resolveLob } from '@pf/shared'
 import { US_TILE_GRID as STATE_GRID } from '../../lib/geo/usTileGrid'
 
-const COASTAL = new Set<string>(HO3_COASTAL_STATES)
 const FOOTPRINT = new Set<string>(HO3_FOOTPRINT_STATES)
 const ALL_STATES = Object.keys(STATE_GRID)
 
 export default function ProductStates() {
   const { pid, product, loading } = useProductCtx()
+  const COASTAL = new Set<string>(resolveLob(product).peril.eligibleStates)
   const { user }   = useUser()
   const canEdit    = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const actor      = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }

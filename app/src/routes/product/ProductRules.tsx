@@ -11,9 +11,8 @@ import { IconPlus, IconClose, IconCheckCircle, IconWarning, IconAlertCircle } fr
 import { Button } from '../../components/ui/Button'
 import { RuleFlowCard, RuleComposer, type NewRule } from '../../components/product/RuleBuilder'
 import type { RuleCategory, SelectionContext } from '@pf/shared'
-import { HO3_COASTAL_STATES } from '@pf/shared'
+import { resolveLob } from '@pf/shared'
 
-const COASTAL = new Set<string>(HO3_COASTAL_STATES)
 const CAT_COLOR: Record<RuleCategory, 'purple'|'blue'|'warn'> = { PRODUCT: 'purple', RATING: 'blue', FORMS: 'warn' }
 
 // ─── Simulate panel ───────────────────────────────────────────────────────────
@@ -27,7 +26,8 @@ const DEFAULT_SEL: SelectionContext = {
 }
 
 function SimulatePanel() {
-  const { ldTables } = useProductCtx()
+  const { product, ldTables } = useProductCtx()
+  const coastal = new Set<string>(resolveLob(product).peril.eligibleStates)
   const [sel, setSel] = useState<SelectionContext>(DEFAULT_SEL)
   const upd = (p: Partial<SelectionContext>) => setSel(prev => ({ ...prev, ...p }))
 
@@ -68,7 +68,7 @@ function SimulatePanel() {
             { key: 'rcElected' as const, label: 'Replacement Cost (HO 04 90)' },
             { key: 'sppElected' as const, label: 'Scheduled Personal Property (HO 04 61)' },
             { key: 'waterBackupElected' as const, label: 'Water Back-Up (HO 04 95)' },
-            { key: 'windHailElected' as const, label: `Wind/Hail % deductible (${COASTAL.has(sel.riskState) ? 'coastal ✓' : 'non-coastal'})` },
+            { key: 'windHailElected' as const, label: `Wind/Hail % deductible (${coastal.has(sel.riskState) ? 'coastal ✓' : 'non-coastal'})` },
             { key: 'dayCareCoverage' as const, label: 'Home day-care exclusion (HO 04 96)' },
           ].map(({ key, label }) => (
             <div key={key} className="flex items-center gap-2">
@@ -137,7 +137,8 @@ function SimulatePanel() {
 
 export default function ProductRules() {
   const ctx = useProductCtx()
-  const { pid, rules, formRules, coverages, loading } = ctx
+  const { pid, product, rules, formRules, coverages, loading } = ctx
+  const lobPrefix = resolveLob(product).prefix   // refId prefix is line-driven (HO, GL…)
   const { user } = useUser()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -160,8 +161,9 @@ export default function ProductRules() {
 
   async function createRule(nr: NewRule) {
     if (!user) return
-    const next = Math.max(10, ...rules.map(r => Number(/HO\.RU\.(\d+)/.exec(r.refId ?? '')?.[1] ?? 0))) + 1
-    const refId = `HO.RU.${String(next).padStart(3, '0')}`
+    const ruleRe = new RegExp(`^${lobPrefix}\\.RU\\.(\\d+)`)
+    const next = Math.max(10, ...rules.map(r => Number(ruleRe.exec(r.refId ?? '')?.[1] ?? 0))) + 1
+    const refId = `${lobPrefix}.RU.${String(next).padStart(3, '0')}`
     try {
       await adapter.db.mutate({
         op: 'create', path: `products/${pid}/rules/${crypto.randomUUID()}`,

@@ -1,9 +1,10 @@
 // CoverageCollection — the product's coverages presented the way a P&C product
-// manager thinks about them: grouped into ISO sections (Section I property,
-// Section II liability), each coverage a card with its headline limit, attached
-// forms and nested endorsements. Click a card to open it in the Coverages tab.
+// manager thinks about them: grouped into the line's coverage sections (driven by
+// the LOB registry, e.g. Homeowners Section I / II), each coverage a card with its
+// headline limit, attached forms and nested endorsements. Click a card to open it.
 import { IconChevronRight } from '../ui/icons'
 import { Badge, RefChip } from '../ui'
+import { groupBySection, resolveLob, type LobDefinition } from '@pf/shared'
 import type { Coverage, CoverageTerm } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
@@ -102,16 +103,14 @@ function CoverageCard({ cov, endorsements, onOpen }: {
   )
 }
 
-const isLiability = (c: WithId<Coverage>) => /liabilit|medical/i.test(c.name)
-
-export function CoverageCollection({ coverages, onOpen }: { coverages: WithId<Coverage>[]; onOpen: (id: string) => void }) {
+export function CoverageCollection({ coverages, onOpen, lob = resolveLob() }: {
+  coverages: WithId<Coverage>[]; onOpen: (id: string) => void; lob?: LobDefinition
+}) {
   const roots = coverages.filter(c => !c.parentId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const endorsementsOf = (refId: string | null) => refId ? coverages.filter(c => c.parentId === refId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : []
 
-  const sections = [
-    { label: 'Section I — Property',  items: roots.filter(c => !isLiability(c)) },
-    { label: 'Section II — Liability', items: roots.filter(isLiability) },
-  ].filter(s => s.items.length > 0)
+  // Section grouping is line-driven (Homeowners Section I / II, GL coverage parts…).
+  const sections = groupBySection(lob, roots)
 
   if (!roots.length) return <p className="text-sm text-faint py-8 text-center">No coverages yet.</p>
 

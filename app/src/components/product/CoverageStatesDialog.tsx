@@ -11,16 +11,16 @@ import { useUser } from '../../context/useUser'
 import { Dialog, Button } from '../ui'
 import { IconStates, IconClose } from '../ui/icons'
 import { StateTileMap } from './StateTileMap'
-import { HO3_COASTAL_STATES } from '@pf/shared'
+import { resolveLob } from '@pf/shared'
 import { US_TILE_GRID } from '../../lib/geo/usTileGrid'
 import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
-const COASTAL = new Set<string>(HO3_COASTAL_STATES)
 const ALL_TILE_STATES = Object.keys(US_TILE_GRID)
 
 export function CoverageStatesDialog({ cov, onClose }: { cov: WithId<Coverage>; onClose: () => void }) {
   const { pid, product } = useProductCtx()
+  const COASTAL = new Set<string>(resolveLob(product).peril.eligibleStates)
   const { user } = useUser()
   const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }

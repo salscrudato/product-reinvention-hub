@@ -10,6 +10,7 @@ import { Skeleton } from '../../components/ui'
 import { IconWarning, IconAlertCircle, IconArrowRight, IconClose } from '../../components/ui/icons'
 import { CoverageCollection } from '../../components/product/CoverageCollection'
 import { computeProductFindings, type Finding } from '../../lib/productHealth'
+import { resolveLob } from '@pf/shared'
 
 // ─── Quiet inline finding banner ───────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ export default function ProductOverview() {
   const navigate = useNavigate()
   const ctx = useProductCtx()
   const { pid, coverages, loading } = ctx
+  const lob = resolveLob(ctx.product)
   const [dismissed, setDismissed] = useState(false)
 
   if (loading) {
@@ -79,7 +81,7 @@ export default function ProductOverview() {
         </span>
       </div>
 
-      <CoverageCollection coverages={coverages} onOpen={id => navigate(`/app/products/${pid}/coverages?cov=${id}`)} />
+      <CoverageCollection coverages={coverages} lob={lob} onOpen={id => navigate(`/app/products/${pid}/coverages?cov=${id}`)} />
     </div>
   )
 }

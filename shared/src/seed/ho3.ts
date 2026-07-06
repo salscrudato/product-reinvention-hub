@@ -5,11 +5,13 @@ import type {
   Product, Coverage, LDTable, RTTable, RatingProgram, Form,
   Rule, FormRule, DictionaryEntry, Task, Feedback, User, RatingInputs,
 } from '../types'
+import { HO_LOB } from '../insurance/lobRegistry'
 
 // ─── State sets ──────────────────────────────────────────────────────────────
 
+// Footprint is this product's filed states; coastal wind/hail eligibility is a
+// line-level peril rule owned by the LOB registry (single source of truth).
 export const HO3_FOOTPRINT_STATES = ['AZ','CA','CO','FL','GA','IL','IN','MI','NC','OH','PA','SC','TN','TX','VA'] as const
-export const HO3_COASTAL_STATES   = ['FL','GA','NC','SC','TX'] as const
 
 // ─── Governance helper ───────────────────────────────────────────────────────
 
@@ -28,7 +30,7 @@ function gov(overrides: { lifecycle?: Product['lifecycle']; status?: Product['st
 }
 
 const FOOTPRINT_SCOPE = { allStates: false, states: [...HO3_FOOTPRINT_STATES] }
-const COASTAL_SCOPE   = { allStates: false, states: [...HO3_COASTAL_STATES] }
+const COASTAL_SCOPE   = { allStates: false, states: [...HO_LOB.peril.eligibleStates] }
 
 // ─── Product ─────────────────────────────────────────────────────────────────
 
