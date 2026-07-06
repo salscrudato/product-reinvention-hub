@@ -14,7 +14,11 @@ anonymous, Functions, Hosting).
 ## Read before you touch code
 - This file plus the relevant `docs/`: `DATA_MODEL.md` (Firestore model),
   `DOMAIN_HO.md` (the HO-3 domain + $1,528 trace), `AWS_SWAP.md` (portability seam),
-  `BASELINE_AUDIT.md` (scored per-route critique).
+  `BASELINE_AUDIT.md` (scored per-route critique), `ELEVATION_PROMPT.md` (the UI/UX
+  elevation spec + 10-axis rubric).
+- The **load-bearing decisions** are one-page ADRs in `docs/adr/` (0001 adapter seam ·
+  0002 mutation invariant · 0003 roles · 0004 grounded AI · 0005 rating engine + $1,528 ·
+  0006 model policy). Read the relevant ADR before changing an invariant — don't re-derive it.
 - The scoped guide for the workspace you're in — load only what your task needs:
   - `app/CLAUDE.md` — design tokens, component conventions, adapter seam, routes.
   - `functions/CLAUDE.md` — SSE + tool-grounding + secret + auth patterns.
@@ -60,14 +64,22 @@ for Excel export. Vitest. pnpm workspaces: `app`, `functions`, `shared`.
 
 ## Commands (root)
 ```
+pnpm spinup         # ONE-COMMAND SPIN-UP: emulator suite + idempotent HO-3 seed (start here)
 pnpm dev            # Vite dev server (expects emulators running)
 pnpm emulators      # firebase emulators:start (auth, firestore, functions, storage, hosting)
 pnpm dev:all        # both, concurrently
 pnpm seed           # seed HO-3 into the emulator (--project <id> for prod, with confirm)
 pnpm test           # vitest (shared engines + app units)
+pnpm test:rules     # Firestore rules matrix (starts its own firestore emulator; needs :8080 free)
 pnpm typecheck · pnpm lint · pnpm build
 pnpm deploy         # build + firebase deploy
 ```
+**One-command spin-up:** `pnpm spinup` brings up the full Emulator Suite and, once
+Firestore is ready, seeds HO-3 — **idempotent** (the seed wipes + re-seeds to a known
+state and re-verifies $1,528, so it's safe to re-run). Emulator ports (`firebase.json`):
+Auth **9099** · Firestore **8080** · Functions **5001** · Storage **9199** · Hosting
+**5000** · Emulator UI **4000**. The app auto-connects to them when `VITE_USE_EMULATORS=true`
+(set in `app/.env.development`); run `pnpm dev` alongside. Ctrl-C stops the suite.
 
 ## Definition of done — every task
 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green; the $1,528 canary
@@ -75,3 +87,15 @@ still passes. Loading/empty/error states shipped; roles enforced in rules +
 Functions; Audit + Version written on every mutation; keyboard + screen-reader
 friendly (AA). Then review your own work as a hostile senior reviewer, fix what you
 find, and commit locally with a clear message (no remote yet).
+
+## Working rhythm (commit cadence)
+The **commit is the drift-control mechanism** for this build. Ship **one small,
+gate-green, hostile-reviewed commit per surface or per prompt** — no long uncommitted
+sessions. Before each commit: run `/gate` (keep the $1,528 canary green) and review your
+own diff as a hostile senior reviewer, fixing what you find. Commit **locally only** — no
+remote yet; never push or deploy. **Session resets are expected between prompts**, so leave
+the tree gate-green and committed at every stopping point. Encoded rails make each new
+session resume from a known, reproducible state instead of re-deriving it: the ADRs
+(`docs/adr/`) hold the invariants, `pnpm spinup` restores the data, and the scoped slash
+commands (`.claude/commands/`: `/seed`, `/gate`, `/elevate`, `/verify-invariant`) make the
+repetitive flows deterministic.

@@ -6,6 +6,7 @@
     "dev": "pnpm --filter app dev",
     "emulators": "firebase emulators:start",
     "dev:all": "concurrently \"pnpm emulators\" \"pnpm --filter app dev\"",
+    "spinup": "concurrently -n emu,seed -c magenta,green \"pnpm emulators\" \"node scripts/wait-and-seed.mjs\"",
     "seed": "tsx scripts/seed.ts",
     "test": "vitest run",
     "test:rules": "firebase emulators:exec --only firestore --project productreinvention \"vitest run --config vitest.rules.config.ts\"",
