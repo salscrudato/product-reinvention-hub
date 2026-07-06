@@ -1,5 +1,6 @@
-// scripts/seed.ts — Seeds the full HO-3 dataset into Firestore.
-// Default target: emulators (env vars set before admin init).
+// scripts/seed.ts — Seeds the reference products (HO-3 and General Liability) into Firestore.
+// Both products flow through the SAME seeding path, so audit/version/searchIndex parity
+// holds for each. Default target: emulators (env vars set before admin init).
 // Pass --project productreinvention to target production (typed confirmation required).
 import * as admin from 'firebase-admin'
 import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore'
@@ -11,6 +12,12 @@ import {
   HO3_SAMPLE_FEEDBACK, HO3_WORKED_EXAMPLE,
   makeHO3RtGetter, makeHO3LdGetter,
 } from '../shared/src/seed/ho3'
+import {
+  GL_PRODUCT, GL_COVERAGES, GL_LD_TABLES, GL_RT_TABLES,
+  GL_RATING_PROGRAM, GL_FORMS, GL_RULES, GL_FORM_RULES,
+  GL_DICTIONARY, GL_WORKED_EXAMPLE,
+  makeGLRtGetter, makeGLLdGetter,
+} from '../shared/src/seed/gl'
 import { evaluate } from '../shared/src/rating/evaluator'
 import type { SearchEntityType } from '../shared/src/types'
 import * as readline from 'readline'
@@ -19,6 +26,22 @@ import * as readline from 'readline'
 
 type Doc = Record<string, unknown>
 interface IndexEntry { type: SearchEntityType; refId?: string; title: string; subtitle: string; path: string; keywords: string[] }
+
+// A reference product bundle — everything one product owns (its own doc + subcollections)
+// plus the global tables/forms/dictionary it contributes. Both HO-3 and GL fill this shape,
+// so the seeding loop treats every line identically (no Homeowners special-casing).
+interface ProductBundle {
+  productKeywords: string[]
+  product:       typeof HO3_PRODUCT | typeof GL_PRODUCT
+  coverages:     ReadonlyArray<Doc>
+  ldTables:      Record<string, Doc>
+  rtTables:      Record<string, Doc>
+  ratingProgram: Doc & { refId: string }
+  forms:         ReadonlyArray<Doc & { number: string }>
+  rules:         ReadonlyArray<Doc>
+  formRules:     ReadonlyArray<Doc>
+  dictionary:    ReadonlyArray<Doc & { name: string }>
+}
 
 // ─── CLI flag parsing ─────────────────────────────────────────────────────────
 
@@ -92,105 +115,131 @@ async function main(): Promise<void> {
   const inc   = (col: string, n = 1) => { counts[col] = (counts[col] ?? 0) + n }
   const addIdx = (e: IndexEntry) => searchEntries.push({ id: e.path.replace(/\//g, '_'), data: e })
 
-  const pid = HO3_PRODUCT.refId!
+  // ── Reference product bundles (each seeded identically) ────────────────────
+  const bundles: ProductBundle[] = [
+    {
+      productKeywords: ['homeowners', 'ho3', 'ho-3'],
+      product: HO3_PRODUCT, coverages: HO3_COVERAGES,
+      ldTables: HO3_LD_TABLES as Record<string, Doc>, rtTables: HO3_RT_TABLES as Record<string, Doc>,
+      ratingProgram: HO3_RATING_PROGRAM as unknown as Doc & { refId: string },
+      forms: HO3_FORMS, rules: HO3_RULES, formRules: HO3_FORM_RULES, dictionary: HO3_DICTIONARY,
+    },
+    {
+      productKeywords: ['general', 'liability', 'gl', 'cgl', 'commercial'],
+      product: GL_PRODUCT, coverages: GL_COVERAGES,
+      ldTables: GL_LD_TABLES as Record<string, Doc>, rtTables: GL_RT_TABLES as Record<string, Doc>,
+      ratingProgram: GL_RATING_PROGRAM as unknown as Doc & { refId: string },
+      forms: GL_FORMS, rules: GL_RULES, formRules: GL_FORM_RULES, dictionary: GL_DICTIONARY,
+    },
+  ]
 
-  // ── Wipe ──────────────────────────────────────────────────────────────────
+  // ── Wipe (idempotent re-seed to a known state) ─────────────────────────────
   console.log('🧹 Wiping…')
   await Promise.all([
     'products', 'forms', 'ldTables', 'rtTables',
     'dictionary', 'tasks', 'feedback', 'searchIndex', 'seedReports',
   ].map(c => deleteAll(db, c)))
-  for (const sub of ['coverages', 'rules', 'formRules', 'ratingPrograms']) {
-    await deleteAll(db, `products/${pid}/${sub}`)
+  for (const b of bundles) {
+    const pid = b.product.refId!
+    for (const sub of ['coverages', 'rules', 'formRules', 'ratingPrograms']) {
+      await deleteAll(db, `products/${pid}/${sub}`)
+    }
   }
 
-  // ── Product ───────────────────────────────────────────────────────────────
-  await db.doc(`products/${pid}`).set(withTs(HO3_PRODUCT as Doc, now))
-  inc('products')
-  addIdx({ type: 'product', refId: pid, title: HO3_PRODUCT.name,
-    subtitle: `${HO3_PRODUCT.lob.name} · ${HO3_PRODUCT.marketSegment}`,
-    path: `products/${pid}`,
-    keywords: [...keywords(HO3_PRODUCT.name), 'homeowners', 'ho3', 'ho-3', pid.toLowerCase()],
-  })
+  // ── Seed each product bundle through the same path ─────────────────────────
+  const seededDictionary = new Set<string>()
 
-  // ── Coverages ─────────────────────────────────────────────────────────────
-  for (const cov of HO3_COVERAGES) {
-    const id = cov.refId!.replace(/\./g, '-')
-    await db.doc(`products/${pid}/coverages/${id}`).set(withTs(cov as Doc, now))
-    inc('coverages')
-    addIdx({ type: 'coverage', refId: cov.refId ?? undefined, title: cov.name,
-      subtitle: cov.refId ?? '', path: `products/${pid}/coverages/${id}`,
-      keywords: keywords(cov.name),
+  for (const b of bundles) {
+    const pid = b.product.refId!
+    console.log(`\n📦 Seeding ${pid} — ${b.product.name}`)
+
+    // Product
+    await db.doc(`products/${pid}`).set(withTs(b.product as Doc, now))
+    inc('products')
+    addIdx({ type: 'product', refId: pid, title: b.product.name,
+      subtitle: `${b.product.lob.name} · ${b.product.marketSegment}`,
+      path: `products/${pid}`,
+      keywords: [...keywords(b.product.name), ...b.productKeywords, pid.toLowerCase()],
     })
+
+    // Coverages
+    for (const cov of b.coverages) {
+      const refId = cov['refId'] as string
+      const id = refId.replace(/\./g, '-')
+      await db.doc(`products/${pid}/coverages/${id}`).set(withTs(cov, now))
+      inc('coverages')
+      addIdx({ type: 'coverage', refId, title: cov['name'] as string,
+        subtitle: refId, path: `products/${pid}/coverages/${id}`,
+        keywords: keywords(cov['name'] as string) })
+    }
+
+    // LD Tables (global collection; ids preserved verbatim)
+    for (const [refId, tbl] of Object.entries(b.ldTables)) {
+      await db.doc(`ldTables/${refId}`).set(tbl)
+      inc('ldTables')
+      addIdx({ type: 'ldTable', refId, title: tbl['name'] as string, subtitle: refId,
+        path: `ldTables/${refId}`, keywords: [...keywords(tbl['name'] as string), ...keywords(refId)] })
+    }
+
+    // RT Tables (global collection; ids preserved verbatim)
+    for (const [refId, tbl] of Object.entries(b.rtTables)) {
+      await db.doc(`rtTables/${refId}`).set(tbl)
+      inc('rtTables')
+      addIdx({ type: 'rtTable', refId, title: tbl['name'] as string, subtitle: refId,
+        path: `rtTables/${refId}`, keywords: [...keywords(tbl['name'] as string), ...keywords(refId)] })
+    }
+
+    // Rating Program
+    const rpId = b.ratingProgram.refId.replace(/\./g, '-')
+    await db.doc(`products/${pid}/ratingPrograms/${rpId}`).set(withTs(b.ratingProgram, now))
+    inc('ratingPrograms')
+
+    // Forms (global; keyed by normalized form number)
+    for (const form of b.forms) {
+      const key = form.number.replace(/\s+/g, '-')
+      await db.doc(`forms/${key}`).set(withTs(form, now))
+      inc('forms')
+      addIdx({ type: 'form', title: form['name'] as string,
+        subtitle: `${form.number} · ${form['edition']}`,
+        path: `forms/${key}`,
+        keywords: [...keywords(form['name'] as string), ...keywords(form.number)] })
+    }
+
+    // Product Rules
+    for (const rule of b.rules) {
+      const id = (rule['refId'] as string).replace(/\./g, '-')
+      await db.doc(`products/${pid}/rules/${id}`).set(withTs(rule, now))
+      inc('rules')
+    }
+
+    // Form Rules
+    for (const fr of b.formRules) {
+      const id = (fr['refId'] as string).replace(/\./g, '-')
+      await db.doc(`products/${pid}/formRules/${id}`).set(withTs(fr, now))
+      inc('formRules')
+    }
+
+    // Dictionary (global; de-duplicated by name across bundles)
+    for (const entry of b.dictionary) {
+      const id = entry.name.toLowerCase().replace(/\s+/g, '-')
+      if (seededDictionary.has(id)) continue
+      seededDictionary.add(id)
+      await db.doc(`dictionary/${id}`).set(withTs(entry, now))
+      inc('dictionary')
+      addIdx({ type: 'dictionary', title: entry.name, subtitle: entry['type'] as string,
+        path: `dictionary/${id}`, keywords: [...keywords(entry.name), ...(entry['tags'] as string[])] })
+    }
   }
 
-  // ── LD Tables ─────────────────────────────────────────────────────────────
-  for (const [refId, tbl] of Object.entries(HO3_LD_TABLES)) {
-    await db.doc(`ldTables/${refId}`).set(tbl as Doc)
-    inc('ldTables')
-    addIdx({ type: 'ldTable', refId, title: tbl.name, subtitle: refId,
-      path: `ldTables/${refId}`, keywords: [...keywords(tbl.name), ...keywords(refId)] })
-  }
-
-  // ── RT Tables ─────────────────────────────────────────────────────────────
-  for (const [refId, tbl] of Object.entries(HO3_RT_TABLES)) {
-    await db.doc(`rtTables/${refId}`).set(tbl as Doc)
-    inc('rtTables')
-    addIdx({ type: 'rtTable', refId, title: tbl.name, subtitle: refId,
-      path: `rtTables/${refId}`, keywords: [...keywords(tbl.name), ...keywords(refId)] })
-  }
-
-  // ── Rating Program ────────────────────────────────────────────────────────
-  const rpId = HO3_RATING_PROGRAM.refId.replace(/\./g, '-')
-  await db.doc(`products/${pid}/ratingPrograms/${rpId}`)
-    .set(withTs(HO3_RATING_PROGRAM as Doc, now))
-  inc('ratingPrograms')
-
-  // ── Forms ─────────────────────────────────────────────────────────────────
-  for (const form of HO3_FORMS) {
-    const key = form.number.replace(/\s+/g, '-')
-    await db.doc(`forms/${key}`).set(withTs(form as Doc, now))
-    inc('forms')
-    addIdx({ type: 'form', title: form.name,
-      subtitle: `${form.number} · ${form.edition}`,
-      path: `forms/${key}`,
-      keywords: [...keywords(form.name), ...keywords(form.number)],
-    })
-  }
-
-  // ── Product Rules ─────────────────────────────────────────────────────────
-  for (const rule of HO3_RULES) {
-    const id = rule.refId!.replace(/\./g, '-')
-    await db.doc(`products/${pid}/rules/${id}`).set(withTs(rule as Doc, now))
-    inc('rules')
-  }
-
-  // ── Form Rules ────────────────────────────────────────────────────────────
-  for (const fr of HO3_FORM_RULES) {
-    const id = fr.refId!.replace(/\./g, '-')
-    await db.doc(`products/${pid}/formRules/${id}`).set(withTs(fr as Doc, now))
-    inc('formRules')
-  }
-
-  // ── Dictionary ────────────────────────────────────────────────────────────
-  for (const entry of HO3_DICTIONARY) {
-    const id = entry.name.toLowerCase().replace(/\s+/g, '-')
-    await db.doc(`dictionary/${id}`).set(withTs(entry as Doc, now))
-    inc('dictionary')
-    addIdx({ type: 'dictionary', title: entry.name, subtitle: entry.type,
-      path: `dictionary/${id}`, keywords: [...keywords(entry.name), ...entry.tags],
-    })
-  }
-
-  // ── Default Tasks ─────────────────────────────────────────────────────────
+  // ── Default Tasks (HO-3 templates; tied to the HO-3 product) ───────────────
   const base = new Date()
   for (let i = 0; i < HO3_DEFAULT_TASK_TEMPLATES.length; i++) {
-    const tmpl  = HO3_DEFAULT_TASK_TEMPLATES[i]
+    const tmpl  = HO3_DEFAULT_TASK_TEMPLATES[i]!
     const dueAt = new Date(base)
     dueAt.setDate(dueAt.getDate() + tmpl.daysOffset)
     await db.collection('tasks').add({
       title: tmpl.title, column: tmpl.column,
-      productId: pid, checklist: [], order: i,
+      productId: HO3_PRODUCT.refId, checklist: [], order: i,
       dueAt: Timestamp.fromDate(dueAt),
       status: 'ACTIVE', lifecycle: 'DRAFT', reviewStatus: 'NOT_STARTED',
       updatedBy: 'seed', rev: 1, createdAt: now, updatedAt: now,
@@ -215,7 +264,7 @@ async function main(): Promise<void> {
   inc('searchIndex', searchEntries.length)
 
   // ── Auth Users ────────────────────────────────────────────────────────────
-  console.log('👤 Creating auth users…')
+  console.log('\n👤 Creating auth users…')
   for (const u of HO3_SEED_USERS) {
     try {
       try {
@@ -238,28 +287,41 @@ async function main(): Promise<void> {
     }
   }
 
-  // ── Verify worked example → must equal $1,528 ────────────────────────────
-  console.log('\n🧮 Verifying worked example…')
-  const rtGetter = makeHO3RtGetter(HO3_RT_TABLES)
-  const ldGetter = makeHO3LdGetter(HO3_LD_TABLES)
-  const { finalPremium } = evaluate(HO3_RATING_PROGRAM, HO3_WORKED_EXAMPLE, rtGetter, ldGetter)
+  // ── Verify worked examples → the two canaries ($1,528 and $2,789) ─────────
+  console.log('\n🧮 Verifying worked examples…')
+  const workedExamplePremiums: Record<string, number> = {}
 
-  if (finalPremium !== 1528) {
-    warnings.push(`CRITICAL: worked example premium = ${finalPremium}, expected $1,528`)
-    console.error(`  ✗ Got $${finalPremium} — expected $1,528!`)
-  } else {
-    console.log('  ✓ $1,528 confirmed')
-  }
+  const ho3 = evaluate(HO3_RATING_PROGRAM, HO3_WORKED_EXAMPLE, makeHO3RtGetter(HO3_RT_TABLES), makeHO3LdGetter(HO3_LD_TABLES))
+  workedExamplePremiums[HO3_PRODUCT.refId!] = ho3.finalPremium
+  if (ho3.finalPremium !== 1528) {
+    warnings.push(`CRITICAL: HO-3 worked example = ${ho3.finalPremium}, expected $1,528`)
+    console.error(`  ✗ HO-3 got $${ho3.finalPremium} — expected $1,528!`)
+  } else console.log('  ✓ HO-3 $1,528 confirmed')
+
+  const gl = evaluate(GL_RATING_PROGRAM, GL_WORKED_EXAMPLE, makeGLRtGetter(GL_RT_TABLES), makeGLLdGetter(GL_LD_TABLES))
+  workedExamplePremiums[GL_PRODUCT.refId!] = gl.finalPremium
+  if (gl.finalPremium !== 2789) {
+    warnings.push(`CRITICAL: GL worked example = ${gl.finalPremium}, expected $2,789`)
+    console.error(`  ✗ GL got $${gl.finalPremium} — expected $2,789!`)
+  } else console.log('  ✓ GL $2,789 confirmed')
 
   // ── Seed Report ───────────────────────────────────────────────────────────
-  await db.collection('seedReports').add({ counts, warnings, workedExamplePremium: finalPremium, at: now })
+  await db.collection('seedReports').add({
+    counts, warnings,
+    workedExamplePremium: ho3.finalPremium, // HO-3 canary (back-compat)
+    workedExamplePremiums,
+    at: now,
+  })
 
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log('\n✅ Seed complete.')
   console.log('   Counts:')
   for (const [k, v] of Object.entries(counts)) console.log(`     ${k}: ${v}`)
   if (warnings.length) console.warn('\n   Warnings:', warnings)
-  console.log(`\n   💰 Worked example premium: $${finalPremium.toLocaleString()}`)
+  console.log('\n   💰 Worked example premiums:')
+  for (const [pid, prem] of Object.entries(workedExamplePremiums)) {
+    console.log(`     ${pid}: $${prem.toLocaleString()}`)
+  }
 }
 
 main().catch(err => { console.error('Seed failed:', err); process.exit(1) })

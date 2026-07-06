@@ -260,9 +260,14 @@ function SeedTab() {
         <span className="text-sm font-semibold text-text">Latest seed</span>
         <span className="text-xs text-faint">{fmt(latest.at)}</span>
       </div>
-      <div className="flex items-center justify-between px-4 py-3 rounded-[12px]" style={{ background: 'var(--gradient-accent-soft)', border: '1px solid var(--color-accent-line)' }}>
-        <span className="text-sm text-text">Worked example premium</span>
-        <span className="text-lg font-bold gradient-text">${latest.workedExamplePremium?.toLocaleString()}</span>
+      {/* One tile per reference product's worked-example premium (the canaries) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {Object.entries(latest.workedExamplePremiums ?? { 'HO.PROD.001': latest.workedExamplePremium }).map(([pid, prem]) => (
+          <div key={pid} className="flex items-center justify-between px-4 py-3 rounded-[12px]" style={{ background: 'var(--gradient-accent-soft)', border: '1px solid var(--color-accent-line)' }}>
+            <span className="text-sm text-text">{pid} worked example</span>
+            <span className="text-lg font-bold gradient-text">${prem?.toLocaleString()}</span>
+          </div>
+        ))}
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Object.entries(latest.counts ?? {}).map(([k, n]) => (

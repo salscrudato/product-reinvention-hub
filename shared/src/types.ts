@@ -362,7 +362,8 @@ export interface SearchIndexEntry {
 export interface SeedReport {
   counts:                Record<string, number>
   warnings:              string[]
-  workedExamplePremium:  number
+  workedExamplePremium:  number                  // HO-3 canary ($1,528) — kept for back-compat
+  workedExamplePremiums?: Record<string, number> // per-product worked examples (HO-3, GL, …)
   at:                    unknown
 }
 
@@ -371,6 +372,28 @@ export interface SeedReport {
 export interface SppItem {
   itemClass:       string
   appraisedValue:  number
+}
+
+/** The generic input bag the evaluator reads by key. Each line supplies its own
+ *  concrete inputs shape — HO-3 `RatingInputs`, GL `GLRatingInputs` — and both
+ *  satisfy this, so `evaluate()` stays line-agnostic (no Homeowners assumption).
+ *  `sppItems` is typed because the SPP source kind reads it directly. */
+export interface RatingInputMap {
+  sppItems?:      SppItem[]
+  [key: string]:  unknown
+}
+
+/** One field in a line's rating-input worksheet — drives the data-driven pricing
+ *  panel for any line that isn't the bespoke HO-3 worksheet. Options may be inline
+ *  or sourced from an LD table (`ldTableRef`) resolved at render time. */
+export interface RatingInputField {
+  key:         string
+  label:       string
+  kind:        'number' | 'select' | 'boolean' | 'text'
+  options?:    { label: string; value: number | string }[]
+  ldTableRef?: string
+  step?:       number
+  min?:        number
 }
 
 /** All inputs the HO-3 rating engine reads from a submission. */

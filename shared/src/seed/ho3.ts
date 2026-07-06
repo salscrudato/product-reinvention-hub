@@ -9,9 +9,9 @@ import { HO_LOB } from '../insurance/lobRegistry'
 
 // ─── State sets ──────────────────────────────────────────────────────────────
 
-// Footprint is this product's filed states; coastal wind/hail eligibility is a
-// line-level peril rule owned by the LOB registry (single source of truth).
-export const HO3_FOOTPRINT_STATES = ['AZ','CA','CO','FL','GA','IL','IN','MI','NC','OH','PA','SC','TN','TX','VA'] as const
+// Footprint and coastal wind/hail eligibility are line-level facts owned by the LOB
+// registry (single source of truth); the seed re-exports the footprint for convenience.
+export const HO3_FOOTPRINT_STATES = HO_LOB.footprintStates
 
 // ─── Governance helper ───────────────────────────────────────────────────────
 

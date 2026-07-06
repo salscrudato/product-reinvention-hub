@@ -4,8 +4,8 @@
 // (how Overview/Explorer group coverages), and peril/territorial deductible rules
 // (Homeowners gates a wind/hail % deductible to a coastal state subset; other lines
 // use rating territories instead). Every line-aware decision in shared/ and the UI
-// resolves through here rather than hard-coding Homeowners-isms. Homeowners is fully
-// described; General Liability is reserved for the GL seed (Prompt 6).
+// resolves through here rather than hard-coding Homeowners-isms. Both Homeowners and
+// General Liability are fully described (each has a seed reference product).
 // Pure TypeScript — zero platform imports.
 
 // Personal vs Commercial market vertical; Property vs Casualty family — the two
@@ -33,13 +33,14 @@ export interface PerilRule {
 }
 
 export interface LobDefinition {
-  refId:    string          // e.g. "HO.LOB.001"
-  prefix:   string          // refId prefix for this line's entities, e.g. "HO"
-  name:     string          // "Homeowners"
+  refId:    string                 // e.g. "HO.LOB.001"
+  prefix:   string                 // refId prefix for this line's entities, e.g. "HO"
+  name:     string                 // "Homeowners"
   vertical: MarketVertical
   family:   CoverageFamily
-  sections: LobSection[]    // ordered; drives coverage grouping
+  sections: LobSection[]           // ordered; drives coverage grouping
   peril:    PerilRule
+  footprintStates: readonly string[] // the line's standard filing footprint (States "All footprint")
 }
 
 // ─── Homeowners (fully described — the seed reference line) ────────────────────
@@ -63,9 +64,10 @@ export const HO_LOB: LobDefinition = {
     eligibleStates: ['FL', 'GA', 'NC', 'SC', 'TX'],
     label:          'Coastal wind/hail',
   },
+  footprintStates: ['AZ','CA','CO','FL','GA','IL','IN','MI','NC','OH','PA','SC','TN','TX','VA'],
 }
 
-// ─── General Liability (reserved for the GL seed — Prompt 6) ───────────────────
+// ─── General Liability (the second seed reference line — commercial casualty) ──
 
 // ISO CGL groups coverage into coverage parts A/B/C; GL rates by territory and has
 // no coastal peril. The final catch-all keeps any unclassified coverage visible.
@@ -82,6 +84,11 @@ export const GL_LOB: LobDefinition = {
     { label: 'Other Coverages',                              match: () => true },
   ],
   peril: { kind: 'TERRITORY', eligibleStates: [], label: 'Rating territory' },
+  footprintStates: [
+    'AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','ID','IL','IN','IA','KS','KY',
+    'ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NC','ND','OH',
+    'OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV',
+  ],
 }
 
 // ─── Registry + resolution ─────────────────────────────────────────────────────

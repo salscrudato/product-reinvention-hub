@@ -139,6 +139,9 @@ export default function ProductRules() {
   const ctx = useProductCtx()
   const { pid, product, rules, formRules, coverages, loading } = ctx
   const lobPrefix = resolveLob(product).prefix   // refId prefix is line-driven (HO, GL…)
+  // The Simulate panel runs the Homeowners rules engine (SelectionContext); it's the only
+  // line with one today, so scope it to HO rather than show a misleading panel elsewhere.
+  const canSimulate = lobPrefix === 'HO'
   const { user } = useUser()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -205,9 +208,11 @@ export default function ProductRules() {
         <input className="flex-1 max-w-sm h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
           placeholder="Search rules..." value={query} onChange={e => setQuery(e.target.value)} />
         <div className="flex items-center gap-2 ml-auto">
-          <Button variant="ghost" size="sm" onClick={() => setSimOpen(s => !s)}>
-            {simOpen ? 'Hide simulate' : 'Simulate…'}
-          </Button>
+          {canSimulate && (
+            <Button variant="ghost" size="sm" onClick={() => setSimOpen(s => !s)}>
+              {simOpen ? 'Hide simulate' : 'Simulate…'}
+            </Button>
+          )}
           {canEdit && (
             <Button variant="primary" size="sm" onClick={() => setComposerOpen(o => !o)}>
               <IconPlus size={14} />New rule
@@ -220,7 +225,7 @@ export default function ProductRules() {
         <RuleComposer forms={ctx.forms.map(f => f.number)} onCreate={createRule} onCancel={() => setComposerOpen(false)} />
       )}
 
-      {simOpen && (
+      {simOpen && canSimulate && (
         <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
           <p className="text-sm font-semibold text-text mb-4">Simulate panel — enter selections to see which forms attach and what violations fire</p>
           <SimulatePanel />

@@ -1,6 +1,6 @@
 // Pure rating engine: executes a RatingProgram step-by-step and returns a full trace.
 // No platform imports; injected table getters keep this testable without Firestore.
-import type { RatingProgram, RatingInputs, EvaluatorResult, TraceEntry } from '../types'
+import type { RatingProgram, RatingInputMap, EvaluatorResult, TraceEntry } from '../types'
 
 /** Look up a value from an RT table given a set of resolved input keys. */
 export type RtGetter = (tableRef: string, queryInputs: Record<string, unknown>) => number
@@ -20,7 +20,7 @@ function round(value: number, decimals: number): number {
  */
 export function evaluate(
   program: RatingProgram,
-  inputs: RatingInputs,
+  inputs: RatingInputMap,
   rtGetter: RtGetter,
   ldGetter: LdGetter,
 ): EvaluatorResult {
@@ -63,7 +63,7 @@ export function evaluate(
 
 function resolveSource(
   step: RatingProgram['steps'][number],
-  inputs: RatingInputs,
+  inputs: RatingInputMap,
   rtGetter: RtGetter,
   ldGetter: LdGetter,
 ): { factor: number; sourceRef: string } {

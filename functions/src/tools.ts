@@ -5,11 +5,11 @@
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
 import {
-  evaluate, makeHO3RtGetter, makeHO3LdGetter, HO3_WORKED_EXAMPLE, rankDocuments,
+  evaluate, resolveRatingKit, resolveLobByRefId, rankDocuments,
 } from '@pf/shared'
 import type { RankDoc } from '@pf/shared'
 import type {
-  RatingInputs, RatingProgram, RTTable, LDTable, Coverage, Rule, Form,
+  RatingInputMap, RatingProgram, RTTable, LDTable, Coverage, Rule, Form,
   Product, DictionaryEntry, SearchIndexEntry,
 } from '@pf/shared'
 
@@ -84,12 +84,12 @@ export const TOOLS: Anthropic.Tool[] = [
   {
     name: 'run_rating',
     description:
-      'Execute the rating algorithm and return the final premium with a step-by-step trace. Pass programRef (e.g. HO.RAT.1) and any subset of inputs; unspecified inputs default to the standard $1,528 worked example. Use to trace or re-price a premium.',
+      'Execute the rating algorithm and return the final premium with a step-by-step trace. Pass programRef (e.g. HO.RAT.1 or GL.RAT.1) and any subset of inputs; unspecified inputs default to that line\'s worked example (HO-3 $1,528, GL $2,789). Use to trace or re-price a premium.',
     input_schema: {
       type: 'object',
       properties: {
-        programRef: { type: 'string', description: 'Rating program refId, e.g. HO.RAT.1.' },
-        inputs:     { type: 'object', description: 'Partial RatingInputs (territory, pc, construction, covA, allPerilDed, covCPct, covELimit, covFLimit, tier, deviceCredit, rcElected, windHailElected/windHailPct, waterBackupElected/waterBackupLimit, sppElected/sppItems). Merged over the worked example.' },
+        programRef: { type: 'string', description: 'Rating program refId, e.g. HO.RAT.1 or GL.RAT.1.' },
+        inputs:     { type: 'object', description: 'Partial rating inputs merged over the line\'s worked example. HO-3: territory, pc, construction, covA, allPerilDed, covCPct, covELimit, covFLimit, tier, deviceCredit, rcElected, windHailElected/windHailPct, waterBackupElected/waterBackupLimit, sppElected/sppItems. GL: classTable, lossCost, exposureUnits, perOccurrenceLimit, aggregateLimit, lcmState, scheduleMod, tierFactor, terrorismElected.' },
       },
       required: ['programRef'],
     },
@@ -107,14 +107,14 @@ export const TOOLS: Anthropic.Tool[] = [
 
 // ─── System prompt (cacheable) ─────────────────────────────────────────────────
 
-export const SYSTEM_PROMPT = `You are Product Factory's portfolio analyst for P&C insurance product managers. The reference product is an ISO-style Homeowners HO-3.
+export const SYSTEM_PROMPT = `You are Product Factory's portfolio analyst for P&C insurance product managers. The reference products are an ISO-style Homeowners HO-3 and a Monoline General Liability (CGL); the platform is multi-line, so resolve every fact from the tools rather than assuming a line.
 
 DATA MODEL (Firestore, all reachable via the tools):
-- products → coverages (Coverage A–F plus endorsements; each has terms of kind LIMIT | DEDUCTIBLE | OPTION), rules (category PRODUCT | RATING | FORMS, each a condition → outcome), formRules, and ratingPrograms (ordered SET/MUL/ADD/MIN_FLOOR steps).
-- forms — policy documents keyed by number (e.g. "HO 04 61"), with category, attachment condition and coverage parts.
-- ldTables — Limit/Deductible option tables (refIds like HO.LD.002). rtTables — rate tables (refIds like HO.RT.003). dictionary — canonical field definitions.
+- products → coverages (line-specific, e.g. HO-3 Coverage A–F or GL premises/products BI/PD plus endorsements; each has terms of kind LIMIT | DEDUCTIBLE | OPTION), rules (category PRODUCT | RATING | FORMS, each a condition → outcome), formRules, and ratingPrograms (ordered SET/MUL/ADD/MIN_FLOOR steps).
+- forms — policy documents keyed by number (e.g. "HO 04 61", "CG 00 01"), with category, attachment condition and coverage parts.
+- ldTables — Limit/Deductible option tables (refIds like HO.LD.002, LDTable.001). rtTables — rate tables (refIds like HO.RT.003, RTTable.001). dictionary — canonical field definitions.
 
-REFERENCE IDs are the traceability backbone and must be preserved and cited exactly: coverage refIds (HO.COV.003.002), rule refIds (HO.RU.006), form-rule refIds (HO.FORM.RU.003), table refIds (HO.LD.002, HO.RT.003) and form numbers (HO 04 61, HO 04 90).
+REFERENCE IDs are the traceability backbone and must be preserved and cited exactly: coverage refIds (HO.COV.003.002, GL.COV.002.001), rule refIds (HO.RU.006, GL.RU.004), form-rule refIds (HO.FORM.RU.003, GL.FORM.RU.001), table refIds (HO.LD.002, RTTable.001) and form numbers (HO 04 61, CG 00 01).
 
 HOUSE RULES — non-negotiable:
 1. Assert ONLY what the tools return. Never invent coverages, forms, rules, limits, factors or premiums.
@@ -140,7 +140,7 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
       case 'get_rules':        return await getRules(input.coverageRefId as string | undefined, input.productId as string | undefined)
       case 'get_forms':        return await getForms(input)
       case 'get_ld_table':     return await getLdTable(String(input.refId ?? ''))
-      case 'run_rating':       return await runRating(String(input.programRef ?? ''), (input.inputs as Partial<RatingInputs>) ?? {})
+      case 'run_rating':       return await runRating(String(input.programRef ?? ''), (input.inputs as Partial<RatingInputMap>) ?? {})
       case 'get_dictionary':   return await getDictionary(String(input.name ?? ''))
       default: return { content: JSON.stringify({ error: `Unknown tool ${name}` }), summary: 'error' }
     }
@@ -280,7 +280,7 @@ async function getLdTable(refId: string): Promise<ToolOutput> {
   return { content: JSON.stringify({ refId, name: t.name, defaultValue: t.defaultValue ?? null, rows: t.rows }), summary: `${t.rows?.length ?? 0} rows` }
 }
 
-async function runRating(programRef: string, partial: Partial<RatingInputs>): Promise<ToolOutput> {
+async function runRating(programRef: string, partial: Partial<RatingInputMap>): Promise<ToolOutput> {
   const db = getFirestore()
   const progSnap = await db.collectionGroup('ratingPrograms').where('refId', '==', programRef).limit(1).get()
   if (progSnap.empty) return { content: JSON.stringify({ found: false, programRef }), summary: 'not found' }
@@ -292,8 +292,11 @@ async function runRating(programRef: string, partial: Partial<RatingInputs>): Pr
   const ldTables: Record<string, LDTable> = {}
   for (const d of ldSnap.docs) ldTables[d.id] = d.data() as LDTable
 
-  const inputs: RatingInputs = { ...HO3_WORKED_EXAMPLE, ...partial }
-  const { finalPremium, trace } = evaluate(program, inputs, makeHO3RtGetter(rtTables), makeHO3LdGetter(ldTables))
+  // Resolve the line's rating kit from the program refId (HO.RAT.1 → HO, GL.RAT.1 → GL)
+  // so the getters + worked-example defaults match the product being priced.
+  const kit = resolveRatingKit(resolveLobByRefId(programRef)?.prefix ?? 'HO')
+  const inputs: RatingInputMap = { ...kit.workedExample, ...partial }
+  const { finalPremium, trace } = evaluate(program, inputs, kit.makeRtGetter(rtTables), kit.makeLdGetter(ldTables))
   const out = {
     programRef, finalPremium,
     trace: trace.map(t => ({ stepId: t.stepId, label: t.label, op: t.op, sourceRef: t.sourceRef, factorOrAmount: t.factorOrAmount, runningTotal: t.runningTotal })),
