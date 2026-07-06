@@ -36,12 +36,12 @@ export function Dialog({ open, onClose, title, children, width = 'max-w-lg' }: D
         onClick={onClose}
         aria-hidden="true"
       />
-      {/* Panel */}
+      {/* Panel — spring entrance; neutralised under prefers-reduced-motion via index.css */}
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'dialog-title' : undefined}
-        className={`relative w-full ${width} bg-surface rounded-[16px] p-6 shadow-2xl`}
+        className={`relative w-full ${width} bg-surface rounded-[16px] p-6 shadow-2xl rise-in`}
         style={{ border: '1px solid var(--color-border)' }}
       >
         {title && (

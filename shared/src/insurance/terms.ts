@@ -70,12 +70,18 @@ export function resolveTermOptions(t: CoverageTerm, ldTable?: LDTable): Standard
   const defNum = typeof t.default === 'number' ? t.default : undefined
   const values = numbers.length ? numbers : defNum !== undefined ? [defNum] : []
 
-  const opts: StandardOption[] = values.map(v => ({
-    id: `opt-${v}`, type, value: v,
-    allStates: true, states: [],
-    isDefault: defNum !== undefined ? v === defNum : false,
-    enabled: true,
-  }))
+  const opts: StandardOption[] = values.map(v => {
+    const row = ldTable?.rows.find(r => r.value === v)
+    return {
+      id: `opt-${v}`, type, value: v,
+      allStates: true, states: [],
+      isDefault: defNum !== undefined ? v === defNum : false,
+      enabled: true,
+      // Surface LD-table metadata so editors can display constraint notes + labels.
+      ...(row?.constraintNote ? { constraintNote: row.constraintNote } : {}),
+      ...(row?.label ? { label: row.label } : {}),
+    }
+  })
   return ensureOneDefault(opts)
 }
 

@@ -1,8 +1,7 @@
 // Coverages — the product's coverages as a browsable collection (cards ⇄ list).
 // Every coverage is a hub whose tiles drill into focused editors: Limits and
-// Deductibles (typed standard options), States (US map), and the Forms/Pricing/
-// Rules tabs — filtered to that coverage so the relationships stay navigable both
-// ways. Create / edit / delete keep the hierarchy consistent.
+// Deductibles (typed standard options), States (US map), Forms (edition + scope),
+// and the Pricing/Rules tabs. Create / edit / delete keep the hierarchy consistent.
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import Fuse from 'fuse.js'
@@ -18,6 +17,7 @@ import { BaseFormExtract } from '../../components/product/BaseFormExtract'
 import type { CoverageAspect } from '../../components/product/coverageAspects'
 import { TermOptionsDialog } from '../../components/product/TermOptionsDialog'
 import { CoverageStatesDialog } from '../../components/product/CoverageStatesDialog'
+import { CoverageFormsDialog } from '../../components/product/CoverageFormsDialog'
 import { CoverageEditDialog } from '../../components/product/CoverageEditDialog'
 import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
@@ -48,7 +48,7 @@ export default function ProductCoverages() {
   const [query, setQuery] = useState('')
 
   // Aspect editors (dialogs) + coverage create/edit.
-  const [dialog, setDialog] = useState<{ kind: 'limits' | 'deductibles' | 'states'; cov: WithId<Coverage> } | null>(null)
+  const [dialog, setDialog] = useState<{ kind: 'limits' | 'deductibles' | 'states' | 'forms'; cov: WithId<Coverage> } | null>(null)
   const [editCov, setEditCov] = useState<WithId<Coverage> | 'new' | null>(null)
 
   const fuse = useMemo(() => new Fuse(coverages, { keys: ['name', 'refId', 'claimsBasis'], threshold: 0.4 }), [coverages])
@@ -69,8 +69,11 @@ export default function ProductCoverages() {
   }, [coverages, params])
 
   function onTile(aspect: CoverageAspect, cov: WithId<Coverage>) {
-    if (aspect === 'limits' || aspect === 'deductibles' || aspect === 'states') setDialog({ kind: aspect, cov })
-    else navigate(`/app/products/${pid}/${aspect}?cov=${encodeURIComponent(cov.refId ?? cov.id)}`)
+    if (aspect === 'limits' || aspect === 'deductibles' || aspect === 'states' || aspect === 'forms') {
+      setDialog({ kind: aspect, cov })
+    } else {
+      navigate(`/app/products/${pid}/${aspect}?cov=${encodeURIComponent(cov.refId ?? cov.id)}`)
+    }
   }
 
   async function onDelete(cov: WithId<Coverage>) {
@@ -102,7 +105,7 @@ export default function ProductCoverages() {
         <div className="relative flex-1 min-w-[200px]">
           <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search coverages by name or code…"
-            className="w-full h-9 pl-9 pr-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent" />
+            className="w-full h-9 pl-9 pr-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25" />
         </div>
         <ViewToggle mode={view} onChange={setViewPersist} />
         {product && <BaseFormExtract product={product} coverages={coverages} canEdit={canEdit} actor={actor} />}
@@ -122,7 +125,11 @@ export default function ProductCoverages() {
               <SectionHeader label="Coverages" count={roots.length} />
               {view === 'cards' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {roots.map(cov => <CoverageHubCard key={cov.id} {...hubProps(cov)} />)}
+                  {roots.map((cov, i) => (
+                    <div key={cov.id} className="rise-in" style={{ '--rise-delay': `${i * 40}ms` } as React.CSSProperties}>
+                      <CoverageHubCard {...hubProps(cov)} />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
@@ -137,7 +144,11 @@ export default function ProductCoverages() {
               <SectionHeader label="Endorsements" count={endorsements.length} />
               {view === 'cards' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {endorsements.map(cov => <CoverageHubCard key={cov.id} parentName={parentName(cov.parentId)} {...hubProps(cov)} />)}
+                  {endorsements.map((cov, i) => (
+                    <div key={cov.id} className="rise-in" style={{ '--rise-delay': `${(roots.length + i) * 40}ms` } as React.CSSProperties}>
+                      <CoverageHubCard parentName={parentName(cov.parentId)} {...hubProps(cov)} />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
@@ -153,6 +164,7 @@ export default function ProductCoverages() {
       {dialog?.kind === 'limits' && <TermOptionsDialog cov={dialog.cov} mode="LIMIT" onClose={() => setDialog(null)} />}
       {dialog?.kind === 'deductibles' && <TermOptionsDialog cov={dialog.cov} mode="DEDUCTIBLE" onClose={() => setDialog(null)} />}
       {dialog?.kind === 'states' && <CoverageStatesDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'forms' && <CoverageFormsDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
       {editCov !== null && <CoverageEditDialog cov={editCov === 'new' ? null : editCov} onClose={() => setEditCov(null)} />}
     </div>
   )
