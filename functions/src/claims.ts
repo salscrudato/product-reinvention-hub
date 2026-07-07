@@ -308,7 +308,7 @@ export const identifyBaseForm = onCall<IdentifyBody>(
       tools:       [IDENTIFY_TOOL],
       tool_choice: { type: 'tool', name: 'identify_form' },
       messages:    [{ role: 'user', content }],
-    })
+    }, { timeout: 45_000 })
     const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
     const out = (tu?.input as { title?: string; formNumber?: string; edition?: string; lob?: string } | undefined) ?? {}
     const lob = (out.lob ?? '').trim().toUpperCase()

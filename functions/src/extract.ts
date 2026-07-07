@@ -161,6 +161,12 @@ const PROPOSE_RATING: Anthropic.Tool = {
   },
 }
 
+// All four tools are sent on EVERY section call (only tool_choice changes). Keeping the
+// tools array identical means the cached prefix (system + document + tools) is reused
+// across sections, so the document is read once and sections 2–4 hit the cache — far
+// cheaper and faster than re-reading it four times.
+const ALL_TOOLS: Anthropic.Tool[] = [PROPOSE_COVERAGES, PROPOSE_FORMS, PROPOSE_RULES, PROPOSE_RATING]
+
 const SYSTEM =
   'You are a P&C insurance product analyst extracting a product\'s structure from an uploaded ' +
   'base coverage form. Ground EVERY proposal in the document\'s actual text — never invent a ' +
@@ -170,27 +176,26 @@ const SYSTEM =
   'section, return an empty array and say so in `note` rather than guessing. You are called once ' +
   'per section with a single forced tool; call that tool exactly once.'
 
-// One forced-tool round-trip per section. Forcing the tool guarantees a structured
-// result — including an explicit empty section — for every kind, so "found nothing"
-// is honest rather than silent. Note: each section forces a DIFFERENT tool (and
-// tool_choice), which invalidates the prompt cache down to the message tier — so the
-// document is re-read per section and marking it ephemeral would only add a write
-// premium with no cross-section read. We therefore leave the document uncached here.
+// One forced-tool round-trip per section. Forcing the tool (via tool_choice) guarantees a
+// structured result — including an explicit empty section — so "found nothing" is honest.
+// The tools array + system + cached document form an identical prefix across all four
+// sections, so only the first call reads the document and the rest hit the prompt cache.
+// A per-call timeout keeps a stalled request from hanging to the function ceiling.
 async function runSection(
   client:      Anthropic,
   docBlock:    Anthropic.ContentBlockParam,
   instruction: string,
-  tool:        Anthropic.Tool,
+  toolName:    string,
   maxTokens:   number,
 ): Promise<Record<string, unknown>> {
   const msg = await client.messages.create({
     model:       MODEL,
     max_tokens:  maxTokens,
     system:      SYSTEM,
-    tools:       [tool],
-    tool_choice: { type: 'tool', name: tool.name },
+    tools:       ALL_TOOLS,
+    tool_choice: { type: 'tool', name: toolName },
     messages:    [{ role: 'user', content: [docBlock, { type: 'text', text: instruction }] }],
-  })
+  }, { timeout: 90_000 })
   const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
   return (tu?.input as Record<string, unknown> | undefined) ?? {}
 }
@@ -215,19 +220,19 @@ export const extractCoverages = onRequest(
     try {
       const body = (req.body ?? {}) as ExtractBody
 
-      // Build the document block once. For text we ALSO keep the raw text so the
-      // shared sanitizers can verify every proposed form number against it; for a PDF
-      // we have no text to grep (text = null) and rely on the citation + never-invent.
-      // Not cached: the per-section forced tool_choice invalidates the message tier
-      // (see the note on runSection), so an ephemeral marker here would never be read.
+      // Build the document block once and mark it ephemeral so it is cached and reused
+      // across all four section calls (which now share an identical tools prefix). For
+      // text we ALSO keep the raw text so the shared sanitizers can verify every proposed
+      // form number against it; for a PDF we have no text to grep (text = null) and rely
+      // on the citation + never-invent guarantees.
       let docBlock: Anthropic.ContentBlockParam
       let verifyText: string | null
       if (body.formBase64 && body.mediaType === 'application/pdf') {
-        docBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 } }
+        docBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 }, cache_control: { type: 'ephemeral' } }
         verifyText = null
       } else if (body.formText?.trim()) {
         verifyText = body.formText.slice(0, 120_000)
-        docBlock = { type: 'text', text: `BASE COVERAGE FORM:\n\n${verifyText}` }
+        docBlock = { type: 'text', text: `BASE COVERAGE FORM:\n\n${verifyText}`, cache_control: { type: 'ephemeral' } }
       } else {
         send(res, { t: 'error', message: 'No form content provided.' }); return
       }
@@ -257,7 +262,7 @@ export const extractCoverages = onRequest(
 
       for (const s of sections) {
         send(res, { t: 'tool', name: s.key, phase: 'start' })
-        const input = await runSection(client, docBlock, s.instruction, s.tool, s.maxTokens)
+        const input = await runSection(client, docBlock, s.instruction, s.tool.name, s.maxTokens)
         const section = s.clean(input, verifyText)
         const n = section.items.length
         send(res, { t: 'tool', name: s.key, phase: 'end', summary: `${n} ${s.label}${n === 1 ? '' : 's'}` })

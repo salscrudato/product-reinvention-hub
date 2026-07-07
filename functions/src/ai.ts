@@ -38,7 +38,9 @@ async function streamTurn(
   for (let attempt = 1; ; attempt++) {
     let streamed = false
     try {
-      const stream = client.messages.stream(params)
+      // Per-turn timeout so a stalled upstream can't hang the request to the function
+      // ceiling — the SDK aborts and surfaces a timeout we treat like any other fault.
+      const stream = client.messages.stream(params, { timeout: 120_000 })
       // A no-op 'error' listener keeps an emitted error from becoming an unhandled
       // exception; we act on the finalMessage() rejection below instead.
       stream.on('error', () => {})
