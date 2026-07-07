@@ -15,6 +15,7 @@ export interface BaseForm {
   title:          string
   formNumber:     string
   edition:        string
+  lob?:           string   // detected line: 'HO' | 'GL' | '' — labels the card + grounds analysis
   fileName:       string
   storagePath:    string
   url:            string
@@ -24,6 +25,9 @@ export interface BaseForm {
   uploadedByName: string
   createdAt?:     unknown
 }
+
+// Full-name tooltip for the compact line chip.
+const LINE_TITLE: Record<string, string> = { HO: 'Homeowners', GL: 'General Liability' }
 
 interface Props {
   forms:      BaseForm[]
@@ -95,10 +99,10 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
         const payload = isPdf
           ? { formBase64: toBase64(buf), mediaType, fileName: file.name }
           : { formText: new TextDecoder().decode(buf), fileName: file.name }
-        const meta = await adapter.fns.call<typeof payload, { title: string; formNumber: string; edition: string }>('identifyBaseForm', payload)
+        const meta = await adapter.fns.call<typeof payload, { title: string; formNumber: string; edition: string; lob: string }>('identifyBaseForm', payload)
         await adapter.db.mutate({
           op: 'update', path: `baseForms/${id}`,
-          data: { title: meta.title || file.name, formNumber: meta.formNumber || '', edition: meta.edition || '', status: 'READY' },
+          data: { title: meta.title || file.name, formNumber: meta.formNumber || '', edition: meta.edition || '', lob: meta.lob || '', status: 'READY' },
           entityType: 'baseForm', actor,
         })
       } catch {
@@ -144,7 +148,7 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
             {busy ? <IconSpinner size={16} className="animate-spin text-accent" aria-hidden="true" /> : <IconUpload size={16} className="text-accent" aria-hidden="true" />}
           </div>
           <p className="text-[12px] text-dim leading-snug">
-            {busy ? 'Uploading & reading form…' : <>Drop a Homeowners form here<br />or</>}
+            {busy ? 'Uploading & reading form…' : <>Drop a base coverage form here<br />or</>}
           </p>
           {!busy && (
             <button
@@ -175,7 +179,7 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
             compact
             icon={<IconFile size={26} />}
             title="No base forms yet"
-            description={canEdit ? 'Upload a Homeowners form to start a coverage conversation.' : 'Ask an editor to upload a Homeowners form to start.'}
+            description={canEdit ? 'Upload a Homeowners or General Liability base form to start a coverage conversation.' : 'Ask an editor to upload a base form to start.'}
           />
         ) : (
           forms.map(f => {
@@ -196,6 +200,14 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
                     <span className={`text-[13px] font-semibold leading-snug line-clamp-2 ${on ? 'text-accent' : 'text-text'}`}>{f.title}</span>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {f.formNumber && <RefChip id={f.formNumber} tone={on ? 'accent' : 'default'} />}
+                      {f.lob && (
+                        <span
+                          className="text-[10px] font-medium px-1.5 py-0.5 rounded-[5px] bg-raised text-dim"
+                          title={LINE_TITLE[f.lob] ?? f.lob}
+                        >
+                          {f.lob}
+                        </span>
+                      )}
                       {f.edition && <span className="text-[10px] text-faint tnum">ed. {f.edition}</span>}
                     </div>
                     <div className="flex items-center gap-1.5 text-[10px] text-faint">

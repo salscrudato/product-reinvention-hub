@@ -29,14 +29,16 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
     'other tools. Do not call it alongside other tools. Ground every field in the ' +
     "uploaded form's language and the product data — never invent a coverage, limit or " +
     'exclusion. When a figure depends on the insured\'s Declarations or an adjuster, say ' +
-    'so in the value/note rather than guessing a number.',
+    'so in the value/note rather than guessing a number. Every reasoning point must cite, ' +
+    'in [brackets], the form section/clause and/or the refId or form number it relied on; ' +
+    'a substantive determination that cites nothing will be rejected.',
   input_schema: {
     type: 'object',
     properties: {
       verdict: {
         type: 'string',
-        enum: ['COVERED', 'NOT_COVERED', 'PARTIAL'],
-        description: 'COVERED, NOT_COVERED, or PARTIAL (partially covered / depends on a policy option or fact).',
+        enum: ['COVERED', 'NOT_COVERED', 'PARTIAL', 'NOT_ADDRESSED'],
+        description: 'COVERED; NOT_COVERED; PARTIAL (partially covered / depends on a policy option or fact); or NOT_ADDRESSED (the attached form does not address this scenario — it is silent, or the scenario is outside what this line/form covers). Use NOT_ADDRESSED honestly rather than forcing a verdict or inventing coverage.',
       },
       summary: { type: 'string', description: 'One plain-English sentence stating the outcome.' },
       coverages: {
@@ -79,35 +81,61 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
       },
       citations: {
         type: 'array',
-        description: 'Every refId / form number relied on, e.g. ["HO.COV.001","HO 00 03","HO.LD.003"].',
+        description: 'Every specific source relied on — a form section/clause and/or a refId or form number, e.g. ["Section I – Exclusions","HO.COV.001","HO 04 95"] or ["Coverage A – Bodily Injury","GL.COV.002","CG 00 01"]. For a substantive verdict this must be non-empty; may be empty only for NOT_ADDRESSED.',
         items: { type: 'string' },
       },
-      formNumber: { type: 'string', description: 'Always set: the base form number the analysis is grounded in, e.g. HO 00 03.' },
+      formNumber: { type: 'string', description: 'Always set: the base form number the analysis is grounded in, e.g. HO 00 03 or CG 00 01.' },
     },
-    required: ['verdict', 'summary', 'coverages', 'limits', 'reasoning'],
+    required: ['verdict', 'summary', 'coverages', 'limits', 'reasoning', 'citations'],
   },
 }
 
 const CLAIMS_TOOLS: Anthropic.Tool[] = [...TOOLS, EMIT_DETERMINATION_TOOL]
 
 // Claims-specific context layered on top of the house grounding rules (SYSTEM_PROMPT).
-const CLAIMS_SYSTEM = `You are a senior P&C claims coverage analyst working a Homeowners file. Attached to this conversation is the actual base coverage form the policy is written on — read ITS language (agreement, Section I property coverages & perils, Section I exclusions, Section II liability, conditions) as the primary authority. The product's structured data (coverages, endorsements, limits, deductibles, rules, rating) is in Firestore and reachable through the grounding tools; the seeded product is the ISO-style Homeowners HO-3 (omit productId to use the sole product).
+// Line-agnostic: the ATTACHED form is authoritative and tells the model the line, so the
+// same copilot works for a Homeowners HO-3 or a Commercial General Liability policy. The
+// per-line framing below is applied to whichever line the attached form belongs to.
+const CLAIMS_SYSTEM = `You are a senior P&C claims coverage analyst. Attached to this conversation is the ACTUAL base coverage form the policy is written on — read ITS language (insuring agreement, the coverages and their triggers/perils, exclusions, conditions and definitions) as the PRIMARY authority. The form itself identifies the line: an ISO-style Homeowners form (e.g. HO 00 03) or a Commercial General Liability form (e.g. CG 00 01).
 
-YOUR JOB when the claims professional describes a loss and asks about coverage:
-1. Decide COVERED, NOT_COVERED, or PARTIAL (partially covered / depends on a policy option or fact).
+RESOLVE THE RIGHT PRODUCT. The portfolio holds more than one product (an ISO Homeowners HO-3 and a Monoline CGL). Use search_entities to find the product that MATCHES the attached form's line, then pass its productId to get_rules and get_product_tree so you never mix lines. get_coverage, get_ld_table and get_dictionary take a refId and need no productId — prefer them.
+
+YOUR JOB when a loss or claim scenario is described:
+1. Decide COVERED, NOT_COVERED, PARTIAL (depends on a policy option or fact), or NOT_ADDRESSED (the attached form does not address this scenario — it is silent, or the scenario is outside what this line/form covers). Use NOT_ADDRESSED honestly instead of forcing a verdict or inventing coverage.
 2. Identify the exact coverages and endorsements that apply, each with a concise definition drawn from the form.
-3. State the limits, sub-limits and deductibles that apply, with their source. If a figure is set by the insured's Declarations (e.g. the Coverage A amount, the selected deductible), say so — do NOT invent a number.
-4. Give concise, cited reasoning that names the decisive coverage OR exclusion. HO-3 insures Coverages A & B against risk of direct physical loss (open peril) subject to the Section I exclusions, and Coverage C on the named perils. Sudden & accidental water discharge is covered; constant/repeated seepage, gradual leakage, wear & tear, and mold/fungus/wet rot are excluded; water that backs up through sewers/drains or a sump is excluded under the base form unless the Water Back-Up endorsement (HO 04 95) is on the policy; flood/surface water is excluded.
+3. State the limits, sub-limits and deductibles that apply, with their source. If a figure is set by the insured's Declarations (e.g. the Coverage A amount, the selected occurrence limit or deductible), say so — do NOT invent a number.
+4. Give concise, cited reasoning that names the decisive coverage OR exclusion.
 5. Explicitly flag anything the form does not determine (facts needing the Declarations page or an adjuster's inspection).
 
-Then call emit_determination exactly once, as your final action, with the structured result (always set its formNumber to the base form's number). That structured determination is the primary answer.
+Then call emit_determination exactly once, as your final action, with the structured result (always set its formNumber to the base form's number). CITE EVERYTHING: every reasoning point must cite, in [square brackets], the specific form section/clause you read (e.g. [Section I – Exclusions], [Coverage A – Dwelling], [Coverage A – Bodily Injury]) and/or the refId or form number from a tool (e.g. [HO.COV.001], [HO 04 95], [GL.COV.002], [CG 00 01]). A substantive determination that cites nothing will be rejected — cite or answer NOT_ADDRESSED. Never fabricate a coverage, limit, exclusion or form.
+
+LINE FRAMING — apply the one matching the attached form:
+• Homeowners (HO-3): first-party property + liability. Coverages A & B (dwelling / other structures) are insured against risk of direct physical loss on an OPEN-peril basis subject to the Section I exclusions; Coverage C (personal property) on the NAMED perils; plus D–F (loss of use, personal liability, medical payments). Sudden & accidental water discharge is covered; constant/repeated seepage, gradual leakage, wear & tear and mold/fungus/wet rot are excluded; water backing up through sewers/drains or a sump is excluded under the base form unless the Water Back-Up endorsement (HO 04 95) is on the policy; flood/surface water is excluded.
+• Commercial General Liability (CG 00 01): THIRD-PARTY liability, NOT first-party damage to the insured's own property. Coverage A (bodily injury & property damage) and Coverage B (personal & advertising injury) respond to the insured's legal liability to others (Coverage A on an occurrence basis, Coverage B by covered offense); Coverage C (medical payments) is no-fault. Subject to the Coverage A/B exclusions (e.g. expected/intended injury, contractual liability, pollution, auto, and damage to the insured's OWN product/work/property) and to the per-occurrence, general aggregate and products-completed-operations aggregate limits. A first-party loss to the insured's own building or contents is not a CGL subject — answer NOT_ADDRESSED and point to the property line.
 
 For questions that are NOT a loss determination (a definition, a limit/deductible lookup, a follow-up that refines a prior scenario), answer concisely in cited prose and do NOT call emit_determination — unless the refinement changes a prior verdict, in which case re-issue the determination.
 
 WORKING STYLE — important:
 - Use tools SILENTLY first. Do not write any prose until you have finished gathering facts. Never describe your process, your plan, or which tool you are about to use, and never mention the tools or "emit_determination" in the text you output — the claims professional sees only your final answer. Lead with the answer. Do not preface a prose answer by classifying the question or saying a determination isn't needed — just give the answer.
-- There are two seeded products (the Homeowners HO-3 and a General Liability line); this analysis is always the HO-3. get_coverage and get_ld_table take a refId and need no productId — prefer them; use search_entities to resolve the HO-3 product before get_rules or get_product_tree.
 - Ground every specific coverage, limit, sub-limit, deductible, rule or exclusion in the form's text and/or a tool result, and cite the refId or form number in [brackets]. Never fabricate. If the form is silent or a fact is unknown, say so plainly.`
+
+// ─── Citation guard — the "grounded + cited" invariant, enforced server-side ────
+// A substantive verdict (COVERED / NOT_COVERED / PARTIAL) may never reach the card
+// without pointing at a real source: an explicit citation, a coverage refId / form
+// number, a limit source, or a [bracketed] reasoning cite. The always-present base
+// formNumber footer does NOT count on its own. NOT_ADDRESSED is the honest exception
+// (the form is silent — nothing to cite). Mirror of app/src/lib/claims/determination.ts.
+const SUBSTANTIVE_VERDICTS = new Set(['COVERED', 'NOT_COVERED', 'PARTIAL'])
+
+function determinationIsCited(d: Record<string, unknown>): boolean {
+  const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+  const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+  const explicit  = arr(d.citations).some(c => str(c).length > 0)
+  const coverage  = arr(d.coverages).some(c => { const o = c as Record<string, unknown>; return str(o.refId) || str(o.formNumber) })
+  const limit     = arr(d.limits).some(l => str((l as Record<string, unknown>).source).length > 0)
+  const reasoning = arr(d.reasoning).some(r => /\[[^\]]+\]/.test(str(r)))
+  return explicit || coverage || limit || reasoning
+}
 
 // ─── analyzeClaim — the multi-turn coverage conversation (SSE) ──────────────────
 
@@ -117,6 +145,13 @@ interface ClaimBody {
   formText?:   string
   mediaType?:  string
   formNumber?: string
+  lob?:        string   // detected line ('HO' | 'GL' | …) — a hint; the form stays authoritative
+}
+
+// Human labels for the detected line, used to nudge the model toward the right product.
+const LINE_LABELS: Record<string, string> = {
+  HO: 'an ISO Homeowners form',
+  GL: 'a Commercial General Liability form',
 }
 
 export const analyzeClaim = onRequest(
@@ -164,14 +199,33 @@ export const analyzeClaim = onRequest(
       // `json` event; delegate every grounding tool to the shared runTool.
       const runClaimsTool = (name: string, input: Record<string, unknown>): Promise<ToolOutput> => {
         if (name === 'emit_determination') {
+          // Grounding invariant, enforced here: a substantive determination that cites
+          // nothing is a bug — hand it back so the model re-issues it citing the section /
+          // refId it relied on (or switches to NOT_ADDRESSED if the form is truly silent).
+          // We never surface an uncited coverage determination to the UI.
+          const verdict = typeof input.verdict === 'string' ? input.verdict : ''
+          if (SUBSTANTIVE_VERDICTS.has(verdict) && !determinationIsCited(input)) {
+            return Promise.resolve({
+              content: JSON.stringify({
+                error: 'This determination cites no source. Re-call emit_determination and cite, in [brackets] on each reasoning point, the specific form section/clause, coverage refId or form number you relied on. If the attached form does not actually address this scenario, set verdict to NOT_ADDRESSED instead of guessing.',
+              }),
+              summary: 'needs citation',
+            })
+          }
           send(res, { t: 'json', key: 'determination', value: input })
           return Promise.resolve({ content: JSON.stringify({ recorded: true }), summary: 'determination ready' })
         }
         return runTool(name, input)
       }
 
+      // The detected line is a hint only — the attached form remains authoritative.
+      const lob = (body.lob ?? '').toUpperCase()
+      const lobHint = LINE_LABELS[lob]
+        ? `\n\nThe attached form has been identified as ${LINE_LABELS[lob]} — analyze on that line and resolve the matching product.`
+        : ''
+
       await runChatAgent(anthropic(), messages, res, {
-        system:    CLAIMS_SYSTEM,
+        system:    CLAIMS_SYSTEM + lobHint,
         tools:     CLAIMS_TOOLS,
         runTool:   runClaimsTool,
         maxTokens: 2600,
@@ -206,6 +260,7 @@ const IDENTIFY_TOOL: Anthropic.Tool = {
       title:      { type: 'string', description: 'The form title, e.g. "Homeowners 3 – Special Form".' },
       formNumber: { type: 'string', description: 'The form number exactly as printed, e.g. "HO 00 03".' },
       edition:    { type: 'string', description: 'The edition date as printed, e.g. "10 00".' },
+      lob:        { type: 'string', enum: ['HO', 'GL', 'OTHER'], description: 'The insurance line, inferred from the form itself: HO for an ISO Homeowners form, GL for a Commercial General Liability form, otherwise OTHER.' },
     },
     required: ['title'],
   },
@@ -232,17 +287,19 @@ export const identifyBaseForm = onCall<IdentifyBody>(
     const msg = await anthropic().messages.create({
       model:       MODEL,
       max_tokens:  400,
-      system:      'You read the header of an uploaded P&C insurance form and report its title, form number and edition exactly as printed. Do not invent anything.',
+      system:      'You read the header of an uploaded P&C insurance form and report its title, form number, edition and line (HO/GL/OTHER) exactly as the document shows. Do not invent anything.',
       tools:       [IDENTIFY_TOOL],
       tool_choice: { type: 'tool', name: 'identify_form' },
       messages:    [{ role: 'user', content }],
     })
     const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-    const out = (tu?.input as { title?: string; formNumber?: string; edition?: string } | undefined) ?? {}
+    const out = (tu?.input as { title?: string; formNumber?: string; edition?: string; lob?: string } | undefined) ?? {}
+    const lob = (out.lob ?? '').trim().toUpperCase()
     return {
       title:      (out.title ?? body.fileName ?? 'Base form').trim(),
       formNumber: (out.formNumber ?? '').trim(),
       edition:    (out.edition ?? '').trim(),
+      lob:        lob === 'HO' || lob === 'GL' ? lob : '',
     }
   },
 )

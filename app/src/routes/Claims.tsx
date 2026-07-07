@@ -11,6 +11,7 @@ import { useUser } from '../context/useUser'
 import { ChatComposer } from '../components/chat/ChatComposer'
 import { BaseFormsLibrary, type BaseForm } from '../components/claims/BaseFormsLibrary'
 import { DeterminationCard, CitedText, type Determination } from '../components/claims/DeterminationCard'
+import { shouldRenderDetermination } from '../lib/claims/determination'
 import { RefChip } from '../components/ui'
 import { IconSparkle, IconCheck, IconSpinner, IconShield, IconChat } from '../components/ui/icons'
 
@@ -44,14 +45,33 @@ const TOOL_LABELS: Record<string, string> = {
   emit_determination:'Forming the determination',
 }
 
-// Domain-true examples — illustrate before a form is selected, and become one-tap
-// starters once one is (they exercise water discharge, back-up, fire, and off-premises).
-const EXAMPLES = [
+// Domain-true examples, per line — they become one-tap starters once a form is selected.
+// HO exercises water discharge, sump back-up, fire, and off-premises theft; GL exercises
+// premises bodily injury, products liability, third-party property damage, and Coverage B.
+const HO_EXAMPLES = [
   'A pipe burst upstairs and soaked the hardwood floors and the ceiling below.',
   'Water backed up through my basement floor drain from the sump — is that covered?',
   'A wildfire damaged my detached garage and we lived in a hotel for two weeks.',
   'My laptop was stolen from my car at the mall.',
 ]
+const GL_EXAMPLES = [
+  'A customer slipped on a wet floor in our store and broke a wrist.',
+  'A product we manufactured failed months after sale and injured the user.',
+  "Our crew accidentally damaged a client's equipment while working on their site.",
+  'A competitor claims our new ad copied their slogan and is suing us.',
+]
+// Zero-state (no form selected yet): a representative blend so the surface reads multi-line.
+const BLENDED_EXAMPLES = [HO_EXAMPLES[0]!, GL_EXAMPLES[0]!, HO_EXAMPLES[2]!, GL_EXAMPLES[3]!]
+
+// Pick the starter set matching the selected form's line (defaults to HO when unknown).
+function examplesFor(lob?: string): string[] {
+  const l = (lob ?? '').toUpperCase()
+  if (l === 'GL') return GL_EXAMPLES
+  return HO_EXAMPLES
+}
+
+// Full-name tooltip for the compact line chip in the context header.
+const LINE_TITLE: Record<string, string> = { HO: 'Homeowners', GL: 'General Liability' }
 
 function toMillis(v: unknown): number {
   const o = v as { toDate?: () => Date; seconds?: number } | null
@@ -165,6 +185,7 @@ export default function Claims() {
     const payload = {
       messages: wire,
       formNumber: selectedForm.formNumber,
+      ...(selectedForm.lob ? { lob: selectedForm.lob } : {}),
       ...(formData.base64 ? { formBase64: formData.base64, mediaType: formData.mediaType } : { formText: formData.text }),
     }
 
@@ -201,7 +222,18 @@ export default function Claims() {
               const d = ev.value as Determination
               // Guarantee the footer form-number chip even if the model omits it.
               const withForm = { ...d, formNumber: d.formNumber || selectedForm.formNumber || undefined }
-              patchAssistant(m => ({ ...m, determination: withForm, historyText: determinationToText(withForm) }))
+              if (shouldRenderDetermination(withForm)) {
+                patchAssistant(m => ({ ...m, determination: withForm, historyText: determinationToText(withForm) }))
+              } else {
+                // Defense in depth: the server guard already rejects an uncited substantive
+                // determination, but should one ever slip through we refuse to render it as
+                // fact and ask for a rephrase rather than showing an ungrounded verdict.
+                patchAssistant(m => ({
+                  ...m,
+                  text: m.text || "I couldn't ground that determination in the form — please rephrase the scenario.",
+                  historyText: undefined,
+                }))
+              }
             }
             break
           case 'error':
@@ -238,6 +270,14 @@ export default function Claims() {
               <div className="flex items-center gap-2 min-w-0">
                 <h1 className="text-[15px] font-semibold text-text truncate">{selectedForm.title}</h1>
                 {selectedForm.formNumber && <RefChip id={selectedForm.formNumber} tone="accent" />}
+                {selectedForm.lob && (
+                  <span
+                    className="text-[10px] font-medium px-1.5 py-0.5 rounded-[5px] bg-raised text-dim shrink-0"
+                    title={LINE_TITLE[selectedForm.lob] ?? selectedForm.lob}
+                  >
+                    {selectedForm.lob}
+                  </span>
+                )}
               </div>
               <span className="text-[11px] text-faint">Grounded in this form + its product data</span>
             </div>
@@ -248,7 +288,7 @@ export default function Claims() {
           {!selectedForm ? (
             <ZeroState />
           ) : messages.length === 0 ? (
-            <Starters onPick={ask} disabled={!composerReady} />
+            <Starters onPick={ask} disabled={!composerReady} examples={examplesFor(selectedForm.lob)} />
           ) : (
             <div className="flex flex-col gap-5 py-4">
               {messages.map((m, i) => (
@@ -322,7 +362,7 @@ function ZeroState() {
         </p>
       </div>
       <div className="grid sm:grid-cols-2 gap-2.5 w-full max-w-xl">
-        {EXAMPLES.map(s => (
+        {BLENDED_EXAMPLES.map(s => (
           <div key={s} className="text-left text-sm text-dim bg-surface rounded-[12px] px-4 py-3" style={{ border: '1px solid var(--color-border)' }}>
             <span className="flex items-start gap-2">
               <IconSparkle size={13} className="text-accent shrink-0 mt-0.5" aria-hidden="true" />
@@ -338,7 +378,7 @@ function ZeroState() {
 
 // ─── Starters (form selected, no messages yet) ──────────────────────────────────
 
-function Starters({ onPick, disabled }: { onPick: (t: string) => void; disabled: boolean }) {
+function Starters({ onPick, disabled, examples }: { onPick: (t: string) => void; disabled: boolean; examples: string[] }) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center gap-5 py-10">
       <div className="flex flex-col gap-1.5">
@@ -346,7 +386,7 @@ function Starters({ onPick, disabled }: { onPick: (t: string) => void; disabled:
         <p className="text-sm text-dim max-w-md">Ask in plain English. Every determination cites the coverages, limits and exclusions it relied on.</p>
       </div>
       <div className="grid sm:grid-cols-2 gap-2.5 w-full max-w-xl">
-        {EXAMPLES.map(s => (
+        {examples.map(s => (
           <button
             key={s} onClick={() => onPick(s)} disabled={disabled}
             className="text-left text-sm text-dim bg-surface rounded-[12px] px-4 py-3 hover:text-text hover:shadow-[var(--shadow-card-hover)] transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50 disabled:cursor-not-allowed"

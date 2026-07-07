@@ -6,29 +6,23 @@
 // footer. All colour comes from tokens (verdict tints via color-mix); no hard hex.
 import type { ReactNode } from 'react'
 import { RefChip } from '../ui'
-import { IconCheckCircle, IconAlertCircle, IconWarning, type IconType } from '../ui/icons'
+import { IconCheckCircle, IconAlertCircle, IconWarning, IconInfo, type IconType } from '../ui/icons'
+import type { Verdict, Determination } from '../../lib/claims/determination'
 
-// ─── Determination shape (mirror of the emit_determination tool payload) ────────
-
-export type Verdict = 'COVERED' | 'NOT_COVERED' | 'PARTIAL'
-
-export interface Determination {
-  verdict:    Verdict
-  summary:    string
-  coverages:  { name: string; refId?: string; formNumber?: string; definition: string }[]
-  limits:     { label: string; value: string; source?: string; note?: string }[]
-  reasoning:  string[]
-  openItems?: string[]
-  citations?: string[]
-  formNumber?: string
-}
+// The determination shape + verdict live in the platform-free claims lib (it is unit-
+// tested there against the server guard). Re-exported here so the Claims route keeps
+// importing the card's types from the card.
+export type { Verdict, Determination } from '../../lib/claims/determination'
 
 // Verdict presentation. Solid token for the bold pill; a color-mixed wash for the
 // header so the tint is always derived from the same token (never a duplicated hex).
+// NOT_ADDRESSED gets a neutral slate (never a coverage-implying green/red) so an
+// "the form is silent" answer reads as exactly that.
 const VERDICT: Record<Verdict, { label: string; token: string; Icon: IconType }> = {
-  COVERED:     { label: 'Covered',                     token: 'var(--color-good)',   Icon: IconCheckCircle },
-  NOT_COVERED: { label: 'Not covered',                 token: 'var(--color-danger)', Icon: IconAlertCircle },
-  PARTIAL:     { label: 'Partially covered · depends', token: 'var(--color-warn)',   Icon: IconWarning },
+  COVERED:       { label: 'Covered',                     token: 'var(--color-good)',   Icon: IconCheckCircle },
+  NOT_COVERED:   { label: 'Not covered',                 token: 'var(--color-danger)', Icon: IconAlertCircle },
+  PARTIAL:       { label: 'Partially covered · depends', token: 'var(--color-warn)',   Icon: IconWarning },
+  NOT_ADDRESSED: { label: 'Not addressed by this form',  token: 'var(--color-dim)',    Icon: IconInfo },
 }
 
 // ─── Citation linkifying ────────────────────────────────────────────────────────
@@ -102,7 +96,11 @@ export function DeterminationCard({ d }: { d: Determination }) {
         {/* Coverages that apply */}
         <Section title="Coverages that apply">
           {coverages.length === 0 ? (
-            <p className="text-[13px] text-dim italic">No coverages apply to this loss under the base form.</p>
+            <p className="text-[13px] text-dim italic">
+              {d.verdict === 'NOT_ADDRESSED'
+                ? "This form doesn't address the described scenario — nothing in it applies."
+                : 'No coverages apply to this loss under the base form.'}
+            </p>
           ) : (
             <ul className="flex flex-col gap-2.5">
               {coverages.map((c, i) => (
