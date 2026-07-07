@@ -27,6 +27,28 @@ export interface StateScope {
   states:    string[]
 }
 
+// ─── Provenance / lineage ─────────────────────────────────────────────────────
+// A draft product records what it leveraged so its origin is always visible and
+// auditable. `sources` cite REAL entities (an existing product/coverage/form refId,
+// an uploaded workbook filename, or the LOB it was scaffolded against) — the same
+// grounding discipline the AI paths follow, so provenance is never invented.
+
+export type LineageKind = 'BLANK' | 'IMPORT' | 'CLONE' | 'AI_SCAFFOLD'
+
+export interface LineageSource {
+  type: 'product' | 'coverage' | 'form' | 'file' | 'lob'
+  ref:  string            // product/coverage refId, form number, filename, or LOB refId
+  name?: string           // human label, when the ref alone isn't self-describing
+}
+
+export interface Lineage {
+  kind:    LineageKind
+  summary: string                     // one-line human description of the origin
+  sources: LineageSource[]            // what this draft cloned / imported / leveraged
+  by:      { uid: string; name: string }
+  at:      unknown                    // ISO string in seed/wire; Timestamp in Firebase
+}
+
 // ─── Users ──────────────────────────────────────────────────────────────────
 
 export interface User {
@@ -50,6 +72,9 @@ export interface Product extends GovernanceBlock, StateScope {
   health:        { score: number; findingCount: number; updatedAt: unknown }
   // The uploaded base coverage form that gates + grounds AI coverage extraction.
   baseForm?:     { path: string; url: string; name: string; uploadedAt: unknown; uploadedBy: string } | null
+  // Provenance — set on drafts (import/clone/scaffold/blank). Absent on legacy/seeded
+  // products. Display-only; never gates behaviour, so leaving it off is always safe.
+  lineage?:      Lineage | null
 }
 
 // ─── Coverages ──────────────────────────────────────────────────────────────

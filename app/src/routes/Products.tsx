@@ -1,9 +1,11 @@
-// Products list — realtime portfolio with three views: Cards (the portfolio grid),
-// Table (the flattened coverage/form inventory) and Hierarchy (the product-framework
-// tree). Segmentation (Personal/Commercial, Property/Casualty, market segment) is
-// driven entirely by the LOB registry, so it extends automatically as lines are
-// registered. Cards need only the product docs; the inventory + hierarchy lazily load
-// per-product coverages and forms.
+// Products list — the PUBLISHED portfolio only (lifecycle LAUNCHED). Drafts live in
+// the Builder workbench and reach this surface solely through an explicit promotion,
+// so a draft can never leak into the portfolio here. Three views: Cards (the portfolio
+// grid), Table (the flattened coverage/form inventory) and Hierarchy (the product-
+// framework tree). Segmentation (Personal/Commercial, Property/Casualty, market
+// segment) is driven entirely by the LOB registry, so it extends automatically as
+// lines are registered. Cards need only the product docs; the inventory + hierarchy
+// lazily load per-product coverages and forms.
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Fuse from 'fuse.js'
@@ -11,14 +13,12 @@ import { toast } from 'sonner'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { usePortfolioInventory } from '../lib/usePortfolioInventory'
-import { Button, Skeleton, EmptyState, Tabs } from '../components/ui'
-import { IconPlus, IconDownload, IconUpload, IconProduct, IconSearch, IconCards, IconTable, IconLayers } from '../components/ui/icons'
+import { Button, Skeleton, EmptyState } from '../components/ui'
+import { IconPlus, IconDownload, IconProduct, IconSearch, IconCards, IconTable, IconLayers } from '../components/ui/icons'
 import { ProductCard } from '../components/product/ProductCard'
 import { SegmentFilter } from '../components/product/SegmentFilter'
 import { InventoryTable } from '../components/product/InventoryTable'
 import { ProductHierarchy } from '../components/product/ProductHierarchy'
-import { NewProductModal } from '../components/product/NewProductModal'
-import { ImportWorkbookModal } from '../components/product/ImportWorkbookModal'
 import { exportPortfolioExcel, type ProductExport } from '../lib/export/excel'
 import {
   deriveSegmentAxes, matchesSegments,
@@ -30,11 +30,6 @@ import type { WithId } from '../context/ProductContext'
 type ProductView = 'cards' | 'table' | 'tree'
 const VIEW_KEY = 'pf.products.view'
 const FWID_KEY = 'pf.products.fwid'
-
-const TABS = [
-  { id: 'portfolio', label: 'Portfolio' },
-  { id: 'drafts',    label: 'Drafts'    },
-]
 
 const VIEWS: { id: ProductView; label: string; Icon: typeof IconCards }[] = [
   { id: 'cards', label: 'Cards',     Icon: IconCards  },
@@ -56,11 +51,8 @@ export default function Products() {
   const [products, setProducts] = useState<WithId<Product>[]>([])
   const [loading,  setLoading]  = useState(true)
   const [query,    setQuery]    = useState('')
-  const [tab,      setTab]      = useState('portfolio')
   const [selection, setSelection] = useState<SegmentSelection>({})
   const [groupBy,  setGroupBy]  = useState<SegmentAxisId | 'none'>('none')
-  const [newOpen,  setNewOpen]  = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [view, setView] = useState<ProductView>(readView)
   const [showFwId, setShowFwId] = useState<boolean>(() => localStorage.getItem(FWID_KEY) !== '0')
@@ -69,7 +61,8 @@ export default function Products() {
   const setFwIdPersist = (b: boolean) => { setShowFwId(b); localStorage.setItem(FWID_KEY, b ? '1' : '0') }
 
   async function exportPortfolio() {
-    if (!products.length) return
+    const launchedProducts = products.filter(p => p.lifecycle === 'LAUNCHED')
+    if (!launchedProducts.length) return
     setExporting(true)
     try {
       const [forms, ldList, rtList] = await Promise.all([
@@ -79,7 +72,7 @@ export default function Products() {
       ])
       const ldTables = Object.fromEntries(ldList.map(t => [t.id, t])) as Record<string, LDTable>
       const rtTables = Object.fromEntries(rtList.map(t => [t.id, t])) as Record<string, RTTable>
-      const items: ProductExport[] = await Promise.all(products.map(async p => {
+      const items: ProductExport[] = await Promise.all(launchedProducts.map(async p => {
         const [coverages, rules, programs] = await Promise.all([
           adapter.db.list<Coverage>(`products/${p.id}/coverages`),
           adapter.db.list<Rule>(`products/${p.id}/rules`),
@@ -103,27 +96,24 @@ export default function Products() {
     return unsub
   }, [])
 
-  // Portfolio (LAUNCHED) vs drafts, then registry-driven segmentation, then search.
-  const tabbed = useMemo(() => (
-    tab === 'portfolio'
-      ? products.filter(p => p.lifecycle === 'LAUNCHED')
-      : products.filter(p => p.lifecycle !== 'LAUNCHED')
-  ), [products, tab])
+  // Published portfolio only (LAUNCHED); drafts are authored + promoted in the Builder.
+  // Then registry-driven segmentation, then search.
+  const launched = useMemo(() => products.filter(p => p.lifecycle === 'LAUNCHED'), [products])
 
-  const segmented = useMemo(() => tabbed.filter(p => matchesSegments(p, selection)), [tabbed, selection])
+  const segmented = useMemo(() => launched.filter(p => matchesSegments(p, selection)), [launched, selection])
 
   const fuse = useMemo(() => new Fuse(segmented, { keys: ['name', 'refId', 'marketSegment'], threshold: 0.4 }), [segmented])
   const visible = query ? fuse.search(query).map(r => r.item) : segmented
 
-  // Facet axes + per-value counts (within the current tab) — all from the registry.
+  // Facet axes + per-value counts (within the published set) — all from the registry.
   const axes = useMemo(() => deriveSegmentAxes(), [])
   const counts = useMemo(() => {
     const out: Partial<Record<SegmentAxisId, Record<string, number>>> = {}
     for (const a of axes) {
-      out[a.id] = Object.fromEntries(a.values.map(v => [v, tabbed.filter(p => matchesSegments(p, { [a.id]: v })).length]))
+      out[a.id] = Object.fromEntries(a.values.map(v => [v, launched.filter(p => matchesSegments(p, { [a.id]: v })).length]))
     }
     return out
-  }, [axes, tabbed])
+  }, [axes, launched])
 
   // Inventory data (coverages + forms) — loaded only while table/hierarchy is active.
   const needsInventory = view !== 'cards'
@@ -137,30 +127,24 @@ export default function Products() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-text">Products</h1>
-          <p className="text-sm text-dim mt-0.5 tnum">{products.length} product{products.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-dim mt-0.5 tnum">{launched.length} published product{launched.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2">
-          {products.length > 0 && (
+          {launched.length > 0 && (
             <Button variant="ghost" size="sm" onClick={exportPortfolio} disabled={exporting}>
               <IconDownload size={14} />{exporting ? 'Exporting…' : 'Export'}
             </Button>
           )}
           {canEdit && (
-            <Button variant="ghost" size="sm" onClick={() => setImportOpen(true)}>
-              <IconUpload size={14} />Import
-            </Button>
-          )}
-          {canEdit && (
-            <Button variant="primary" size="sm" onClick={() => setNewOpen(true)}>
-              <IconPlus size={14} />New product
+            <Button variant="primary" size="sm" onClick={() => navigate('/app/builder')}>
+              <IconPlus size={14} />New draft
             </Button>
           )}
         </div>
       </div>
 
-      {/* Tabs · search · view switch */}
+      {/* Search · view switch */}
       <div className="flex flex-wrap items-center gap-3">
-        <Tabs tabs={TABS} active={tab} onChange={setTab} />
         <div className="relative flex-1 min-w-[200px]">
           <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
           <input
@@ -204,10 +188,15 @@ export default function Products() {
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState icon={<IconProduct size={32} />} title={query ? `No results for "${query}"` : 'No products match these filters'}
-          description={canEdit ? 'Adjust the filters, or create a new product.' : 'Adjust the filters to see products.'}
-          action={canEdit && !query ? <Button variant="primary" size="sm" onClick={() => setNewOpen(true)}><IconPlus size={14} />New product</Button> : undefined}
-        />
+        launched.length === 0 && !query ? (
+          <EmptyState icon={<IconProduct size={32} />} title="No published products yet"
+            description={canEdit ? 'Author products in the Builder, then promote them here.' : 'Products appear here once a draft is promoted.'}
+            action={canEdit ? <Button variant="primary" size="sm" onClick={() => navigate('/app/builder')}><IconPlus size={14} />Go to Builder</Button> : undefined}
+          />
+        ) : (
+          <EmptyState icon={<IconProduct size={32} />} title={query ? `No results for "${query}"` : 'No products match these filters'}
+            description="Adjust the filters to see published products." />
+        )
       ) : view === 'cards' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visible.map(p => <ProductCard key={p.id} p={p} />)}
@@ -217,9 +206,6 @@ export default function Products() {
       ) : (
         <ProductHierarchy products={visible} byProduct={inventory.byProduct} loading={inventory.loading} error={inventory.error} groupBy={groupBy} />
       )}
-
-      {newOpen && <NewProductModal onClose={() => setNewOpen(false)} onCreated={id => { setNewOpen(false); navigate(`/app/products/${id}`) }} />}
-      {importOpen && <ImportWorkbookModal onClose={() => setImportOpen(false)} onImported={id => { setImportOpen(false); navigate(`/app/products/${id}`) }} />}
     </div>
   )
 }

@@ -18,6 +18,7 @@ import {
 } from '../ui/icons'
 import { readWorkbooks } from '../../lib/import/readWorkbook'
 import { importPlan, type ImportProgress, type ImportResult } from '../../lib/import/importProduct'
+import { newDraftId, importLineage } from '../../lib/draft/draft'
 
 interface Props { onClose: () => void; onImported: (productId: string) => void }
 type Phase = 'select' | 'parsing' | 'preview' | 'importing' | 'done' | 'error'
@@ -70,10 +71,15 @@ export function ImportWorkbookModal({ onClose, onImported }: Props) {
     setPhase('importing')
     setProgress({ done: 0, total: 0, label: 'Starting…' })
     try {
-      const res = await importPlan(plan, { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }, setProgress)
+      const actor = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
+      // Land under a freshly-minted, distinct draft id (never the canonical refId), so
+      // an import can never clobber or demote a launched product with the same refId.
+      const draftId = newDraftId(plan.productId)
+      const lineage = importLineage(fileNames, plan.productId, actor)
+      const res = await importPlan(plan, actor, setProgress, { productId: draftId, lineage })
       setResult(res); setPhase('done')
-      if (res.failed) toast.warning(`Imported ${res.written} items, ${res.failed} skipped`)
-      else toast.success(`Imported ${res.written} items`)
+      if (res.failed) toast.warning(`Imported ${res.written} items as a draft, ${res.failed} skipped`)
+      else toast.success(`Imported ${res.written} items as a draft`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed.')
       setPhase('error')
@@ -92,7 +98,8 @@ export function ImportWorkbookModal({ onClose, onImported }: Props) {
           <p className="text-sm text-dim">
             Upload the ISO product-specification workbooks — Framework, Forms, Rating and Rules.
             You can select all four at once. We&apos;ll map them onto the model and preview a full
-            summary before anything is written.
+            summary before anything is written. The import lands as a <span className="font-medium text-text">draft</span> you
+            review and promote later — it never touches the published portfolio.
           </p>
           <button
             type="button"
@@ -208,7 +215,7 @@ export function ImportWorkbookModal({ onClose, onImported }: Props) {
           <div className="flex gap-2 justify-end pt-1">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
             <Button variant="primary" onClick={runImport} disabled={!plan?.product}>
-              Import product <IconArrowRight size={14} />
+              Import as draft <IconArrowRight size={14} />
             </Button>
           </div>
         </div>
@@ -229,10 +236,10 @@ export function ImportWorkbookModal({ onClose, onImported }: Props) {
             <span className="flex items-center justify-center w-12 h-12 rounded-full" style={{ background: 'var(--color-accent-soft)' }}>
               <IconCheckCircle size={26} className="text-good" />
             </span>
-            <div className="text-base font-semibold text-text">Import complete</div>
+            <div className="text-base font-semibold text-text">Draft created</div>
             <p className="text-sm text-dim">
-              {result.written} item{result.written !== 1 ? 's' : ''} written
-              {result.failed ? <span className="text-danger"> · {result.failed} skipped</span> : null}.
+              {result.written} item{result.written !== 1 ? 's' : ''} written to a new draft
+              {result.failed ? <span className="text-danger"> · {result.failed} skipped</span> : null}. Promote it when it&apos;s ready.
             </p>
           </div>
           {result.errors.length > 0 && (
@@ -248,7 +255,7 @@ export function ImportWorkbookModal({ onClose, onImported }: Props) {
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={onClose}>Close</Button>
             <Button variant="primary" onClick={() => onImported(result.productId)}>
-              Open product <IconArrowRight size={14} />
+              Open draft <IconArrowRight size={14} />
             </Button>
           </div>
         </div>

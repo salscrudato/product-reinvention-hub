@@ -12,6 +12,7 @@ import { Button } from '../ui/Button'
 import { DEFAULT_TASK_TEMPLATES, DEFAULT_LOB } from '@pf/shared'
 import type { TaskTemplate } from '@pf/shared'
 import { PRODUCT_NAME_SUGGESTIONS, MARKET_SEGMENTS } from '../../lib/insurance/vocab'
+import { blankLineage } from '../../lib/draft/draft'
 
 interface Props { onClose: () => void; onCreated: (id: string) => void }
 
@@ -54,6 +55,7 @@ export function NewProductModal({ onClose, onCreated }: Props) {
           reviewStatus: 'NOT_STARTED', updatedBy: actor.uid,
           rev: 1, allStates: false, states: [],
           health: { score: 100, findingCount: 0, updatedAt: null },
+          lineage: blankLineage(actor),
         },
         entityType: 'product', actor,
       })
