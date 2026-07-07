@@ -5,7 +5,7 @@ import { ProductProvider } from '../../context/ProductContext'
 import { useProductCtx } from '../../context/useProductCtx'
 import { adapter } from '../../lib/backend'
 import { Skeleton, StatusPill, LifecyclePill, Badge, Button } from '../../components/ui'
-import { IconShare, IconRecent, IconChat, IconUsers } from '../../components/ui/icons'
+import { IconShare, IconRecent, IconChat, IconUsers, IconBack, IconChevronDown } from '../../components/ui/icons'
 import { computeProductFindings, healthScore, healthColor } from '../../lib/productHealth'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { CommentsPanel } from '../../components/product/CommentsPanel'
@@ -30,6 +30,7 @@ function WorkspaceInner() {
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [shareOpen,    setShareOpen]    = useState(false)
   const [viewers, setViewers] = useState<string[]>([])
+  const [siblings, setSiblings] = useState<{ id: string; name: string }[]>([])
 
   // Presence
   useEffect(() => {
@@ -38,6 +39,15 @@ function WorkspaceInner() {
     const unwatch = adapter.presence.watch(pid, uids => setViewers([...new Set(uids)]))
     return () => { leavePresence(); unwatch() }
   }, [pid])
+
+  // Sibling products — powers the "switch product" control in the back bar so a PM
+  // can hop between products without returning to the hub first.
+  useEffect(() => {
+    const unsub = adapter.db.subscribe<{ id: string; name: string }>('products', (d) => {
+      if (Array.isArray(d)) setSiblings(d.map(p => ({ id: p.id, name: p.name })).sort((a, b) => a.name.localeCompare(b.name)))
+    })
+    return unsub
+  }, [])
 
   if (loading && !product) {
     return (
@@ -69,6 +79,27 @@ function WorkspaceInner() {
         </div>
 
         <div className="relative">
+          {/* Back bar — consistent on every detail tab: return to the hub, or jump
+              straight to a sibling product without going back first. */}
+          <div className="flex items-center gap-2 mb-4 text-sm">
+            <button onClick={() => navigate('/app/products')}
+              className="inline-flex items-center gap-1.5 -ml-1.5 px-1.5 py-1 rounded-[7px] text-dim hover:text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              <IconBack size={15} aria-hidden="true" /> Products
+            </button>
+            <span className="text-faint" aria-hidden="true">/</span>
+            <div className="relative">
+              <label htmlFor="pf-sibling-switch" className="sr-only">Switch to another product</label>
+              <select id="pf-sibling-switch" value={pid}
+                onChange={e => { if (e.target.value !== pid) navigate(`/app/products/${e.target.value}/${activeTab}`) }}
+                className="max-w-[280px] h-8 pl-2.5 pr-8 rounded-[8px] bg-surface border border-border-strong text-sm font-medium text-text truncate appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/25">
+                {(siblings.length ? siblings : [{ id: pid, name: product.name }]).map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <IconChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-faint pointer-events-none" aria-hidden="true" />
+            </div>
+          </div>
+
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 flex-wrap">

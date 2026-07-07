@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest'
 import {
   HO_LOB, GL_LOB, LOB_REGISTRY, DEFAULT_LOB,
   resolveLob, resolveLobByRefId, groupBySection, isPerilState,
+  deriveSegmentAxes, productSegments, matchesSegments,
 } from './lobRegistry'
 
 describe('LOB resolution', () => {
@@ -84,5 +85,40 @@ describe('peril / coastal rules', () => {
     expect(GL_LOB.peril.kind).toBe('TERRITORY')
     expect(GL_LOB.peril.eligibleStates).toHaveLength(0)
     expect(isPerilState(GL_LOB, 'FL')).toBe(false)
+  })
+})
+
+describe('segmentation (registry-driven)', () => {
+  const HO = { lob: { refId: 'HO.LOB.001' } }
+  const GL = { lob: { refId: 'GL.LOB.001' } }
+
+  it('derives axes and their values from the registry, not hard-coded lists', () => {
+    const axes = deriveSegmentAxes()
+    expect(axes.map(a => a.id)).toEqual(['vertical', 'family', 'marketSegment'])
+    const byId = Object.fromEntries(axes.map(a => [a.id, a.values]))
+    expect(byId['vertical']).toEqual(['Commercial Lines', 'Personal Lines'])
+    expect(byId['family']).toEqual(['Casualty', 'Property'])
+    // Every market segment any registered line serves is present (sorted, deduped).
+    expect(byId['marketSegment']).toEqual(['Middle Market', 'Personal Lines', 'Small Commercial'])
+  })
+
+  it('resolves a product\'s segment tags through its line of business', () => {
+    expect(productSegments(HO)).toEqual({ vertical: 'Personal Lines', family: 'Property', marketSegments: ['Personal Lines'] })
+    expect(productSegments(GL)).toEqual({ vertical: 'Commercial Lines', family: 'Casualty', marketSegments: ['Small Commercial', 'Middle Market'] })
+  })
+
+  it('matches products against a selection; unset axes are wildcards', () => {
+    expect(matchesSegments(HO, {})).toBe(true)                                    // no filter → all
+    expect(matchesSegments(HO, { vertical: 'Personal Lines' })).toBe(true)
+    expect(matchesSegments(HO, { vertical: 'Commercial Lines' })).toBe(false)
+    expect(matchesSegments(GL, { family: 'Casualty' })).toBe(true)
+    expect(matchesSegments(GL, { family: 'Property' })).toBe(false)
+    // market-segment axis works for both lines
+    expect(matchesSegments(GL, { marketSegment: 'Middle Market' })).toBe(true)
+    expect(matchesSegments(HO, { marketSegment: 'Middle Market' })).toBe(false)
+    expect(matchesSegments(HO, { marketSegment: 'Personal Lines' })).toBe(true)
+    // combined selection must satisfy every set axis
+    expect(matchesSegments(GL, { vertical: 'Commercial Lines', family: 'Casualty', marketSegment: 'Small Commercial' })).toBe(true)
+    expect(matchesSegments(GL, { vertical: 'Commercial Lines', family: 'Property' })).toBe(false)
   })
 })
