@@ -6,6 +6,7 @@
     "dev": "pnpm --filter app dev",
     "emulators": "firebase emulators:start",
     "dev:all": "concurrently \"pnpm emulators\" \"pnpm --filter app dev\"",
+    "dev:seed": "concurrently -n emu,seed,app -c magenta,green,cyan \"pnpm emulators\" \"node scripts/wait-and-seed.mjs\" \"pnpm --filter app dev\"",
     "spinup": "concurrently -n emu,seed -c magenta,green \"pnpm emulators\" \"node scripts/wait-and-seed.mjs\"",
     "seed": "tsx scripts/seed.ts",
     "cors:set": "gsutil cors set storage.cors.json gs://productreinvention.firebasestorage.app",

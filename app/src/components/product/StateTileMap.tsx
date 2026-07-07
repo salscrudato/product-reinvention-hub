@@ -107,8 +107,8 @@ export function StateTileMap({ active, coastal, footprint, onToggle, canEdit = f
 		>
 			<defs>
 				<linearGradient id={`${id}-c`} x1="0" y1="0" x2="1" y2="1">
-					<stop offset="0%" stopColor="#A100FF" />
-					<stop offset="100%" stopColor="#7A00E6" />
+					<stop offset="0%" stopColor="var(--color-accent-bright)" />
+					<stop offset="100%" stopColor="var(--color-accent-strong)" />
 				</linearGradient>
 			</defs>
 			{ALL_STATES.map(st => {
@@ -120,12 +120,12 @@ export function StateTileMap({ active, coastal, footprint, onToggle, canEdit = f
 				const isCoastal = coastal.has(st) && inFootprint
 
 				const fill = !inFootprint
-					? '#E4E4EB'
+					? '#E4E4EB'  // no token — sits between raised and hover intentionally
 					: isActive
-						? (isCoastal ? `url(#${id}-c)` : '#8B1FE0')
-						: '#F3F3F8'
+						? (isCoastal ? `url(#${id}-c)` : 'var(--color-accent)')
+						: 'var(--color-raised)'
 
-				const textFill = isActive ? '#FFFFFF' : '#5B5C6B'
+				const textFill = isActive ? 'var(--color-surface)' : 'var(--color-dim)'
 				const statusLabel = describeStatus(st, isActive, inFootprint, isCoastal)
 				const isFocused = focused === st
 
@@ -166,19 +166,19 @@ export function StateTileMap({ active, coastal, footprint, onToggle, canEdit = f
 						</text>
 						{isCoastal && L.coastal && (
 							<g transform={`translate(${x + CELL - 6} ${y + 6})`} aria-hidden="true">
-								<circle r={5} fill="#F59E0B" stroke="#FFFFFF" strokeWidth={0.75} />
-								<path d="M0.4 -2.6 L-1.8 0.4 L-0.2 0.4 L-0.6 2.6 L1.8 -0.4 L0.2 -0.4 Z" fill="#FFFFFF" />
+								<circle r={5} fill="#F59E0B" stroke="var(--color-surface)" strokeWidth={0.75} />
+								<path d="M0.4 -2.6 L-1.8 0.4 L-0.2 0.4 L-0.6 2.6 L1.8 -0.4 L0.2 -0.4 Z" fill="var(--color-surface)" />
 							</g>
 						)}
 					</g>
 				)
 			})}
 			{/* Legend */}
-			<g transform={`translate(${PAD} ${H - 12})`} fontSize={9} fill="#5B5C6B">
-				<rect x={0} y={-9} width={12} height={12} rx={3} fill="#8B1FE0" />
+			<g transform={`translate(${PAD} ${H - 12})`} fontSize={9} fill="var(--color-dim)">
+				<rect x={0} y={-9} width={12} height={12} rx={3} fill="var(--color-accent)" />
 				<text x={17} y={0}>{L.active}</text>
 
-				<rect x={120} y={-9} width={12} height={12} rx={3} fill="#F3F3F8" />
+				<rect x={120} y={-9} width={12} height={12} rx={3} fill="var(--color-raised)" />
 				<text x={137} y={0}>{L.available}</text>
 
 				<rect x={248} y={-9} width={12} height={12} rx={3} fill="#E4E4EB" />
@@ -187,7 +187,7 @@ export function StateTileMap({ active, coastal, footprint, onToggle, canEdit = f
 				{L.coastal && (
 					<>
 						<rect x={376} y={-9} width={12} height={12} rx={3} fill={`url(#${id}-c)`} />
-						<circle cx={385.5} cy={-6.5} r={3} fill="#F59E0B" stroke="#FFFFFF" strokeWidth={0.5} />
+						<circle cx={385.5} cy={-6.5} r={3} fill="#F59E0B" stroke="var(--color-surface)" strokeWidth={0.5} />
 						<text x={394} y={0}>{L.coastal}</text>
 					</>
 				)}

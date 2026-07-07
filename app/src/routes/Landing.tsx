@@ -159,7 +159,7 @@ function InsightGraph() {
           <circle cx={f.x} cy={f.y} r={RN} fill="rgba(255,255,255,.96)" stroke="var(--color-accent-line)" strokeWidth={1}
             style={{ filter: 'drop-shadow(0 3px 12px rgba(139,31,224,.12))' }} />
           <g transform={`translate(${f.x} ${f.y})`}><Glyph id={f.id} /></g>
-          <text x={f.x} y={f.y - RN - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="#131318">{f.label}</text>
+          <text x={f.x} y={f.y - RN - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--color-text)">{f.label}</text>
         </g>
       ))}
 
@@ -172,11 +172,11 @@ function InsightGraph() {
         <circle cx={PM.x} cy={PM.y} r={RPM} fill="url(#ig-medallion)"
           style={{ filter: 'drop-shadow(0 8px 26px rgba(139,31,224,.34))' }} />
         {/* Product-manager glyph: head + shoulders */}
-        <g fill="#fff">
+        <g fill="var(--color-surface)">
           <circle cx={PM.x} cy={PM.y - 9} r={11} />
           <path d={`M${PM.x - 19} ${PM.y + 22} C${PM.x - 19} ${PM.y + 6} ${PM.x + 19} ${PM.y + 6} ${PM.x + 19} ${PM.y + 22} Z`} />
         </g>
-        <text x={PM.x} y={PM.y + RPM + 22} textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#131318">Product Manager</text>
+        <text x={PM.x} y={PM.y + RPM + 22} textAnchor="middle" fontSize="12.5" fontWeight="700" fill="var(--color-text)">Product Manager</text>
       </g>
     </svg>
   )
