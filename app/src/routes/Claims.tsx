@@ -92,10 +92,12 @@ function toBase64(buf: ArrayBuffer): string {
 // Faithful text rendering of a determination so multi-turn follow-ups keep context.
 function determinationToText(d: Determination): string {
   const cov = d.coverages.map(c => `${c.name}${c.refId ? ` [${c.refId}]` : ''}${c.formNumber ? ` [${c.formNumber}]` : ''} — ${c.definition}`).join('; ')
+  const exc = (d.exclusions ?? []).map(e => `${e.name}${e.refId ? ` [${e.refId}]` : ''}${e.formNumber ? ` [${e.formNumber}]` : ''}${e.note ? ` — ${e.note}` : ''}`).join('; ')
   const lim = d.limits.map(l => `${l.label}: ${l.value}${l.source ? ` [${l.source}]` : ''}${l.note ? ` (${l.note})` : ''}`).join('; ')
   return [
     `Determination: ${d.verdict.replace('_', ' ')}. ${d.summary}`,
     cov && `Coverages that apply: ${cov}`,
+    exc && `What's not covered: ${exc}`,
     lim && `Limits & deductibles: ${lim}`,
     d.reasoning.length ? `Reasoning: ${d.reasoning.join(' ')}` : '',
     d.openItems?.length ? `Not determined by the form: ${d.openItems.join('; ')}` : '',

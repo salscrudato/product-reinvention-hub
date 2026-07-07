@@ -9,11 +9,16 @@ export type Verdict = 'COVERED' | 'NOT_COVERED' | 'PARTIAL' | 'NOT_ADDRESSED'
 
 export interface DeterminationCoverage { name: string; refId?: string; formNumber?: string; definition: string }
 export interface DeterminationLimit    { label: string; value: string; source?: string; note?: string }
+// The specific exclusions / carve-outs that shaped the verdict — what is NOT covered and
+// why (e.g. the failed pipe itself, gradual seepage, mold conditions, a Coverage A/B
+// exclusion). `source` is the cited section / refId / form number it comes from.
+export interface DeterminationExclusion { name: string; refId?: string; formNumber?: string; note?: string }
 
 export interface Determination {
   verdict:     Verdict
   summary:     string
   coverages:   DeterminationCoverage[]
+  exclusions?: DeterminationExclusion[]
   limits:      DeterminationLimit[]
   reasoning:   string[]
   openItems?:  string[]
@@ -36,9 +41,10 @@ const filled = (s?: string): boolean => !!s && s.trim().length > 0
 export function isDeterminationCited(d: Determination): boolean {
   const explicit  = (d.citations ?? []).some(filled)
   const coverage  = (d.coverages ?? []).some(c => filled(c.refId) || filled(c.formNumber))
+  const exclusion = (d.exclusions ?? []).some(e => filled(e.refId) || filled(e.formNumber))
   const limit     = (d.limits ?? []).some(l => filled(l.source))
   const reasoning = (d.reasoning ?? []).some(r => hasBracketCitation(r ?? ''))
-  return explicit || coverage || limit || reasoning
+  return explicit || coverage || exclusion || limit || reasoning
 }
 
 /** The gate the UI applies before rendering a determination card: a substantive verdict

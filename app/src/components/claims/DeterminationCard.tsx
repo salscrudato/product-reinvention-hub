@@ -69,10 +69,11 @@ export function DeterminationCard({ d }: { d: Determination }) {
   const wash = `color-mix(in srgb, ${v.token} 9%, var(--color-surface))`
   // Defensive: the structured payload comes from the model — default the arrays so a
   // partial determination renders cleanly instead of crashing the message.
-  const coverages = d.coverages ?? []
-  const limits    = d.limits ?? []
-  const reasoning = d.reasoning ?? []
-  const openItems = d.openItems ?? []
+  const coverages  = d.coverages ?? []
+  const exclusions = d.exclusions ?? []
+  const limits     = d.limits ?? []
+  const reasoning  = d.reasoning ?? []
+  const openItems  = d.openItems ?? []
 
   return (
     <article
@@ -116,6 +117,25 @@ export function DeterminationCard({ d }: { d: Determination }) {
             </ul>
           )}
         </Section>
+
+        {/* What's not covered — the specific exclusions / carve-outs that shaped the verdict */}
+        {exclusions.length > 0 && (
+          <Section title="What's not covered">
+            <ul className="flex flex-col gap-2.5">
+              {exclusions.map((e, i) => (
+                <li key={i} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-danger)' }} aria-hidden="true" />
+                    <span className="font-semibold text-[13px] text-text">{e.name}</span>
+                    {e.refId && <RefChip id={e.refId} />}
+                    {e.formNumber && <RefChip id={e.formNumber} />}
+                  </div>
+                  {e.note && <p className="text-[13px] text-dim leading-relaxed"><CitedText text={e.note} /></p>}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
 
         {/* Limits & deductibles */}
         {limits.length > 0 && (

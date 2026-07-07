@@ -55,6 +55,20 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
           required: ['name', 'definition'],
         },
       },
+      exclusions: {
+        type: 'array',
+        description: 'The specific exclusions, limitations or carve-outs that shaped the verdict — what is NOT covered and why (e.g. the failed pipe/appliance itself, gradual/repeated seepage, mold/fungus conditions, or the decisive Coverage A/B or Section I exclusion). Empty if none are relevant. Cite each in source (a form section, refId or form number).',
+        items: {
+          type: 'object',
+          properties: {
+            name:       { type: 'string', description: 'The excluded item or named exclusion, e.g. "The failed pipe itself" or "Water Damage exclusion".' },
+            refId:      { type: 'string', description: 'Rule/coverage refId if applicable, e.g. HO.RU.006.' },
+            formNumber: { type: 'string', description: 'The form number or form section it comes from, e.g. "HO 00 03 §I.B.12.b(1)" or "CG 00 01 Excl. j".' },
+            note:       { type: 'string', description: 'One concise sentence: what is excluded / carved out and how it bears on this loss.' },
+          },
+          required: ['name'],
+        },
+      },
       limits: {
         type: 'array',
         description: 'Relevant limits, sub-limits and deductibles. Use an honest value when it is set by the Declarations.',
@@ -103,9 +117,10 @@ RESOLVE THE RIGHT PRODUCT. The portfolio holds more than one product (an ISO Hom
 YOUR JOB when a loss or claim scenario is described:
 1. Decide COVERED, NOT_COVERED, PARTIAL (depends on a policy option or fact), or NOT_ADDRESSED (the attached form does not address this scenario — it is silent, or the scenario is outside what this line/form covers). Use NOT_ADDRESSED honestly instead of forcing a verdict or inventing coverage.
 2. Identify the exact coverages and endorsements that apply, each with a concise definition drawn from the form.
-3. State the limits, sub-limits and deductibles that apply, with their source. If a figure is set by the insured's Declarations (e.g. the Coverage A amount, the selected occurrence limit or deductible), say so — do NOT invent a number.
-4. Give concise, cited reasoning that names the decisive coverage OR exclusion.
-5. Explicitly flag anything the form does not determine (facts needing the Declarations page or an adjuster's inspection).
+3. Name the specific exclusions and carve-outs that shape the verdict — what is NOT covered and why (e.g. the failed pipe/appliance itself, gradual or repeated seepage, mold/fungus, or the decisive Coverage A/B or Section I exclusion). Populate the determination's exclusions with these, each cited; note when a plausible exclusion does NOT apply.
+4. State the limits, sub-limits and deductibles that apply, with their source. If a figure is set by the insured's Declarations (e.g. the Coverage A amount, the selected occurrence limit or deductible), say so — do NOT invent a number.
+5. Give concise, cited reasoning that names the decisive coverage OR exclusion.
+6. Explicitly flag anything the form does not determine (facts needing the Declarations page or an adjuster's inspection).
 
 Then call emit_determination exactly once, as your final action, with the structured result (always set its formNumber to the base form's number). CITE EVERYTHING: every reasoning point must cite, in [square brackets], the specific form section/clause you read (e.g. [Section I – Exclusions], [Coverage A – Dwelling], [Coverage A – Bodily Injury]) and/or the refId or form number from a tool (e.g. [HO.COV.001], [HO 04 95], [GL.COV.002], [CG 00 01]). A substantive determination that cites nothing will be rejected — cite or answer NOT_ADDRESSED. Never fabricate a coverage, limit, exclusion or form.
 
@@ -132,9 +147,10 @@ function determinationIsCited(d: Record<string, unknown>): boolean {
   const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
   const explicit  = arr(d.citations).some(c => str(c).length > 0)
   const coverage  = arr(d.coverages).some(c => { const o = c as Record<string, unknown>; return str(o.refId) || str(o.formNumber) })
+  const exclusion = arr(d.exclusions).some(e => { const o = e as Record<string, unknown>; return str(o.refId) || str(o.formNumber) })
   const limit     = arr(d.limits).some(l => str((l as Record<string, unknown>).source).length > 0)
   const reasoning = arr(d.reasoning).some(r => /\[[^\]]+\]/.test(str(r)))
-  return explicit || coverage || limit || reasoning
+  return explicit || coverage || exclusion || limit || reasoning
 }
 
 // ─── analyzeClaim — the multi-turn coverage conversation (SSE) ──────────────────

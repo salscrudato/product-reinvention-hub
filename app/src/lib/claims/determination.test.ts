@@ -30,6 +30,13 @@ describe('isDeterminationCited', () => {
     expect(isDeterminationCited({ ...base, limits: [{ label: 'Deductible', value: '$1,000', source: 'HO.LD.003' }] })).toBe(true)
   })
 
+  it('is true via an exclusion form section (what is NOT covered, cited)', () => {
+    expect(isDeterminationCited({
+      ...base, verdict: 'NOT_COVERED',
+      exclusions: [{ name: 'The failed pipe itself', formNumber: 'HO 00 03 §I.B.12.b(1)', note: 'The system that leaked is not covered.' }],
+    })).toBe(true)
+  })
+
   it('is true via a [bracketed] reasoning cite (a form section)', () => {
     expect(isDeterminationCited({ ...base, reasoning: ['Excluded by [Section I – Exclusions].'] })).toBe(true)
   })
