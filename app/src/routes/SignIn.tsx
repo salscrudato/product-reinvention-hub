@@ -112,8 +112,8 @@ export default function SignIn() {
               type="button"
               onClick={() => setShowPass(s => !s)}
               aria-label={showPass ? 'Hide password' : 'Show password'}
-              tabIndex={-1}
-              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors"
+              aria-pressed={showPass}
+              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               {showPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
             </button>
