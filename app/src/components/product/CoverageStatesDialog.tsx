@@ -99,7 +99,7 @@ export function CoverageStatesDialog({ cov, onClose }: { cov: WithId<Coverage>; 
 	          footprint={new Set(productFootprint)}
 	          onToggle={canEdit && !allStates ? toggle : undefined}
 	          canEdit={canEdit && !allStates}
-	          labels={{ active: 'In scope', coastal: 'Coastal wind/hail', inactive: 'Out of scope' }}
+	          labels={{ active: 'In scope', coastal: COASTAL.size ? lob.peril.label : undefined, inactive: 'Out of scope' }}
 	        />
 	      </div>
 

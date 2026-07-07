@@ -36,7 +36,7 @@ function toRoute(entry: SearchIndexEntry): string {
   switch (entry.type) {
     case 'product':    return `/app/products/${pid}`
     case 'coverage':   return `/app/products/${pid}/coverages`
-    case 'form':       return `/app/products/HO.PROD.001/forms`
+    case 'form':       return `/app/products/${entry.refId ?? 'HO.PROD.001'}/forms`
     case 'rule':       return `/app/products/${pid}/rules`
     case 'ldTable':
     case 'rtTable':    return `/app/explorer`

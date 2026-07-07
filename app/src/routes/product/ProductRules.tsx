@@ -138,10 +138,11 @@ function SimulatePanel() {
 export default function ProductRules() {
   const ctx = useProductCtx()
   const { pid, product, rules, formRules, coverages, loading } = ctx
-  const lobPrefix = resolveLob(product).prefix   // refId prefix is line-driven (HO, GL…)
-  // The Simulate panel runs the Homeowners rules engine (SelectionContext); it's the only
-  // line with one today, so scope it to HO rather than show a misleading panel elsewhere.
-  const canSimulate = lobPrefix === 'HO'
+  const lob = resolveLob(product)
+  const lobPrefix = lob.prefix   // refId prefix is line-driven (HO, GL…)
+  // The Simulate panel runs the line's rules engine; only lines whose LOB definition
+  // sets supportsRulesSimulation:true have an evaluateRules() implementation.
+  const canSimulate = lob.supportsRulesSimulation
   const { user } = useUser()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()

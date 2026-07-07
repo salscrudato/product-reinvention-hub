@@ -5,7 +5,7 @@
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
 import {
-  evaluate, resolveRatingKit, resolveLobByRefId, rankDocuments,
+  evaluate, resolveRatingKit, resolveLobByRefId, DEFAULT_LOB, rankDocuments,
 } from '@pf/shared'
 import type { RankDoc } from '@pf/shared'
 import type {
@@ -294,7 +294,7 @@ async function runRating(programRef: string, partial: Partial<RatingInputMap>): 
 
   // Resolve the line's rating kit from the program refId (HO.RAT.1 → HO, GL.RAT.1 → GL)
   // so the getters + worked-example defaults match the product being priced.
-  const kit = resolveRatingKit(resolveLobByRefId(programRef)?.prefix ?? 'HO')
+  const kit = resolveRatingKit((resolveLobByRefId(programRef) ?? DEFAULT_LOB).prefix)
   const inputs: RatingInputMap = { ...kit.workedExample, ...partial }
   const { finalPremium, trace } = evaluate(program, inputs, kit.makeRtGetter(rtTables), kit.makeLdGetter(ldTables))
   const out = {

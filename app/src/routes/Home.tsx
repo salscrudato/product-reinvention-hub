@@ -26,16 +26,16 @@ interface ToolChip { name: string; done: boolean; summary?: string }
 interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[] }
 
 const SUGGESTIONS = [
-  'Which forms attach if I add Scheduled Personal Property on a Texas risk?',
   'Trace the premium for the default HO-3 example.',
-  'What are the eligibility rules that reference Coverage F medical payments?',
-  'Show the wind/hail percentage deductible options and their constraints.',
+  'Which forms attach if I add Scheduled Personal Property on a Texas risk?',
+  'Trace the GL premium for a retail store with $300,000 in gross sales.',
+  'What GL coverages are mandatory under CG 00 01?',
 ]
 
 // ─── Citation linkifying ────────────────────────────────────────────────────────
 
-// Match bracketed refIds / form numbers: [HO.RU.006], [HO 04 90], [HO.LD.002].
-const CITE_RE = /\[(HO[\s.][A-Z0-9][A-Z0-9.\s]*?)\]/g
+// Match bracketed refIds / form numbers for any line: [HO.RU.006], [GL.COV.002], [CG 00 01].
+const CITE_RE = /\[([A-Z]{1,4}[\s.][A-Z0-9][A-Z0-9.\s]*?)\]/g
 
 /** Render assistant text with clickable citation chips. */
 function RichText({ text, onCite }: { text: string; onCite: (cite: string) => void }) {

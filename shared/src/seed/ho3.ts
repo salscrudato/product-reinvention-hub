@@ -13,6 +13,18 @@ import { HO_LOB } from '../insurance/lobRegistry'
 // registry (single source of truth); the seed re-exports the footprint for convenience.
 export const HO3_FOOTPRINT_STATES = HO_LOB.footprintStates
 
+// Section identifiers for form coverageParts — derived from the HO LOB taxonomy so
+// no 'Section I / Section II' string is hard-coded outside the registry.
+const SEC_I  = HO_LOB.sections[0]!.shortName   // 'Section I'
+const SEC_II = HO_LOB.sections[1]!.shortName   // 'Section II'
+
+// Coastal constraint note for HO.LD.004 and HO.RU.008 — built from the LOB's
+// peril definition so the coastal state list is owned by the registry alone.
+const COASTAL_CONSTRAINT_NOTE =
+  `Coastal states only (${HO_LOB.peril.eligibleStates.join(' ')}); dollar amount must be ≥ all-peril deductible`
+const COASTAL_RULE_OUTCOME =
+  `Coastal states only (${HO_LOB.peril.eligibleStates.join(' ')}); dollar amount ≥ all-peril deductible`
+
 // ─── Governance helper ───────────────────────────────────────────────────────
 
 // createdAt/updatedAt are null here; the seed script replaces them with FieldValue.serverTimestamp()
@@ -39,7 +51,7 @@ export const HO3_PRODUCT: Omit<Product, 'createdAt' | 'updatedAt'> & {
 } = {
   refId:         'HO.PROD.001',
   name:          'Homeowners — HO-3 Special Form',
-  lob:           { refId: 'HO.LOB.001', name: 'Homeowners' },
+  lob:           { refId: HO_LOB.refId, name: HO_LOB.name },
   description:   'ISO-style Special Form homeowners policy covering dwelling, personal property, liability and medical payments on an open-peril basis.',
   marketSegment: 'Personal Lines / Property',
   owner:         { uid: 'seed', name: 'Product Factory Seed' },
@@ -82,9 +94,9 @@ export const HO3_LD_TABLES: Record<string, LDTable> = {
   'HO.LD.004': {
     name: 'Wind/Hail Percentage Deductible',
     rows: [
-      { label: '1%', value: 1, constraintNote: 'Coastal states only (FL GA NC SC TX); dollar amount must be ≥ all-peril deductible' },
-      { label: '2%', value: 2, constraintNote: 'Coastal states only (FL GA NC SC TX); dollar amount must be ≥ all-peril deductible' },
-      { label: '5%', value: 5, constraintNote: 'Coastal states only (FL GA NC SC TX); dollar amount must be ≥ all-peril deductible' },
+      { label: '1%', value: 1, constraintNote: COASTAL_CONSTRAINT_NOTE },
+      { label: '2%', value: 2, constraintNote: COASTAL_CONSTRAINT_NOTE },
+      { label: '5%', value: 5, constraintNote: COASTAL_CONSTRAINT_NOTE },
     ],
   },
   'HO.LD.005': {
@@ -488,7 +500,7 @@ export const HO3_FORMS: FormSeed[] = [
     claimsBasis: 'Occurrence', dynamic: false, mandatoryDefault: true,
     attachmentCondition: 'NONE', source: 'BUREAU', admitted: true,
     displayOnSchedule: true, multiUse: false,
-    transactions: [], coverageParts: ['Section I', 'Section II'],
+    transactions: [], coverageParts: [SEC_I, SEC_II],
     productRefIds: ['HO.PROD.001'],
     description: 'Base open-peril homeowners policy form covering dwelling, other structures, personal property, loss of use, personal liability and medical payments.',
     dynamicFields: [], ...FOOTPRINT_SCOPE, ...gov(),
@@ -518,7 +530,7 @@ export const HO3_FORMS: FormSeed[] = [
     claimsBasis: 'Occurrence', dynamic: false, mandatoryDefault: false,
     attachmentCondition: 'RULE', source: 'BUREAU', admitted: true,
     displayOnSchedule: true, multiUse: false,
-    transactions: [], coverageParts: ['Section I'],
+    transactions: [], coverageParts: [SEC_I],
     productRefIds: ['HO.PROD.001'],
     description: 'Amends Coverage C to settle losses at replacement cost rather than actual cash value.',
     dynamicFields: [], ...FOOTPRINT_SCOPE, ...gov(),
@@ -529,7 +541,7 @@ export const HO3_FORMS: FormSeed[] = [
     claimsBasis: 'Occurrence', dynamic: true, mandatoryDefault: false,
     attachmentCondition: 'RULE', source: 'BUREAU', admitted: true,
     displayOnSchedule: true, multiUse: false,
-    transactions: [], coverageParts: ['Section I'],
+    transactions: [], coverageParts: [SEC_I],
     productRefIds: ['HO.PROD.001'],
     description: 'Extends coverage to loss caused by water that backs up through sewers or drains or overflows from a sump.',
     dynamicFields: [{ name: 'BackUpLimit', dataType: 'CURRENCY', repeating: false }],
@@ -541,7 +553,7 @@ export const HO3_FORMS: FormSeed[] = [
     claimsBasis: 'Occurrence', dynamic: true, mandatoryDefault: false,
     attachmentCondition: 'RULE', source: 'BUREAU', admitted: true,
     displayOnSchedule: true, multiUse: false,
-    transactions: [], coverageParts: ['Section I'],
+    transactions: [], coverageParts: [SEC_I],
     productRefIds: ['HO.PROD.001'],
     description: 'Schedules high-value personal property items (jewelry, furs, cameras, fine arts, etc.) at agreed appraised values.',
     dynamicFields: [
@@ -572,7 +584,7 @@ export const HO3_FORMS: FormSeed[] = [
     claimsBasis: 'Occurrence', dynamic: true, mandatoryDefault: false,
     attachmentCondition: 'RULE', source: 'BUREAU', admitted: true,
     displayOnSchedule: true, multiUse: true,
-    transactions: [], coverageParts: ['Section I'],
+    transactions: [], coverageParts: [SEC_I],
     productRefIds: ['HO.PROD.001'],
     description: 'Increases Coverage B beyond the default 10% of Coverage A for specifically described other structures.',
     dynamicFields: [
@@ -587,7 +599,7 @@ export const HO3_FORMS: FormSeed[] = [
     claimsBasis: 'Occurrence', dynamic: true, mandatoryDefault: false,
     attachmentCondition: 'RULE', source: 'BUREAU', admitted: true,
     displayOnSchedule: false, multiUse: false,
-    transactions: [], coverageParts: ['Section I'],
+    transactions: [], coverageParts: [SEC_I],
     productRefIds: ['HO.PROD.001'],
     description: 'Replaces the standard deductible for windstorm or hail losses with a percentage-of-dwelling deductible.',
     dynamicFields: [
@@ -601,7 +613,7 @@ export const HO3_FORMS: FormSeed[] = [
     claimsBasis: 'Occurrence', dynamic: false, mandatoryDefault: false,
     attachmentCondition: 'RULE', source: 'BUREAU', admitted: true,
     displayOnSchedule: false, multiUse: false,
-    transactions: [], coverageParts: ['Section II'],
+    transactions: [], coverageParts: [SEC_II],
     productRefIds: ['HO.PROD.001'],
     description: 'Excludes personal liability and medical payments coverage for the day-care business conducted at the residence.',
     dynamicFields: [], ...FOOTPRINT_SCOPE, ...gov(),
@@ -683,7 +695,7 @@ export const HO3_RULES: RuleSeed[] = [
     ...FOOTPRINT_SCOPE, ...gov() },
   { refId: 'HO.RU.008', category: 'RATING', subCategory: 'Deductibles',
     condition: 'Wind/Hail percentage deductible elected',
-    outcome: 'Coastal states only (FL GA NC SC TX); dollar amount ≥ all-peril deductible',
+    outcome: COASTAL_RULE_OUTCOME,
     ldTableRef: 'HO.LD.004', coverageRefIds: [], formNumbers: ['HO 03 12'],
     ...COASTAL_SCOPE, ...gov() },
   { refId: 'HO.RU.009', category: 'RATING', subCategory: 'Premium Floor',

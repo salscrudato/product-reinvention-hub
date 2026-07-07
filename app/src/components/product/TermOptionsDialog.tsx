@@ -347,7 +347,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
             ) : (
               <div className="flex flex-col gap-2">
                 {options.map(o => (
-	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} coastalStates={coastalStates} canEdit={canEdit}
+	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} coastalStates={coastalStates} perilLabel={lob.peril.label} canEdit={canEdit}
                     inRange={rangeOk(o, active)}
                     onChange={next => setOptions(options.map(x => x.id === o.id ? next : x))}
                     onDefault={() => setOptions(options.map(x => ({ ...x, isDefault: x.id === o.id })))}
@@ -374,8 +374,8 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 
 // ─── One editable option row ─────────────────────────────────────────────────
 
-function OptionRow({ o, mode, scopeStates, coastalStates, canEdit, inRange, onChange, onDefault, onRemove }: {
-	  o: StandardOption; mode: Mode; scopeStates: string[]; coastalStates: readonly string[]; canEdit: boolean; inRange: boolean
+function OptionRow({ o, mode, scopeStates, coastalStates, perilLabel, canEdit, inRange, onChange, onDefault, onRemove }: {
+	  o: StandardOption; mode: Mode; scopeStates: string[]; coastalStates: readonly string[]; perilLabel: string; canEdit: boolean; inRange: boolean
 	  onChange: (o: StandardOption) => void; onDefault: () => void; onRemove: () => void
 	}) {
 	  const [expanded, setExpanded] = useState(false)
@@ -515,7 +515,7 @@ function OptionRow({ o, mode, scopeStates, coastalStates, canEdit, inRange, onCh
 	                      active: 'Option available',
 	                      available: 'In coverage scope',
 	                      inactive: 'Out of coverage scope',
-	                      coastal: coastalSet.size ? 'Coastal wind/hail' : undefined,
+	                      coastal: coastalSet.size ? perilLabel : undefined,
 	                    }}
 	                    ariaLabel={`State applicability for option — ${activeStateCount} of ${scopeStates.length} coverage states`}
 	                  />

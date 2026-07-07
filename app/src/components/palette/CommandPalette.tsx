@@ -16,7 +16,9 @@ import type { SearchIndexEntry, SearchEntityType } from '@pf/shared'
 
 function toRoute(entry: SearchIndexEntry): string {
   const parts = entry.path.split('/')
-  const productId = entry.path.includes('products/') ? (parts[1] ?? 'HO.PROD.001') : 'HO.PROD.001'
+  // For product-scoped entities use the product segment; for global entities (forms)
+  // fall back to the owning product stored as entry.refId by the seed.
+  const productId = entry.path.includes('products/') ? (parts[1] ?? 'HO.PROD.001') : (entry.refId ?? 'HO.PROD.001')
   switch (entry.type) {
     case 'product':    return `/app/products/${parts[1]}`
     case 'coverage':   return `/app/products/${productId}/coverages`

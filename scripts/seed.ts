@@ -208,7 +208,8 @@ async function main(): Promise<void> {
       const key = form.number.replace(/\s+/g, '-')
       await db.doc(`forms/${key}`).set(withTs(form, now))
       inc('forms')
-      addIdx({ type: 'form', title: form['name'] as string,
+      // refId stores the owning product so Explorer/palette can route to the right tab.
+      addIdx({ type: 'form', refId: pid, title: form['name'] as string,
         subtitle: `${form.number} · ${form['edition']}`,
         path: `forms/${key}`,
         keywords: [...keywords(form['name'] as string), ...keywords(form.number)] })
