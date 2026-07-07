@@ -80,6 +80,9 @@ const INDEXABLE = new Set(['product', 'coverage', 'rule', 'form', 'ldTable', 'rt
 // A fake ADMIN session held entirely client-side. Dev builds only; because there is
 // no real ID token, Firestore rules reject every read/write (the workspace loads
 // empty). Persisted in sessionStorage so a reload keeps it. Remove before production.
+// Bare-username sign-in maps "name" → "name@USERNAME_DOMAIN" (the address the seeded
+// accounts are provisioned under), so users can log in with just "sal" / "rebecca".
+const USERNAME_DOMAIN = 'productreinvention.app'
 const DEV_BYPASS_KEY = 'pf.devAdminBypass'
 const DEV_ADMIN: AuthUser = { uid: 'dev-admin', email: 'dev-admin@local', name: 'Dev Admin (bypass)', role: 'ADMIN' }
 // Seeded demo-admin account (see shared HO3_SEED_USERS: admin@admin.com, no forced
@@ -95,7 +98,11 @@ let triedAnonSignIn = false
 export const adapter: BackendAdapter = {
   auth: {
     async signIn(email, password): Promise<Session> {
-      const cred = await signInWithEmailAndPassword(auth, email, password)
+      // Accept a bare username (e.g. "sal") as well as a full email — a username maps to
+      // <username>@USERNAME_DOMAIN, the synthetic address the account is provisioned under.
+      const id = email.trim()
+      const addr = id.includes('@') ? id : `${id.toLowerCase()}@${USERNAME_DOMAIN}`
+      const cred = await signInWithEmailAndPassword(auth, addr, password)
       const user = await toAuthUser(cred.user)
       const token = await cred.user.getIdToken()
       return { user, token }

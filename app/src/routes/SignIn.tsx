@@ -4,7 +4,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
-import { IconSpinner, IconKey, IconEye, IconEyeOff } from '../components/ui/icons'
+import { IconSpinner, IconEye, IconEyeOff } from '../components/ui/icons'
 import { useUser } from '../context/useUser'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
@@ -34,7 +34,7 @@ export default function SignIn() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sign-in failed'
       if (msg.includes('invalid-credential') || msg.includes('wrong-password') || msg.includes('user-not-found')) {
-        setError('Invalid email or password.')
+        setError('Invalid username or password.')
       } else if (msg.includes('too-many-requests')) {
         setError('Too many attempts — try again in a moment.')
       } else {
@@ -47,20 +47,6 @@ export default function SignIn() {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     void doSignIn(email, pass)
-  }
-
-  // No-credentials admin: a real sign-in as the seeded demo admin, so the workspace
-  // loads with full ADMIN access and every edit persists (no fake/token-less session).
-  async function handleAdmin() {
-    setError('')
-    setLoading(true)
-    try {
-      await adapter.auth.signInAsAdmin()
-      navigate(from, { replace: true })
-    } catch {
-      setError('Could not start the admin session. Make sure the demo backend is running and seeded.')
-      setLoading(false)
-    }
   }
 
   const busy = loading
@@ -91,8 +77,8 @@ export default function SignIn() {
           noValidate
         >
           <Input
-            label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="you@company.com" autoComplete="email" required disabled={busy}
+            label="Username" type="text" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="sal" autoComplete="username" required disabled={busy}
             autoFocus
           />
 
@@ -129,20 +115,10 @@ export default function SignIn() {
             {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>
-
-          {/* No-credentials admin — real ADMIN sign-in for demos (full access + persistence) */}
-          <div className="flex items-center gap-3 my-1" aria-hidden="true">
-            <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
-            <span className="text-[11px] uppercase tracking-wide text-faint">or</span>
-            <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
-          </div>
-          <Button type="button" variant="default" className="w-full" disabled={busy} onClick={() => void handleAdmin()}>
-            <IconKey size={14} aria-hidden="true" />Continue as admin
-          </Button>
         </form>
 
         <p className="text-center text-xs text-faint mt-4">
-          No credentials needed — the admin button opens a full-access demo workspace you can edit.
+          Sign in with your username and password.
         </p>
       </div>
     </div>

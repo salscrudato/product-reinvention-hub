@@ -797,27 +797,19 @@ export const HO3_DEFAULT_TASK_TEMPLATES = DEFAULT_TASK_TEMPLATES
 
 // ─── Sample users ─────────────────────────────────────────────────────────────
 
+// The only two accounts that may sign in — both full ADMIN. Provisioned under the
+// USERNAME_DOMAIN synthetic addresses so they log in with the bare usernames "sal" /
+// "rebecca" (see firebase.adapter signIn). Passwords per the deploy brief.
 export const HO3_SEED_USERS: Array<Omit<User, 'createdAt'> & { createdAt: null; password: string }> = [
   {
-    // Convenience admin for local sign-in (no forced password change).
-    email: 'admin@admin.com', name: 'Admin',
+    email: 'sal@productreinvention.app', name: 'Sal',
     role: 'ADMIN', active: true, mustChangePassword: false,
-    password: 'admin123', createdAt: null,
+    password: 'scrudato', createdAt: null,
   },
   {
-    email: 'admin@productfactory.app', name: 'Product Factory Admin',
-    role: 'ADMIN', active: true, mustChangePassword: true,
-    password: 'admin123', createdAt: null,
-  },
-  {
-    email: 'editor@productfactory.app', name: 'Product Editor',
-    role: 'EDITOR', active: true, mustChangePassword: false,
-    password: 'editor123', createdAt: null,
-  },
-  {
-    email: 'viewer@productfactory.app', name: 'Product Viewer',
-    role: 'VIEWER', active: true, mustChangePassword: false,
-    password: 'viewer123', createdAt: null,
+    email: 'rebecca@productreinvention.app', name: 'Rebecca',
+    role: 'ADMIN', active: true, mustChangePassword: false,
+    password: 'freeman', createdAt: null,
   },
 ]
 
