@@ -8,7 +8,6 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { copyToClipboard } from '../../lib/clipboard'
 import { Skeleton, ProductStatusPill, Badge, Button } from '../../components/ui'
 import { IconRecent, IconChat, IconUsers, IconBack, IconChevronDown, IconArrowUp, IconShare, IconEdit, IconCheck, IconClose } from '../../components/ui/icons'
-import { computeProductFindings, healthScore, healthColor } from '../../lib/productHealth'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { CommentsPanel } from '../../components/product/CommentsPanel'
 import { ExportMenu } from '../../components/product/ExportMenu'
@@ -26,7 +25,7 @@ const TABS = [
 ]
 
 function WorkspaceInner() {
-  const { pid, product, coverages, rules, formRules, forms, ldTables, rtTables, ratingProgram, loading } = useProductCtx()
+  const { pid, product, coverages, rules, forms, ldTables, rtTables, ratingProgram, loading } = useProductCtx()
   const navigate     = useNavigate()
   const { pathname } = useLocation()
   const { user }     = useUser()
@@ -113,11 +112,6 @@ function WorkspaceInner() {
 
   if (!product) return <Navigate to="/app/products" replace />
 
-  // Readiness pill — same source as the Overview finding banner, so they agree.
-  const findings = computeProductFindings({ pid, coverages, rules, ratingProgram, ldTables, rtTables, formRules })
-  const score  = healthScore(findings)
-  const hColor = healthColor(score)
-
   return (
     <div className="flex flex-col gap-0">
       {/* Hero header */}
@@ -158,14 +152,6 @@ function WorkspaceInner() {
               <div className="flex items-center gap-2 flex-wrap">
                 <ProductStatusPill lifecycle={product.lifecycle} />
                 {product.lob?.name && <Badge label={product.lob.name} color="blue" />}
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full pl-2 pr-2.5 py-0.5 text-xs font-medium tnum"
-                  style={{ background: `color-mix(in srgb, ${hColor} 12%, transparent)`, color: hColor }}
-                  title={findings.length ? `${findings.length} readiness finding${findings.length !== 1 ? 's' : ''}` : 'No issues found'}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: hColor }} aria-hidden="true" />
-                  {score}{findings.length ? ` · ${findings.length} finding${findings.length !== 1 ? 's' : ''}` : ' · Healthy'}
-                </span>
               </div>
               {editingName ? (
                 <div className="flex items-center gap-2">

@@ -37,6 +37,10 @@ function buildMeta(product: WithId<Product>, coverages: WithId<Coverage>[], rule
       return { condition: o.condition ?? o.name ?? '', outcome: o.outcome ?? o.description ?? '' }
     }),
     rating: ratingProgram ? { steps: ratingProgram.steps?.length ?? 0, minimumPremium: ratingProgram.minimumPremium } : undefined,
+    // The base coverage form (from create-time identify) grounds the summary.
+    baseForm: product.baseForm
+      ? { number: product.baseForm.formNumber, title: product.baseForm.title, edition: product.baseForm.edition }
+      : undefined,
   }
 }
 
@@ -82,7 +86,11 @@ export function ProductSummaryDashboard() {
           </span>
           <div>
             <h2 className="text-sm font-semibold text-text leading-tight">AI product summary</h2>
-            <p className="text-[11px] text-faint">Generated from this product's metadata</p>
+            <p className="text-[11px] text-faint">
+              {product?.baseForm
+                ? <>Grounded in the base form{product.baseForm.formNumber ? <> <span className="font-mono text-dim">{product.baseForm.formNumber}</span></> : ''}</>
+                : "Generated from this product's metadata"}
+            </p>
           </div>
         </div>
         <button onClick={() => void generate(true)} disabled={state === 'loading'}

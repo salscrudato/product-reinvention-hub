@@ -203,6 +203,23 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
   const pct = active ? isPercentTerm(active) : false
   const { Icon: ModeIcon, title: modeTitle, noun: modeLabel } = MODE_META[mode]
 
+  // Append one or more values as options in a single edit — the engine behind both
+  // the quick-add presets and the Excel-style paste. New values inherit the term's
+  // current structure/type, apply to all states, and are enabled; ensureOneDefault
+  // (via setOptions) guarantees exactly one default survives.
+  function addValues(nums: number[]) {
+    if (!canEdit || !active) return
+    const type = impliedType(active.structure ?? (mode === 'LIMIT' ? 'SINGLE' : 'FLAT'))
+    const seen = new Set(options.map(o => o.value))
+    const additions: StandardOption[] = []
+    nums.forEach((value, i) => {
+      if (!Number.isFinite(value) || value < 0 || seen.has(value)) return
+      seen.add(value)
+      additions.push({ id: `opt-${Date.now()}-${i}`, type, value, allStates: true, states: [], isDefault: false, enabled: true })
+    })
+    if (additions.length) setOptions([...options, ...additions])
+  }
+
   return (
     <Dialog open onClose={onClose} width="max-w-3xl">
       {/* Header */}
@@ -262,45 +279,6 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
         </div>
       ) : (
         <div className="flex flex-col gap-6 max-h-[62vh] overflow-y-auto pr-1 -mr-1">
-          {/* ─ Structure (limits / deductibles only) ─────────────────────────── */}
-          {mode !== 'OPTION' && (
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">
-              {mode === 'LIMIT' ? 'Limit structure' : 'Deductible structure'}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {structures.map(s => {
-                const Icon = STRUCT_ICON[s.icon] ?? IconSingle
-                const selected = (active.structure ?? 'SINGLE') === s.id
-                return (
-                  <button key={s.id} disabled={!canEdit}
-                    onClick={() => patchActive({
-                      structure: s.id as LimitStructure | DeductibleStructure,
-                      ...(mode === 'DEDUCTIBLE' ? { unit: impliedType(s.id) === 'PERCENT' ? '%' : 'dollars' } : {}),
-                      optionSet: (active.optionSet ?? []).map(o => ({ ...o, type: impliedType(s.id) })),
-                    })}
-                    className={`text-left p-3 rounded-[12px] transition-all ${selected ? 'bg-accent-soft' : 'bg-surface hover:bg-raised'}`}
-                    style={{ border: selected ? '1.5px solid var(--color-accent)' : '1px solid var(--color-border)' }}>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className={`w-8 h-8 rounded-[9px] flex items-center justify-center ${selected ? 'text-accent bg-surface' : 'text-dim bg-raised'}`}
-                        style={selected ? { border: '1px solid var(--color-accent-line)' } : undefined}>
-                        <Icon size={17} />
-                      </span>
-                      <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${selected ? 'bg-accent text-white' : ''}`}
-                        style={{ border: selected ? 'none' : '1.5px solid var(--color-border-strong)' }}>
-                        {selected && <IconCheck size={10} strokeWidth={3} />}
-                      </span>
-                    </div>
-                    <p className="text-sm font-semibold text-text mt-2">{s.label}</p>
-                    <p className="text-xs text-dim mt-0.5 leading-snug">{s.blurb}</p>
-                    <p className="font-mono text-[11px] text-accent mt-1.5">{s.sample}</p>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-          )}
-
           {/* ─ Election (options only) — a yes/no default until values are added ── */}
           {mode === 'OPTION' && options.length === 0 && active && (
             <section>
@@ -318,56 +296,38 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
             </section>
           )}
 
-          {/* ─ Basis + Range (limits / deductibles only) ─────────────────────── */}
-          {mode !== 'OPTION' && (
-          <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {mode === 'LIMIT' && (
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">Limit basis</p>
-                <select disabled={!canEdit} value={active.limitBasis ?? 'PER_OCCURRENCE'}
-                  onChange={e => patchActive({ limitBasis: e.target.value as LimitBasis })}
-                  className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25">
-                  {LIMIT_BASES.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
-                </select>
-              </div>
-            )}
-            <div className={mode === 'LIMIT' ? '' : 'sm:col-span-2'}>
-              <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">Range {pct ? '(%)' : '($)'}</p>
-              <div className="flex items-center gap-2">
-                <input key={`min-${active.id}`} aria-label="Minimum" defaultValue={active.min ?? ''} disabled={!canEdit}
-                  onBlur={e => patchActive({ min: e.target.value ? parseNum(e.target.value) : undefined })}
-                  placeholder="min" className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong font-mono text-sm text-text text-center focus:outline-none focus:ring-2 focus:ring-accent/25" />
-                <span className="text-faint text-sm">–</span>
-                <input key={`max-${active.id}`} aria-label="Maximum" defaultValue={active.max ?? ''} disabled={!canEdit}
-                  onBlur={e => patchActive({ max: e.target.value ? parseNum(e.target.value) : undefined })}
-                  placeholder="max" className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong font-mono text-sm text-text text-center focus:outline-none focus:ring-2 focus:ring-accent/25" />
-              </div>
-            </div>
-          </section>
-          )}
-
-          {/* ─ Standard options ───────────────────────────────────────────── */}
+          {/* ─ Values — the primary PM surface (quick-add presets + paste) ────── */}
           <section>
             <div className="flex items-center justify-between mb-2.5">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint">
-                  {mode === 'OPTION' ? 'Selectable values' : 'Standard options'}
+                <p className="text-sm font-semibold text-text">
+                  {mode === 'OPTION' ? 'Values a PM can select' : `Values a PM can pick for this ${modeLabel}`}
                 </p>
-                {options.length > 0 && (
-                  <p className="text-xs text-faint mt-0.5">
-                    {options.filter(o => o.enabled).length} enabled · {options.length} total
-                  </p>
-                )}
+                <p className="text-xs text-faint mt-0.5">
+                  {options.length > 0
+                    ? `${options.filter(o => o.enabled).length} offered · one is the default`
+                    : 'Add the amounts underwriting will offer — the starred one is pre-selected.'}
+                </p>
               </div>
-              {canEdit && (
+              {canEdit && options.length > 0 && (
                 <Button variant="default" size="sm" onClick={() => setOptions([...options, {
                   id: `opt-${Date.now()}`, type: impliedType(active.structure ?? 'SINGLE'),
                   value: 0, allStates: true, states: [], isDefault: options.length === 0, enabled: true,
                 }])}>
-                  <IconPlus size={13} />Add option
+                  <IconPlus size={13} />Custom
                 </Button>
               )}
             </div>
+
+            {/* Quick add — one-click presets + Excel-style paste (the fast PM path). */}
+            {active && (
+              <QuickAdd
+                mode={mode} pct={pct}
+                isWaiting={impliedType(active.structure ?? 'SINGLE') === 'WAITING_PERIOD'}
+                canEdit={canEdit} existing={new Set(options.map(o => o.value))}
+                onAddValues={addValues}
+              />
+            )}
 
             {/* Validation summary — every blocking issue, always visible even when a
                 row is collapsed, so the PM sees exactly what stops the save. */}
@@ -415,6 +375,82 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
               </div>
             )}
           </section>
+
+          {/* ─ Advanced (limits / deductibles) — structure, basis & range, tucked
+              away so the common path stays jargon-free. Fully functional inside. ── */}
+          {mode !== 'OPTION' && active && (
+            <details className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+              <summary className="flex items-center gap-2 px-3.5 py-2.5 cursor-pointer select-none text-[13px] font-medium text-dim hover:text-text hover:bg-raised">
+                <IconLayers size={14} aria-hidden="true" />
+                Advanced — structure, basis &amp; range
+                <span className="ml-1 text-[11px] text-faint font-normal">optional</span>
+              </summary>
+              <div className="flex flex-col gap-5 px-3.5 pb-4 pt-1.5" style={{ borderTop: '1px solid var(--color-border)' }}>
+                {/* Structure */}
+                <section>
+                  <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">
+                    {mode === 'LIMIT' ? 'Limit structure' : 'Deductible structure'}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {structures.map(s => {
+                      const Icon = STRUCT_ICON[s.icon] ?? IconSingle
+                      const selected = (active.structure ?? 'SINGLE') === s.id
+                      return (
+                        <button key={s.id} disabled={!canEdit}
+                          onClick={() => patchActive({
+                            structure: s.id as LimitStructure | DeductibleStructure,
+                            ...(mode === 'DEDUCTIBLE' ? { unit: impliedType(s.id) === 'PERCENT' ? '%' : 'dollars' } : {}),
+                            optionSet: (active.optionSet ?? []).map(o => ({ ...o, type: impliedType(s.id) })),
+                          })}
+                          className={`text-left p-3 rounded-[12px] transition-all ${selected ? 'bg-accent-soft' : 'bg-surface hover:bg-raised'}`}
+                          style={{ border: selected ? '1.5px solid var(--color-accent)' : '1px solid var(--color-border)' }}>
+                          <div className="flex items-start justify-between gap-2">
+                            <span className={`w-8 h-8 rounded-[9px] flex items-center justify-center ${selected ? 'text-accent bg-surface' : 'text-dim bg-raised'}`}
+                              style={selected ? { border: '1px solid var(--color-accent-line)' } : undefined}>
+                              <Icon size={17} />
+                            </span>
+                            <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${selected ? 'bg-accent text-white' : ''}`}
+                              style={{ border: selected ? 'none' : '1.5px solid var(--color-border-strong)' }}>
+                              {selected && <IconCheck size={10} strokeWidth={3} />}
+                            </span>
+                          </div>
+                          <p className="text-sm font-semibold text-text mt-2">{s.label}</p>
+                          <p className="text-xs text-dim mt-0.5 leading-snug">{s.blurb}</p>
+                          <p className="font-mono text-[11px] text-accent mt-1.5">{s.sample}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+
+                {/* Basis + Range */}
+                <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {mode === 'LIMIT' && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">Limit basis</p>
+                      <select disabled={!canEdit} value={active.limitBasis ?? 'PER_OCCURRENCE'}
+                        onChange={e => patchActive({ limitBasis: e.target.value as LimitBasis })}
+                        className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25">
+                        {LIMIT_BASES.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div className={mode === 'LIMIT' ? '' : 'sm:col-span-2'}>
+                    <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">Allowed range {pct ? '(%)' : '($)'}</p>
+                    <div className="flex items-center gap-2">
+                      <input key={`min-${active.id}`} aria-label="Minimum" defaultValue={active.min ?? ''} disabled={!canEdit}
+                        onBlur={e => patchActive({ min: e.target.value ? parseNum(e.target.value) : undefined })}
+                        placeholder="min" className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong font-mono text-sm text-text text-center focus:outline-none focus:ring-2 focus:ring-accent/25" />
+                      <span className="text-faint text-sm">–</span>
+                      <input key={`max-${active.id}`} aria-label="Maximum" defaultValue={active.max ?? ''} disabled={!canEdit}
+                        onBlur={e => patchActive({ max: e.target.value ? parseNum(e.target.value) : undefined })}
+                        placeholder="max" className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong font-mono text-sm text-text text-center focus:outline-none focus:ring-2 focus:ring-accent/25" />
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </details>
+          )}
         </div>
       )}
 
@@ -434,6 +470,68 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
         )}
       </div>
     </Dialog>
+  )
+}
+
+// ─── Quick add — presets + Excel-style paste ─────────────────────────────────
+// The fast path: one-click common values, or paste a column/row straight from a
+// spreadsheet. Values are cleaned of $, %, commas and separators, then handed to the
+// parent's addValues (which types + de-dupes them). Presets adapt to the active
+// term's type so a % deductible offers %-presets, a waiting period offers hours, etc.
+const FLAT_PRESETS: Record<Mode, number[]> = {
+  LIMIT:      [25000, 50000, 100000, 250000, 500000, 1000000],
+  DEDUCTIBLE: [250, 500, 1000, 2500, 5000, 10000],
+  OPTION:     [100, 250, 500, 1000, 2500],
+}
+const PCT_PRESETS = [1, 2, 5, 10]
+const HRS_PRESETS = [24, 48, 72, 168]
+
+function parsePasted(text: string): number[] {
+  return text
+    .split(/[\s,;|\t\n]+/)
+    .map(s => s.replace(/[$%,]/g, '').trim())
+    .filter(Boolean)
+    .map(Number)
+    .filter(n => Number.isFinite(n))
+}
+
+function QuickAdd({ mode, pct, isWaiting, canEdit, existing, onAddValues }: {
+  mode: Mode; pct: boolean; isWaiting: boolean; canEdit: boolean
+  existing: Set<number>; onAddValues: (nums: number[]) => void
+}) {
+  const [paste, setPaste] = useState('')
+  if (!canEdit) return null
+  const presets = pct ? PCT_PRESETS : isWaiting ? HRS_PRESETS : FLAT_PRESETS[mode]
+  const fmt = (n: number) => pct ? `${n}%` : isWaiting ? `${n}h` : n >= 1000 ? `$${(n / 1000).toLocaleString()}k` : `$${n.toLocaleString()}`
+  const eg = pct ? '5, 10, 15' : isWaiting ? '24, 48, 72' : '1000, 2500, 5000'
+  const commit = () => { const nums = parsePasted(paste); if (nums.length) { onAddValues(nums); setPaste('') } }
+
+  return (
+    <div className="mb-2.5 flex flex-col gap-2 rounded-[10px] bg-raised px-3 py-2.5" style={{ border: '1px solid var(--color-border)' }}>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-faint mr-0.5">Quick add</span>
+        {presets.map(v => {
+          const added = existing.has(v)
+          return (
+            <button key={v} type="button" disabled={added} onClick={() => onAddValues([v])}
+              title={added ? 'Already added' : `Add ${fmt(v)}`}
+              className={`px-2 py-1 rounded-[7px] text-[11px] font-medium font-mono transition-colors ${added ? 'text-faint cursor-default' : 'text-accent hover:bg-accent-soft'}`}
+              style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+              {added ? `✓ ${fmt(v)}` : `+ ${fmt(v)}`}
+            </button>
+          )
+        })}
+      </div>
+      <div className="flex items-center gap-2">
+        <input value={paste} onChange={e => setPaste(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit() } }}
+          onPaste={e => { const t = e.clipboardData.getData('text'); if (/[\s,;|\t\n]/.test(t)) { e.preventDefault(); onAddValues(parsePasted(t)) } }}
+          placeholder={`Paste from Excel — e.g. ${eg}`}
+          aria-label="Paste values to add"
+          className="flex-1 h-8 px-2.5 rounded-[7px] bg-surface border border-border-strong font-mono text-xs text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25" />
+        <Button variant="default" size="sm" onClick={commit} disabled={!paste.trim()}>Add</Button>
+      </div>
+    </div>
   )
 }
 
@@ -514,10 +612,13 @@ function OptionRow({ o, mode, scopeStates, peril, canEdit, hasError, onChange, o
           {o.allStates ? 'All states' : `${activeStateCount} state${activeStateCount === 1 ? '' : 's'}`}
         </button>
 
-        {/* Default (star) */}
-        <button disabled={!canEdit} onClick={onDefault} aria-pressed={o.isDefault} title="Set as default"
-          className={`w-8 h-8 rounded-[7px] flex items-center justify-center shrink-0 transition-colors ${o.isDefault ? 'text-warn bg-[rgba(180,83,9,.1)]' : 'text-faint hover:text-dim hover:bg-raised'}`}>
-          <IconStar size={15} className={o.isDefault ? 'fill-current' : ''} />
+        {/* Default — an unmistakable single-choice control (exactly one is default) */}
+        <button disabled={!canEdit} onClick={onDefault} aria-pressed={o.isDefault}
+          title={o.isDefault ? 'This is the default — pre-selected for the PM' : 'Make this the default'}
+          className={`h-8 px-2.5 rounded-[7px] flex items-center gap-1 shrink-0 text-[11px] font-semibold transition-colors ${o.isDefault ? 'bg-accent text-white' : 'text-faint hover:text-accent hover:bg-accent-soft'}`}
+          style={o.isDefault ? undefined : { border: '1px solid var(--color-border-strong)' }}>
+          <IconStar size={13} className={o.isDefault ? 'fill-current' : ''} />
+          Default
         </button>
 
         {/* Enabled toggle */}

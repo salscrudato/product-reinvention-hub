@@ -71,7 +71,12 @@ export interface Product extends GovernanceBlock, StateScope {
   owner:         { uid: string; name: string }
   health:        { score: number; findingCount: number; updatedAt: unknown }
   // The uploaded base coverage form that gates + grounds AI coverage extraction.
-  baseForm?:     { path: string; url: string; name: string; uploadedAt: unknown; uploadedBy: string } | null
+  // Required at product-create time (see NewProductModal / ScaffoldProductModal);
+  // the identify pass fills in formNumber/title/edition/lob when the form states them.
+  baseForm?:     {
+    path: string; url: string; name: string; uploadedAt: unknown; uploadedBy: string
+    formNumber?: string; title?: string; edition?: string; lob?: string
+  } | null
   // Provenance — set on drafts (import/clone/scaffold/blank). Absent on legacy/seeded
   // products. Display-only; never gates behaviour, so leaving it off is always safe.
   lineage?:      Lineage | null

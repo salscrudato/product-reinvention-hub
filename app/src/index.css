@@ -46,8 +46,10 @@
   --color-tile-oos:  #E4E4EB;
   --color-peril:     #F59E0B;
 
-  --font-ui:   'Inter Variable', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  /* Apple-inspired UI type: genuine San Francisco on Apple devices, Inter Variable
+     (tuned below to San-Francisco-like single-story glyphs) everywhere else. */
+  --font-ui:   -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
 
   --radius-card: 14px;
   --ease-spring: cubic-bezier(.22,.61,.36,1);
@@ -92,6 +94,10 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Inter → San-Francisco-like: single-story a/g (cv11) + Apple-ish alternates,
+     plus contextual/kerning. Ignored gracefully when real SF is rendering. */
+  font-feature-settings: "cv11" 1, "ss01" 1, "calt" 1, "kern" 1;
+  letter-spacing: -0.006em;
 }
 
 body { margin: 0; }
@@ -224,18 +230,20 @@ h1, h2 { text-wrap: balance; }
 /* Shimmer for skeletons — subtle, brand-tinted. */
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 
-/* ─── State tile map — smooth token fills, hover lift, keyboard focus ring ───
-   Fills/strokes are set as SVG presentation attributes on each tile; these rules
-   layer interaction on top (CSS beats presentation attributes). The focus ring is
-   a dedicated outline rect drawn *outside* the cell so it stays visible on any
-   fill — including a selected accent tile — and only appears on keyboard focus
-   (`:focus-visible`), never on mouse press. All transitions here are neutralised
-   by the global reduced-motion block below. */
-.state-tile__cell { transition: fill .18s var(--ease-spring), stroke .18s var(--ease-spring); }
-.state-tile { outline: none; }
-.state-tile[data-interactive="true"]:hover .state-tile__cell { stroke: var(--color-accent-line); }
-.state-tile__ring { opacity: 0; transition: opacity .12s var(--ease-spring); pointer-events: none; }
-.state-tile:focus-visible .state-tile__ring { opacity: 1; }
+/* ─── Geographic state map — smooth token fills, hover, keyboard focus ring ──
+   Fills/strokes are SVG presentation attributes on each state shape; these rules
+   layer interaction on top (CSS beats presentation attributes). Focus is shown by
+   thickening the shape's (and external pill's) accent stroke — visible on any fill,
+   including a selected accent state — and only on keyboard focus (`:focus-visible`),
+   never on mouse press. All transitions here are neutralised by the global
+   reduced-motion block below. */
+.usmap-state__shape,
+.usmap-state__pill { transition: fill .18s var(--ease-spring), stroke .18s var(--ease-spring); }
+.usmap-state { outline: none; }
+.usmap-state[data-interactive="true"]:hover .usmap-state__shape,
+.usmap-state[data-interactive="true"]:hover .usmap-state__pill { stroke: var(--color-accent); stroke-width: 1.75; }
+.usmap-state:focus-visible .usmap-state__shape,
+.usmap-state:focus-visible .usmap-state__pill { stroke: var(--color-accent); stroke-width: 2.5; }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }

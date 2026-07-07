@@ -17,6 +17,9 @@ interface SummarizeBody {
     rules?: { condition: string; outcome: string }[]
     rating?: { steps: number; minimumPremium?: number }
     forms?: { number: string; name?: string }[]
+    // The base coverage form the product was created on (identify pass). When present,
+    // the summary is grounded in it — the form number/title anchors what the product is.
+    baseForm?: { number?: string; title?: string; edition?: string }
   }
 }
 
@@ -59,8 +62,10 @@ export const summarizeProduct = onCall<SummarizeBody>(
       max_tokens:  1200,
       system:
         'You are a P&C insurance product analyst. Summarize a product for its product manager ' +
-        'using ONLY the structured metadata provided (no policy-form text is available). Be ' +
-        'concise, concrete and executive in tone. Never invent facts. Then call product_summary once.',
+        'using ONLY the structured metadata provided. When a `baseForm` is present, treat it as ' +
+        'the coverage form the product is built on — ground the headline/overview in it and cite ' +
+        'its form number (e.g. "Built on HO 00 03"). Be concise, concrete and executive in tone. ' +
+        'Never invent facts. Then call product_summary once.',
       tools:       [SUMMARY_TOOL],
       tool_choice: { type: 'tool', name: 'product_summary' },
       messages:    [{ role: 'user', content: `PRODUCT METADATA (JSON):\n\n${meta}\n\nSummarize this product, then call product_summary.` }],

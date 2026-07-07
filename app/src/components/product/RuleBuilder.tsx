@@ -282,7 +282,7 @@ export function RuleComposer({ productId, lobPrefix, coverages, forms, existingR
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'var(--gradient-accent)' }}><IconSparkle size={14} className="text-white" aria-hidden="true" /></span>
-          <p className="text-sm font-semibold text-text">{mode === 'edit' ? `Edit rule ${existingRule?.refId ?? ''}` : 'Compose a rule'}</p>
+          <p className="text-sm font-semibold text-text">{mode === 'edit' ? 'Edit rule' : 'Compose a rule'}</p>
         </div>
         <button onClick={onCancel} className="text-faint hover:text-text" aria-label="Cancel"><IconClose size={16} /></button>
       </div>

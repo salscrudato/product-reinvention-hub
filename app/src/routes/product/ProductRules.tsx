@@ -144,7 +144,7 @@ function SimulatePanel({ sel, onChange, result, coastal, states }: {
                 <p className="text-xs font-medium text-faint uppercase tracking-wide">Violations</p>
                 {result.violations.map((v, i) => (
                   <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-[8px] text-sm" style={{ background: 'color-mix(in srgb, var(--color-danger) 6%, var(--color-surface))' }}>
-                    <span className="text-danger text-xs">{v.message} <span className="font-mono">[{v.ruleRefId}]</span></span>
+                    <span className="text-danger text-xs">{v.message}</span>
                   </div>
                 ))}
               </div>
@@ -245,7 +245,7 @@ export default function ProductRules() {
           },
           entityType: 'rule', productId: pid, actor, expectedRev: editing.rev,
         })
-        toast.success(`Rule ${editing.refId ?? ''} updated`)
+        toast.success('Rule updated')
       } else {
         const ruleRe = new RegExp(`^${lobPrefix}\\.RU\\.(\\d+)`)
         const next = Math.max(10, ...rules.map(r => Number(ruleRe.exec(r.refId ?? '')?.[1] ?? 0))) + 1
@@ -260,7 +260,7 @@ export default function ProductRules() {
           },
           entityType: 'rule', productId: pid, actor,
         })
-        toast.success(`Rule ${refId} created`)
+        toast.success('Rule created')
       }
       setComposerOpen(false); setEditing(null)
     } catch (err) {

@@ -265,12 +265,12 @@ export default function Dictionary() {
                       {usage.slice(0, 6).map(u => {
                         const Icon = KIND_ICON[u.kind]
                         return (
-                          <span key={`${u.kind}:${u.refId}`} className="inline-flex items-center gap-1 text-faint">
+                          <button key={`${u.kind}:${u.refId}`} onClick={() => navigate(routeForUsage(u))}
+                            title={`${KIND_LABEL[u.kind]}: ${u.label} — open`}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-raised text-dim text-[11px] hover:bg-accent-soft hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
                             <Icon size={11} aria-hidden />
-                            <RefChip id={u.refId}
-                              onClick={() => navigate(routeForUsage(u))}
-                              title={`${KIND_LABEL[u.kind]}: ${u.label} — open`} />
-                          </span>
+                            <span className="truncate max-w-[150px]">{u.label}</span>
+                          </button>
                         )
                       })}
                       {usage.length > 6 && <span className="text-[10px] text-faint self-center">+{usage.length - 6} more</span>}
@@ -287,11 +287,6 @@ export default function Dictionary() {
       <Dialog open={!!draft} onClose={() => setDraft(null)} title={draft?.source ? 'Edit field' : 'New field'}>
         {draft && (
           <div className="flex flex-col gap-4">
-            {draft.source?.refId && (
-              <div className="flex items-center gap-2 text-xs text-dim">
-                <span>Definition id</span> <RefChip id={draft.source.refId} tone="accent" />
-              </div>
-            )}
             <Input label="Name" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Coverage A Amount" autoFocus />
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text" htmlFor="dict-type">Type</label>

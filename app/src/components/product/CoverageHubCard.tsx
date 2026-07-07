@@ -10,17 +10,6 @@ import { COVERAGE_ASPECTS as ASPECTS, useCoverageCounts, type CoverageAspect } f
 import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
-// Labels shown on a zero-count tile inviting the PM to add the first item.
-const ZERO_INVITE: Record<CoverageAspect, string> = {
-  limits:      'Add limit',
-  deductibles: 'Add ded.',
-  options:     'Add option',
-  states:      'Set scope',
-  forms:       'Add form',
-  pricing:     'View steps',
-  rules:       'View rules',
-}
-
 export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDelete }: {
   cov: WithId<Coverage>
   parentName?: string
@@ -75,36 +64,21 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
           )}
         </div>
 
-        {/* Aspect tile grid — zero-count tiles use dashed borders + invite copy.
-            'Options' is intentionally excluded — options live inside the limits/terms editor. */}
-        <div className="grid grid-cols-3 gap-1.5">
-          {ASPECTS.filter(a => a.key !== 'options').map(({ key, label, Icon }, i) => {
+        {/* Aspect strip — compact, single-line drill-ins into each editor. Calmer
+            than a heavy tile grid: label + count, faint dash when empty. 'Options'
+            is intentionally excluded — options live inside the limits/terms editor. */}
+        <div className="mt-auto grid grid-cols-2 sm:grid-cols-3 gap-x-1 gap-y-0.5 pt-1"
+          style={{ borderTop: '1px solid var(--color-border)' }}>
+          {ASPECTS.filter(a => a.key !== 'options').map(({ key, label, Icon }) => {
             const count = counts[key]
             const isEmpty = count === 0
             return (
               <button key={key} onClick={() => onTile(key, cov)}
                 aria-label={`${cov.name} — ${label} (${count})`}
-                className="rise-in group/tile flex items-center gap-2 px-2.5 py-2 rounded-[10px] transition-colors text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent hover:bg-accent-soft"
-                style={{
-                  '--rise-delay': `${i * 30}ms`,
-                  background: isEmpty ? 'transparent' : 'var(--color-raised)',
-                  border: isEmpty ? '1px dashed var(--color-border-strong)' : '1px solid transparent',
-                } as React.CSSProperties}>
-                <span className={`transition-colors shrink-0 group-hover/tile:text-accent ${isEmpty ? 'text-faint' : 'text-dim'}`}>
-                  <Icon size={16} />
-                </span>
-                <span className="flex flex-col leading-tight min-w-0">
-                  <span className={`text-[11px] font-medium truncate transition-colors group-hover/tile:text-text ${isEmpty ? 'text-faint' : 'text-dim'}`}>
-                    {label}
-                  </span>
-                  {isEmpty ? (
-                    <span className="text-[11px] font-medium text-faint group-hover/tile:text-accent transition-colors">
-                      {ZERO_INVITE[key]}
-                    </span>
-                  ) : (
-                    <span className="text-[13px] font-semibold text-text tnum">{count}</span>
-                  )}
-                </span>
+                className="group/tile flex items-center gap-1.5 h-8 px-1.5 rounded-[7px] text-left transition-colors hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
+                <Icon size={13} className={`shrink-0 transition-colors group-hover/tile:text-accent ${isEmpty ? 'text-faint' : 'text-dim'}`} />
+                <span className={`text-[11px] flex-1 truncate transition-colors group-hover/tile:text-text ${isEmpty ? 'text-faint' : 'text-dim'}`}>{label}</span>
+                <span className={`text-[12px] font-semibold tnum shrink-0 ${isEmpty ? 'text-faint' : 'text-text'}`}>{isEmpty ? '–' : count}</span>
               </button>
             )
           })}

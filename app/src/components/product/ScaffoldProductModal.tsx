@@ -20,6 +20,8 @@ import type {
   ScaffoldPlan, ProposedCoverage, ProposedForm, ProposedRule, LineageSource,
 } from '@pf/shared'
 import { newDraftId, scaffoldLineage } from '../../lib/draft/draft'
+import { BaseFormField } from './BaseFormField'
+import { uploadAndIdentifyBaseForm } from '../../lib/product/baseForm'
 
 interface Props { onClose: () => void; onCreated: (id: string) => void }
 type Phase = 'input' | 'streaming' | 'review' | 'creating' | 'error'
@@ -38,6 +40,7 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
 
   const [phase, setPhase]         = useState<Phase>('input')
   const [instruction, setInstr]   = useState('')
+  const [file, setFile]           = useState<File | null>(null)
   const [status, setStatus]       = useState('')
   const [plan, setPlan]           = useState<ScaffoldPlan | null>(null)
   const [name, setName]           = useState('')
@@ -87,7 +90,7 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
   }
 
   async function create() {
-    if (!plan?.product || !user) return
+    if (!plan?.product || !user || !file) return
     const shell = plan.product
     const actor = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
     const prefix = shell.lobPrefix || DEFAULT_LOB.prefix
@@ -106,11 +109,14 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
       ...chosenForms.map(f => ({ type: 'form' as const, ref: f.number })),
     ]
 
-    setPhase('creating'); setProgress({ done: 0, total, label: shell.name })
+    setPhase('creating'); setProgress({ done: 0, total, label: 'Uploading base form…' })
     let done = 0
     const tick = (label: string) => setProgress({ done, total, label })
     try {
-      // 1) Product shell — a DRAFT, provenance stamped.
+      // 0) A base coverage form is required — upload + identify before writing the shell.
+      const baseForm = await uploadAndIdentifyBaseForm(file, actor, draftId)
+
+      // 1) Product shell — a DRAFT, provenance stamped, grounded on the base form.
       await adapter.db.mutate({
         op: 'create', path: `products/${draftId}`, entityType: 'product', productId: draftId, actor,
         data: {
@@ -118,7 +124,7 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
           lob: { refId: lob.refId, name: lob.name },
           description: shell.description, marketSegment: shell.marketSegment || `${lob.vertical} / ${lob.family}`,
           owner: actor, health: { score: 100, findingCount: 0, updatedAt: null },
-          allStates: false, states: [],
+          allStates: false, states: [], baseForm,
           lineage: scaffoldLineage(instruction, dedupeSources(sources), actor),
           status: 'ACTIVE', lifecycle: 'DRAFT', reviewStatus: 'NOT_STARTED', reviewer: '',
         },
@@ -221,9 +227,10 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
               </button>
             ))}
           </div>
+          <BaseFormField file={file} onFile={setFile} />
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" onClick={() => void run()} disabled={!instruction.trim()}>
+            <Button variant="primary" onClick={() => void run()} disabled={!instruction.trim() || !file}>
               <IconSparkle size={14} aria-hidden="true" />Scaffold
             </Button>
           </div>

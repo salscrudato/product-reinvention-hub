@@ -82,9 +82,6 @@ export default function Share() {
                 <span className="text-xs text-faint uppercase tracking-wide font-semibold">Product snapshot</span>
               </div>
               <h1 className="text-2xl font-bold text-text mb-1">{data.snapshot.product.name}</h1>
-              {data.snapshot.product.refId && (
-                <p className="font-mono text-sm text-faint">{data.snapshot.product.refId}</p>
-              )}
               <p className="text-sm text-dim mt-2">{data.snapshot.product.description}</p>
 
               <div className="flex flex-wrap gap-2 mt-4 text-xs text-faint">
@@ -113,7 +110,6 @@ export default function Share() {
                       return (
                         <div key={cov.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                           <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-                            {cov.refId && <span className="font-mono text-[11px] text-faint bg-raised px-1.5 py-0.5 rounded-[4px]">{cov.refId}</span>}
                             <span className="text-sm font-medium text-text">{cov.name}</span>
                             <Badge label={cov.requirement} color={cov.requirement === 'MANDATORY' ? 'purple' : 'default'} />
                             {cov.formNumbers?.length > 0 && (
@@ -126,7 +122,6 @@ export default function Share() {
                             <div className="pl-8 pb-2 flex flex-col gap-0.5">
                               {subs.map(s => (
                                 <div key={s.id} className="flex items-center gap-2 px-4 py-1.5 text-sm text-dim">
-                                  {s.refId && <span className="font-mono text-[11px] text-faint">{s.refId}</span>}
                                   <span>{s.name}</span>
                                 </div>
                               ))}

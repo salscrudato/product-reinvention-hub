@@ -13,6 +13,8 @@ import { DEFAULT_TASK_TEMPLATES, DEFAULT_LOB } from '@pf/shared'
 import type { TaskTemplate } from '@pf/shared'
 import { PRODUCT_NAME_SUGGESTIONS, MARKET_SEGMENTS } from '../../lib/insurance/vocab'
 import { blankLineage } from '../../lib/draft/draft'
+import { BaseFormField } from './BaseFormField'
+import { uploadAndIdentifyBaseForm } from '../../lib/product/baseForm'
 
 interface Props { onClose: () => void; onCreated: (id: string) => void }
 
@@ -20,16 +22,27 @@ export function NewProductModal({ onClose, onCreated }: Props) {
   const { user }   = useUser()
   const [name,     setName]     = useState('')
   const [seg,      setSeg]      = useState('Personal Lines / Property')
+  const [file,     setFile]     = useState<File | null>(null)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!user) return
+    if (!user || !file) return
     setLoading(true); setError('')
     const actor     = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
     const pid       = `prod-${Date.now()}`
     const startDate = new Date()
+
+    // A base coverage form is required — upload + identify it first; abort on failure.
+    let baseForm
+    try {
+      baseForm = await uploadAndIdentifyBaseForm(file, actor, pid)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not upload the base form.')
+      setLoading(false)
+      return
+    }
 
     // Load SLA templates from Firestore; fall back to code defaults when the
     // collection is empty or the read fails (network, rules mismatch, etc.).
@@ -55,6 +68,7 @@ export function NewProductModal({ onClose, onCreated }: Props) {
           reviewStatus: 'NOT_STARTED', updatedBy: actor.uid,
           rev: 1, allStates: false, states: [],
           health: { score: 100, findingCount: 0, updatedAt: null },
+          baseForm,
           lineage: blankLineage(actor),
         },
         entityType: 'product', actor,
@@ -97,12 +111,13 @@ export function NewProductModal({ onClose, onCreated }: Props) {
             {MARKET_SEGMENTS.map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
+        <BaseFormField file={file} onFile={setFile} disabled={loading} />
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex gap-2 justify-end">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={loading || !name.trim()}>
+          <Button type="submit" variant="primary" disabled={loading || !name.trim() || !file}>
             {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
-            Create product
+            {loading ? 'Creating…' : 'Create product'}
           </Button>
         </div>
       </form>
