@@ -1,17 +1,20 @@
-// Home (/app) — the portfolio's front door: a centered, tool-grounded chat over
-// the whole product portfolio, plus a "Today's Focus" rail (SLA tasks, reviews
-// awaiting me, health findings, latest news). Streaming tokens, live tool-status
-// chips, and citations that link straight to the cited entity.
+// Home (/app) — the portfolio cockpit + assistant. The assistant is a tool-grounded
+// chat over the whole portfolio (reusing the server-side `chat` agent): every answer
+// cites a [refId] or form number and says "not found" when a tool returns nothing.
+// Alongside it, a cockpit rail: a prioritised task list (due → criticality) with a
+// daily/weekly window, and a real "portfolio changes" feed sourced from the version
+// log + product health. The whole surface is inquiry-only — no mutations happen here,
+// so a VIEWER sees exactly what everyone else does (no edit affordances to hide).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  IconSparkle, IconCheck, IconTasks, IconClipboard, IconActivity, IconNews, IconSpinner,
-} from '../components/ui/icons'
+import { IconSparkle, IconCheck, IconSpinner } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
-import { useUser } from '../context/useUser'
-import { Badge } from '../components/ui'
+import type { Query } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
-import type { SearchIndexEntry, Task, Product, News } from '@pf/shared'
+import { PriorityRail } from '../components/home/PriorityRail'
+import { ChangesFeed } from '../components/home/ChangesFeed'
+import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
+import type { SearchIndexEntry, Task, Product, Version } from '@pf/shared'
 
 // ─── Stream protocol (mirror of functions/src/runtime.ts StreamEvent) ───────────
 
@@ -32,6 +35,9 @@ const SUGGESTIONS = [
   'What GL coverages are mandatory under CG 00 01?',
 ]
 
+// Most-recent version events for the changes feed (single-field orderBy → auto-indexed).
+const RECENT_VERSIONS: Query = { orderBy: [{ field: 'at', dir: 'desc' }], limit: 50 }
+
 // ─── Citation linkifying ────────────────────────────────────────────────────────
 
 // Match bracketed refIds / form numbers for any line: [HO.RU.006], [GL.COV.002], [CG 00 01].
@@ -51,7 +57,7 @@ function RichText({ text, onCite }: { text: string; onCite: (cite: string) => vo
       <button
         key={`c${i++}`}
         onClick={() => onCite(cite)}
-        className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-[5px] bg-accent-soft text-accent font-mono text-[11px] font-medium hover:bg-accent/15 transition-colors align-baseline"
+        className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-[5px] bg-accent-soft text-accent font-mono text-[11px] font-medium hover:bg-accent/15 transition-colors align-baseline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         title={`Open ${cite}`}
       >
         {cite}
@@ -63,89 +69,24 @@ function RichText({ text, onCite }: { text: string; onCite: (cite: string) => vo
   return <span className="whitespace-pre-wrap leading-relaxed">{nodes}</span>
 }
 
-// ─── Timestamp helper (Firestore Timestamp | ISO | millis → millis) ─────────────
-
-function toMillis(v: unknown): number | null {
-  if (v == null) return null
-  if (typeof v === 'number') return v
-  if (typeof v === 'string') { const t = Date.parse(v); return Number.isNaN(t) ? null : t }
-  const o = v as { toDate?: () => Date; seconds?: number }
-  if (typeof o.toDate === 'function') return o.toDate().getTime()
-  if (typeof o.seconds === 'number') return o.seconds * 1000
-  return null
-}
-
-function relativeDue(ms: number | null): { label: string; overdue: boolean } {
-  if (ms == null) return { label: 'no date', overdue: false }
-  const days = Math.round((ms - Date.now()) / 86_400_000)
-  if (days < 0)  return { label: `${-days}d overdue`, overdue: true }
-  if (days === 0) return { label: 'due today', overdue: true }
-  if (days === 1) return { label: 'due tomorrow', overdue: false }
-  return { label: `in ${days}d`, overdue: false }
-}
-
-// ─── Today's Focus data ─────────────────────────────────────────────────────────
-
-interface WithId { id?: string }
-
-function useFocusData(uid: string | undefined) {
-  const [tasks, setTasks]       = useState<(Task & WithId)[]>([])
-  const [products, setProducts] = useState<(Product & WithId)[]>([])
-  const [news, setNews]         = useState<(News & WithId)[]>([])
-
-  useEffect(() => {
-    const u1 = adapter.db.subscribe<Task & WithId>('tasks',    d => Array.isArray(d) && setTasks(d))
-    const u2 = adapter.db.subscribe<Product & WithId>('products', d => Array.isArray(d) && setProducts(d))
-    const u3 = adapter.db.subscribe<News & WithId>('news',      d => Array.isArray(d) && setNews(d))
-    return () => { u1(); u2(); u3() }
-  }, [])
-
-  const myTasks = useMemo(() => tasks
-    .filter(t => t.column !== 'LAUNCH_MONITOR')
-    .filter(t => !uid || !t.assignee || t.assignee.uid === uid)
-    .sort((a, b) => (toMillis(a.dueAt) ?? Infinity) - (toMillis(b.dueAt) ?? Infinity))
-    .slice(0, 5), [tasks, uid])
-
-  const awaitingReview = useMemo(() =>
-    products.filter(p => p.reviewStatus === 'BUSINESS_REVIEW' || p.reviewStatus === 'IN_PROGRESS').slice(0, 4),
-    [products])
-
-  const healthFindings = useMemo(() =>
-    [...products].sort((a, b) => (a.health?.score ?? 100) - (b.health?.score ?? 100)).slice(0, 3),
-    [products])
-
-  const latestNews = useMemo(() =>
-    [...news].sort((a, b) => (toMillis(b.fetchedAt) ?? 0) - (toMillis(a.fetchedAt) ?? 0)).slice(0, 3),
-    [news])
-
-  return { myTasks, awaitingReview, healthFindings, latestNews }
-}
-
-function FocusSection({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 text-faint">
-        {icon}
-        <span className="text-[11px] font-semibold uppercase tracking-wide">{title}</span>
-      </div>
-      {children}
-    </section>
-  )
-}
-
-// ─── Chat ─────────────────────────────────────────────────────────────────────
+// ─── Cockpit ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const navigate = useNavigate()
-  const { user } = useUser()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [input, setInput]       = useState('')
+  const [messages, setMessages]   = useState<ChatMessage[]>([])
+  const [input, setInput]         = useState('')
   const [streaming, setStreaming] = useState(false)
   const [indexEntries, setIndexEntries] = useState<SearchIndexEntry[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const { myTasks, awaitingReview, healthFindings, latestNews } = useFocusData(user?.uid)
+  // Cockpit data — realtime, with genuine loading / error states (see useLiveCollection).
+  const tasks    = useLiveCollection<Task>('tasks')
+  const products = useLiveCollection<Product>('products')
+  const versions = useLiveCollection<Version>('versions', RECENT_VERSIONS)
+  // Fixed at mount so streaming chat tokens don't re-sort the rail on every keystroke.
+  const now = useMemo(() => Date.now(), [])
 
+  // Search index powers citation → entity navigation (best-effort; not a rendered panel).
   useEffect(() => {
     const unsub = adapter.db.subscribe<SearchIndexEntry>('searchIndex', d => { if (Array.isArray(d)) setIndexEntries(d) })
     return unsub
@@ -218,116 +159,79 @@ export default function Home() {
   const empty = messages.length === 0
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 h-full min-h-0">
-      {/* Chat column */}
-      <div className="flex flex-col min-h-0 max-w-3xl w-full mx-auto">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 pr-1">
-          {empty ? (
-            <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-10">
-              <div className="w-14 h-14 rounded-[16px] flex items-center justify-center"
-                style={{ background: 'var(--gradient-accent)' }}>
-                <IconSparkle size={26} className="text-white" aria-hidden="true" />
+    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:h-full lg:min-h-0">
+      {/* Assistant — grounded portfolio Q&A */}
+      <section className="flex flex-col min-h-[60vh] lg:min-h-0" aria-label="Portfolio assistant">
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto pr-1">
+          <div className="max-w-3xl w-full mx-auto h-full">
+            {empty ? (
+              <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-10">
+                <div className="w-14 h-14 rounded-[16px] flex items-center justify-center"
+                  style={{ background: 'var(--gradient-accent)' }}>
+                  <IconSparkle size={26} className="text-white" aria-hidden="true" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <h1 className="text-xl font-bold text-text">Ask your product portfolio</h1>
+                  <p className="text-sm text-dim max-w-md">Grounded in your coverages, forms, rules and rating tables — every answer cites the exact refId or form number.</p>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2.5 w-full max-w-xl">
+                  {SUGGESTIONS.map(s => (
+                    <button key={s} onClick={() => ask(s)}
+                      className="text-left text-sm text-dim bg-surface rounded-[12px] px-4 py-3 hover:text-text hover:shadow-[var(--shadow-card-hover)] transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      style={{ border: '1px solid var(--color-border)' }}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <h1 className="text-xl font-bold text-text">Ask your product portfolio</h1>
-                <p className="text-sm text-dim max-w-md">Grounded in your coverages, forms, rules and rating tables — every answer cites the exact refId or form number.</p>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-2.5 w-full max-w-xl">
-                {SUGGESTIONS.map(s => (
-                  <button key={s} onClick={() => ask(s)}
-                    className="text-left text-sm text-dim bg-surface rounded-[12px] px-4 py-3 hover:text-text hover:shadow-[var(--shadow-card-hover)] transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                    style={{ border: '1px solid var(--color-border)' }}>
-                    {s}
-                  </button>
+            ) : (
+              <div className="flex flex-col gap-5 py-4">
+                {messages.map((m, i) => (
+                  <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
+                    <div className={m.role === 'user'
+                      ? 'max-w-[85%] rounded-[14px] px-4 py-2.5 text-sm text-white'
+                      : 'max-w-[92%] flex flex-col gap-2'}
+                      style={m.role === 'user' ? { background: 'var(--gradient-accent)' } : undefined}>
+                      {m.role === 'assistant' && m.tools.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.tools.map((t, ti) => (
+                            <span key={ti} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-raised text-[11px] text-dim font-mono">
+                              {t.done ? <IconCheck size={10} className="text-good" aria-hidden="true" /> : <IconSpinner size={10} className="animate-spin text-accent" aria-hidden="true" />}
+                              {t.name}{t.done && t.summary ? ` · ${t.summary}` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {m.role === 'assistant'
+                        ? <div className="text-sm text-text"><RichText text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
+                        : m.text}
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-5 py-4">
-              {messages.map((m, i) => (
-                <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
-                  <div className={m.role === 'user'
-                    ? 'max-w-[85%] rounded-[14px] px-4 py-2.5 text-sm text-white'
-                    : 'max-w-[92%] flex flex-col gap-2'}
-                    style={m.role === 'user' ? { background: 'var(--gradient-accent)' } : undefined}>
-                    {m.role === 'assistant' && m.tools.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {m.tools.map((t, ti) => (
-                          <span key={ti} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-raised text-[11px] text-dim font-mono">
-                            {t.done ? <IconCheck size={10} className="text-good" aria-hidden="true" /> : <IconSpinner size={10} className="animate-spin text-accent" aria-hidden="true" />}
-                            {t.name}{t.done && t.summary ? ` · ${t.summary}` : ''}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {m.role === 'assistant'
-                      ? <div className="text-sm text-text"><RichText text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
-                      : m.text}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Composer */}
-        <div className="mt-3">
+        <div className="mt-3 max-w-3xl w-full mx-auto">
           <ChatComposer value={input} onChange={setInput} onSubmit={() => ask(input)} streaming={streaming} />
         </div>
-      </div>
+      </section>
 
-      {/* Today's Focus rail */}
-      <aside className="hidden lg:flex flex-col gap-6 overflow-y-auto min-h-0 pl-1">
-        <h2 className="text-sm font-semibold text-text">Today's Focus</h2>
-
-        <FocusSection icon={<IconTasks size={13} aria-hidden="true" />} title="My open tasks">
-          {myTasks.length === 0 ? <EmptyLine text="No open tasks assigned." /> : myTasks.map(t => {
-            const due = relativeDue(toMillis(t.dueAt))
-            return (
-              <button key={t.id} onClick={() => navigate('/app/tasks')} className="flex items-center justify-between gap-2 text-left w-full group">
-                <span className="text-xs text-dim group-hover:text-text truncate">{t.title}</span>
-                <Badge label={due.label} color={due.overdue ? 'danger' : 'default'} />
-              </button>
-            )
-          })}
-        </FocusSection>
-
-        <FocusSection icon={<IconClipboard size={13} aria-hidden="true" />} title="Awaiting review">
-          {awaitingReview.length === 0 ? <EmptyLine text="Nothing awaiting review." /> : awaitingReview.map(p => (
-            <button key={p.id} onClick={() => navigate(`/app/products/${p.id}/overview`)} className="flex items-center justify-between gap-2 text-left w-full group">
-              <span className="text-xs text-dim group-hover:text-text truncate">{p.name}</span>
-              <Badge label={p.reviewStatus.replace(/_/g, ' ')} color="warn" />
-            </button>
-          ))}
-        </FocusSection>
-
-        <FocusSection icon={<IconActivity size={13} aria-hidden="true" />} title="Health findings">
-          {healthFindings.length === 0 ? <EmptyLine text="No products yet." /> : healthFindings.map(p => (
-            <button key={p.id} onClick={() => navigate(`/app/products/${p.id}/overview`)} className="flex items-center justify-between gap-2 text-left w-full group">
-              <span className="text-xs text-dim group-hover:text-text truncate">{p.name}</span>
-              <span className="flex items-center gap-1.5">
-                {(p.health?.findingCount ?? 0) > 0 && <span className="text-[11px] text-warn">{p.health.findingCount}</span>}
-                <Badge label={`${p.health?.score ?? '—'}`} color={(p.health?.score ?? 100) < 70 ? 'danger' : (p.health?.score ?? 100) < 90 ? 'warn' : 'good'} />
-              </span>
-            </button>
-          ))}
-        </FocusSection>
-
-        <FocusSection icon={<IconNews size={13} aria-hidden="true" />} title="Latest news">
-          {latestNews.length === 0 ? <EmptyLine text="No news items yet." /> : latestNews.map(n => (
-            <a key={n.id} href={n.url} target="_blank" rel="noreferrer" className="flex flex-col gap-0.5 group">
-              <span className="text-xs text-dim group-hover:text-text line-clamp-2">{n.title}</span>
-              <span className="text-[10px] text-faint">{n.source}</span>
-            </a>
-          ))}
-        </FocusSection>
+      {/* Cockpit rail */}
+      <aside className="flex flex-col gap-4 lg:overflow-y-auto lg:min-h-0 pb-1" aria-label="Portfolio cockpit">
+        <PriorityRail
+          status={combineStatus(tasks.status, products.status)}
+          tasks={tasks.items} products={products.items} now={now}
+        />
+        <ChangesFeed
+          status={combineStatus(versions.status, products.status)}
+          versions={versions.items} products={products.items} now={now}
+        />
       </aside>
     </div>
   )
-}
-
-function EmptyLine({ text }: { text: string }) {
-  return <span className="text-xs text-faint italic">{text}</span>
 }
 
 // Map a search-index hit to its in-app route (mirrors Explorer's toRoute).
