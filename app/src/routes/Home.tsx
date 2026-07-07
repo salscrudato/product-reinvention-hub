@@ -10,14 +10,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconSparkle, IconCheck, IconSpinner } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
-import type { Query } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
 import { Markdown } from '../components/chat/Markdown'
 import { HeroMark } from '../components/home/HeroMark'
 import { PriorityRail } from '../components/home/PriorityRail'
-import { PortfolioPulse } from '../components/home/PortfolioPulse'
+import { PortfolioMetrics } from '../components/home/PortfolioMetrics'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
-import type { SearchIndexEntry, Task, Product, Version } from '@pf/shared'
+import type { SearchIndexEntry, Task, Product } from '@pf/shared'
 
 // ─── Stream protocol (mirror of functions/src/runtime.ts StreamEvent) ───────────
 
@@ -39,8 +38,6 @@ const SUGGESTIONS: Array<{ label: string; prompt: string }> = [
   { label: 'Mandatory GL coverages', prompt: 'What GL coverages are mandatory under CG 00 01?' },
 ]
 
-// Most-recent version events for the changes feed (single-field orderBy → auto-indexed).
-const RECENT_VERSIONS: Query = { orderBy: [{ field: 'at', dir: 'desc' }], limit: 50 }
 
 // ─── Cockpit ────────────────────────────────────────────────────────────────────
 
@@ -59,7 +56,6 @@ export default function Home() {
   // Cockpit data — realtime, with genuine loading / error states (see useLiveCollection).
   const tasks    = useLiveCollection<Task>('tasks')
   const products = useLiveCollection<Product>('products')
-  const versions = useLiveCollection<Version>('versions', RECENT_VERSIONS)
   // Fixed at mount so streaming chat tokens don't re-sort the rail on every keystroke.
   const now = useMemo(() => Date.now(), [])
 
@@ -209,10 +205,7 @@ export default function Home() {
           status={combineStatus(tasks.status, products.status)}
           tasks={tasks.items} products={products.items} now={now}
         />
-        <PortfolioPulse
-          status={combineStatus(products.status, versions.status)}
-          products={products.items} versions={versions.items} index={indexEntries} now={now}
-        />
+        <PortfolioMetrics products={products.items} />
       </aside>
     </div>
   )
