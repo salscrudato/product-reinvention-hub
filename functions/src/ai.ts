@@ -14,7 +14,6 @@ export interface AgentOptions {
   tools?:       Anthropic.Tool[]   // defaults to the grounding TOOLS
   maxTokens?:   number
   maxTurns?:    number
-  temperature?: number             // Sonnet 4.6 accepts sampling; omit for a thinking model (Glasswing swap)
   // Custom tool executor — defaults to the shared grounding runTool. Callers (claims.ts)
   // supply this to handle their own extra tools (e.g. emit_determination) while still
   // delegating the grounding tools to runTool. Keeps this the single agent loop.
@@ -44,10 +43,11 @@ export async function runChatAgent(
   const convo: Anthropic.MessageParam[] = [...messages]
 
   for (let turn = 0; turn < maxTurns; turn++) {
+    // No sampling params: Sonnet 5 rejects a non-default temperature/top_p/top_k
+    // (400). Grounding is enforced by the tools + system prompt, not by sampling.
     const stream = client.messages.stream({
       model:      MODEL,
       max_tokens: opts.maxTokens ?? 2048,
-      ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
       system,
       tools,
       messages:   convo,

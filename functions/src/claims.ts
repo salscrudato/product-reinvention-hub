@@ -171,12 +171,11 @@ export const analyzeClaim = onRequest(
       }
 
       await runChatAgent(anthropic(), messages, res, {
-        system:      CLAIMS_SYSTEM,
-        tools:       CLAIMS_TOOLS,
-        runTool:     runClaimsTool,
-        maxTokens:   2600,
-        maxTurns:    7,
-        temperature: 0.2,   // determinism; a Glasswing operator swapping MODEL to the thinking model must drop this
+        system:    CLAIMS_SYSTEM,
+        tools:     CLAIMS_TOOLS,
+        runTool:   runClaimsTool,
+        maxTokens: 2600,
+        maxTurns:  7,
       })
       send(res, { t: 'done' })
     } catch (err) {
