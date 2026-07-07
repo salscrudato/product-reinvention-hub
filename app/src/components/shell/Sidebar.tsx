@@ -6,31 +6,30 @@ import { Tooltip, Logo } from '../ui'
 import {
   IconHome, IconProduct, IconSparkle, IconExplorer, IconTasks,
   IconNews, IconChart, IconBook, IconChat, IconChevronLeft,
-  IconChevronRight, IconSettings, type IconType,
+  IconChevronRight, IconSettings, IconShield, type IconType,
 } from '../ui/icons'
+import { useUser } from '../../context/useUser'
 
 interface NavItem { to: string; label: string; icon: IconType; exact?: boolean }
 
-const SECTIONS: { label: string; items: NavItem[] }[] = [
-  {
-    label: 'Workspace',
-    items: [
-      { to: '/app',          label: 'Home',       icon: IconHome, exact: true },
-      { to: '/app/products', label: 'Products',   icon: IconProduct },
-      { to: '/app/builder',  label: 'AI Builder', icon: IconSparkle },
-      { to: '/app/explorer', label: 'Explorer',   icon: IconExplorer },
-    ],
-  },
-  {
-    label: 'Intelligence',
-    items: [
-      { to: '/app/tasks',      label: 'Tasks',           icon: IconTasks },
-      { to: '/app/news',       label: 'News',            icon: IconNews },
-      { to: '/app/claims',     label: 'Claims Analysis', icon: IconChart },
-      { to: '/app/dictionary', label: 'Data Dictionary', icon: IconBook },
-      { to: '/app/feedback',   label: 'Feedback',        icon: IconChat },
-    ],
-  },
+const WORKSPACE_ITEMS: NavItem[] = [
+  { to: '/app',          label: 'Home',       icon: IconHome, exact: true },
+  { to: '/app/products', label: 'Products',   icon: IconProduct },
+  { to: '/app/builder',  label: 'Builder',    icon: IconSparkle },
+  { to: '/app/explorer', label: 'Explorer',   icon: IconExplorer },
+]
+
+const INTELLIGENCE_ITEMS: NavItem[] = [
+  { to: '/app/tasks',      label: 'Tasks',           icon: IconTasks },
+  { to: '/app/news',       label: 'News',            icon: IconNews },
+  { to: '/app/claims',     label: 'Claims Analysis', icon: IconChart },
+  { to: '/app/dictionary', label: 'Data Dictionary', icon: IconBook },
+  { to: '/app/feedback',   label: 'Feedback',        icon: IconChat },
+]
+
+const SECTIONS = [
+  { label: 'Workspace',    items: WORKSPACE_ITEMS   },
+  { label: 'Intelligence', items: INTELLIGENCE_ITEMS },
 ]
 
 interface SidebarProps { collapsed: boolean; onToggle: () => void }
@@ -59,7 +58,9 @@ function Item({ item, collapsed, active }: { item: NavItem; collapsed: boolean; 
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation()
+  const { profile } = useUser()
   const isActive = (to: string, exact?: boolean) => exact ? location.pathname === to : location.pathname.startsWith(to)
+  const isAdmin  = profile?.role === 'ADMIN'
 
   return (
     <aside
@@ -90,7 +91,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Footer */}
       <div className="py-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-        <Item item={{ to: '/app/admin', label: 'Settings', icon: IconSettings }} collapsed={collapsed} active={isActive('/app/admin')} />
+        {/* Footer nav: ADMIN users get a shield-branded "Admin" item; others see "Settings".
+            The /app/admin route guards itself server-side (rules + Functions). */}
+        {isAdmin
+          ? <Item item={{ to: '/app/admin', label: 'Admin', icon: IconShield }} collapsed={collapsed} active={isActive('/app/admin')} />
+          : <Item item={{ to: '/app/admin', label: 'Settings', icon: IconSettings }} collapsed={collapsed} active={isActive('/app/admin')} />
+        }
         <button
           onClick={onToggle}
           className={`flex items-center gap-3 mx-2 px-2.5 py-2 rounded-[10px] text-sm text-dim hover:bg-raised hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent w-[calc(100%-16px)] ${collapsed ? 'justify-center' : ''}`}

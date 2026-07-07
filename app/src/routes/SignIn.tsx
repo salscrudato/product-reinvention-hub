@@ -4,7 +4,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
-import { IconSpinner, IconKey } from '../components/ui/icons'
+import { IconSpinner, IconKey, IconEye, IconEyeOff } from '../components/ui/icons'
 import { useUser } from '../context/useUser'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
@@ -16,10 +16,11 @@ export default function SignIn() {
   const { user }  = useUser()
   const from      = (location.state as { from?: string } | null)?.from ?? '/app'
 
-  const [email,   setEmail]   = useState('')
-  const [pass,    setPass]    = useState('')
-  const [error,   setError]   = useState('')
-  const [loading, setLoading] = useState(false)
+  const [email,       setEmail]       = useState('')
+  const [pass,        setPass]        = useState('')
+  const [showPass,    setShowPass]    = useState(false)
+  const [error,       setError]       = useState('')
+  const [loading,     setLoading]     = useState(false)
 
   // Already signed in — redirect (render-time <Navigate>, not an in-render call)
   if (user) return <Navigate to={from} replace />
@@ -70,6 +71,8 @@ export default function SignIn() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="aurora-a absolute -top-40 left-1/2 -translate-x-1/2 w-[680px] h-[380px] rounded-full blur-3xl opacity-20"
           style={{ background: 'radial-gradient(ellipse, var(--color-accent-bright), var(--color-accent-strong))' }} />
+        <div className="aurora-b absolute -bottom-20 right-1/4 w-[400px] h-[260px] rounded-full blur-3xl opacity-10"
+          style={{ background: 'radial-gradient(ellipse, var(--color-accent), transparent)' }} />
       </div>
 
       <div className="relative w-full max-w-sm rise-in">
@@ -90,11 +93,31 @@ export default function SignIn() {
           <Input
             label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="you@company.com" autoComplete="email" required disabled={busy}
+            autoFocus
           />
-          <Input
-            label="Password" type="password" value={pass} onChange={e => setPass(e.target.value)}
-            placeholder="password" autoComplete="current-password" required disabled={busy}
-          />
+
+          {/* Password with show/hide toggle */}
+          <div className="relative">
+            <Input
+              label="Password"
+              type={showPass ? 'text' : 'password'}
+              value={pass}
+              onChange={e => setPass(e.target.value)}
+              placeholder="Password"
+              autoComplete="current-password"
+              required
+              disabled={busy}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass(s => !s)}
+              aria-label={showPass ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors"
+            >
+              {showPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+            </button>
+          </div>
 
           {error && (
             <p role="alert" className="text-sm text-danger bg-[rgba(220,38,38,.06)] rounded-[8px] px-3 py-2">

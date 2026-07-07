@@ -2,19 +2,22 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
-import { IconSpinner } from '../components/ui/icons'
+import { IconSpinner, IconEye, IconEyeOff } from '../components/ui/icons'
 import { useUser } from '../context/useUser'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { Logo } from '../components/ui'
 
 export default function MustChangePassword() {
   const { user }  = useUser()
   const navigate  = useNavigate()
 
-  const [next,    setNext]    = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [error,   setError]   = useState('')
-  const [loading, setLoading] = useState(false)
+  const [next,        setNext]        = useState('')
+  const [confirm,     setConfirm]     = useState('')
+  const [showNext,    setShowNext]    = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [error,       setError]       = useState('')
+  const [loading,     setLoading]     = useState(false)
 
   if (!user) return <Navigate to="/sign-in" replace />
 
@@ -45,43 +48,82 @@ export default function MustChangePassword() {
 
   return (
     <div className="min-h-svh flex items-center justify-center bg-page px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-full bg-[rgba(180,83,9,.1)] flex items-center justify-center text-warn font-bold text-lg" aria-hidden="true">!</div>
-          <h1 className="text-xl font-bold text-text">Set a new password</h1>
-          <p className="text-sm text-dim text-center">Your account requires a password change before you can continue.</p>
+      {/* Aurora wash */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div className="aurora-a absolute -top-40 left-1/2 -translate-x-1/2 w-[680px] h-[380px] rounded-full blur-3xl opacity-15"
+          style={{ background: 'radial-gradient(ellipse, var(--color-warn), var(--color-accent-strong))' }} />
+      </div>
+
+      <div className="relative w-full max-w-sm rise-in">
+        <div className="flex flex-col items-center gap-4 mb-8">
+          <Logo size={48} rounded={14} className="shadow-[0_6px_20px_rgba(139,31,224,.3)]" />
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-text">Set a new password</h1>
+            <p className="text-sm text-dim mt-1">Your account requires a password change before you can continue.</p>
+          </div>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-surface rounded-[16px] p-6 flex flex-col gap-4"
+          className="bg-surface rounded-[18px] p-6 flex flex-col gap-4"
           style={{ boxShadow: 'var(--shadow-card)', border: '1px solid var(--color-border)' }}
           noValidate
         >
-          <Input
-            label="New password"
-            type="password"
-            value={next}
-            onChange={e => setNext(e.target.value)}
-            placeholder="At least 8 characters"
-            autoComplete="new-password"
-            required
-            disabled={loading}
-          />
-          <Input
-            label="Confirm new password"
-            type="password"
-            value={confirm}
-            onChange={e => setConfirm(e.target.value)}
-            placeholder="Repeat password"
-            autoComplete="new-password"
-            required
-            disabled={loading}
-          />
+          <div className="relative">
+            <Input
+              label="New password"
+              type={showNext ? 'text' : 'password'}
+              value={next}
+              onChange={e => setNext(e.target.value)}
+              placeholder="At least 8 characters"
+              autoComplete="new-password"
+              required
+              disabled={loading}
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowNext(s => !s)}
+              aria-label={showNext ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors"
+            >
+              {showNext ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+            </button>
+          </div>
+
+          <div className="relative">
+            <Input
+              label="Confirm new password"
+              type={showConfirm ? 'text' : 'password'}
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              placeholder="Repeat password"
+              autoComplete="new-password"
+              required
+              disabled={loading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm(s => !s)}
+              aria-label={showConfirm ? 'Hide confirmation' : 'Show confirmation'}
+              tabIndex={-1}
+              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors"
+            >
+              {showConfirm ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+            </button>
+          </div>
+
+          {/* Inline strength hint */}
+          {next.length > 0 && next.length < 8 && (
+            <p className="text-xs text-warn -mt-1">Password is too short ({next.length}/8).</p>
+          )}
+
           {error && <p role="alert" className="text-sm text-danger bg-[rgba(220,38,38,.06)] rounded-[8px] px-3 py-2">{error}</p>}
+
           <Button type="submit" variant="primary" className="w-full mt-1" disabled={loading || !next || !confirm}>
             {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
-            {loading ? 'Saving...' : 'Set password'}
+            {loading ? 'Saving…' : 'Set password'}
           </Button>
         </form>
       </div>

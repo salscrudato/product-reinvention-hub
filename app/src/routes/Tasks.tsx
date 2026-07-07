@@ -325,6 +325,7 @@ export default function Tasks() {
   const [view,     setView]     = useState<ViewMode>('board')
 
   // ── filter state ──
+  const [query,       setQuery]       = useState('')
   const [mine,        setMine]        = useState(false)
   const [overdue,     setOverdue]     = useState(false)
   const [productId,   setProductId]   = useState('')
@@ -355,6 +356,7 @@ export default function Tasks() {
 
   const filtered = useMemo(() => {
     let list = tasks ?? []
+    if (query)         { const q = query.toLowerCase(); list = list.filter(t => t.title.toLowerCase().includes(q)) }
     if (mine && user)  list = list.filter(t => t.assignee?.uid === user.uid)
     if (productId)     list = list.filter(t => t.productId === productId)
     if (assigneeUid)   list = list.filter(t => t.assignee?.uid === assigneeUid)
@@ -365,7 +367,7 @@ export default function Tasks() {
     }
     if (overdue) list = list.filter(t => { const m = toMillis(t.dueAt); return m != null && m < Date.now() })
     return list
-  }, [tasks, mine, productId, assigneeUid, colFilter, dueWindow, overdue, user])
+  }, [tasks, query, mine, productId, assigneeUid, colFilter, dueWindow, overdue, user])
 
   const byColumn = useMemo(() => {
     const map: Record<TaskColumn, TaskDoc[]> = { IDEATION: [], BUILD_FILE: [], TEST_APPROVE: [], LAUNCH_MONITOR: [] }
@@ -406,11 +408,11 @@ export default function Tasks() {
 
   const activeTask = dragId ? tasks?.find(t => t.id === dragId) : null
 
-  const activeFilterCount = [mine, overdue, !!productId, !!assigneeUid, !!colFilter, dueWindow !== 'any']
+  const activeFilterCount = [!!query, mine, overdue, !!productId, !!assigneeUid, !!colFilter, dueWindow !== 'any']
     .filter(Boolean).length
 
   function clearFilters() {
-    setMine(false); setOverdue(false); setProductId('')
+    setQuery(''); setMine(false); setOverdue(false); setProductId('')
     setAssigneeUid(''); setColFilter(''); setDueWindow('any')
   }
 
@@ -428,6 +430,25 @@ export default function Tasks() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Task filters">
         <IconFilter size={14} className="text-faint" aria-hidden="true" />
+
+        {/* Title typeahead */}
+        <div className="relative">
+          <input
+            type="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search tasks…"
+            aria-label="Search tasks by title"
+            className="h-7 pl-2.5 pr-7 rounded-[8px] bg-surface border text-xs text-text placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 w-40"
+            style={{ borderColor: query ? 'var(--color-accent)' : 'var(--color-border)' }}
+          />
+          {query && (
+            <button onClick={() => setQuery('')} aria-label="Clear search"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-faint hover:text-text transition-colors">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M1 1l8 8M9 1L1 9"/></svg>
+            </button>
+          )}
+        </div>
 
         <FilterChip active={mine} onClick={() => setMine(m => !m)}>Mine</FilterChip>
         <FilterChip active={overdue} onClick={() => setOverdue(o => !o)}>Overdue</FilterChip>

@@ -3,13 +3,17 @@ import { useParams, useNavigate, useLocation, Outlet, Navigate } from 'react-rou
 import { useEffect, useState } from 'react'
 import { ProductProvider } from '../../context/ProductContext'
 import { useProductCtx } from '../../context/useProductCtx'
+import { useUser } from '../../context/useUser'
 import { adapter } from '../../lib/backend'
 import { Skeleton, StatusPill, LifecyclePill, Badge, Button } from '../../components/ui'
-import { IconRecent, IconChat, IconUsers, IconBack, IconChevronDown } from '../../components/ui/icons'
+import { IconRecent, IconChat, IconUsers, IconBack, IconChevronDown, IconArrowUp, IconShare } from '../../components/ui/icons'
 import { computeProductFindings, healthScore, healthColor } from '../../lib/productHealth'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { CommentsPanel } from '../../components/product/CommentsPanel'
 import { ExportMenu } from '../../components/product/ExportMenu'
+import { PromoteDraftDialog } from '../../components/product/PromoteDraftDialog'
+import { LineageBadge } from '../../components/product/LineageBadge'
+import { toast } from 'sonner'
 
 const TABS = [
   { id: 'overview',  label: 'Overview'  },
@@ -24,9 +28,13 @@ function WorkspaceInner() {
   const { pid, product, coverages, rules, formRules, forms, ldTables, rtTables, ratingProgram, loading } = useProductCtx()
   const navigate     = useNavigate()
   const { pathname } = useLocation()
+  const { user }     = useUser()
+  const canEdit      = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const activeTab    = TABS.find(t => pathname.includes(t.id))?.id ?? 'overview'
   const [historyOpen, setHistoryOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [promoteOpen, setPromoteOpen] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const [viewers, setViewers] = useState<string[]>([])
   const [siblings, setSiblings] = useState<{ id: string; name: string }[]>([])
 
@@ -46,6 +54,26 @@ function WorkspaceInner() {
     })
     return unsub
   }, [])
+
+  async function handleShare() {
+    if (!user || (user.role !== 'EDITOR' && user.role !== 'ADMIN')) {
+      toast.error('EDITOR or ADMIN role required to create share links.')
+      return
+    }
+    setSharing(true)
+    try {
+      const { shareId } = await adapter.fns.call<{ productId: string }, { shareId: string }>(
+        'createShare', { productId: pid },
+      )
+      const url = `${location.origin}/share/${shareId}`
+      await navigator.clipboard.writeText(url)
+      toast.success('Share link copied to clipboard')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not create share link')
+    } finally {
+      setSharing(false)
+    }
+  }
 
   if (loading && !product) {
     return (
@@ -114,9 +142,12 @@ function WorkspaceInner() {
                 </span>
               </div>
               <h1 className="text-2xl font-bold text-text">{product.name}</h1>
-              {product.refId && (
-                <span className="text-sm font-mono text-dim">{product.refId}</span>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {product.refId && (
+                  <span className="text-sm font-mono text-dim">{product.refId}</span>
+                )}
+                {product.lineage && <LineageBadge lineage={product.lineage} />}
+              </div>
               <p className="text-sm text-dim mt-1">
                 {coverages.length} coverage{coverages.length !== 1 ? 's' : ''}
                 {' · '}{product.states?.length ?? 0} state{(product.states?.length ?? 0) !== 1 ? 's' : ''}
@@ -139,12 +170,22 @@ function WorkspaceInner() {
                   </div>
                 </div>
               )}
+              {product.lifecycle !== 'LAUNCHED' && canEdit && (
+                <Button variant="primary" size="sm" onClick={() => setPromoteOpen(true)}>
+                  <IconArrowUp size={14} aria-hidden="true" />Promote
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={() => setCommentsOpen(true)}>
                 <IconChat size={14} aria-hidden="true" />Comments
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
                 <IconRecent size={14} aria-hidden="true" />History
               </Button>
+              {canEdit && (
+                <Button variant="ghost" size="sm" onClick={() => void handleShare()} disabled={sharing}>
+                  <IconShare size={14} aria-hidden="true" />{sharing ? 'Sharing…' : 'Share'}
+                </Button>
+              )}
               <ExportMenu data={{ product, coverages, rules, forms, ldTables, rtTables, ratingProgram }} />
             </div>
           </div>
@@ -176,6 +217,14 @@ function WorkspaceInner() {
 
       {historyOpen  && <HistoryDrawer  onClose={() => setHistoryOpen(false)}  entityPath={`products/${pid}`} />}
       {commentsOpen && <CommentsPanel  onClose={() => setCommentsOpen(false)} entityPath={`products/${pid}`} />}
+      {promoteOpen && user && (
+        <PromoteDraftDialog
+          product={product}
+          actor={{ uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }}
+          onClose={() => setPromoteOpen(false)}
+          onPromoted={() => setPromoteOpen(false)}
+        />
+      )}
     </div>
   )
 }

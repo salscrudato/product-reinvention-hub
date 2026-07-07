@@ -105,6 +105,16 @@ service cloud.firestore {
     // ── Task templates — ADMIN edits SLA config; all authed read (NewProductModal fallback) ──
     match /taskTemplates/{id} { allow read: if isAuthed(); allow write: if isAdmin(); }
 
+    // ── Share snapshots — public read (share links work unauthenticated); EDITOR/ADMIN create ──
+    // Mutation (delete) requires ADMIN to prevent abuse. getShare reads via Admin SDK but the
+    // frontend share viewer also reads directly, so public read is intentional.
+    match /shares/{shareId} {
+      allow read:   if true;
+      allow create: if canEdit();
+      allow delete: if isAdmin();
+      allow update: if false;
+    }
+
     // ── Deny everything not explicitly matched ────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

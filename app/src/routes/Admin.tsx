@@ -1,9 +1,9 @@
 // Admin (/app/admin, ADMIN only) — user management (via the setUserRole callable),
-// an audit-log explorer that opens any event to its before/after diff, the seed
-// report, and local app settings.
+// an audit-log explorer that opens any event to its before/after diff, a share-links
+// manager, the seed report, and local app settings.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { IconShield, IconPlus, IconUserX, IconUserCheck, IconSearch, IconFileClock } from '../components/ui/icons'
+import { IconShield, IconPlus, IconUserX, IconUserCheck, IconSearch, IconFileClock, IconShare, IconClose } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
@@ -13,6 +13,16 @@ type UserDoc      = User & { id: string }
 type AuditDoc     = AuditEvent & { id: string }
 type VersionDoc   = Version & { id: string }
 type SeedReportDoc = SeedReport & { id: string }
+
+interface ShareDoc {
+  id:         string
+  productId:  string
+  note:       string
+  createdBy:  { uid: string; name: string }
+  createdAt:  unknown
+  expiresAt:  string
+  snapshot:   { product: { name?: string } }
+}
 
 function toMillis(v: unknown): number | null {
   if (v == null) return null
@@ -37,13 +47,20 @@ export default function Admin() {
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-xl font-bold text-text">Admin</h1>
-        <p className="text-sm text-dim">Users, audit trail, seed report and settings.</p>
+        <p className="text-sm text-dim">Users, share links, audit trail, seed report and settings.</p>
       </div>
       <Tabs
-        tabs={[{ id: 'users', label: 'Users' }, { id: 'audit', label: 'Audit Log' }, { id: 'seed', label: 'Seed Report' }, { id: 'settings', label: 'Settings' }]}
+        tabs={[
+          { id: 'users',  label: 'Users'       },
+          { id: 'shares', label: 'Share Links'  },
+          { id: 'audit',  label: 'Audit Log'    },
+          { id: 'seed',   label: 'Seed Report'  },
+          { id: 'settings', label: 'Settings'  },
+        ]}
         active={tab} onChange={setTab}
       />
       {tab === 'users'    && <UsersTab />}
+      {tab === 'shares'   && <SharesTab />}
       {tab === 'audit'    && <AuditTab />}
       {tab === 'seed'     && <SeedTab />}
       {tab === 'settings' && <SettingsTab />}
@@ -57,8 +74,9 @@ const ROLES: Role[] = ['ADMIN', 'EDITOR', 'VIEWER']
 const roleColor: Record<Role, 'purple' | 'blue' | 'default'> = { ADMIN: 'purple', EDITOR: 'blue', VIEWER: 'default' }
 
 function UsersTab() {
-  const [users, setUsers] = useState<UserDoc[] | null>(null)
+  const [users,    setUsers]    = useState<UserDoc[] | null>(null)
   const [creating, setCreating] = useState(false)
+  const [query,    setQuery]    = useState('')
   const [draft, setDraft] = useState({ email: '', name: '', password: '', role: 'VIEWER' as Role })
   const [busy, setBusy] = useState(false)
 
@@ -80,15 +98,38 @@ function UsersTab() {
     setCreating(false); setDraft({ email: '', name: '', password: '', role: 'VIEWER' })
   }
 
+  // Instant typeahead over name + email
+  const filtered = useMemo(() => {
+    if (!users) return null
+    if (!query.trim()) return users
+    const q = query.toLowerCase()
+    return users.filter(u => u.name?.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+  }, [users, query])
+
   if (users === null) return <div className="flex flex-col gap-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
-        <Button variant="primary" size="sm" onClick={() => setCreating(true)}><IconPlus size={14} /> New user</Button>
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <IconSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" aria-hidden="true" />
+          <input
+            className="w-full h-8 pl-8 pr-3 rounded-[8px] bg-surface border border-border-strong text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
+            placeholder="Search users…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            aria-label="Search users"
+          />
+          {query && (
+            <button onClick={() => setQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-faint hover:text-dim" aria-label="Clear search">
+              <IconClose size={12} />
+            </button>
+          )}
+        </div>
+        <Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New user</Button>
       </div>
       <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-        {users.map(u => (
+        {(filtered ?? []).map(u => (
           <div key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
             <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'var(--gradient-accent)' }}>
               {(u.name || u.email).slice(0, 2).toUpperCase()}
@@ -109,6 +150,9 @@ function UsersTab() {
               : <Button variant="ghost" size="sm" disabled={busy} onClick={() => call({ action: 'reactivate', uid: u.id }, 'User reactivated')}><IconUserCheck size={13} /> Reactivate</Button>}
           </div>
         ))}
+        {filtered?.length === 0 && (
+          <div className="px-4 py-6 text-center text-sm text-faint">No users match "{query}".</div>
+        )}
       </div>
 
       <Dialog open={creating} onClose={() => setCreating(false)} title="New user">
@@ -129,6 +173,75 @@ function UsersTab() {
           </div>
         </div>
       </Dialog>
+    </div>
+  )
+}
+
+// ─── Share links ─────────────────────────────────────────────────────────────
+
+function SharesTab() {
+  const [shares, setShares] = useState<ShareDoc[] | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const unsub = adapter.db.subscribe<ShareDoc>('shares', d => {
+      if (Array.isArray(d)) setShares([...d].sort((a, b) => (toMillis(b.createdAt) ?? 0) - (toMillis(a.createdAt) ?? 0)))
+    })
+    return unsub
+  }, [])
+
+  async function deleteShare(id: string) {
+    setBusy(true)
+    try {
+      await adapter.db.mutate({ op: 'delete', path: `shares/${id}`, entityType: 'share', actor: { uid: 'admin', name: 'Admin' } })
+      toast.success('Share link deleted')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not delete share link')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function copyLink(id: string) {
+    const url = `${location.origin}/share/${id}`
+    void navigator.clipboard.writeText(url)
+    toast.success('Link copied')
+  }
+
+  if (shares === null) return <div className="flex flex-col gap-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+
+  if (shares.length === 0) return (
+    <EmptyState
+      icon={<IconShare size={26} />}
+      title="No share links yet"
+      description="Share buttons in the product workspace create read-only snapshot links here."
+    />
+  )
+
+  return (
+    <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+      {shares.map(s => {
+        const expired = s.expiresAt && new Date(s.expiresAt) < new Date()
+        return (
+          <div key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
+            <div className="flex-1 min-w-[200px]">
+              <div className="text-sm font-medium text-text truncate">{s.snapshot?.product?.name ?? s.productId}</div>
+              <div className="text-xs text-faint font-mono mt-0.5">{s.id}</div>
+              {s.note && <div className="text-xs text-dim mt-0.5 truncate">{s.note}</div>}
+            </div>
+            <div className="text-xs text-faint text-right shrink-0">
+              <div>{s.createdBy?.name}</div>
+              <div>{fmt(s.createdAt)}</div>
+              <div className={expired ? 'text-danger' : ''}>Exp: {s.expiresAt ? new Date(s.expiresAt).toLocaleDateString() : '—'}</div>
+            </div>
+            {expired && <Badge label="expired" color="danger" />}
+            <Button variant="ghost" size="sm" onClick={() => copyLink(s.id)}>Copy link</Button>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => void deleteShare(s.id)}>
+              <IconClose size={13} /> Delete
+            </Button>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -260,7 +373,6 @@ function SeedTab() {
         <span className="text-sm font-semibold text-text">Latest seed</span>
         <span className="text-xs text-faint">{fmt(latest.at)}</span>
       </div>
-      {/* One tile per reference product's worked-example premium (the canaries) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {Object.entries(latest.workedExamplePremiums ?? { 'HO.PROD.001': latest.workedExamplePremium }).map(([pid, prem]) => (
           <div key={pid} className="flex items-center justify-between px-4 py-3 rounded-[12px]" style={{ background: 'var(--gradient-accent-soft)', border: '1px solid var(--color-accent-line)' }}>

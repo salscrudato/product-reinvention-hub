@@ -1,13 +1,18 @@
 // Forms tab — table of product forms with facets; row click opens a full Drawer.
 // Two-way linked with coverages: a coverage's form chip deep-links here (?form=),
 // and each form lists the coverages that reference it (clickable back).
+// AI-generated plain-English descriptions are cached on the form document and shown
+// prominently in the drawer; clicking "Generate" fetches via the describeForm callable.
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import Fuse from 'fuse.js'
 import { useProductCtx } from '../../context/useProductCtx'
 import { Badge, Skeleton, EmptyState, RefChip } from '../../components/ui'
-import { IconForm, IconClose } from '../../components/ui/icons'
+import { IconForm, IconClose, IconSparkle, IconSpinner } from '../../components/ui/icons'
 import { Drawer } from '../../components/ui/Drawer'
+import { adapter } from '../../lib/backend'
+import { useUser } from '../../context/useUser'
 import type { WithId } from '../../context/ProductContext'
 import type { Form, Coverage } from '@pf/shared'
 
@@ -19,7 +24,30 @@ const CAT_COLOR: Record<string, 'blue'|'purple'|'warn'|'danger'|'good'|'default'
 function FormDrawer({ form, coverages, onOpenCoverage, onClose }: {
   form: WithId<Form>; coverages: WithId<Coverage>[]; onOpenCoverage: (id: string) => void; onClose: () => void
 }) {
+  const { user } = useUser()
+  const canEdit  = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const referencedBy = coverages.filter(c => c.formNumbers?.includes(form.number))
+
+  // Local description state — starts from the form doc so the drawer shows the
+  // cached value immediately; "Generate" overwrites it on success.
+  const [description, setDescription] = useState(form.description ?? '')
+  const [generating, setGenerating]   = useState(false)
+
+  async function handleGenerate() {
+    setGenerating(true)
+    try {
+      const result = await adapter.fns.call<{ formKey: string }, { description: string; cached: boolean }>(
+        'describeForm', { formKey: form.id },
+      )
+      setDescription(result.description)
+      if (!result.cached) toast.success('Description generated')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not generate description')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   return (
     <Drawer open title={`${form.number} — ${form.name}`} onClose={onClose} width="w-[480px]">
       <div className="flex flex-col gap-5">
@@ -31,9 +59,33 @@ function FormDrawer({ form, coverages, onOpenCoverage, onClose }: {
           {form.mandatoryDefault && <Badge label="Mandatory" color="purple" />}
         </div>
 
+        {/* AI-cached plain-English description */}
         <div>
-          <p className="text-xs font-medium text-faint uppercase tracking-wide mb-1">Description</p>
-          <p className="text-sm text-dim">{form.description || 'No description yet.'}</p>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-faint">Plain-English summary</p>
+            {canEdit && (
+              <button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline disabled:opacity-50"
+                aria-label="Generate AI description"
+              >
+                {generating
+                  ? <IconSpinner size={12} className="animate-spin" />
+                  : <IconSparkle size={12} />}
+                {description ? (generating ? 'Regenerating…' : 'Regenerate') : (generating ? 'Generating…' : 'Generate')}
+              </button>
+            )}
+          </div>
+          {description ? (
+            <p className="text-sm text-dim leading-relaxed">{description}</p>
+          ) : (
+            <p className="text-sm text-faint italic">
+              {canEdit
+                ? 'No description yet — click Generate to create one.'
+                : 'No plain-English description available.'}
+            </p>
+          )}
         </div>
 
         {/* Two-way link back to coverages */}
@@ -87,9 +139,9 @@ export default function ProductForms() {
   const { pid, forms, coverages, loading } = useProductCtx()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const [query, setQuery]     = useState('')
-  const [catFilter, setCat]   = useState('')
-  const [selected, setSelected] = useState<WithId<Form> | null>(null)
+  const [query,    setQuery]     = useState('')
+  const [catFilter, setCat]      = useState('')
+  const [selected, setSelected]  = useState<WithId<Form> | null>(null)
 
   // Honour a deep link from a coverage's form chip (…/forms?form=HO%2004%2090).
   const focusForm = params.get('form')
@@ -105,7 +157,7 @@ export default function ProductForms() {
   const covFilter = coverages.find(c => c.refId === params.get('cov') || c.id === params.get('cov'))
   const covForms = covFilter ? new Set(covFilter.formNumbers ?? []) : null
 
-  const fuse    = useMemo(() => new Fuse(forms, { keys: ['number', 'name', 'category'], threshold: 0.4 }), [forms])
+  const fuse    = useMemo(() => new Fuse(forms, { keys: ['number', 'name', 'category', 'description'], threshold: 0.4 }), [forms])
   const base    = query ? fuse.search(query).map(r => r.item) : forms
   const filtered = base
     .filter(f => !catFilter || f.category === catFilter)
@@ -127,12 +179,14 @@ export default function ProductForms() {
       <div className="flex items-center gap-3 flex-wrap">
         <input
           className="flex-1 min-w-[200px] h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
-          placeholder="Search forms..."
+          placeholder="Search forms…"
           value={query} onChange={e => setQuery(e.target.value)}
+          aria-label="Search forms"
         />
         <select
           className="h-8 px-3 rounded-[8px] bg-surface border border-border-strong text-sm text-dim focus:outline-none focus:ring-2 focus:ring-accent/25"
           value={catFilter} onChange={e => setCat(e.target.value)}
+          aria-label="Filter by category"
         >
           <option value="">All categories</option>
           {cats.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
@@ -158,7 +212,12 @@ export default function ProductForms() {
                   className="cursor-pointer hover:bg-raised transition-colors"
                   style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <td className="px-4 py-3"><RefChip id={form.number} /></td>
-                  <td className="px-4 py-3 text-text max-w-[200px] truncate">{form.name}</td>
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <span className="text-text truncate block">{form.name}</span>
+                    {form.description && (
+                      <span className="text-[11px] text-faint truncate block mt-0.5">{form.description.slice(0, 80)}{form.description.length > 80 ? '…' : ''}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-dim">{form.edition}</td>
                   <td className="px-4 py-3"><Badge label={form.category.replace('_',' ')} color={CAT_COLOR[form.category] ?? 'default'} /></td>
                   <td className="px-4 py-3 text-center">{form.dynamic ? '✓' : '—'}</td>

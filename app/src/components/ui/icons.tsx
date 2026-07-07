@@ -287,3 +287,18 @@ export const IconWarning = (p: IconProps) => (
 export const IconAlertCircle = (p: IconProps) => (
   <Glyph {...p}><circle cx="12" cy="12" r="8.4" /><path d="M12 7.6v5.3" /><circle cx="12" cy="16.4" r="1" fill="currentColor" stroke="none" /></Glyph>
 )
+
+/** Eye — reveal / show password or hidden content. */
+export const IconEye = (p: IconProps) => (
+  <Glyph {...p}><path d="M2 12c2.5-5 5.5-7.5 10-7.5S19.5 7 22 12c-2.5 5-5.5 7.5-10 7.5S4.5 17 2 12Z" /><circle cx="12" cy="12" r="2.9" /></Glyph>
+)
+
+/** Eye-off — hide / mask password or hidden content. */
+export const IconEyeOff = (p: IconProps) => (
+  <Glyph {...p}><path d="M17.9 17.9A10.6 10.6 0 0 1 12 19.5C7.5 19.5 4.5 17 2 12c1.1-2.2 2.6-4 4.4-5.4M9.9 5.1A9.9 9.9 0 0 1 12 4.5c4.5 0 7.5 2.5 10 7.5a12.3 12.3 0 0 1-2 3.1" /><path d="m2 2 20 20" /></Glyph>
+)
+
+/** Share — an upward arrow from a box, for sharing / exporting a snapshot. */
+export const IconShare = (p: IconProps) => (
+  <Glyph {...p}><path d="M9 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-4" /><path d="M12 3v13" /><path d="m8.5 6.5 3.5-3.5 3.5 3.5" /></Glyph>
+)

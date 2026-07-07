@@ -112,6 +112,7 @@ export default function News() {
   const [savedInstr, setSaved]        = useState('')
   const [refreshing, setRefreshing]   = useState(false)
   const [saving, setSaving]           = useState(false)
+  const [query, setQuery]             = useState('')
 
   const products = useLiveCollection<Product>('products')
 
@@ -138,6 +139,17 @@ export default function News() {
           : toMillis(b.fetchedAt) - toMillis(a.fetchedAt),
       )
   }, [items, products.items])
+
+  const displayed = useMemo(() => {
+    if (!query) return ranked
+    const q = query.toLowerCase()
+    return ranked.filter(n =>
+      n.title.toLowerCase().includes(q) ||
+      (n.summary ?? '').toLowerCase().includes(q) ||
+      (n.source ?? '').toLowerCase().includes(q) ||
+      (n.tags ?? []).some((t: string) => t.toLowerCase().includes(q)),
+    )
+  }, [ranked, query])
 
   async function savePrefs() {
     if (!user) return
@@ -182,10 +194,30 @@ export default function News() {
           <h1 className="text-xl font-bold text-text">Market News</h1>
           <p className="text-sm text-dim">Curated nightly by an AI agent and ranked against your portfolio.</p>
         </div>
-        <Button variant="default" size="sm" onClick={refresh} disabled={refreshing} aria-label="Refresh news feed now">
-          <IconRefresh size={14} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
-          {refreshing ? 'Fetching…' : 'Refresh now'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Title / summary typeahead */}
+          <div className="relative">
+            <input
+              type="search"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search news…"
+              aria-label="Search news by title, summary, or tag"
+              className="h-8 pl-3 pr-7 rounded-[9px] bg-surface border text-sm text-text placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 w-48"
+              style={{ borderColor: query ? 'var(--color-accent)' : 'var(--color-border-strong)' }}
+            />
+            {query && (
+              <button onClick={() => setQuery('')} aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-faint hover:text-text transition-colors">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M1 1l8 8M9 1L1 9"/></svg>
+              </button>
+            )}
+          </div>
+          <Button variant="default" size="sm" onClick={refresh} disabled={refreshing} aria-label="Refresh news feed now">
+            <IconRefresh size={14} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
+            {refreshing ? 'Fetching…' : 'Refresh now'}
+          </Button>
+        </div>
       </div>
 
       {/* Preference box */}
@@ -229,15 +261,15 @@ export default function News() {
         <div className="flex flex-col gap-3">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>
-      ) : ranked.length === 0 ? (
+      ) : displayed.length === 0 ? (
         <EmptyState
           icon={<IconNews size={28} />}
-          title="No news yet"
-          description={'A nightly agent (06:00 ET) searches the web for your tracking instruction and files what it finds here. Set a preference above, then use “Refresh now” to fetch immediately.'}
+          title={query ? 'No results' : 'No news yet'}
+          description={query ? `No items match "${query}".` : 'A nightly agent (06:00 ET) searches the web for your tracking instruction and files what it finds here. Set a preference above, then use "Refresh now" to fetch immediately.'}
         />
       ) : (
         <div className="flex flex-col gap-3" role="feed" aria-label="Market news feed">
-          {ranked.map(n => (
+          {displayed.map(n => (
             <a
               key={n.id}
               href={n.url}

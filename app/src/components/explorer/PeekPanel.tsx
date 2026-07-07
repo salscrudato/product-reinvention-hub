@@ -162,12 +162,13 @@ export function PeekPanel({ node }: { node: PeekNode | null }) {
         )}
       </Section>
 
-      {/* Attached forms — every number is a deep link into the product's Forms tab. */}
+      {/* Attached forms — every number is a deep link into the product's Forms tab.
+          The description (if cached) surfaces inline so the peek gives instant context. */}
       <Section label={`Attached forms${formNumbers.length ? ` (${formNumbers.length})` : ''}`}>
         {formNumbers.length === 0 ? (
           <p className="text-sm text-faint">No forms attached.</p>
         ) : (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             {formNumbers.map((num) => {
               const f = formByNumber.get(num)
               return (
@@ -175,12 +176,17 @@ export function PeekPanel({ node }: { node: PeekNode | null }) {
                   key={num}
                   onClick={() => openForm(num)}
                   title={`Open ${num} in Forms`}
-                  className="flex items-center gap-2 text-left px-2.5 py-2 rounded-[9px] bg-raised hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                  className="flex flex-col gap-1 text-left px-2.5 py-2.5 rounded-[9px] bg-raised hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                 >
-                  <IconForm size={15} className="text-faint shrink-0" aria-hidden="true" />
-                  <RefChip id={num} tone="accent" />
-                  <span className="text-sm text-dim truncate flex-1">{f?.name ?? 'Form'}</span>
-                  <IconArrowRight size={14} className="text-faint shrink-0" aria-hidden="true" />
+                  <div className="flex items-center gap-2">
+                    <IconForm size={14} className="text-faint shrink-0" aria-hidden="true" />
+                    <RefChip id={num} tone="accent" />
+                    <span className="text-sm text-dim truncate flex-1">{f?.name ?? 'Form'}</span>
+                    <IconArrowRight size={13} className="text-faint shrink-0" aria-hidden="true" />
+                  </div>
+                  {f?.description && (
+                    <p className="text-[11px] text-faint leading-snug pl-[22px] line-clamp-2">{f.description}</p>
+                  )}
                 </button>
               )
             })}

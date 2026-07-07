@@ -4,15 +4,15 @@ import { Suspense, lazy } from 'react'
 import { UserProvider } from './context/UserContext'
 import { Skeleton } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { IconWand } from './components/ui/icons'
-import { StubRoute } from './routes/stub/StubRoute'
 
 const Landing            = lazy(() => import('./routes/Landing'))
 const SignIn             = lazy(() => import('./routes/SignIn'))
 const MustChangePassword = lazy(() => import('./routes/MustChangePassword'))
+const Share              = lazy(() => import('./routes/Share'))
 const AppShell           = lazy(() => import('./routes/AppShell'))
 const Home               = lazy(() => import('./routes/Home'))
 const Products           = lazy(() => import('./routes/Products'))
+const Builder            = lazy(() => import('./routes/Builder'))
 const Explorer           = lazy(() => import('./routes/Explorer'))
 const ProductWorkspace   = lazy(() => import('./routes/product/ProductWorkspace'))
 const ProductOverview    = lazy(() => import('./routes/product/ProductOverview'))
@@ -46,6 +46,8 @@ export default function App() {
             <Route path="/"                      element={<Landing />} />
             <Route path="/sign-in"               element={<SignIn />} />
             <Route path="/must-change-password"  element={<MustChangePassword />} />
+            {/* Public share viewer — no auth required */}
+            <Route path="/share/:id"             element={<Share />} />
 
             <Route path="/app" element={<AppShell />}>
               <Route index                element={<Home />} />
@@ -62,7 +64,7 @@ export default function App() {
                 <Route path="rules"         element={<ProductRules />} />
               </Route>
 
-              <Route path="builder"    element={<StubRoute title="AI Builder" description="Generate product structures, draft coverage language and validate rules with Claude — coming soon." icon={IconWand} />} />
+              <Route path="builder"    element={<Builder />} />
               <Route path="explorer"   element={<Explorer />} />
               <Route path="tasks"      element={<Tasks />} />
               <Route path="news"       element={<News />} />

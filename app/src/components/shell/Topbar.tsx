@@ -1,7 +1,7 @@
 // Topbar — breadcrumb, global search (opens palette), presence slot, user menu.
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { IconSearch, IconSignOut, IconChevronDown, IconUser, IconHome } from '../ui/icons'
+import { IconSearch, IconSignOut, IconChevronDown, IconUser, IconHome, IconKey } from '../ui/icons'
 import { useUser } from '../../context/useUser'
 import { adapter } from '../../lib/backend'
 import type { Product } from '@pf/shared'
@@ -9,7 +9,7 @@ import type { Product } from '@pf/shared'
 interface TopbarProps { onOpenPalette: () => void }
 
 const LABELS: Record<string, string> = {
-  products: 'Products', builder: 'AI Builder', explorer: 'Explorer',
+  products: 'Products', builder: 'Builder', explorer: 'Explorer',
   tasks: 'Tasks', news: 'News', claims: 'Claims Analysis', dictionary: 'Data Dictionary',
   feedback: 'Feedback', admin: 'Settings',
 }
@@ -27,7 +27,6 @@ function useCrumbs(): Crumb[] {
   const onProductPage = pathname.startsWith('/app/products/')
 
   // Lightweight id→name map so a product crumb reads "Homeowners HO-3", not its id.
-  // Subscribe once while in product-land (not per tab switch) to avoid listener churn.
   useEffect(() => {
     if (!onProductPage) return
     const unsub = adapter.db.subscribe<Product & { id?: string }>('products', d => {
@@ -71,6 +70,9 @@ function Breadcrumb() {
   )
 }
 
+// Detect Mac so the shortcut badge reads ⌘K instead of Ctrl+K.
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
+
 export function Topbar({ onOpenPalette }: TopbarProps) {
   const { user } = useUser()
   const navigate  = useNavigate()
@@ -93,11 +95,13 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
         onClick={onOpenPalette}
         className="hidden sm:flex items-center gap-2 px-3 h-8 rounded-[8px] text-sm text-faint bg-raised hover:bg-hover transition-colors"
         style={{ border: '1px solid var(--color-border)', minWidth: 200 }}
-        aria-label="Search (Ctrl+K)"
+        aria-label={`Search (${isMac ? '⌘K' : 'Ctrl+K'})`}
       >
         <IconSearch size={14} aria-hidden="true" />
-        <span>Search...</span>
-        <kbd className="ml-auto text-xs bg-surface rounded px-1 py-0.5 font-mono text-faint" style={{ border: '1px solid var(--color-border)' }}>Ctrl+K</kbd>
+        <span>Search…</span>
+        <kbd className="ml-auto text-xs bg-surface rounded px-1 py-0.5 font-mono text-faint" style={{ border: '1px solid var(--color-border)' }}>
+          {isMac ? '⌘K' : 'Ctrl+K'}
+        </kbd>
       </button>
 
       {/* Presence slot (wired in Prompt 4) */}
@@ -109,6 +113,9 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
           <button
             onClick={() => setMenuOpen(m => !m)}
             className="flex items-center gap-2 px-2.5 py-1.5 rounded-[8px] text-sm text-dim hover:bg-raised hover:text-text transition-colors"
+            aria-label="User menu"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
           >
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-accent-soft text-accent text-xs font-semibold">
               {(user.name ?? user.email ?? 'U')[0].toUpperCase()}
@@ -121,14 +128,25 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
               <div
-                className="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-surface rounded-[12px] py-1 text-sm"
+                role="menu"
+                className="absolute right-0 top-full mt-1 z-50 min-w-[200px] bg-surface rounded-[12px] py-1 text-sm"
                 style={{ boxShadow: '0 8px 24px rgba(19,19,26,.12)', border: '1px solid var(--color-border)' }}
               >
-                <div className="px-3 py-2 border-b border-[rgba(19,19,26,.08)]">
+                <div className="px-3 py-2.5" style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <p className="font-medium text-text truncate">{user.name ?? user.email}</p>
-                  <p className="text-xs text-faint font-mono mt-0.5">{user.role}</p>
+                  <p className="text-xs text-faint font-mono mt-0.5">{user.email}</p>
+                  <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-[4px] bg-accent-soft text-accent">{user.role}</span>
                 </div>
                 <button
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); navigate('/must-change-password') }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-dim hover:bg-raised hover:text-text transition-colors"
+                >
+                  <IconKey size={14} aria-hidden="true" />
+                  Change password
+                </button>
+                <button
+                  role="menuitem"
                   onClick={() => { setMenuOpen(false); void handleSignOut() }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-dim hover:bg-raised hover:text-text transition-colors"
                 >
