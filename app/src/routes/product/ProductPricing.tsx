@@ -6,16 +6,74 @@
 // safe). A table-based step opens the Excel-like grid editor, which persists through
 // mutate() so the trace + premium update live. Line-agnostic, not HO-only.
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { IconDownload, IconRefresh, IconRule, IconTable } from '../../components/ui/icons'
+import { useSearchParams } from 'react-router-dom'
+import { IconDownload, IconRefresh, IconRule, IconTable, IconClose, IconPricing } from '../../components/ui/icons'
 import { evaluate, resolveLob, resolveRatingKit, deriveGridModel } from '@pf/shared'
-import type { RatingInputs, RatingInputMap, TraceEntry, RatingStep, RTTable } from '@pf/shared'
+import type { RatingInputs, RatingInputMap, TraceEntry, RatingStep, RTTable, LDTable, RatingProgram, Coverage } from '@pf/shared'
+import { linkCoverageToPricing } from '../../lib/insurance/pricingLinks'
 import { useProductCtx } from '../../context/useProductCtx'
+import type { WithId } from '../../context/ProductContext'
 import { useUser } from '../../context/useUser'
-import { Button, Badge, Skeleton } from '../../components/ui'
+import { Button, Badge, Skeleton, RefChip } from '../../components/ui'
 import { HomeownersRatingPanel } from '../../components/product/HomeownersRatingPanel'
 import { GenericRatingPanel } from '../../components/product/GenericRatingPanel'
 import { RatingTableEditor } from '../../components/product/RatingTableEditor'
 import { RatingFlow } from '../../lib/svg/ratingFlow'
+
+// ─── Pricing linkage — the rating steps + tables that reference a coverage ──────
+
+const OP_COLOR: Record<RatingStep['op'], 'purple' | 'good' | 'blue' | 'warn'> = {
+  MUL: 'purple', ADD: 'good', SET: 'blue', MIN_FLOOR: 'warn',
+}
+
+function PricingLinkagePanel({ cov, program, rtTables, ldTables, onClear }: {
+  cov: WithId<Coverage>
+  program: WithId<RatingProgram> | null
+  rtTables: Record<string, RTTable>
+  ldTables: Record<string, LDTable>
+  onClear: () => void
+}) {
+  const { steps, tables } = linkCoverageToPricing(cov, program, rtTables, ldTables)
+  return (
+    <div className="bg-surface rounded-[14px] p-4 flex flex-col gap-3" style={{ border: '1px solid var(--color-border)' }}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="w-9 h-9 rounded-[10px] flex items-center justify-center text-accent bg-accent-soft shrink-0"><IconPricing size={18} /></span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-text">Pricing linkage</p>
+            <p className="text-xs text-dim truncate">
+              {steps.length} rating step{steps.length === 1 ? '' : 's'} reference <span className="text-accent font-medium">{cov.name}</span>
+            </p>
+          </div>
+        </div>
+        <button onClick={onClear} aria-label="Clear coverage filter"
+          className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-text hover:bg-raised transition-colors shrink-0"><IconClose size={15} /></button>
+      </div>
+
+      {steps.length === 0 ? (
+        <p className="text-sm text-faint px-1 py-2">No rating steps reference this coverage yet.</p>
+      ) : (
+        <>
+          <div className="flex flex-col gap-1.5">
+            {steps.map(s => (
+              <div key={s.id} className="flex items-center gap-2.5 px-3 py-2 rounded-[9px] bg-raised">
+                <Badge label={s.op} color={OP_COLOR[s.op]} />
+                <span className="text-sm text-text flex-1 min-w-0 truncate">{s.label}</span>
+                {s.source.ref && <RefChip id={s.source.ref} title={rtTables[s.source.ref]?.name ?? ldTables[s.source.ref]?.name} />}
+              </div>
+            ))}
+          </div>
+          {tables.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mr-0.5">Tables</span>
+              {tables.map(t => <RefChip key={t.ref} id={t.ref} tone="accent" title={t.name} />)}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
 
 // ─── Reduced-motion + count-up premium ────────────────────────────────────────
 
@@ -172,7 +230,12 @@ function humanize(key: string) {
 }
 
 export default function ProductPricing() {
-  const { product, ratingProgram, ldTables, rtTables, loading } = useProductCtx()
+  const { product, coverages, ratingProgram, ldTables, rtTables, loading } = useProductCtx()
+  const [params, setParams] = useSearchParams()
+  // A coverage deep link from its Pricing tile (…/pricing?cov=<refId>) surfaces the
+  // rating steps that reference that coverage, with a clearable panel.
+  const covFilter = coverages.find(c => c.refId === params.get('cov') || c.id === params.get('cov'))
+  const clearCov = () => { const p = new URLSearchParams(params); p.delete('cov'); setParams(p, { replace: true }) }
   const { user } = useUser()
   const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const lob  = useMemo(() => resolveLob(product), [product])
@@ -240,7 +303,11 @@ export default function ProductPricing() {
   if (loading) return <div className="grid grid-cols-1 lg:grid-cols-2 gap-5"><Skeleton className="h-[500px]" /><Skeleton className="h-[500px]" /></div>
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div className="flex flex-col gap-5">
+      {covFilter && (
+        <PricingLinkagePanel cov={covFilter} program={ratingProgram} rtTables={rtTables} ldTables={ldTables} onClear={clearCov} />
+      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
       {/* Left — inputs (bespoke Homeowners worksheet, else the data-driven panel) */}
       <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
         <div className="flex items-center justify-between mb-4">
@@ -278,6 +345,7 @@ export default function ProductPricing() {
           candidateDimensions={candidateDimensions} seedInputs={inputs}
           onClose={() => setEditing(null)} />
       )}
+      </div>
     </div>
   )
 }

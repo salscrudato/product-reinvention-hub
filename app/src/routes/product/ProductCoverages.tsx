@@ -48,7 +48,7 @@ export default function ProductCoverages() {
   const [query, setQuery] = useState('')
 
   // Aspect editors (dialogs) + coverage create/edit.
-  const [dialog, setDialog] = useState<{ kind: 'limits' | 'deductibles' | 'states' | 'forms'; cov: WithId<Coverage> } | null>(null)
+  const [dialog, setDialog] = useState<{ kind: 'limits' | 'deductibles' | 'options' | 'states' | 'forms'; cov: WithId<Coverage> } | null>(null)
   const [editCov, setEditCov] = useState<WithId<Coverage> | 'new' | null>(null)
 
   const fuse = useMemo(() => new Fuse(coverages, { keys: ['name', 'refId', 'claimsBasis'], threshold: 0.4 }), [coverages])
@@ -69,7 +69,7 @@ export default function ProductCoverages() {
   }, [coverages, params])
 
   function onTile(aspect: CoverageAspect, cov: WithId<Coverage>) {
-    if (aspect === 'limits' || aspect === 'deductibles' || aspect === 'states' || aspect === 'forms') {
+    if (aspect === 'limits' || aspect === 'deductibles' || aspect === 'options' || aspect === 'states' || aspect === 'forms') {
       setDialog({ kind: aspect, cov })
     } else {
       navigate(`/app/products/${pid}/${aspect}?cov=${encodeURIComponent(cov.refId ?? cov.id)}`)
@@ -163,6 +163,7 @@ export default function ProductCoverages() {
       {/* Aspect editors */}
       {dialog?.kind === 'limits' && <TermOptionsDialog cov={dialog.cov} mode="LIMIT" onClose={() => setDialog(null)} />}
       {dialog?.kind === 'deductibles' && <TermOptionsDialog cov={dialog.cov} mode="DEDUCTIBLE" onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'options' && <TermOptionsDialog cov={dialog.cov} mode="OPTION" onClose={() => setDialog(null)} />}
       {dialog?.kind === 'states' && <CoverageStatesDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'forms' && <CoverageFormsDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
       {editCov !== null && <CoverageEditDialog cov={editCov === 'new' ? null : editCov} onClose={() => setEditCov(null)} />}

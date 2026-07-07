@@ -1,5 +1,5 @@
 // CoverageRow — the list-view counterpart to CoverageHubCard: one dense row with
-// identity, governance chips and the six aspect counts as compact icon buttons
+// identity, governance chips and the per-aspect counts as compact icon buttons
 // that drill into the same editors/tabs.
 import { RefChip, Badge, Tooltip } from '../ui'
 import { IconEdit, IconTrash } from '../ui/icons'

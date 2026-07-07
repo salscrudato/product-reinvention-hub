@@ -1,6 +1,6 @@
 // CoverageHubCard — a coverage as a hub: identity + governance chips on top, then
-// a tile grid for its six related aspects (Limits · Deductibles · States · Forms ·
-// Pricing · Rules). Each tile shows a live count drawn from the canonical model
+// a tile grid for its related aspects (Limits · Deductibles · Options · States ·
+// Forms · Pricing · Rules). Each tile shows a live count drawn from the canonical model
 // and drills straight into that aspect's editor or tab — the coverage is the spine
 // everything hangs off. Zero-count tiles show a dimmed "Add first" invite so a PM
 // always knows what's missing without leaving the collection.
@@ -14,6 +14,7 @@ import type { WithId } from '../../context/ProductContext'
 const ZERO_INVITE: Record<CoverageAspect, string> = {
   limits:      'Add limit',
   deductibles: 'Add ded.',
+  options:     'Add option',
   states:      'Set scope',
   forms:       'Add form',
   pricing:     'View steps',

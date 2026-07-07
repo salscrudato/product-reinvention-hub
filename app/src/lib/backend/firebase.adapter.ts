@@ -18,6 +18,8 @@ import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/
 import { firebaseConfig, FUNCTIONS_REGION } from './firebase.config'
 import type { BackendAdapter, AuthUser, Session, Query, MutationPayload } from './types'
 import { MutationConflictError } from './types'
+import { assertCoverageTermsValid } from '@pf/shared'
+import type { CoverageTerm } from '@pf/shared'
 
 // Singleton — safe under React StrictMode and Vite HMR.
 const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig)
@@ -215,6 +217,18 @@ export const adapter: BackendAdapter = {
         if (JSON.stringify(prevData[field]) !== JSON.stringify(nextData[field])) {
           diff.push({ field, before: prevData[field] ?? null, after: nextData[field] ?? null })
         }
+      }
+
+      // Domain guard at the seam: a coverage term write must satisfy the structural
+      // typed-model invariants (exactly one enabled default; each option's states ⊆
+      // the coverage scope). Validated against the merged (stored + incoming) document
+      // so no path — present or future — can persist a corrupt option matrix. Only
+      // runs when the payload carries `terms`; scope-only edits are left alone.
+      if (m.entityType === 'coverage' && m.op !== 'delete' && m.data && 'terms' in m.data) {
+        const merged = { ...prevData, ...m.data } as {
+          allStates?: boolean; states?: string[]; terms?: CoverageTerm[]
+        }
+        assertCoverageTermsValid(merged)
       }
 
       const batch = writeBatch(db)

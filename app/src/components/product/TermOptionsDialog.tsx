@@ -1,10 +1,13 @@
-// TermOptionsDialog — the rich editor for a coverage's limits or deductibles.
-// Expresses the typed model: kind · structure · basis · range · optionSet.
-// Each StandardOption row shows type, value/parts, label override, a per-option
-// state scope (⊆ coverage footprint), default flag, enabled toggle, constraintNote
-// and a remove button. Integrity rules enforced on save: exactly one enabled default;
-// option states ⊆ coverage scope; values within [min,max]. Legacy fields synced back
-// so rating + export keep working.
+// TermOptionsDialog — the rich editor for a coverage's limits, deductibles or
+// elective options. Expresses the typed model: kind · structure · basis · range ·
+// optionSet. Each StandardOption row shows type, value/parts, label override, a
+// per-option state scope (⊆ coverage footprint), default flag, enabled toggle,
+// constraintNote and a remove button. Every constraint is enforced live and as a
+// hard pre-save gate through the shared validator: exactly one enabled default;
+// option states ⊆ coverage scope; values within [min,max]; and the Homeowners
+// demonstratives (Coverage F $5,000 ⇒ Coverage E ≥ $300,000; wind/hail % ded ≥
+// all-peril ded in dollars). Legacy fields are synced back so rating + export keep
+// working, and the mutate() seam re-checks the structural invariants.
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
@@ -12,14 +15,14 @@ import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { Dialog, Button, EmptyState } from '../ui'
 import {
-	  IconPlus, IconTrash, IconStar, IconCheck, IconClose, IconInfo,
+	  IconPlus, IconTrash, IconStar, IconCheck, IconClose, IconInfo, IconWarning,
 	  IconSingle, IconLayers, IconSplit, IconCombine, IconScheduled,
-	  IconPercent, IconClock, IconPeril, IconLimit, IconDeductible,
+	  IconPercent, IconClock, IconPeril, IconLimit, IconDeductible, IconCheckSquare,
 	} from '../ui/icons'
 import { LIMIT_STRUCTURES, DEDUCTIBLE_STRUCTURES, LIMIT_BASES } from '../../lib/insurance/vocab'
 import {
 	  resolveTermOptions, ensureOneDefault, syncLegacy, formatOption,
-	  isPercentTerm, deriveStructure, deriveBasis, resolveLob,
+	  isPercentTerm, deriveStructure, deriveBasis, resolveLob, validateCoverageTerms,
 	} from '@pf/shared'
 import { StateTileMap } from './StateTileMap'
 import type {
@@ -28,7 +31,7 @@ import type {
 } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
-type Mode = 'LIMIT' | 'DEDUCTIBLE'
+type Mode = 'LIMIT' | 'DEDUCTIBLE' | 'OPTION'
 
 const STRUCT_ICON: Record<string, typeof IconSingle> = {
   single: IconSingle, layers: IconLayers, split: IconSplit,
@@ -49,7 +52,18 @@ const STRUCT_ICON: Record<string, typeof IconSingle> = {
 	    { id: 'WAITING_PERIOD', label: 'Hrs' },
 	    { id: 'SPLIT', label: 'Split' },
 	  ],
+	  OPTION: [
+	    { id: 'FLAT', label: '$' },
+	    { id: 'PERCENT', label: '%' },
+	  ],
 	}
+
+// Per-mode header identity + copy.
+const MODE_META: Record<Mode, { Icon: typeof IconLimit; title: string; noun: string }> = {
+  LIMIT:      { Icon: IconLimit,       title: 'Limit Options',      noun: 'limit' },
+  DEDUCTIBLE: { Icon: IconDeductible,  title: 'Deductible Options', noun: 'deductible' },
+  OPTION:     { Icon: IconCheckSquare, title: 'Coverage Options',   noun: 'option' },
+}
 
 // The option value-type a structure implies (used when the structure changes).
 function impliedType(structure: string): OptionValueType {
@@ -66,17 +80,10 @@ function impliedType(structure: string): OptionValueType {
 
 const parseNum = (s: string) => { const n = Number(s.replace(/[,$%\s]/g, '')); return Number.isFinite(n) ? n : 0 }
 
-function rangeOk(o: StandardOption, t: CoverageTerm): boolean {
-  if (o.type === 'SPLIT' || o.type === 'WAITING_PERIOD') return true
-  if (t.min !== undefined && o.value < t.min) return false
-  if (t.max !== undefined && o.value > t.max) return false
-  return true
-}
-
 interface Props { cov: WithId<Coverage>; mode: Mode; onClose: () => void }
 
 export function TermOptionsDialog({ cov, mode, onClose }: Props) {
-	  const { pid, product, ldTables } = useProductCtx()
+	  const { pid, product, ldTables, coverages } = useProductCtx()
 	  const { user } = useUser()
 	  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
 	  const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
@@ -102,6 +109,9 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
     (cov.terms ?? []).map(t => {
       if (t.kind !== mode) return t
       const opts = resolveTermOptions(t, t.ldTableRef ? ldTables[t.ldTableRef] : undefined)
+      // OPTION terms are elective (a yes/no flag or a small set of selectable values);
+      // they carry no limit structure, basis or range.
+      if (mode === 'OPTION') return { ...t, optionSet: opts }
       const nums = opts.filter(o => o.type !== 'SPLIT' && o.type !== 'WAITING_PERIOD').map(o => o.value)
       return {
         ...t, optionSet: opts, structure: deriveStructure(t),
@@ -116,6 +126,15 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
   const [saving, setSaving] = useState(false)
   const active = terms.find(t => t.id === activeId && t.kind === mode)
 
+  // Live validation — the exact same shared rules the pre-save gate and the mutate()
+  // seam enforce, scoped to the terms of this kind so nothing invisible blocks a save.
+  const modeTermIds = new Set(kindTerms.map(t => t.id))
+  const issues = validateCoverageTerms({ ...cov, terms }, coverages, product, ldTables, scopeStates)
+    .filter(i => modeTermIds.has(i.termId))
+  const errorCount = issues.filter(i => i.severity === 'error').length
+  const optionIssues = (id: string) => issues.filter(i => i.optionId === id)
+  const activeTermIssues = active ? issues.filter(i => i.termId === active.id && !i.optionId) : []
+
   function patchActive(patch: Partial<CoverageTerm>) {
     if (!canEdit) return
     setTerms(prev => prev.map(t => t.id === activeId ? { ...t, ...patch } : t))
@@ -125,12 +144,14 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
   function addTerm() {
     if (!canEdit) return
     const id = `${mode.toLowerCase()}-${Date.now()}`
-    const t: CoverageTerm = {
-      id, kind: mode, label: mode === 'LIMIT' ? 'Limit' : 'Deductible',
-      basis: 'per occurrence', default: 0, unit: 'dollars',
-      structure: mode === 'LIMIT' ? 'SINGLE' : 'FLAT',
-      limitBasis: mode === 'LIMIT' ? 'PER_OCCURRENCE' : undefined, optionSet: [],
-    }
+    const t: CoverageTerm = mode === 'OPTION'
+      ? { id, kind: 'OPTION', label: 'Option', basis: 'flag', default: false, optionSet: [] }
+      : {
+          id, kind: mode, label: mode === 'LIMIT' ? 'Limit' : 'Deductible',
+          basis: 'per occurrence', default: 0, unit: 'dollars',
+          structure: mode === 'LIMIT' ? 'SINGLE' : 'FLAT',
+          limitBasis: mode === 'LIMIT' ? 'PER_OCCURRENCE' : undefined, optionSet: [],
+        }
     setTerms(prev => [...prev, t]); setActiveId(id)
   }
 
@@ -144,34 +165,33 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 
   async function save() {
     if (!canEdit) return
-	    // Validate that every option value respects the [min,max] range for its term
-	    // before persisting; out-of-range options are highlighted and block save.
-	    const outOfRange = terms.flatMap(t => {
-	      if (t.kind !== mode || !t.optionSet) return [] as StandardOption[]
-	      return t.optionSet.filter(o => !rangeOk(o, t))
-	    })
-	    if (outOfRange.length) {
-	      toast.error('Some options fall outside the defined range. Adjust their values or widen the range before saving.')
-	      return
-	    }
+    // Normalise exactly what we'll persist: guarantee one default, clip each option's
+    // states to the coverage scope, and sync legacy fields. A yes/no OPTION flag keeps
+    // its boolean `default` (there's no numeric matrix to sync).
+    const nextTerms = terms.map(t => {
+      if (t.kind !== mode) return t
+      const opts = ensureOneDefault(t.optionSet ?? []).map(o => ({
+        ...o,
+        states: o.allStates ? [] : o.states.filter(s => scopeStates.includes(s)),
+      }))
+      if (mode === 'OPTION' && opts.length === 0) return { ...t, optionSet: [] }
+      return { ...t, optionSet: opts, ...syncLegacy(opts) }
+    })
 
-	    setSaving(true)
-	    try {
-	      const nextTerms = terms.map(t => {
-	        if (t.kind !== mode || !t.optionSet) return t
-	        const opts = ensureOneDefault(t.optionSet).map(o => ({
-	          ...o,
-	          // Enforce: each option's states ⊆ coverage scope.
-	          states: o.allStates ? [] : o.states.filter(s => scopeStates.includes(s)),
-	        }))
-	        return { ...t, optionSet: opts, ...syncLegacy(opts) }
-	      })
+    // Hard gate: every constraint (intrinsic invariants + HO demonstratives) must pass
+    // before the write. This mirrors the live inline errors and the mutate() seam check.
+    const blocking = validateCoverageTerms({ ...cov, terms: nextTerms }, coverages, product, ldTables, scopeStates)
+      .filter(i => i.severity === 'error' && modeTermIds.has(i.termId))
+    if (blocking.length) { toast.error(blocking[0].message); return }
+
+    setSaving(true)
+    try {
       await adapter.db.mutate({
         op: 'update', path: `products/${pid}/coverages/${cov.id}`,
         data: { terms: nextTerms }, entityType: 'coverage', productId: pid, actor,
         expectedRev: (cov as { rev?: number }).rev,
       })
-      toast.success(`${mode === 'LIMIT' ? 'Limits' : 'Deductibles'} saved`)
+      toast.success(`${mode === 'LIMIT' ? 'Limits' : mode === 'DEDUCTIBLE' ? 'Deductibles' : 'Options'} saved`)
       onClose()
     } catch (err) {
       toast.error(err instanceof MutationConflictError
@@ -182,8 +202,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 
   const options = active?.optionSet ?? []
   const pct = active ? isPercentTerm(active) : false
-  const ModeIcon = mode === 'LIMIT' ? IconLimit : IconDeductible
-  const modeLabel = mode === 'LIMIT' ? 'limit' : 'deductible'
+  const { Icon: ModeIcon, title: modeTitle, noun: modeLabel } = MODE_META[mode]
 
   return (
     <Dialog open onClose={onClose} width="max-w-3xl">
@@ -194,7 +213,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
             <ModeIcon size={22} />
           </span>
           <div>
-            <h2 className="text-lg font-semibold text-text">{mode === 'LIMIT' ? 'Limit Options' : 'Deductible Options'}</h2>
+            <h2 className="text-lg font-semibold text-text">{modeTitle}</h2>
             <p className="text-sm text-dim">{cov.name}</p>
           </div>
         </div>
@@ -244,7 +263,8 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
         </div>
       ) : (
         <div className="flex flex-col gap-6 max-h-[62vh] overflow-y-auto pr-1 -mr-1">
-          {/* ─ Structure ───────────────────────────────────────────────────── */}
+          {/* ─ Structure (limits / deductibles only) ─────────────────────────── */}
+          {mode !== 'OPTION' && (
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">
               {mode === 'LIMIT' ? 'Limit structure' : 'Deductible structure'}
@@ -280,8 +300,27 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
               })}
             </div>
           </section>
+          )}
 
-          {/* ─ Basis + Range ──────────────────────────────────────────────── */}
+          {/* ─ Election (options only) — a yes/no default until values are added ── */}
+          {mode === 'OPTION' && options.length === 0 && active && (
+            <section>
+              <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">Election</p>
+              <label className="flex items-center gap-3 p-3 rounded-[12px] bg-surface cursor-pointer"
+                style={{ border: '1px solid var(--color-border)' }}>
+                <input type="checkbox" className="accent-accent" disabled={!canEdit}
+                  checked={active.default === true}
+                  onChange={e => patchActive({ default: e.target.checked })} />
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium text-text">Elected by default</span>
+                  <span className="text-xs text-dim">This is a yes/no election. Add selectable values below to offer specific amounts instead.</span>
+                </span>
+              </label>
+            </section>
+          )}
+
+          {/* ─ Basis + Range (limits / deductibles only) ─────────────────────── */}
+          {mode !== 'OPTION' && (
           <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {mode === 'LIMIT' && (
               <div>
@@ -306,12 +345,15 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
               </div>
             </div>
           </section>
+          )}
 
           {/* ─ Standard options ───────────────────────────────────────────── */}
           <section>
             <div className="flex items-center justify-between mb-2.5">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint">Standard options</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint">
+                  {mode === 'OPTION' ? 'Selectable values' : 'Standard options'}
+                </p>
                 {options.length > 0 && (
                   <p className="text-xs text-faint mt-0.5">
                     {options.filter(o => o.enabled).length} enabled · {options.length} total
@@ -328,19 +370,37 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
               )}
             </div>
 
+            {/* Validation summary — every blocking issue, always visible even when a
+                row is collapsed, so the PM sees exactly what stops the save. */}
+            {(errorCount > 0 || activeTermIssues.length > 0) && (
+              <div className="mb-2.5 flex flex-col gap-1.5 rounded-[10px] px-3 py-2.5"
+                style={{ background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.2)' }}>
+                {[...new Set(issues.filter(i => i.severity === 'error').map(i => i.message))].map(msg => (
+                  <div key={msg} className="flex items-start gap-1.5">
+                    <IconWarning size={12} className="text-danger shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-danger leading-relaxed">{msg}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {options.length === 0 ? (
               <div className="rounded-[12px] bg-raised py-10 flex flex-col items-center gap-3 text-center"
                 style={{ border: '1px dashed var(--color-border-strong)' }}>
-                <p className="text-sm font-medium text-dim">No options yet</p>
-                <p className="text-xs text-faint max-w-[240px] leading-relaxed">
-                  Add the standard values a PM can select when configuring this {modeLabel}.
+                <p className="text-sm font-medium text-dim">
+                  {mode === 'OPTION' ? 'No selectable values' : `0 ${modeLabel}s — add your first`}
+                </p>
+                <p className="text-xs text-faint max-w-[260px] leading-relaxed">
+                  {mode === 'OPTION'
+                    ? 'This is a yes/no election. Add values to offer specific amounts a PM can select.'
+                    : `Add the standard values a PM can select when configuring this ${modeLabel}.`}
                 </p>
                 {canEdit && (
                   <Button variant="primary" size="sm" onClick={() => setOptions([{
                     id: `opt-${Date.now()}`, type: impliedType(active.structure ?? 'SINGLE'),
                     value: 0, allStates: true, states: [], isDefault: true, enabled: true,
                   }])}>
-                    <IconPlus size={14} />Add first option
+                    <IconPlus size={14} />Add first {mode === 'OPTION' ? 'value' : 'option'}
                   </Button>
                 )}
               </div>
@@ -348,7 +408,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
               <div className="flex flex-col gap-2">
                 {options.map(o => (
 	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} coastalStates={coastalStates} perilLabel={lob.peril.label} canEdit={canEdit}
-                    inRange={rangeOk(o, active)}
+                    hasError={optionIssues(o.id).some(i => i.severity === 'error')}
                     onChange={next => setOptions(options.map(x => x.id === o.id ? next : x))}
                     onDefault={() => setOptions(options.map(x => ({ ...x, isDefault: x.id === o.id })))}
                     onRemove={() => setOptions(options.filter(x => x.id !== o.id))} />
@@ -360,10 +420,16 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-end gap-2 mt-6 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+      <div className="flex items-center justify-end gap-3 mt-6 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
+        {canEdit && active && errorCount > 0 && (
+          <span className="mr-auto flex items-center gap-1.5 text-xs text-danger">
+            <IconWarning size={13} />{errorCount} issue{errorCount === 1 ? '' : 's'} to resolve
+          </span>
+        )}
         <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
         {canEdit && active && (
-          <Button variant="primary" size="sm" onClick={save} disabled={saving}>
+          <Button variant="primary" size="sm" onClick={save} disabled={saving || errorCount > 0}
+            title={errorCount > 0 ? 'Resolve the highlighted issues before saving' : undefined}>
             {saving ? 'Saving…' : 'Save changes'}
           </Button>
         )}
@@ -374,8 +440,8 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 
 // ─── One editable option row ─────────────────────────────────────────────────
 
-function OptionRow({ o, mode, scopeStates, coastalStates, perilLabel, canEdit, inRange, onChange, onDefault, onRemove }: {
-	  o: StandardOption; mode: Mode; scopeStates: string[]; coastalStates: readonly string[]; perilLabel: string; canEdit: boolean; inRange: boolean
+function OptionRow({ o, mode, scopeStates, coastalStates, perilLabel, canEdit, hasError, onChange, onDefault, onRemove }: {
+	  o: StandardOption; mode: Mode; scopeStates: string[]; coastalStates: readonly string[]; perilLabel: string; canEdit: boolean; hasError: boolean
 	  onChange: (o: StandardOption) => void; onDefault: () => void; onRemove: () => void
 	}) {
 	  const [expanded, setExpanded] = useState(false)
@@ -422,7 +488,7 @@ function OptionRow({ o, mode, scopeStates, coastalStates, perilLabel, canEdit, i
             )}
             <input disabled={!canEdit} key={`${o.id}-val`} defaultValue={o.value || ''} inputMode="numeric" aria-label="Option value"
               onBlur={e => onChange({ ...o, value: parseNum(e.target.value) })}
-              className={`w-full h-8 ${o.type === 'PERCENT' || o.type === 'WAITING_PERIOD' ? 'px-2' : 'pl-5 pr-2'} rounded-[7px] bg-surface border font-mono text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25 ${inRange ? 'border-border-strong' : 'border-danger'}`} />
+              className={`w-full h-8 ${o.type === 'PERCENT' || o.type === 'WAITING_PERIOD' ? 'px-2' : 'pl-5 pr-2'} rounded-[7px] bg-surface border font-mono text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25 ${hasError ? 'border-danger' : 'border-border-strong'}`} />
             {(o.type === 'PERCENT' || o.type === 'WAITING_PERIOD') && (
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-faint text-[11px] pointer-events-none">
                 {o.type === 'PERCENT' ? '%' : 'hrs'}

@@ -4,6 +4,7 @@
 // Multiple editions of the same number are shown separately so the PM can see
 // which edition is filed where. Edits write only coverage.formNumbers via mutate().
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { useProductCtx } from '../../context/useProductCtx'
@@ -18,6 +19,10 @@ interface Props { cov: WithId<Coverage>; onClose: () => void }
 
 export function CoverageFormsDialog({ cov, onClose }: Props) {
   const { pid, product, forms } = useProductCtx()
+  const navigate = useNavigate()
+  // Deep link a form-number chip to the Forms tab (…/forms?form=<number>), closing
+  // this dialog first so the drawer there opens cleanly.
+  const openForm = (num: string) => { onClose(); navigate(`/app/products/${pid}/forms?form=${encodeURIComponent(num)}`) }
   const { user } = useUser()
   const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
@@ -132,6 +137,7 @@ export function CoverageFormsDialog({ cov, onClose }: Props) {
               {attachedGroups.map(({ number, docs }) => (
                 <AttachedFormRow key={number} number={number} docs={docs}
                   footprintSize={footprintSize} canEdit={canEdit}
+                  onOpen={() => openForm(number)}
                   onDetach={() => detach(number)} />
               ))}
             </div>
@@ -189,14 +195,14 @@ export function CoverageFormsDialog({ cov, onClose }: Props) {
 // Shows a form number chip + all editions found in the product library, each
 // with its edition date and state scope.
 
-function AttachedFormRow({ number, docs, footprintSize, canEdit, onDetach }: {
+function AttachedFormRow({ number, docs, footprintSize, canEdit, onOpen, onDetach }: {
   number: string; docs: WithId<Form>[]; footprintSize: number
-  canEdit: boolean; onDetach: () => void
+  canEdit: boolean; onOpen: () => void; onDetach: () => void
 }) {
   return (
     <div className="rounded-[10px] bg-surface" style={{ border: '1px solid var(--color-border)' }}>
       <div className="flex items-center gap-2.5 px-3 py-2.5">
-        <RefChip id={number} tone="accent" />
+        <RefChip id={number} tone="accent" onClick={onOpen} title={`Open ${number} in Forms`} />
         <div className="flex-1 min-w-0">
           {docs.length === 0 ? (
             <p className="text-sm text-dim italic">Not found in product library</p>
