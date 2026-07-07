@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { IconShield, IconPlus, IconUserX, IconUserCheck, IconSearch, IconFileClock, IconShare, IconClose } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
+import { copyToClipboard } from '../lib/clipboard'
 import { useUser } from '../context/useUser'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
 import type { User, AuditEvent, Version, SeedReport, Role } from '@pf/shared'
@@ -206,10 +207,12 @@ function SharesTab() {
     }
   }
 
-  function copyLink(id: string) {
+  async function copyLink(id: string) {
     const url = `${location.origin}/share/${id}`
-    void navigator.clipboard.writeText(url)
-    toast.success('Link copied')
+    // Only claim success if the copy actually landed — otherwise the user is told it
+    // copied when it didn't (insecure context / no focus / blocked permission).
+    const ok = await copyToClipboard(url)
+    toast[ok ? 'success' : 'error'](ok ? 'Link copied' : 'Could not copy the link')
   }
 
   if (shares === null) return <div className="flex flex-col gap-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
@@ -239,7 +242,7 @@ function SharesTab() {
               <div className={expired ? 'text-danger' : ''}>Exp: {s.expiresAt ? new Date(s.expiresAt).toLocaleDateString() : '—'}</div>
             </div>
             {expired && <Badge label="expired" color="danger" />}
-            <Button variant="ghost" size="sm" onClick={() => copyLink(s.id)}>Copy link</Button>
+            <Button variant="ghost" size="sm" onClick={() => void copyLink(s.id)}>Copy link</Button>
             <Button variant="ghost" size="sm" disabled={busy} onClick={() => void deleteShare(s.id)}>
               <IconClose size={13} /> Delete
             </Button>

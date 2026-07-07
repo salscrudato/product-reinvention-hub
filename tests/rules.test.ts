@@ -111,4 +111,60 @@ describe('Firestore security rules — role matrix', () => {
       setDoc(doc(anonDb, 'users/some-uid'), { email: 'hack@x.com' })
     )
   })
+
+  // ── 7. VIEWER cannot write the atomic-mutate surfaces ─────────────────────────
+  // mutate() writes entity + auditEvent + version + searchIndex in one batch; if ANY
+  // required write is denied the whole batch fails, so these guard the invariant that a
+  // VIEWER can never persist a domain change through the adapter.
+  it('VIEWER write to a coverage sub-collection is rejected', async () => {
+    const db = viewer().firestore()
+    await assertFails(setDoc(doc(db, 'products/HO3/coverages/COV1'), { name: 'X', rev: 1 }))
+  })
+
+  it('VIEWER write to searchIndex is rejected (so the atomic mutate batch is denied)', async () => {
+    const db = viewer().firestore()
+    await assertFails(setDoc(doc(db, 'searchIndex/products_HO3'), { title: 'X', type: 'product' }))
+  })
+
+  it('VIEWER write to dictionary and tasks is rejected', async () => {
+    const db = viewer().firestore()
+    await assertFails(setDoc(doc(db, 'dictionary/D1'), { term: 'X', rev: 1 }))
+    await assertFails(setDoc(doc(db, 'tasks/T1'), { title: 'X', rev: 1 }))
+  })
+
+  // ── 8. VIEWER feedback is votes-only — any other field change is rejected ──────
+  it('VIEWER feedback update is rejected when a non-votes field changes', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'feedback/fb3'), {
+        type: 'IDEA', title: 'Original', status: 'NEW',
+        votes: { count: 0, voters: [] },
+        impact: 1, effort: 1, priorityScore: 0,
+        author: { uid: 'editor-uid', name: 'Editor' }, context: { route: '/app' },
+      })
+    })
+    const db = viewer().firestore()
+    await assertFails(
+      setDoc(doc(db, 'feedback/fb3'), {
+        type: 'IDEA', title: 'Hijacked', status: 'DONE',   // changes more than votes
+        votes: { count: 1, voters: ['viewer-uid'] },
+        impact: 1, effort: 1, priorityScore: 0,
+        author: { uid: 'editor-uid', name: 'Editor' }, context: { route: '/app' },
+      }),
+    )
+  })
+
+  // ── 9. EDITOR is not ADMIN — cannot manage users ──────────────────────────────
+  it('EDITOR cannot write the users collection (ADMIN only)', async () => {
+    const db = editor().firestore()
+    await assertFails(setDoc(doc(db, 'users/victim-uid'), { role: 'ADMIN' }))
+  })
+
+  // ── 10. Audit log is append-only — no update, even for ADMIN ───────────────────
+  it('auditEvents are append-only — update is rejected even for ADMIN', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'auditEvents/ae1'), { action: 'create', actor: { uid: 'x' } })
+    })
+    const db = admin().firestore()
+    await assertFails(setDoc(doc(db, 'auditEvents/ae1'), { action: 'tampered', actor: { uid: 'x' } }))
+  })
 })

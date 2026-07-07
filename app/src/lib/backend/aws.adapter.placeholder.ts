@@ -47,8 +47,9 @@ export const adapter: BackendAdapter = {
   fns: {
     // AWS-SWAP: API Gateway + Lambda invoke (Amplify API.post or aws-sdk invoke)
     call: (_name, _data) => notImplemented('fns.call'),
-    // AWS-SWAP: Lambda URL + streaming response (same SSE pattern over HTTPS)
-    stream: (_name, _data, _onChunk) => notImplemented('fns.stream'),
+    // AWS-SWAP: Lambda URL + streaming response (same SSE pattern over HTTPS; pass the
+    // AbortSignal straight to fetch for cancellation).
+    stream: (_name, _data, _onChunk, _signal) => notImplemented('fns.stream'),
   },
   presence: {
     // AWS-SWAP: DynamoDB TTL heartbeat or AppSync mutation

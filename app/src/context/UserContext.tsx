@@ -25,7 +25,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const profileUnsub = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    return adapter.auth.onUser((u) => {
+    const unsubAuth = adapter.auth.onUser((u) => {
       setUser(u)
       // Tear down previous profile subscription
       profileUnsub.current?.()
@@ -49,6 +49,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       }
     })
+    // Cleanup on unmount must tear down BOTH the auth listener AND any live profile-doc
+    // subscription — the latter is otherwise only released when auth state next changes,
+    // so it would leak on provider unmount (and on every StrictMode remount in dev).
+    return () => {
+      unsubAuth()
+      profileUnsub.current?.()
+      profileUnsub.current = null
+    }
   }, [])
 
   return (

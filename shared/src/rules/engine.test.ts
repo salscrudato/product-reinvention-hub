@@ -68,6 +68,19 @@ describe('HO-3 rules engine', () => {
     expect(opt1pct.available).toBe(true)
   })
 
+  it('flags HO.RU.008 in coastal FL when the wind/hail dollar amount is below the all-peril deductible', () => {
+    // covA 100k, 1% WH = $1,000 < all-peril $2,000 → the dollar-floor branch must fire.
+    const result = evaluateRules({
+      ldTables:  HO3_LD_TABLES,
+      selection: { ...BASE, riskState: 'FL', covA: 100000, allPerilDed: 2000, windHailElected: true, windHailPct: 1 },
+    })
+    expect(result.violations.some(v => v.ruleRefId === 'HO.RU.008')).toBe(true)
+    // The same floor makes the 1% option unavailable with an explanatory reason.
+    const opt1pct = result.availableOptions['HO.LD.004'].find(o => o.value === 1)!
+    expect(opt1pct.available).toBe(false)
+    expect(opt1pct.violationReason).toBeTruthy()
+  })
+
   // ── Form attachment [HO.FORM.RU.*] ─────────────────────────────────────────
 
   it('attaches HO 04 61 when Scheduled Personal Property is elected', () => {
@@ -76,6 +89,24 @@ describe('HO-3 rules engine', () => {
       selection: { ...BASE, sppElected: true },
     })
     expect(result.formsThatAttach).toContain('HO 04 61')
+  })
+
+  it('attaches endorsement forms only for the options actually elected', () => {
+    // Baseline (nothing optional elected) attaches only the mandatory forms.
+    const base = evaluateRules({ ldTables: HO3_LD_TABLES, selection: BASE })
+    for (const f of ['HO 04 90', 'HO 04 95', 'HO 04 16', 'HO 04 48']) {
+      expect(base.formsThatAttach).not.toContain(f)
+    }
+    expect(base.formsThatAttach).toEqual(expect.arrayContaining(['HO 00 03', 'HO DS 01', 'PN HO 01']))
+
+    // Each election pulls in exactly its form.
+    const elected = evaluateRules({
+      ldTables:  HO3_LD_TABLES,
+      selection: { ...BASE, rcElected: true, waterBackupElected: true, deviceCredit: 'central', otherStructuresInc: true },
+    })
+    expect(elected.formsThatAttach).toEqual(
+      expect.arrayContaining(['HO 04 90', 'HO 04 95', 'HO 04 16', 'HO 04 48']),
+    )
   })
 
   it('attaches HO 01 33 for a TX risk and HO 01 04 for CA — but not cross-state', () => {

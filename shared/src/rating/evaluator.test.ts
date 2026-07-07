@@ -38,6 +38,15 @@ describe('HO-3 rating evaluator', () => {
     expect(by('s11').runningTotal).toBe(1528)               // MAX(1527.97,500) rounded
   })
 
+  it('is deterministic — identical inputs yield an identical premium and trace', () => {
+    const a = evaluate(HO3_RATING_PROGRAM, HO3_WORKED_EXAMPLE, rtGetter, ldGetter)
+    const b = evaluate(HO3_RATING_PROGRAM, HO3_WORKED_EXAMPLE, rtGetter, ldGetter)
+    expect(b.finalPremium).toBe(a.finalPremium)
+    expect(b.trace.map(t => [t.stepId, t.runningTotal])).toEqual(a.trace.map(t => [t.stepId, t.runningTotal]))
+    // The reported premium is exactly the final trace step's running total — no drift.
+    expect(a.finalPremium).toBe(a.trace[a.trace.length - 1]!.runningTotal)
+  })
+
   it('produces minimum premium $500 when calculated premium is lower', () => {
     const lowInputs = {
       ...HO3_WORKED_EXAMPLE,

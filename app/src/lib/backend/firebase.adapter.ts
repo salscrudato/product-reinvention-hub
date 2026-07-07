@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth'
 import {
   getFirestore, doc, collection, getDoc, getDocs, onSnapshot,
-  writeBatch, serverTimestamp, setDoc, deleteDoc, updateDoc,
+  serverTimestamp, setDoc, deleteDoc, updateDoc,
   arrayUnion, increment,
   query as fbQuery, where, orderBy, limit as fbLimit,
   runTransaction, connectFirestoreEmulator,
@@ -213,95 +213,103 @@ export const adapter: BackendAdapter = {
     async mutate(m: MutationPayload): Promise<void> {
       // Dev bypass: no backend to write to. Fail clearly so callers show a friendly toast.
       if (bypassActive) throw new Error('Dev admin bypass — changes are not saved (no backend).')
-      // Atomic batch: entity + auditEvent + version (with field diffs) + searchIndex + rev bump.
-      // Rev mismatch throws MutationConflictError → caller shows a friendly conflict toast.
-      // AWS-SWAP: becomes a DynamoDB TransactWriteItems call in the Lambda adapter.
-      const entityRef = doc(db, m.path)
-      const now       = serverTimestamp()
+      // ONE atomic transaction: entity + auditEvent + version (with field diffs) + searchIndex
+      // + rev bump. A transaction — not a bare writeBatch — is required for correct optimistic
+      // concurrency: the rev is read and re-checked INSIDE the transaction, and Firestore aborts
+      // + retries (or fails) if the entity changes before commit. So a concurrent writer can never
+      // slip between the rev check and the commit and be silently overwritten — the loser gets a
+      // MutationConflictError → a friendly "please refresh" toast. (A writeBatch only makes the
+      // writes atomic; it does NOT revalidate a value read beforehand, which is the whole point.)
+      // The batched executor is pure and idempotent, so a transaction retry is safe.
+      // AWS-SWAP: becomes a DynamoDB TransactWriteItems with a rev ConditionExpression.
+      const entityRef  = doc(db, m.path)
+      const auditRef   = doc(collection(db, 'auditEvents'))   // stable ids across retries
+      const versionRef = doc(collection(db, 'versions'))
+      const searchRef  = doc(db, `searchIndex/${m.path.replace(/\//g, '_')}`)
+      const indexable  = INDEXABLE.has(m.entityType)
 
-      // Read current for rev check + diff computation before the batch.
-      const current = m.op !== 'create' ? await getDoc(entityRef) : null
+      await runTransaction(db, async (tx) => {
+        const now = serverTimestamp()
 
-      if (m.expectedRev !== undefined && current) {
-        const storedRev = (current.data() as Record<string, unknown>)?.['rev']
-        if (storedRev !== m.expectedRev) throw new MutationConflictError()
-      }
+        // Read current INSIDE the transaction — for the rev check + the field diff. Because the
+        // read is transactional, the rev we validate is the rev we commit against.
+        const current  = m.op !== 'create' ? await tx.get(entityRef) : null
+        const prevData = (current?.data() ?? {}) as Record<string, unknown>
 
-      // Compute field-level diff for the version snapshot.
-      const prevData   = current?.data() ?? {}
-      const nextData   = m.data ?? {}
-      const allFields  = new Set([...Object.keys(prevData), ...Object.keys(nextData)])
-      const diff: Array<{ field: string; before: unknown; after: unknown }> = []
-      for (const field of allFields) {
-        if (JSON.stringify(prevData[field]) !== JSON.stringify(nextData[field])) {
-          diff.push({ field, before: prevData[field] ?? null, after: nextData[field] ?? null })
+        if (m.expectedRev !== undefined && current) {
+          if (prevData['rev'] !== m.expectedRev) throw new MutationConflictError()
         }
-      }
 
-      // Domain guard at the seam: a coverage term write must satisfy the structural
-      // typed-model invariants (exactly one enabled default; each option's states ⊆
-      // the coverage scope). Validated against the merged (stored + incoming) document
-      // so no path — present or future — can persist a corrupt option matrix. Only
-      // runs when the payload carries `terms`; scope-only edits are left alone.
-      if (m.entityType === 'coverage' && m.op !== 'delete' && m.data && 'terms' in m.data) {
-        const merged = { ...prevData, ...m.data } as {
-          allStates?: boolean; states?: string[]; terms?: CoverageTerm[]
+        // Compute field-level diff for the version snapshot.
+        const nextData  = (m.data ?? {}) as Record<string, unknown>
+        const allFields = new Set([...Object.keys(prevData), ...Object.keys(nextData)])
+        const diff: Array<{ field: string; before: unknown; after: unknown }> = []
+        for (const field of allFields) {
+          if (JSON.stringify(prevData[field]) !== JSON.stringify(nextData[field])) {
+            diff.push({ field, before: prevData[field] ?? null, after: nextData[field] ?? null })
+          }
         }
-        assertCoverageTermsValid(merged)
-      }
 
-      const batch = writeBatch(db)
+        // Domain guard at the seam: a coverage term write must satisfy the structural
+        // typed-model invariants (exactly one enabled default; each option's states ⊆
+        // the coverage scope). Validated against the merged (stored + incoming) document
+        // so no path — present or future — can persist a corrupt option matrix. Throwing
+        // here aborts the whole transaction. Only runs when the payload carries `terms`.
+        if (m.entityType === 'coverage' && m.op !== 'delete' && m.data && 'terms' in m.data) {
+          const merged = { ...prevData, ...m.data } as {
+            allStates?: boolean; states?: string[]; terms?: CoverageTerm[]
+          }
+          assertCoverageTermsValid(merged)
+        }
 
-      if (m.op === 'delete') {
-        batch.delete(entityRef)
-      } else if (m.op === 'create') {
-        batch.set(entityRef, { ...m.data, createdAt: now, updatedAt: now, updatedBy: m.actor.uid, rev: 1 })
-      } else {
-        const newRev = ((prevData['rev'] as number) ?? 0) + 1
-        batch.update(entityRef, { ...m.data, updatedAt: now, updatedBy: m.actor.uid, rev: newRev })
-      }
+        // Entity write + rev bump.
+        if (m.op === 'delete') {
+          tx.delete(entityRef)
+        } else if (m.op === 'create') {
+          tx.set(entityRef, { ...m.data, createdAt: now, updatedAt: now, updatedBy: m.actor.uid, rev: 1 })
+        } else {
+          const newRev = ((prevData['rev'] as number) ?? 0) + 1
+          tx.update(entityRef, { ...m.data, updatedAt: now, updatedBy: m.actor.uid, rev: newRev })
+        }
 
-      // Audit event (append-only)
-      batch.set(doc(collection(db, 'auditEvents')), {
-        actor: m.actor, action: m.op, entityType: m.entityType,
-        entityPath: m.path, productId: m.productId ?? null, at: now,
-      })
-
-      // Version snapshot with field-level diff
-      batch.set(doc(collection(db, 'versions')), {
-        entityType: m.entityType, entityPath: m.path,
-        productId: m.productId ?? null,
-        snapshot: m.op !== 'delete' ? (m.data ?? null) : null,
-        diff, actor: m.actor, at: now,
-      })
-
-      // SearchIndex upsert: derive title/keywords from entity data for ⌘K palette.
-      // AWS-SWAP: becomes a DynamoDB put on the searchIndex table.
-      if (m.op !== 'delete' && m.data && INDEXABLE.has(m.entityType)) {
-        const d = m.data
-        const indexId  = m.path.replace(/\//g, '_')
-        const title    = (d['name'] as string | undefined) ?? (d['title'] as string | undefined) ?? ''
-        const subtitle = (d['refId'] as string | undefined) ?? m.entityType
-        const keywords = [title, subtitle, d['refId'] as string, d['description'] as string]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .split(/\W+/)
-          .filter(k => k.length > 2)
-        batch.set(doc(db, `searchIndex/${indexId}`), {
-          type:     m.entityType,
-          refId:    (d['refId'] as string | null) ?? null,
-          title,
-          subtitle,
-          path:     m.path,
-          keywords: [...new Set(keywords)],
+        // Audit event (append-only).
+        tx.set(auditRef, {
+          actor: m.actor, action: m.op, entityType: m.entityType,
+          entityPath: m.path, productId: m.productId ?? null, at: now,
         })
-      } else if (m.op === 'delete' && INDEXABLE.has(m.entityType)) {
-        const indexId = m.path.replace(/\//g, '_')
-        batch.delete(doc(db, `searchIndex/${indexId}`))
-      }
 
-      await batch.commit()
+        // Version snapshot with field-level diff.
+        tx.set(versionRef, {
+          entityType: m.entityType, entityPath: m.path,
+          productId: m.productId ?? null,
+          snapshot: m.op !== 'delete' ? (m.data ?? null) : null,
+          diff, actor: m.actor, at: now,
+        })
+
+        // SearchIndex upsert/delete: keep the ⌘K palette in sync in the SAME atomic unit.
+        // AWS-SWAP: becomes a DynamoDB put/delete on the searchIndex table.
+        if (m.op !== 'delete' && m.data && indexable) {
+          const d = m.data
+          const title    = (d['name'] as string | undefined) ?? (d['title'] as string | undefined) ?? ''
+          const subtitle = (d['refId'] as string | undefined) ?? m.entityType
+          const keywords = [title, subtitle, d['refId'] as string, d['description'] as string]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .split(/\W+/)
+            .filter(k => k.length > 2)
+          tx.set(searchRef, {
+            type:     m.entityType,
+            refId:    (d['refId'] as string | null) ?? null,
+            title,
+            subtitle,
+            path:     m.path,
+            keywords: [...new Set(keywords)],
+          })
+        } else if (m.op === 'delete' && indexable) {
+          tx.delete(searchRef)
+        }
+      })
     },
 
     async vote(path: string, uid: string): Promise<void> {
@@ -346,7 +354,7 @@ export const adapter: BackendAdapter = {
       return result.data
     },
 
-    async stream(name, data, onChunk) {
+    async stream(name, data, onChunk, signal) {
       // SSE over HTTPS — identical streaming pattern on Lambda.
       // AWS-SWAP: swap the base URL; the SSE parsing below is platform-agnostic.
       const base = import.meta.env.VITE_USE_EMULATORS === 'true'
@@ -363,21 +371,28 @@ export const adapter: BackendAdapter = {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(data),
+        signal,   // caller-owned cancellation (unmount / conversation switch)
       })
       if (!res.ok || !res.body) throw new Error(`Stream ${name} failed: ${res.status}`)
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let buf = ''
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += decoder.decode(value, { stream: true })
-        const lines = buf.split('\n')
-        buf = lines.pop() ?? ''
-        for (const line of lines) {
-          if (line.startsWith('data: ')) onChunk(line.slice(6))
+      try {
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() ?? ''
+          for (const line of lines) {
+            if (line.startsWith('data: ')) onChunk(line.slice(6))
+          }
         }
+      } finally {
+        // Release the stream on any exit (done, throw, or abort) so the connection
+        // is not held open; cancel() is a no-op once the reader is already closed.
+        reader.cancel().catch(() => {})
       }
     },
   },

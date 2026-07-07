@@ -5,6 +5,7 @@ import { ProductProvider } from '../../context/ProductContext'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter } from '../../lib/backend'
+import { copyToClipboard } from '../../lib/clipboard'
 import { Skeleton, StatusPill, LifecyclePill, Badge, Button } from '../../components/ui'
 import { IconRecent, IconChat, IconUsers, IconBack, IconChevronDown, IconArrowUp, IconShare } from '../../components/ui/icons'
 import { computeProductFindings, healthScore, healthColor } from '../../lib/productHealth'
@@ -61,17 +62,23 @@ function WorkspaceInner() {
       return
     }
     setSharing(true)
+    let url: string | null = null
     try {
       const { shareId } = await adapter.fns.call<{ productId: string }, { shareId: string }>(
         'createShare', { productId: pid },
       )
-      const url = `${location.origin}/share/${shareId}`
-      await navigator.clipboard.writeText(url)
-      toast.success('Share link copied to clipboard')
+      url = `${location.origin}/share/${shareId}`
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not create share link')
     } finally {
       setSharing(false)
+    }
+    // Copy AFTER the create try so a clipboard failure never masquerades as a share-creation
+    // failure — the link exists either way, so surface it for the user to copy manually.
+    if (url) {
+      const copied = await copyToClipboard(url)
+      if (copied) toast.success('Share link copied to clipboard')
+      else toast.success('Share link created', { description: url, duration: 10_000 })
     }
   }
 

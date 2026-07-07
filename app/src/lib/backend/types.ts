@@ -76,8 +76,10 @@ export interface BackendAdapter {
   fns: {
     /** Invoke a Firebase callable function. */
     call<TIn, TOut>(name: string, data: TIn): Promise<TOut>
-    /** Stream an SSE endpoint; calls onChunk for each text/event-stream line. */
-    stream(name: string, data: unknown, onChunk: (chunk: string) => void): Promise<void>
+    /** Stream an SSE endpoint; calls onChunk for each text/event-stream line. Pass an
+     *  AbortSignal to cancel the stream (unmount / conversation switch); an aborted
+     *  stream rejects with a DOMException named 'AbortError', which callers ignore. */
+    stream(name: string, data: unknown, onChunk: (chunk: string) => void, signal?: AbortSignal): Promise<void>
   }
   presence: {
     /** Heartbeat doc in presence/{pid}/viewers/{uid}; returns cleanup fn. */

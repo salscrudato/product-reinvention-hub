@@ -9,8 +9,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { ChatComposer } from '../components/chat/ChatComposer'
+import { Markdown } from '../components/chat/Markdown'
 import { BaseFormsLibrary, type BaseForm } from '../components/claims/BaseFormsLibrary'
-import { DeterminationCard, CitedText, type Determination } from '../components/claims/DeterminationCard'
+import { DeterminationCard, type Determination } from '../components/claims/DeterminationCard'
 import { shouldRenderDetermination } from '../lib/claims/determination'
 import { RefChip } from '../components/ui'
 import { IconSparkle, IconCheck, IconSpinner, IconShield, IconChat } from '../components/ui/icons'
@@ -123,6 +124,7 @@ export default function Claims() {
   const [formState, setFormState] = useState<'idle' | 'loading' | 'error'>('idle')
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  const abortRef  = useRef<AbortController | null>(null)   // cancels the in-flight SSE stream
 
   // Live base-forms library.
   useEffect(() => {
@@ -141,8 +143,12 @@ export default function Claims() {
     [sortedForms, selectedId],
   )
 
-  // A new selection starts a fresh conversation (a different policy).
-  useEffect(() => { setMessages([]); setInput('') }, [selectedId])
+  // A new selection starts a fresh conversation (a different policy) — abort any stream
+  // still running against the previous form so its tokens can't bleed into the new thread.
+  useEffect(() => { abortRef.current?.abort(); setMessages([]); setInput('') }, [selectedId])
+
+  // Abort any in-flight analysis on unmount so it doesn't keep consuming tokens/network.
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   // Load the selected form's bytes once so every turn can ground on the real policy.
   const selectedUrl = selectedForm?.url
@@ -199,6 +205,9 @@ export default function Claims() {
         return next
       })
 
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
       await adapter.fns.stream('analyzeClaim', payload, chunk => {
         let ev: StreamEvent
@@ -242,11 +251,15 @@ export default function Claims() {
             patchAssistant(m => ({ ...m, text: m.text + `\n\n⚠️ ${ev.message}` })); break
           case 'done': break
         }
-      })
+      }, controller.signal)
     } catch (err) {
+      // An intentional abort (unmount / form switch) is not an error — leave state as-is.
+      if ((err as { name?: string })?.name === 'AbortError') return
       patchAssistant(m => ({ ...m, text: m.text || `⚠️ ${err instanceof Error ? err.message : 'Analysis failed.'}` }))
     } finally {
-      setStreaming(false)
+      // Only clear streaming if THIS stream is still the active one — a later stream may
+      // have superseded it (the abort above belongs to the newer request).
+      if (abortRef.current === controller) setStreaming(false)
     }
   }
 
@@ -314,7 +327,7 @@ export default function Claims() {
                       {m.determination ? (
                         <DeterminationCard d={m.determination} />
                       ) : m.text ? (
-                        <div className="text-sm text-text"><CitedText text={m.text} />{streaming && i === messages.length - 1 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
+                        <div className="text-sm text-text"><Markdown text={m.text} />{streaming && i === messages.length - 1 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
                       ) : (
                         streaming && i === messages.length - 1 && (
                           <span className="inline-flex items-center gap-2 text-[13px] text-faint">

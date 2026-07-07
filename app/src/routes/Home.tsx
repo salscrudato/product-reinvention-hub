@@ -12,6 +12,7 @@ import { IconSparkle, IconCheck, IconSpinner } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
 import type { Query } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
+import { Markdown } from '../components/chat/Markdown'
 import { PriorityRail } from '../components/home/PriorityRail'
 import { PortfolioPulse } from '../components/home/PortfolioPulse'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
@@ -39,37 +40,6 @@ const SUGGESTIONS = [
 // Most-recent version events for the changes feed (single-field orderBy → auto-indexed).
 const RECENT_VERSIONS: Query = { orderBy: [{ field: 'at', dir: 'desc' }], limit: 50 }
 
-// ─── Citation linkifying ────────────────────────────────────────────────────────
-
-// Match bracketed refIds / form numbers for any line: [HO.RU.006], [GL.COV.002], [CG 00 01].
-const CITE_RE = /\[([A-Z]{1,4}[\s.][A-Z0-9][A-Z0-9.\s]*?)\]/g
-
-/** Render assistant text with clickable citation chips. */
-function RichText({ text, onCite }: { text: string; onCite: (cite: string) => void }) {
-  const nodes: React.ReactNode[] = []
-  let last = 0
-  let m: RegExpExecArray | null
-  CITE_RE.lastIndex = 0
-  let i = 0
-  while ((m = CITE_RE.exec(text)) !== null) {
-    if (m.index > last) nodes.push(text.slice(last, m.index))
-    const cite = m[1]!.trim()
-    nodes.push(
-      <button
-        key={`c${i++}`}
-        onClick={() => onCite(cite)}
-        className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-[5px] bg-accent-soft text-accent font-mono text-[11px] font-medium hover:bg-accent/15 transition-colors align-baseline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        title={`Open ${cite}`}
-      >
-        {cite}
-      </button>,
-    )
-    last = m.index + m[0].length
-  }
-  if (last < text.length) nodes.push(text.slice(last))
-  return <span className="whitespace-pre-wrap leading-relaxed">{nodes}</span>
-}
-
 // ─── Cockpit ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -79,6 +49,10 @@ export default function Home() {
   const [streaming, setStreaming] = useState(false)
   const [indexEntries, setIndexEntries] = useState<SearchIndexEntry[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
+  const abortRef  = useRef<AbortController | null>(null)   // cancels the in-flight SSE stream
+
+  // Abort any in-flight chat on unmount so it doesn't keep consuming tokens/network.
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   // Cockpit data — realtime, with genuine loading / error states (see useLiveCollection).
   const tasks    = useLiveCollection<Task>('tasks')
@@ -127,6 +101,9 @@ export default function Home() {
         return next
       })
 
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
       await adapter.fns.stream('chat', { messages: wire }, (chunk) => {
         let ev: StreamEvent
@@ -149,11 +126,13 @@ export default function Home() {
           case 'done': break
           case 'json': break
         }
-      })
+      }, controller.signal)
     } catch (err) {
+      // An intentional abort (unmount) is not an error — leave state as-is.
+      if ((err as { name?: string })?.name === 'AbortError') return
       patchAssistant(m => ({ ...m, text: m.text || `⚠️ ${err instanceof Error ? err.message : 'Request failed.'}` }))
     } finally {
-      setStreaming(false)
+      if (abortRef.current === controller) setStreaming(false)
     }
   }
 
@@ -204,7 +183,7 @@ export default function Home() {
                         </div>
                       )}
                       {m.role === 'assistant'
-                        ? <div className="text-sm text-text"><RichText text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span aria-hidden="true" className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
+                        ? <div className="text-sm text-text"><Markdown text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span aria-hidden="true" className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
                         : m.text}
                     </div>
                   </div>
