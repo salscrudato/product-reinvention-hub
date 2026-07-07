@@ -497,3 +497,17 @@ export interface RulesResult {
 
 // Utility: unsubscribe function returned by realtime subscriptions
 export type Unsubscribe = () => void
+
+// ─── Task Templates ──────────────────────────────────────────────────────────
+
+/** One entry in the lifecycle SLA set. Stored in Firestore `taskTemplates`
+ *  (editable by ADMIN); the code constant is the fallback when that collection
+ *  is empty. dueAt = projectStartDate + daysOffset calendar days. */
+export interface TaskTemplate {
+  title:      string
+  column:     TaskColumn
+  /** Days from project creation — the SLA value. */
+  daysOffset: number
+  /** Human-readable SLA label shown in the task prefill preview, e.g. "7 days". */
+  slaLabel:   string
+}

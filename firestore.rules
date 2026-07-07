@@ -102,6 +102,9 @@ service cloud.firestore {
       allow write: if isAuthed() && myUid() == uid;
     }
 
+    // ── Task templates — ADMIN edits SLA config; all authed read (NewProductModal fallback) ──
+    match /taskTemplates/{id} { allow read: if isAuthed(); allow write: if isAdmin(); }
+
     // ── Deny everything not explicitly matched ────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

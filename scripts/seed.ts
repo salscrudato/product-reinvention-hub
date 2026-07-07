@@ -146,7 +146,7 @@ async function main(): Promise<void> {
   console.log('🧹 Wiping…')
   await Promise.all([
     'products', 'forms', 'ldTables', 'rtTables',
-    'dictionary', 'tasks', 'feedback', 'searchIndex', 'seedReports',
+    'dictionary', 'tasks', 'taskTemplates', 'feedback', 'searchIndex', 'seedReports',
   ].map(c => deleteAll(db, c)))
   for (const b of bundles) {
     const pid = b.product.refId!
@@ -255,6 +255,21 @@ async function main(): Promise<void> {
       updatedBy: 'seed', rev: 1, createdAt: now, updatedAt: now,
     })
     inc('tasks')
+  }
+
+  // ── Task Templates (SLA config — editable by ADMIN, fallback for NewProductModal) ──
+  {
+    const tmplBatch = db.batch()
+    for (let i = 0; i < HO3_DEFAULT_TASK_TEMPLATES.length; i++) {
+      const tmpl = HO3_DEFAULT_TASK_TEMPLATES[i]!
+      tmplBatch.set(db.doc(`taskTemplates/default-${i}`), {
+        title: tmpl.title, column: tmpl.column,
+        daysOffset: tmpl.daysOffset, slaLabel: tmpl.slaLabel,
+        order: i, createdAt: now, updatedAt: now,
+      })
+    }
+    await tmplBatch.commit()
+    inc('taskTemplates', HO3_DEFAULT_TASK_TEMPLATES.length)
   }
 
   // ── Sample Feedback ───────────────────────────────────────────────────────

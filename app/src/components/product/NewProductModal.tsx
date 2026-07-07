@@ -1,4 +1,7 @@
 // Modal to create a DRAFT product shell and auto-seed the default task set.
+// Task templates are loaded from Firestore `taskTemplates` (ADMIN-editable SLA
+// config) with a code-constant fallback so creation works even when the
+// collection is empty.
 import { useState, type FormEvent } from 'react'
 import { adapter } from '../../lib/backend'
 import { IconSpinner } from '../ui/icons'
@@ -6,7 +9,8 @@ import { useUser } from '../../context/useUser'
 import { Dialog } from '../ui/Dialog'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
-import { HO3_DEFAULT_TASK_TEMPLATES, DEFAULT_LOB } from '@pf/shared'
+import { DEFAULT_TASK_TEMPLATES, DEFAULT_LOB } from '@pf/shared'
+import type { TaskTemplate } from '@pf/shared'
 import { PRODUCT_NAME_SUGGESTIONS, MARKET_SEGMENTS } from '../../lib/insurance/vocab'
 
 interface Props { onClose: () => void; onCreated: (id: string) => void }
@@ -22,9 +26,23 @@ export function NewProductModal({ onClose, onCreated }: Props) {
     e.preventDefault()
     if (!user) return
     setLoading(true); setError('')
-    const actor  = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
-    const pid    = `prod-${Date.now()}`
-    const baseDate = new Date()
+    const actor     = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
+    const pid       = `prod-${Date.now()}`
+    const startDate = new Date()
+
+    // Load SLA templates from Firestore; fall back to code defaults when the
+    // collection is empty or the read fails (network, rules mismatch, etc.).
+    let templates: TaskTemplate[] = DEFAULT_TASK_TEMPLATES
+    try {
+      type TemplateDoc = TaskTemplate & { id: string; order?: number }
+      const loaded = await adapter.db.list<TemplateDoc>('taskTemplates', {
+        orderBy: [{ field: 'order' }],
+      })
+      if (loaded.length > 0) templates = loaded
+    } catch {
+      // silently fall back to code defaults
+    }
+
     try {
       await adapter.db.mutate({
         op: 'create', path: `products/${pid}`,
@@ -39,10 +57,11 @@ export function NewProductModal({ onClose, onCreated }: Props) {
         },
         entityType: 'product', actor,
       })
-      // Auto-seed default tasks
-      for (let i = 0; i < HO3_DEFAULT_TASK_TEMPLATES.length; i++) {
-        const tmpl  = HO3_DEFAULT_TASK_TEMPLATES[i]
-        const dueAt = new Date(baseDate)
+      // Auto-seed default tasks with SLA-driven due dates.
+      // dueAt = startDate + template.daysOffset calendar days.
+      for (let i = 0; i < templates.length; i++) {
+        const tmpl  = templates[i]!
+        const dueAt = new Date(startDate)
         dueAt.setDate(dueAt.getDate() + tmpl.daysOffset)
         await adapter.db.mutate({
           op: 'create', path: `tasks/task-${pid}-${i}`,

@@ -3,7 +3,7 @@
 // The seed script reads these and writes them to Firestore; tests assert against them.
 import type {
   Product, Coverage, LDTable, RTTable, RatingProgram, Form,
-  Rule, FormRule, DictionaryEntry, Task, Feedback, User, RatingInputs,
+  Rule, FormRule, DictionaryEntry, TaskTemplate, Feedback, User, RatingInputs,
 } from '../types'
 import { HO_LOB } from '../insurance/lobRegistry'
 
@@ -739,21 +739,26 @@ export const HO3_DICTIONARY: DictSeed[] = [
   { name: 'Effective Date',     type: 'DATE',     description: 'Policy effective date',                     allowedValues: [], format: 'YYYY-MM-DD', tags: ['policy'], usedIn: [], ...gov() },
 ]
 
-// ─── Default task template ────────────────────────────────────────────────────
+// ─── Default task template (SLA set) ────────────────────────────────────────
+//
+// Generic product-lifecycle SLA set: dueAt = projectStartDate + daysOffset.
+// This constant is the CODE FALLBACK.  The authoritative, editable copy lives in
+// Firestore `taskTemplates` (ADMIN-writable).  NewProductModal reads Firestore
+// first and falls back to these values when the collection is empty.
 
-// D = product creation date; offsets in days
-export const HO3_DEFAULT_TASK_TEMPLATES: Array<{
-  title: string; column: Task['column']; daysOffset: number
-}> = [
-  { title: 'Define coverage strategy',       column: 'IDEATION',        daysOffset: 7   },
-  { title: 'Draft rating plan',              column: 'IDEATION',        daysOffset: 14  },
-  { title: 'Configure product in Factory',   column: 'BUILD_FILE',      daysOffset: 30  },
-  { title: 'File with states',               column: 'BUILD_FILE',      daysOffset: 45  },
-  { title: 'UAT rating scenarios',           column: 'TEST_APPROVE',    daysOffset: 60  },
-  { title: 'Business review sign-off',       column: 'TEST_APPROVE',    daysOffset: 70  },
-  { title: 'Launch readiness check',         column: 'LAUNCH_MONITOR',  daysOffset: 80  },
-  { title: '30-day results review',          column: 'LAUNCH_MONITOR',  daysOffset: 110 },
+export const DEFAULT_TASK_TEMPLATES: TaskTemplate[] = [
+  { title: 'Define coverage strategy',       column: 'IDEATION',        daysOffset: 7,   slaLabel: '7 days'   },
+  { title: 'Draft rating plan',              column: 'IDEATION',        daysOffset: 14,  slaLabel: '2 weeks'  },
+  { title: 'Configure product in Factory',   column: 'BUILD_FILE',      daysOffset: 30,  slaLabel: '30 days'  },
+  { title: 'File with states',               column: 'BUILD_FILE',      daysOffset: 45,  slaLabel: '45 days'  },
+  { title: 'UAT rating scenarios',           column: 'TEST_APPROVE',    daysOffset: 60,  slaLabel: '60 days'  },
+  { title: 'Business review sign-off',       column: 'TEST_APPROVE',    daysOffset: 70,  slaLabel: '70 days'  },
+  { title: 'Launch readiness check',         column: 'LAUNCH_MONITOR',  daysOffset: 80,  slaLabel: '80 days'  },
+  { title: '30-day results review',          column: 'LAUNCH_MONITOR',  daysOffset: 110, slaLabel: '110 days' },
 ]
+
+// Back-compat alias — seed.ts and any code that pre-dates the rename still work.
+export const HO3_DEFAULT_TASK_TEMPLATES = DEFAULT_TASK_TEMPLATES
 
 // ─── Sample users ─────────────────────────────────────────────────────────────
 

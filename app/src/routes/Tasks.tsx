@@ -1,7 +1,7 @@
-// Tasks (/app/tasks) — a 4-column Kanban of the product lifecycle. Drag between
-// columns is audited via adapter.mutate (EDITOR+ only). Cards show product,
-// assignee, an SLA badge coloured by urgency, and checklist progress. Filters
-// (mine / product / overdue) and a board/list toggle. Realtime throughout.
+// Tasks (/app/tasks) — kanban (board/list/project) of the product lifecycle.
+// Project view groups tasks by product with a per-column breakdown.
+// Filters: mine, overdue, product, assignee, column, due window.
+// Drag-and-drop (board only) is audited via adapter.mutate (EDITOR+ only).
 import { useEffect, useMemo, useState } from 'react'
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor, useSensor, useSensors,
@@ -9,14 +9,16 @@ import {
   type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core'
 import { toast } from 'sonner'
-import { IconCards, IconList, IconCheckSquare, IconFilter } from '../components/ui/icons'
+import { IconCards, IconList, IconLayers, IconCheckSquare, IconFilter } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Badge, Skeleton, EmptyState } from '../components/ui'
 import type { Task, Product, TaskColumn } from '@pf/shared'
 
-type TaskDoc = Task & { id: string }
+type TaskDoc    = Task & { id: string }
 type ProductDoc = Product & { id: string }
+type ViewMode   = 'board' | 'list' | 'project'
+type DueWindow  = 'any' | 'today' | 'week' | 'month'
 
 const COLUMNS: { id: TaskColumn; label: string }[] = [
   { id: 'IDEATION',       label: 'Ideation & Design' },
@@ -25,7 +27,14 @@ const COLUMNS: { id: TaskColumn; label: string }[] = [
   { id: 'LAUNCH_MONITOR', label: 'Launch & Monitor' },
 ]
 
-// ─── date helpers ───────────────────────────────────────────────────────────
+const DUE_WINDOWS: { id: DueWindow; label: string }[] = [
+  { id: 'any',   label: 'Any time' },
+  { id: 'today', label: 'Due today' },
+  { id: 'week',  label: 'Due this week' },
+  { id: 'month', label: 'Due this month' },
+]
+
+// ─── Date helpers ────────────────────────────────────────────────────────────
 
 function toMillis(v: unknown): number | null {
   if (v == null) return null
@@ -52,11 +61,20 @@ function initials(name?: string): string {
   return name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-// ─── Card ───────────────────────────────────────────────────────────────────
+/** Returns an { from, to } millis range for a due window, or null for 'any'. */
+function dueWindowRange(w: DueWindow): { from: number; to: number } | null {
+  if (w === 'any') return null
+  const now = Date.now()
+  if (w === 'today') return { from: now, to: now + 86_400_000 }
+  if (w === 'week')  return { from: now, to: now + 7 * 86_400_000 }
+  return { from: now, to: now + 30 * 86_400_000 }
+}
+
+// ─── Card ────────────────────────────────────────────────────────────────────
 
 function CardBody({ task, productName }: { task: TaskDoc; productName?: string }) {
   const due  = sla(toMillis(task.dueAt))
-  const done = task.checklist?.filter(c => c.done).length ?? 0
+  const done  = task.checklist?.filter(c => c.done).length ?? 0
   const total = task.checklist?.length ?? 0
   return (
     <>
@@ -76,7 +94,8 @@ function CardBody({ task, productName }: { task: TaskDoc; productName?: string }
       {total > 0 && (
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-raised overflow-hidden">
-            <div className="h-full rounded-full transition-all" style={{ width: `${(done / total) * 100}%`, background: 'linear-gradient(90deg, var(--color-accent-bright), var(--color-accent-strong))' }} />
+            <div className="h-full rounded-full transition-all"
+              style={{ width: `${(done / total) * 100}%`, background: 'linear-gradient(90deg, var(--color-accent-bright), var(--color-accent-strong))' }} />
           </div>
           <span className="text-[10px] text-faint tabular-nums">{done}/{total}</span>
         </div>
@@ -98,9 +117,9 @@ function DraggableCard({ task, productName, canEdit }: { task: TaskDoc; productN
   )
 }
 
-// ─── Column ─────────────────────────────────────────────────────────────────
+// ─── Board column ────────────────────────────────────────────────────────────
 
-function Column({ id, label, tasks, nameFor, canEdit }: {
+function BoardColumn({ id, label, tasks, nameFor, canEdit }: {
   id: TaskColumn; label: string; tasks: TaskDoc[]; nameFor: (t: TaskDoc) => string | undefined; canEdit: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id })
@@ -122,19 +141,199 @@ function Column({ id, label, tasks, nameFor, canEdit }: {
   )
 }
 
-// ─── Route ──────────────────────────────────────────────────────────────────
+// ─── List view ───────────────────────────────────────────────────────────────
+
+function ListView({ byColumn, nameFor }: {
+  byColumn: Record<TaskColumn, TaskDoc[]>; nameFor: (t: TaskDoc) => string | undefined
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      {COLUMNS.map(col => byColumn[col.id].length > 0 && (
+        <div key={col.id} className="flex flex-col gap-2">
+          <span className="text-xs font-semibold text-dim uppercase tracking-wide">{col.label}</span>
+          <div className="flex flex-col rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+            {byColumn[col.id].map(t => {
+              const due   = sla(toMillis(t.dueAt))
+              const done  = t.checklist?.filter(c => c.done).length ?? 0
+              const total = t.checklist?.length ?? 0
+              return (
+                <div key={t.id} className="flex items-center gap-3 px-4 py-2.5 bg-surface"
+                  style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <span className="flex-1 text-sm text-text truncate">{t.title}</span>
+                  {nameFor(t) && <Badge label={nameFor(t)!} color="purple" />}
+                  {total > 0 && <span className="text-xs text-faint tabular-nums">{done}/{total}</span>}
+                  {due && <Badge label={due.label} color={due.color} />}
+                  {t.assignee && <span className="text-xs text-dim">{t.assignee.name}</span>}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Project view ────────────────────────────────────────────────────────────
+// Tasks grouped by product, each product section showing a lifecycle breakdown.
+
+function ProjectView({ products, tasks }: { products: ProductDoc[]; tasks: TaskDoc[] }) {
+  const byProduct = useMemo(() => {
+    const map = new Map<string, TaskDoc[]>()
+    for (const t of tasks) {
+      const key = t.productId ?? '__unassigned__'
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(t)
+    }
+    return map
+  }, [tasks])
+
+  const sortedKeys = useMemo(() => (
+    [...byProduct.keys()].sort((a, b) => {
+      if (a === '__unassigned__') return 1
+      if (b === '__unassigned__') return -1
+      const pa = products.find(p => p.id === a)?.name ?? a
+      const pb = products.find(p => p.id === b)?.name ?? b
+      return pa.localeCompare(pb)
+    })
+  ), [byProduct, products])
+
+  if (sortedKeys.length === 0) return null
+
+  return (
+    <div className="flex flex-col gap-8">
+      {sortedKeys.map(pid => {
+        const ptasks = byProduct.get(pid) ?? []
+        const pname  = pid === '__unassigned__'
+          ? 'Unassigned'
+          : (products.find(p => p.id === pid)?.name ?? pid)
+
+        const launched = ptasks.filter(t => t.column === 'LAUNCH_MONITOR').length
+        const pct      = ptasks.length > 0 ? Math.round((launched / ptasks.length) * 100) : 0
+
+        return (
+          <section key={pid} aria-label={pname}>
+            {/* Project header */}
+            <div className="flex items-center gap-3 mb-3">
+              <h2 className="text-sm font-semibold text-text">{pname}</h2>
+              <span className="text-xs text-faint">{ptasks.length} task{ptasks.length !== 1 ? 's' : ''}</span>
+              {/* Lifecycle progress strip — segments correspond to the 4 columns */}
+              <div className="flex flex-1 gap-0.5 h-1.5 max-w-[200px]" aria-label={`${pct}% at Launch & Monitor`}>
+                {COLUMNS.map((col, i) => {
+                  const n = ptasks.filter(t => t.column === col.id).length
+                  const opacity = [0.3, 0.5, 0.75, 1][i]!
+                  return (
+                    <div key={col.id} className="flex-1 rounded-full overflow-hidden bg-raised"
+                      title={`${col.label}: ${n}`}>
+                      {n > 0 && (
+                        <div className="h-full w-full rounded-full"
+                          style={{ background: 'var(--color-accent)', opacity }} />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <span className="text-[11px] text-faint tabular-nums shrink-0">{pct}% launched</span>
+            </div>
+
+            {/* Per-column task rows */}
+            <div className="flex flex-col gap-3">
+              {COLUMNS.map(col => {
+                const colTasks = ptasks
+                  .filter(t => t.column === col.id)
+                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                if (colTasks.length === 0) return null
+                return (
+                  <div key={col.id} className="pl-4" style={{ borderLeft: '2px solid var(--color-border)' }}>
+                    <span className="text-[11px] font-semibold text-dim uppercase tracking-wide block mb-1.5">
+                      {col.label}
+                    </span>
+                    <div className="flex flex-col rounded-[10px] overflow-hidden"
+                      style={{ border: '1px solid var(--color-border)' }}>
+                      {colTasks.map(t => {
+                        const due   = sla(toMillis(t.dueAt))
+                        const done  = t.checklist?.filter(c => c.done).length ?? 0
+                        const total = t.checklist?.length ?? 0
+                        return (
+                          <div key={t.id} className="flex items-center gap-3 px-4 py-2.5 bg-surface"
+                            style={{ borderBottom: '1px solid var(--color-border)' }}>
+                            <span className="flex-1 text-sm text-text truncate">{t.title}</span>
+                            {total > 0 && (
+                              <span className="text-xs text-faint tabular-nums">{done}/{total}</span>
+                            )}
+                            {due && <Badge label={due.label} color={due.color} />}
+                            {t.assignee && (
+                              <span className="text-xs text-dim truncate max-w-[100px]" title={t.assignee.name}>
+                                {t.assignee.name}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} aria-pressed={active}
+      className={`px-2.5 py-1 rounded-[8px] text-xs font-medium transition-colors ${active ? 'bg-accent-soft text-accent' : 'bg-surface text-dim hover:text-text'}`}
+      style={{ border: `1px solid ${active ? 'var(--color-accent-line)' : 'var(--color-border)'}` }}>
+      {children}
+    </button>
+  )
+}
+
+const VIEWS: { id: ViewMode; label: string; Icon: typeof IconCards }[] = [
+  { id: 'board',   label: 'Board',   Icon: IconCards  },
+  { id: 'list',    label: 'List',    Icon: IconList   },
+  { id: 'project', label: 'Project', Icon: IconLayers },
+]
+
+function ViewSwitch({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode) => void }) {
+  return (
+    <div className="flex items-center rounded-[9px] p-0.5 bg-raised" role="tablist" aria-label="View">
+      {VIEWS.map(({ id, label, Icon }) => (
+        <button key={id} role="tab" aria-selected={view === id} onClick={() => onChange(id)}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-xs font-medium transition-colors ${view === id ? 'bg-surface text-text shadow-sm' : 'text-dim hover:text-text'}`}>
+          <Icon size={13} />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ─── Route ───────────────────────────────────────────────────────────────────
 
 export default function Tasks() {
   const { user, profile } = useUser()
   const canEdit = profile?.role === 'EDITOR' || profile?.role === 'ADMIN'
 
-  const [tasks, setTasks]       = useState<TaskDoc[] | null>(null)
+  const [tasks,    setTasks]    = useState<TaskDoc[] | null>(null)
   const [products, setProducts] = useState<ProductDoc[]>([])
-  const [view, setView]         = useState<'board' | 'list'>('board')
-  const [mine, setMine]         = useState(false)
-  const [overdue, setOverdue]   = useState(false)
-  const [productId, setProductId] = useState('')
-  const [dragId, setDragId]     = useState<string | null>(null)
+  const [view,     setView]     = useState<ViewMode>('board')
+
+  // ── filter state ──
+  const [mine,        setMine]        = useState(false)
+  const [overdue,     setOverdue]     = useState(false)
+  const [productId,   setProductId]   = useState('')
+  const [assigneeUid, setAssigneeUid] = useState('')
+  const [colFilter,   setColFilter]   = useState<TaskColumn | ''>('')
+  const [dueWindow,   setDueWindow]   = useState<DueWindow>('any')
+
+  // ── drag ──
+  const [dragId, setDragId] = useState<string | null>(null)
 
   useEffect(() => {
     const u1 = adapter.db.subscribe<TaskDoc>('tasks',    d => { if (Array.isArray(d)) setTasks(d) })
@@ -144,13 +343,29 @@ export default function Tasks() {
 
   const nameFor = (t: TaskDoc) => products.find(p => p.id === t.productId)?.name
 
+  // Unique assignees present in the loaded task set.
+  const assignees = useMemo(() => {
+    if (!tasks) return []
+    const seen = new Map<string, string>()
+    for (const t of tasks) {
+      if (t.assignee && !seen.has(t.assignee.uid)) seen.set(t.assignee.uid, t.assignee.name)
+    }
+    return [...seen.entries()].map(([uid, name]) => ({ uid, name }))
+  }, [tasks])
+
   const filtered = useMemo(() => {
     let list = tasks ?? []
-    if (mine && user)   list = list.filter(t => t.assignee?.uid === user.uid)
-    if (productId)      list = list.filter(t => t.productId === productId)
-    if (overdue)        list = list.filter(t => { const m = toMillis(t.dueAt); return m != null && m < Date.now() })
+    if (mine && user)  list = list.filter(t => t.assignee?.uid === user.uid)
+    if (productId)     list = list.filter(t => t.productId === productId)
+    if (assigneeUid)   list = list.filter(t => t.assignee?.uid === assigneeUid)
+    if (colFilter)     list = list.filter(t => t.column === colFilter)
+    const win = dueWindowRange(dueWindow)
+    if (win) {
+      list = list.filter(t => { const m = toMillis(t.dueAt); return m != null && m >= win.from && m < win.to })
+    }
+    if (overdue) list = list.filter(t => { const m = toMillis(t.dueAt); return m != null && m < Date.now() })
     return list
-  }, [tasks, mine, productId, overdue, user])
+  }, [tasks, mine, productId, assigneeUid, colFilter, dueWindow, overdue, user])
 
   const byColumn = useMemo(() => {
     const map: Record<TaskColumn, TaskDoc[]> = { IDEATION: [], BUILD_FILE: [], TEST_APPROVE: [], LAUNCH_MONITOR: [] }
@@ -191,6 +406,14 @@ export default function Tasks() {
 
   const activeTask = dragId ? tasks?.find(t => t.id === dragId) : null
 
+  const activeFilterCount = [mine, overdue, !!productId, !!assigneeUid, !!colFilter, dueWindow !== 'any']
+    .filter(Boolean).length
+
+  function clearFilters() {
+    setMine(false); setOverdue(false); setProductId('')
+    setAssigneeUid(''); setColFilter(''); setDueWindow('any')
+  }
+
   return (
     <div className="flex flex-col gap-5 h-full min-h-0">
       {/* Header */}
@@ -199,33 +422,62 @@ export default function Tasks() {
           <h1 className="text-xl font-bold text-text">Tasks</h1>
           <p className="text-sm text-dim">Every product from ideation to launch.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-[9px] p-0.5 bg-raised" role="tablist" aria-label="View">
-            <button onClick={() => setView('board')} aria-pressed={view === 'board'}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-xs font-medium transition-colors ${view === 'board' ? 'bg-surface text-text shadow-sm' : 'text-dim'}`}>
-              <IconCards size={13} /> Board
-            </button>
-            <button onClick={() => setView('list')} aria-pressed={view === 'list'}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[7px] text-xs font-medium transition-colors ${view === 'list' ? 'bg-surface text-text shadow-sm' : 'text-dim'}`}>
-              <IconList size={13} /> List
-            </button>
-          </div>
-        </div>
+        <ViewSwitch view={view} onChange={setView} />
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Task filters">
         <IconFilter size={14} className="text-faint" aria-hidden="true" />
+
         <FilterChip active={mine} onClick={() => setMine(m => !m)}>Mine</FilterChip>
         <FilterChip active={overdue} onClick={() => setOverdue(o => !o)}>Overdue</FilterChip>
-        <select
-          value={productId} onChange={e => setProductId(e.target.value)}
+
+        {/* Product */}
+        <select value={productId} onChange={e => setProductId(e.target.value)}
           className="h-7 px-2 rounded-[8px] bg-surface border text-xs text-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
-          style={{ borderColor: 'var(--color-border)' }} aria-label="Filter by product"
-        >
+          style={{ borderColor: productId ? 'var(--color-accent)' : 'var(--color-border)' }}
+          aria-label="Filter by product">
           <option value="">All products</option>
           {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
+
+        {/* Assignee — only rendered when at least one task has an assignee */}
+        {assignees.length > 0 && (
+          <select value={assigneeUid} onChange={e => setAssigneeUid(e.target.value)}
+            className="h-7 px-2 rounded-[8px] bg-surface border text-xs text-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+            style={{ borderColor: assigneeUid ? 'var(--color-accent)' : 'var(--color-border)' }}
+            aria-label="Filter by assignee">
+            <option value="">All assignees</option>
+            {assignees.map(a => <option key={a.uid} value={a.uid}>{a.name}</option>)}
+          </select>
+        )}
+
+        {/* Column */}
+        <select value={colFilter} onChange={e => setColFilter(e.target.value as TaskColumn | '')}
+          className="h-7 px-2 rounded-[8px] bg-surface border text-xs text-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+          style={{ borderColor: colFilter ? 'var(--color-accent)' : 'var(--color-border)' }}
+          aria-label="Filter by column">
+          <option value="">All columns</option>
+          {COLUMNS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+        </select>
+
+        {/* Due window */}
+        <select value={dueWindow} onChange={e => setDueWindow(e.target.value as DueWindow)}
+          className="h-7 px-2 rounded-[8px] bg-surface border text-xs text-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+          style={{ borderColor: dueWindow !== 'any' ? 'var(--color-accent)' : 'var(--color-border)' }}
+          aria-label="Filter by due date window">
+          {DUE_WINDOWS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+        </select>
+
+        {/* Clear all — only shown when at least one filter is active */}
+        {activeFilterCount > 0 && (
+          <button onClick={clearFilters}
+            className="h-7 px-2.5 rounded-[8px] text-xs text-dim hover:text-danger transition-colors"
+            style={{ border: '1px solid var(--color-border)' }}
+            aria-label={`Clear ${activeFilterCount} active filter${activeFilterCount !== 1 ? 's' : ''}`}>
+            Clear {activeFilterCount}
+          </button>
+        )}
       </div>
 
       {/* Body */}
@@ -234,63 +486,33 @@ export default function Tasks() {
           {COLUMNS.map(c => <Skeleton key={c.id} className="h-64" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={<IconCheckSquare size={28} />} title="No tasks match" description="Adjust your filters, or create a product to seed its default task set." />
+        <EmptyState
+          icon={<IconCheckSquare size={28} />}
+          title="No tasks match"
+          description="Adjust your filters, or create a product to seed its default task set."
+        />
       ) : view === 'board' ? (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0">
             {COLUMNS.map(col => (
-              <Column key={col.id} id={col.id} label={col.label} tasks={byColumn[col.id]} nameFor={nameFor} canEdit={canEdit} />
+              <BoardColumn key={col.id} id={col.id} label={col.label}
+                tasks={byColumn[col.id]} nameFor={nameFor} canEdit={canEdit} />
             ))}
           </div>
           <DragOverlay>
             {activeTask ? (
-              <div className="bg-surface rounded-[12px] p-3 flex flex-col gap-2 rotate-2" style={{ border: '1px solid var(--color-accent)', boxShadow: 'var(--shadow-card-hover)' }}>
+              <div className="bg-surface rounded-[12px] p-3 flex flex-col gap-2 rotate-2"
+                style={{ border: '1px solid var(--color-accent)', boxShadow: 'var(--shadow-card-hover)' }}>
                 <CardBody task={activeTask} productName={nameFor(activeTask)} />
               </div>
             ) : null}
           </DragOverlay>
         </DndContext>
+      ) : view === 'list' ? (
+        <ListView byColumn={byColumn} nameFor={nameFor} />
       ) : (
-        <ListView columns={COLUMNS} byColumn={byColumn} nameFor={nameFor} />
+        <ProjectView products={products} tasks={filtered} />
       )}
-    </div>
-  )
-}
-
-function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button onClick={onClick} aria-pressed={active}
-      className={`px-2.5 py-1 rounded-[8px] text-xs font-medium transition-colors ${active ? 'bg-accent-soft text-accent' : 'bg-surface text-dim hover:text-text'}`}
-      style={{ border: '1px solid var(--color-border)' }}>
-      {children}
-    </button>
-  )
-}
-
-function ListView({ columns, byColumn, nameFor }: {
-  columns: typeof COLUMNS; byColumn: Record<TaskColumn, TaskDoc[]>; nameFor: (t: TaskDoc) => string | undefined
-}) {
-  return (
-    <div className="flex flex-col gap-6">
-      {columns.map(col => byColumn[col.id].length > 0 && (
-        <div key={col.id} className="flex flex-col gap-2">
-          <span className="text-xs font-semibold text-dim uppercase tracking-wide">{col.label}</span>
-          <div className="flex flex-col rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-            {byColumn[col.id].map(t => {
-              const due = sla(toMillis(t.dueAt)); const done = t.checklist?.filter(c => c.done).length ?? 0; const total = t.checklist?.length ?? 0
-              return (
-                <div key={t.id} className="flex items-center gap-3 px-4 py-2.5 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  <span className="flex-1 text-sm text-text truncate">{t.title}</span>
-                  {nameFor(t) && <Badge label={nameFor(t)!} color="purple" />}
-                  {total > 0 && <span className="text-xs text-faint tabular-nums">{done}/{total}</span>}
-                  {due && <Badge label={due.label} color={due.color} />}
-                  {t.assignee && <span className="text-xs text-dim">{t.assignee.name}</span>}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ))}
     </div>
   )
 }
