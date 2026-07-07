@@ -27,7 +27,7 @@ import {
 import { StateTileMap } from './StateTileMap'
 import type {
   Coverage, CoverageTerm, StandardOption, OptionValueType,
-  LimitStructure, DeductibleStructure, LimitBasis,
+  LimitStructure, DeductibleStructure, LimitBasis, PerilRule,
 } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
@@ -102,7 +102,6 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 	  const scopeStates = cov.allStates
 	    ? productFootprintStates
 	    : (cov.states ?? []).filter(st => productFootprintStates.includes(st))
-	  const coastalStates = lob.peril.eligibleStates
 
   // Normalise every term of this kind so editing is uniform (rich optionSet + typing).
   const [terms, setTerms] = useState<CoverageTerm[]>(() =>
@@ -407,7 +406,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
             ) : (
               <div className="flex flex-col gap-2">
                 {options.map(o => (
-	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} coastalStates={coastalStates} perilLabel={lob.peril.label} canEdit={canEdit}
+	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} peril={lob.perilModel} canEdit={canEdit}
                     hasError={optionIssues(o.id).some(i => i.severity === 'error')}
                     onChange={next => setOptions(options.map(x => x.id === o.id ? next : x))}
                     onDefault={() => setOptions(options.map(x => ({ ...x, isDefault: x.id === o.id })))}
@@ -440,16 +439,19 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 
 // ─── One editable option row ─────────────────────────────────────────────────
 
-function OptionRow({ o, mode, scopeStates, coastalStates, perilLabel, canEdit, hasError, onChange, onDefault, onRemove }: {
-	  o: StandardOption; mode: Mode; scopeStates: string[]; coastalStates: readonly string[]; perilLabel: string; canEdit: boolean; hasError: boolean
+function OptionRow({ o, mode, scopeStates, peril, canEdit, hasError, onChange, onDefault, onRemove }: {
+	  o: StandardOption; mode: Mode; scopeStates: string[]; peril: PerilRule; canEdit: boolean; hasError: boolean
 	  onChange: (o: StandardOption) => void; onDefault: () => void; onRemove: () => void
 	}) {
 	  const [expanded, setExpanded] = useState(false)
 	  const types = OPTION_TYPES[mode]
-	  const activeStateCount = o.allStates ? scopeStates.length : o.states.length
-	  const activeSet = new Set(o.allStates ? scopeStates : o.states)
+	  // Clip the option's stored states to the coverage scope: an option can never
+	  // apply outside its coverage's footprint, so the count is bounded by scope and
+	  // can never exceed 100% (e.g. an option set before the coverage scope shrank).
+	  const inScope = o.states.filter(s => scopeStates.includes(s))
+	  const activeStateCount = o.allStates ? scopeStates.length : inScope.length
+	  const activeSet = new Set(o.allStates ? scopeStates : inScope)
 	  const footprintSet = new Set(scopeStates)
-	  const coastalSet = new Set(coastalStates)
 
 	  function handleToggleState(st: string) {
 	    if (!canEdit || o.allStates || !scopeStates.includes(st)) return
@@ -573,15 +575,14 @@ function OptionRow({ o, mode, scopeStates, coastalStates, perilLabel, canEdit, h
 	                <div className="rounded-[10px] bg-page p-2" style={{ border: '1px solid var(--color-border)' }}>
 	                  <StateTileMap
 	                    active={activeSet}
-	                    coastal={coastalSet}
 	                    footprint={footprintSet}
+	                    peril={peril}
 	                    onToggle={canEdit && !o.allStates ? handleToggleState : undefined}
 	                    canEdit={canEdit && !o.allStates}
 	                    labels={{
 	                      active: 'Option available',
 	                      available: 'In coverage scope',
 	                      inactive: 'Out of coverage scope',
-	                      coastal: coastalSet.size ? perilLabel : undefined,
 	                    }}
 	                    ariaLabel={`State applicability for option — ${activeStateCount} of ${scopeStates.length} coverage states`}
 	                  />

@@ -18,7 +18,6 @@ import type { WithId } from '../../context/ProductContext'
 export function CoverageStatesDialog({ cov, onClose }: { cov: WithId<Coverage>; onClose: () => void }) {
   const { pid, product } = useProductCtx()
   const lob = resolveLob(product)
-  const COASTAL = new Set<string>(lob.peril.eligibleStates)
   const { user } = useUser()
   const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
@@ -95,11 +94,11 @@ export function CoverageStatesDialog({ cov, onClose }: { cov: WithId<Coverage>; 
 	      <div className="bg-page rounded-[12px] p-3" style={{ border: '1px solid var(--color-border)' }}>
 	        <StateTileMap
 	          active={active}
-	          coastal={COASTAL}
 	          footprint={new Set(productFootprint)}
+	          peril={lob.perilModel}
 	          onToggle={canEdit && !allStates ? toggle : undefined}
 	          canEdit={canEdit && !allStates}
-	          labels={{ active: 'In scope', coastal: COASTAL.size ? lob.peril.label : undefined, inactive: 'Out of scope' }}
+	          labels={{ active: 'In scope', inactive: 'Out of scope' }}
 	        />
 	      </div>
 

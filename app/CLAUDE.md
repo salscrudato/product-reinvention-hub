@@ -32,5 +32,5 @@ See [../CLAUDE.md](../CLAUDE.md) for the binding invariants that apply across ev
 ## Gotchas
 
 - `signInAsDevAdmin()` in the adapter is dev-only (`import.meta.env.DEV` guard). Remove before production.
-- `StateTileMap.tsx` has two hex values with no token equivalent (`#E4E4EB` inactive-state fill, `#F59E0B` coastal badge amber). Leave them; no token covers that exact shade.
+- `StateTileMap.tsx` is the single component behind all three state-scope surfaces (product footprint, per-coverage scope, per-option applicability). It is fully token-driven — the out-of-scope tile fill and peril badge are the `--color-tile-oos` / `--color-peril` tokens. Peril badges come from the passed `peril` (the LOB registry's `perilModel`); never hard-code coastal facts. `footprint` is the required count denominator, so a scope count can never exceed 100%.
 - Adding a new collection or mutating a new entity type? Update `firestore.rules` (and check `shared/src/types.ts`) first.

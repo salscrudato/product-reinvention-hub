@@ -91,12 +91,11 @@ export default function ProductStates() {
       <div ref={svgRef} className="bg-surface rounded-[14px] p-4 overflow-x-auto" style={{ border: '1px solid var(--color-border)' }}>
         <StateTileMap
           active={activeSet}
-          coastal={COASTAL}
           footprint={FOOTPRINT}
+          peril={lob.perilModel}
           onToggle={canEdit ? toggleState : undefined}
           canEdit={canEdit}
-          ariaLabel={`Product footprint map \
-${states.length} of ${FOOTPRINT.size} states selected.`}
+          ariaLabel={`Product footprint map — ${states.length} of ${FOOTPRINT.size} states selected.`}
         />
       </div>
 
