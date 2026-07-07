@@ -9,6 +9,19 @@ import { Button } from '../../components/ui'
 import { StateTileMap } from '../../components/product/StateTileMap'
 import { resolveLob } from '@pf/shared'
 
+// The wind/hail peril mark for the grid chips — the same amber-disc-with-bolt badge
+// the map and its legend use, so the surface reads as one system (an emoji would be
+// off-grid and platform-dependent). Decorative: the peril is spoken in each chip's
+// aria-label, so the glyph is aria-hidden.
+function PerilBolt() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true" className="shrink-0">
+      <circle cx="6" cy="6" r="5" fill="var(--color-peril)" stroke="var(--color-surface)" strokeWidth="0.75" />
+      <path d="M6.4 3.4 L4.2 6.4 L5.8 6.4 L5.4 8.6 L7.8 5.6 L6.2 5.6 Z" fill="var(--color-surface)" />
+    </svg>
+  )
+}
+
 export default function ProductStates() {
   const { pid, product, loading } = useProductCtx()
   const lob     = resolveLob(product)              // line-driven footprint + peril
@@ -99,21 +112,29 @@ export default function ProductStates() {
         />
       </div>
 
-      {/* Grid chips */}
+      {/* Grid chips — a keyboard-friendly alternate to the map. The peril mark follows
+          the state (coastal), not the selection, so it shows on every coastal footprint
+          chip exactly as the map does. */}
       <div className="flex flex-wrap gap-1.5">
-        {Array.from(FOOTPRINT).sort().map(st => (
-          <button
-            key={st}
-            disabled={!canEdit}
-            onClick={() => canEdit && toggleState(st)}
-            className={`px-2 py-1 rounded-[6px] text-xs font-mono font-medium border transition-colors
-              ${activeSet.has(st) ? 'bg-accent text-white border-accent' : 'bg-surface text-dim border-border-strong hover:border-accent hover:text-accent'}
-              ${!canEdit ? 'cursor-default' : 'cursor-pointer'}`}
-          >
-            {st}
-            {COASTAL.has(st) && activeSet.has(st) && <span className="ml-0.5 text-[8px]">⚡</span>}
-          </button>
-        ))}
+        {Array.from(FOOTPRINT).sort().map(st => {
+          const on = activeSet.has(st)
+          const coastal = COASTAL.has(st)
+          return (
+            <button
+              key={st}
+              disabled={!canEdit}
+              aria-pressed={canEdit ? on : undefined}
+              aria-label={`${st} — ${on ? 'in scope' : 'out of scope'}${coastal ? `, ${lob.peril.label}` : ''}`}
+              onClick={() => canEdit && toggleState(st)}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-[6px] text-xs font-mono font-medium border transition-colors
+                ${on ? 'bg-accent text-white border-accent' : 'bg-surface text-dim border-border-strong hover:border-accent hover:text-accent'}
+                ${!canEdit ? 'cursor-default' : 'cursor-pointer'}`}
+            >
+              {st}
+              {coastal && <PerilBolt />}
+            </button>
+          )
+        })}
       </div>
     </div>
   )
