@@ -90,8 +90,12 @@ export default function Explorer() {
   const selSub        = coverages.find((c) => c.id === sel.sub) ?? null
   const subCoverages  = selCoverage ? childrenOf(selCoverage.refId).sort(byOrder) : []
 
-  const toProdItem = (p: WithId<Product>): ColumnItem => ({ id: p.id, refId: p.refId, title: p.name, hasChildren: true })
-  const toCovItem  = (c: WithId<Coverage>, canDescend: boolean): ColumnItem => ({ id: c.id, refId: c.refId, title: c.name, hasChildren: canDescend })
+  // Meta replaces the old internal refId sub-line with something a PM actually scans:
+  // a product's line, a coverage's requirement.
+  const toProdItem = (p: WithId<Product>): ColumnItem => ({ id: p.id, title: p.name, meta: p.lob?.name, hasChildren: true })
+  const toCovItem  = (c: WithId<Coverage>, canDescend: boolean): ColumnItem => ({
+    id: c.id, title: c.name, meta: c.requirement === 'MANDATORY' ? 'Mandatory' : 'Optional', hasChildren: canDescend,
+  })
 
   // Columns are always a prefix: Products, then Coverages (once a product is picked),
   // then Sub-coverages (once a coverage is picked — even if it has none, so its empty

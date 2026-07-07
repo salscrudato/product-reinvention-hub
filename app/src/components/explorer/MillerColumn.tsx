@@ -56,7 +56,7 @@ export function MillerColumn({
 
   return (
     <section
-      className="col-in flex flex-col shrink-0 w-64 rounded-[14px] bg-surface overflow-hidden"
+      className="col-in flex flex-col flex-1 min-w-[240px] rounded-[14px] bg-surface overflow-hidden"
       style={{ border: `1px solid ${focused ? 'var(--color-accent-line)' : 'var(--color-border)'}` }}
     >
       {/* Header — icon, label, and a filtered/total count so the state is legible. */}
@@ -118,15 +118,12 @@ export function MillerColumn({
                   <span className="text-sm font-medium truncate leading-snug">
                     <Highlight text={item.title} query={query} />
                   </span>
-                  {item.refId && (
-                    <span className={`font-mono text-[10.5px] tracking-[-.01em] truncate ${selected && focused ? 'text-white/90' : 'text-faint'}`}>
-                      {item.refId}
+                  {item.meta && (
+                    <span className={`text-[11px] truncate ${selected && focused ? 'text-white/85' : 'text-faint'}`}>
+                      {item.meta}
                     </span>
                   )}
                 </span>
-                {item.meta && (
-                  <span className={`text-[10.5px] tnum shrink-0 ${selected && focused ? 'text-white/90' : 'text-faint'}`}>{item.meta}</span>
-                )}
                 {item.hasChildren && (
                   <IconChevronRight
                     size={15}

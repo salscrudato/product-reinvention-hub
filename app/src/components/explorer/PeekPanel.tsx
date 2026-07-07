@@ -4,7 +4,7 @@
 // as working deep links into the product workspace. Purely presentational + read-only;
 // every "open" is a navigate, never a mutation.
 import { useNavigate } from 'react-router-dom'
-import { Badge, StatusPill, LifecyclePill, RefChip } from '../ui'
+import { Badge, StatusPill, LifecyclePill, ProductStatusPill, RefChip } from '../ui'
 import {
   IconLimit, IconDeductible, IconEndorsement, IconForm, IconArrowRight,
   IconStates, IconInfo, type IconType,
@@ -47,7 +47,7 @@ export function PeekPanel({ node }: { node: PeekNode | null }) {
 
   const shell = (children: React.ReactNode) => (
     <aside
-      className="col-in flex flex-col shrink-0 w-[340px] rounded-[14px] bg-surface overflow-hidden"
+      className="col-in flex flex-col flex-1 min-w-[320px] rounded-[14px] bg-surface overflow-hidden"
       style={{ border: '1px solid var(--color-border)' }}
     >
       {children}
@@ -72,14 +72,10 @@ export function PeekPanel({ node }: { node: PeekNode | null }) {
     return shell(
       <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-5">
         <div className="flex flex-col gap-2">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-base font-bold text-text leading-tight">{p.name}</h3>
-            {p.refId && <RefChip id={p.refId} tone="accent" />}
-          </div>
+          <h3 className="text-base font-bold text-text leading-tight">{p.name}</h3>
           <p className="text-xs text-dim">{p.lob?.name} · {p.marketSegment}</p>
           <div className="flex flex-wrap gap-1.5 pt-0.5">
-            <StatusPill status={p.status} />
-            <LifecyclePill lifecycle={p.lifecycle} />
+            <ProductStatusPill lifecycle={p.lifecycle} />
           </div>
         </div>
 
@@ -123,12 +119,9 @@ export function PeekPanel({ node }: { node: PeekNode | null }) {
 
   return shell(
     <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-5">
-      {/* Identity — name + refId chip (load-bearing) + governance pills. */}
+      {/* Identity — name + governance pills (internal refId intentionally not shown). */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-base font-bold text-text leading-tight">{cov.name}</h3>
-          {cov.refId && <RefChip id={cov.refId} tone="accent" />}
-        </div>
+        <h3 className="text-base font-bold text-text leading-tight">{cov.name}</h3>
         <div className="flex flex-wrap gap-1.5 pt-0.5">
           <StatusPill status={cov.status} />
           <LifecyclePill lifecycle={cov.lifecycle} />
