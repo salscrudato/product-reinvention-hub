@@ -47,3 +47,18 @@ const reviewColors: Record<ReviewStatus, BadgeColor>  = {
 export function StatusPill({ status }:        { status: Status })       { return <Badge label={status}   color={statusColors[status]}   /> }
 export function LifecyclePill({ lifecycle }:  { lifecycle: Lifecycle }) { return <Badge label={lifecycle} color={lifecycleColors[lifecycle]} /> }
 export function ReviewPill({ review }:        { review: ReviewStatus }) { return <Badge label={review.replace(/_/g,' ')} color={reviewColors[review]} /> }
+
+// ─── ProductStatusPill ──────────────────────────────────────────────────────────
+// A single, human product status. ACTIVE + LAUNCHED read as one thing to a PM, so a
+// product carries ONE pill derived from its lifecycle (draft → in review → approved →
+// live) instead of a redundant status+lifecycle pair.
+const productStatusMeta: Record<Lifecycle, { label: string; color: BadgeColor }> = {
+  DRAFT:     { label: 'Draft',     color: 'default' },
+  IN_REVIEW: { label: 'In review', color: 'warn' },
+  APPROVED:  { label: 'Approved',  color: 'purple' },
+  LAUNCHED:  { label: 'Live',      color: 'good' },
+}
+export function ProductStatusPill({ lifecycle }: { lifecycle: Lifecycle }) {
+  const m = productStatusMeta[lifecycle] ?? productStatusMeta.DRAFT
+  return <Badge label={m.label} color={m.color} />
+}

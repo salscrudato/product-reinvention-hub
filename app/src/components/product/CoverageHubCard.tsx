@@ -4,7 +4,7 @@
 // and drills straight into that aspect's editor or tab — the coverage is the spine
 // everything hangs off. Zero-count tiles show a dimmed "Add first" invite so a PM
 // always knows what's missing without leaving the collection.
-import { StatusPill, Badge, RefChip, Tooltip } from '../ui'
+import { StatusPill, Badge, Tooltip } from '../ui'
 import { IconEdit, IconTrash, IconEndorsement } from '../ui/icons'
 import { COVERAGE_ASPECTS as ASPECTS, useCoverageCounts, type CoverageAspect } from './coverageAspects'
 import type { Coverage } from '@pf/shared'
@@ -32,9 +32,11 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
   const counts = useCoverageCounts(cov)
 
   return (
-    <div className="group relative h-full bg-surface rounded-[16px] overflow-hidden flex flex-col hover:shadow-[var(--shadow-card-hover)] transition-all duration-200"
-      style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
-      <div className="p-4 flex flex-col gap-3.5 flex-1">
+    <div className="group relative h-full bg-surface rounded-[16px] overflow-hidden flex flex-col border border-[color:var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-accent-line)] hover:shadow-[0_16px_36px_-14px_var(--glow-accent)]">
+      {/* Subtle gradient wash + glow on hover */}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        style={{ background: 'var(--gradient-accent-soft)' }} />
+      <div className="relative p-4 flex flex-col gap-3.5 flex-1">
         {/* Identity */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col gap-1.5 min-w-0">
@@ -47,7 +49,6 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
               <span className="w-2 h-2 rounded-full shrink-0"
                 style={{ background: cov.status === 'ACTIVE' ? 'var(--color-good)' : cov.status === 'FUTURE' ? 'var(--color-info)' : 'var(--color-faint)' }} />
               <span className="font-semibold text-[15px] text-text leading-snug truncate">{cov.name}</span>
-              {cov.refId && <span className="shrink-0"><RefChip id={cov.refId} /></span>}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <Badge label={cov.requirement === 'MANDATORY' ? 'Mandatory' : 'Optional'} color={cov.requirement === 'MANDATORY' ? 'purple' : 'default'} />
@@ -74,9 +75,10 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
           )}
         </div>
 
-        {/* Aspect tile grid — zero-count tiles use dashed borders + invite copy */}
+        {/* Aspect tile grid — zero-count tiles use dashed borders + invite copy.
+            'Options' is intentionally excluded — options live inside the limits/terms editor. */}
         <div className="grid grid-cols-3 gap-1.5">
-          {ASPECTS.map(({ key, label, Icon }, i) => {
+          {ASPECTS.filter(a => a.key !== 'options').map(({ key, label, Icon }, i) => {
             const count = counts[key]
             const isEmpty = count === 0
             return (

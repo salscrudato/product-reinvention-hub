@@ -70,7 +70,7 @@ const EMIT_RULE_DRAFT_TOOL: Anthropic.Tool = {
 const RULES_TOOLS: Anthropic.Tool[] = [...TOOLS, EMIT_RULE_DRAFT_TOOL]
 
 // Composer-specific context, layered on the house grounding rules (SYSTEM_PROMPT).
-const RULES_SYSTEM = `You are Product Factory's rule-drafting assistant for P&C product managers. You draft or refine exactly ONE product rule as a precise IF → THEN statement (a condition and an outcome), grounded entirely in the product's real data.
+const RULES_SYSTEM = `You are the Product Reinvention Hub rule-drafting assistant for P&C product managers. You draft or refine exactly ONE product rule as a precise IF → THEN statement (a condition and an outcome), grounded entirely in the product's real data.
 
 WORKFLOW:
 1. Use the grounding tools SILENTLY first to find the coverages, forms, LD tables and existing rules the request touches. Never narrate your process or mention the tools; the product manager sees only the finished draft.

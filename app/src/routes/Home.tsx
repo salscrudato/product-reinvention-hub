@@ -13,6 +13,7 @@ import { adapter } from '../lib/backend'
 import type { Query } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
 import { Markdown } from '../components/chat/Markdown'
+import { HeroMark } from '../components/home/HeroMark'
 import { PriorityRail } from '../components/home/PriorityRail'
 import { PortfolioPulse } from '../components/home/PortfolioPulse'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
@@ -30,11 +31,12 @@ type StreamEvent =
 interface ToolChip { name: string; done: boolean; summary?: string }
 interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[] }
 
-const SUGGESTIONS = [
-  'Trace the premium for the default HO-3 example.',
-  'Which forms attach if I add Scheduled Personal Property on a Texas risk?',
-  'Trace the GL premium for a retail store with $300,000 in gross sales.',
-  'What GL coverages are mandatory under CG 00 01?',
+// Short pill labels around the composer, each carrying the full prompt it sends.
+const SUGGESTIONS: Array<{ label: string; prompt: string }> = [
+  { label: 'Trace HO-3 premium',     prompt: 'Trace the premium for the default HO-3 example.' },
+  { label: 'SPP forms · Texas',      prompt: 'Which forms attach if I add Scheduled Personal Property on a Texas risk?' },
+  { label: 'Trace GL premium',       prompt: 'Trace the GL premium for a retail store with $300,000 in gross sales.' },
+  { label: 'Mandatory GL coverages', prompt: 'What GL coverages are mandatory under CG 00 01?' },
 ]
 
 // Most-recent version events for the changes feed (single-field orderBy → auto-indexed).
@@ -146,22 +148,10 @@ export default function Home() {
           <div className="max-w-3xl w-full mx-auto h-full">
             {empty ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-10">
-                <div className="w-14 h-14 rounded-[16px] flex items-center justify-center"
-                  style={{ background: 'var(--gradient-accent)' }}>
-                  <IconSparkle size={26} className="text-white" aria-hidden="true" />
-                </div>
+                <HeroMark size={76} />
                 <div className="flex flex-col gap-1.5">
-                  <h1 className="text-xl font-bold text-text">Ask your product portfolio</h1>
-                  <p className="text-sm text-dim max-w-md">Grounded in your coverages, forms, rules and rating tables — every answer cites the exact refId or form number.</p>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-2.5 w-full max-w-xl">
-                  {SUGGESTIONS.map(s => (
-                    <button key={s} onClick={() => ask(s)}
-                      className="text-left text-sm text-dim bg-surface rounded-[12px] px-4 py-3 hover:text-text hover:shadow-[var(--shadow-card-hover)] transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                      style={{ border: '1px solid var(--color-border)' }}>
-                      {s}
-                    </button>
-                  ))}
+                  <h1 className="text-2xl font-bold text-text tracking-tight">Ask your product portfolio</h1>
+                  <p className="text-sm text-dim max-w-md">Grounded in your coverages, forms, rules and rating tables — every answer cites its source.</p>
                 </div>
               </div>
             ) : (
@@ -193,8 +183,22 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Composer */}
+        {/* Composer — with one-tap starter pills around it while the thread is empty */}
         <div className="mt-3 max-w-3xl w-full mx-auto">
+          {empty && (
+            <div className="flex flex-wrap justify-center gap-2 mb-3">
+              {SUGGESTIONS.map(s => (
+                <button
+                  key={s.label} onClick={() => ask(s.prompt)} title={s.prompt}
+                  className="group inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-[12.5px] text-dim bg-surface hover:text-text transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  style={{ border: '1px solid var(--color-border)' }}
+                >
+                  <IconSparkle size={12} className="text-accent opacity-70 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
           <ChatComposer value={input} onChange={setInput} onSubmit={() => ask(input)} streaming={streaming} />
         </div>
       </section>

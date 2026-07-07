@@ -44,19 +44,18 @@ function CoverageCard({ cov, endorsements, onOpen }: {
   const range = term && rangeSummary(term)
 
   return (
-    <div className="bg-surface rounded-[14px] flex flex-col overflow-hidden transition-all duration-200 hover:shadow-[var(--shadow-card-hover)]"
-      style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+    <div className="group/card relative bg-surface rounded-[14px] flex flex-col overflow-hidden border border-[color:var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-accent-line)] hover:shadow-[0_16px_36px_-14px_var(--glow-accent)]">
+      {/* Subtle gradient wash + glow on hover */}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-0 group-hover/card:opacity-100 transition-opacity duration-200"
+        style={{ background: 'var(--gradient-accent-soft)' }} />
       <button
         onClick={() => onOpen(cov.id)}
-        className="group text-left p-4 flex flex-col gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="group relative text-left p-4 flex flex-col gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS_DOT[cov.status] ?? 'var(--color-faint)' }} />
-              <span className="font-semibold text-[14px] text-text leading-snug group-hover:text-accent transition-colors truncate">{cov.name}</span>
-            </div>
-            {cov.refId && <div><RefChip id={cov.refId} /></div>}
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: STATUS_DOT[cov.status] ?? 'var(--color-faint)' }} />
+            <span className="font-semibold text-[14px] text-text leading-snug group-hover:text-accent transition-colors truncate">{cov.name}</span>
           </div>
           <IconChevronRight size={16} className="text-faint shrink-0 group-hover:text-accent group-hover:translate-x-0.5 transition-all mt-0.5" aria-hidden="true" />
         </div>
@@ -78,7 +77,7 @@ function CoverageCard({ cov, endorsements, onOpen }: {
       </button>
 
       {(cov.formNumbers?.length > 0 || endorsements.length > 0) && (
-        <div className="px-4 pb-3 pt-0 flex flex-col gap-2.5">
+        <div className="relative px-4 pb-3 pt-0 flex flex-col gap-2.5">
           {cov.formNumbers?.length > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap">
               {cov.formNumbers.map(fn => <RefChip key={fn} id={fn} tone="accent" />)}
@@ -92,7 +91,6 @@ function CoverageCard({ cov, endorsements, onOpen }: {
                   className="group flex items-center gap-2 text-left rounded-[8px] px-2 py-1.5 -mx-1 hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: STATUS_DOT[e.status] ?? 'var(--color-faint)' }} />
                   <span className="text-[13px] text-dim group-hover:text-text truncate flex-1">{e.name}</span>
-                  {e.refId && <span className="font-mono text-[10px] text-faint shrink-0">{e.refId.split('.').slice(-1)[0]}</span>}
                 </button>
               ))}
             </div>
@@ -123,7 +121,7 @@ export function CoverageCollection({ coverages, onOpen, lob = resolveLob() }: {
             <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
             <span className="text-[11px] text-faint tnum">{section.items.length}</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {section.items.map(cov => (
               <CoverageCard key={cov.id} cov={cov} endorsements={endorsementsOf(cov.refId)} onOpen={onOpen} />
             ))}

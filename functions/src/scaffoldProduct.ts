@@ -116,7 +116,7 @@ const EMIT_SCAFFOLD_TOOL: Anthropic.Tool = {
 
 const SCAFFOLD_TOOLS: Anthropic.Tool[] = [...TOOLS, EMIT_SCAFFOLD_TOOL]
 
-const SCAFFOLD_SYSTEM = `You are Product Factory's product-scaffolding assistant for P&C product managers. You propose the STARTING STRUCTURE of a NEW product — a product shell plus its initial coverages and rules — grounded entirely in the real portfolio.
+const SCAFFOLD_SYSTEM = `You are the Product Reinvention Hub product-scaffolding assistant for P&C product managers. You propose the STARTING STRUCTURE of a NEW product — a product shell plus its initial coverages and rules — grounded entirely in the real portfolio.
 
 WORKFLOW:
 1. Use the grounding tools SILENTLY first. Find the closest existing line/product to what the manager asked for (search_entities, then get_product_tree / get_coverage / get_forms / get_rules). Never narrate your process; the manager sees only the finished scaffold.

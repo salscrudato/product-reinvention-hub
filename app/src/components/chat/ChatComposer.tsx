@@ -48,7 +48,7 @@ export function ChatComposer({ value, onChange, onSubmit, streaming = false, dis
 
       <div className="absolute left-4 bottom-3 flex items-center gap-1.5 text-[11px] text-faint select-none pointer-events-none">
         <IconSparkle size={12} className="text-accent" aria-hidden="true" />
-        {hint ?? 'Grounded — every answer cites its refId'}
+        {hint ?? 'Grounded — every answer cites its source'}
       </div>
 
       <button

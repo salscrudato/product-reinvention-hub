@@ -125,7 +125,7 @@ export default function ProductCoverages() {
             <section className="flex flex-col gap-3">
               <SectionHeader label="Coverages" count={roots.length} />
               {view === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {roots.map((cov, i) => (
                     <div key={cov.id} className="rise-in h-full" style={{ '--rise-delay': `${i * 40}ms` } as React.CSSProperties}>
                       <CoverageHubCard {...hubProps(cov)} />
@@ -144,7 +144,7 @@ export default function ProductCoverages() {
             <section className="flex flex-col gap-3">
               <SectionHeader label="Endorsements" count={endorsements.length} />
               {view === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {endorsements.map((cov, i) => (
                     <div key={cov.id} className="rise-in h-full" style={{ '--rise-delay': `${(roots.length + i) * 40}ms` } as React.CSSProperties}>
                       <CoverageHubCard parentName={parentName(cov.parentId)} {...hubProps(cov)} />

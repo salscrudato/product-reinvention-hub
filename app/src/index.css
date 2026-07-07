@@ -1,4 +1,4 @@
-/* Product Factory design system — light, premium, Apple-inspired.
+/* Product Reinvention Hub design system — light, premium, Apple-inspired.
    Fonts self-hosted via @fontsource (imported in main.tsx).
    BRAND: violet-forward, evoking the Accenture mark (#A100FF → #7A00E6),
    tuned for AA contrast on the light surfaces. All accent colour lives here;
@@ -244,11 +244,27 @@ h1, h2 { text-wrap: balance; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-faint); }
 
 /* ─── Reduced-motion overrides ───────────────────────────────────────────── */
+/* HeroMark — the floating "PM person" brand mark (see HeroMark.tsx). The whole mark
+   gives a lively bounce; the data orbit spins and the spark pulses about their own
+   (centred) box via fill-box. */
+.hero-mark { animation: hero-float 2.8s ease-in-out infinite; }
+.hero-mark__orbit,
+.hero-mark__spark,
+.hero-mark__halo { transform-box: fill-box; transform-origin: center; }
+.hero-mark__orbit { animation: hero-spin 14s linear infinite; }
+.hero-mark__halo  { animation: hero-halo 4.2s ease-in-out infinite; }
+.hero-mark__spark { animation: hero-spark 2.4s ease-in-out infinite; }
+@keyframes hero-spin  { to { transform: rotate(360deg); } }
+@keyframes hero-halo  { 0%, 100% { opacity: .26; transform: scale(1); } 50% { opacity: .52; transform: scale(1.08); } }
+@keyframes hero-spark { 0%, 100% { opacity: .5; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes hero-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+  .hero-mark, .hero-mark__orbit, .hero-mark__spark, .hero-mark__halo { animation: none !important; }
   .aurora-a, .aurora-b, .aurora-c { animation: none !important; opacity: .35 !important; }
   .edge-flow { animation: none !important; stroke-dasharray: none !important; opacity: 0 !important; }
   .node-glow, .graph-float { animation: none !important; }

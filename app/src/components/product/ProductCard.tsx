@@ -5,7 +5,7 @@
 // at-a-glance facts and an AI summary affordance. No nested interactive elements:
 // the container is a div; each region is its own button.
 import { useNavigate } from 'react-router-dom'
-import { StatusPill, LifecyclePill, Badge, RefChip } from '../ui'
+import { ProductStatusPill, Badge } from '../ui'
 import { IconCoverage, IconPricing, IconForm, IconStates, IconRule, IconSparkle, IconChevronRight } from '../ui/icons'
 import type { Product } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
@@ -44,9 +44,7 @@ export function ProductCard({ p }: { p: WithId<Product> }) {
             <IconChevronRight size={16} className="text-faint shrink-0 mt-0.5 group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
-            {p.refId && <RefChip id={p.refId} />}
-            <StatusPill status={p.status} />
-            <LifecyclePill lifecycle={p.lifecycle} />
+            <ProductStatusPill lifecycle={p.lifecycle} />
             {p.lob?.name && <Badge label={p.lob.name} color="blue" />}
           </div>
         </button>
