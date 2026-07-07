@@ -195,6 +195,45 @@ describe('mapIsoWorkbook — rules, form rules, rating, tables', () => {
   })
 })
 
+// ─── Real-template column fidelity (quirks confirmed against the shipped GL books) ─
+// The real GL framework has TWO form columns: "COVERAGE FORM(S)" (form *titles*) and
+// "FORM NUMBER(S)" (form *numbers*). Only the latter may feed formNumbers[]. The real
+// Dynamic Data sheet also carries effective/expiration-date columns the DynamicField
+// model doesn't store — those must surface as unmapped, never drop silently.
+describe('mapIsoWorkbook — real-template column fidelity', () => {
+  const fwTwoForm = g('GL Product Framework', [
+    ['PRODUCT FRAMEWORK - GENERAL LIABILITY'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE',
+     'COVERAGE FORM(S)', 'FORM NUMBER(S)', 'CLAIMS BASIS', 'COVERAGE REQUIREMENT',
+     'PREMIUM GENERATING', 'BUREAU', 'PROPRIETARY', 'ALL ACTIVE STATES'],
+    ['Active', 'GL.PROD.001', 'GL Product', '', '', '', '', '', '', '', '', '', '', 'X'],
+    ['Active', 'GL.COV.001', 'GL Product', 'Commercial General Liability', 'Wrongful Acts', '',
+     'Cap On Losses From Certified Acts Of Terrorism', 'CG 21 70\nCG 21 87',
+     'Occurrence', 'Mandatory', 'No', 'Yes', 'No', 'X'],
+  ])
+  const dynDates = g('GL Forms Dynamic Data', [
+    ['DYNAMIC DATA'],
+    ['FORM NUMBER', 'FORM NAME', 'DYNAMIC FIELD NAME', 'DATA TYPE', 'REPEATING FIELD',
+     'EFFECTIVE DATE OF DYNAMIC FIELD', 'EXPIRATION DATE OF DYNAMIC FIELD', 'NOTES'],
+    ['CG 00 40', 'Pollution Form', 'Aggregate Limit', 'Currency', 'No', '2017-06-01', '9999-12-31', 'n'],
+  ])
+  const p = mapIsoWorkbook([fwTwoForm, dynDates])
+
+  it('takes formNumbers only from FORM NUMBER(S), never the COVERAGE FORM(S) title column', () => {
+    const c = p.coverages.find(cv => cv.refId === 'GL.COV.001')!
+    expect(c.data['formNumbers']).toEqual(['CG 21 70', 'CG 21 87'])
+    const fwUnmapped = p.summary.unmappedColumns.find(u => u.sheet === 'GL Product Framework')
+    expect(fwUnmapped?.columns).toContain('COVERAGE FORM(S)') // surfaced, not merged in
+  })
+
+  it('surfaces (never silently drops) unconsumed Dynamic Data columns', () => {
+    const dynUnmapped = p.summary.unmappedColumns.find(u => u.sheet === 'GL Forms Dynamic Data')
+    expect(dynUnmapped?.columns).toEqual(expect.arrayContaining([
+      'EFFECTIVE DATE OF DYNAMIC FIELD', 'EXPIRATION DATE OF DYNAMIC FIELD',
+    ]))
+  })
+})
+
 describe('mapIsoWorkbook — summary', () => {
   it('reports counts, recognized sheets and unmapped columns', () => {
     expect(plan.summary.counts).toMatchObject({

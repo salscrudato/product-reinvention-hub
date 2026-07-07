@@ -431,10 +431,15 @@ function parseDynamicFields(grid: IsoGrid | undefined, ctx: Ctx): Record<string,
       name: fieldName,
       dataType: mapDynType('dataType' in col ? (cells[col['dataType']] ?? null) : null),
       repeating: isYes('repeating' in col ? (cells[col['repeating']] ?? null) : null),
+      // The ISO GL template carries no LIST-type fields and no options column; a
+      // future template that does would map here. Empty ≠ dropped.
       options: [],
       notes: 'notes' in col ? clean(cells[col['notes']] ?? null) || undefined : undefined,
     })
   }
+  // Surface columns this sheet carries but the DynamicField model doesn't consume
+  // (e.g. effective/expiration date) — same transparency every other parser gives.
+  ctx.recordUnmapped(grid.sheet, header, new Set(Object.values(col)))
   return out
 }
 
