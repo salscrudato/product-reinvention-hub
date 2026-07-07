@@ -9,6 +9,7 @@ import { useProductCtx } from '../../context/useProductCtx'
 import { Skeleton } from '../../components/ui'
 import { IconWarning, IconAlertCircle, IconArrowRight, IconClose } from '../../components/ui/icons'
 import { CoverageCollection } from '../../components/product/CoverageCollection'
+import { ProductSummaryDashboard } from '../../components/product/ProductSummaryDashboard'
 import { computeProductFindings, type Finding } from '../../lib/productHealth'
 import { resolveLob } from '@pf/shared'
 
@@ -73,6 +74,8 @@ export default function ProductOverview() {
           onDismiss={() => setDismissed(true)}
         />
       )}
+
+      <ProductSummaryDashboard />
 
       <div className="flex items-baseline justify-between">
         <h2 className="text-[15px] font-semibold text-text tracking-tight">Coverages</h2>
