@@ -186,7 +186,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-5 py-4">
+              <div className="flex flex-col gap-5 py-4" role="log" aria-live="polite" aria-label="Conversation">
                 {messages.map((m, i) => (
                   <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                     <div className={m.role === 'user'
@@ -204,7 +204,7 @@ export default function Home() {
                         </div>
                       )}
                       {m.role === 'assistant'
-                        ? <div className="text-sm text-text"><RichText text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
+                        ? <div className="text-sm text-text"><RichText text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span aria-hidden="true" className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
                         : m.text}
                     </div>
                   </div>
