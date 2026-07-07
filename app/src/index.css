@@ -14,7 +14,10 @@
   --color-border-strong: rgba(19,19,26,.12);
   --color-text:        #131318;
   --color-dim:         #5B5C6B;
-  --color-faint:       #8E90A0;
+  /* Third text tier — the faintest legible grey. Darkened to clear WCAG AA (≥4.5:1
+     on page/surface/raised) so hint text, legends, timestamps and placeholders
+     stay readable; still visibly lighter than `dim` to preserve the hierarchy. */
+  --color-faint:       #6B6D7E;
 
   /* Accent — Accenture-inspired violet. `accent` reads AA (6.1:1) on white for
      text/icons/borders; `bright` is the signature stop (glows + gradient start);
