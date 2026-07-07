@@ -105,6 +105,7 @@ export default function ProductCoverages() {
         <div className="relative flex-1 min-w-[200px]">
           <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search coverages by name or code…"
+            aria-label="Search coverages"
             className="w-full h-9 pl-9 pr-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25" />
         </div>
         <ViewToggle mode={view} onChange={setViewPersist} />

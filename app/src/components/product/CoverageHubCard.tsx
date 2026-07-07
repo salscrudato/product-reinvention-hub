@@ -57,7 +57,7 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
             </div>
           </div>
           {canEdit && (
-            <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
               <Tooltip content="Edit coverage">
                 <button onClick={() => onEdit(cov)} aria-label={`Edit ${cov.name}`}
                   className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-accent hover:bg-accent-soft transition-colors">
