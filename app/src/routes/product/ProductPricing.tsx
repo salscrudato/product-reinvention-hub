@@ -162,8 +162,10 @@ function TracePanel({ trace, finalPremium, changedStepIds, editableFor, onEditTa
     URL.revokeObjectURL(url)
   }
 
+  // Real tab semantics (role="tab" + aria-selected) — the parent is a role="tablist",
+  // so a screen reader announces "tab, selected" rather than the mismatched "button, pressed".
   const seg = (v: 'flow' | 'table', icon: React.ReactNode, label: string) => (
-    <button onClick={() => setView(v)} aria-pressed={view === v}
+    <button onClick={() => setView(v)} role="tab" aria-selected={view === v}
       className={`inline-flex items-center gap-1.5 px-2.5 h-7 rounded-[7px] text-xs font-medium transition-colors cursor-pointer ${view === v ? 'bg-surface text-accent shadow-[var(--shadow-card)]' : 'text-dim hover:text-text'}`}>
       {icon}{label}
     </button>
@@ -324,6 +326,10 @@ export default function ProductPricing() {
   }, [ratingProgram, rtTables, canEdit])
   const editableFor = (stepId: string): EditableStep | null => editableByStepId.get(stepId) ?? null
 
+  // Whether the rating tables have actually arrived — lets the trace pane tell "loading"
+  // apart from "evaluation failed" (both leave result === null).
+  const tablesReady = Object.keys(rtTables).length > 0 && Object.keys(ldTables).length > 0
+
   if (loading) return <div className="grid grid-cols-1 lg:grid-cols-2 gap-5"><Skeleton className="h-[500px]" /><Skeleton className="h-[500px]" /></div>
 
   return (
@@ -353,10 +359,18 @@ export default function ProductPricing() {
 
       {/* Right — trace */}
       <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
-        {!ratingProgram || !result ? (
+        {!ratingProgram ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-faint">
-            <IconRefresh size={24} className={!ratingProgram ? '' : 'animate-spin'} />
-            <span className="text-sm">{!ratingProgram ? 'No rating program found' : 'Loading tables…'}</span>
+            <IconRefresh size={24} />
+            <span className="text-sm">No rating program found</span>
+          </div>
+        ) : !result ? (
+          // Tables still loading vs. a genuine evaluation failure are different states — the
+          // spinner only spins while data is in-flight; a failed evaluate() says so honestly
+          // instead of a forever-spinner that implies "still loading".
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-faint">
+            <IconRefresh size={24} className={tablesReady ? '' : 'animate-spin'} />
+            <span className="text-sm">{tablesReady ? 'Couldn’t evaluate these inputs — adjust and retry' : 'Loading tables…'}</span>
           </div>
         ) : (
           <TracePanel trace={result.trace} finalPremium={result.finalPremium}

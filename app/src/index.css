@@ -28,7 +28,13 @@
   --color-accent-soft:   rgba(139,31,224,.08);
   --color-accent-line:   rgba(139,31,224,.22);
 
-  --color-good:        #059669;
+  /* Success green — darkened from #059669 (3.4–3.8:1, below WCAG AA on every
+     surface) to clear AA as *body text*, not just as icons/dots: it now reads
+     4.96–5.48:1 on page/surface/raised. Batch-2 surfaces (Rules "No violations",
+     the Admin audit before/after diff, Claims) render it as small text, so the
+     earlier "icons-only, fix before body copy" caveat had to be resolved. Still a
+     recognisable emerald and distinct from the violet accent. */
+  --color-good:        #047857;
   --color-warn:        #B45309;
   --color-danger:      #DC2626;
   --color-info:        #2563EB;

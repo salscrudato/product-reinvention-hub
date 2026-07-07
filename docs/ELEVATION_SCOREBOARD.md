@@ -37,18 +37,18 @@ Score legend per cell: **0** absent · **1** poor · **2** weak · **3** compete
 | Products | `/app/products` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 5 | 5 | 5 | 4.5 | **4.80** | ✅ Batch-1 (+ framework tree). **Fixed:** domain-truth — card showed a fabricated `50` when `allStates` → now "All states"; motion — added `rise-in` stagger to match the Coverage grid; a11y — search input labelled. Drafts can't leak (LAUNCHED-only). |
 | Product › Overview | `/app/products/:id/overview` | | | | | | | | | | | | `routes/product/ProductOverview.tsx`; health, governance. |
 | Product › Coverages | `.../coverages` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 5 | 5 | 5 | 4.5 | **4.80** | ✅ Batch-1 (coverage detail). **Fixed:** affordance/a11y — edit/delete revealed on hover only (keyboard users tabbed onto invisible controls) → now `focus-within` too; search labelled. Live counts + refId chips are canonical. |
-| Product › Forms | `.../forms` | | | | | | | | | | | | `ProductForms.tsx`; form-number chips, attachment rules. |
-| Product › Pricing | `.../pricing` | | | | | | | | | | | | `ProductPricing.tsx`; live rating trace ($1,528), SVG export. |
+| Product › Forms | `.../forms` | 4.5 | 5 | 4.5 | 4.5 | 4.5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | **4.60** | ✅ Batch-2. **Fixed weakest (affordance/a11y):** the detail Drawer opened on **mouse-click only** — keyboard/SR users were locked out. Rows are now `role="button"` + `tabIndex=0` + Enter/Space + `aria-label`, with a contained focus ring; table wrapped in `overflow-x-auto`. Two-way coverage↔form links; AI descriptions cached + cited. iconography 4.5: "Dyn" column uses a ✓/— text convention. |
+| Product › Pricing | `.../pricing` | 5 | 5 | 4.5 | 4.5 | 5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.80** | ✅ Batch-2. **Fixed weakest (states + a11y):** `!result` showed a forever-spinning "Loading tables…" even when `evaluate()` had *failed* → now distinguishes tables-loading from an eval failure ("Couldn't evaluate these inputs"); trace-view toggle was `aria-pressed` buttons inside a `role="tablist"` → now real `role="tab"`/`aria-selected`. Spring premium, SVG export == on-screen, **$1,528** canary intact. color/depth 4.5: SVG export hard-codes `#F7F7FA` (allowed serialised exception). |
 | Product › States | `.../states` | 4.5 | 4.5 | 4.5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | 5 | 4.5 | **4.60** | ✅ Batch-1 (states map). **Fixed:** iconography — grid chips used a `⚡` emoji → now the same bespoke amber bolt badge as the map/legend; domain-truth — peril follows the *state* (coastal), not selection, so chips now badge every coastal footprint state exactly as the map does; a11y — chips gained `aria-pressed` + descriptive labels. |
-| Product › Rules | `.../rules` | | | | | | | | | | | | `ProductRules.tsx`; RuleBuilder, condition/outcome. |
+| Product › Rules | `.../rules` | 5 | 5 | 4.5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | 5 | 4.5 | **4.70** | ✅ Batch-2. **Fixed weakest (a11y):** the "No violations — this submission is valid" line was green **body text** on `--color-good #059669` (**3.4:1, below AA**) → token darkened to `#047857` (**≈5:1**, cross-cutting; see below). Runs the *shared* rules engine; every card's outcome is derived from that one run; the composer's grounding guard re-validates every coverage/form/table ref before `mutate()`. iconography 4.5: a lone "coastal ✓" text glyph in a label. |
 | Explorer | `/app/explorer` | 5 | 5 | 5 | 5 | 4.5 | 5 | 5 | 4.5 | 5 | 5 | **4.90** | ✅ Batch-1. The a11y reference surface — roving tabindex, ↑↓/→/←/Home/End, `aria-current`, labelled search, reduced-motion. No code change needed beyond the AA `--color-faint` lift. `states` 4.5: subscribe-error path isn't surfaced (per-column loading/empty are). |
-| Tasks | `/app/tasks` | | | | | | | | | | | | `routes/Tasks.tsx`; four lanes, dnd-kit board. |
-| News | `/app/news` | | | | | | | | | | | | `routes/News.tsx`; market-news scout + NL prefs. |
-| Claims | `/app/claims` | | | | | | | | | | | | `routes/Claims.tsx`; grounded coverage-analysis workspace (real). |
-| Data Dictionary | `/app/dictionary` | | | | | | | | | | | | `routes/Dictionary.tsx`; canonical field defs, usedIn. |
+| Tasks | `/app/tasks` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.75** | ✅ Batch-2. **No fix required — all axes ≥4.5.** Board/List/Project views; dnd-kit `KeyboardSensor` makes cards keyboard-draggable (role/tabindex/aria from `useDraggable`); filters labelled + `aria-pressed`; `ViewSwitch` is a proper `role=tab`/`aria-selected` group; the move `mutate()` is EDITOR+ with a conflict toast. states 4.5: loading + empty ship, subscribe-error isn't surfaced (same honest caveat as Explorer). Incidentally lifted by the `--color-good` AA fix. |
+| News | `/app/news` | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.80** | ✅ Batch-2. **No fix required — all axes ≥4.5.** Portfolio-relevance ranking with provenance badges (which LOBs/states matched); `role="feed"`; labelled search + clear; preference textarea labelled + `aria-describedby`. states 4.5: loading + empty(query/no-news) ship, no subscribe-error path. a11y 4.5: `role="feed"` children are anchors, not `role="article"` (minor). |
+| Claims | `/app/claims` | 5 | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 5 | 5 | 4.5 | **4.85** | ✅ Batch-2. **No fix required — all axes ≥4.5.** Grounded coverage-copilot: SSE stream with honest tool chips, deterministic `DeterminationCard`, **refuses + asks for a rephrase on an uncited verdict** (defence-in-depth over the server guard), `role="log"`/`aria-live` transcript, composer disabled until the policy bytes load, form-read error surfaced. iconography 4.5: a ⚠️ glyph only in transient streamed error text (not chrome). a11y 4.5: token-by-token log can be verbose under SR (same caveat as Home). |
+| Data Dictionary | `/app/dictionary` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | 5 | 5 | 5 | **4.80** | ✅ Batch-2. **No fix required — all axes ≥4.5; the batch-2 `states` reference:** loading / error / empty(query-aware) / corpus-loading / corpus-error all ship. Live "used in" back-refs (never a stored snapshot) deep-link to the exact tab; refId cite hints; type filters `aria-pressed` + focus-visible; citation focus-flash scroll. affordance 4.5: delete uses a native `window.confirm` (accessible + functional, just not the on-brand Dialog). |
 | Feedback | `/app/feedback` | | | | | | | | | | | | `routes/Feedback.tsx`; ⌘. capture, one-vote, priority lanes. |
-| Admin | `/app/admin` | | | | | | | | | | | | `routes/Admin.tsx`; users/roles, audit trail, settings. |
-| Builder / Drafts | `/app/builder` | | | | | | | | | | | | **STUB** — `StubRoute` "AI Builder … coming soon" (App.tsx:67). |
+| Admin | `/app/admin` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 5 | 5 | 4.5 | 4.5 | **4.75** | ✅ Batch-2. **Fixed weakest (domain-truth):** the share-link delete wrote a **hard-coded `{uid:'admin', name:'Admin'}`** into the audit trail → now attributes to the *real* acting admin (uid/name/email). Five tabs each with loading + empty states; the audit explorer correlates events → version diffs (before/after); ADMIN-only guard. motion 4.5: utilitarian console — transitions are functional by design. The `--color-good` AA fix also lifts the audit diff's green "after" values (small body text). |
+| Builder / Drafts | `/app/builder` | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.80** | ✅ Batch-2. **Code wins:** the instrument called this a STUB, but `builder` → a full Builder/Drafts workbench (App.tsx:67). **No fix required — all axes ≥4.5.** Four grounded entry points (AI scaffold / import / clone / blank); a draft can't reach Products without the typed-confirmation promote (LAUNCHED-only); lineage + refId + live counts; focus-visible outlines throughout; canEdit-aware empty copy. motion 4.5: hover lift only, no entrance stagger (intentional restraint). |
 
 ### Additional real surfaces (not in the base list, but user-facing)
 
@@ -94,6 +94,58 @@ badged by *state* not selection, `aria-pressed` chips.
   the shadow *tokens* in `index.css` are themselves rgba). Every *semantic solid* colour
   uses a `var(--color-*)` token, so the token invariant holds in spirit; alpha-blended
   depth effects are the tolerated exception. Not docked, but noted so it's a conscious call.
+
+## Batch 2 — scoring pass (Pricing · Rules · Tasks · Builder/Drafts · News · Data Dictionary · Claims · Admin · Forms)
+
+Scored against live code at `60b9891`, hostile-reviewer stance, then the honestly-weakest
+axis on each surface was fixed for real (not cosmetically) and the gate re-run green
+(typecheck · lint · **136 tests** incl. the HO-3 **$1,528** *and* GL **$2,789** canaries ·
+build). Every axis on every batch-2 surface now sits **≥ 4.5**. As in batch 1 the baseline
+was already high, so the genuine sub-4.5 axes clustered on **a11y**, **states** and
+**domain-truth**; four surfaces had a real defect, five were already clean and were **left
+unchanged** (no decorative churn).
+
+**Cross-cutting fix (lifts a11y on Rules, Admin, Claims, Tasks, News + everywhere green text appears):**
+`--color-good` was `#059669` — **3.41–3.77:1** on page/surface/raised, i.e. *below WCAG AA*.
+The batch-1 note tolerated it as "icons/dots only — fix before body copy"; batch-2 **does**
+render it as body copy (Rules "No violations…", the Admin audit before/after diff, Claims).
+Darkened to `#047857` (**4.96–5.48:1**, and **4.88:1** on the Badge green tint, whose rgba was
+updated to match) — AA-clear as text while still a recognisable emerald distinct from the
+violet accent. All hex lives in `index.css` / the one Badge tint (token invariant respected).
+
+**Per-surface weakest-axis fixes (real, verified):**
+- **Forms — affordance/a11y:** detail Drawer opened on mouse-click only; rows are now
+  `role="button"` + `tabIndex` + Enter/Space + `aria-label` (contained focus ring) and the
+  table scrolls horizontally on narrow viewports.
+- **Pricing — states + a11y:** a null `evaluate()` result no longer masquerades as a
+  forever "Loading tables…" spinner (loading vs. eval-failure are now distinct); the
+  trace-view toggle became real `role="tab"`/`aria-selected` instead of `aria-pressed`
+  inside a `role="tablist"`.
+- **Rules — a11y:** the green "No violations" body text (see cross-cutting fix).
+- **Admin — domain-truth:** the share-link delete now records the real acting admin in the
+  audit trail instead of a hard-coded `{uid:'admin'}`.
+
+**Left unchanged (already ≥4.5, hostile-checked):** Tasks, Builder/Drafts, News, Data
+Dictionary, Claims. Each is documented in its row; the highest remaining nits are honest
+4.5s, not defects.
+
+**Honest caveats (a hostile reviewer's likely pushback, and our answer):**
+- **`--color-danger` (#DC2626) is 4.37:1 on `raised`** (4.83 on white, 4.52 on page). It is
+  used as small body text (rule violations, audit "before" diffs) but almost always on
+  white/near-white surfaces where it clears AA; it does **not** currently sit on `raised`.
+  Left unchanged, flagged so a future pass darkens it before any raised-surface use.
+- **iconography 4.5 on Forms / Rules / Claims:** a `✓`/`—` table convention, a "coastal ✓"
+  label glyph, and a `⚠️` in *transient streamed error text* respectively — none are UI
+  chrome, so they weren't swapped for in-house icons (unlike batch-1's persistent `⚡` badge,
+  which was). A conscious call, not an oversight.
+- **states 4.5 on Tasks / News / Forms:** loading + empty ship, but an adapter
+  *subscribe-error* path isn't surfaced (identical to Explorer's batch-1 caveat).
+- **Dictionary affordance 4.5:** delete uses a native `window.confirm` — accessible and
+  functional, just not the on-brand `Dialog`. Not docked to <4.5 because it works for
+  keyboard + SR users; noted as the one obvious future polish.
+- **No batch-2 change touched `shared/rating` or `shared/types`.** The fixes are CSS-token,
+  ARIA, state-branch and audit-actor edits — structurally incapable of moving a premium.
+  The HO-3 **$1,528** and GL **$2,789** canaries are re-run green regardless.
 
 ## Baseline divergences (code vs. archived docs)
 

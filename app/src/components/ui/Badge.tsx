@@ -8,7 +8,7 @@ type BadgeColor = 'default' | 'accent' | 'good' | 'warn' | 'danger' | 'blue' | '
 const badgeColors: Record<BadgeColor, string> = {
   default: 'bg-raised text-dim',
   accent:  'text-white',
-  good:    'bg-[rgba(5,150,105,.1)] text-good',
+  good:    'bg-[rgba(4,120,87,.1)] text-good',
   warn:    'bg-[rgba(180,83,9,.1)] text-warn',
   danger:  'bg-[rgba(220,38,38,.1)] text-danger',
   blue:    'bg-[rgba(37,99,235,.08)] text-info',

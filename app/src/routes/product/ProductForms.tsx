@@ -198,6 +198,7 @@ export default function ProductForms() {
         <EmptyState icon={<IconForm size={32} />} title={covFilter ? `No forms attached to ${covFilter.name}` : 'No forms'} description={covFilter ? undefined : 'Forms appear here once the product is seeded.'} compact />
       ) : (
         <div className="bg-surface rounded-[14px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-raised text-xs font-medium text-dim uppercase tracking-wide" style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -209,7 +210,10 @@ export default function ProductForms() {
             <tbody>
               {filtered.map(form => (
                 <tr key={form.id} onClick={() => setSelected(form)}
-                  className="cursor-pointer hover:bg-raised transition-colors"
+                  tabIndex={0} role="button"
+                  aria-label={`Open ${form.number} — ${form.name}`}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(form) } }}
+                  className="cursor-pointer hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
                   style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <td className="px-4 py-3"><RefChip id={form.number} /></td>
                   <td className="px-4 py-3 max-w-[200px]">
@@ -226,6 +230,7 @@ export default function ProductForms() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

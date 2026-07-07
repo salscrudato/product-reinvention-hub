@@ -180,6 +180,7 @@ function UsersTab() {
 // ─── Share links ─────────────────────────────────────────────────────────────
 
 function SharesTab() {
+  const { user } = useUser()
   const [shares, setShares] = useState<ShareDoc[] | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -191,9 +192,12 @@ function SharesTab() {
   }, [])
 
   async function deleteShare(id: string) {
+    if (!user) return
     setBusy(true)
     try {
-      await adapter.db.mutate({ op: 'delete', path: `shares/${id}`, entityType: 'share', actor: { uid: 'admin', name: 'Admin' } })
+      // Attribute the deletion to the real acting admin so the audit trail is truthful —
+      // not a hard-coded "Admin" actor. (Only ADMINs reach this tab; the guard is belt-and-braces.)
+      await adapter.db.mutate({ op: 'delete', path: `shares/${id}`, entityType: 'share', actor: { uid: user.uid, name: user.name ?? user.email ?? 'Admin' } })
       toast.success('Share link deleted')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not delete share link')
