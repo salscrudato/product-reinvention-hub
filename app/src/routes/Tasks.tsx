@@ -9,16 +9,21 @@ import {
   type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core'
 import { toast } from 'sonner'
-import { IconCards, IconList, IconLayers, IconCheckSquare, IconFilter } from '../components/ui/icons'
+import { IconCards, IconList, IconLayers, IconCheckSquare, IconFilter, IconPlus, IconCheck, IconEdit, IconUsers } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
-import { Badge, Skeleton, EmptyState } from '../components/ui'
+import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
+import { TaskEditDialog } from '../components/tasks/TaskEditDialog'
 import type { Task, Product, TaskColumn } from '@pf/shared'
 
 type TaskDoc    = Task & { id: string }
 type ProductDoc = Product & { id: string }
-type ViewMode   = 'board' | 'list' | 'project'
+type ViewMode   = 'board' | 'list' | 'project' | 'people'
 type DueWindow  = 'any' | 'today' | 'week' | 'month'
+
+// Completed tasks sort to the bottom of any list, then by their manual order.
+const byDoneThenOrder = (a: TaskDoc, b: TaskDoc) =>
+  Number(!!a.done) - Number(!!b.done) || (a.order ?? 0) - (b.order ?? 0)
 
 const COLUMNS: { id: TaskColumn; label: string }[] = [
   { id: 'IDEATION',       label: 'Ideation & Design' },
@@ -72,26 +77,51 @@ function dueWindowRange(w: DueWindow): { from: number; to: number } | null {
 
 // ─── Card ────────────────────────────────────────────────────────────────────
 
-function CardBody({ task, productName }: { task: TaskDoc; productName?: string }) {
+// Stop pointer events from starting a drag when interacting with a card control.
+const stopDrag = (e: React.PointerEvent) => e.stopPropagation()
+
+function CompleteToggle({ task, onToggle }: { task: TaskDoc; onToggle: (t: TaskDoc) => void }) {
+  return (
+    <button onPointerDown={stopDrag} onClick={() => onToggle(task)}
+      aria-pressed={!!task.done} title={task.done ? 'Mark not done' : 'Mark done'}
+      className={`mt-0.5 w-[18px] h-[18px] rounded-[6px] flex items-center justify-center shrink-0 border transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${task.done ? 'text-white' : 'text-transparent hover:border-accent'}`}
+      style={{ background: task.done ? 'var(--gradient-accent)' : 'transparent', borderColor: task.done ? 'transparent' : 'var(--color-border-strong)' }}>
+      <IconCheck size={11} aria-hidden="true" />
+    </button>
+  )
+}
+
+function CardBody({ task, productName, canEdit, onToggle, onEdit }: {
+  task: TaskDoc; productName?: string; canEdit?: boolean
+  onToggle?: (t: TaskDoc) => void; onEdit?: (t: TaskDoc) => void
+}) {
   const due  = sla(toMillis(task.dueAt))
   const done  = task.checklist?.filter(c => c.done).length ?? 0
   const total = task.checklist?.length ?? 0
   return (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-sm font-medium text-text leading-snug">{task.title}</span>
+      <div className="flex items-start gap-2">
+        {canEdit && onToggle && <CompleteToggle task={task} onToggle={onToggle} />}
+        <span className={`text-sm font-medium leading-snug flex-1 ${task.done ? 'text-faint line-through' : 'text-text'}`}>{task.title}</span>
         {task.assignee && (
           <span className="shrink-0 w-6 h-6 rounded-full text-[10px] font-semibold text-white flex items-center justify-center"
             style={{ background: 'var(--gradient-accent)' }} title={task.assignee.name}>
             {initials(task.assignee.name)}
           </span>
         )}
+        {canEdit && onEdit && (
+          <button onPointerDown={stopDrag} onClick={() => onEdit(task)} title="Edit task" aria-label={`Edit ${task.title}`}
+            className="shrink-0 w-6 h-6 rounded-[6px] flex items-center justify-center text-faint hover:text-accent hover:bg-accent-soft transition-colors">
+            <IconEdit size={13} aria-hidden="true" />
+          </button>
+        )}
       </div>
       <div className="flex items-center flex-wrap gap-1.5">
         {productName && <Badge label={productName} color="purple" />}
-        {due && <Badge label={due.label} color={due.color} />}
+        {task.durationDays != null && <Badge label={`${task.durationDays}d`} />}
+        {task.done ? <Badge label="Done" color="good" /> : due && <Badge label={due.label} color={due.color} />}
       </div>
-      {total > 0 && (
+      {total > 0 && !task.done && (
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-raised overflow-hidden">
             <div className="h-full rounded-full transition-all"
@@ -104,23 +134,27 @@ function CardBody({ task, productName }: { task: TaskDoc; productName?: string }
   )
 }
 
-function DraggableCard({ task, productName, canEdit }: { task: TaskDoc; productName?: string; canEdit: boolean }) {
+function DraggableCard({ task, productName, canEdit, onToggle, onEdit }: {
+  task: TaskDoc; productName?: string; canEdit: boolean
+  onToggle: (t: TaskDoc) => void; onEdit: (t: TaskDoc) => void
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id, disabled: !canEdit })
   return (
     <div
       ref={setNodeRef} {...listeners} {...attributes}
-      className={`bg-surface rounded-[12px] p-3 flex flex-col gap-2 ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''}`}
+      className={`bg-surface rounded-[12px] p-3 flex flex-col gap-2 transition-opacity ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''} ${task.done ? 'opacity-60' : ''}`}
       style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
     >
-      <CardBody task={task} productName={productName} />
+      <CardBody task={task} productName={productName} canEdit={canEdit} onToggle={onToggle} onEdit={onEdit} />
     </div>
   )
 }
 
 // ─── Board column ────────────────────────────────────────────────────────────
 
-function BoardColumn({ id, label, tasks, nameFor, canEdit }: {
+function BoardColumn({ id, label, tasks, nameFor, canEdit, onToggle, onEdit }: {
   id: TaskColumn; label: string; tasks: TaskDoc[]; nameFor: (t: TaskDoc) => string | undefined; canEdit: boolean
+  onToggle: (t: TaskDoc) => void; onEdit: (t: TaskDoc) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id })
   return (
@@ -134,9 +168,60 @@ function BoardColumn({ id, label, tasks, nameFor, canEdit }: {
         className={`flex flex-col gap-2 rounded-[14px] p-2 min-h-[120px] flex-1 transition-colors ${isOver ? 'bg-accent-soft' : 'bg-raised/50'}`}
         style={{ border: isOver ? '1px dashed var(--color-accent)' : '1px solid transparent' }}
       >
-        {tasks.map(t => <DraggableCard key={t.id} task={t} productName={nameFor(t)} canEdit={canEdit} />)}
+        {tasks.map(t => <DraggableCard key={t.id} task={t} productName={nameFor(t)} canEdit={canEdit} onToggle={onToggle} onEdit={onEdit} />)}
         {tasks.length === 0 && <div className="text-xs text-faint text-center py-6">Nothing here</div>}
       </div>
+    </div>
+  )
+}
+
+// ─── People view — monitor tasks by assignee ───────────────────────────────────
+
+function PeopleView({ tasks, nameFor }: { tasks: TaskDoc[]; nameFor: (t: TaskDoc) => string | undefined }) {
+  const groups = useMemo(() => {
+    const map = new Map<string, { name: string; tasks: TaskDoc[] }>()
+    for (const t of tasks) {
+      const key = t.assignee?.uid ?? '__unassigned__'
+      const name = t.assignee?.name ?? 'Unassigned'
+      if (!map.has(key)) map.set(key, { name, tasks: [] })
+      map.get(key)!.tasks.push(t)
+    }
+    return [...map.values()].sort((a, b) =>
+      a.name === 'Unassigned' ? 1 : b.name === 'Unassigned' ? -1 : a.name.localeCompare(b.name))
+  }, [tasks])
+
+  if (groups.length === 0) return null
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {groups.map(g => {
+        const doneCount = g.tasks.filter(t => t.done).length
+        const pct = Math.round((doneCount / g.tasks.length) * 100)
+        return (
+          <section key={g.name} className="bg-surface rounded-[14px] overflow-hidden flex flex-col" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'var(--gradient-accent)' }}>
+                {initials(g.name)}
+              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-semibold text-text truncate">{g.name}</span>
+                <span className="text-[11px] text-faint tabular-nums">{doneCount}/{g.tasks.length} done · {pct}%</span>
+              </div>
+            </div>
+            <div className="flex flex-col">
+              {[...g.tasks].sort(byDoneThenOrder).map(t => {
+                const due = sla(toMillis(t.dueAt))
+                return (
+                  <div key={t.id} className={`flex items-center gap-2 px-4 py-2 ${t.done ? 'opacity-60' : ''}`} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <span className={`flex-1 text-[13px] truncate ${t.done ? 'text-faint line-through' : 'text-text'}`}>{t.title}</span>
+                    {nameFor(t) && <Badge label={nameFor(t)!} color="purple" />}
+                    {t.done ? <Badge label="Done" color="good" /> : due && <Badge label={due.label} color={due.color} />}
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }
@@ -298,6 +383,7 @@ const VIEWS: { id: ViewMode; label: string; Icon: typeof IconCards }[] = [
   { id: 'board',   label: 'Board',   Icon: IconCards  },
   { id: 'list',    label: 'List',    Icon: IconList   },
   { id: 'project', label: 'Project', Icon: IconLayers },
+  { id: 'people',  label: 'People',  Icon: IconUsers  },
 ]
 
 function ViewSwitch({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode) => void }) {
@@ -319,10 +405,12 @@ function ViewSwitch({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode
 export default function Tasks() {
   const { user, profile } = useUser()
   const canEdit = profile?.role === 'EDITOR' || profile?.role === 'ADMIN'
+  const actor = user ? { uid: user.uid, name: user.name ?? user.email ?? 'User' } : null
 
   const [tasks,    setTasks]    = useState<TaskDoc[] | null>(null)
   const [products, setProducts] = useState<ProductDoc[]>([])
   const [view,     setView]     = useState<ViewMode>('board')
+  const [editor,   setEditor]   = useState<{ task: TaskDoc | null } | null>(null)
 
   // ── filter state ──
   const [query,       setQuery]       = useState('')
@@ -372,9 +460,22 @@ export default function Tasks() {
   const byColumn = useMemo(() => {
     const map: Record<TaskColumn, TaskDoc[]> = { IDEATION: [], BUILD_FILE: [], TEST_APPROVE: [], LAUNCH_MONITOR: [] }
     for (const t of filtered) (map[t.column] ?? map.IDEATION).push(t)
-    for (const col of COLUMNS) map[col.id].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    for (const col of COLUMNS) map[col.id].sort(byDoneThenOrder)   // completed tasks fall to the bottom
     return map
   }, [filtered])
+
+  // Toggle completion — done tasks grey out and sort to the bottom of their column.
+  async function toggleDone(task: TaskDoc) {
+    if (!actor) return
+    try {
+      await adapter.db.mutate({
+        op: 'update', path: `tasks/${task.id}`, data: { done: !task.done },
+        entityType: 'task', productId: task.productId, actor, expectedRev: task.rev,
+      })
+    } catch (err) {
+      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Update failed')
+    }
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -424,7 +525,14 @@ export default function Tasks() {
           <h1 className="text-xl font-bold text-text">Tasks</h1>
           <p className="text-sm text-dim">Every product from ideation to launch.</p>
         </div>
-        <ViewSwitch view={view} onChange={setView} />
+        <div className="flex items-center gap-2">
+          <ViewSwitch view={view} onChange={setView} />
+          {canEdit && (
+            <Button variant="primary" size="sm" onClick={() => setEditor({ task: null })}>
+              <IconPlus size={14} aria-hidden="true" />New task
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -517,7 +625,8 @@ export default function Tasks() {
           <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0">
             {COLUMNS.map(col => (
               <BoardColumn key={col.id} id={col.id} label={col.label}
-                tasks={byColumn[col.id]} nameFor={nameFor} canEdit={canEdit} />
+                tasks={byColumn[col.id]} nameFor={nameFor} canEdit={canEdit}
+                onToggle={toggleDone} onEdit={t => setEditor({ task: t })} />
             ))}
           </div>
           <DragOverlay>
@@ -531,8 +640,20 @@ export default function Tasks() {
         </DndContext>
       ) : view === 'list' ? (
         <ListView byColumn={byColumn} nameFor={nameFor} />
+      ) : view === 'people' ? (
+        <PeopleView tasks={filtered} nameFor={nameFor} />
       ) : (
         <ProjectView products={products} tasks={filtered} />
+      )}
+
+      {editor && actor && (
+        <TaskEditDialog
+          task={editor.task}
+          products={products.map(p => ({ id: p.id, name: p.name }))}
+          assignees={assignees}
+          actor={actor}
+          onClose={() => setEditor(null)}
+        />
       )}
     </div>
   )

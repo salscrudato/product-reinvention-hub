@@ -317,13 +317,17 @@ export interface Comment {
 export type TaskColumn = 'IDEATION' | 'BUILD_FILE' | 'TEST_APPROVE' | 'LAUNCH_MONITOR'
 
 export interface Task extends GovernanceBlock {
-  title:      string
-  column:     TaskColumn
-  productId?: string
-  assignee?:  { uid: string; name: string }
-  dueAt?:     unknown
-  checklist:  { t: string; done: boolean }[]
-  order:      number
+  title:         string
+  column:        TaskColumn
+  productId?:    string
+  assignee?:     { uid: string; name: string }
+  dueAt?:        unknown
+  checklist:     { t: string; done: boolean }[]
+  order:         number
+  /** Completed tasks grey out and sort to the bottom of their column. */
+  done?:         boolean
+  /** Planned effort in working days (e.g. "market research" = 5). Illustrative timing. */
+  durationDays?: number
 }
 
 // ─── Feedback ────────────────────────────────────────────────────────────────
