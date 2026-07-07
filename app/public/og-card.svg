@@ -1,46 +1,91 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" font-family="Inter, system-ui, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" font-family="'Inter', 'Segoe UI', system-ui, sans-serif">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#F7F7FA"/>
+    <linearGradient id="og-bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0C0914"/><stop offset="0.55" stop-color="#150F27"/><stop offset="1" stop-color="#0B0812"/>
     </linearGradient>
-    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#A100FF"/><stop offset="0.55" stop-color="#8B1FE0"/><stop offset="1" stop-color="#6D28D9"/>
+    <linearGradient id="og-brand" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#B24BFF"/><stop offset="0.5" stop-color="#8B1FE0"/><stop offset="1" stop-color="#6D28D9"/>
     </linearGradient>
-    <radialGradient id="aura" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="rgba(139,31,224,0.16)"/><stop offset="100%" stop-color="rgba(139,31,224,0)"/>
+    <radialGradient id="og-aura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(161,0,255,0.34)"/><stop offset="100%" stop-color="rgba(161,0,255,0)"/>
+    </radialGradient>
+    <radialGradient id="og-aura2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(122,0,230,0.20)"/><stop offset="100%" stop-color="rgba(122,0,230,0)"/>
+    </radialGradient>
+    <!-- Logo-mark gradients -->
+    <linearGradient id="og-mbg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A100FF"/><stop offset="0.5" stop-color="#8B1FE0"/><stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+    <linearGradient id="og-msheen" x1="4" y1="2" x2="20" y2="27" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity="0.24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="og-mcore" cx="0.5" cy="0.42" r="0.6">
+      <stop offset="55%" stop-color="#fff"/><stop offset="100%" stop-color="#fff" stop-opacity="0.9"/>
+    </radialGradient>
+    <radialGradient id="og-mglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.55"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="og-hubglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="rgba(178,75,255,0.55)"/><stop offset="100%" stop-color="rgba(178,75,255,0)"/>
     </radialGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <circle cx="980" cy="150" r="420" fill="url(#aura)"/>
+  <rect width="1200" height="630" fill="url(#og-bg)"/>
+  <circle cx="1010" cy="120" r="460" fill="url(#og-aura)"/>
+  <circle cx="120" cy="620" r="340" fill="url(#og-aura2)"/>
+
+  <!-- Ambient orbit motif (top-right) — the logo, oversized and quiet, for depth -->
+  <g transform="translate(980 232)" opacity="0.9">
+    <circle r="150" fill="url(#og-hubglow)"/>
+    <g transform="rotate(-24)" fill="none" stroke="#ffffff">
+      <ellipse rx="250" ry="128" stroke-opacity="0.10" stroke-width="2"/>
+      <ellipse rx="188" ry="96"  stroke-opacity="0.08" stroke-width="2"/>
+    </g>
+    <g transform="rotate(-24)">
+      <circle cx="250" cy="0" r="7" fill="#ffffff" fill-opacity="0.5"/>
+      <circle cx="-188" cy="0" r="5" fill="#ffffff" fill-opacity="0.32"/>
+    </g>
+    <circle r="7" fill="#ffffff" fill-opacity="0.65"/>
+  </g>
 
   <!-- Brand row -->
-  <g transform="translate(80, 80)">
-    <rect width="56" height="56" rx="14" fill="url(#brand)"/>
-    <g stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.92" transform="translate(28,28) scale(1.75)">
-      <line x1="0" y1="0" x2="0" y2="-8.4"/><line x1="0" y1="0" x2="7.6" y2="4.4"/><line x1="0" y1="0" x2="-7.6" y2="4.4"/>
+  <g transform="translate(84 88)">
+    <g transform="scale(2.625)">
+      <rect width="32" height="32" rx="8" fill="url(#og-mbg)"/>
+      <rect width="32" height="32" rx="8" fill="url(#og-msheen)"/>
+      <g transform="translate(16 16)">
+        <g transform="rotate(-24)">
+          <ellipse rx="10.6" ry="5.5" fill="none" stroke="#fff" stroke-opacity="0.9" stroke-width="1.9"/>
+          <circle cx="6.1" cy="-4.5" r="2.25" fill="#fff"/>
+        </g>
+        <circle r="6.3" fill="url(#og-mglow)"/>
+        <circle r="3.3" fill="url(#og-mcore)"/>
+      </g>
     </g>
-    <g fill="#fff" transform="translate(28,28) scale(1.75)">
-      <circle cx="0" cy="0" r="3.2"/><circle cx="0" cy="-9" r="2.3"/><circle cx="7.9" cy="4.5" r="2.3"/><circle cx="-7.9" cy="4.5" r="2.3"/>
-    </g>
-    <text x="76" y="37" font-size="26" font-weight="600" fill="#131318" letter-spacing="-0.5">Product Reinvention Hub</text>
+    <text x="106" y="56" font-size="31" font-weight="600" fill="#F4F2FA" letter-spacing="-0.4">Product Reinvention Hub</text>
   </g>
 
   <!-- Headline -->
-  <text x="80" y="330" font-size="82" font-weight="800" fill="#131318" letter-spacing="-2.5">Ship insurance</text>
-  <text x="80" y="422" font-size="82" font-weight="800" letter-spacing="-2.5">
-    <tspan fill="#131318">products </tspan><tspan fill="url(#brand)">faster.</tspan>
+  <text x="82" y="322" font-size="80" font-weight="800" fill="#FFFFFF" letter-spacing="-2.6">Reinvent insurance</text>
+  <text x="82" y="416" font-size="80" font-weight="800" letter-spacing="-2.6">
+    <tspan fill="#FFFFFF">products, </tspan><tspan fill="url(#og-brand)">faster.</tspan>
   </text>
 
   <!-- Subcopy -->
-  <text x="82" y="486" font-size="27" fill="#5B5C6B">AI-native product management for property &amp; casualty insurers.</text>
+  <text x="84" y="474" font-size="26" fill="#ABA7BF">The AI-native workspace for P&amp;C insurance product management.</text>
 
-  <!-- refId chips -->
-  <g font-family="'JetBrains Mono', monospace" font-size="18" fill="#8E90A0">
-    <g transform="translate(80,540)"><rect width="118" height="34" rx="17" fill="none" stroke="rgba(19,19,26,0.1)"/><text x="59" y="23" text-anchor="middle">HO.RU.006</text></g>
-    <g transform="translate(210,540)"><rect width="104" height="34" rx="17" fill="none" stroke="rgba(19,19,26,0.1)"/><text x="52" y="23" text-anchor="middle">HO 04 90</text></g>
-    <g transform="translate(326,540)"><rect width="112" height="34" rx="17" fill="none" stroke="rgba(19,19,26,0.1)"/><text x="56" y="23" text-anchor="middle">HO.RT.003</text></g>
-    <g transform="translate(450,540)"><rect width="150" height="34" rx="17" fill="none" stroke="rgba(19,19,26,0.1)"/><text x="75" y="23" text-anchor="middle">HO.COV.003.002</text></g>
+  <!-- Capability tags (no internal ids — clean, on-brand) -->
+  <g font-size="19" font-weight="500" fill="rgba(255,255,255,0.74)" text-anchor="middle">
+    <g transform="translate(84 516)"><rect width="128" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="64" y="26">Coverages</text></g>
+    <g transform="translate(224 516)"><rect width="96" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="48" y="26">Rating</text></g>
+    <g transform="translate(332 516)"><rect width="90" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="45" y="26">Forms</text></g>
+    <g transform="translate(434 516)"><rect width="88" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="44" y="26">Rules</text></g>
+    <g transform="translate(534 516)"><rect width="132" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="66" y="26">AI Copilot</text></g>
   </g>
+
+  <!-- URL -->
+  <text x="1116" y="556" text-anchor="end" font-size="20" fill="rgba(255,255,255,0.42)" letter-spacing="0.2">productreinvention.web.app</text>
+
+  <!-- Bottom brand hairline -->
+  <rect x="0" y="626" width="1200" height="4" fill="url(#og-brand)"/>
 </svg>

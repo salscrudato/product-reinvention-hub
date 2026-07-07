@@ -6,18 +6,23 @@
     <linearGradient id="prh-sheen" x1="6" y1="4" x2="24" y2="30" gradientUnits="userSpaceOnUse">
       <stop stop-color="#fff" stop-opacity="0.18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
     </linearGradient>
-    <radialGradient id="prh-core" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="55%" stop-color="#fff"/><stop offset="100%" stop-color="#fff" stop-opacity="0.85"/>
+    <radialGradient id="prh-core" cx="0.5" cy="0.42" r="0.6">
+      <stop offset="55%" stop-color="#fff"/><stop offset="100%" stop-color="#fff" stop-opacity="0.9"/>
+    </radialGradient>
+    <radialGradient id="prh-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.55"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <!-- Full-bleed gradient (no rounding) — the launcher applies its own mask -->
+  <!-- Full-bleed gradient (no rounding) — the launcher applies its own mask. Mark
+       scaled to 0.8 so it sits inside the maskable safe zone. -->
   <rect width="32" height="32" fill="url(#prh-bg)"/>
   <rect width="32" height="32" fill="url(#prh-sheen)"/>
-  <!-- Mark scaled to 0.8 so it sits inside the maskable safe zone -->
   <g transform="translate(16 16) scale(0.8)">
-    <path d="M0 -4 C3.6 -4.8 5.6 -7.8 4.8 -11 C4.5 -12.1 3.2 -12.4 2.2 -11.6 C0.4 -10.2 -0.6 -7 0 -4 Z" fill="#fff" transform="rotate(0)"/>
-    <path d="M0 -4 C3.6 -4.8 5.6 -7.8 4.8 -11 C4.5 -12.1 3.2 -12.4 2.2 -11.6 C0.4 -10.2 -0.6 -7 0 -4 Z" fill="#fff" fill-opacity="0.82" transform="rotate(120)"/>
-    <path d="M0 -4 C3.6 -4.8 5.6 -7.8 4.8 -11 C4.5 -12.1 3.2 -12.4 2.2 -11.6 C0.4 -10.2 -0.6 -7 0 -4 Z" fill="#fff" fill-opacity="0.66" transform="rotate(240)"/>
-    <circle r="2.7" fill="url(#prh-core)"/>
+    <g transform="rotate(-24)">
+      <ellipse rx="10.6" ry="5.5" fill="none" stroke="#fff" stroke-opacity="0.9" stroke-width="2.1"/>
+      <circle cx="6.1" cy="-4.5" r="2.25" fill="#fff"/>
+    </g>
+    <circle r="6.3" fill="url(#prh-glow)"/>
+    <circle r="3.3" fill="url(#prh-core)"/>
   </g>
 </svg>
