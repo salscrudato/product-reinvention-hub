@@ -12,30 +12,33 @@ import { Dialog, Button } from '../ui'
 import { IconStates, IconClose } from '../ui/icons'
 import { StateTileMap } from './StateTileMap'
 import { resolveLob } from '@pf/shared'
-import { US_TILE_GRID } from '../../lib/geo/usTileGrid'
 import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
-const ALL_TILE_STATES = Object.keys(US_TILE_GRID)
-
 export function CoverageStatesDialog({ cov, onClose }: { cov: WithId<Coverage>; onClose: () => void }) {
   const { pid, product } = useProductCtx()
-  const COASTAL = new Set<string>(resolveLob(product).peril.eligibleStates)
+  const lob = resolveLob(product)
+  const COASTAL = new Set<string>(lob.peril.eligibleStates)
   const { user } = useUser()
   const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
 
-  // The product footprint bounds every coverage; default to it when unset.
-  const footprint = product?.allStates ? ALL_TILE_STATES : (product?.states ?? ALL_TILE_STATES)
-  const [allStates, setAllStates] = useState(cov.allStates ?? false)
-  const [states, setStates] = useState<string[]>(() => (cov.states ?? []).filter(s => footprint.includes(s)))
+	  // The product footprint bounds every coverage; default to the line's
+	  // footprint when unset. Clips to the line's footprint so counts never
+	  // exceed the denominator.
+	  const productFootprint = (product?.allStates
+	    ? (product?.states?.length ? product.states : lob.footprintStates)
+	    : (product?.states ?? lob.footprintStates)
+	  ).filter(st => lob.footprintStates.includes(st))
+	  const [allStates, setAllStates] = useState(cov.allStates ?? false)
+	  const [states, setStates] = useState<string[]>(() => (cov.states ?? []).filter(s => productFootprint.includes(s)))
   const [saving, setSaving] = useState(false)
 
-  const active = allStates ? new Set(footprint) : new Set(states)
-  const selectedCount = allStates ? footprint.length : states.length
+	  const active = allStates ? new Set(productFootprint) : new Set(states)
+	  const selectedCount = allStates ? productFootprint.length : states.length
 
-  function toggle(s: string) {
-    if (!canEdit || allStates || !footprint.includes(s)) return
+	  function toggle(s: string) {
+	    if (!canEdit || allStates || !productFootprint.includes(s)) return
     setStates(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
   }
 
@@ -77,11 +80,11 @@ export function CoverageStatesDialog({ cov, onClose }: { cov: WithId<Coverage>; 
           All footprint states
         </label>
         <div className="flex items-center gap-3 text-xs">
-          <span className="text-dim"><b className="text-text tnum">{selectedCount}</b> selected</span>
-          <span className="text-faint">of {footprint.length} in footprint</span>
+	          <span className="text-dim"><b className="text-text tnum">{selectedCount}</b> selected</span>
+	          <span className="text-faint">of {productFootprint.length} in footprint</span>
           {canEdit && !allStates && (
             <div className="flex items-center gap-1.5">
-              <button onClick={() => setStates([...footprint])} className="text-accent font-medium hover:underline">All</button>
+	              <button onClick={() => setStates([...productFootprint])} className="text-accent font-medium hover:underline">All</button>
               <span className="text-faint">·</span>
               <button onClick={() => setStates([])} className="text-dim font-medium hover:underline">Clear</button>
             </div>
@@ -89,10 +92,16 @@ export function CoverageStatesDialog({ cov, onClose }: { cov: WithId<Coverage>; 
         </div>
       </div>
 
-      <div className="bg-page rounded-[12px] p-3" style={{ border: '1px solid var(--color-border)' }}>
-        <StateTileMap active={active} coastal={COASTAL} onToggle={toggle} canEdit={canEdit && !allStates}
-          labels={{ active: 'In scope', coastal: 'Coastal wind/hail', inactive: 'Out of scope' }} />
-      </div>
+	      <div className="bg-page rounded-[12px] p-3" style={{ border: '1px solid var(--color-border)' }}>
+	        <StateTileMap
+	          active={active}
+	          coastal={COASTAL}
+	          footprint={new Set(productFootprint)}
+	          onToggle={canEdit && !allStates ? toggle : undefined}
+	          canEdit={canEdit && !allStates}
+	          labels={{ active: 'In scope', coastal: 'Coastal wind/hail', inactive: 'Out of scope' }}
+	        />
+	      </div>
 
       <div className="flex items-center justify-end gap-2 mt-5 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
         <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>

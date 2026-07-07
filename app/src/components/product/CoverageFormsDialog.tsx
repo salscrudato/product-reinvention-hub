@@ -10,6 +10,7 @@ import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { Dialog, Button, EmptyState, RefChip } from '../ui'
 import { IconForm, IconClose, IconPlus, IconTrash, IconSearch, IconStates } from '../ui/icons'
+import { resolveLob } from '@pf/shared'
 import type { Coverage, Form } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
@@ -25,8 +26,14 @@ export function CoverageFormsDialog({ cov, onClose }: Props) {
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // The product footprint for state counts.
-  const footprintSize = product?.allStates ? 50 : (product?.states?.length ?? 50)
+	  // The product footprint for state counts — derived from the line's footprint
+	  // and the product's own state scope so counts never exceed the denominator.
+	  const lob = resolveLob(product)
+	  const productFootprintStates = (product?.allStates
+	    ? (product?.states?.length ? product.states : lob.footprintStates)
+	    : (product?.states ?? lob.footprintStates)
+	  ).filter(st => lob.footprintStates.includes(st))
+	  const footprintSize = productFootprintStates.length
 
   // For each form number in coverage.formNumbers, collect all matching form docs
   // (multiple editions of the same number may exist in the product's form library).

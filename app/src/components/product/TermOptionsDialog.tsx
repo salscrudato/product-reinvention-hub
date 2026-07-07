@@ -12,15 +12,16 @@ import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { Dialog, Button, EmptyState } from '../ui'
 import {
-  IconPlus, IconTrash, IconStar, IconCheck, IconClose, IconInfo,
-  IconSingle, IconLayers, IconSplit, IconCombine, IconScheduled,
-  IconPercent, IconClock, IconPeril, IconLimit, IconDeductible,
-} from '../ui/icons'
+	  IconPlus, IconTrash, IconStar, IconCheck, IconClose, IconInfo,
+	  IconSingle, IconLayers, IconSplit, IconCombine, IconScheduled,
+	  IconPercent, IconClock, IconPeril, IconLimit, IconDeductible,
+	} from '../ui/icons'
 import { LIMIT_STRUCTURES, DEDUCTIBLE_STRUCTURES, LIMIT_BASES } from '../../lib/insurance/vocab'
 import {
-  resolveTermOptions, ensureOneDefault, syncLegacy, formatOption,
-  isPercentTerm, deriveStructure, deriveBasis,
-} from '@pf/shared'
+	  resolveTermOptions, ensureOneDefault, syncLegacy, formatOption,
+	  isPercentTerm, deriveStructure, deriveBasis, resolveLob,
+	} from '@pf/shared'
+import { StateTileMap } from './StateTileMap'
 import type {
   Coverage, CoverageTerm, StandardOption, OptionValueType,
   LimitStructure, DeductibleStructure, LimitBasis,
@@ -34,15 +35,21 @@ const STRUCT_ICON: Record<string, typeof IconSingle> = {
   combine: IconCombine, scheduled: IconScheduled, percent: IconPercent, clock: IconClock, peril: IconPeril,
 }
 
-const OPTION_TYPES: Record<Mode, { id: OptionValueType; label: string }[]> = {
-  LIMIT: [
-    { id: 'FLAT', label: '$' }, { id: 'PERCENT', label: '%' }, { id: 'SPLIT', label: 'Split' },
-    { id: 'CSL', label: 'CSL' }, { id: 'SCHEDULED', label: 'Item' },
-  ],
-  DEDUCTIBLE: [
-    { id: 'FLAT', label: '$' }, { id: 'PERCENT', label: '%' }, { id: 'WAITING_PERIOD', label: 'Hrs' },
-  ],
-}
+	const OPTION_TYPES: Record<Mode, { id: OptionValueType; label: string }[]> = {
+	  LIMIT: [
+	    { id: 'FLAT', label: '$' },
+	    { id: 'PERCENT', label: '%' },
+	    { id: 'SPLIT', label: 'Split' },
+	    { id: 'CSL', label: 'CSL' },
+	    { id: 'SCHEDULED', label: 'Item' },
+	  ],
+	  DEDUCTIBLE: [
+	    { id: 'FLAT', label: '$' },
+	    { id: 'PERCENT', label: '%' },
+	    { id: 'WAITING_PERIOD', label: 'Hrs' },
+	    { id: 'SPLIT', label: 'Split' },
+	  ],
+	}
 
 // The option value-type a structure implies (used when the structure changes).
 function impliedType(structure: string): OptionValueType {
@@ -69,14 +76,26 @@ function rangeOk(o: StandardOption, t: CoverageTerm): boolean {
 interface Props { cov: WithId<Coverage>; mode: Mode; onClose: () => void }
 
 export function TermOptionsDialog({ cov, mode, onClose }: Props) {
-  const { pid, product, ldTables } = useProductCtx()
-  const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
-  const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
+	  const { pid, product, ldTables } = useProductCtx()
+	  const { user } = useUser()
+	  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+	  const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
 
-  const structures = mode === 'LIMIT' ? LIMIT_STRUCTURES : DEDUCTIBLE_STRUCTURES
-  // Effective state footprint for this coverage — bounds every option's applicability.
-  const scopeStates = cov.allStates ? (product?.states ?? []) : (cov.states ?? [])
+	  const structures = mode === 'LIMIT' ? LIMIT_STRUCTURES : DEDUCTIBLE_STRUCTURES
+	  const lob = resolveLob(product)
+	  // Product footprint (denominator) for this coverage, clipped to the line's
+	  // footprint so counts never exceed 100%.
+	  const productFootprintStates = (product?.allStates
+	    ? (product?.states?.length ? product.states : lob.footprintStates)
+	    : (product?.states ?? lob.footprintStates)
+	  ).filter(st => lob.footprintStates.includes(st))
+	  // Effective coverage scope — either the full product footprint (when marked
+	  // `allStates`) or the coverage's own subset, clipped to the product
+	  // footprint.
+	  const scopeStates = cov.allStates
+	    ? productFootprintStates
+	    : (cov.states ?? []).filter(st => productFootprintStates.includes(st))
+	  const coastalStates = lob.peril.eligibleStates
 
   // Normalise every term of this kind so editing is uniform (rich optionSet + typing).
   const [terms, setTerms] = useState<CoverageTerm[]>(() =>
@@ -125,17 +144,28 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 
   async function save() {
     if (!canEdit) return
-    setSaving(true)
-    try {
-      const nextTerms = terms.map(t => {
-        if (t.kind !== mode || !t.optionSet) return t
-        const opts = ensureOneDefault(t.optionSet).map(o => ({
-          ...o,
-          // Enforce: each option's states ⊆ coverage scope.
-          states: o.allStates ? [] : o.states.filter(s => scopeStates.includes(s)),
-        }))
-        return { ...t, optionSet: opts, ...syncLegacy(opts) }
-      })
+	    // Validate that every option value respects the [min,max] range for its term
+	    // before persisting; out-of-range options are highlighted and block save.
+	    const outOfRange = terms.flatMap(t => {
+	      if (t.kind !== mode || !t.optionSet) return [] as StandardOption[]
+	      return t.optionSet.filter(o => !rangeOk(o, t))
+	    })
+	    if (outOfRange.length) {
+	      toast.error('Some options fall outside the defined range. Adjust their values or widen the range before saving.')
+	      return
+	    }
+
+	    setSaving(true)
+	    try {
+	      const nextTerms = terms.map(t => {
+	        if (t.kind !== mode || !t.optionSet) return t
+	        const opts = ensureOneDefault(t.optionSet).map(o => ({
+	          ...o,
+	          // Enforce: each option's states ⊆ coverage scope.
+	          states: o.allStates ? [] : o.states.filter(s => scopeStates.includes(s)),
+	        }))
+	        return { ...t, optionSet: opts, ...syncLegacy(opts) }
+	      })
       await adapter.db.mutate({
         op: 'update', path: `products/${pid}/coverages/${cov.id}`,
         data: { terms: nextTerms }, entityType: 'coverage', productId: pid, actor,
@@ -317,7 +347,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
             ) : (
               <div className="flex flex-col gap-2">
                 {options.map(o => (
-                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} canEdit={canEdit}
+	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} coastalStates={coastalStates} canEdit={canEdit}
                     inRange={rangeOk(o, active)}
                     onChange={next => setOptions(options.map(x => x.id === o.id ? next : x))}
                     onDefault={() => setOptions(options.map(x => ({ ...x, isDefault: x.id === o.id })))}
@@ -344,13 +374,23 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 
 // ─── One editable option row ─────────────────────────────────────────────────
 
-function OptionRow({ o, mode, scopeStates, canEdit, inRange, onChange, onDefault, onRemove }: {
-  o: StandardOption; mode: Mode; scopeStates: string[]; canEdit: boolean; inRange: boolean
-  onChange: (o: StandardOption) => void; onDefault: () => void; onRemove: () => void
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const types = OPTION_TYPES[mode]
-  const activeStateCount = o.allStates ? scopeStates.length : o.states.length
+function OptionRow({ o, mode, scopeStates, coastalStates, canEdit, inRange, onChange, onDefault, onRemove }: {
+	  o: StandardOption; mode: Mode; scopeStates: string[]; coastalStates: readonly string[]; canEdit: boolean; inRange: boolean
+	  onChange: (o: StandardOption) => void; onDefault: () => void; onRemove: () => void
+	}) {
+	  const [expanded, setExpanded] = useState(false)
+	  const types = OPTION_TYPES[mode]
+	  const activeStateCount = o.allStates ? scopeStates.length : o.states.length
+	  const activeSet = new Set(o.allStates ? scopeStates : o.states)
+	  const footprintSet = new Set(scopeStates)
+	  const coastalSet = new Set(coastalStates)
+
+	  function handleToggleState(st: string) {
+	    if (!canEdit || o.allStates || !scopeStates.includes(st)) return
+	    const on = o.states.includes(st)
+	    const nextStates = on ? o.states.filter(x => x !== st) : [...o.states, st]
+	    onChange({ ...o, states: nextStates })
+	  }
 
   return (
     <div className="rounded-[10px] overflow-hidden bg-surface transition-all"
@@ -399,7 +439,7 @@ function OptionRow({ o, mode, scopeStates, canEdit, inRange, onChange, onDefault
         )}
 
         {/* State applicability */}
-        <button disabled={!canEdit} onClick={() => setExpanded(v => !v)} aria-expanded={expanded} aria-label="Edit state applicability"
+	        <button disabled={!canEdit} onClick={() => setExpanded(v => !v)} aria-expanded={expanded} aria-label="Edit state applicability"
           className={`h-8 px-2.5 rounded-[7px] text-xs font-medium shrink-0 transition-colors
             ${o.allStates ? 'bg-raised text-dim' : activeStateCount === 0 ? 'bg-[rgba(220,38,38,.08)] text-danger' : 'bg-accent-soft text-accent'}
             hover:text-accent`}>
@@ -442,37 +482,52 @@ function OptionRow({ o, mode, scopeStates, canEdit, inRange, onChange, onDefault
       {expanded && (
         <div className="px-3 pb-3 pt-2 flex flex-col gap-3" style={{ borderTop: '1px solid var(--color-border)' }}>
           {/* State scope */}
-          <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2 text-xs text-dim cursor-pointer">
-              <input type="checkbox" className="accent-accent" checked={o.allStates} disabled={!canEdit}
-                onChange={e => onChange({ ...o, allStates: e.target.checked, states: e.target.checked ? [] : o.states })} />
-              Available in all of this coverage's states
-              <span className="ml-auto text-[11px] text-faint font-mono tnum">{o.allStates ? scopeStates.length : o.states.length} / {scopeStates.length}</span>
-            </label>
-            {!o.allStates && (
-              scopeStates.length === 0
-                ? <p className="text-xs text-faint italic">This coverage has no states in scope yet — set the coverage's state scope first.</p>
-                : (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap gap-1">
-                      {scopeStates.map(s => {
-                        const on = o.states.includes(s)
-                        return (
-                          <button key={s} disabled={!canEdit}
-                            onClick={() => onChange({ ...o, states: on ? o.states.filter(x => x !== s) : [...o.states, s] })}
-                            className={`px-1.5 py-0.5 rounded-[5px] text-[11px] font-mono transition-colors ${on ? 'bg-accent text-white' : 'bg-raised text-dim hover:text-accent'}`}>
-                            {s}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {!o.allStates && o.states.length === 0 && (
-                      <p className="text-[11px] text-danger">Select at least one state, or choose "All coverage states".</p>
-                    )}
-                  </div>
-                )
-            )}
-          </div>
+	          <div className="flex flex-col gap-2">
+	            <label className="flex items-center gap-2 text-xs text-dim cursor-pointer">
+	              <input
+	                type="checkbox"
+	                className="accent-accent"
+	                checked={o.allStates}
+	                disabled={!canEdit}
+	                onChange={e => onChange({
+	                  ...o,
+	                  allStates: e.target.checked,
+	                  states: e.target.checked ? [] : (o.states.length ? o.states : scopeStates),
+	                })}
+	              />
+	              Available in all of this coverage's states
+	              <span className="ml-auto text-[11px] text-faint font-mono tnum">{activeStateCount} / {scopeStates.length}</span>
+	            </label>
+	            {scopeStates.length === 0 ? (
+	              <p className="text-xs text-faint italic">
+	                This coverage has no states in scope yet — set the coverage's state scope first.
+	              </p>
+	            ) : (
+	              <>
+	                <div className="rounded-[10px] bg-page p-2" style={{ border: '1px solid var(--color-border)' }}>
+	                  <StateTileMap
+	                    active={activeSet}
+	                    coastal={coastalSet}
+	                    footprint={footprintSet}
+	                    onToggle={canEdit && !o.allStates ? handleToggleState : undefined}
+	                    canEdit={canEdit && !o.allStates}
+	                    labels={{
+	                      active: 'Option available',
+	                      available: 'In coverage scope',
+	                      inactive: 'Out of coverage scope',
+	                      coastal: coastalSet.size ? 'Coastal wind/hail' : undefined,
+	                    }}
+	                    ariaLabel={`State applicability for option — ${activeStateCount} of ${scopeStates.length} coverage states`}
+	                  />
+	                </div>
+	                {!o.allStates && o.states.length === 0 && (
+	                  <p className="text-[11px] text-danger">
+	                    Select at least one state, or choose "All coverage states".
+	                  </p>
+	                )}
+	              </>
+	            )}
+	          </div>
 
           {/* Label override */}
           <div className="flex flex-col gap-1">

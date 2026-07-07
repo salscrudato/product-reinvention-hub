@@ -8,9 +8,6 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { Button } from '../../components/ui'
 import { StateTileMap } from '../../components/product/StateTileMap'
 import { resolveLob } from '@pf/shared'
-import { US_TILE_GRID as STATE_GRID } from '../../lib/geo/usTileGrid'
-
-const ALL_STATES = Object.keys(STATE_GRID)
 
 export default function ProductStates() {
   const { pid, product, loading } = useProductCtx()
@@ -22,12 +19,22 @@ export default function ProductStates() {
   const actor      = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
   const svgRef     = useRef<HTMLDivElement>(null)
 
-  const [states, setStates] = useState<string[]>(() => product?.states ?? [])
+  // The product's effective footprint, clipped to the line's standard footprint so
+  // counts never exceed 100%. When `allStates` is true we treat the line footprint
+  // as the product footprint; otherwise we honour the stored `states` (falling
+  // back to the line footprint when empty).
+  const initialStates = (product?.allStates
+    ? (product?.states?.length ? product.states : lob.footprintStates)
+    : (product?.states ?? lob.footprintStates)
+  ).filter(st => FOOTPRINT.has(st))
+
+  const [states, setStates] = useState<string[]>(() => initialStates)
   const [dirty,  setDirty]  = useState(false)
 
   const activeSet = new Set(states)
 
   function toggleState(st: string) {
+    if (!FOOTPRINT.has(st)) return
     setStates(prev => prev.includes(st) ? prev.filter(s => s !== st) : [...prev, st])
     setDirty(true)
   }
@@ -63,7 +70,9 @@ export default function ProductStates() {
     <div className="flex flex-col gap-5">
       {/* Controls */}
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-sm font-semibold text-text">{states.length} states selected</span>
+        <span className="text-sm font-semibold text-text">
+          {states.length} of {FOOTPRINT.size} state{FOOTPRINT.size === 1 ? '' : 's'}
+        </span>
         {canEdit && (
           <>
             <Button variant="ghost" size="sm" onClick={() => { setStates([...FOOTPRINT]); setDirty(true) }}>
@@ -80,12 +89,20 @@ export default function ProductStates() {
 
       {/* Map */}
       <div ref={svgRef} className="bg-surface rounded-[14px] p-4 overflow-x-auto" style={{ border: '1px solid var(--color-border)' }}>
-        <StateTileMap active={activeSet} coastal={COASTAL} onToggle={toggleState} canEdit={canEdit} />
+        <StateTileMap
+          active={activeSet}
+          coastal={COASTAL}
+          footprint={FOOTPRINT}
+          onToggle={canEdit ? toggleState : undefined}
+          canEdit={canEdit}
+          ariaLabel={`Product footprint map \
+${states.length} of ${FOOTPRINT.size} states selected.`}
+        />
       </div>
 
       {/* Grid chips */}
       <div className="flex flex-wrap gap-1.5">
-        {ALL_STATES.sort().map(st => (
+        {Array.from(FOOTPRINT).sort().map(st => (
           <button
             key={st}
             disabled={!canEdit}
