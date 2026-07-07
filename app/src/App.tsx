@@ -4,6 +4,7 @@ import { Suspense, lazy } from 'react'
 import { UserProvider } from './context/UserContext'
 import { Skeleton } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { VersionWatcher } from './components/VersionWatcher'
 
 const Landing            = lazy(() => import('./routes/Landing'))
 const SignIn             = lazy(() => import('./routes/SignIn'))
@@ -40,6 +41,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <UserProvider>
+        <VersionWatcher />
         <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <Routes>
