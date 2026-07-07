@@ -203,6 +203,15 @@ h1, h2 { text-wrap: balance; }
 }
 .rise-in { animation: rise-in .7s var(--ease-spring) both; animation-delay: var(--rise-delay, 0ms); }
 
+/* ─── Explorer — Miller-column cascade entrance ──────────────────────────────
+   A newly revealed column (and the peek panel) slides in from its parent on the
+   left, so the cascade reads left-to-right. Neutralised under reduced motion. */
+@keyframes col-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+.col-in { animation: col-in .34s var(--ease-spring) both; }
+
 /* Shimmer for skeletons — subtle, brand-tinted. */
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 
@@ -234,7 +243,7 @@ h1, h2 { text-wrap: balance; }
   .aurora-a, .aurora-b, .aurora-c { animation: none !important; opacity: .35 !important; }
   .edge-flow { animation: none !important; stroke-dasharray: none !important; opacity: 0 !important; }
   .node-glow, .graph-float { animation: none !important; }
-  .rise-in, .flow-step, .flow-changed { animation: none !important; }
+  .rise-in, .flow-step, .flow-changed, .col-in { animation: none !important; }
   .flow-pulse { animation: none !important; opacity: 0 !important; }
   .state-tile__cell, .state-tile__ring { transition: none !important; }
 }
