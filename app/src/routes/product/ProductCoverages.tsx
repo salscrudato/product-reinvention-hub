@@ -36,7 +36,7 @@ function SectionHeader({ label, count }: { label: string; count: number }) {
 }
 
 export default function ProductCoverages() {
-  const { pid, product, coverages, loading } = useProductCtx()
+  const { pid, product, coverages, forms, rules, loading } = useProductCtx()
   const { user } = useUser()
   const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
@@ -108,7 +108,7 @@ export default function ProductCoverages() {
             className="w-full h-9 pl-9 pr-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25" />
         </div>
         <ViewToggle mode={view} onChange={setViewPersist} />
-        {product && <BaseFormExtract product={product} coverages={coverages} canEdit={canEdit} actor={actor} />}
+        {product && <BaseFormExtract product={product} coverages={coverages} forms={forms} rules={rules} canEdit={canEdit} actor={actor} />}
         {canEdit && <Button variant="primary" size="sm" onClick={() => setEditCov('new')}><IconPlus size={14} />Add coverage</Button>}
       </div>
 

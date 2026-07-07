@@ -1,13 +1,24 @@
-// extract.ts — grounded coverage extraction from an uploaded base coverage form.
+// extract.ts — grounded structured extraction from an uploaded base coverage form.
 // The client sends the form's content (text, or a base64 PDF); Claude reads it and,
-// via a single forced tool, proposes the product's coverages — each prefilled with
-// its requirement / rated flag / attached form numbers, plus a confidence and a
-// citation back to the form. Never invents coverages; lower confidence when the
-// form is ambiguous. EDITOR/ADMIN only. Streamed over SSE (one json event).
+// via FOUR forced tools (one per section), proposes the product's:
+//   • coverages     — name / requirement / rated flag / attached form numbers
+//   • forms         — the form itself + the endorsements/exclusions it references
+//   • rules         — PRODUCT (eligibility/limits/constraints) and FORMS (attachment) IF→THEN
+//   • rating hints  — premium basis / factors / deductible bases / minimum premium
+// Each proposal carries a 0..1 confidence and a citation to where in the document it
+// was found. The model NEVER invents: the tools have no refId field (refIds are
+// allocated by the app, so a fabricated one is impossible), and the shared sanitizers
+// drop any proposal without a citation and any form number not present in the text.
+// When a section yields nothing the sanitizer emits an explicit note. EDITOR/ADMIN
+// only. Streamed over SSE: a tool start/end per section + one json event per section.
 // AWS-SWAP: onRequest → Lambda URL; auth + secret handling live in runtime.ts.
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
+import {
+  cleanCoverages, cleanForms, cleanRules, cleanRating,
+  type ExtractionSection,
+} from '@pf/shared'
 
 interface ExtractBody {
   productName?: string
@@ -16,12 +27,17 @@ interface ExtractBody {
   mediaType?:   string
 }
 
-const PROPOSE_TOOL: Anthropic.Tool = {
+// ─── Forced tools — one per section. Each item requires confidence + citation. ──
+// Shared field fragments keep the "confidence + citation" contract identical across
+// tools, so every proposal — of every kind — is cited by construction.
+const CONFIDENCE = { type: 'number',  description: '0..1 confidence this item is correctly identified from the document. Lower it when the form is ambiguous.' } as const
+const CITATION   = { type: 'string',  description: 'Where in the document this was found (section / heading / page). REQUIRED — proposals without a citation are discarded.' } as const
+
+const PROPOSE_COVERAGES: Anthropic.Tool = {
   name: 'propose_coverages',
   description:
     'Return the coverages the base form actually defines. Only include coverages the ' +
-    'document describes — never invent coverages, forms, limits or requirements. Use ' +
-    'lower confidence when the form is ambiguous about a field.',
+    'document describes — never invent a coverage, form, limit or requirement.',
   input_schema: {
     type: 'object',
     properties: {
@@ -33,32 +49,157 @@ const PROPOSE_TOOL: Anthropic.Tool = {
             name:              { type: 'string',  description: 'Coverage name exactly as the form uses it, e.g. "Coverage A — Dwelling".' },
             requirement:       { type: 'string',  enum: ['MANDATORY', 'OPTIONAL'] },
             premiumGenerating: { type: 'boolean', description: 'True if this coverage is rated (generates premium).' },
-            formNumbers:       { type: 'array', items: { type: 'string' }, description: 'Attached ISO/proprietary form numbers, e.g. "HO 00 03".' },
+            formNumbers:       { type: 'array', items: { type: 'string' }, description: 'Attached ISO/proprietary form numbers exactly as printed, e.g. "HO 00 03". Only numbers that appear in the document.' },
             limitHint:         { type: 'string',  description: 'Short summary of the limit basis if the form states one, e.g. "10% of Coverage A".' },
-            confidence:        { type: 'number',  description: '0..1 confidence this coverage is correctly identified.' },
-            citation:          { type: 'string',  description: 'Where in the form this was found (section / heading / page).' },
+            confidence:        CONFIDENCE,
+            citation:          CITATION,
           },
           required: ['name', 'requirement', 'premiumGenerating', 'confidence', 'citation'],
         },
       },
+      note: { type: 'string', description: 'If the document defines no coverages, return an empty array and explain here.' },
     },
     required: ['coverages'],
   },
 }
 
+const PROPOSE_FORMS: Anthropic.Tool = {
+  name: 'propose_forms',
+  description:
+    'Return the insurance forms this document IS or explicitly references BY NUMBER — the base ' +
+    'form itself, plus any declarations, endorsements, exclusions or amendatory forms it names. ' +
+    'Only include a form whose number literally appears in the document. Never invent a form number.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      forms: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            number:              { type: 'string', description: 'Form number exactly as printed, e.g. "HO 00 03" or "CG 00 01".' },
+            name:                { type: 'string', description: 'The form title as the document states it.' },
+            edition:             { type: 'string', description: 'Edition date as printed, e.g. "05 11", if shown.' },
+            category:            { type: 'string', enum: ['BASE_COVERAGE', 'DECLARATIONS', 'ENDORSEMENT', 'EXCLUSION', 'AMENDATORY', 'POLICY_NOTICE'] },
+            mandatoryDefault:    { type: 'boolean', description: 'True if the form is always attached (not optional/rule-driven).' },
+            attachmentCondition: { type: 'string', enum: ['RULE', 'NONE'], description: 'NONE = always attached; RULE = attaches only when a condition is met.' },
+            confidence:          CONFIDENCE,
+            citation:            CITATION,
+          },
+          required: ['number', 'category', 'confidence', 'citation'],
+        },
+      },
+      note: { type: 'string', description: 'If the document references no forms beyond itself, say so here.' },
+    },
+    required: ['forms'],
+  },
+}
+
+const PROPOSE_RULES: Anthropic.Tool = {
+  name: 'propose_rules',
+  description:
+    'Return the product rules the document\'s language supports, as short IF → THEN statements. ' +
+    'Use PRODUCT for eligibility, coverage limits/constraints and packaging; FORMS for "attach ' +
+    'endorsement X when Y". Reference coverages by the NAME the form uses and forms by number — ' +
+    'never emit an internal id. Do NOT include rating/premium rules here (use propose_rating).',
+  input_schema: {
+    type: 'object',
+    properties: {
+      rules: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            category:      { type: 'string', enum: ['PRODUCT', 'FORMS'] },
+            subCategory:   { type: 'string', description: 'e.g. "Eligibility", "Coverage Limits", "Coverage Constraints", "Attachment".' },
+            condition:     { type: 'string', description: 'The IF clause — short and declarative, e.g. "Water Back-Up elected".' },
+            outcome:       { type: 'string', description: 'The THEN clause — what the rule requires, blocks or attaches, e.g. "Attach HO 04 95".' },
+            coverageNames: { type: 'array', items: { type: 'string' }, description: 'Names of coverages this rule governs, exactly as the form writes them.' },
+            formNumbers:   { type: 'array', items: { type: 'string' }, description: 'Form numbers the rule attaches/references — only numbers present in the document.' },
+            confidence:    CONFIDENCE,
+            citation:      CITATION,
+          },
+          required: ['category', 'condition', 'outcome', 'confidence', 'citation'],
+        },
+      },
+      note: { type: 'string', description: 'If the document supports no such rules, say so here.' },
+    },
+    required: ['rules'],
+  },
+}
+
+const PROPOSE_RATING: Anthropic.Tool = {
+  name: 'propose_rating',
+  description:
+    'Return RATING hints the document explicitly states — the premium basis, rating variables, ' +
+    'deductible bases, or a minimum premium. IMPORTANT: a base coverage form usually contains NO ' +
+    'rating information (rates live in a separate rate manual). If so, return an empty array and ' +
+    'say so in note. Never invent a rate, factor, table or number.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      hints: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            subCategory:    { type: 'string', description: 'e.g. "Premium Basis", "Deductibles", "Premium Floor".' },
+            condition:      { type: 'string', description: 'The IF clause / the rating variable, e.g. "All-peril deductible selection".' },
+            outcome:        { type: 'string', description: 'What the document states about rating, e.g. "Premium varies by territory and construction".' },
+            coverageNames:  { type: 'array', items: { type: 'string' }, description: 'Coverage names this hint relates to, if any.' },
+            formNumbers:    { type: 'array', items: { type: 'string' }, description: 'Form numbers referenced — only numbers present in the document.' },
+            minimumPremium: { type: 'number', description: 'A minimum/deposit premium in dollars, if and only if the document states one.' },
+            confidence:     CONFIDENCE,
+            citation:       CITATION,
+          },
+          required: ['condition', 'outcome', 'confidence', 'citation'],
+        },
+      },
+      note: { type: 'string', description: 'If the document contains no rating information, say so explicitly here.' },
+    },
+    required: ['hints'],
+  },
+}
+
 const SYSTEM =
-  'You are a P&C insurance product analyst. Read the provided base coverage form and ' +
-  'identify the coverages it defines for the product. Ground every proposal in the ' +
-  "form's actual text — do not invent coverages, forms, limits or requirements. Prefer " +
-  'the exact coverage names and ISO form numbers used in the document. When the form is ' +
-  'ambiguous about a field, lower the confidence. Call propose_coverages exactly once.'
+  'You are a P&C insurance product analyst extracting a product\'s structure from an uploaded ' +
+  'base coverage form. Ground EVERY proposal in the document\'s actual text — never invent a ' +
+  'coverage, form number, rule or rating fact. Prefer the exact names and ISO form numbers the ' +
+  'document uses. Give each item a 0..1 confidence (lower when the document is ambiguous) and a ' +
+  'citation to where you found it. If the document does not define anything for the requested ' +
+  'section, return an empty array and say so in `note` rather than guessing. You are called once ' +
+  'per section with a single forced tool; call that tool exactly once.'
+
+// One forced-tool round-trip. The document block is identical across all four calls
+// (and marked ephemeral), so calls 2–4 hit the prompt cache and only re-read the
+// short per-section instruction. Forcing the tool guarantees a structured result —
+// including an explicit empty section — for every kind.
+async function runSection(
+  client:      Anthropic,
+  docBlock:    Anthropic.ContentBlockParam,
+  instruction: string,
+  tool:        Anthropic.Tool,
+  maxTokens:   number,
+): Promise<Record<string, unknown>> {
+  const msg = await client.messages.create({
+    model:       MODEL,
+    max_tokens:  maxTokens,
+    system:      SYSTEM,
+    tools:       [tool],
+    tool_choice: { type: 'tool', name: tool.name },
+    messages:    [{ role: 'user', content: [docBlock, { type: 'text', text: instruction }] }],
+  })
+  const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+  return (tu?.input as Record<string, unknown> | undefined) ?? {}
+}
 
 export const extractCoverages = onRequest(
-  { secrets: [ANTHROPIC_API_KEY], cors: true, timeoutSeconds: 120, memory: '512MiB' },
+  { secrets: [ANTHROPIC_API_KEY], cors: true, timeoutSeconds: 240, memory: '512MiB' },
   async (req, res) => {
     if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
 
-    // Author-only: extraction proposes writes, so guard like a mutation.
+    // Author-only: extraction proposes writes, so guard like a mutation (mirrors the
+    // Firestore rules the eventual mutate() will hit — role enforced on BOTH sides).
     try {
       const caller = await authenticate(req)
       if (caller.role !== 'EDITOR' && caller.role !== 'ADMIN') {
@@ -71,32 +212,54 @@ export const extractCoverages = onRequest(
     openSse(res)
     try {
       const body = (req.body ?? {}) as ExtractBody
-      const content: Anthropic.ContentBlockParam[] = []
 
+      // Build the document block once. For text we ALSO keep the raw text so the
+      // shared sanitizers can verify every proposed form number against it; for a PDF
+      // we have no text to grep (text = null) and rely on the citation + never-invent.
+      let docBlock: Anthropic.ContentBlockParam
+      let verifyText: string | null
       if (body.formBase64 && body.mediaType === 'application/pdf') {
-        content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 } })
+        docBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 }, cache_control: { type: 'ephemeral' } }
+        verifyText = null
       } else if (body.formText?.trim()) {
-        content.push({ type: 'text', text: `BASE COVERAGE FORM:\n\n${body.formText.slice(0, 120_000)}` })
+        verifyText = body.formText.slice(0, 120_000)
+        docBlock = { type: 'text', text: `BASE COVERAGE FORM:\n\n${verifyText}`, cache_control: { type: 'ephemeral' } }
       } else {
         send(res, { t: 'error', message: 'No form content provided.' }); return
       }
-      content.push({ type: 'text', text: `Product: ${body.productName ?? 'this product'}. Identify every coverage this form defines, then call propose_coverages.` })
 
-      send(res, { t: 'tool', name: 'read_base_form', phase: 'start' })
-      const msg = await anthropic().messages.create({
-        model:       MODEL,
-        max_tokens:  3000,
-        system:      SYSTEM,
-        tools:       [PROPOSE_TOOL],
-        tool_choice: { type: 'tool', name: 'propose_coverages' },
-        messages:    [{ role: 'user', content }],
-      })
+      const product = body.productName ?? 'this product'
+      const client = anthropic()
 
-      const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-      const proposal = (tu?.input as { coverages?: unknown[] } | undefined) ?? { coverages: [] }
-      const count = Array.isArray(proposal.coverages) ? proposal.coverages.length : 0
-      send(res, { t: 'tool', name: 'read_base_form', phase: 'end', summary: `${count} coverage${count === 1 ? '' : 's'} found` })
-      send(res, { t: 'json', key: 'proposal', value: proposal })
+      // Each section: a forced tool, its instruction, its sanitizer, its token budget.
+      // Sanitizers (shared/) enforce the citation + form-number guarantees uniformly.
+      const sections: Array<{
+        key: string; label: string; tool: Anthropic.Tool; instruction: string; maxTokens: number
+        clean: (input: Record<string, unknown>, text: string | null) => ExtractionSection<unknown>
+      }> = [
+        { key: 'coverages', label: 'coverage', tool: PROPOSE_COVERAGES, maxTokens: 3000,
+          instruction: `Product: ${product}. Identify every coverage this base form defines, then call propose_coverages.`,
+          clean: cleanCoverages },
+        { key: 'forms', label: 'form', tool: PROPOSE_FORMS, maxTokens: 2000,
+          instruction: `Product: ${product}. List the forms this document is or references by number, then call propose_forms.`,
+          clean: cleanForms },
+        { key: 'rules', label: 'rule', tool: PROPOSE_RULES, maxTokens: 2000,
+          instruction: `Product: ${product}. Identify the PRODUCT and FORMS rules the document supports, then call propose_rules.`,
+          clean: cleanRules },
+        { key: 'rating', label: 'rating hint', tool: PROPOSE_RATING, maxTokens: 1500,
+          instruction: `Product: ${product}. Identify any rating information the document states, then call propose_rating.`,
+          clean: cleanRating },
+      ]
+
+      for (const s of sections) {
+        send(res, { t: 'tool', name: s.key, phase: 'start' })
+        const input = await runSection(client, docBlock, s.instruction, s.tool, s.maxTokens)
+        const section = s.clean(input, verifyText)
+        const n = section.items.length
+        send(res, { t: 'tool', name: s.key, phase: 'end', summary: `${n} ${s.label}${n === 1 ? '' : 's'}` })
+        send(res, { t: 'json', key: s.key, value: section })
+      }
+
       send(res, { t: 'done' })
     } catch (err) {
       send(res, { t: 'error', message: err instanceof Error ? err.message : 'Extraction failed.' })
