@@ -150,6 +150,7 @@ export default function Products() {
           <input
             className="w-full h-8 pl-9 pr-3 rounded-[8px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent"
             placeholder="Search products…"
+            aria-label="Search products"
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
@@ -199,7 +200,13 @@ export default function Products() {
         )
       ) : view === 'cards' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {visible.map(p => <ProductCard key={p.id} p={p} />)}
+          {/* Entrance stagger, matching the Coverage card grid so both surfaces share
+              one motion language. Capped + reduced-motion-neutralised (see index.css). */}
+          {visible.map((p, i) => (
+            <div key={p.id} className="rise-in" style={{ '--rise-delay': `${Math.min(i, 8) * 40}ms` } as React.CSSProperties}>
+              <ProductCard p={p} />
+            </div>
+          ))}
         </div>
       ) : view === 'table' ? (
         <InventoryTable products={visible} byProduct={inventory.byProduct} loading={inventory.loading} error={inventory.error} showFrameworkId={showFwId} groupBy={groupBy} />

@@ -66,7 +66,7 @@ export function ProductCard({ p }: { p: WithId<Product> }) {
 
         {/* Footer — facts + AI summary */}
         <div className="flex items-center gap-3 text-xs text-dim pt-3 mt-auto" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <span className="tnum">{p.allStates ? '50' : (p.states?.length ?? 0)} states</span>
+          <span className="tnum">{p.allStates ? 'All states' : `${p.states?.length ?? 0} states`}</span>
           <span className="truncate">{p.marketSegment ?? '—'}</span>
           <span className="ml-auto flex items-center gap-1.5" title={`Health ${health}${findings ? ` · ${findings} finding${findings === 1 ? '' : 's'}` : ''}`}>
             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: healthColor }} />
