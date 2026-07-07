@@ -13,7 +13,7 @@ import {
   buildCoverageTree, resolveLob, productSegments,
   type Coverage, type Form, type Product, type SegmentAxisId, type CoverageNode,
 } from '@pf/shared'
-import { Badge, RefChip, Skeleton, EmptyState } from '../ui'
+import { Badge, ProductStatusPill, Skeleton, EmptyState } from '../ui'
 import {
   IconChevronDown, IconChevronRight, IconLayers, IconWarning, IconAlertCircle,
   IconCoverage, IconPricing, IconForm, IconStates, IconRule, IconEndorsement,
@@ -97,7 +97,10 @@ function ProductTree({ product, inv }: { product: WithId<Product>; inv: ProductI
   const { roots, orphans } = buildCoverageTree<WithId<Coverage>, WithId<Form>>(coverages, forms)
 
   return (
-    <div className="bg-surface rounded-[16px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+    <div className="bg-surface rounded-[16px] overflow-hidden transition-shadow hover:shadow-[var(--shadow-card)]" style={{ border: '1px solid var(--color-border)' }}>
+      {/* Brand rail */}
+      <span aria-hidden="true" className="block h-[3px] w-full"
+        style={{ background: 'linear-gradient(90deg, var(--color-accent-bright) 0%, var(--color-accent-strong) 55%, transparent 100%)' }} />
       {/* Product node */}
       <div className="flex items-start gap-3 p-4">
         <button onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label={open ? `Collapse ${product.name}` : `Expand ${product.name}`}
@@ -110,7 +113,7 @@ function ProductTree({ product, inv }: { product: WithId<Product>; inv: ProductI
               className="font-semibold text-[15px] text-text hover:text-accent transition-colors text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent rounded-[4px]">
               {product.name}
             </button>
-            {product.refId && <RefChip id={product.refId} />}
+            <ProductStatusPill lifecycle={product.lifecycle} />
           </div>
           {/* Detail entry points — all five detail views are one click away */}
           <div className="flex items-center gap-1 flex-wrap">
@@ -131,7 +134,6 @@ function ProductTree({ product, inv }: { product: WithId<Product>; inv: ProductI
             <div className="flex items-center gap-2 py-1.5 flex-wrap">
               <span className="text-[10px] font-semibold uppercase tracking-[.07em] text-faint">LOB</span>
               <span className="text-sm font-medium text-text">{lob.displayName}</span>
-              <RefChip id={lob.code} />
               <Badge label={seg.vertical} color="blue" />
               <Badge label={seg.family} color="purple" />
             </div>
@@ -197,7 +199,6 @@ function CoverageBranch({ node, productId, depth, orphan = false }: {
           title={`Open ${coverage.name}`}>
           {coverage.name}
         </button>
-        {coverage.refId && <RefChip id={coverage.refId} />}
         {orphan && (
           <span className="inline-flex items-center gap-1 text-[11px] text-warn" title={`Parent ${coverage.parentId ?? 'unknown'} was not found`}>
             <IconWarning size={11} aria-hidden="true" /> parent {coverage.parentId ?? '?'} missing

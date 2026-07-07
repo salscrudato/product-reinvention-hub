@@ -29,7 +29,6 @@ import type { WithId } from '../context/ProductContext'
 
 type ProductView = 'cards' | 'table' | 'tree'
 const VIEW_KEY = 'pf.products.view'
-const FWID_KEY = 'pf.products.fwid'
 
 const VIEWS: { id: ProductView; label: string; Icon: typeof IconCards }[] = [
   { id: 'cards', label: 'Cards',     Icon: IconCards  },
@@ -55,10 +54,8 @@ export default function Products() {
   const [groupBy,  setGroupBy]  = useState<SegmentAxisId | 'none'>('none')
   const [exporting, setExporting] = useState(false)
   const [view, setView] = useState<ProductView>(readView)
-  const [showFwId, setShowFwId] = useState<boolean>(() => localStorage.getItem(FWID_KEY) !== '0')
 
   const setViewPersist = (m: ProductView) => { setView(m); localStorage.setItem(VIEW_KEY, m) }
-  const setFwIdPersist = (b: boolean) => { setShowFwId(b); localStorage.setItem(FWID_KEY, b ? '1' : '0') }
 
   async function exportPortfolio() {
     const launchedProducts = products.filter(p => p.lifecycle === 'LAUNCHED')
@@ -168,14 +165,6 @@ export default function Products() {
               className="h-8 px-2.5 rounded-[8px] bg-surface border border-border-strong text-[13px] text-dim focus:outline-none focus:ring-2 focus:ring-accent/25">
               {groupOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            {view === 'table' && (
-              <button type="button" onClick={() => setFwIdPersist(!showFwId)} aria-pressed={showFwId}
-                title="Show or hide the Product Framework ID column"
-                className={`h-8 px-2.5 rounded-[8px] text-[13px] font-medium border transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
-                  showFwId ? 'bg-accent-soft text-accent border-accent-line' : 'bg-surface text-dim border-border-strong hover:text-text'}`}>
-                Framework ID
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -209,7 +198,7 @@ export default function Products() {
           ))}
         </div>
       ) : view === 'table' ? (
-        <InventoryTable products={visible} byProduct={inventory.byProduct} loading={inventory.loading} error={inventory.error} showFrameworkId={showFwId} groupBy={groupBy} />
+        <InventoryTable products={visible} byProduct={inventory.byProduct} loading={inventory.loading} error={inventory.error} groupBy={groupBy} />
       ) : (
         <ProductHierarchy products={visible} byProduct={inventory.byProduct} loading={inventory.loading} error={inventory.error} groupBy={groupBy} />
       )}

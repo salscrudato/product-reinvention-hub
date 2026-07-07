@@ -48,7 +48,6 @@ interface InventoryTableProps {
   byProduct:       Map<string, ProductInventory>
   loading:         boolean
   error:           string | null
-  showFrameworkId: boolean
   groupBy:         SegmentAxisId | 'none'
 }
 
@@ -60,7 +59,7 @@ function groupLabelFor(product: WithId<Product>, groupBy: SegmentAxisId | 'none'
   return seg.marketSegments[0] ?? '—' // a line can serve several bands; bucket by the first
 }
 
-export function InventoryTable({ products, byProduct, loading, error, showFrameworkId, groupBy }: InventoryTableProps) {
+export function InventoryTable({ products, byProduct, loading, error, groupBy }: InventoryTableProps) {
   const navigate = useNavigate()
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' } | null>(null)
 
@@ -124,7 +123,7 @@ export function InventoryTable({ products, byProduct, loading, error, showFramew
     return [...map.entries()].map(([label, rs]) => ({ label, rows: [...rs].sort(cmp) }))
   }, [rows, sort])
 
-  const cols = showFrameworkId ? 13 : 12
+  const cols = 12
 
   if (loading) return <Skeleton className="h-64 rounded-[14px]" />
   if (error) {
@@ -166,7 +165,6 @@ export function InventoryTable({ products, byProduct, loading, error, showFramew
             <tr className="bg-raised text-[11px] uppercase tracking-wide text-dim" style={{ borderBottom: '1px solid var(--color-border)' }}>
               {th('Offering Name', 'offering')}
               {th('Product Name', 'productName')}
-              {showFrameworkId && th('Product Framework ID')}
               {th('Product')}
               {th('LOB', 'lob')}
               {th('Coverage', 'coverage')}
@@ -195,28 +193,34 @@ export function InventoryTable({ products, byProduct, loading, error, showFramew
                     const sameProduct  = !!prev && prev.productId === r.productId
                     const sameCoverage = sameProduct && prev!.covRef === r.covRef
                     prev = r
-                    const dim = 'text-faint'
+                    // Repeated identity/coverage cells show the inherited value in a light
+                    // grey (a "ditto" placeholder) rather than going blank — so a scanned
+                    // column always reads which product/coverage a row belongs to.
+                    const inherit = 'text-faint'
                     return (
                       <tr key={`${r.productId}:${r.seq}`} className="hover:bg-raised transition-colors align-top" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        {/* Product identity — de-emphasised on repeat within a product */}
+                        {/* Product identity — inherited (greyed) on repeat within a product */}
                         <td className="px-3 py-2 max-w-[190px]">
-                          {sameProduct ? <span className={dim}>›</span> : (
+                          {sameProduct ? (
+                            <span className={`${inherit} truncate block max-w-full`} title={r.offering}>{r.offering}</span>
+                          ) : (
                             <button onClick={() => navigate(`/app/products/${r.productId}/overview`)}
                               className="text-left text-text font-medium hover:text-accent transition-colors truncate block max-w-full focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent rounded-[4px]"
                               title={r.offering}>{r.offering}</button>
                           )}
                         </td>
-                        <td className={`px-3 py-2 max-w-[150px] truncate ${sameProduct ? dim : 'text-dim'}`} title={r.productName}>{sameProduct ? '' : r.productName}</td>
-                        {showFrameworkId && <td className="px-3 py-2">{sameProduct ? '' : <RefChip id={r.frameworkId} />}</td>}
-                        <td className={`px-3 py-2 tnum ${sameProduct ? dim : 'text-dim'}`}>{sameProduct ? '' : r.productCode}</td>
-                        <td className={`px-3 py-2 whitespace-nowrap ${sameProduct ? dim : 'text-dim'}`}>{sameProduct ? '' : r.lobName}</td>
+                        <td className={`px-3 py-2 max-w-[150px] truncate ${sameProduct ? inherit : 'text-dim'}`} title={r.productName}>{r.productName}</td>
+                        <td className={`px-3 py-2 tnum ${sameProduct ? inherit : 'text-dim'}`}>{r.productCode}</td>
+                        <td className={`px-3 py-2 whitespace-nowrap ${sameProduct ? inherit : 'text-dim'}`}>{r.lobName}</td>
 
-                        {/* Coverage / Sub-Coverage — clickable into the Coverages detail */}
+                        {/* Coverage / Sub-Coverage — clickable into the Coverages detail; inherited on repeat */}
                         <td className="px-3 py-2 max-w-[190px]">
-                          {sameCoverage ? '' : r.isOrphan ? (
+                          {r.isOrphan ? (
                             <span className="inline-flex items-center gap-1 text-warn" title={`This endorsement's parent (${r.parentId ?? 'unknown'}) was not found`}>
                               <IconWarning size={12} aria-hidden="true" /> Unlinked
                             </span>
+                          ) : sameCoverage ? (
+                            <span className={`${inherit} truncate block max-w-full`} title={r.topName}>{r.topName}</span>
                           ) : (
                             <button onClick={() => navigate(`/app/products/${r.productId}/coverages?cov=${encodeURIComponent(r.topRef)}`)}
                               className="text-left text-text hover:text-accent transition-colors truncate block max-w-full focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent rounded-[4px]"
@@ -224,10 +228,14 @@ export function InventoryTable({ products, byProduct, loading, error, showFramew
                           )}
                         </td>
                         <td className="px-3 py-2 max-w-[180px]">
-                          {sameCoverage ? '' : (r.isSub || r.isOrphan) ? (
-                            <button onClick={() => navigate(`/app/products/${r.productId}/coverages?cov=${encodeURIComponent(r.covRef)}`)}
-                              className="text-left text-dim hover:text-accent transition-colors truncate block max-w-full focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent rounded-[4px]"
-                              title={r.covName}>{r.covName}</button>
+                          {(r.isSub || r.isOrphan) ? (
+                            sameCoverage ? (
+                              <span className={`${inherit} truncate block max-w-full`} title={r.covName}>{r.covName}</span>
+                            ) : (
+                              <button onClick={() => navigate(`/app/products/${r.productId}/coverages?cov=${encodeURIComponent(r.covRef)}`)}
+                                className="text-left text-dim hover:text-accent transition-colors truncate block max-w-full focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent rounded-[4px]"
+                                title={r.covName}>{r.covName}</button>
+                            )
                           ) : <span className="text-faint">—</span>}
                         </td>
 

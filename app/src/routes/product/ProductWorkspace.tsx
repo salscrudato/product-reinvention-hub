@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import { ProductProvider } from '../../context/ProductContext'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
-import { adapter } from '../../lib/backend'
+import { adapter, MutationConflictError } from '../../lib/backend'
 import { copyToClipboard } from '../../lib/clipboard'
-import { Skeleton, StatusPill, LifecyclePill, Badge, Button } from '../../components/ui'
-import { IconRecent, IconChat, IconUsers, IconBack, IconChevronDown, IconArrowUp, IconShare } from '../../components/ui/icons'
+import { Skeleton, ProductStatusPill, Badge, Button } from '../../components/ui'
+import { IconRecent, IconChat, IconUsers, IconBack, IconChevronDown, IconArrowUp, IconShare, IconEdit, IconCheck, IconClose } from '../../components/ui/icons'
 import { computeProductFindings, healthScore, healthColor } from '../../lib/productHealth'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { CommentsPanel } from '../../components/product/CommentsPanel'
@@ -38,6 +38,8 @@ function WorkspaceInner() {
   const [sharing, setSharing] = useState(false)
   const [viewers, setViewers] = useState<string[]>([])
   const [siblings, setSiblings] = useState<{ id: string; name: string }[]>([])
+  const [editingName, setEditingName] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
 
   // Presence
   useEffect(() => {
@@ -79,6 +81,24 @@ function WorkspaceInner() {
       const copied = await copyToClipboard(url)
       if (copied) toast.success('Share link copied to clipboard')
       else toast.success('Share link created', { description: url, duration: 10_000 })
+    }
+  }
+
+  // Inline product rename — optimistic-locked through the adapter (atomic mutate).
+  async function saveName() {
+    const name = nameDraft.trim()
+    if (!name || !user || name === product?.name) { setEditingName(false); return }
+    try {
+      await adapter.db.mutate({
+        op: 'update', path: `products/${pid}`, data: { name },
+        entityType: 'product', productId: pid,
+        actor: { uid: user.uid, name: user.name ?? user.email ?? 'User' },
+        expectedRev: (product as { rev?: number }).rev,
+      })
+      toast.success('Product renamed')
+      setEditingName(false)
+    } catch (err) {
+      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Rename failed')
     }
   }
 
@@ -136,8 +156,7 @@ function WorkspaceInner() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <StatusPill status={product.status} />
-                <LifecyclePill lifecycle={product.lifecycle} />
+                <ProductStatusPill lifecycle={product.lifecycle} />
                 {product.lob?.name && <Badge label={product.lob.name} color="blue" />}
                 <span
                   className="inline-flex items-center gap-1.5 rounded-full pl-2 pr-2.5 py-0.5 text-xs font-medium tnum"
@@ -148,13 +167,41 @@ function WorkspaceInner() {
                   {score}{findings.length ? ` · ${findings.length} finding${findings.length !== 1 ? 's' : ''}` : ' · Healthy'}
                 </span>
               </div>
-              <h1 className="text-2xl font-bold text-text">{product.name}</h1>
-              <div className="flex items-center gap-2 flex-wrap">
-                {product.refId && (
-                  <span className="text-sm font-mono text-dim">{product.refId}</span>
-                )}
-                {product.lineage && <LineageBadge lineage={product.lineage} />}
-              </div>
+              {editingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    autoFocus value={nameDraft} onChange={e => setNameDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') void saveName(); if (e.key === 'Escape') setEditingName(false) }}
+                    aria-label="Product name"
+                    className="text-2xl font-bold text-text bg-surface rounded-[8px] px-2 py-0.5 min-w-[280px] focus:outline-none focus:ring-2 focus:ring-accent/25"
+                    style={{ border: '1px solid var(--color-border-strong)' }}
+                  />
+                  <button onClick={() => void saveName()} title="Save name" aria-label="Save name"
+                    className="w-8 h-8 rounded-[8px] flex items-center justify-center text-white shrink-0" style={{ background: 'var(--gradient-accent)' }}>
+                    <IconCheck size={15} aria-hidden="true" />
+                  </button>
+                  <button onClick={() => setEditingName(false)} title="Cancel" aria-label="Cancel rename"
+                    className="w-8 h-8 rounded-[8px] flex items-center justify-center text-faint hover:text-text hover:bg-hover shrink-0">
+                    <IconClose size={15} aria-hidden="true" />
+                  </button>
+                </div>
+              ) : (
+                <div className="group/name flex items-center gap-2">
+                  <h1 className="text-2xl font-bold text-text">{product.name}</h1>
+                  {canEdit && (
+                    <button onClick={() => { setNameDraft(product.name); setEditingName(true) }}
+                      title="Rename product" aria-label="Rename product"
+                      className="opacity-0 group-hover/name:opacity-100 focus:opacity-100 transition-opacity w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-accent hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
+                      <IconEdit size={14} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              )}
+              {product.lineage && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <LineageBadge lineage={product.lineage} />
+                </div>
+              )}
               <p className="text-sm text-dim mt-1">
                 {coverages.length} coverage{coverages.length !== 1 ? 's' : ''}
                 {' · '}{product.states?.length ?? 0} state{(product.states?.length ?? 0) !== 1 ? 's' : ''}
