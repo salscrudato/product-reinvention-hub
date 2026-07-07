@@ -3,8 +3,8 @@
 // AWS-SWAP: replace with aws.adapter.ts — see aws.adapter.placeholder.ts for the mapping.
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import {
-  getAuth, signInWithEmailAndPassword, signOut as fbSignOut,
-  onAuthStateChanged, updatePassword, connectAuthEmulator,
+	getAuth, signInWithEmailAndPassword, signOut as fbSignOut,
+	onAuthStateChanged, updatePassword, connectAuthEmulator, signInAnonymously,
 } from 'firebase/auth'
 import {
   getFirestore, doc, collection, getDoc, getDocs, onSnapshot,
@@ -13,7 +13,7 @@ import {
   query as fbQuery, where, orderBy, limit as fbLimit,
   runTransaction, connectFirestoreEmulator,
 } from 'firebase/firestore'
-import { getStorage, ref, uploadBytes, getDownloadURL, connectStorageEmulator } from 'firebase/storage'
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions'
 import { firebaseConfig, FUNCTIONS_REGION } from './firebase.config'
 import type { BackendAdapter, AuthUser, Session, Query, MutationPayload } from './types'
@@ -28,13 +28,14 @@ const functions   = getFunctions(firebaseApp, FUNCTIONS_REGION)
 
 // Wire emulators in development; module-level guard prevents duplicate connects on HMR.
 // AWS-SWAP: no emulator step needed; point to real AWS endpoints per environment config.
+// NOTE: Storage always uses live endpoints (no emulator) to avoid CORS issues.
 let _emulatorsWired = false
 if (import.meta.env.VITE_USE_EMULATORS === 'true' && !_emulatorsWired) {
   _emulatorsWired = true
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
   connectFirestoreEmulator(db, '127.0.0.1', 8080)
   connectFunctionsEmulator(functions, '127.0.0.1', 5001)
-  connectStorageEmulator(storage, '127.0.0.1', 9199)
+  // Storage emulator is NOT connected — always use live Firebase Storage
 }
 
 /** Parse a Firestore document snapshot into a typed value with its id. */
@@ -81,6 +82,8 @@ const DEV_BYPASS_KEY = 'pf.devAdminBypass'
 const DEV_ADMIN: AuthUser = { uid: 'dev-admin', email: 'dev-admin@local', name: 'Dev Admin (bypass)', role: 'ADMIN' }
 let bypassActive = import.meta.env.DEV && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(DEV_BYPASS_KEY) === '1'
 const bypassListeners = new Set<(u: AuthUser | null) => void>()
+// One-shot guard so we don't loop endlessly if anonymous sign-in fails or is disabled.
+let triedAnonSignIn = false
 
 export const adapter: BackendAdapter = {
   auth: {
@@ -102,16 +105,31 @@ export const adapter: BackendAdapter = {
       await fbSignOut(auth)
     },
 
-    onUser(cb) {
-      bypassListeners.add(cb)
-      const unsubFb = onAuthStateChanged(auth, async (fbUser) => {
-        if (bypassActive) return   // dev bypass owns the session; ignore Firebase state
-        if (!fbUser) { cb(null); return }
-        cb(await toAuthUser(fbUser))
-      })
-      if (bypassActive) cb(DEV_ADMIN)   // emit the fake session immediately on subscribe
-      return () => { bypassListeners.delete(cb); unsubFb() }
-    },
+	    onUser(cb) {
+	      bypassListeners.add(cb)
+	      const unsubFb = onAuthStateChanged(auth, async (fbUser) => {
+	        if (bypassActive) return   // dev bypass owns the session; ignore Firebase state
+	        if (!fbUser) {
+	          // Auto-connect anonymous users so live endpoints that require a token (AI, reads)
+	          // work without a manual sign-in. This respects security rules: anonymous users
+	          // still have no role claim, so they cannot write where EDITOR/ADMIN is required.
+	          if (!triedAnonSignIn) {
+	            triedAnonSignIn = true
+	            try {
+	              await signInAnonymously(auth)
+	              return
+	            } catch (err) {
+	              console.warn('[auth] Anonymous sign-in failed; falling back to signed-out state.', err)
+	            }
+	          }
+	          cb(null)
+	          return
+	        }
+	        cb(await toAuthUser(fbUser))
+	      })
+	      if (bypassActive) cb(DEV_ADMIN)   // emit the fake session immediately on subscribe
+	      return () => { bypassListeners.delete(cb); unsubFb() }
+	    },
 
     // TEMPORARY dev-only admin bypass — see types.ts. No-op outside dev builds.
     signInAsDevAdmin() {
