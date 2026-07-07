@@ -449,6 +449,10 @@ export interface EvaluatorResult {
 
 // ─── Rules Engine I/O ────────────────────────────────────────────────────────
 
+// How the dwelling is occupied — the input the HO-3 eligibility rules read.
+// PRIMARY_OWNER is the eligible base case; the others gate [HO.RU.001]/[HO.RU.010].
+export type HoOccupancy = 'PRIMARY_OWNER' | 'TENANT_NONOWNER' | 'SEASONAL' | 'SECONDARY'
+
 export interface SelectionContext {
   riskState:          string   // 2-letter state code
   covELimit:          number
@@ -464,6 +468,11 @@ export interface SelectionContext {
   sppElected:         boolean
   dayCareCoverage:    boolean
   otherStructuresInc: boolean
+  // Eligibility inputs [HO.RU.001]/[HO.RU.010]. Optional and default to an eligible
+  // owner-occupied primary dwelling, so callers that don't collect occupancy keep
+  // producing the same result (no spurious eligibility violation).
+  occupancy?:         HoOccupancy
+  companionPolicy?:   boolean   // a companion primary policy is in force (seasonal/secondary)
 }
 
 export interface TermOption {
@@ -484,6 +493,12 @@ export interface RulesResult {
   availableOptions:   Record<string, TermOption[]>  // keyed by term ldTableRef
   formsThatAttach:    string[]                       // form numbers
   violations:         RuleViolation[]
+  // Rule refIds whose conditions this engine actually evaluates (eligibility +
+  // hard constraints). The Rules surface uses this to show a live satisfied/violated
+  // state for those rules rather than mislabelling an engine-evaluated rule as merely
+  // "documented". Rules gated purely by an LD table or a form attachment are already
+  // reflected via availableOptions / formsThatAttach and need not appear here.
+  evaluatedRuleRefIds: string[]
 }
 
 // Utility: unsubscribe function returned by realtime subscriptions

@@ -87,4 +87,35 @@ describe('HO-3 rules engine', () => {
     expect(caResult.formsThatAttach).toContain('HO 01 04')
     expect(caResult.formsThatAttach).not.toContain('HO 01 33')
   })
+
+  // ── Eligibility [HO.RU.001] / [HO.RU.010] ──────────────────────────────────
+
+  it('treats an unspecified / owner-occupied primary dwelling as eligible (back-compat)', () => {
+    const base    = evaluateRules({ ldTables: HO3_LD_TABLES, selection: BASE })
+    const primary = evaluateRules({ ldTables: HO3_LD_TABLES, selection: { ...BASE, occupancy: 'PRIMARY_OWNER' } })
+    for (const r of [base, primary]) {
+      expect(r.violations.some(v => v.ruleRefId === 'HO.RU.001')).toBe(false)
+      expect(r.violations.some(v => v.ruleRefId === 'HO.RU.010')).toBe(false)
+    }
+  })
+
+  it('flags HO.RU.001 for a tenant / non-owner-occupied risk', () => {
+    const result = evaluateRules({ ldTables: HO3_LD_TABLES, selection: { ...BASE, occupancy: 'TENANT_NONOWNER' } })
+    expect(result.violations.some(v => v.ruleRefId === 'HO.RU.001')).toBe(true)
+  })
+
+  it('flags HO.RU.010 for a seasonal dwelling without a companion policy, clears it with one', () => {
+    const without = evaluateRules({ ldTables: HO3_LD_TABLES, selection: { ...BASE, occupancy: 'SEASONAL', companionPolicy: false } })
+    expect(without.violations.some(v => v.ruleRefId === 'HO.RU.010')).toBe(true)
+
+    const withCompanion = evaluateRules({ ldTables: HO3_LD_TABLES, selection: { ...BASE, occupancy: 'SECONDARY', companionPolicy: true } })
+    expect(withCompanion.violations.some(v => v.ruleRefId === 'HO.RU.010')).toBe(false)
+  })
+
+  it('declares the rules it evaluates directly via evaluatedRuleRefIds', () => {
+    const result = evaluateRules({ ldTables: HO3_LD_TABLES, selection: BASE })
+    expect(result.evaluatedRuleRefIds).toEqual(
+      expect.arrayContaining(['HO.RU.001', 'HO.RU.006', 'HO.RU.008', 'HO.RU.010']),
+    )
+  })
 })

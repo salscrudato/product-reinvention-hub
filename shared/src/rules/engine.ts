@@ -89,6 +89,28 @@ export function evaluateRules(input: RulesEngineInput): RulesResult {
     }
   }
 
+  // ── Eligibility [HO.RU.001] / [HO.RU.010] ─────────────────────────────────────
+  // Undefined occupancy defaults to the eligible base case (owner-occupied primary),
+  // so callers that don't collect occupancy see no eligibility violation.
+  const occupancy = selection.occupancy ?? 'PRIMARY_OWNER'
+  if (occupancy === 'SEASONAL' || occupancy === 'SECONDARY') {
+    // [HO.RU.010] seasonal/secondary is ineligible unless a companion primary is in force
+    if (!selection.companionPolicy) {
+      violations.push({
+        ruleRefId: 'HO.RU.010',
+        message:   'Seasonal or secondary dwelling is ineligible for HO-3 unless a companion primary policy is in force',
+        severity:  'error',
+      })
+    }
+  } else if (occupancy === 'TENANT_NONOWNER') {
+    // [HO.RU.001] HO-3 requires an owner-occupied 1–4 family dwelling in residential use
+    violations.push({
+      ruleRefId: 'HO.RU.001',
+      message:   'HO-3 requires an owner-occupied 1–4 family dwelling in residential use',
+      severity:  'error',
+    })
+  }
+
   // ── Forms that attach ───────────────────────────────────────────────────────
 
   const formsThatAttach: string[] = []
@@ -125,6 +147,10 @@ export function evaluateRules(input: RulesEngineInput): RulesResult {
     },
     formsThatAttach,
     violations,
+    // The rules whose conditions this engine evaluates directly (eligibility + hard
+    // constraints). LD-table-gated rules (HO.RU.003/005/007) and form-attachment rules
+    // surface through availableOptions / formsThatAttach, so they are not repeated here.
+    evaluatedRuleRefIds: ['HO.RU.001', 'HO.RU.006', 'HO.RU.008', 'HO.RU.010'],
   }
 }
 

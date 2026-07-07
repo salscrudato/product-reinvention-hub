@@ -3,6 +3,7 @@
 export { hello } from './health'
 export { createShareLink, getShareSnapshot, share } from './share'
 export { chat } from './ai'
+export { draftRule } from './rules'
 export { extractCoverages } from './extract'
 export { analyzeClaim, identifyBaseForm } from './claims'
 export { setUserRole } from './admin'
