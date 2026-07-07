@@ -1,52 +1,56 @@
-// HeroMark — the floating brand mark above the portfolio assistant. A crisp, modern,
-// techy "product manager": a clean avatar silhouette in the accent gradient with a
-// sharp white rim light, wrapped by one precise tilted data-orbit (a thin ring + node
-// that slowly rotates), with a crisp sparkle accent. No fuzzy halo — depth comes from a
-// tight drop-shadow, so every edge stays sharp. The whole mark gives a lively little
-// bounce. Pure inline SVG + design tokens (pure-white highlights only). Motion
-// auto-stills under prefers-reduced-motion (global rule in index.css). aria-hidden.
-export function HeroMark({ size = 88 }: { size?: number }) {
+// HeroMark — the floating brand mark above the portfolio assistant. It renders the core
+// idea: a Product Manager as the single source of truth that absorbs all the scattered,
+// abstract context. A gradient PM node (person in a purple disc) sits inside a slowly
+// rotating dashed "field" ring, while dashed context-arrows stream IN from the left and
+// converge on it (dashes flow inward). The whole mark gently floats. Pure inline SVG +
+// design tokens (white highlights only); motion auto-stills under prefers-reduced-motion.
+export function HeroMark({ size = 108 }: { size?: number }) {
+  // 5 context streams converging on the node's left side; staggered so the inflow shimmers.
+  const streams = [
+    'M6 16 Q46 20 58 46',
+    'M4 33 Q44 34 57 50',
+    'M4 52 L57 52',
+    'M4 71 Q44 70 57 54',
+    'M6 88 Q46 84 58 58',
+  ]
   return (
     <div
       className="hero-mark relative inline-flex items-center justify-center"
-      style={{ width: size, height: size }}
+      style={{ width: size, height: Math.round(size * 0.86) }}
       aria-hidden="true"
     >
-      <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"
-        style={{ filter: 'drop-shadow(0 8px 16px var(--glow-accent))', overflow: 'visible' }}>
+      <svg width={size} height={Math.round(size * 0.86)} viewBox="0 0 124 104" fill="none" xmlns="http://www.w3.org/2000/svg"
+        style={{ filter: 'drop-shadow(0 10px 22px var(--glow-accent))', overflow: 'visible' }}>
         <defs>
-          <linearGradient id="hm-body" x1="26" y1="16" x2="74" y2="94" gradientUnits="userSpaceOnUse">
+          <linearGradient id="hm-node" x1="60" y1="30" x2="104" y2="76" gradientUnits="userSpaceOnUse">
             <stop offset="0" stopColor="var(--color-accent-bright)" />
             <stop offset="1" stopColor="var(--color-accent-strong)" />
           </linearGradient>
-          <radialGradient id="hm-spark" cx="50%" cy="50%" r="50%">
-            <stop offset="0" stopColor="#FFFFFF" />
-            <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
-          </radialGradient>
+          <marker id="hm-arrow" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M1 1 L6.5 4 L1 7 Z" fill="var(--color-accent)" />
+          </marker>
         </defs>
 
-        {/* Tilted data-orbit — one crisp thin ring + a single node, slowly rotating.
-            The invisible circle anchors the group's box on (50,50) for a centred spin. */}
-        <g className="hero-mark__orbit">
-          <circle cx="50" cy="50" r="41" fill="none" stroke="none" />
-          <g transform="rotate(-24 50 50)">
-            <ellipse cx="50" cy="53" rx="41" ry="12.5" fill="none" stroke="var(--color-accent-bright)" strokeOpacity="0.55" strokeWidth="1.5" />
-            <circle cx="91" cy="53" r="2.6" fill="var(--color-accent-bright)" />
-            <circle cx="9" cy="53" r="1.6" fill="var(--color-accent)" />
-          </g>
+        {/* Context streams flowing IN and converging on the node */}
+        <g fill="none" stroke="var(--color-accent)" strokeWidth="1.5" strokeLinecap="round"
+          strokeDasharray="2 5" markerEnd="url(#hm-arrow)">
+          {streams.map((d, i) => (
+            <path key={i} className="hero-flow" d={d} style={{ animationDelay: `${i * -0.22}s` }} />
+          ))}
         </g>
 
-        {/* The PM figure — crisp avatar: shoulders + head with a sharp rim light */}
-        <path d="M26 89 C26 66 74 66 74 89 Z" fill="url(#hm-body)" />
-        <circle cx="50" cy="34" r="13.5" fill="url(#hm-body)" />
-        {/* Sharp top-left rim highlight on the head */}
-        <path d="M40.5 25 A13.5 13.5 0 0 1 58 24.2" stroke="#FFFFFF" strokeOpacity="0.55" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        {/* Crisp shoulder highlight */}
-        <path d="M31 82 C33 71 45 68 50 68" stroke="#FFFFFF" strokeOpacity="0.28" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+        {/* Rotating dashed "field" ring around the node */}
+        <circle className="hero-mark__orbit" cx="84" cy="52" r="30" fill="none"
+          stroke="var(--color-accent-bright)" strokeOpacity="0.5" strokeWidth="1.5" strokeDasharray="1.5 6.5" strokeLinecap="round" />
 
-        {/* Crisp 4-point sparkle */}
-        <circle className="hero-mark__spark" cx="73" cy="18" r="7" fill="url(#hm-spark)" opacity="0.8" />
-        <path className="hero-mark__spark" d="M73 11 L75 16 L80 18 L75 20 L73 25 L71 20 L66 18 L71 16 Z" fill="#FFFFFF" />
+        {/* The PM node — single source of truth */}
+        <circle cx="84" cy="52" r="23" fill="url(#hm-node)" />
+        <circle cx="84.6" cy="52.6" r="22.4" fill="none" stroke="#FFFFFF" strokeOpacity="0.28" strokeWidth="1.25" />
+        {/* Person */}
+        <circle cx="84" cy="45.5" r="6.6" fill="#FFFFFF" />
+        <path d="M72.5 66 C72.5 55 95.5 55 95.5 66 Z" fill="#FFFFFF" />
+        {/* Sharp top-left rim light */}
+        <path d="M69 44 A23 23 0 0 1 84 29.5" stroke="#FFFFFF" strokeOpacity="0.4" strokeWidth="1.25" fill="none" strokeLinecap="round" />
       </svg>
     </div>
   )
