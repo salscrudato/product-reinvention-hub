@@ -32,7 +32,10 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
   const counts = useCoverageCounts(cov)
 
   return (
-    <div className="group relative h-full bg-surface rounded-[16px] overflow-hidden flex flex-col border border-[color:var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-accent-line)] hover:shadow-[0_16px_36px_-14px_var(--glow-accent)]">
+    <div className="group relative h-full bg-surface rounded-[16px] overflow-hidden flex flex-col border border-[color:var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-accent-line)] hover:shadow-[0_18px_40px_-14px_var(--glow-accent)]">
+      {/* Top brand gradient — subtle, brightens on hover */}
+      <span aria-hidden="true" className="block h-[3px] w-full opacity-80 group-hover:opacity-100 transition-opacity"
+        style={{ background: 'linear-gradient(90deg, var(--color-accent-bright) 0%, var(--color-accent-strong) 55%, transparent 100%)' }} />
       {/* Subtle gradient wash + glow on hover */}
       <span aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         style={{ background: 'var(--gradient-accent-soft)' }} />
@@ -42,7 +45,7 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
           <div className="flex flex-col gap-1.5 min-w-0">
             {parentName && (
               <span className="inline-flex items-center gap-1 text-[11px] text-faint">
-                <IconEndorsement size={12} /> Endorsement · {parentName}
+                <IconEndorsement size={12} /> Sub-coverage · {parentName}
               </span>
             )}
             <div className="flex items-center gap-2 min-w-0">

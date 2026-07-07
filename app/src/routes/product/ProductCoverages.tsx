@@ -57,6 +57,18 @@ export default function ProductCoverages() {
   const endorsements = filtered.filter(c => c.parentId).sort(byOrder)
   const parentName = (refId?: string | null) => coverages.find(c => c.refId === refId)?.name
 
+  // One unified list — every coverage-bearing item together, with each parent immediately
+  // followed by its sub-coverages (children whose parent is missing trail at the end). No
+  // "coverage vs endorsement" split: the only distinction is coverage (standalone/parent)
+  // vs sub-coverage (child), surfaced on the card itself.
+  const ordered = useMemo(() => {
+    const out: WithId<Coverage>[] = []
+    for (const r of roots) { out.push(r, ...endorsements.filter(e => e.parentId === r.refId)) }
+    const seen = new Set(out.map(c => c.id))
+    for (const e of endorsements) if (!seen.has(e.id)) out.push(e)
+    return out
+  }, [roots, endorsements])
+
   // A deep link (?cov=<id|refId>) auto-opens that coverage's Limits editor once,
   // after coverages have loaded (guarded so closing it doesn't reopen).
   const deepLinkDone = useRef(false)
@@ -120,45 +132,22 @@ export default function ProductCoverages() {
       ) : filtered.length === 0 ? (
         <EmptyState icon={<IconSearch size={32} />} title={`No coverages match "${query}"`} />
       ) : (
-        <div className="flex flex-col gap-6">
-          {roots.length > 0 && (
-            <section className="flex flex-col gap-3">
-              <SectionHeader label="Coverages" count={roots.length} />
-              {view === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {roots.map((cov, i) => (
-                    <div key={cov.id} className="rise-in h-full" style={{ '--rise-delay': `${i * 40}ms` } as React.CSSProperties}>
-                      <CoverageHubCard {...hubProps(cov)} />
-                    </div>
-                  ))}
+        <section className="flex flex-col gap-3">
+          <SectionHeader label="Coverages" count={ordered.length} />
+          {view === 'cards' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {ordered.map((cov, i) => (
+                <div key={cov.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(i, 10) * 40}ms` } as React.CSSProperties}>
+                  <CoverageHubCard parentName={cov.parentId ? parentName(cov.parentId) : undefined} {...hubProps(cov)} />
                 </div>
-              ) : (
-                <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
-                  {roots.map(cov => <CoverageRow key={cov.id} {...hubProps(cov)} />)}
-                </div>
-              )}
-            </section>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
+              {ordered.map(cov => <CoverageRow key={cov.id} isEndorsement={!!cov.parentId} {...hubProps(cov)} />)}
+            </div>
           )}
-
-          {endorsements.length > 0 && (
-            <section className="flex flex-col gap-3">
-              <SectionHeader label="Endorsements" count={endorsements.length} />
-              {view === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {endorsements.map((cov, i) => (
-                    <div key={cov.id} className="rise-in h-full" style={{ '--rise-delay': `${(roots.length + i) * 40}ms` } as React.CSSProperties}>
-                      <CoverageHubCard parentName={parentName(cov.parentId)} {...hubProps(cov)} />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
-                  {endorsements.map(cov => <CoverageRow key={cov.id} isEndorsement {...hubProps(cov)} />)}
-                </div>
-              )}
-            </section>
-          )}
-        </div>
+        </section>
       )}
 
       {/* Aspect editors */}
