@@ -127,7 +127,7 @@ export default function ProductCoverages() {
               {view === 'cards' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {roots.map((cov, i) => (
-                    <div key={cov.id} className="rise-in" style={{ '--rise-delay': `${i * 40}ms` } as React.CSSProperties}>
+                    <div key={cov.id} className="rise-in h-full" style={{ '--rise-delay': `${i * 40}ms` } as React.CSSProperties}>
                       <CoverageHubCard {...hubProps(cov)} />
                     </div>
                   ))}
@@ -146,7 +146,7 @@ export default function ProductCoverages() {
               {view === 'cards' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {endorsements.map((cov, i) => (
-                    <div key={cov.id} className="rise-in" style={{ '--rise-delay': `${(roots.length + i) * 40}ms` } as React.CSSProperties}>
+                    <div key={cov.id} className="rise-in h-full" style={{ '--rise-delay': `${(roots.length + i) * 40}ms` } as React.CSSProperties}>
                       <CoverageHubCard parentName={parentName(cov.parentId)} {...hubProps(cov)} />
                     </div>
                   ))}

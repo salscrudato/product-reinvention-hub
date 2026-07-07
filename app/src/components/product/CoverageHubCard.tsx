@@ -32,7 +32,7 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
   const counts = useCoverageCounts(cov)
 
   return (
-    <div className="group relative bg-surface rounded-[16px] overflow-hidden flex flex-col hover:shadow-[var(--shadow-card-hover)] transition-all duration-200"
+    <div className="group relative h-full bg-surface rounded-[16px] overflow-hidden flex flex-col hover:shadow-[var(--shadow-card-hover)] transition-all duration-200"
       style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
       <div className="p-4 flex flex-col gap-3.5 flex-1">
         {/* Identity */}

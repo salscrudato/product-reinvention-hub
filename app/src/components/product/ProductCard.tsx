@@ -28,7 +28,7 @@ export function ProductCard({ p }: { p: WithId<Product> }) {
 
   return (
     <div
-      className="group relative bg-surface rounded-[16px] overflow-hidden flex flex-col hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] transition-all duration-200"
+      className="group relative h-full bg-surface rounded-[16px] overflow-hidden flex flex-col hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] transition-all duration-200"
       style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
     >
       {/* Brand rail — subtle gradient flowing left→right, brightening on hover */}

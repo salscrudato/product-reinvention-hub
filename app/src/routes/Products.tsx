@@ -203,7 +203,7 @@ export default function Products() {
           {/* Entrance stagger, matching the Coverage card grid so both surfaces share
               one motion language. Capped + reduced-motion-neutralised (see index.css). */}
           {visible.map((p, i) => (
-            <div key={p.id} className="rise-in" style={{ '--rise-delay': `${Math.min(i, 8) * 40}ms` } as React.CSSProperties}>
+            <div key={p.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(i, 8) * 40}ms` } as React.CSSProperties}>
               <ProductCard p={p} />
             </div>
           ))}
