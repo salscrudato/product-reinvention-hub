@@ -8,7 +8,7 @@
 // Provenance badges on each card show which LOBs and states triggered the match.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { IconNews, IconRefresh, IconExternalLink, IconSparkle, IconProduct, IconStates } from '../components/ui/icons'
+import { IconNews, IconRefresh, IconExternalLink, IconSparkle, IconProduct, IconStates, IconFilter } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
@@ -46,6 +46,21 @@ const STATE_NAMES: Record<string, string> = {
 const LOB_KEYWORDS: Record<string, string[]> = {
   HO: ['homeowners', 'homeowner', 'ho-3', 'ho3', 'dwelling', 'renters', 'property insurance', 'home insurance'],
   GL: ['general liability', 'cgl', 'commercial general liability', 'business liability'],
+}
+
+// The shared baseline every user starts from — what the agent should always pull. A
+// user's own edit refines it, but everyone begins from the same instruction.
+const BASE_NEWS_INSTRUCTION =
+  'Track U.S. P&C insurance market developments: rate filings and approvals, competitor product and endorsement launches, regulatory and legislative changes, catastrophe and reinsurance trends, and distribution / insurtech moves — with emphasis on Homeowners (HO) and commercial General Liability (GL).'
+
+// Natural-language article filter: keep items containing every significant word in the
+// phrase (case-insensitive, stop-words dropped). Empty phrase → keep everything.
+const STOP = new Set(['the','a','an','and','or','for','to','of','in','on','with','is','are','by','at','about','me','show','only','news','article','articles','that'])
+function nlMatch(text: string, phrase: string): boolean {
+  const terms = phrase.toLowerCase().split(/\W+/).filter(w => w.length > 2 && !STOP.has(w))
+  if (terms.length === 0) return true
+  const hay = text.toLowerCase()
+  return terms.every(t => hay.includes(t))
 }
 
 interface RelevanceResult {
@@ -108,11 +123,12 @@ function computeRelevance(
 export default function News() {
   const { user } = useUser()
   const [items, setItems]             = useState<NewsDoc[] | null>(null)
-  const [instruction, setInstr]       = useState('')
-  const [savedInstr, setSaved]        = useState('')
+  const [instruction, setInstr]       = useState(BASE_NEWS_INSTRUCTION)
+  const [savedInstr, setSaved]        = useState(BASE_NEWS_INSTRUCTION)
   const [refreshing, setRefreshing]   = useState(false)
   const [saving, setSaving]           = useState(false)
   const [query, setQuery]             = useState('')
+  const [nlFilter, setNlFilter]       = useState('')
 
   const products = useLiveCollection<Product>('products')
 
@@ -121,7 +137,11 @@ export default function News() {
     let u2: (() => void) | undefined
     if (user) {
       u2 = adapter.db.subscribe<NewsPrefs>(`newsPrefs/${user.uid}`, d => {
-        if (d && !Array.isArray(d)) { setInstr(d.instruction ?? ''); setSaved(d.instruction ?? '') }
+        // Fall back to the shared baseline so everyone starts from the same instruction.
+        if (d && !Array.isArray(d)) {
+          const instr = d.instruction?.trim() ? d.instruction : BASE_NEWS_INSTRUCTION
+          setInstr(instr); setSaved(instr)
+        }
       })
     }
     return () => { u1(); u2?.() }
@@ -141,15 +161,21 @@ export default function News() {
   }, [items, products.items])
 
   const displayed = useMemo(() => {
-    if (!query) return ranked
-    const q = query.toLowerCase()
-    return ranked.filter(n =>
-      n.title.toLowerCase().includes(q) ||
-      (n.summary ?? '').toLowerCase().includes(q) ||
-      (n.source ?? '').toLowerCase().includes(q) ||
-      (n.tags ?? []).some((t: string) => t.toLowerCase().includes(q)),
-    )
-  }, [ranked, query])
+    let list = ranked
+    if (query) {
+      const q = query.toLowerCase()
+      list = list.filter(n =>
+        n.title.toLowerCase().includes(q) ||
+        (n.summary ?? '').toLowerCase().includes(q) ||
+        (n.source ?? '').toLowerCase().includes(q) ||
+        (n.tags ?? []).some((t: string) => t.toLowerCase().includes(q)),
+      )
+    }
+    if (nlFilter.trim()) {
+      list = list.filter(n => nlMatch(`${n.title} ${n.summary ?? ''} ${(n.tags ?? []).join(' ')}`, nlFilter))
+    }
+    return list
+  }, [ranked, query, nlFilter])
 
   async function savePrefs() {
     if (!user) return
@@ -187,7 +213,7 @@ export default function News() {
   const unsaved = instruction.trim() !== savedInstr
 
   return (
-    <div className="flex flex-col gap-5 max-w-3xl">
+    <div className="flex flex-col gap-5">
       {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -242,17 +268,44 @@ export default function News() {
         />
         <div className="flex items-center justify-between gap-2">
           <p id="news-instr-hint" className="text-xs text-faint">
-            Used alongside your portfolio ({products.items.length} product{products.items.length === 1 ? '' : 's'}) to tailor each fetch.
+            Starts from a shared baseline — your edits refine what the nightly agent pulls, alongside your portfolio ({products.items.length} product{products.items.length === 1 ? '' : 's'}).
           </p>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={savePrefs}
-            disabled={!instruction.trim() || !unsaved || saving}
-            aria-label="Save news tracking preference"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {instruction.trim() !== BASE_NEWS_INSTRUCTION && (
+              <button onClick={() => setInstr(BASE_NEWS_INSTRUCTION)} className="text-xs text-dim hover:text-accent transition-colors">Reset to baseline</button>
+            )}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={savePrefs}
+              disabled={!instruction.trim() || !unsaved || saving}
+              aria-label="Save news tracking preference"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Natural-language article filter — narrows the feed below without re-fetching */}
+        <div className="flex flex-col gap-1.5 pt-3 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <label htmlFor="news-nl-filter" className="flex items-center gap-1.5 text-sm font-medium text-text">
+            <IconFilter size={14} className="text-accent" aria-hidden="true" />
+            Filter articles (natural language)
+          </label>
+          <input
+            id="news-nl-filter"
+            value={nlFilter}
+            onChange={e => setNlFilter(e.target.value)}
+            placeholder="e.g. Florida rate hikes and reinsurance"
+            className="h-9 rounded-[10px] bg-surface border text-sm text-text px-3 focus:outline-none focus:ring-2 focus:ring-accent/25"
+            style={{ borderColor: nlFilter ? 'var(--color-accent)' : 'var(--color-border-strong)' }}
+            aria-describedby="news-nl-hint"
+          />
+          <p id="news-nl-hint" className="text-xs text-faint">
+            {nlFilter.trim()
+              ? `Showing ${displayed.length} of ${ranked.length} articles matching “${nlFilter.trim()}”.`
+              : 'Type a phrase — only articles mentioning every key word are shown.'}
+          </p>
         </div>
       </div>
 
@@ -268,83 +321,61 @@ export default function News() {
           description={query ? `No items match "${query}".` : 'A nightly agent (06:00 ET) searches the web for your tracking instruction and files what it finds here. Set a preference above, then use "Refresh now" to fetch immediately.'}
         />
       ) : (
-        <div className="flex flex-col gap-3" role="feed" aria-label="Market news feed">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" role="feed" aria-label="Market news feed">
           {displayed.map(n => (
             <a
               key={n.id}
               href={n.url}
               target="_blank"
               rel="noreferrer"
-              className="group bg-surface rounded-[14px] p-4 flex flex-col gap-2 transition-all hover:shadow-[var(--shadow-card-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-              style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+              className="group relative bg-surface rounded-[16px] overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5 border border-[color:var(--color-border)] shadow-[var(--shadow-card)] hover:border-[color:var(--color-accent-line)] hover:shadow-[0_16px_36px_-14px_var(--glow-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               aria-label={`${n.title} — ${n.source || 'Web'}`}
             >
-              {/* Meta row: source · date · portfolio-match badge · external-link icon */}
-              <div className="flex items-center gap-2 text-xs text-faint">
-                <span className="font-medium text-dim">{n.source || 'Web'}</span>
-                {n.fetchedAt
-                  ? <><span aria-hidden="true">·</span><time dateTime={new Date(toMillis(n.fetchedAt)).toISOString()}>{new Date(toMillis(n.fetchedAt)).toLocaleDateString()}</time></>
-                  : null}
-                {n.rel.score > 0 && (
-                  <span
-                    className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[5px] text-[10px] font-medium"
-                    style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}
-                    title="Matches your portfolio"
-                  >
-                    <IconProduct size={9} aria-hidden="true" />
-                    Portfolio match
-                  </span>
-                )}
-                <IconExternalLink size={12} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
-              </div>
+              {/* Brand rail */}
+              <span aria-hidden="true" className="block h-[3px] w-full opacity-70 group-hover:opacity-100 transition-opacity"
+                style={{ background: 'linear-gradient(90deg, var(--color-accent-bright) 0%, var(--color-accent-strong) 60%, transparent 100%)' }} />
 
-              {/* Title */}
-              <h3 className="text-sm font-semibold text-text group-hover:text-accent transition-colors leading-snug">
-                {n.title}
-              </h3>
-
-              {/* Summary */}
-              {n.summary && (
-                <p className="text-sm text-dim leading-relaxed">{n.summary}</p>
-              )}
-
-              {/* Provenance row — which LOBs and states in the portfolio triggered this match */}
-              {(n.rel.lobs.length > 0 || n.rel.states.length > 0) && (
-                <div
-                  className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5"
-                  role="list"
-                  aria-label="Portfolio match reasons"
-                >
-                  {n.rel.lobs.length > 0 && (
-                    <span
-                      role="listitem"
-                      className="inline-flex items-center gap-1 text-[10px] text-faint"
-                    >
-                      <IconProduct size={9} aria-hidden="true" />
-                      {n.rel.lobs.join(', ')}
+              <div className="p-4 flex flex-col gap-2 flex-1">
+                {/* Meta row: source · date · portfolio-match · external-link */}
+                <div className="flex items-center gap-2 text-xs text-faint">
+                  <span className="font-medium text-dim truncate max-w-[45%]">{n.source || 'Web'}</span>
+                  {n.fetchedAt ? (
+                    <><span aria-hidden="true">·</span><time dateTime={new Date(toMillis(n.fetchedAt)).toISOString()}>{new Date(toMillis(n.fetchedAt)).toLocaleDateString()}</time></>
+                  ) : null}
+                  {n.rel.score > 0 && (
+                    <span className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium shrink-0"
+                      style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent)' }} title="Matches your portfolio">
+                      <IconProduct size={9} aria-hidden="true" /> Match
                     </span>
                   )}
-                  {n.rel.lobs.length > 0 && n.rel.states.length > 0 && (
-                    <span className="text-[10px] text-faint" aria-hidden="true">·</span>
+                  <IconExternalLink size={12} className={`${n.rel.score > 0 ? '' : 'ml-auto'} opacity-0 group-hover:opacity-100 transition-opacity shrink-0`} aria-hidden="true" />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-[15px] font-semibold text-text group-hover:text-accent transition-colors leading-snug line-clamp-2">
+                  {n.title}
+                </h3>
+
+                {/* Summary — clamped so cards stay even */}
+                {n.summary && (
+                  <p className="text-[13px] text-dim leading-relaxed line-clamp-3">{n.summary}</p>
+                )}
+
+                {/* Footer — just-enough metadata: match reasons + up to 3 tags */}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-auto pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+                  {n.rel.lobs.length > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-faint">
+                      <IconProduct size={9} aria-hidden="true" />{n.rel.lobs.join(', ')}
+                    </span>
                   )}
                   {n.rel.states.length > 0 && (
-                    <span
-                      role="listitem"
-                      className="inline-flex items-center gap-1 text-[10px] text-faint"
-                    >
-                      <IconStates size={9} aria-hidden="true" />
-                      {n.rel.states.join(' · ')}
+                    <span className="inline-flex items-center gap-1 text-[10px] text-faint">
+                      <IconStates size={9} aria-hidden="true" />{n.rel.states.slice(0, 3).join(' · ')}{n.rel.states.length > 3 ? '…' : ''}
                     </span>
                   )}
+                  {(n.tags ?? []).slice(0, 3).map((t: string) => <Badge key={t} label={t} color="purple" />)}
                 </div>
-              )}
-
-              {/* Tags */}
-              {(n.tags ?? []).length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {n.tags.map(t => <Badge key={t} label={t} color="purple" />)}
-                </div>
-              )}
+              </div>
             </a>
           ))}
         </div>
