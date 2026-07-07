@@ -343,13 +343,24 @@ export interface NewsPrefs {
 // ─── Dictionary ──────────────────────────────────────────────────────────────
 
 export interface DictionaryEntry extends GovernanceBlock {
+  // Citable definition id — the traceability token the grounded AI cites in brackets,
+  // e.g. [DEF.003]. Seeded terms use a line prefix (HO.DEF.001, GL.DEF.001); terms a
+  // user creates in-app get a neutral DEF.NNN. Nullable to mirror the other refId shapes.
+  refId:         string | null
   name:          string
   type:          DynamicFieldType
   description:   string
   allowedValues: string[]
   format:        string
   tags:          string[]
-  usedIn:        { entityPath: string; label: string }[]
+  // Curated match synonyms — the surface forms this term/field actually appears under in
+  // coverage/rule/form text (e.g. "NamedInsured" for "Named Insured"). Drives the computed
+  // "used in" back-references. Optional + additive; matching always includes `name`.
+  aliases?:      string[]
+  // "Used in" back-references are computed LIVE from the current coverages/forms/rules via
+  // computeDictionaryUsage() — never persisted — so they can never go stale. Kept optional
+  // for wire/back-compat; do not rely on a stored value.
+  usedIn?:       { entityPath: string; label: string }[]
 }
 
 // ─── Search ──────────────────────────────────────────────────────────────────

@@ -1,14 +1,20 @@
-// Data Dictionary (/app/dictionary) — reusable field definitions with audited
-// create/edit/delete. Each card shows type, description, allowed values, format,
-// tags and "used in" backlinks.
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+// Data Dictionary (/app/dictionary) — the governed catalogue of canonical fields/terms.
+// Each entry carries a citable refId (the AI cites [HO.DEF.003]), a type, description,
+// allowed values, format, tags and aliases. Its "used in" back-references are computed
+// LIVE from the current coverages/rules/forms (never a stored snapshot, so they can't go
+// stale) and rendered as deep links to the exact product tab. Every write goes through
+// adapter.db.mutate() (atomic entity + audit + version + searchIndex).
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { IconBook, IconPlus, IconSearch, IconTrash, IconLink } from '../components/ui/icons'
+import { IconBook, IconPlus, IconSearch, IconTrash, IconEdit, IconCoverage, IconRule, IconForm } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
-import { Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
-import type { DictionaryEntry, DynamicFieldType } from '@pf/shared'
+import { useLiveCollection } from '../lib/useLiveCollection'
+import { useDictionaryCorpus } from '../lib/useDictionaryCorpus'
+import { Badge, Button, Input, Dialog, Skeleton, EmptyState, RefChip, LifecyclePill, ReviewPill } from '../components/ui'
+import { computeDictionaryUsage } from '@pf/shared'
+import type { DictionaryEntry, DynamicFieldType, DictUsageRef, DictUsageKind } from '@pf/shared'
 
 type DictDoc = DictionaryEntry & { id: string }
 
@@ -16,46 +22,80 @@ const TYPES: DynamicFieldType[] = ['TEXT', 'CURRENCY', 'DATE', 'LIST', 'PERCENT'
 const TYPE_COLOR: Record<DynamicFieldType, 'blue' | 'good' | 'purple' | 'warn' | 'default'> = {
   TEXT: 'default', CURRENCY: 'good', DATE: 'blue', LIST: 'purple', PERCENT: 'warn',
 }
+const KIND_ICON: Record<DictUsageKind, typeof IconCoverage> = { coverage: IconCoverage, rule: IconRule, form: IconForm }
+const KIND_LABEL: Record<DictUsageKind, string> = { coverage: 'Coverage', rule: 'Rule', form: 'Form' }
 
-// Map an entity path (e.g. products/HO.PROD.001/coverages/x) to an in-app route.
-function pathToRoute(entityPath: string): string {
-  const parts = entityPath.split('/')
-  const pid = parts[1] ?? 'HO.PROD.001'
-  if (entityPath.includes('/coverages')) return `/app/products/${pid}/coverages`
-  if (entityPath.includes('/rules'))     return `/app/products/${pid}/rules`
-  if (entityPath.startsWith('forms'))    return `/app/products/${pid}/forms`
-  if (entityPath.startsWith('products')) return `/app/products/${pid}/overview`
-  return '/app/explorer'
+/** Deep link a back-reference to the exact product tab the entity lives on, focusing it.
+ *  Falls back to the Explorer when no owning product is known (e.g. an orphan form). */
+function routeForUsage(u: DictUsageRef): string {
+  if (!u.productId) return '/app/explorer'
+  const tab = u.kind === 'coverage' ? 'coverages' : u.kind === 'rule' ? 'rules' : 'forms'
+  return `/app/products/${u.productId}/${tab}?focus=${encodeURIComponent(u.refId)}`
 }
 
-interface Draft { id?: string; name: string; type: DynamicFieldType; description: string; allowedValues: string; format: string; tags: string; source?: DictDoc }
-const EMPTY_DRAFT: Draft = { name: '', type: 'TEXT', description: '', allowedValues: '', format: '', tags: '' }
+/** Next neutral refId (DEF.NNN) for a user-created term — max existing trailing number +1,
+ *  scanning all prefixes (HO.DEF/GL.DEF/DEF) so ids never collide across lines. */
+function nextRefId(entries: DictDoc[]): string {
+  const max = entries.reduce((m, e) => {
+    const n = Number(/(\d+)\s*$/.exec(e.refId ?? '')?.[1] ?? '0')
+    return Number.isFinite(n) && n > m ? n : m
+  }, 0)
+  return `DEF.${String(max + 1).padStart(3, '0')}`
+}
+
+interface Draft { name: string; type: DynamicFieldType; description: string; allowedValues: string; format: string; tags: string; aliases: string; source?: DictDoc }
+const EMPTY_DRAFT: Draft = { name: '', type: 'TEXT', description: '', allowedValues: '', format: '', tags: '', aliases: '' }
 
 export default function Dictionary() {
   const navigate = useNavigate()
   const { user, profile } = useUser()
   const canEdit = profile?.role === 'EDITOR' || profile?.role === 'ADMIN'
 
-  const [entries, setEntries] = useState<DictDoc[] | null>(null)
+  const { items: entries, status } = useLiveCollection<DictDoc>('dictionary')
+  const { corpus, status: corpusStatus } = useDictionaryCorpus()
+
   const [query, setQuery]     = useState('')
   const [typeFilter, setTypeFilter] = useState<DynamicFieldType | ''>('')
   const [draft, setDraft]     = useState<Draft | null>(null)
   const [saving, setSaving]   = useState(false)
 
-  useEffect(() => {
-    const unsub = adapter.db.subscribe<DictDoc>('dictionary', d => { if (Array.isArray(d)) setEntries(d) })
-    return unsub
-  }, [])
+  // Citation focus: /app/dictionary?term=HO.DEF.003 scrolls to + rings that entry.
+  const [params, setParams] = useSearchParams()
+  const focusTerm = params.get('term')?.toLowerCase() ?? ''
+  const [flashId, setFlashId] = useState<string | null>(null)
+  const cardRefs = useRef(new Map<string, HTMLElement>())
+
+  // Live back-references, recomputed whenever the dictionary or the corpus changes.
+  const usageByEntry = useMemo(() => {
+    const map = new Map<string, DictUsageRef[]>()
+    for (const e of entries) map.set(e.id, computeDictionaryUsage(e, corpus))
+    return map
+  }, [entries, corpus])
 
   const visible = useMemo(() => {
-    let list = entries ?? []
+    let list = entries
     if (typeFilter) list = list.filter(e => e.type === typeFilter)
     if (query) {
       const q = query.toLowerCase()
-      list = list.filter(e => `${e.name} ${e.description} ${(e.tags ?? []).join(' ')}`.toLowerCase().includes(q))
+      list = list.filter(e => `${e.name} ${e.refId ?? ''} ${e.description} ${(e.tags ?? []).join(' ')} ${(e.aliases ?? []).join(' ')}`.toLowerCase().includes(q))
     }
     return [...list].sort((a, b) => a.name.localeCompare(b.name))
   }, [entries, query, typeFilter])
+
+  // Once entries are loaded, scroll the cited term into view and flash it.
+  useEffect(() => {
+    if (!focusTerm || status !== 'ready') return
+    const target = entries.find(e => (e.refId ?? '').toLowerCase() === focusTerm || e.id === focusTerm)
+    if (!target) return
+    setFlashId(target.id)
+    const el = cardRefs.current.get(target.id)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const clear = setTimeout(() => setFlashId(null), 2200)
+    // Consume the param so a later edit/nav doesn't re-trigger the flash.
+    const next = new URLSearchParams(params); next.delete('term'); setParams(next, { replace: true })
+    return () => clearTimeout(clear)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTerm, status, entries])
 
   async function save() {
     if (!draft || !user) return
@@ -63,16 +103,19 @@ export default function Dictionary() {
     if (!name) { toast.error('Name is required'); return }
     setSaving(true)
     const actor = { uid: user.uid, name: user.name ?? user.email ?? 'User' }
-    const allowedValues = draft.allowedValues.split(',').map(s => s.trim()).filter(Boolean)
-    const tags          = draft.tags.split(',').map(s => s.trim()).filter(Boolean)
+    const split = (s: string) => s.split(',').map(x => x.trim()).filter(Boolean)
+    const allowedValues = split(draft.allowedValues)
+    const tags          = split(draft.tags)
+    const aliases       = split(draft.aliases)
 
     try {
       if (draft.source) {
-        // Update — spread the full current entity so the version diff is clean.
+        // Update — spread the full current entity so the version diff is clean, then
+        // overwrite the editable fields (refId + governance are preserved from source).
         const { id, ...rest } = draft.source
         await adapter.db.mutate({
           op: 'update', path: `dictionary/${id}`,
-          data: { ...rest, name, type: draft.type, description: draft.description.trim(), allowedValues, format: draft.format.trim(), tags },
+          data: { ...rest, name, type: draft.type, description: draft.description.trim(), allowedValues, format: draft.format.trim(), tags, aliases },
           entityType: 'dictionary', actor, expectedRev: draft.source.rev,
         })
         toast.success('Field updated')
@@ -81,8 +124,9 @@ export default function Dictionary() {
         await adapter.db.mutate({
           op: 'create', path: `dictionary/${id}`,
           data: {
-            name, type: draft.type, description: draft.description.trim(), allowedValues, format: draft.format.trim(), tags,
-            usedIn: [], status: 'ACTIVE', lifecycle: 'DRAFT', reviewStatus: 'NOT_STARTED',
+            refId: nextRefId(entries),
+            name, type: draft.type, description: draft.description.trim(), allowedValues, format: draft.format.trim(), tags, aliases,
+            status: 'ACTIVE', lifecycle: 'DRAFT', reviewStatus: 'NOT_STARTED',
           },
           entityType: 'dictionary', actor,
         })
@@ -114,12 +158,20 @@ export default function Dictionary() {
     }
   }
 
+  function openEditor(e: DictDoc) {
+    setDraft({
+      name: e.name, type: e.type, description: e.description,
+      allowedValues: (e.allowedValues ?? []).join(', '), format: e.format ?? '',
+      tags: (e.tags ?? []).join(', '), aliases: (e.aliases ?? []).join(', '), source: e,
+    })
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-text">Data Dictionary</h1>
-          <p className="text-sm text-dim">Canonical field definitions, reused across coverages and forms.</p>
+          <p className="text-sm text-dim">Governed field definitions — cited by the assistant and back-linked to where they’re used.</p>
         </div>
         {canEdit && (
           <Button variant="primary" size="sm" onClick={() => setDraft({ ...EMPTY_DRAFT })}>
@@ -130,60 +182,104 @@ export default function Dictionary() {
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
-        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search fields…" leftIcon={<IconSearch size={14} />} className="max-w-xs" />
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search fields…" leftIcon={<IconSearch size={14} />} className="max-w-xs" aria-label="Search dictionary fields" />
+        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Filter by type">
           <button onClick={() => setTypeFilter('')} aria-pressed={typeFilter === ''}
-            className={`px-2.5 py-1 rounded-[8px] text-xs font-medium ${typeFilter === '' ? 'bg-accent-soft text-accent' : 'bg-surface text-dim'}`} style={{ border: '1px solid var(--color-border)' }}>All</button>
+            className={`px-2.5 py-1 rounded-[8px] text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${typeFilter === '' ? 'bg-accent-soft text-accent' : 'bg-surface text-dim'}`} style={{ border: '1px solid var(--color-border)' }}>All</button>
           {TYPES.map(t => (
             <button key={t} onClick={() => setTypeFilter(t === typeFilter ? '' : t)} aria-pressed={typeFilter === t}
-              className={`px-2.5 py-1 rounded-[8px] text-xs font-medium ${typeFilter === t ? 'bg-accent-soft text-accent' : 'bg-surface text-dim'}`} style={{ border: '1px solid var(--color-border)' }}>{t}</button>
+              className={`px-2.5 py-1 rounded-[8px] text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${typeFilter === t ? 'bg-accent-soft text-accent' : 'bg-surface text-dim'}`} style={{ border: '1px solid var(--color-border)' }}>{t}</button>
           ))}
         </div>
       </div>
 
       {/* Grid */}
-      {entries === null ? (
+      {status === 'loading' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40" />)}
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-52" />)}
         </div>
+      ) : status === 'error' ? (
+        <EmptyState icon={<IconBook size={28} />} title="Couldn’t load the dictionary"
+          description="Check your connection or permissions and try again." />
       ) : visible.length === 0 ? (
         <EmptyState icon={<IconBook size={28} />} title={query || typeFilter ? 'No matching fields' : 'No dictionary fields yet'}
           description={query || typeFilter ? 'Try a different search or type.' : 'Define your first reusable field.'}
           action={canEdit && !query && !typeFilter ? <Button variant="primary" size="sm" onClick={() => setDraft({ ...EMPTY_DRAFT })}><IconPlus size={14} /> New field</Button> : undefined} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {visible.map(e => (
-            <button key={e.id} onClick={() => canEdit && setDraft({ id: e.id, name: e.name, type: e.type, description: e.description, allowedValues: (e.allowedValues ?? []).join(', '), format: e.format ?? '', tags: (e.tags ?? []).join(', '), source: e })}
-              className={`text-left bg-surface rounded-[16px] p-4 flex flex-col gap-3 transition-all ${canEdit ? 'hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5' : 'cursor-default'}`}
-              style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-semibold text-sm text-text">{e.name}</span>
-                <Badge label={e.type} color={TYPE_COLOR[e.type]} />
-              </div>
-              {e.description && <p className="text-xs text-dim leading-relaxed line-clamp-3">{e.description}</p>}
-              {e.format && <span className="text-[11px] font-mono text-faint">format: {e.format}</span>}
-              {(e.allowedValues ?? []).length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {e.allowedValues.slice(0, 4).map(v => <span key={v} className="text-[10px] font-mono px-1.5 py-0.5 rounded-[5px] bg-raised text-dim">{v}</span>)}
-                  {e.allowedValues.length > 4 && <span className="text-[10px] text-faint">+{e.allowedValues.length - 4}</span>}
+          {visible.map(e => {
+            const usage = usageByEntry.get(e.id) ?? []
+            const flashing = flashId === e.id
+            return (
+              <article key={e.id}
+                ref={el => { if (el) cardRefs.current.set(e.id, el); else cardRefs.current.delete(e.id) }}
+                className="bg-surface rounded-[16px] p-4 flex flex-col gap-3 transition-shadow"
+                style={{ border: `1px solid ${flashing ? 'var(--color-accent)' : 'var(--color-border)'}`, boxShadow: flashing ? '0 0 0 3px var(--color-accent-soft)' : 'var(--shadow-card)' }}>
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <span className="font-semibold text-sm text-text truncate">{e.name}</span>
+                    {e.refId && <RefChip id={e.refId} tone="accent" title={`Cite this definition as [${e.refId}]`} />}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge label={e.type} color={TYPE_COLOR[e.type]} />
+                    {canEdit && (
+                      <button onClick={() => openEditor(e)} aria-label={`Edit ${e.name}`} title={`Edit ${e.name}`}
+                        className="p-1 rounded-[6px] text-faint hover:text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
+                        <IconEdit size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
-              {(e.tags ?? []).length > 0 && <div className="flex flex-wrap gap-1">{e.tags.map(t => <Badge key={t} label={t} color="default" />)}</div>}
-              {(e.usedIn ?? []).length > 0 && (
-                <div className="flex flex-col gap-1 pt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
-                  <span className="text-[10px] uppercase tracking-wide text-faint">Used in</span>
-                  {e.usedIn.slice(0, 3).map((u, i) => (
-                    <span key={i} role="link" tabIndex={0}
-                      onClick={ev => { ev.stopPropagation(); navigate(pathToRoute(u.entityPath)) }}
-                      onKeyDown={ev => { if (ev.key === 'Enter') { ev.stopPropagation(); navigate(pathToRoute(u.entityPath)) } }}
-                      className="flex items-center gap-1 text-[11px] text-accent hover:underline cursor-pointer">
-                      <IconLink size={10} /> {u.label}
-                    </span>
-                  ))}
+
+                {/* Governance */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <LifecyclePill lifecycle={e.lifecycle} />
+                  <ReviewPill review={e.reviewStatus} />
                 </div>
-              )}
-            </button>
-          ))}
+
+                {e.description && <p className="text-xs text-dim leading-relaxed line-clamp-3">{e.description}</p>}
+                {e.format && <span className="text-[11px] font-mono text-faint">format: {e.format}</span>}
+
+                {(e.allowedValues ?? []).length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {e.allowedValues.slice(0, 5).map(v => <span key={v} className="text-[10px] font-mono px-1.5 py-0.5 rounded-[5px] bg-raised text-dim">{v}</span>)}
+                    {e.allowedValues.length > 5 && <span className="text-[10px] text-faint self-center">+{e.allowedValues.length - 5}</span>}
+                  </div>
+                )}
+                {(e.tags ?? []).length > 0 && <div className="flex flex-wrap gap-1">{e.tags.map(t => <Badge key={t} label={t} color="default" />)}</div>}
+
+                {/* Used in — live back-references */}
+                <div className="flex flex-col gap-1.5 pt-2 mt-auto" style={{ borderTop: '1px solid var(--color-border)' }}>
+                  <span className="text-[10px] uppercase tracking-wide text-faint">
+                    Used in{usage.length > 0 ? ` · ${usage.length}` : ''}
+                  </span>
+                  {corpusStatus === 'loading' ? (
+                    <span className="text-[11px] text-faint">Resolving references…</span>
+                  ) : corpusStatus === 'error' ? (
+                    <span className="text-[11px] text-faint">References unavailable.</span>
+                  ) : usage.length === 0 ? (
+                    <span className="text-[11px] text-faint">Not referenced in any coverage, form or rule.</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {usage.slice(0, 6).map(u => {
+                        const Icon = KIND_ICON[u.kind]
+                        return (
+                          <span key={`${u.kind}:${u.refId}`} className="inline-flex items-center gap-1 text-faint">
+                            <Icon size={11} aria-hidden />
+                            <RefChip id={u.refId}
+                              onClick={() => navigate(routeForUsage(u))}
+                              title={`${KIND_LABEL[u.kind]}: ${u.label} — open`} />
+                          </span>
+                        )
+                      })}
+                      {usage.length > 6 && <span className="text-[10px] text-faint self-center">+{usage.length - 6} more</span>}
+                    </div>
+                  )}
+                </div>
+              </article>
+            )
+          })}
         </div>
       )}
 
@@ -191,7 +287,12 @@ export default function Dictionary() {
       <Dialog open={!!draft} onClose={() => setDraft(null)} title={draft?.source ? 'Edit field' : 'New field'}>
         {draft && (
           <div className="flex flex-col gap-4">
-            <Input label="Name" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Coverage A" autoFocus />
+            {draft.source?.refId && (
+              <div className="flex items-center gap-2 text-xs text-dim">
+                <span>Definition id</span> <RefChip id={draft.source.refId} tone="accent" />
+              </div>
+            )}
+            <Input label="Name" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Coverage A Amount" autoFocus />
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text" htmlFor="dict-type">Type</label>
               <select id="dict-type" value={draft.type} onChange={e => setDraft({ ...draft, type: e.target.value as DynamicFieldType })}
@@ -204,9 +305,13 @@ export default function Dictionary() {
               <textarea id="dict-desc" value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} rows={3}
                 className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none" style={{ borderColor: 'var(--color-border-strong)' }} placeholder="What this field means…" />
             </div>
-            <Input label="Allowed values (comma-separated)" value={draft.allowedValues} onChange={e => setDraft({ ...draft, allowedValues: e.target.value })} placeholder="50, 70, 75" />
-            <Input label="Format" value={draft.format} onChange={e => setDraft({ ...draft, format: e.target.value })} placeholder="USD, percent, ISO-8601…" />
+            <Input label="Allowed values (comma-separated)" value={draft.allowedValues} onChange={e => setDraft({ ...draft, allowedValues: e.target.value })} placeholder="500, 1000, 2500, 5000" />
+            <Input label="Format" value={draft.format} onChange={e => setDraft({ ...draft, format: e.target.value })} placeholder="USD (whole dollars), YYYY-MM-DD…" />
             <Input label="Tags (comma-separated)" value={draft.tags} onChange={e => setDraft({ ...draft, tags: e.target.value })} placeholder="rating, limits" />
+            <div className="flex flex-col gap-1">
+              <Input label="Aliases (comma-separated)" value={draft.aliases} onChange={e => setDraft({ ...draft, aliases: e.target.value })} placeholder="Coverage A, Dwelling limit" />
+              <span className="text-[11px] text-faint">Other surface forms this term appears under — drives the “used in” back-references.</span>
+            </div>
 
             <div className="flex items-center justify-between pt-2">
               {draft.source

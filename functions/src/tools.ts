@@ -6,8 +6,9 @@ import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
 import {
   evaluate, resolveRatingKit, resolveLobByRefId, DEFAULT_LOB, rankDocuments,
+  computeDictionaryUsage,
 } from '@pf/shared'
-import type { RankDoc } from '@pf/shared'
+import type { RankDoc, DictUsageCorpus } from '@pf/shared'
 import type {
   RatingInputMap, RatingProgram, RTTable, LDTable, Coverage, Rule, Form,
   Product, DictionaryEntry, SearchIndexEntry,
@@ -96,11 +97,14 @@ export const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'get_dictionary',
-    description: 'Return a data-dictionary term by name (type, description, allowed values, format). Use for canonical field definitions.',
+    description:
+      'Return a governed data-dictionary definition by refId (e.g. HO.DEF.003) or name (e.g. "Coverage A Amount"). Gives type, description, allowed values, format, tags and a LIVE "used in" list of the coverages/rules/forms where the term actually appears (each with its own refId). Cite the definition by its refId, e.g. [HO.DEF.003].',
     input_schema: {
       type: 'object',
-      properties: { name: { type: 'string', description: 'Dictionary term name, e.g. "Coverage A" or "Protection Class".' } },
-      required: ['name'],
+      properties: {
+        refId: { type: 'string', description: 'Dictionary definition refId, e.g. HO.DEF.003 or GL.DEF.001. Preferred when known.' },
+        name:  { type: 'string', description: 'Dictionary term name, e.g. "Coverage A Amount" or "Occurrence Limit".' },
+      },
     },
   },
 ]
@@ -112,9 +116,9 @@ export const SYSTEM_PROMPT = `You are Product Factory's portfolio analyst for P&
 DATA MODEL (Firestore, all reachable via the tools):
 - products → coverages (line-specific, e.g. HO-3 Coverage A–F or GL premises/products BI/PD plus endorsements; each has terms of kind LIMIT | DEDUCTIBLE | OPTION), rules (category PRODUCT | RATING | FORMS, each a condition → outcome), formRules, and ratingPrograms (ordered SET/MUL/ADD/MIN_FLOOR steps).
 - forms — policy documents keyed by number (e.g. "HO 04 61", "CG 00 01"), with category, attachment condition and coverage parts.
-- ldTables — Limit/Deductible option tables (refIds like HO.LD.002, LDTable.001). rtTables — rate tables (refIds like HO.RT.003, RTTable.001). dictionary — canonical field definitions.
+- ldTables — Limit/Deductible option tables (refIds like HO.LD.002, LDTable.001). rtTables — rate tables (refIds like HO.RT.003, RTTable.001). dictionary — governed field definitions, each with a citable refId (HO.DEF.003, GL.DEF.001) and a live list of the coverages/rules/forms it is used in.
 
-REFERENCE IDs are the traceability backbone and must be preserved and cited exactly: coverage refIds (HO.COV.003.002, GL.COV.002.001), rule refIds (HO.RU.006, GL.RU.004), form-rule refIds (HO.FORM.RU.003, GL.FORM.RU.001), table refIds (HO.LD.002, RTTable.001) and form numbers (HO 04 61, CG 00 01).
+REFERENCE IDs are the traceability backbone and must be preserved and cited exactly: coverage refIds (HO.COV.003.002, GL.COV.002.001), rule refIds (HO.RU.006, GL.RU.004), form-rule refIds (HO.FORM.RU.003, GL.FORM.RU.001), table refIds (HO.LD.002, RTTable.001), dictionary definition refIds (HO.DEF.003, GL.DEF.001) and form numbers (HO 04 61, CG 00 01). When you define or explain what a field means, ground it with get_dictionary and cite the definition by its refId, e.g. [HO.DEF.003]. Never cite a definition refId that get_dictionary did not return.
 
 HOUSE RULES — non-negotiable:
 1. Assert ONLY what the tools return. Never invent coverages, forms, rules, limits, factors or premiums.
@@ -141,7 +145,7 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
       case 'get_forms':        return await getForms(input)
       case 'get_ld_table':     return await getLdTable(String(input.refId ?? ''))
       case 'run_rating':       return await runRating(String(input.programRef ?? ''), (input.inputs as Partial<RatingInputMap>) ?? {})
-      case 'get_dictionary':   return await getDictionary(String(input.name ?? ''))
+      case 'get_dictionary':   return await getDictionary(input.name as string | undefined, input.refId as string | undefined)
       default: return { content: JSON.stringify({ error: `Unknown tool ${name}` }), summary: 'error' }
     }
   } catch (err) {
@@ -304,17 +308,60 @@ async function runRating(programRef: string, partial: Partial<RatingInputMap>): 
   return { content: JSON.stringify(out), summary: `$${finalPremium.toLocaleString()}` }
 }
 
-async function getDictionary(name: string): Promise<ToolOutput> {
-  if (!name) return { content: JSON.stringify({ error: 'name required' }), summary: 'error' }
+async function getDictionary(name?: string, refId?: string): Promise<ToolOutput> {
+  const wantedRef  = refId?.trim().toLowerCase()
+  const wantedName = name?.trim().toLowerCase()
+  if (!wantedRef && !wantedName) return { content: JSON.stringify({ error: 'Provide a dictionary refId or name.' }), summary: 'error' }
+
   const db   = getFirestore()
   const snap = await db.collection('dictionary').get()
-  const wanted = name.toLowerCase()
+  const all  = snap.docs.map(d => d.data() as DictionaryEntry)
+
+  // refId is exact-match and authoritative; name falls back to exact-then-contains.
   const entry =
-    snap.docs.map(d => d.data() as DictionaryEntry).find(e => e.name.toLowerCase() === wanted) ??
-    snap.docs.map(d => d.data() as DictionaryEntry).find(e => e.name.toLowerCase().includes(wanted))
-  if (!entry) return { content: JSON.stringify({ found: false, name }), summary: 'not found' }
+    (wantedRef  ? all.find(e => (e.refId ?? '').toLowerCase() === wantedRef) : undefined) ??
+    (wantedName ? (all.find(e => e.name.toLowerCase() === wantedName) ?? all.find(e => e.name.toLowerCase().includes(wantedName))) : undefined)
+
+  if (!entry) return { content: JSON.stringify({ found: false, query: refId ?? name ?? '' }), summary: 'not found' }
+
+  // Recompute "used in" LIVE from the current corpus so a cited definition never points
+  // at a stale reference. The AI can cite both the definition's refId and each usage's.
+  const usage = computeDictionaryUsage(entry, await loadUsageCorpus())
   return {
-    content: JSON.stringify({ name: entry.name, type: entry.type, description: entry.description, allowedValues: entry.allowedValues, format: entry.format }),
-    summary: entry.name,
+    content: JSON.stringify({
+      found: true,
+      refId: entry.refId, name: entry.name, type: entry.type,
+      description: entry.description, allowedValues: entry.allowedValues,
+      format: entry.format, tags: entry.tags, aliases: entry.aliases ?? [],
+      usedIn: usage.map(u => ({ kind: u.kind, refId: u.refId, label: u.label })),
+    }),
+    summary: entry.refId ?? entry.name,
+  }
+}
+
+/** Load the coverages + rules + forms corpus for computing dictionary back-references.
+ *  Uses collection-group reads so every product contributes; productId is parsed from
+ *  the sub-collection path (products/{pid}/coverages/{cid}). */
+async function loadUsageCorpus(): Promise<DictUsageCorpus> {
+  const db = getFirestore()
+  const [covSnap, ruleSnap, formSnap] = await Promise.all([
+    db.collectionGroup('coverages').get(),
+    db.collectionGroup('rules').get(),
+    db.collection('forms').get(),
+  ])
+  const pidOf = (path: string) => path.split('/')[1]   // products/<pid>/...
+  return {
+    coverages: covSnap.docs.map(d => {
+      const c = d.data() as Coverage
+      return { refId: c.refId, name: c.name, terms: c.terms, productId: pidOf(d.ref.path), entityPath: d.ref.path }
+    }),
+    rules: ruleSnap.docs.map(d => {
+      const r = d.data() as Rule
+      return { refId: r.refId, condition: r.condition, outcome: r.outcome, subCategory: r.subCategory, productId: pidOf(d.ref.path), entityPath: d.ref.path }
+    }),
+    forms: formSnap.docs.map(d => {
+      const f = d.data() as Form
+      return { number: f.number, name: f.name, description: f.description, dynamicFields: f.dynamicFields, productRefIds: f.productRefIds, entityPath: d.ref.path }
+    }),
   }
 }

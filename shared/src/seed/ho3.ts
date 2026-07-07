@@ -726,17 +726,52 @@ export const HO3_FORM_RULES: FormRuleSeed[] = [
 
 type DictSeed = Omit<DictionaryEntry, 'createdAt' | 'updatedAt'> & { createdAt: null; updatedAt: null }
 
+// Governed HO-3 field/term definitions. `refId` is the citable id (the AI cites e.g.
+// [HO.DEF.003]); `aliases` are the real surface forms each term appears under in
+// coverage/rule/form text, driving the computed "used in" back-references. Rating-only
+// inputs (Protection Class, Construction, Territory) live in RT tables, not in
+// coverage/form/rule prose, so they legitimately resolve to no back-references.
 export const HO3_DICTIONARY: DictSeed[] = [
-  { name: 'Named Insured',      type: 'TEXT',     description: 'Full legal name of the primary insured',    allowedValues: [], format: '',       tags: ['person'], usedIn: [], ...gov() },
-  { name: 'Property Address',   type: 'TEXT',     description: 'Street address of the insured dwelling',    allowedValues: [], format: '',       tags: ['location'], usedIn: [], ...gov() },
-  { name: 'Coverage A Amount',  type: 'CURRENCY', description: 'Insured replacement value of the dwelling', allowedValues: [], format: 'USD',    tags: ['coverage','rating'], usedIn: [], ...gov() },
-  { name: 'All-Peril Deductible', type: 'CURRENCY', description: 'Per-occurrence deductible for all covered perils', allowedValues: [], format: 'USD', tags: ['deductible','rating'], usedIn: [], ...gov() },
-  { name: 'Protection Class',   type: 'LIST',     description: 'ISO fire protection class 1–10',            allowedValues: ['1','2','3','4','5','6','7','8','9','10'], format: '', tags: ['rating'], usedIn: [], ...gov() },
-  { name: 'Construction Type',  type: 'LIST',     description: 'Primary construction material of the dwelling', allowedValues: ['Frame','Masonry'], format: '', tags: ['rating'], usedIn: [], ...gov() },
-  { name: 'Territory Code',     type: 'LIST',     description: 'Rating territory assigned to the property location', allowedValues: ['T001','T002','T003','T004','T005'], format: '', tags: ['rating'], usedIn: [], ...gov() },
-  { name: 'Appraised Value',    type: 'CURRENCY', description: 'Professionally appraised value of a scheduled personal property item', allowedValues: [], format: 'USD', tags: ['spp'], usedIn: [], ...gov() },
-  { name: 'Device Type',        type: 'LIST',     description: 'Type of qualifying protective device installed at the premises', allowedValues: ['Local Alarm','Central Station'], format: '', tags: ['credit'], usedIn: [], ...gov() },
-  { name: 'Effective Date',     type: 'DATE',     description: 'Policy effective date',                     allowedValues: [], format: 'YYYY-MM-DD', tags: ['policy'], usedIn: [], ...gov() },
+  { refId: 'HO.DEF.001', name: 'Named Insured', type: 'TEXT',
+    description: 'Full legal name of the primary insured named on the declarations.',
+    allowedValues: [], format: 'Free text', tags: ['party','declarations'],
+    aliases: ['NamedInsured', 'named insured'], ...gov() },
+  { refId: 'HO.DEF.002', name: 'Property Address', type: 'TEXT',
+    description: 'Physical street address of the insured dwelling / residence premises.',
+    allowedValues: [], format: 'USPS address', tags: ['location','declarations'],
+    aliases: ['PropertyAddress', 'property address', 'residence premises'], ...gov() },
+  { refId: 'HO.DEF.003', name: 'Coverage A Amount', type: 'CURRENCY',
+    description: 'Insured replacement value of the dwelling; the base for Coverage B/C/D derivations.',
+    allowedValues: [], format: 'USD (whole dollars)', tags: ['coverage','rating','limit'],
+    aliases: ['Coverage A', 'Coverage A Amount', 'Dwelling limit'], ...gov() },
+  { refId: 'HO.DEF.004', name: 'All-Peril Deductible', type: 'CURRENCY',
+    description: 'Per-occurrence deductible applied to all covered perils before wind/hail options.',
+    allowedValues: ['500', '1000', '2500', '5000'], format: 'USD (whole dollars)', tags: ['deductible','rating'],
+    aliases: ['all-peril deductible', 'all peril deductible'], ...gov() },
+  { refId: 'HO.DEF.005', name: 'Protection Class', type: 'LIST',
+    description: 'ISO Public Protection Classification (fire) 1–10 for the risk location.',
+    allowedValues: ['1','2','3','4','5','6','7','8','9','10'], format: 'Integer 1–10', tags: ['rating','underwriting'],
+    aliases: ['Protection Class', 'ISO fire protection class', 'PPC'], ...gov() },
+  { refId: 'HO.DEF.006', name: 'Construction Type', type: 'LIST',
+    description: 'Primary construction material of the dwelling used for the construction rating factor.',
+    allowedValues: ['Frame', 'Masonry'], format: 'Enumerated', tags: ['rating','underwriting'],
+    aliases: ['Construction Type', 'construction class'], ...gov() },
+  { refId: 'HO.DEF.007', name: 'Territory Code', type: 'LIST',
+    description: 'Rating territory assigned to the property location; keys the territory base rate.',
+    allowedValues: ['T001','T002','T003','T004','T005'], format: 'T0NN', tags: ['rating'],
+    aliases: ['Territory Code', 'rating territory'], ...gov() },
+  { refId: 'HO.DEF.008', name: 'Appraised Value', type: 'CURRENCY',
+    description: 'Professionally appraised value of a scheduled personal property item.',
+    allowedValues: [], format: 'USD (whole dollars)', tags: ['spp','scheduled-property'],
+    aliases: ['AppraisedValue', 'appraised value'], ...gov() },
+  { refId: 'HO.DEF.009', name: 'Device Type', type: 'LIST',
+    description: 'Qualifying protective device installed at the premises; drives the device credit.',
+    allowedValues: ['Local Alarm', 'Central Station'], format: 'Enumerated', tags: ['credit','underwriting'],
+    aliases: ['DeviceType', 'protective device', 'device type'], ...gov() },
+  { refId: 'HO.DEF.010', name: 'Effective Date', type: 'DATE',
+    description: 'Date the policy period begins.',
+    allowedValues: [], format: 'YYYY-MM-DD', tags: ['policy','declarations'],
+    aliases: ['PolicyEffective', 'effective date'], ...gov() },
 ]
 
 // ─── Default task template (SLA set) ────────────────────────────────────────

@@ -243,7 +243,7 @@ function routeFor(entry: SearchIndexEntry): string {
     case 'coverage':   return `/app/products/${pid}/coverages`
     case 'form':       return `/app/products/${pid}/forms`
     case 'rule':       return `/app/products/${pid}/rules`
-    case 'dictionary': return `/app/dictionary`
+    case 'dictionary': return entry.refId ? `/app/dictionary?term=${encodeURIComponent(entry.refId)}` : `/app/dictionary`
     default:           return `/app/explorer`
   }
 }

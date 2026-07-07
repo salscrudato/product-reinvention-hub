@@ -686,12 +686,38 @@ export const GL_FORM_RULES: FormRuleSeed[] = [
 
 type DictSeed = Omit<DictionaryEntry, 'createdAt' | 'updatedAt'> & { createdAt: null; updatedAt: null }
 
+// Governed GL field/term definitions. `refId` is the citable id (the AI cites e.g.
+// [GL.DEF.001]); `aliases` are the real surface forms each term appears under in
+// coverage/rule/form text. Pure rating-table inputs (Base Loss Cost, Schedule Rating,
+// Claims Basis trigger) live in RT tables / the governance block, not in coverage/rule
+// prose, so they legitimately resolve to no back-references.
 export const GL_DICTIONARY: DictSeed[] = [
-  { name: 'Occurrence Limit',    type: 'CURRENCY', description: 'Each-occurrence limit of liability for bodily injury and property damage', allowedValues: [], format: 'USD', tags: ['limit','rating'], usedIn: [], ...gov() },
-  { name: 'General Aggregate Limit', type: 'CURRENCY', description: 'Most the policy will pay in the policy period for covered losses', allowedValues: [], format: 'USD', tags: ['limit'], usedIn: [], ...gov() },
-  { name: 'ISO Class Table',     type: 'LIST',     description: 'ISO increased-limit class table (1–3 premises/operations)', allowedValues: ['1','2','3'], format: '', tags: ['rating'], usedIn: [], ...gov() },
-  { name: 'Base Loss Cost',      type: 'CURRENCY', description: 'ISO base loss cost per $1,000 of exposure for the class code', allowedValues: [], format: 'USD', tags: ['rating'], usedIn: [], ...gov() },
-  { name: 'Loss Cost Multiplier', type: 'PERCENT', description: 'Company multiplier applied to ISO loss costs (filed per state)', allowedValues: [], format: '', tags: ['rating'], usedIn: [], ...gov() },
-  { name: 'Schedule Rating Modification', type: 'PERCENT', description: 'Credit or debit for risk characteristics, capped at ±25%', allowedValues: [], format: '', tags: ['rating'], usedIn: [], ...gov() },
-  { name: 'Claims Basis',        type: 'LIST',     description: 'Occurrence or Claims-made trigger for a coverage', allowedValues: ['Occurrence','Claims-made'], format: '', tags: ['coverage'], usedIn: [], ...gov() },
+  { refId: 'GL.DEF.001', name: 'Occurrence Limit', type: 'CURRENCY',
+    description: 'Each-occurrence limit of liability for bodily injury and property damage.',
+    allowedValues: [], format: 'USD (whole dollars)', tags: ['limit','rating'],
+    aliases: ['Occurrence Limit', 'Each Occurrence Limit', 'occurrence limit'], ...gov() },
+  { refId: 'GL.DEF.002', name: 'General Aggregate Limit', type: 'CURRENCY',
+    description: 'Most the policy will pay in the policy period for covered losses.',
+    allowedValues: [], format: 'USD (whole dollars)', tags: ['limit'],
+    aliases: ['General Aggregate Limit', 'General Aggregate'], ...gov() },
+  { refId: 'GL.DEF.003', name: 'ISO Class Table', type: 'LIST',
+    description: 'ISO increased-limit class table (1–3 premises/operations) keying the minimum premium.',
+    allowedValues: ['1','2','3'], format: 'Integer 1–3', tags: ['rating'],
+    aliases: ['ISO class table', 'ISO Class'], ...gov() },
+  { refId: 'GL.DEF.004', name: 'Base Loss Cost', type: 'CURRENCY',
+    description: 'ISO base loss cost per $1,000 of exposure for the class code.',
+    allowedValues: [], format: 'USD per $1,000 exposure', tags: ['rating'],
+    aliases: ['Base Loss Cost'], ...gov() },
+  { refId: 'GL.DEF.005', name: 'Loss Cost Multiplier', type: 'PERCENT',
+    description: 'Company multiplier applied to ISO loss costs (filed per state).',
+    allowedValues: [], format: 'Decimal factor', tags: ['rating'],
+    aliases: ['Loss Cost Multiplier', 'LCM'], ...gov() },
+  { refId: 'GL.DEF.006', name: 'Schedule Rating Modification', type: 'PERCENT',
+    description: 'Credit or debit for risk characteristics, capped at ±25%.',
+    allowedValues: [], format: 'Percent −25%…+25%', tags: ['rating'],
+    aliases: ['Schedule Rating Modification', 'Schedule Rating', 'schedule mod'], ...gov() },
+  { refId: 'GL.DEF.007', name: 'Claims Basis', type: 'LIST',
+    description: 'Occurrence or Claims-made trigger for a coverage.',
+    allowedValues: ['Occurrence', 'Claims-made'], format: 'Enumerated', tags: ['coverage'],
+    aliases: ['Claims Basis', 'claims-made trigger'], ...gov() },
 ]

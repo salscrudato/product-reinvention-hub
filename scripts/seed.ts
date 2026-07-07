@@ -236,8 +236,11 @@ async function main(): Promise<void> {
       seededDictionary.add(id)
       await db.doc(`dictionary/${id}`).set(withTs(entry, now))
       inc('dictionary')
-      addIdx({ type: 'dictionary', title: entry.name, subtitle: entry['type'] as string,
-        path: `dictionary/${id}`, keywords: [...keywords(entry.name), ...(entry['tags'] as string[])] })
+      // refId is indexed so a cited definition (e.g. [HO.DEF.003]) resolves to this entry.
+      const dictRefId = entry['refId'] as string | undefined
+      addIdx({ type: 'dictionary', refId: dictRefId, title: entry.name, subtitle: dictRefId ?? (entry['type'] as string),
+        path: `dictionary/${id}`,
+        keywords: [...keywords(entry.name), ...(dictRefId ? keywords(dictRefId) : []), ...(entry['tags'] as string[]), ...((entry['aliases'] as string[] | undefined) ?? []).flatMap(keywords)] })
     }
   }
 
