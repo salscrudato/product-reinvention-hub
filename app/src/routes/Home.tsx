@@ -2,8 +2,9 @@
 // chat over the whole portfolio (reusing the server-side `chat` agent): every answer
 // cites a [refId] or form number and says "not found" when a tool returns nothing.
 // Alongside it, a cockpit rail: a prioritised task list (due → criticality) with a
-// daily/weekly window, and a real "portfolio changes" feed sourced from the version
-// log + product health. The whole surface is inquiry-only — no mutations happen here,
+// daily/weekly window, and a Portfolio Pulse panel (readiness gauge, lifecycle mix,
+// composition counts, 14-day change activity) — all derived from real product / version
+// / search-index data. The whole surface is inquiry-only — no mutations happen here,
 // so a VIEWER sees exactly what everyone else does (no edit affordances to hide).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -12,7 +13,7 @@ import { adapter } from '../lib/backend'
 import type { Query } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
 import { PriorityRail } from '../components/home/PriorityRail'
-import { ChangesFeed } from '../components/home/ChangesFeed'
+import { PortfolioPulse } from '../components/home/PortfolioPulse'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
 import type { SearchIndexEntry, Task, Product, Version } from '@pf/shared'
 
@@ -225,9 +226,9 @@ export default function Home() {
           status={combineStatus(tasks.status, products.status)}
           tasks={tasks.items} products={products.items} now={now}
         />
-        <ChangesFeed
-          status={combineStatus(versions.status, products.status)}
-          versions={versions.items} products={products.items} now={now}
+        <PortfolioPulse
+          status={combineStatus(products.status, versions.status)}
+          products={products.items} versions={versions.items} index={indexEntries} now={now}
         />
       </aside>
     </div>

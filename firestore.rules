@@ -14,11 +14,6 @@ service cloud.firestore {
     function canEdit()   { return isEditor() || isAdmin(); }
     function myUid()     { return request.auth.uid; }
 
-    // ── Share links — no client access; Admin SDK only ────────────────────────
-    match /shareLinks/{token} {
-      allow read, write: if false;
-    }
-
     // ── Audit events — create-only from authenticated users ───────────────────
     match /auditEvents/{id} {
       allow create: if isAuthed();

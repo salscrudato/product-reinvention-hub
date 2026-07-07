@@ -82,6 +82,11 @@ const INDEXABLE = new Set(['product', 'coverage', 'rule', 'form', 'ldTable', 'rt
 // empty). Persisted in sessionStorage so a reload keeps it. Remove before production.
 const DEV_BYPASS_KEY = 'pf.devAdminBypass'
 const DEV_ADMIN: AuthUser = { uid: 'dev-admin', email: 'dev-admin@local', name: 'Dev Admin (bypass)', role: 'ADMIN' }
+// Seeded demo-admin account (see shared HO3_SEED_USERS: admin@admin.com, no forced
+// password change). The no-credentials "Continue as admin" button signs in as this
+// real account so the session carries a genuine token + ADMIN claim → full access.
+const DEMO_ADMIN_EMAIL    = 'admin@admin.com'
+const DEMO_ADMIN_PASSWORD = 'admin123'
 let bypassActive = import.meta.env.DEV && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(DEV_BYPASS_KEY) === '1'
 const bypassListeners = new Set<(u: AuthUser | null) => void>()
 // One-shot guard so we don't loop endlessly if anonymous sign-in fails or is disabled.
@@ -132,6 +137,20 @@ export const adapter: BackendAdapter = {
 	      if (bypassActive) cb(DEV_ADMIN)   // emit the fake session immediately on subscribe
 	      return () => { bypassListeners.delete(cb); unsubFb() }
 	    },
+
+    // No-credentials admin: a REAL sign-in as the seeded demo admin. Unlike the dev
+    // bypass below, this returns a genuine session (token + ADMIN claim), so data loads
+    // and writes persist. Clears any active dev bypass first so the real session owns onUser.
+    async signInAsAdmin(): Promise<Session> {
+      if (bypassActive) {
+        bypassActive = false
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(DEV_BYPASS_KEY)
+      }
+      const cred  = await signInWithEmailAndPassword(auth, DEMO_ADMIN_EMAIL, DEMO_ADMIN_PASSWORD)
+      const user  = await toAuthUser(cred.user)
+      const token = await cred.user.getIdToken()
+      return { user, token }
+    },
 
     // TEMPORARY dev-only admin bypass — see types.ts. No-op outside dev builds.
     signInAsDevAdmin() {

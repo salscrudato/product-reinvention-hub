@@ -1,19 +1,14 @@
-// Sign-in — email + password through the adapter. Dev builds also expose a TEMPORARY
-// "Continue as admin" bypass that fakes an ADMIN session with NO backend auth (for
-// testing only; see adapter.auth.signInAsDevAdmin). Premium, calm, Apple-inspired.
+// Sign-in — email + password through the adapter, plus a no-credentials "Continue as
+// admin" button that performs a REAL sign-in as the seeded demo admin (real token +
+// ADMIN claim → full access and persistence). Premium, calm, Apple-inspired.
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
-import { IconSpinner, IconCoverage } from '../components/ui/icons'
+import { IconSpinner, IconKey } from '../components/ui/icons'
 import { useUser } from '../context/useUser'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Logo } from '../components/ui'
-
-// The dev bypass (fake ADMIN, no backend) is only useful when there's no backend to
-// sign into. Shown for dev builds, but hidden once the app is pointed at a real backend
-// (VITE_USE_EMULATORS=false) — there you sign in for real so writes actually persist.
-const DEV_BYPASS = import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS !== 'false'
 
 export default function SignIn() {
   const navigate  = useNavigate()
@@ -53,11 +48,18 @@ export default function SignIn() {
     void doSignIn(email, pass)
   }
 
-  // TEMPORARY: pure client-side admin bypass — no Firebase auth. Because there is no
-  // real token, the workspace loads without backend data (rules deny). Remove later.
-  function handleDevAdmin() {
-    adapter.auth.signInAsDevAdmin()
-    navigate(from, { replace: true })
+  // No-credentials admin: a real sign-in as the seeded demo admin, so the workspace
+  // loads with full ADMIN access and every edit persists (no fake/token-less session).
+  async function handleAdmin() {
+    setError('')
+    setLoading(true)
+    try {
+      await adapter.auth.signInAsAdmin()
+      navigate(from, { replace: true })
+    } catch {
+      setError('Could not start the admin session. Make sure the demo backend is running and seeded.')
+      setLoading(false)
+    }
   }
 
   const busy = loading
@@ -105,25 +107,19 @@ export default function SignIn() {
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>
 
-          {/* TEMPORARY dev-only admin bypass (no backend auth — testing only) */}
-          {DEV_BYPASS && (
-            <>
-              <div className="flex items-center gap-3 my-1" aria-hidden="true">
-                <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
-                <span className="text-[11px] uppercase tracking-wide text-faint">dev only</span>
-                <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
-              </div>
-              <Button type="button" variant="default" className="w-full" disabled={busy} onClick={handleDevAdmin}>
-                <IconCoverage size={14} aria-hidden="true" />Continue as admin
-              </Button>
-            </>
-          )}
+          {/* No-credentials admin — real ADMIN sign-in for demos (full access + persistence) */}
+          <div className="flex items-center gap-3 my-1" aria-hidden="true">
+            <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
+            <span className="text-[11px] uppercase tracking-wide text-faint">or</span>
+            <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
+          </div>
+          <Button type="button" variant="default" className="w-full" disabled={busy} onClick={() => void handleAdmin()}>
+            <IconKey size={14} aria-hidden="true" />Continue as admin
+          </Button>
         </form>
 
         <p className="text-center text-xs text-faint mt-4">
-          {DEV_BYPASS
-            ? <>Admin bypass is a temporary no-auth shortcut · data loads only when signed in</>
-            : <>Demo workspace · <span className="font-mono">admin@productfactory.app</span></>}
+          No credentials needed — the admin button opens a full-access demo workspace you can edit.
         </p>
       </div>
     </div>

@@ -19,6 +19,8 @@ export const adapter: BackendAdapter = {
     onUser: (_cb) => notImplemented('auth.onUser'),
     // AWS-SWAP: Auth.changePassword(oldPassword, newPassword)
     changePassword: (_next) => notImplemented('auth.changePassword'),
+    // AWS-SWAP: Cognito sign-in with the seeded demo-admin credentials
+    signInAsAdmin: () => notImplemented('auth.signInAsAdmin'),
     // TEMPORARY dev-only admin bypass (no backend auth) — no-op in this placeholder.
     signInAsDevAdmin: () => { /* dev bypass; see firebase.adapter.ts */ },
   },

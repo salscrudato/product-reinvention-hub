@@ -5,11 +5,10 @@ import { ProductProvider } from '../../context/ProductContext'
 import { useProductCtx } from '../../context/useProductCtx'
 import { adapter } from '../../lib/backend'
 import { Skeleton, StatusPill, LifecyclePill, Badge, Button } from '../../components/ui'
-import { IconShare, IconRecent, IconChat, IconUsers, IconBack, IconChevronDown } from '../../components/ui/icons'
+import { IconRecent, IconChat, IconUsers, IconBack, IconChevronDown } from '../../components/ui/icons'
 import { computeProductFindings, healthScore, healthColor } from '../../lib/productHealth'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { CommentsPanel } from '../../components/product/CommentsPanel'
-import { ShareModal } from '../../components/product/ShareModal'
 import { ExportMenu } from '../../components/product/ExportMenu'
 
 const TABS = [
@@ -28,7 +27,6 @@ function WorkspaceInner() {
   const activeTab    = TABS.find(t => pathname.includes(t.id))?.id ?? 'overview'
   const [historyOpen, setHistoryOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
-  const [shareOpen,    setShareOpen]    = useState(false)
   const [viewers, setViewers] = useState<string[]>([])
   const [siblings, setSiblings] = useState<{ id: string; name: string }[]>([])
 
@@ -148,9 +146,6 @@ function WorkspaceInner() {
                 <IconRecent size={14} aria-hidden="true" />History
               </Button>
               <ExportMenu data={{ product, coverages, rules, forms, ldTables, rtTables, ratingProgram }} />
-              <Button variant="ghost" size="sm" onClick={() => setShareOpen(true)}>
-                <IconShare size={14} aria-hidden="true" />Share
-              </Button>
             </div>
           </div>
         </div>
@@ -181,7 +176,6 @@ function WorkspaceInner() {
 
       {historyOpen  && <HistoryDrawer  onClose={() => setHistoryOpen(false)}  entityPath={`products/${pid}`} />}
       {commentsOpen && <CommentsPanel  onClose={() => setCommentsOpen(false)} entityPath={`products/${pid}`} />}
-      {shareOpen    && <ShareModal     onClose={() => setShareOpen(false)}    productId={pid} productName={product.name} />}
     </div>
   )
 }

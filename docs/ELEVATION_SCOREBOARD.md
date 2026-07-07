@@ -55,7 +55,6 @@ Score legend per cell: **0** absent · **1** poor · **2** weak · **3** compete
 | Surface | Route | layout | typography | spacing/density | color/depth | motion | iconography/SVG | affordance | states | domain-truth | a11y | Current score | Notes |
 |---|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|---|
 | Must-Change-Password | `/must-change-password` | | | | | | | | | | | | `routes/MustChangePassword.tsx`; first-login forced reset. |
-| Share View (public) | `/share/:token` | | | | | | | | | | | | `routes/ShareView.tsx`; read-only snapshot via `share` Function. |
 
 ## Baseline divergences (code vs. archived docs)
 

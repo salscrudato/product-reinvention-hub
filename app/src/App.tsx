@@ -11,7 +11,6 @@ const Landing            = lazy(() => import('./routes/Landing'))
 const SignIn             = lazy(() => import('./routes/SignIn'))
 const MustChangePassword = lazy(() => import('./routes/MustChangePassword'))
 const AppShell           = lazy(() => import('./routes/AppShell'))
-const ShareView          = lazy(() => import('./routes/ShareView'))
 const Home               = lazy(() => import('./routes/Home'))
 const Products           = lazy(() => import('./routes/Products'))
 const Explorer           = lazy(() => import('./routes/Explorer'))
@@ -47,7 +46,6 @@ export default function App() {
             <Route path="/"                      element={<Landing />} />
             <Route path="/sign-in"               element={<SignIn />} />
             <Route path="/must-change-password"  element={<MustChangePassword />} />
-            <Route path="/share/:token"          element={<ShareView />} />
 
             <Route path="/app" element={<AppShell />}>
               <Route index                element={<Home />} />

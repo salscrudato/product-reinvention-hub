@@ -352,13 +352,7 @@ export interface DictionaryEntry extends GovernanceBlock {
   usedIn:        { entityPath: string; label: string }[]
 }
 
-// ─── Share + Search ──────────────────────────────────────────────────────────
-
-export interface ShareLink {
-  productId:  string
-  createdBy:  string
-  expiresAt:  unknown
-}
+// ─── Search ──────────────────────────────────────────────────────────────────
 
 export type SearchEntityType = 'product' | 'coverage' | 'rule' | 'form' | 'ldTable' | 'rtTable' | 'dictionary' | 'task'
 

@@ -4,10 +4,6 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
-        "source": "/share/**",
-        "function": "share"
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
