@@ -33,12 +33,9 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
 
   return (
     <div className="group relative h-full bg-surface rounded-[16px] overflow-hidden flex flex-col border border-[color:var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-accent-line)] hover:shadow-[0_18px_40px_-14px_var(--glow-accent)]">
-      {/* Top brand gradient — subtle, brightens on hover */}
+      {/* Top brand gradient — subtle, brightens on hover (no full-card fill) */}
       <span aria-hidden="true" className="block h-[3px] w-full opacity-80 group-hover:opacity-100 transition-opacity"
         style={{ background: 'linear-gradient(90deg, var(--color-accent-bright) 0%, var(--color-accent-strong) 55%, transparent 100%)' }} />
-      {/* Subtle gradient wash + glow on hover */}
-      <span aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-        style={{ background: 'var(--gradient-accent-soft)' }} />
       <div className="relative p-4 flex flex-col gap-3.5 flex-1">
         {/* Identity */}
         <div className="flex items-start justify-between gap-2">

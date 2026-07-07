@@ -45,9 +45,9 @@ function CoverageCard({ cov, endorsements, onOpen }: {
 
   return (
     <div className="group/card relative bg-surface rounded-[14px] flex flex-col overflow-hidden border border-[color:var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-accent-line)] hover:shadow-[0_16px_36px_-14px_var(--glow-accent)]">
-      {/* Subtle gradient wash + glow on hover */}
-      <span aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-0 group-hover/card:opacity-100 transition-opacity duration-200"
-        style={{ background: 'var(--gradient-accent-soft)' }} />
+      {/* Subtle top brand gradient (no full-card fill), brightens on hover */}
+      <span aria-hidden="true" className="block h-[3px] w-full opacity-70 group-hover/card:opacity-100 transition-opacity"
+        style={{ background: 'linear-gradient(90deg, var(--color-accent-bright) 0%, var(--color-accent-strong) 60%, transparent 100%)' }} />
       <button
         onClick={() => onOpen(cov.id)}
         className="group relative text-left p-4 flex flex-col gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
