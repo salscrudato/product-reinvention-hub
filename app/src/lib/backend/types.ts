@@ -1,6 +1,6 @@
 // BackendAdapter contract — the only interface app code may depend on.
 // AWS-SWAP: all platform concerns live behind this seam; swap the implementation,
-// not the callers. See docs/AWS_SWAP.md.
+// not the callers.
 import type { Unsubscribe } from '@pf/shared'
 
 export interface AuthUser {

@@ -1,4 +1,4 @@
-// HO-3 seed constants — encodes docs/DOMAIN_HO.md verbatim.
+// HO-3 seed constants — the canonical HO-3 domain reference (coverages, forms, rating).
 // Every refId, rate, factor and form number here is the traceability backbone.
 // The seed script reads these and writes them to Firestore; tests assert against them.
 import type {

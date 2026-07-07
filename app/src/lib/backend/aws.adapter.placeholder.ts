@@ -1,12 +1,12 @@
 // AWS adapter placeholder — mirrors BackendAdapter; every method throws NotImplemented
 // and carries a comment mapping it to the AWS service that would replace it.
-// AWS-SWAP: implement this file to complete the Firebase → AWS migration.
-// See docs/AWS_SWAP.md for the full service mapping and swap procedure.
+// AWS-SWAP: implement this file to complete the Firebase → AWS migration; the per-method
+// comments below are the full service mapping.
 import type { BackendAdapter } from './types'
 import { MutationConflictError } from './types'
 
 function notImplemented(method: string): never {
-  throw new Error(`AWS adapter: ${method} is not yet implemented. See docs/AWS_SWAP.md.`)
+  throw new Error(`AWS adapter: ${method} is not yet implemented.`)
 }
 
 export const adapter: BackendAdapter = {

@@ -1,4 +1,4 @@
-// Firestore security rules — role matrix per docs/DATA_MODEL.md Access section.
+// Firestore security rules — role matrix for the app's collections.
 // Role is read from the verified JWT custom claim (set via setUserRole callable).
 rules_version = '2';
 service cloud.firestore {

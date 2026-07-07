@@ -8,7 +8,7 @@ const USPS = [
   'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
   'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
 ]
-// HO-3 seed footprint (docs/DOMAIN_HO.md) — every one must have a tile to render.
+// HO-3 seed footprint — every one must have a tile to render.
 const HO3_FOOTPRINT = ['AZ','CA','CO','FL','GA','IL','IN','MI','NC','OH','PA','SC','TN','TX','VA']
 
 describe('US tile grid', () => {

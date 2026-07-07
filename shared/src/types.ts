@@ -1,4 +1,4 @@
-// Shared domain types — mirror of every Firestore collection shape in docs/DATA_MODEL.md.
+// Shared domain types — mirror of every Firestore collection shape.
 // Zero platform imports; consumed by both app (Vite) and functions (Node 20).
 
 // ─── Governance ─────────────────────────────────────────────────────────────

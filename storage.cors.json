@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["http://localhost:5173", "https://productreinvention.web.app", "https://productreinvention.firebaseapp.com"],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "User-Agent", "x-goog-resumable"]
+  }
+]
