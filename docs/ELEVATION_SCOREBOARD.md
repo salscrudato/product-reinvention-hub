@@ -89,6 +89,11 @@ badged by *state* not selection, `aria-pressed` chips.
 - **`--color-good` (#059669) is ~3.5:1** — below AA for small text. Left unchanged because
   on every batch-1 surface it appears only as icons/status dots (the 3:1 non-text
   threshold applies). Flagged here so a future pass darkens it before using it as body copy.
+- **`color/depth` allows raw `rgba()` for glows/shadows/glass** (Landing aurora + SVG node
+  fills, card shadows, focus glows) — an app-wide convention (67 occurrences / 30 files;
+  the shadow *tokens* in `index.css` are themselves rgba). Every *semantic solid* colour
+  uses a `var(--color-*)` token, so the token invariant holds in spirit; alpha-blended
+  depth effects are the tolerated exception. Not docked, but noted so it's a conscious call.
 
 ## Baseline divergences (code vs. archived docs)
 
