@@ -75,34 +75,58 @@ function PricingLinkagePanel({ cov, program, rtTables, ldTables, onClear }: {
   )
 }
 
-// ─── Reduced-motion + count-up premium ────────────────────────────────────────
+// ─── Reduced-motion + spring-animated premium ─────────────────────────────────
 
 function prefersReducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 }
 
-/** Animate a number toward `target` (easeOutCubic); instant under reduced motion. Animates
- *  from the current displayed value so rapid input changes stay smooth. */
-function useCountUp(target: number): number {
+/** Animate a number toward `target` with a lightly under-damped spring — it settles in
+ *  ~280ms with a barely-perceptible overshoot, so a changed input reads as a live, physical
+ *  nudge against the premium rather than a linear tween. The spring chases a MOVING target:
+ *  rapid input changes retarget the in-flight animation instead of restarting it, keeping
+ *  motion continuous. Snaps instantly under reduced motion. */
+function useSpringNumber(target: number): number {
   const [display, setDisplay] = useState(target)
-  const displayRef = useRef(target)
-  const rafRef = useRef<number | null>(null)
+  const motion = useRef({ value: target, velocity: 0 })
+  const goalRef = useRef(target)
+  const rafRef  = useRef<number | null>(null)
+
   useEffect(() => {
-    if (prefersReducedMotion()) { displayRef.current = target; setDisplay(target); return }
-    const from = displayRef.current
-    if (from === target) return
-    const start = performance.now(), dur = 500
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / dur)
-      const eased = 1 - Math.pow(1 - t, 3)
-      const val = from + (target - from) * eased
-      displayRef.current = val; setDisplay(val)
-      if (t < 1) rafRef.current = requestAnimationFrame(step)
-      else { displayRef.current = target; setDisplay(target) }
+    goalRef.current = target
+    if (prefersReducedMotion()) {
+      motion.current = { value: target, velocity: 0 }
+      setDisplay(target)
+      return
     }
-    rafRef.current = requestAnimationFrame(step)
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+    // A loop is already chasing goalRef → let it converge on the new target. And if we're
+    // already at rest on target, there's nothing to animate (also the mount case).
+    if (rafRef.current !== null) return
+    if (Math.abs(motion.current.value - target) < 0.5 && Math.abs(motion.current.velocity) < 0.5) {
+      motion.current.value = target; setDisplay(target); return
+    }
+    // Tuned for a lively 200–400ms settle: ω₀ ≈ 19.5 rad/s, ζ ≈ 0.74 → ~3% overshoot.
+    const STIFFNESS = 380, DAMPING = 29, MASS = 1
+    let last = performance.now()
+    const tick = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 1 / 30); last = now   // clamp dt (tab defocus)
+      const m = motion.current
+      const accel = (-STIFFNESS * (m.value - goalRef.current) - DAMPING * m.velocity) / MASS
+      m.velocity += accel * dt
+      m.value    += m.velocity * dt
+      if (Math.abs(m.velocity) < 0.5 && Math.abs(m.value - goalRef.current) < 0.5) {
+        m.value = goalRef.current; m.velocity = 0
+        setDisplay(goalRef.current); rafRef.current = null; return
+      }
+      setDisplay(m.value)
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
   }, [target])
+
+  // Cancel any in-flight frame on unmount.
+  useEffect(() => () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current) }, [])
+
   return display
 }
 
@@ -120,7 +144,7 @@ function TracePanel({ trace, finalPremium, changedStepIds, editableFor, onEditTa
 }) {
   const [view, setView] = useState<'flow' | 'table'>('flow')
   const flowRef = useRef<HTMLDivElement>(null)
-  const animatedPremium = useCountUp(finalPremium)
+  const animatedPremium = useSpringNumber(finalPremium)
   const shownPremium = Math.round(animatedPremium)
 
   // Export the on-screen flow SVG verbatim (adds a page-background rect for a
