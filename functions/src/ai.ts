@@ -1,16 +1,17 @@
 // ai.ts — the portfolio chat SSE endpoint and the reusable tool-grounded agent
 // loop. `runChatAgent` streams assistant tokens + tool-status events while
-// looping over tool_use turns; claims.ts and gap.ts reuse it with their own
-// system context and tool set.
+// looping over tool_use turns; claims.ts, rules.ts and scaffoldProduct.ts reuse it
+// with their own system context and tool set.
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, isRetryableAnthropicError } from './runtime'
 import type { SseResponse } from './runtime'
 import { TOOLS, SYSTEM_PROMPT, runTool } from './tools'
 import type { ToolOutput } from './tools'
 
 export interface AgentOptions {
-  system?:      string             // extra, non-cached system context (e.g. focus product)
+  system?:      string             // stable feature prompt — cached alongside the house rules
+  context?:     string             // volatile per-request context (focus product, detected line) — never cached
   tools?:       Anthropic.Tool[]   // defaults to the grounding TOOLS
   maxTokens?:   number
   maxTurns?:    number
@@ -18,6 +19,36 @@ export interface AgentOptions {
   // supply this to handle their own extra tools (e.g. emit_determination) while still
   // delegating the grounding tools to runTool. Keeps this the single agent loop.
   runTool?:     (name: string, input: Record<string, unknown>) => Promise<ToolOutput>
+}
+
+/**
+ * Consume one streamed assistant turn, forwarding text deltas as SSE `token`
+ * events. Recovers from a transient failure by retrying with backoff — but ONLY
+ * while nothing has been streamed to the client yet this turn: the API cannot
+ * resume a partially-emitted message, so re-streaming would duplicate visible text.
+ * This sits on top of the client's own maxRetries (which covers only establishing
+ * the request), catching faults surfaced during stream consumption.
+ */
+async function streamTurn(
+  client: Anthropic,
+  params: Anthropic.MessageStreamParams,
+  res:    SseResponse,
+): Promise<Anthropic.Message> {
+  const MAX_ATTEMPTS = 3
+  for (let attempt = 1; ; attempt++) {
+    let streamed = false
+    try {
+      const stream = client.messages.stream(params)
+      // A no-op 'error' listener keeps an emitted error from becoming an unhandled
+      // exception; we act on the finalMessage() rejection below instead.
+      stream.on('error', () => {})
+      stream.on('text', (delta) => { streamed = true; send(res, { t: 'token', v: delta }) })
+      return await stream.finalMessage()
+    } catch (err) {
+      if (streamed || attempt >= MAX_ATTEMPTS || !isRetryableAnthropicError(err)) throw err
+      await new Promise(r => setTimeout(r, 400 * 2 ** (attempt - 1)))   // 400ms, then 800ms
+    }
+  }
 }
 
 /**
@@ -31,13 +62,17 @@ export async function runChatAgent(
   res: SseResponse,
   opts: AgentOptions = {},
 ): Promise<Anthropic.MessageParam[]> {
-  // Stable rules first (cached across requests); volatile focus context after the breakpoint.
-  const system: Anthropic.TextBlockParam[] = [
-    { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-  ]
+  // Stable, cacheable context first: the shared house rules, then any feature prompt.
+  // One cache breakpoint on the LAST stable block caches the whole prefix (tools +
+  // system) across this conversation's tool-loop turns AND across requests. Volatile
+  // per-request context goes AFTER the breakpoint so it never invalidates the cache.
+  const system: Anthropic.TextBlockParam[] = [{ type: 'text', text: SYSTEM_PROMPT }]
   if (opts.system) system.push({ type: 'text', text: opts.system })
+  system[system.length - 1]!.cache_control = { type: 'ephemeral' }
+  if (opts.context) system.push({ type: 'text', text: opts.context })
 
-  const tools    = opts.tools ?? TOOLS
+  const tools     = opts.tools ?? TOOLS
+  const maxTokens = opts.maxTokens ?? 2048
   const maxTurns  = opts.maxTurns ?? 6
   const exec      = opts.runTool ?? runTool
   const convo: Anthropic.MessageParam[] = [...messages]
@@ -45,15 +80,12 @@ export async function runChatAgent(
   for (let turn = 0; turn < maxTurns; turn++) {
     // No sampling params: Sonnet 5 rejects a non-default temperature/top_p/top_k
     // (400). Grounding is enforced by the tools + system prompt, not by sampling.
-    const stream = client.messages.stream({
-      model:      MODEL,
-      max_tokens: opts.maxTokens ?? 2048,
-      system,
-      tools,
-      messages:   convo,
-    })
-    stream.on('text', (delta) => send(res, { t: 'token', v: delta }))
-    const final = await stream.finalMessage()
+    // streamTurn adds partial-stream recovery over the client's own maxRetries.
+    const final = await streamTurn(
+      client,
+      { model: MODEL, max_tokens: maxTokens, system, tools, messages: convo },
+      res,
+    )
     convo.push({ role: 'assistant', content: final.content })
 
     const toolUses = final.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
@@ -101,7 +133,7 @@ export const chat = onRequest(
         ? `The user is focused on product ${body.productId}. Prefer that product when a productId is needed.`
         : undefined
 
-      await runChatAgent(anthropic(), messages, res, { system: focus })
+      await runChatAgent(anthropic(), messages, res, { context: focus })
       send(res, { t: 'done' })
     } catch (err) {
       send(res, { t: 'error', message: err instanceof Error ? err.message : 'AI request failed.' })

@@ -170,10 +170,12 @@ const SYSTEM =
   'section, return an empty array and say so in `note` rather than guessing. You are called once ' +
   'per section with a single forced tool; call that tool exactly once.'
 
-// One forced-tool round-trip. The document block is identical across all four calls
-// (and marked ephemeral), so calls 2–4 hit the prompt cache and only re-read the
-// short per-section instruction. Forcing the tool guarantees a structured result —
-// including an explicit empty section — for every kind.
+// One forced-tool round-trip per section. Forcing the tool guarantees a structured
+// result — including an explicit empty section — for every kind, so "found nothing"
+// is honest rather than silent. Note: each section forces a DIFFERENT tool (and
+// tool_choice), which invalidates the prompt cache down to the message tier — so the
+// document is re-read per section and marking it ephemeral would only add a write
+// premium with no cross-section read. We therefore leave the document uncached here.
 async function runSection(
   client:      Anthropic,
   docBlock:    Anthropic.ContentBlockParam,
@@ -216,14 +218,16 @@ export const extractCoverages = onRequest(
       // Build the document block once. For text we ALSO keep the raw text so the
       // shared sanitizers can verify every proposed form number against it; for a PDF
       // we have no text to grep (text = null) and rely on the citation + never-invent.
+      // Not cached: the per-section forced tool_choice invalidates the message tier
+      // (see the note on runSection), so an ephemeral marker here would never be read.
       let docBlock: Anthropic.ContentBlockParam
       let verifyText: string | null
       if (body.formBase64 && body.mediaType === 'application/pdf') {
-        docBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 }, cache_control: { type: 'ephemeral' } }
+        docBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 } }
         verifyText = null
       } else if (body.formText?.trim()) {
         verifyText = body.formText.slice(0, 120_000)
-        docBlock = { type: 'text', text: `BASE COVERAGE FORM:\n\n${verifyText}`, cache_control: { type: 'ephemeral' } }
+        docBlock = { type: 'text', text: `BASE COVERAGE FORM:\n\n${verifyText}` }
       } else {
         send(res, { t: 'error', message: 'No form content provided.' }); return
       }

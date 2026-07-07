@@ -35,6 +35,19 @@ export function anthropic(): Anthropic {
   return new Anthropic({ apiKey: ANTHROPIC_API_KEY.value(), maxRetries: 4 })
 }
 
+/** Whether an Anthropic SDK failure is worth retrying: rate limit, request timeout,
+ *  a transient 5xx / overloaded, or a connection drop. Used for partial-stream
+ *  recovery (ai.ts) on top of the client's own maxRetries — which only covers
+ *  establishing the request, not a fault surfaced mid-stream. */
+export function isRetryableAnthropicError(err: unknown): boolean {
+  if (err instanceof Anthropic.APIConnectionError) return true   // includes timeouts
+  if (err instanceof Anthropic.APIError) {
+    const s = err.status
+    return s === 408 || s === 409 || s === 429 || (typeof s === 'number' && s >= 500)
+  }
+  return false
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export interface Caller {

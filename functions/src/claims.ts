@@ -237,11 +237,12 @@ export const analyzeClaim = onRequest(
       // The detected line is a hint only — the attached form remains authoritative.
       const lob = (body.lob ?? '').toUpperCase()
       const lobHint = LINE_LABELS[lob]
-        ? `\n\nThe attached form has been identified as ${LINE_LABELS[lob]} — analyze on that line and resolve the matching product.`
+        ? `The attached form has been identified as ${LINE_LABELS[lob]} — analyze on that line and resolve the matching product.`
         : ''
 
       await runChatAgent(anthropic(), messages, res, {
-        system:    CLAIMS_SYSTEM + lobHint,
+        system:    CLAIMS_SYSTEM,        // stable → cached with the house rules
+        context:   lobHint || undefined, // volatile per-request line hint → never cached
         tools:     CLAIMS_TOOLS,
         runTool:   runClaimsTool,
         maxTokens: 2600,

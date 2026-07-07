@@ -213,7 +213,8 @@ export const draftRule = onRequest(
       }
 
       await runChatAgent(anthropic(), messages, res, {
-        system:    `${RULES_SYSTEM}\n\n${focus}`,
+        system:    RULES_SYSTEM,   // stable → cached with the house rules
+        context:   focus,          // volatile (focus product) → never cached
         tools:     RULES_TOOLS,
         runTool:   runDraftTool,
         maxTokens: 1800,
