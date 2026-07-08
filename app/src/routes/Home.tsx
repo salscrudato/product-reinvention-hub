@@ -31,12 +31,15 @@ type StreamEvent =
 interface ToolChip { name: string; done: boolean; summary?: string }
 interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[]; notice?: string }
 
-// Short pill labels around the composer, each carrying the full prompt it sends.
+// Short pill labels around the composer. Clicking one PRIMES the composer with its prompt
+// (A4) — it no longer auto-fires a billed chat turn; the user reviews and hits send. Prompts
+// track the seeded portfolio (Personal Home HO-3 · Personal Auto) so a primed ask lands on
+// real, citable data.
 const SUGGESTIONS: Array<{ label: string; prompt: string }> = [
-  { label: 'Trace HO-3 premium',     prompt: 'Trace the premium for the default HO-3 example.' },
-  { label: 'SPP forms · Texas',      prompt: 'Which forms attach if I add Scheduled Personal Property on a Texas risk?' },
-  { label: 'Trace GL premium',       prompt: 'Trace the GL premium for a retail store with $300,000 in gross sales.' },
-  { label: 'Mandatory GL coverages', prompt: 'What GL coverages are mandatory under CG 00 01?' },
+  { label: 'Trace Personal Home premium', prompt: 'Trace the premium for the default Personal Home (HO-3) worked example.' },
+  { label: 'Water back-up endorsement',   prompt: 'Which endorsement adds water back-up coverage on the Personal Home product, and when does it attach?' },
+  { label: 'Personal Auto coverages',     prompt: 'What coverages does the Personal Auto product include, and which are mandatory?' },
+  { label: 'Compare both products',       prompt: 'Compare the Personal Home and Personal Auto products at a glance.' },
 ]
 
 
@@ -197,7 +200,7 @@ export default function Home() {
             <div className="flex flex-wrap justify-center gap-2 mb-3">
               {SUGGESTIONS.map(s => (
                 <button
-                  key={s.label} onClick={() => ask(s.prompt)} title={s.prompt}
+                  key={s.label} onClick={() => setInput(s.prompt)} title={s.prompt}
                   className="group inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-[12.5px] text-dim bg-surface hover:text-text transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                   style={{ border: '1px solid var(--color-border)' }}
                 >

@@ -11,7 +11,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { createHash } from 'crypto'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY, requireRole } from './runtime'
+import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY, requireRole, CACHE_1H } from './runtime'
 import { verifyItems } from '@pf/shared'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 import type { UsageAccum } from './telemetry'
@@ -99,8 +99,12 @@ async function fetchForInstruction(instruction: string, portfolioCtx: string, us
     const res = await client.messages.create({
       model:       MODEL_FAST,
       max_tokens:  2048,
-      temperature: 0,   // grounded extraction → deterministic, low-variance output
-      system:      NEWS_SYSTEM,
+      temperature: 0,   // grounded extraction → deterministic, low-variance output (Haiku allows sampling)
+      // Cache the stable web_search tool def + scout instruction (1h TTL) so it is reused
+      // across the pause_turn continuation turns AND across each nightly instruction; only
+      // the per-instruction user message (below) is volatile. (Under Haiku's 4096 cache
+      // floor today — a no-op that activates for free once the prefix grows past it.)
+      system:      [{ type: 'text', text: NEWS_SYSTEM, cache_control: CACHE_1H }],
       tools:       [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 } satisfies Anthropic.WebSearchTool20250305],
       messages,
     }, { timeout: 60_000 })
@@ -196,13 +200,19 @@ async function storeItems(items: NewsItem[], products: ProductInfo[]): Promise<n
   for (const it of items) {
     const urlHash = createHash('sha1').update(it.url).digest('hex')
     const ref     = db.doc(`news/${urlHash}`)
-    if ((await ref.get()).exists) continue
-    const relatedProductIds = matchToProductIds(it, products)
-    await ref.set({
-      urlHash, url: it.url, source: it.source, title: it.title, summary: it.summary,
-      tags: it.tags, relatedProductIds, fetchedAt: Timestamp.now(),
+    const relatedProductIds = matchToProductIds(it, products)   // pure; safe to compute before the tx
+    // B4: dedup as an atomic check-and-set. The previous get-then-set could let two concurrent
+    // runs (a manual refresh racing the nightly agent) both see "not present" and both write —
+    // the transactional read+write closes that window (a duplicate simply no-ops).
+    const created = await db.runTransaction(async (tx) => {
+      if ((await tx.get(ref)).exists) return false
+      tx.set(ref, {
+        urlHash, url: it.url, source: it.source, title: it.title, summary: it.summary,
+        tags: it.tags, relatedProductIds, fetchedAt: Timestamp.now(),
+      })
+      return true
     })
-    stored++
+    if (created) stored++
   }
   return stored
 }

@@ -14,13 +14,13 @@
 // AWS-SWAP: onRequest → Lambda URL; auth + secret handling live in runtime.ts.
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, ANTHROPIC_API_KEY, CACHE_1H } from './runtime'
 import { extractPdfText } from './pdfText'
 import {
   cleanCoverages, cleanForms, cleanRules, cleanRating,
   type ExtractionSection,
 } from '@pf/shared'
-import { emptyUsage, addUsage, recordUsage } from './telemetry'
+import { emptyUsage, addUsage, recordCascade } from './telemetry'
 import type { UsageAccum } from './telemetry'
 
 interface ExtractBody {
@@ -179,13 +179,16 @@ const SYSTEM =
   'section, return an empty array and say so in `note` rather than guessing. You are called once ' +
   'per section with a single forced tool; call that tool exactly once.'
 
-// One forced-tool round-trip per section. Forcing the tool (via tool_choice) guarantees a
-// structured result — including an explicit empty section — so "found nothing" is honest.
-// The tools array + system + cached document form an identical prefix across all four
-// sections, so only the first call reads the document and the rest hit the prompt cache.
-// A per-call timeout keeps a stalled request from hanging to the function ceiling.
+// One forced-tool round-trip per section, on the given model. Forcing the tool (via
+// tool_choice) guarantees a structured result — including an explicit empty section — so
+// "found nothing" is honest. The tools array + system + cached document form an identical
+// prefix across all sections FOR A GIVEN MODEL (the cache is model-scoped), so the fast
+// pass reads the document once and its later sections hit the cache; a strong escalation
+// re-reads it under sonnet's own cache. A per-call timeout keeps a stalled request from
+// hanging to the function ceiling.
 async function runSection(
   client:      Anthropic,
+  model:       string,
   docBlock:    Anthropic.ContentBlockParam,
   instruction: string,
   toolName:    string,
@@ -193,7 +196,7 @@ async function runSection(
   usageAccum?: UsageAccum,
 ): Promise<Record<string, unknown>> {
   const msg = await client.messages.create({
-    model:       MODEL,
+    model,
     max_tokens:  maxTokens,
     system:      SYSTEM,
     tools:       ALL_TOOLS,
@@ -203,6 +206,27 @@ async function runSection(
   if (usageAccum) addUsage(usageAccum, msg.usage)
   const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
   return (tu?.input as Record<string, unknown> | undefined) ?? {}
+}
+
+// The cheap-first escalation CHECK for a section, reusing the shared extraction sanitizers
+// as the verifier. `rawCount` is what the fast model proposed; `keptCount` is what survived
+// the sanitizer (uncited items + form numbers absent from the source are dropped).
+function sectionNeedsEscalation(key: string, rawCount: number, keptCount: number): boolean {
+  // Fabrication signal: the fast pass proposed items but the sanitizer dropped them ALL —
+  // an ungrounded/hallucinated-citation pattern. Escalate for a cleaner strong pass.
+  if (rawCount > 0 && keptCount === 0) return true
+  // Under-read signal: a real base COVERAGE form always defines coverages and is itself a
+  // form, so an empty coverages/forms section means the fast pass missed the obvious.
+  if ((key === 'coverages' || key === 'forms') && keptCount === 0) return true
+  return false
+}
+
+// Count what the model proposed for a section BEFORE the sanitizer runs (the tool field
+// name differs for rating). Used only to detect the "proposed items, all dropped" pattern.
+function proposedCount(key: string, input: Record<string, unknown>): number {
+  const field = key === 'rating' ? 'hints' : key
+  const arr = input[field]
+  return Array.isArray(arr) ? arr.length : 0
 }
 
 export const extractCoverages = onRequest(
@@ -222,7 +246,11 @@ export const extractCoverages = onRequest(
     }
 
     openSse(res)
-    const usageAccum = emptyUsage()
+    // Cheap-first cascade accumulators: the fast (haiku) pass fills cheapUsage; any section
+    // that fails its sanitizer check escalates to the reasoning model into strongUsage.
+    const cheapUsage  = emptyUsage()
+    const strongUsage = emptyUsage()
+    let escalated = false
     const t0 = Date.now()
     let ok = true
     try {
@@ -238,11 +266,11 @@ export const extractCoverages = onRequest(
       let docBlock: Anthropic.ContentBlockParam
       let verifyText: string | null
       if (body.formBase64 && body.mediaType === 'application/pdf') {
-        docBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 }, cache_control: { type: 'ephemeral' } }
+        docBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 }, cache_control: CACHE_1H }
         verifyText = extractPdfText(body.formBase64)
       } else if (body.formText?.trim()) {
         verifyText = body.formText.slice(0, 120_000)
-        docBlock = { type: 'text', text: `BASE COVERAGE FORM:\n\n${verifyText}`, cache_control: { type: 'ephemeral' } }
+        docBlock = { type: 'text', text: `BASE COVERAGE FORM:\n\n${verifyText}`, cache_control: CACHE_1H }
       } else {
         send(res, { t: 'error', message: 'No form content provided.' }); return
       }
@@ -272,8 +300,16 @@ export const extractCoverages = onRequest(
 
       for (const s of sections) {
         send(res, { t: 'tool', name: s.key, phase: 'start' })
-        const input = await runSection(client, docBlock, s.instruction, s.tool.name, s.maxTokens, usageAccum)
-        const section = s.clean(input, verifyText)
+        // Fast first pass, then run the sanitizer as the check.
+        const cheapInput = await runSection(client, MODEL_FAST, docBlock, s.instruction, s.tool.name, s.maxTokens, cheapUsage)
+        let section = s.clean(cheapInput, verifyText)
+        // Escalate ONLY this section, ONLY on a failed check — keeps sonnet spend to the
+        // sections the fast model actually got wrong, not the whole document.
+        if (sectionNeedsEscalation(s.key, proposedCount(s.key, cheapInput), section.items.length)) {
+          escalated = true
+          const strongInput = await runSection(client, MODEL, docBlock, s.instruction, s.tool.name, s.maxTokens, strongUsage)
+          section = s.clean(strongInput, verifyText)
+        }
         const n = section.items.length
         send(res, { t: 'tool', name: s.key, phase: 'end', summary: `${n} ${s.label}${n === 1 ? '' : 's'}` })
         send(res, { t: 'json', key: s.key, value: section })
@@ -286,7 +322,12 @@ export const extractCoverages = onRequest(
       send(res, { t: 'error', message: 'Extraction failed.' })
     } finally {
       res.end()
-      void recordUsage({ feature: 'extractCoverages', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+      // Latency is invocation-level (cheap + escalated sections interleave); attribute it to
+      // the cheap record and leave the strong record's latency at 0 rather than double-count.
+      void recordCascade({
+        feature: 'extractCoverages', cheapUsage, cheapLatencyMs: Date.now() - t0, ok,
+        strongUsage: escalated ? strongUsage : undefined,
+      })
     }
   },
 )

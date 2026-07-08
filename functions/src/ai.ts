@@ -4,7 +4,7 @@
 // with their own system context and tool set.
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, isRetryableAnthropicError } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, isRetryableAnthropicError, CACHE_1H } from './runtime'
 import type { SseResponse } from './runtime'
 import { TOOLS, SYSTEM_PROMPT, runTool, loadKnownCitations } from './tools'
 import type { ToolOutput } from './tools'
@@ -84,12 +84,12 @@ export async function runChatAgent(
   opts: AgentOptions = {},
 ): Promise<Anthropic.MessageParam[]> {
   // Stable, cacheable context first: the shared house rules, then any feature prompt.
-  // One cache breakpoint on the LAST stable block caches the whole prefix (tools +
-  // system) across this conversation's tool-loop turns AND across requests. Volatile
-  // per-request context goes AFTER the breakpoint so it never invalidates the cache.
+  // One cache breakpoint (explicit 1h TTL) on the LAST stable block caches the whole prefix
+  // (tools + system) across this conversation's tool-loop turns AND across requests.
+  // Volatile per-request context goes AFTER the breakpoint so it never invalidates the cache.
   const system: Anthropic.TextBlockParam[] = [{ type: 'text', text: SYSTEM_PROMPT }]
   if (opts.system) system.push({ type: 'text', text: opts.system })
-  system[system.length - 1]!.cache_control = { type: 'ephemeral' }
+  system[system.length - 1]!.cache_control = CACHE_1H
   if (opts.context) system.push({ type: 'text', text: opts.context })
 
   const tools     = opts.tools ?? TOOLS

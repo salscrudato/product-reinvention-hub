@@ -3,8 +3,8 @@
 // manager, the seed report, and local app settings.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { IconShield, IconPlus, IconUserX, IconUserCheck, IconSearch, IconFileClock, IconShare, IconClose } from '../components/ui/icons'
-import { adapter } from '../lib/backend'
+import { IconShield, IconPlus, IconUserX, IconUserCheck, IconSearch, IconFileClock, IconShare, IconClose, IconWarning } from '../components/ui/icons'
+import { adapter, MutationConflictError } from '../lib/backend'
 import { copyToClipboard } from '../lib/clipboard'
 import { useUser } from '../context/useUser'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
@@ -21,6 +21,8 @@ interface AiUsageDoc {
   latencyMs:        number
   ok:               boolean
   estimatedUsd:     number
+  tier?:            'cheap' | 'strong'  // cheap-first cascade tier (older records may lack it)
+  escalated?:       boolean             // strong record produced by a failed cheap check
   at:               unknown
 }
 
@@ -36,6 +38,7 @@ interface ShareDoc {
   createdBy:  { uid: string; name: string }
   createdAt:  unknown
   expiresAt:  string
+  rev?:       number   // B9: createShare stamps rev:1 so the delete can guard uniformly
   snapshot:   { product: { name?: string } }
 }
 
@@ -211,16 +214,18 @@ function SharesTab() {
     return unsub
   }, [])
 
-  async function deleteShare(id: string) {
+  async function deleteShare(share: ShareDoc) {
     if (!user) return
     setBusy(true)
     try {
       // Attribute the deletion to the real acting admin so the audit trail is truthful —
       // not a hard-coded "Admin" actor. (Only ADMINs reach this tab; the guard is belt-and-braces.)
-      await adapter.db.mutate({ op: 'delete', path: `shares/${id}`, entityType: 'share', actor: { uid: user.uid, name: user.name ?? user.email ?? 'Admin' } })
+      // B9: pass the loaded rev so the delete is optimistic-concurrency-guarded like every
+      // other mutate() call (undefined for legacy shares minted before rev:1 → safe no-op).
+      await adapter.db.mutate({ op: 'delete', path: `shares/${share.id}`, entityType: 'share', actor: { uid: user.uid, name: user.name ?? user.email ?? 'Admin' }, expectedRev: share.rev })
       toast.success('Share link deleted')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not delete share link')
+      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : err instanceof Error ? err.message : 'Could not delete share link')
     } finally {
       setBusy(false)
     }
@@ -262,7 +267,7 @@ function SharesTab() {
             </div>
             {expired && <Badge label="expired" color="danger" />}
             <Button variant="ghost" size="sm" onClick={() => void copyLink(s.id)}>Copy link</Button>
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => void deleteShare(s.id)}>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => void deleteShare(s)}>
               <IconClose size={13} /> Delete
             </Button>
           </div>
@@ -518,9 +523,47 @@ function AiCostTab() {
     return [...map.entries()].sort((a, b) => b[1].usd - a[1].usd)
   }, [filtered])
 
+  // Cheap-first cascade metrics (P-B6): `tier` splits cheap (haiku) vs strong (sonnet) spend;
+  // escalation rate = escalations ÷ cheap calls. It climbs toward 100% exactly in the known
+  // failure mode — a drifting verifier escalating every cheap pass — so it drives the alarm.
+  // Older records predate the field; fall back to inferring the tier from the model id.
+  const tierOf = (r: AiUsageDoc) => r.tier ?? (r.model?.includes('haiku') ? 'cheap' : 'strong')
+  const cascade = useMemo(() => {
+    let cheapCalls = 0, strongCalls = 0, escalations = 0, cheapUsd = 0, strongUsd = 0
+    for (const r of filtered) {
+      if (tierOf(r) === 'cheap') { cheapCalls++; cheapUsd += r.estimatedUsd ?? 0 }
+      else { strongCalls++; strongUsd += r.estimatedUsd ?? 0 }
+      if (r.escalated) escalations++
+    }
+    return { cheapCalls, strongCalls, escalations, cheapUsd, strongUsd, rate: cheapCalls > 0 ? escalations / cheapCalls : null }
+  }, [filtered])
+
+  // Per-feature escalation so the by-feature table can pinpoint a drifting verifier.
+  const escByFeature = useMemo(() => {
+    const map = new Map<string, { cheap: number; escalated: number }>()
+    for (const r of filtered) {
+      const f = r.feature ?? 'unknown'
+      if (!map.has(f)) map.set(f, { cheap: 0, escalated: 0 })
+      const a = map.get(f)!
+      if (tierOf(r) === 'cheap') a.cheap++
+      if (r.escalated) a.escalated++
+    }
+    return map
+  }, [filtered])
+
+  // Configurable cost alarm (localStorage; advisory). A rising escalation rate is the tell
+  // for a drifting verifier; the spend cap catches runaway blended cost in the window.
+  const [alarm, setAlarm] = useState<{ escalationPct: number; spendCapUsd: number }>(() => {
+    try { const raw = localStorage.getItem('prh:aiCostAlarm'); if (raw) return JSON.parse(raw) as { escalationPct: number; spendCapUsd: number } } catch { /* default */ }
+    return { escalationPct: 50, spendCapUsd: 0 }
+  })
+  useEffect(() => { try { localStorage.setItem('prh:aiCostAlarm', JSON.stringify(alarm)) } catch { /* quota — non-fatal */ } }, [alarm])
+
   const totalTokens = totals.input + totals.output + totals.cacheRead + totals.cacheWrite
   const cacheHitRatio = totalTokens > 0 ? totals.cacheRead / totalTokens : 0
   const avgLatency    = totals.calls > 0 ? Math.round(totals.latencyMs / totals.calls) : 0
+  const escBreached   = cascade.rate != null && alarm.escalationPct > 0 && cascade.rate * 100 > alarm.escalationPct
+  const spendBreached = alarm.spendCapUsd > 0 && totals.usd > alarm.spendCapUsd
 
   if (loading) return <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
   if (!records || records.length === 0) return (
@@ -550,6 +593,21 @@ function AiCostTab() {
           <span className="text-xs text-faint ml-auto">{filtered.length} / {records?.length} records</span>
         )}
       </div>
+
+      {/* Cost alarm — fires when a verifier drifts (escalation rate) or spend runs away */}
+      {(escBreached || spendBreached) && (
+        <div role="alert" className="flex items-start gap-2.5 rounded-[12px] px-4 py-3"
+          style={{ border: '1px solid var(--color-danger)', background: 'color-mix(in srgb, var(--color-danger) 8%, transparent)' }}>
+          <IconWarning size={18} className="text-danger shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="text-sm">
+            <div className="font-semibold text-danger">AI cost alarm</div>
+            <ul className="mt-0.5 flex flex-col gap-0.5 text-dim">
+              {escBreached && <li>Escalation rate <span className="font-semibold tabular-nums">{(cascade.rate! * 100).toFixed(1)}%</span> exceeds the {alarm.escalationPct}% threshold — a cheap-first verifier may be escalating too often (see “Escal.” by feature below).</li>}
+              {spendBreached && <li>Spend <span className="font-semibold tabular-nums">{fmtUsd(totals.usd)}</span> exceeds the ${alarm.spendCapUsd} cap for this window.</li>}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Summary tiles */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -584,23 +642,72 @@ function AiCostTab() {
         </div>
       </div>
 
+      {/* Cheap-first cascade + configurable alarm (P-B6) */}
+      <div className="bg-surface rounded-[12px] p-4" style={{ border: '1px solid var(--color-border)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs font-semibold text-dim uppercase">Cheap-first cascade</div>
+          <span className="text-xs text-faint">
+            escalation rate{' '}
+            <span className="font-semibold tabular-nums" style={{ color: escBreached ? 'var(--color-danger)' : 'var(--color-text)' }}>
+              {cascade.rate == null ? '—' : `${(cascade.rate * 100).toFixed(1)}%`}
+            </span>
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+          {[
+            { label: 'Cheap calls (haiku)',   value: cascade.cheapCalls.toLocaleString(),  color: 'var(--color-good)' },
+            { label: 'Strong calls (sonnet)', value: cascade.strongCalls.toLocaleString(), color: 'var(--color-accent)' },
+            { label: 'Escalations',           value: cascade.escalations.toLocaleString(), color: 'var(--color-warn)' },
+            { label: 'Strong spend share',    value: totals.usd > 0 ? `${(cascade.strongUsd / totals.usd * 100).toFixed(0)}%` : '—', color: 'var(--color-dim)' },
+          ].map(t => (
+            <div key={t.label} className="flex flex-col gap-0.5">
+              <div className="font-semibold tabular-nums" style={{ color: t.color }}>{t.value}</div>
+              <div className="text-xs text-faint">{t.label}</div>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-end gap-4 mt-4 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <label className="flex flex-col gap-1 text-[11px] text-faint uppercase font-semibold">
+            Escalation alarm (%)
+            <input type="number" min={0} max={100} value={alarm.escalationPct}
+              onChange={e => setAlarm(a => ({ ...a, escalationPct: Math.max(0, Math.min(100, Number(e.target.value) || 0)) }))}
+              className="w-20 h-8 px-2 rounded-[8px] bg-raised text-text text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+              style={{ border: '1px solid var(--color-border)' }} />
+          </label>
+          <label className="flex flex-col gap-1 text-[11px] text-faint uppercase font-semibold">
+            Spend cap ($ · 0 = off)
+            <input type="number" min={0} step="0.5" value={alarm.spendCapUsd}
+              onChange={e => setAlarm(a => ({ ...a, spendCapUsd: Math.max(0, Number(e.target.value) || 0) }))}
+              className="w-24 h-8 px-2 rounded-[8px] bg-raised text-text text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+              style={{ border: '1px solid var(--color-border)' }} />
+          </label>
+          <span className="text-[11px] text-faint max-w-xs leading-snug">Advisory thresholds for this window. A rising escalation rate is the tell for a drifting verifier escalating everything.</span>
+        </div>
+      </div>
+
       {/* By feature */}
       {byFeature.length > 0 && (
         <div>
           <div className="text-xs font-semibold text-dim uppercase mb-2">By feature</div>
           <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 px-4 py-2 text-[11px] font-semibold text-faint uppercase bg-raised">
-              <span>Feature</span><span>Calls</span><span>Tokens</span><span>Cost</span><span>Errors</span>
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-2 text-[11px] font-semibold text-faint uppercase bg-raised">
+              <span>Feature</span><span>Calls</span><span>Tokens</span><span>Cost</span><span className="text-right">Escal.</span><span>Errors</span>
             </div>
-            {byFeature.map(([feat, a]) => (
-              <div key={feat} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-center px-4 py-2.5 text-sm bg-surface" style={{ borderTop: '1px solid var(--color-border)' }}>
-                <span className="font-mono text-text text-xs truncate">{feat}</span>
-                <span className="text-dim tabular-nums text-right">{a.calls}</span>
-                <span className="text-dim tabular-nums text-right">{fmtTokens(a.input + a.output + a.cacheRead)}</span>
-                <span className="font-semibold tabular-nums text-right" style={{ color: 'var(--color-accent)' }}>{fmtUsd(a.usd)}</span>
-                <span className={`tabular-nums text-right ${a.errors > 0 ? 'text-danger' : 'text-faint'}`}>{a.errors}</span>
-              </div>
-            ))}
+            {byFeature.map(([feat, a]) => {
+              const esc = escByFeature.get(feat)
+              const rate = esc && esc.cheap > 0 ? esc.escalated / esc.cheap : null
+              const hot  = rate != null && alarm.escalationPct > 0 && rate * 100 > alarm.escalationPct
+              return (
+                <div key={feat} className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 items-center px-4 py-2.5 text-sm bg-surface" style={{ borderTop: '1px solid var(--color-border)' }}>
+                  <span className="font-mono text-text text-xs truncate">{feat}</span>
+                  <span className="text-dim tabular-nums text-right">{a.calls}</span>
+                  <span className="text-dim tabular-nums text-right">{fmtTokens(a.input + a.output + a.cacheRead)}</span>
+                  <span className="font-semibold tabular-nums text-right" style={{ color: 'var(--color-accent)' }}>{fmtUsd(a.usd)}</span>
+                  <span className={`tabular-nums text-right ${hot ? 'text-danger font-semibold' : 'text-faint'}`}>{rate == null ? '—' : `${(rate * 100).toFixed(0)}%`}</span>
+                  <span className={`tabular-nums text-right ${a.errors > 0 ? 'text-danger' : 'text-faint'}`}>{a.errors}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

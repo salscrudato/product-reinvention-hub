@@ -30,6 +30,28 @@ export const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY')
 export const MODEL      = 'claude-sonnet-5'   // reasoning: portfolio chat, analysis
 export const MODEL_FAST = 'claude-haiku-4-5'  // bulk/simple: market-news scout
 
+// ─── Prompt-cache breakpoint (explicit 1-hour TTL) ─────────────────────────────
+// Every cached prefix in this project — tools + system, and any cached document — is
+// marked with THIS single breakpoint value, so the stable prefix stays warm across the
+// minutes-long gaps between calls that the default 5-minute TTL would drop: a product-
+// workspace session, the nightly news run, a multi-turn claims/extraction request. A 1h
+// cache write costs ~2x input (vs ~1.25x for 5m), but a stable prefix is READ far more
+// than written, so the blended cost still falls — and telemetry prices cache writes at
+// the 1h rate so the Admin cost tab stays honest.
+//
+// Caching is a prefix match (order: tools → system → messages): put the breakpoint on the
+// LAST stable block and keep the volatile per-request suffix after it. Min cacheable prefix
+// is 1024 tok on Sonnet and 4096 tok on Haiku — below that the marker is a silent no-op
+// (no error), so a small Haiku prefix simply won't cache until it grows past the floor.
+//
+// SDK 0.54's CacheControlEphemeral type models only { type:'ephemeral' } and does not yet
+// type the (GA) `ttl` field, so we extend it locally — additive, no `as unknown` hole. The
+// wire API accepts `ttl`; EphemeralCacheControl is a structural SUBTYPE of the SDK type, so
+// assigning CACHE_1H to a `CacheControlEphemeral`-typed field is safe and the `ttl` survives
+// on the runtime object. Verified against docs.claude.com: 1h TTL is GA, no beta header.
+export type EphemeralCacheControl = Anthropic.CacheControlEphemeral & { ttl?: '5m' | '1h' }
+export const CACHE_1H: EphemeralCacheControl = { type: 'ephemeral', ttl: '1h' }
+
 /** Anthropic client — call inside a handler so the bound secret is resolvable.
  *  maxRetries adds explicit exponential backoff on 429 / 5xx / connection errors. */
 export function anthropic(): Anthropic {

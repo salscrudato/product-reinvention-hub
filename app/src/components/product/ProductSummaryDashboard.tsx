@@ -68,11 +68,20 @@ export function ProductSummaryDashboard() {
     }
   }
 
-  // Generate once per product per session (cached). Regenerate is explicit.
+  // A4: do NOT auto-run summarizeProduct on mount — that fired a billed model call once per
+  // product per session without the user asking (which compounds across a large portfolio).
+  // Instead, hydrate a summary generated earlier THIS session (sessionStorage) so it still
+  // appears instantly, and otherwise reset to the explicit "Generate AI summary" affordance.
+  // Generation is now always user-initiated (the button below / Regenerate). Reset on product
+  // switch so a previous product's summary never lingers under a product with no cache yet.
   useEffect(() => {
     if (!product || requested.current === pid) return
     requested.current = pid
-    void generate(false)
+    const cached = sessionStorage.getItem(`pf.summary.${pid}`)
+    if (cached) {
+      try { setSummary(JSON.parse(cached) as ProductSummary); setState('idle'); return } catch { /* stale cache — fall through to Generate */ }
+    }
+    setSummary(null); setState('idle')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pid, product])
 
@@ -96,10 +105,13 @@ export function ProductSummaryDashboard() {
             </p>
           </div>
         </div>
+        {/* Explicit, user-initiated generate/regenerate — never auto-fires (A4). */}
         <button onClick={() => void generate(true)} disabled={state === 'loading'}
           className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[8px] text-[12px] font-medium text-accent hover:bg-accent-soft transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
-          {state === 'loading' ? <IconSpinner size={13} className="animate-spin" aria-hidden="true" /> : <IconRefresh size={13} aria-hidden="true" />}
-          {state === 'loading' ? 'Generating…' : 'Regenerate'}
+          {state === 'loading'
+            ? <IconSpinner size={13} className="animate-spin" aria-hidden="true" />
+            : summary ? <IconRefresh size={13} aria-hidden="true" /> : <IconSparkle size={13} aria-hidden="true" />}
+          {state === 'loading' ? 'Generating…' : summary ? 'Regenerate' : 'Generate summary'}
         </button>
       </div>
 

@@ -12,11 +12,11 @@
 // secret handling live in runtime.ts.
 import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, ANTHROPIC_API_KEY, CACHE_1H } from './runtime'
 import { runChatAgent, assistantText } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
-import { emptyUsage, addUsage, recordUsage } from './telemetry'
+import { emptyUsage, addUsage, recordUsage, recordCascade } from './telemetry'
 
 // ─── Structured determination (the card contract) ──────────────────────────────
 // The model calls this exactly once, as its final action, when the user has
@@ -204,10 +204,10 @@ export const analyzeClaim = onRequest(
             content.push({
               type: 'document',
               source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 },
-              cache_control: { type: 'ephemeral' },
+              cache_control: CACHE_1H,
             })
           } else if (body.formText?.trim()) {
-            content.push({ type: 'text', text: `BASE COVERAGE FORM (${formNumber}):\n\n${body.formText.slice(0, 200_000)}`, cache_control: { type: 'ephemeral' } })
+            content.push({ type: 'text', text: `BASE COVERAGE FORM (${formNumber}):\n\n${body.formText.slice(0, 200_000)}`, cache_control: CACHE_1H })
           }
           content.push({ type: 'text', text: m.content })
           return { role, content }
@@ -320,33 +320,62 @@ export const identifyBaseForm = onCall<IdentifyBody>(
     }
     content.push({ type: 'text', text: 'Identify this form, then call identify_form exactly once.' })
 
-    const t0 = Date.now()
-    let ok = true
-    const usageAccum = emptyUsage()
-    try {
-      const msg = await anthropic().messages.create({
-        model:       MODEL,
-        max_tokens:  400,
-        system:      'You read the header of an uploaded P&C insurance form and report its title, form number, edition and line (HO/GL/OTHER) exactly as the document shows. Do not invent anything.',
-        tools:       [IDENTIFY_TOOL],
-        tool_choice: { type: 'tool', name: 'identify_form' },
-        messages:    [{ role: 'user', content }],
-      }, { timeout: 45_000 })
-      addUsage(usageAccum, msg.usage)
-      const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-      const out = (tu?.input as { title?: string; formNumber?: string; edition?: string; lob?: string } | undefined) ?? {}
-      const lob = (out.lob ?? '').trim().toUpperCase()
+    // Reading a form's header (title / number / edition / line) is a CLASSIFICATION +
+    // extraction first-pass — exactly what the fast model handles well. Run haiku FIRST,
+    // then escalate to the reasoning model ONLY when a cheap check fails. The result is
+    // metadata for a library card the author reviews and edits — never a grounded answer
+    // presented as fact — so a cheap first pass carries no quality-floor risk.
+    const run = (model: string) => anthropic().messages.create({
+      model,
+      max_tokens:  400,
+      system:      'You read the header of an uploaded P&C insurance form and report its title, form number, edition and line (HO/GL/OTHER) exactly as the document shows. Do not invent anything.',
+      tools:       [IDENTIFY_TOOL],
+      tool_choice: { type: 'tool', name: 'identify_form' },
+      messages:    [{ role: 'user', content }],
+    }, { timeout: 45_000 })
+    const readIdentity = (msg: Anthropic.Message) => {
+      const tu  = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+      const raw = (tu?.input as { title?: string; formNumber?: string; edition?: string; lob?: string } | undefined) ?? {}
+      const lob = (raw.lob ?? '').trim().toUpperCase()
       return {
-        title:      (out.title ?? body.fileName ?? 'Base form').trim(),
-        formNumber: (out.formNumber ?? '').trim(),
-        edition:    (out.edition ?? '').trim(),
+        title:      (raw.title ?? body.fileName ?? 'Base form').trim(),
+        formNumber: (raw.formNumber ?? '').trim(),
+        edition:    (raw.edition ?? '').trim(),
         lob:        lob === 'HO' || lob === 'GL' ? lob : '',
       }
+    }
+
+    const t0 = Date.now()
+    let ok = true
+    let escalated = false
+    let tCheap = t0
+    const cheapUsage  = emptyUsage()
+    const strongUsage = emptyUsage()
+    try {
+      const cheapMsg = await run(MODEL_FAST)
+      addUsage(cheapUsage, cheapMsg.usage)
+      tCheap = Date.now()
+      let out = readIdentity(cheapMsg)
+
+      // CHECK — escalate only on a failed check: a confident read yields EITHER a printed
+      // form number OR a recognized line (HO/GL). If the fast pass produced neither, the
+      // header was hard to read — escalate to the reasoning model for an accurate identity.
+      if (!out.formNumber && !out.lob) {
+        escalated = true
+        const strongMsg = await run(MODEL)
+        addUsage(strongUsage, strongMsg.usage)
+        out = readIdentity(strongMsg)
+      }
+      return out
     } catch (err) {
       ok = false
       throw err
     } finally {
-      void recordUsage({ feature: 'identifyBaseForm', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+      void recordCascade({
+        feature: 'identifyBaseForm', cheapUsage, cheapLatencyMs: tCheap - t0, ok,
+        strongUsage:     escalated ? strongUsage : undefined,
+        strongLatencyMs: escalated ? Date.now() - tCheap : undefined,
+      })
     }
   },
 )

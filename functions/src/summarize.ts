@@ -7,7 +7,7 @@
 // → Lambda URL; auth + secret handling live in runtime.ts.
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY } from './runtime'
+import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY, CACHE_1H } from './runtime'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 
 interface CoverageMeta { name: string; requirement?: string; rated?: boolean; sub?: boolean; forms?: string[]; limit?: string }
@@ -83,12 +83,21 @@ export const summarizeProduct = onCall<SummarizeBody>(
       const msg = await anthropic().messages.create({
         model:       MODEL_FAST,
         max_tokens:  1200,
-        system:
-          'You are a P&C insurance product analyst. Summarize a product for its product manager ' +
-          'using ONLY the structured metadata provided. When a `baseForm` is present, treat it as ' +
-          'the coverage form the product is built on — ground the headline/overview in it and cite ' +
-          'its form number (e.g. "Built on HO 00 03"). Be concise, concrete and executive in tone. ' +
-          'Never invent facts. Then call product_summary once.',
+        // Stable instruction + tool def are the cacheable prefix (1h TTL); only the per-
+        // product metadata in the user message below is volatile, and it sits after the
+        // breakpoint so it never busts the cache. (Haiku's 4096-token cache floor means this
+        // prefix only starts caching once it grows past the floor — a no-op until then, and
+        // free thereafter.)
+        system:      [{
+          type: 'text',
+          text:
+            'You are a P&C insurance product analyst. Summarize a product for its product manager ' +
+            'using ONLY the structured metadata provided. When a `baseForm` is present, treat it as ' +
+            'the coverage form the product is built on — ground the headline/overview in it and cite ' +
+            'its form number (e.g. "Built on HO 00 03"). Be concise, concrete and executive in tone. ' +
+            'Never invent facts. Then call product_summary once.',
+          cache_control: CACHE_1H,
+        }],
         tools:       [SUMMARY_TOOL],
         tool_choice: { type: 'tool', name: 'product_summary' },
         messages:    [{ role: 'user', content: `PRODUCT METADATA (JSON):\n\n${meta}\n\nSummarize this product, then call product_summary.` }],
