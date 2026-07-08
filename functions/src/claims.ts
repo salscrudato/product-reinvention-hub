@@ -13,7 +13,7 @@
 import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
-import { runChatAgent } from './ai'
+import { runChatAgent, assistantText } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
@@ -217,6 +217,7 @@ export const analyzeClaim = onRequest(
 
       // Custom executor: capture the structured determination and surface it as a
       // `json` event; delegate every grounding tool to the shared runTool.
+      let determinationEmitted = false
       const runClaimsTool = (name: string, input: Record<string, unknown>): Promise<ToolOutput> => {
         if (name === 'emit_determination') {
           // Grounding invariant, enforced here: a substantive determination that cites
@@ -233,6 +234,7 @@ export const analyzeClaim = onRequest(
             })
           }
           send(res, { t: 'json', key: 'determination', value: input })
+          determinationEmitted = true
           return Promise.resolve({ content: JSON.stringify({ recorded: true }), summary: 'determination ready' })
         }
         return runTool(name, input)
@@ -244,7 +246,7 @@ export const analyzeClaim = onRequest(
         ? `The attached form has been identified as ${LINE_LABELS[lob]} — analyze on that line and resolve the matching product.`
         : ''
 
-      await runChatAgent(anthropic(), messages, res, {
+      const convo = await runChatAgent(anthropic(), messages, res, {
         system:      CLAIMS_SYSTEM,
         context:     lobHint || undefined,
         tools:       CLAIMS_TOOLS,
@@ -253,6 +255,15 @@ export const analyzeClaim = onRequest(
         maxTurns:    7,
         usageAccum,
       })
+
+      // B2: the loop can end (maxTurns exhausted, or a determination repeatedly rejected
+      // for missing citations) having produced NEITHER a determination card NOR any prose
+      // — a silent empty result. Never leave the copilot blank: emit a terminal message so
+      // the user knows to add detail. A valid prose answer (a definition / follow-up) has
+      // text, so this fires ONLY on the truly-empty case.
+      if (!determinationEmitted && !assistantText(convo).trim()) {
+        send(res, { t: 'error', message: "I couldn't reach a grounded determination for that scenario. Add detail about what happened and what was damaged, or rephrase, and I'll try again." })
+      }
       send(res, { t: 'done' })
     } catch (err) {
       ok = false

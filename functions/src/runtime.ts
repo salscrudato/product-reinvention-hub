@@ -108,6 +108,7 @@ export type StreamEvent =
   | { t: 'token'; v: string }                                   // assistant text delta
   | { t: 'tool';  name: string; phase: 'start' | 'end'; summary?: string }
   | { t: 'json';  key: string; value: unknown }                 // structured payload (drafts, determinations)
+  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[] }  // non-fatal advisory (e.g. unverified citations)
   | { t: 'error'; message: string }
   | { t: 'done' }
 

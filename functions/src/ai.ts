@@ -6,10 +6,24 @@ import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, isRetryableAnthropicError } from './runtime'
 import type { SseResponse } from './runtime'
-import { TOOLS, SYSTEM_PROMPT, runTool } from './tools'
+import { TOOLS, SYSTEM_PROMPT, runTool, loadKnownCitations } from './tools'
 import type { ToolOutput } from './tools'
+import { findUnverifiedCitations } from '@pf/shared'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 import type { UsageAccum } from './telemetry'
+
+/** Concatenate every assistant text block across a completed conversation — the full
+ *  answer the user saw (tokens are appended across turns in the UI). Used to detect a
+ *  silent empty result and to run the citation post-check. Ignores tool_use blocks. */
+export function assistantText(convo: Anthropic.MessageParam[]): string {
+  const parts: string[] = []
+  for (const m of convo) {
+    if (m.role !== 'assistant') continue
+    if (typeof m.content === 'string') { parts.push(m.content); continue }
+    for (const b of m.content) if (b.type === 'text') parts.push(b.text)
+  }
+  return parts.join('')
+}
 
 export interface AgentOptions {
   system?:      string             // stable feature prompt — cached alongside the house rules
@@ -144,7 +158,32 @@ export const chat = onRequest(
         ? `The user is focused on product ${body.productId}. Prefer that product when a productId is needed.`
         : undefined
 
-      await runChatAgent(anthropic(), messages, res, { context: focus, usageAccum })
+      const convo = await runChatAgent(anthropic(), messages, res, { context: focus, usageAccum })
+
+      const answer = assistantText(convo)
+      if (!answer.trim()) {
+        // B1: the agent loop can exhaust maxTurns mid-tool-use (or otherwise end with no
+        // text) — never let that surface as a silent empty bubble.
+        send(res, { t: 'error', message: "I couldn't produce an answer for that. Please rephrase or try again." })
+      } else {
+        // C1: server-verify every [refId] / [form number] the answer cites against the
+        // live catalogue and FLAG any that don't resolve, so an ungrounded reference is
+        // never presented as if verified. Best-effort — a lookup failure must not break
+        // an answer that already streamed.
+        try {
+          const known = await loadKnownCitations()
+          const unverified = findUnverifiedCitations(answer, known.refIds, known.formNumbers)
+          if (unverified.length) {
+            const one = unverified.length === 1
+            send(res, {
+              t: 'notice', level: 'warn', refs: unverified,
+              message: `${unverified.length} cited ${one ? 'reference' : 'references'} couldn't be verified against the catalog (${unverified.join(', ')}). Treat ${one ? 'it' : 'them'} as unconfirmed.`,
+            })
+          }
+        } catch (e) {
+          console.warn('[chat] citation verification skipped:', e)
+        }
+      }
       send(res, { t: 'done' })
     } catch (err) {
       ok = false

@@ -86,10 +86,13 @@ export function ProductSummaryDashboard() {
           </span>
           <div>
             <h2 className="text-sm font-semibold text-text leading-tight">AI product summary</h2>
+            {/* summarizeProduct reads the metadata snapshot, never the form PDF — so the
+                label says "summarized from metadata", not "grounded in the form" (A3). The
+                base-form number chip is still surfaced (load-bearing) when we have one. */}
             <p className="text-[11px] text-faint">
-              {product?.baseForm
-                ? <>Grounded in the base form{product.baseForm.formNumber ? <> <span className="font-mono text-dim">{product.baseForm.formNumber}</span></> : ''}</>
-                : "Generated from this product's metadata"}
+              {product?.baseForm?.formNumber
+                ? <>Summarized from product metadata · base form <span className="font-mono text-dim">{product.baseForm.formNumber}</span></>
+                : 'Summarized from product metadata'}
             </p>
           </div>
         </div>

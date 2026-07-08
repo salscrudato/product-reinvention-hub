@@ -8,7 +8,7 @@
 // so a VIEWER sees exactly what everyone else does (no edit affordances to hide).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { IconSparkle, IconCheck, IconSpinner } from '../components/ui/icons'
+import { IconSparkle, IconCheck, IconSpinner, IconWarning } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
 import { Markdown } from '../components/chat/Markdown'
@@ -24,11 +24,12 @@ type StreamEvent =
   | { t: 'token'; v: string }
   | { t: 'tool';  name: string; phase: 'start' | 'end'; summary?: string }
   | { t: 'json';  key: string; value: unknown }
+  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[] }
   | { t: 'error'; message: string }
   | { t: 'done' }
 
 interface ToolChip { name: string; done: boolean; summary?: string }
-interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[] }
+interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[]; notice?: string }
 
 // Short pill labels around the composer, each carrying the full prompt it sends.
 const SUGGESTIONS: Array<{ label: string; prompt: string }> = [
@@ -119,6 +120,11 @@ export default function Home() {
               }
               return { ...m, tools }
             }); break
+          case 'notice':
+            // C1: the answer streamed, but the server couldn't verify one or more cited
+            // references against the catalog — surface that so a chip is never read as
+            // confirmed. Non-fatal; the prose stays.
+            patchAssistant(m => ({ ...m, notice: ev.message })); break
           case 'error':
             patchAssistant(m => ({ ...m, text: m.text + `\n\n⚠️ ${ev.message}` })); break
           case 'done': break
@@ -171,6 +177,12 @@ export default function Home() {
                       {m.role === 'assistant'
                         ? <div className="text-sm text-text"><Markdown text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span aria-hidden="true" className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
                         : m.text}
+                      {m.role === 'assistant' && m.notice && (
+                        <div className="flex items-start gap-1.5 text-[12px] text-warn" role="note">
+                          <IconWarning size={13} className="shrink-0 mt-0.5" aria-hidden="true" />
+                          <span>{m.notice}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

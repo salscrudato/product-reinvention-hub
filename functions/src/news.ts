@@ -12,6 +12,7 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { createHash } from 'crypto'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY, requireRole } from './runtime'
+import { verifyItems } from '@pf/shared'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 import type { UsageAccum } from './telemetry'
 
@@ -167,6 +168,26 @@ async function loadProducts(): Promise<ProductInfo[]> {
   })
 }
 
+/** Best-effort liveness probe for a source URL: a short-timeout HEAD (C2). A returned
+ *  news item only needs url+title, so nothing has confirmed the URL resolves — a
+ *  hallucinated/dead source would otherwise be persisted as real news. We treat a
+ *  definitive "not found" (404/410) or a network/timeout failure (a fabricated domain,
+ *  typically) as dead; a gated (401/403), method-refused (405) or transient (5xx) reply
+ *  still means the resource exists, so we keep it rather than drop a real source on a
+ *  blip. The shape gate + this probe both run inside verifyItems (@pf/shared). */
+async function headIsAlive(url: string): Promise<boolean> {
+  const ctrl  = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 4000)
+  try {
+    const res = await fetch(url, { method: 'HEAD', redirect: 'follow', signal: ctrl.signal })
+    return res.status !== 404 && res.status !== 410
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /** Store items, deduped by a hash of the URL. Returns how many were newly stored.
  *  relatedProductIds is populated on each new item via LOB + state matching. */
 async function storeItems(items: NewsItem[], products: ProductInfo[]): Promise<number> {
@@ -204,8 +225,9 @@ export const refreshNews = onCall(
     let ok = true
     try {
       const items  = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
-      const stored = await storeItems(items, products)
-      return { found: items.length, stored }
+      const live   = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
+      const stored = await storeItems(live, products)
+      return { found: items.length, verified: live.length, stored }
     } catch (err) {
       ok = false
       console.error('[refreshNews] internal error:', err)
@@ -235,7 +257,8 @@ export const nightlyNews = onSchedule(
     for (const instruction of unique) {
       try {
         const items = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
-        await storeItems(items, products)
+        const live  = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
+        await storeItems(live, products)
       } catch { ok = false /* one bad instruction shouldn't fail the whole run */ }
     }
     void recordUsage({ feature: 'nightlyNews', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })

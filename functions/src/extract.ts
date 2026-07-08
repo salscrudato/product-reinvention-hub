@@ -15,6 +15,7 @@
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
+import { extractPdfText } from './pdfText'
 import {
   cleanCoverages, cleanForms, cleanRules, cleanRating,
   type ExtractionSection,
@@ -229,14 +230,16 @@ export const extractCoverages = onRequest(
 
       // Build the document block once and mark it ephemeral so it is cached and reused
       // across all four section calls (which now share an identical tools prefix). For
-      // text we ALSO keep the raw text so the shared sanitizers can verify every proposed
-      // form number against it; for a PDF we have no text to grep (text = null) and rely
-      // on the citation + never-invent guarantees.
+      // both paths we ALSO derive `verifyText` so the shared sanitizers can verify every
+      // proposed form number against the source. Text uploads carry their text directly;
+      // for a PDF we recover text SERVER-SIDE (C3) so the primary upload path is verified
+      // too — extraction fails safe to null (skip verification, rely on citation +
+      // never-invent) rather than false-dropping a real number on a PDF we can't read.
       let docBlock: Anthropic.ContentBlockParam
       let verifyText: string | null
       if (body.formBase64 && body.mediaType === 'application/pdf') {
         docBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 }, cache_control: { type: 'ephemeral' } }
-        verifyText = null
+        verifyText = extractPdfText(body.formBase64)
       } else if (body.formText?.trim()) {
         verifyText = body.formText.slice(0, 120_000)
         docBlock = { type: 'text', text: `BASE COVERAGE FORM:\n\n${verifyText}`, cache_control: { type: 'ephemeral' } }

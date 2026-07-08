@@ -49,6 +49,24 @@ const SUMMARY_TOOL: Anthropic.Tool = {
   },
 }
 
+const norm = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
+
+// C1 (grounded posture, applied to the summary): the model builds the summary purely
+// from the client-supplied metadata, but nothing stops it naming a coverage the metadata
+// does not contain. Drop any coverageHighlight whose name doesn't correspond to a real
+// metadata coverage, so an invented coverage never reaches the dashboard. Tolerant match
+// (either name contains the other, ignoring case/punctuation) so "Coverage A" still
+// grounds against "Coverage A — Dwelling". Mirrors extraction's "drop the ungrounded".
+function groundSummary(raw: Record<string, unknown>, coverages: CoverageMeta[]): Record<string, unknown> {
+  const known = coverages.map(c => norm(c.name)).filter(Boolean)
+  const highlights = Array.isArray(raw.coverageHighlights) ? raw.coverageHighlights : []
+  const grounded = highlights.filter(h => {
+    const n = norm(String((h as { name?: unknown }).name ?? ''))
+    return !!n && known.some(k => k.includes(n) || n.includes(k))
+  })
+  return { ...raw, coverageHighlights: grounded }
+}
+
 export const summarizeProduct = onCall<SummarizeBody>(
   { secrets: [ANTHROPIC_API_KEY], maxInstances: 5, timeoutSeconds: 60, memory: '512MiB' },
   async (req) => {
@@ -77,7 +95,7 @@ export const summarizeProduct = onCall<SummarizeBody>(
       }, { timeout: 45_000 })
       addUsage(usageAccum, msg.usage)
       const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-      return (tu?.input as Record<string, unknown> | undefined) ?? {}
+      return groundSummary((tu?.input as Record<string, unknown> | undefined) ?? {}, p.coverages ?? [])
     } catch (err) {
       ok = false
       throw err

@@ -6,7 +6,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
 import {
   evaluate, resolveRatingKit, resolveLobByRefId, DEFAULT_LOB, rankDocuments,
-  computeDictionaryUsage,
+  computeDictionaryUsage, normalizeFormNumber,
 } from '@pf/shared'
 import type { RankDoc, DictUsageCorpus } from '@pf/shared'
 import type {
@@ -337,6 +337,50 @@ async function getDictionary(name?: string, refId?: string): Promise<ToolOutput>
     }),
     summary: entry.refId ?? entry.name,
   }
+}
+
+// ─── Citation resolver — the live catalogue of every real refId + form number ───
+// The "grounded + cited" invariant applied to free-prose answers: functions/src/ai.ts
+// verifies each [refId] / [form number] the chat model cites against these sets and
+// flags any that don't resolve, so a fabricated reference is never shown as if verified.
+// Built from the SAME collections the grounding tools read — the live mirror of the
+// eval's KNOWN_REF_IDS / KNOWN_FORM_NUMBERS. refIds are upper-cased; form numbers are
+// normalised (compare with token.toUpperCase() / normalizeFormNumber(token)).
+// NOTE (OBSERVATIONS B10): these are full-collection reads — cheap at seed scale, run
+// once per chat request; swap for targeted lookups before portfolio scale.
+export interface KnownCitations { refIds: Set<string>; formNumbers: Set<string> }
+
+export async function loadKnownCitations(): Promise<KnownCitations> {
+  const db = getFirestore()
+  const [covG, ruleG, frG, rpG, ldSnap, rtSnap, dictSnap, prodSnap, formSnap] = await Promise.all([
+    db.collectionGroup('coverages').get(),
+    db.collectionGroup('rules').get(),
+    db.collectionGroup('formRules').get(),
+    db.collectionGroup('ratingPrograms').get(),
+    db.collection('ldTables').get(),
+    db.collection('rtTables').get(),
+    db.collection('dictionary').get(),
+    db.collection('products').get(),
+    db.collection('forms').get(),
+  ])
+
+  const refIds = new Set<string>()
+  const add = (v: unknown): void => { if (typeof v === 'string' && v.trim()) refIds.add(v.trim().toUpperCase()) }
+  for (const d of covG.docs)   add((d.data() as Coverage).refId)
+  for (const d of ruleG.docs)  add((d.data() as Rule).refId)
+  for (const d of frG.docs)    add((d.data() as { refId?: string }).refId)
+  for (const d of rpG.docs)    add((d.data() as RatingProgram).refId)
+  for (const d of ldSnap.docs) add(d.id)     // ldTables / rtTables doc id IS the refId
+  for (const d of rtSnap.docs) add(d.id)
+  for (const d of dictSnap.docs) add((d.data() as DictionaryEntry).refId)
+  for (const d of prodSnap.docs) { add(d.id); add((d.data() as Product).refId) }
+
+  const formNumbers = new Set<string>()
+  for (const d of formSnap.docs) {
+    const n = (d.data() as Form).number
+    if (n) formNumbers.add(normalizeFormNumber(n))
+  }
+  return { refIds, formNumbers }
 }
 
 /** Load the coverages + rules + forms corpus for computing dictionary back-references.
