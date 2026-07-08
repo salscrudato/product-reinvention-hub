@@ -11,10 +11,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "echo 'no linter configured for shared'"
+    "lint": "oxlint src"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
+    "oxlint": "^1.71.0",
+    "typescript": "~6.0.2",
     "vitest": "^3.1.4"
   }
 }

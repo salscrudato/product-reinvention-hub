@@ -34,27 +34,34 @@ export const createShare = onCall<CreateShareInput>(
 
     const db = getFirestore()
 
-    // Read product + its coverages atomically from the current state.
-    const productRef  = db.doc(`products/${productId}`)
-    const productSnap = await productRef.get()
-    if (!productSnap.exists) throw new HttpsError('not-found', `Product ${productId} not found.`)
+    const productRef = db.doc(`products/${productId}`)
+    const shareId    = db.collection('shares').doc().id
+    const expiresAt  = new Date(Date.now() + expiresInDays * 86_400_000)
 
-    const coverageSnaps = await db.collection(`products/${productId}/coverages`).get()
-    const coverages = coverageSnaps.docs.map(d => ({ id: d.id, ...d.data() }))
+    // B4: read the product AND its coverages inside ONE transaction so the snapshot is a
+    // consistent point-in-time image. The previous two separate reads could interleave with a
+    // concurrent edit (e.g. a coverage added between them) and mint a torn snapshot.
+    await db.runTransaction(async (tx) => {
+      const productSnap = await tx.get(productRef)
+      if (!productSnap.exists) throw new HttpsError('not-found', `Product ${productId} not found.`)
+      const coverageSnaps = await tx.get(db.collection(`products/${productId}/coverages`))
+      const coverages = coverageSnaps.docs.map(d => ({ id: d.id, ...d.data() }))
 
-    const shareId   = db.collection('shares').doc().id
-    const expiresAt = new Date(Date.now() + expiresInDays * 86_400_000)
-
-    await db.doc(`shares/${shareId}`).set({
-      productId,
-      note:      note?.trim() ?? '',
-      createdBy: { uid: req.auth.uid, name: (req.auth.token.name as string | undefined) ?? req.auth.uid },
-      createdAt: FieldValue.serverTimestamp(),
-      expiresAt: expiresAt.toISOString(),
-      snapshot:  {
-        product:   { id: productId, ...productSnap.data() },
-        coverages,
-      },
+      tx.set(db.doc(`shares/${shareId}`), {
+        productId,
+        note:      note?.trim() ?? '',
+        createdBy: { uid: req.auth!.uid, name: (req.auth!.token.name as string | undefined) ?? req.auth!.uid },
+        createdAt: FieldValue.serverTimestamp(),
+        expiresAt: expiresAt.toISOString(),
+        // rev:1 puts shares in the same optimistic-concurrency lineage as mutate()-managed docs,
+        // so the Admin share-delete can pass expectedRev uniformly (B9). Shares are immutable
+        // snapshots (create + delete only), so this is belt-and-braces, not a live update guard.
+        rev:       1,
+        snapshot:  {
+          product:   { id: productId, ...productSnap.data() },
+          coverages,
+        },
+      })
     })
 
     return { shareId }

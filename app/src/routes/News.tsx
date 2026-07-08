@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { IconNews, IconRefresh, IconExternalLink, IconSparkle, IconProduct, IconStates, IconFilter } from '../components/ui/icons'
-import { adapter } from '../lib/backend'
+import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
 import { useLiveCollection } from '../lib/useLiveCollection'
@@ -127,6 +127,7 @@ export default function News() {
   const [savedInstr, setSaved]        = useState(BASE_NEWS_INSTRUCTION)
   const [refreshing, setRefreshing]   = useState(false)
   const [saving, setSaving]           = useState(false)
+  const [savedRev, setSavedRev]       = useState<number | undefined>(undefined)   // B9: rev of the stored pref
   const [query, setQuery]             = useState('')
   const [nlFilter, setNlFilter]       = useState('')
 
@@ -136,11 +137,12 @@ export default function News() {
     const u1 = adapter.db.subscribe<NewsDoc>('news', d => { if (Array.isArray(d)) setItems(d) })
     let u2: (() => void) | undefined
     if (user) {
-      u2 = adapter.db.subscribe<NewsPrefs>(`newsPrefs/${user.uid}`, d => {
+      u2 = adapter.db.subscribe<NewsPrefs & { rev?: number }>(`newsPrefs/${user.uid}`, d => {
         // Fall back to the shared baseline so everyone starts from the same instruction.
         if (d && !Array.isArray(d)) {
           const instr = d.instruction?.trim() ? d.instruction : BASE_NEWS_INSTRUCTION
           setInstr(instr); setSaved(instr)
+          setSavedRev(d.rev)   // B9: track rev so the next save can guard against a lost update
         }
       })
     }
@@ -182,16 +184,17 @@ export default function News() {
     setSaving(true)
     try {
       await adapter.db.mutate({
-        op:         savedInstr ? 'update' : 'create',
-        path:       `newsPrefs/${user.uid}`,
-        data:       { instruction: instruction.trim() },
-        entityType: 'newsPrefs',
-        actor:      { uid: user.uid, name: user.name ?? user.email ?? 'User' },
+        op:          savedInstr ? 'update' : 'create',
+        path:        `newsPrefs/${user.uid}`,
+        data:        { instruction: instruction.trim() },
+        entityType:  'newsPrefs',
+        actor:       { uid: user.uid, name: user.name ?? user.email ?? 'User' },
+        expectedRev: savedRev,   // B9: guard the update against a lost update (undefined on first save → no-op)
       })
       setSaved(instruction.trim())
       toast.success('Tracking preference saved')
-    } catch {
-      toast.error('Could not save preference')
+    } catch (err) {
+      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not save preference')
     } finally {
       setSaving(false)
     }

@@ -13,7 +13,7 @@ import {
   query as fbQuery, where, orderBy, limit as fbLimit,
   runTransaction, connectFirestoreEmulator,
 } from 'firebase/firestore'
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getStorage, ref, uploadBytes, getDownloadURL, connectStorageEmulator } from 'firebase/storage'
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions'
 import { firebaseConfig, FUNCTIONS_REGION } from './firebase.config'
 import type { BackendAdapter, AuthUser, Session, Query, MutationPayload } from './types'
@@ -30,14 +30,20 @@ const functions   = getFunctions(firebaseApp, FUNCTIONS_REGION)
 
 // Wire emulators in development; module-level guard prevents duplicate connects on HMR.
 // AWS-SWAP: no emulator step needed; point to real AWS endpoints per environment config.
-// NOTE: Storage always uses live endpoints (no emulator) to avoid CORS issues.
+// B8 FOOTGUN FIX: Storage is now emulated alongside Auth/Firestore/Functions. Previously
+// Storage was left on the LIVE endpoint even in emulator mode, so a local base-form upload
+// silently wrote objects into the PRODUCTION bucket. The old "CORS" note conflated two things:
+// the local emulator (127.0.0.1:9199) has no cross-origin issue; the real CORS config is for
+// the PROD bucket from a deployed origin (see the `cors:set`/`storage.cors.json` scripts).
+// Because every connect lives in this one guarded block, when emulators are on, uploads/reads
+// hit the emulator; when off (prod build), they hit prod — no path leaves local uploads on prod.
 let _emulatorsWired = false
 if (import.meta.env.VITE_USE_EMULATORS === 'true' && !_emulatorsWired) {
   _emulatorsWired = true
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
   connectFirestoreEmulator(db, '127.0.0.1', 8080)
   connectFunctionsEmulator(functions, '127.0.0.1', 5001)
-  // Storage emulator is NOT connected — always use live Firebase Storage
+  connectStorageEmulator(storage, '127.0.0.1', 9199)   // firebase.json → emulators.storage.port
 }
 
 /** Parse a Firestore document snapshot into a typed value with its id. */

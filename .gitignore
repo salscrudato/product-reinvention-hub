@@ -29,6 +29,12 @@ storage.rules.swp
 emulator-data/
 .emulator/
 
+# Playwright e2e artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # IDE
 .vscode/settings.json
 .idea/

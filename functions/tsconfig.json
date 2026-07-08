@@ -2,9 +2,17 @@
   "compilerOptions": {
     "target": "es2022",
     "module": "commonjs",
+    // Functions emit CommonJS for the Node 20 runtime (bundled by tsup), so the classic
+    // Node resolver is correct here. TS 6.0 deprecates the "node" alias (removed in 7.0);
+    // ignoreDeprecations keeps the correct-for-CJS behavior without changing resolution.
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "lib": ["es2022"],
-    "outDir": "lib",
+    // This tsconfig is TYPECHECK-ONLY (`tsc --noEmit`); tsup owns the actual build + emit
+    // (its own outDir:lib, and it bundles @pf/shared from source — see tsup.config.ts). No
+    // emit options here on purpose: with `@pf/shared` pulled in via the path map below, an
+    // `outDir` would make TS 6.0 enforce rootDir over the out-of-tree shared sources (TS6059).
+    "noEmit": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -12,8 +20,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "declaration": false,
-    "sourceMap": true,
     "paths": {
       "@pf/shared": ["../shared/src/index.ts"]
     }

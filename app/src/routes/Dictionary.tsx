@@ -148,11 +148,12 @@ export default function Dictionary() {
       await adapter.db.mutate({
         op: 'delete', path: `dictionary/${draft.source.id}`,
         entityType: 'dictionary', actor: { uid: user.uid, name: user.name ?? user.email ?? 'User' },
+        expectedRev: draft.source.rev,   // B9: guard the delete against a lost update, like save
       })
       toast.success('Field deleted')
       setDraft(null)
-    } catch {
-      toast.error('Delete failed')
+    } catch (err) {
+      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Delete failed')
     } finally {
       setSaving(false)
     }

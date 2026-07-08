@@ -1,7 +1,7 @@
 // Interstitial shown when mustChangePassword=true on the user's Firestore doc.
 import { useState, type FormEvent } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
-import { adapter } from '../lib/backend'
+import { adapter, MutationConflictError } from '../lib/backend'
 import { IconSpinner, IconEye, IconEyeOff } from '../components/ui/icons'
 import { useUser } from '../context/useUser'
 import { Input } from '../components/ui/Input'
@@ -32,15 +32,21 @@ export default function MustChangePassword() {
     setLoading(true)
     try {
       await adapter.auth.changePassword(next)
+      // B9: load the current rev so the self-update is optimistic-concurrency-guarded like every
+      // other mutate() call. The users doc is provisioned via the Admin SDK (setUserRole/seed),
+      // so it may carry no rev yet — undefined then makes the guard a safe no-op.
+      const profileDoc = await adapter.db.get<{ rev?: number }>(`users/${currentUser.uid}`).catch(() => null)
       await adapter.db.mutate({
         op: 'update', path: `users/${currentUser.uid}`,
         data: { mustChangePassword: false },
         entityType: 'user',
         actor: { uid: currentUser.uid, name: currentUser.name ?? currentUser.email ?? 'unknown' },
+        expectedRev: profileDoc?.rev,
       })
       navigate('/app', { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not change password.')
+      setError(err instanceof MutationConflictError ? 'Someone else updated your account — please refresh and try again.'
+        : err instanceof Error ? err.message : 'Could not change password.')
     } finally {
       setLoading(false)
     }
