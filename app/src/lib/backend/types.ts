@@ -48,12 +48,12 @@ export interface BackendAdapter {
     /** No-credentials admin entry point: a REAL Firebase sign-in as the seeded demo
      *  admin (real ID token + ADMIN claim), so the workspace loads and every edit
      *  persists — full functionality without the user typing anything. Works in any
-     *  environment where the demo admin account exists. See SignIn.tsx. */
+     *  environment where the demo admin account exists. */
     signInAsAdmin(): Promise<Session>
     /** TEMPORARY dev-only admin bypass — sets a fake ADMIN session with NO backend auth.
      *  Dev builds only (`import.meta.env.DEV`); a no-op otherwise. Because there is no real
      *  auth token, backend reads/writes are rejected by security rules (data won't load).
-     *  Remove before production. See SignIn.tsx. */
+     *  Remove before production. */
     signInAsDevAdmin(): void
   }
   db: {

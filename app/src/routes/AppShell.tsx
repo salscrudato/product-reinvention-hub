@@ -36,7 +36,7 @@ export default function AppShell() {
     )
   }
 
-  if (!user) return <Navigate to="/sign-in" state={{ from: location.pathname }} replace />
+  if (!user) return <Navigate to="/" replace />
 
   return (
     <FeedbackProvider>

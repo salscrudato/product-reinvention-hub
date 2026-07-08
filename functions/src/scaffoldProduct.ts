@@ -21,7 +21,7 @@ import { onRequest } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY } from './runtime'
-import { runChatAgent } from './ai'
+import { runChatAgent, sseCostGate } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
 import { cleanScaffold, resolveLobByRefId, type ScaffoldPlan } from '@pf/shared'
@@ -171,7 +171,7 @@ async function verifyScaffold(input: Record<string, unknown>): Promise<ScaffoldP
 
 // ─── scaffoldProduct — the grounded composer (SSE) ───────────────────────────────
 
-interface ScaffoldBody { instruction?: string; lobPrefix?: string }
+interface ScaffoldBody { instruction?: string; lobPrefix?: string; sessionId?: string }
 
 export const scaffoldProduct = onRequest(
   { secrets: [ANTHROPIC_API_KEY, VOYAGE_API_KEY], cors: true, timeoutSeconds: 300, memory: '512MiB' },
@@ -191,10 +191,19 @@ export const scaffoldProduct = onRequest(
     const usageAccum = emptyUsage()
     const t0 = Date.now()
     let ok = true
+    let providerCalled = true
+    let degraded = false
+    let denied = false
+    const body        = (req.body ?? {}) as ScaffoldBody
+    const sessionKey  = body.sessionId?.trim() || caller.uid
     try {
-      const body        = (req.body ?? {}) as ScaffoldBody
       const instruction = body.instruction?.trim()
       if (!instruction) { send(res, { t: 'error', message: 'Describe the product you want to scaffold.' }); return }
+
+      // Part C — cost cap + breaker gate.
+      const gate = await sseCostGate(res, 'scaffoldProduct', sessionKey)
+      if (!gate.proceed) { providerCalled = false; denied = gate.blocked === 'deny'; degraded = gate.blocked === 'breaker'; return }
+      degraded = gate.degraded
 
       const parts: string[] = []
       if (body.lobPrefix) {
@@ -222,7 +231,7 @@ export const scaffoldProduct = onRequest(
         tools:       SCAFFOLD_TOOLS,
         runTool:     runScaffoldTool,
         maxTokens:   2600,
-        maxTurns:    8,
+        maxTurns:    degraded ? 5 : 8,   // cost-saver: fewer tool turns under a soft cap
         usageAccum,
       })
       send(res, { t: 'done' })
@@ -232,7 +241,7 @@ export const scaffoldProduct = onRequest(
       send(res, { t: 'error', message: 'Scaffold failed.' })
     } finally {
       res.end()
-      void recordUsage({ feature: 'scaffoldProduct', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+      void recordUsage({ feature: 'scaffoldProduct', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok, sessionKey, degraded, denied, providerCalled })
     }
   },
 )

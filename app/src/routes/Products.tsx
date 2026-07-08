@@ -112,6 +112,15 @@ export default function Products() {
     return out
   }, [axes, launched])
 
+  // Portfolio at-a-glance KPIs — derived purely from the published product docs.
+  const kpis = useMemo(() => {
+    const lines    = new Set(launched.map(p => p.lob?.name).filter(Boolean)).size
+    const segments = new Set(launched.map(p => p.marketSegment).filter(Boolean)).size
+    const states   = new Set<string>()
+    launched.forEach(p => (p.states ?? []).forEach(s => states.add(s)))
+    return { lines, segments, statesCovered: launched.some(p => p.allStates) ? 'All' : states.size }
+  }, [launched])
+
   // Inventory data (coverages + forms) — loaded only while table/hierarchy is active.
   const needsInventory = view !== 'cards'
   const inventory = usePortfolioInventory(visible, needsInventory)
@@ -139,6 +148,23 @@ export default function Products() {
           )}
         </div>
       </div>
+
+      {/* Portfolio at-a-glance — a calm KPI strip that frames the grid below. */}
+      {!loading && launched.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Published products', value: launched.length },
+            { label: 'Lines of business',  value: kpis.lines },
+            { label: 'Market segments',    value: kpis.segments },
+            { label: 'States covered',     value: kpis.statesCovered },
+          ].map(k => (
+            <div key={k.label} className="rounded-[14px] bg-surface px-4 py-3" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+              <div className="text-[22px] font-bold text-text leading-none tnum">{k.value}</div>
+              <div className="text-[11px] text-faint mt-1.5">{k.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Search · view switch */}
       <div className="flex flex-wrap items-center gap-3">

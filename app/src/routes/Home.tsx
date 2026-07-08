@@ -29,7 +29,7 @@ type StreamEvent =
   | { t: 'done' }
 
 interface ToolChip { name: string; done: boolean; summary?: string }
-interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[]; notice?: string }
+interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[]; notice?: string; noticeLevel?: 'info' | 'warn' }
 
 // Short pill labels around the composer. Clicking one PRIMES the composer with its prompt
 // (A4) — it no longer auto-fires a billed chat turn; the user reviews and hits send. Prompts
@@ -51,6 +51,14 @@ export default function Home() {
   const [input, setInput]         = useState('')
   const [streaming, setStreaming] = useState(false)
   const [indexEntries, setIndexEntries] = useState<SearchIndexEntry[]>([])
+  // Stable per-session id → the server's per-session cost-cap bucket + semantic-cache scope.
+  // Persisted for the browser session so it survives route remounts.
+  const [sessionId] = useState(() => {
+    try { const s = sessionStorage.getItem('prh:aiSessionId'); if (s) return s } catch { /* private mode */ }
+    const id = `s_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`
+    try { sessionStorage.setItem('prh:aiSessionId', id) } catch { /* private mode */ }
+    return id
+  })
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef  = useRef<AbortController | null>(null)   // cancels the in-flight SSE stream
 
@@ -83,13 +91,10 @@ export default function Home() {
     navigate(hit ? routeFor(hit) : `/app/explorer`)
   }
 
-  async function ask(text: string) {
-    const question = text.trim()
-    if (!question || streaming) return
-    setInput('')
-
-    const history: ChatMessage[] = [...messages, { role: 'user', text: question, tools: [] }]
-    // Placeholder assistant message we stream into.
+  // Stream one turn. `history` ends at the user turn to answer; a fresh assistant placeholder
+  // is appended and streamed into. `regenerate` tells the server to BYPASS the semantic cache
+  // READ (force a fresh answer) — the per-session regenerate bypass (Part A).
+  async function runChat(history: ChatMessage[], regenerate: boolean) {
     setMessages([...history, { role: 'assistant', text: '', tools: [] }])
     setStreaming(true)
 
@@ -107,7 +112,7 @@ export default function Home() {
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      await adapter.fns.stream('chat', { messages: wire }, (chunk) => {
+      await adapter.fns.stream('chat', { messages: wire, sessionId, regenerate }, (chunk) => {
         let ev: StreamEvent
         try { ev = JSON.parse(chunk) as StreamEvent } catch { return }
         switch (ev.t) {
@@ -124,10 +129,10 @@ export default function Home() {
               return { ...m, tools }
             }); break
           case 'notice':
-            // C1: the answer streamed, but the server couldn't verify one or more cited
-            // references against the catalog — surface that so a chip is never read as
-            // confirmed. Non-fatal; the prose stays.
-            patchAssistant(m => ({ ...m, notice: ev.message })); break
+            // Non-fatal advisory: an unverified citation (warn), a cache hit or a cost-saver
+            // degradation (info). Surface it so a chip is never read as confirmed and the
+            // user knows when an answer came from cache (and can Regenerate for a fresh one).
+            patchAssistant(m => ({ ...m, notice: ev.message, noticeLevel: ev.level })); break
           case 'error':
             patchAssistant(m => ({ ...m, text: m.text + `\n\n⚠️ ${ev.message}` })); break
           case 'done': break
@@ -141,6 +146,22 @@ export default function Home() {
     } finally {
       if (abortRef.current === controller) setStreaming(false)
     }
+  }
+
+  async function ask(text: string) {
+    const question = text.trim()
+    if (!question || streaming) return
+    setInput('')
+    await runChat([...messages, { role: 'user', text: question, tools: [] }], false)
+  }
+
+  // Regenerate the last answer, bypassing the semantic cache (per-session bypass).
+  async function regenerate() {
+    if (streaming) return
+    let lastUser = -1
+    for (let i = messages.length - 1; i >= 0; i--) if (messages[i]!.role === 'user') { lastUser = i; break }
+    if (lastUser < 0) return
+    await runChat(messages.slice(0, lastUser + 1), true)
   }
 
   const empty = messages.length === 0
@@ -181,10 +202,19 @@ export default function Home() {
                         ? <div className="text-sm text-text"><Markdown text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span aria-hidden="true" className="inline-block w-1.5 h-4 ml-0.5 bg-accent align-middle animate-pulse" />}</div>
                         : m.text}
                       {m.role === 'assistant' && m.notice && (
-                        <div className="flex items-start gap-1.5 text-[12px] text-warn" role="note">
-                          <IconWarning size={13} className="shrink-0 mt-0.5" aria-hidden="true" />
+                        <div className={`flex items-start gap-1.5 text-[12px] ${m.noticeLevel === 'info' ? 'text-dim' : 'text-warn'}`} role="note">
+                          {m.noticeLevel === 'info'
+                            ? <IconSparkle size={13} className="shrink-0 mt-0.5 text-accent" aria-hidden="true" />
+                            : <IconWarning size={13} className="shrink-0 mt-0.5" aria-hidden="true" />}
                           <span>{m.notice}</span>
                         </div>
+                      )}
+                      {m.role === 'assistant' && i === messages.length - 1 && !streaming && m.text.trim() && (
+                        <button
+                          onClick={regenerate}
+                          title="Regenerate a fresh answer (bypass the cached response)"
+                          className="self-start inline-flex items-center gap-1 text-[11px] text-faint hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[6px] px-1"
+                        >↻ Regenerate</button>
                       )}
                     </div>
                   </div>

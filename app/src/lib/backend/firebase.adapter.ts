@@ -18,7 +18,7 @@ import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/
 import { firebaseConfig, FUNCTIONS_REGION } from './firebase.config'
 import type { BackendAdapter, AuthUser, Session, Query, MutationPayload } from './types'
 import { MutationConflictError } from './types'
-import { assertCoverageTermsValid } from '@pf/shared'
+import { assertCoverageTermsValid, resolveLob } from '@pf/shared'
 import type { CoverageTerm } from '@pf/shared'
 
 // Singleton — safe under React StrictMode and Vite HMR.
@@ -82,6 +82,68 @@ function buildQuery(collRef: ReturnType<typeof collection>, q: Query) {
 // submissions within their allowed rule surface (searchIndex is EDITOR+ write).
 const INDEXABLE = new Set(['product', 'coverage', 'rule', 'form', 'ldTable', 'rtTable', 'dictionary', 'task'])
 
+// ─── Server-authoritative refId allocation ────────────────────────────────────
+// refIds (PH.PROD.001, PH.COV.004, PH.RU.011, …) used to be minted ad-hoc across half a
+// dozen components, and several create paths left them null. Allocation is now centralized
+// HERE at the single write seam: on a create that omits a refId, the adapter mints one from
+// the entity's LOB prefix + the next free sequence, so refId-bearing entities are never null
+// and the scheme lives in one place. An EXPLICIT refId (import, clone, hand-authored, seed)
+// always wins — this only fills the gaps. The sibling scan runs as a pre-read before the
+// transaction (Firestore client transactions cannot query), so it is race-tolerant.
+const REFID_SEGMENT: Record<string, string> = {
+  product: 'PROD', coverage: 'COV', rule: 'RU', formRule: 'FORM.RU', ratingProgram: 'RAT',
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Next sequence for refIds sharing `<prefix>.<segment>.` — max existing suffix + 1 (or floor). */
+function nextRefIdSeq(existing: (string | null | undefined)[], prefix: string, segment: string, floor = 0): number {
+  const re = new RegExp(`^${escapeRe(prefix)}\\.${escapeRe(segment)}\\.(\\d+)`, 'i')
+  const max = existing.reduce((m, r) => {
+    const n = Number(re.exec(r ?? '')?.[1] ?? 0)
+    return Number.isFinite(n) && n > m ? n : m
+  }, floor)
+  return max + 1
+}
+
+async function refIdsIn(collectionPath: string): Promise<(string | null | undefined)[]> {
+  const snap = await getDocs(collection(db, collectionPath))
+  return snap.docs.map(d => (d.data() as { refId?: string | null }).refId)
+}
+
+/** Mint a refId for a create that lacks one; undefined when not applicable (explicit refId,
+ *  non-create, or a type that carries no refId). */
+async function allocateRefId(m: MutationPayload): Promise<string | undefined> {
+  if (m.op !== 'create') return undefined
+  const segment = REFID_SEGMENT[m.entityType]
+  if (!segment) return undefined
+  const current = m.data?.['refId'] as string | null | undefined
+  if (current && String(current).trim()) return undefined   // explicit refId wins
+
+  const pad = (n: number) => m.entityType === 'ratingProgram' ? String(n) : String(n).padStart(3, '0')
+
+  if (m.entityType === 'product') {
+    const prefix = resolveLob({ lob: m.data?.['lob'] as { refId?: string | null } | undefined }).prefix
+    const seq = nextRefIdSeq(await refIdsIn('products'), prefix, segment)
+    return `${prefix}.${segment}.${pad(seq)}`
+  }
+
+  // Sub-entities: siblings live in the collection that contains m.path (drop the doc id).
+  const parts = m.path.split('/').filter(Boolean)
+  const collectionPath = parts.slice(0, -1).join('/')
+  const siblings = await refIdsIn(collectionPath)
+  // Resolve the LOB prefix from an existing sibling, else the parent product's LOB.
+  let prefix = siblings.find(r => typeof r === 'string' && r.includes('.'))?.split('.')[0]
+  if (!prefix && m.productId) {
+    const psnap = await getDoc(doc(db, `products/${m.productId}`))
+    prefix = resolveLob(psnap.data() as { lob?: { refId?: string | null } } | undefined).prefix
+  }
+  if (!prefix) prefix = resolveLob(null).prefix   // default line
+  // Authored rules historically start at 011 (001–010 reserved for seeded rules).
+  const floor = m.entityType === 'rule' || m.entityType === 'formRule' ? 10 : 0
+  return `${prefix}.${segment}.${pad(nextRefIdSeq(siblings, prefix, segment, floor))}`
+}
+
 // ─── TEMPORARY dev-only admin bypass (no Firebase auth) ───────────────────────
 // A fake ADMIN session held entirely client-side. Dev builds only; because there is
 // no real ID token, Firestore rules reject every read/write (the workspace loads
@@ -144,7 +206,17 @@ export const adapter: BackendAdapter = {
 	          cb(null)
 	          return
 	        }
-	        cb(await toAuthUser(fbUser))
+	        // Guard: getIdTokenResult() can time out when the Firebase backend is
+	        // unreachable (e.g. network flakiness, cold start). An unhandled rejection
+	        // here crashes React 19's effect error handler and breaks context provision,
+	        // causing the "useUser must be inside UserProvider" loop. Fall back to null
+	        // (signed-out) so the app redirects cleanly instead of crashing.
+	        try {
+	          cb(await toAuthUser(fbUser))
+	        } catch (err) {
+	          console.warn('[auth] Failed to resolve user token; signing out:', err)
+	          cb(null)
+	        }
 	      })
 	      if (bypassActive) cb(DEV_ADMIN)   // emit the fake session immediately on subscribe
 	      return () => { bypassListeners.delete(cb); unsubFb() }
@@ -240,6 +312,14 @@ export const adapter: BackendAdapter = {
       const searchRef  = doc(db, `searchIndex/${m.path.replace(/\//g, '_')}`)
       const indexable  = INDEXABLE.has(m.entityType)
 
+      // Server-authoritative refId: fill an omitted one for refId-bearing creates so nothing
+      // persists null (see allocateRefId). Explicit refIds pass through untouched. The scan
+      // is a pre-read (client transactions can't query); the write itself stays transactional.
+      const mintedRefId = await allocateRefId(m)
+      const data: Record<string, unknown> | undefined = mintedRefId
+        ? { ...(m.data ?? {}), refId: mintedRefId }
+        : m.data
+
       await runTransaction(db, async (tx) => {
         const now = serverTimestamp()
 
@@ -253,7 +333,7 @@ export const adapter: BackendAdapter = {
         }
 
         // Compute field-level diff for the version snapshot.
-        const nextData  = (m.data ?? {}) as Record<string, unknown>
+        const nextData  = (data ?? {}) as Record<string, unknown>
         const allFields = new Set([...Object.keys(prevData), ...Object.keys(nextData)])
         const diff: Array<{ field: string; before: unknown; after: unknown }> = []
         for (const field of allFields) {
@@ -267,8 +347,8 @@ export const adapter: BackendAdapter = {
         // the coverage scope). Validated against the merged (stored + incoming) document
         // so no path — present or future — can persist a corrupt option matrix. Throwing
         // here aborts the whole transaction. Only runs when the payload carries `terms`.
-        if (m.entityType === 'coverage' && m.op !== 'delete' && m.data && 'terms' in m.data) {
-          const merged = { ...prevData, ...m.data } as {
+        if (m.entityType === 'coverage' && m.op !== 'delete' && data && 'terms' in data) {
+          const merged = { ...prevData, ...data } as {
             allStates?: boolean; states?: string[]; terms?: CoverageTerm[]
           }
           assertCoverageTermsValid(merged)
@@ -278,10 +358,10 @@ export const adapter: BackendAdapter = {
         if (m.op === 'delete') {
           tx.delete(entityRef)
         } else if (m.op === 'create') {
-          tx.set(entityRef, { ...m.data, createdAt: now, updatedAt: now, updatedBy: m.actor.uid, rev: 1 })
+          tx.set(entityRef, { ...data, createdAt: now, updatedAt: now, updatedBy: m.actor.uid, rev: 1 })
         } else {
           const newRev = ((prevData['rev'] as number) ?? 0) + 1
-          tx.update(entityRef, { ...m.data, updatedAt: now, updatedBy: m.actor.uid, rev: newRev })
+          tx.update(entityRef, { ...data, updatedAt: now, updatedBy: m.actor.uid, rev: newRev })
         }
 
         // Audit event (append-only).
@@ -294,14 +374,14 @@ export const adapter: BackendAdapter = {
         tx.set(versionRef, {
           entityType: m.entityType, entityPath: m.path,
           productId: m.productId ?? null,
-          snapshot: m.op !== 'delete' ? (m.data ?? null) : null,
+          snapshot: m.op !== 'delete' ? (data ?? null) : null,
           diff, actor: m.actor, at: now,
         })
 
         // SearchIndex upsert/delete: keep the ⌘K palette in sync in the SAME atomic unit.
         // AWS-SWAP: becomes a DynamoDB put/delete on the searchIndex table.
-        if (m.op !== 'delete' && m.data && indexable) {
-          const d = m.data
+        if (m.op !== 'delete' && data && indexable) {
+          const d = data
           const title    = (d['name'] as string | undefined) ?? (d['title'] as string | undefined) ?? ''
           const subtitle = (d['refId'] as string | undefined) ?? m.entityType
           const keywords = [title, subtitle, d['refId'] as string, d['description'] as string]

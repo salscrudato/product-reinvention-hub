@@ -87,11 +87,19 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
       }),
       adapter.db.subscribe<WithId<Version>>('versions', (d) => {
         if (Array.isArray(d)) {
-          setVersions(d.filter(v => v.productId === pid).sort((a,b) => {
-            const ta = a.at instanceof Object ? 0 : Number(a.at)
-            const tb = b.at instanceof Object ? 0 : Number(b.at)
-            return tb - ta
-          }))
+          // Newest-first. `at` is a Firestore Timestamp (has toDate/seconds) after commit,
+          // or a number/ISO string in tests — extract millis from all three so the audit
+          // trail orders correctly (the old `instanceof Object ? 0` collapsed every
+          // server Timestamp to 0, leaving the timeline effectively unsorted).
+          const ms = (at: unknown): number => {
+            if (at == null) return 0
+            const o = at as { toDate?: () => Date; seconds?: number }
+            if (typeof o.toDate === 'function') return o.toDate().getTime()
+            if (typeof o.seconds === 'number') return o.seconds * 1000
+            const n = Number(at); if (Number.isFinite(n)) return n
+            const p = Date.parse(String(at)); return Number.isNaN(p) ? 0 : p
+          }
+          setVersions(d.filter(v => v.productId === pid).sort((a, b) => ms(b.at) - ms(a.at)))
           inc()
         }
       }),

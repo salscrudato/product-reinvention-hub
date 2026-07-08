@@ -4,16 +4,18 @@
 // with their own system context and tool set.
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY, voyageKey, isRetryableAnthropicError, CACHE_1H } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY, voyageKey, isRetryableAnthropicError, CACHE_1H } from './runtime'
 import type { SseResponse } from './runtime'
 import { TOOLS, SYSTEM_PROMPT, runTool, loadKnownCitations } from './tools'
 import type { ToolOutput } from './tools'
-import { findUnverifiedCitations } from '@pf/shared'
+import { findUnverifiedCitations, verifiedCitedAnchors } from '@pf/shared'
 import type { ChunkMetadata } from '@pf/shared'
-import { retrieve } from './retrieval/index'
+import { retrieve, embedQueryVector } from './retrieval/index'
 import { buildCiteableDocuments, citationsFromConvo, verifyCitations } from './retrieval/citations'
-import { emptyUsage, addUsage, recordUsage } from './telemetry'
+import { emptyUsage, addUsage, recordUsage, estimateCost } from './telemetry'
 import type { UsageAccum } from './telemetry'
+import { semanticCacheGet, semanticCachePut } from './semanticCache'
+import { guardSpend, estCostFor } from './costGuard'
 
 /** Concatenate every assistant text block across a completed conversation — the full
  *  answer the user saw (tokens are appended across turns in the UI). Used to detect a
@@ -128,11 +130,39 @@ export async function runChatAgent(
   return convo
 }
 
+// ─── Shared SSE cost gate (Part C) ──────────────────────────────────────────────
+// Reused by the grounded SSE endpoints (claims / extract / rules / scaffold). Reads the cost
+// caps + breaker and, on a block, streams the honest notice + a terminal `done` itself; the
+// caller returns and its `finally` records the (no-provider-call) usage. A soft cap returns
+// `degraded` so the caller can run a cheaper path (fewer turns / no escalation).
+export interface CostGate { proceed: boolean; degraded: boolean; blocked: 'deny' | 'breaker' | null }
+
+export async function sseCostGate(res: SseResponse, feature: string, sessionKey: string): Promise<CostGate> {
+  const guard = await guardSpend({ feature, sessionKey, estCostUsd: estCostFor(feature) })
+  if (guard.action === 'deny') {
+    send(res, { t: 'notice', level: 'warn', message: 'AI is temporarily limited — the daily budget ceiling has been reached. Please try again later.' })
+    send(res, { t: 'done' })
+    return { proceed: false, degraded: false, blocked: 'deny' }
+  }
+  if (guard.breakerOpen) {
+    send(res, { t: 'notice', level: 'warn', message: 'The AI service is temporarily unavailable. Please try again shortly.' })
+    send(res, { t: 'done' })
+    return { proceed: false, degraded: false, blocked: 'breaker' }
+  }
+  if (guard.action === 'degrade') {
+    send(res, { t: 'notice', level: 'info', message: guard.reason })
+    return { proceed: true, degraded: true, blocked: null }
+  }
+  return { proceed: true, degraded: false, blocked: null }
+}
+
 // ─── chat endpoint ──────────────────────────────────────────────────────────────
 
 interface ChatBody {
   messages?:  Array<{ role: string; content: string }>
   productId?: string
+  sessionId?: string    // client session — the per-session cost cap bucket + cache scope key
+  regenerate?: boolean  // per-session bypass: skip the semantic cache READ, force a fresh answer
 }
 
 export const chat = onRequest(
@@ -141,15 +171,27 @@ export const chat = onRequest(
     if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
 
     // Any signed-in role may chat — it only reads. Writes are gated elsewhere.
-    try { await authenticate(req) }
+    let caller
+    try { caller = await authenticate(req) }
     catch (e) { res.status(401).json({ error: e instanceof AuthError ? e.message : 'Unauthorized' }); return }
 
     openSse(res)
     const usageAccum = emptyUsage()
     const t0 = Date.now()
     let ok = true
+    // Telemetry we resolve as the request unfolds.
+    let providerCalled = true
+    let semanticCache: 'hit' | 'miss' | undefined
+    let savedUsd: number | undefined
+    let degraded = false
+    let denied = false
+    let recordModel: string = MODEL
+    let recordUsageAccum: UsageAccum = usageAccum
+
+    const body       = (req.body ?? {}) as ChatBody
+    const productId  = body.productId
+    const sessionKey = body.sessionId?.trim() || caller.uid
     try {
-      const body     = (req.body ?? {}) as ChatBody
       const incoming = (body.messages ?? []).filter(m => m.content?.trim())
       if (incoming.length === 0) { send(res, { t: 'error', message: 'No message provided.' }); return }
 
@@ -157,33 +199,89 @@ export const chat = onRequest(
         role:    (m.role === 'assistant' ? 'assistant' : 'user') as 'assistant' | 'user',
         content: m.content as string | Anthropic.ContentBlockParam[],
       }))
-      const focus = body.productId
-        ? `The user is focused on product ${body.productId}. Prefer that product when a productId is needed.`
-        : undefined
+      // The latest user question drives the cache key + citation retrieval.
+      let li = -1
+      for (let i = messages.length - 1; i >= 0; i--) if (messages[i]!.role === 'user') { li = i; break }
+      const query = li >= 0 ? incoming[li]!.content : ''
 
-      // Retrieval-augmented citations (gated on a configured Voyage key → prod only; with
-      // no key the flow is exactly today's tools-only path, so offline behavior is
-      // unchanged). Attach the chunks most relevant to the LATEST question as citeable
-      // `document` blocks so the model cites chunk-level sources we then verify server-side.
-      let citationIndex: ChunkMetadata[] = []
       const vKey = voyageKey()
-      if (vKey) {
-        let li = -1
-        for (let i = messages.length - 1; i >= 0; i--) if (messages[i]!.role === 'user') { li = i; break }
-        if (li >= 0) {
-          const q = incoming[li]!.content
-          try {
-            const hits = await retrieve({ query: q, topK: 6, filter: body.productId ? { productId: body.productId } : undefined, voyageKey: vKey })
-            const { blocks, index } = buildCiteableDocuments(hits)
-            if (blocks.length) {
-              citationIndex = index
-              messages[li] = { role: 'user', content: [...blocks, { type: 'text', text: q }] }
-            }
-          } catch (e) { console.warn('[chat] citation pre-retrieval skipped:', e) }
-        }
+      // Embed the query ONCE (Voyage/prod only): reused for the cache probe AND, on a miss, for
+      // citation retrieval (no double embed). Null offline → cache skipped, tools-only path.
+      const queryVector = vKey && query ? await embedQueryVector(query, vKey) : null
+
+      // The live citation catalogue: used both to check cache freshness up-front AND for the
+      // post-answer verification below — loaded once. Best-effort (empty on failure).
+      let known = { refIds: new Set<string>(), formNumbers: new Set<string>() }
+      try { known = await loadKnownCitations() } catch (e) { console.warn('[chat] known-citations load skipped:', e) }
+
+      // ── PART A — semantic cache READ (skipped on regenerate) ──────────────────
+      // Three gates (freshness → similarity → cheap verifier) in semanticCacheGet. A hit
+      // skips retrieval + the Sonnet call; a stale-cited candidate is never served + evicted.
+      if (queryVector && !body.regenerate) {
+        try {
+          const r = await semanticCacheGet({ client: anthropic(), query, queryVector, productId, known })
+          if (r.hit) {
+            send(res, { t: 'token', v: r.hit.answer })
+            send(res, { t: 'notice', level: 'info', message: 'Answered from a cached response for a near-identical question. Use Regenerate for a fresh answer.' })
+            send(res, { t: 'done' })
+            // A hit spent only the tiny verifier (+ one embed) — record that, and the Sonnet
+            // spend it AVOIDED as savedUsd. No provider answer call, so the breaker is untouched.
+            recordModel = MODEL_FAST
+            recordUsageAccum = r.verifierUsage
+            semanticCache = 'hit'
+            providerCalled = false
+            savedUsd = Math.max(0, estCostFor('chat') - estimateCost(MODEL_FAST, r.verifierUsage))
+            return
+          }
+          semanticCache = 'miss'
+        } catch (e) { console.warn('[chat] semantic cache probe skipped:', e); semanticCache = 'miss' }
       }
 
-      const convo = await runChatAgent(anthropic(), messages, res, { context: focus, usageAccum })
+      // ── PART C — budget cap + circuit breaker (graceful degradation) ──────────
+      const guard = await guardSpend({ feature: 'chat', sessionKey, estCostUsd: estCostFor('chat') })
+      if (guard.action === 'deny') {
+        // Hard global ceiling — no model call. Clear, honest message; ADMIN alarm in the tab.
+        denied = true; providerCalled = false; recordUsageAccum = emptyUsage()
+        send(res, { t: 'notice', level: 'warn', message: 'AI is temporarily limited — the daily budget ceiling has been reached. Please try again later.' })
+        send(res, { t: 'done' })
+        return
+      }
+      if (guard.breakerOpen) {
+        // Provider unhealthy (breaker open) and no cache hit — don't hammer it. Degrade to a
+        // clear message rather than burning the timeout on a call likely to fail.
+        degraded = true; providerCalled = false; recordUsageAccum = emptyUsage()
+        send(res, { t: 'notice', level: 'warn', message: 'The AI service is temporarily unavailable. Please try again shortly.' })
+        send(res, { t: 'done' })
+        return
+      }
+      if (guard.action === 'degrade') {
+        // Soft cap (session/feature) with a healthy provider — still answer, but cheaper:
+        // fewer tool turns and skip the citation augmentation. Grounding stays enforced by
+        // the tools + the post-answer verification.
+        degraded = true
+        send(res, { t: 'notice', level: 'info', message: guard.reason })
+      }
+
+      const focus = productId
+        ? `The user is focused on product ${productId}. Prefer that product when a productId is needed.`
+        : undefined
+
+      // Retrieval-augmented citations (Voyage/prod; skipped when degrading to save tokens).
+      let citationIndex: ChunkMetadata[] = []
+      if (vKey && !degraded && li >= 0) {
+        try {
+          const hits = await retrieve({ query, topK: 6, queryVector: queryVector ?? undefined, filter: productId ? { productId } : undefined, voyageKey: vKey })
+          const { blocks, index } = buildCiteableDocuments(hits)
+          if (blocks.length) {
+            citationIndex = index
+            messages[li] = { role: 'user', content: [...blocks, { type: 'text', text: query }] }
+          }
+        } catch (e) { console.warn('[chat] citation pre-retrieval skipped:', e) }
+      }
+
+      const convo = await runChatAgent(anthropic(), messages, res, {
+        context: focus, usageAccum, maxTurns: degraded ? 3 : undefined,
+      })
 
       const answer = assistantText(convo)
       if (!answer.trim()) {
@@ -192,32 +290,32 @@ export const chat = onRequest(
         send(res, { t: 'error', message: "I couldn't produce an answer for that. Please rephrase or try again." })
       } else {
         // C1: server-verify every [refId] / [form number] the answer cites against the
-        // live catalogue and FLAG any that don't resolve, so an ungrounded reference is
-        // never presented as if verified. Best-effort — a lookup failure must not break
-        // an answer that already streamed.
-        try {
-          const known = await loadKnownCitations()
-          const unverified = findUnverifiedCitations(answer, known.refIds, known.formNumbers)
-          if (unverified.length) {
-            const one = unverified.length === 1
-            send(res, {
-              t: 'notice', level: 'warn', refs: unverified,
-              message: `${unverified.length} cited ${one ? 'reference' : 'references'} couldn't be verified against the catalog (${unverified.join(', ')}). Treat ${one ? 'it' : 'them'} as unconfirmed.`,
-            })
-          }
-        } catch (e) {
-          console.warn('[chat] citation verification skipped:', e)
+        // live catalogue and FLAG any that don't resolve. Best-effort.
+        const unverified = findUnverifiedCitations(answer, known.refIds, known.formNumbers)
+        if (unverified.length) {
+          const one = unverified.length === 1
+          send(res, {
+            t: 'notice', level: 'warn', refs: unverified,
+            message: `${unverified.length} cited ${one ? 'reference' : 'references'} couldn't be verified against the catalog (${unverified.join(', ')}). Treat ${one ? 'it' : 'them'} as unconfirmed.`,
+          })
         }
 
         // When citeable chunks were supplied, resolve the model's Citations-API citations
-        // back to those chunks: every valid citation points at a REAL chunk whose refId we
-        // know (server-verifiable grounding, C1). `invalid` (a citation outside the supplied
-        // set) should never happen — surface it if it does.
+        // back to those chunks (server-verifiable grounding, C1).
         if (citationIndex.length) {
           const v = verifyCitations(citationsFromConvo(convo), citationIndex)
           if (v.invalid > 0) {
             send(res, { t: 'notice', level: 'warn', message: `${v.invalid} citation${v.invalid === 1 ? '' : 's'} referenced a source outside the grounded set — treat as unconfirmed.` })
           }
+        }
+
+        // ── PART A — semantic cache WRITE. Cache the answer keyed on the query embedding,
+        // storing the VERIFIED refId/form anchors as its freshness key. A future read only
+        // serves it while every anchor still resolves; the invalidation trigger evicts it the
+        // moment a cited entity changes. `regenerate` refreshes the entry in place.
+        if (queryVector) {
+          const anchors = verifiedCitedAnchors(answer, known.refIds, known.formNumbers)
+          void semanticCachePut({ query, queryVector, answer, anchors, productId, model: MODEL })
         }
       }
       send(res, { t: 'done' })
@@ -227,7 +325,10 @@ export const chat = onRequest(
       send(res, { t: 'error', message: 'AI request failed.' })
     } finally {
       res.end()
-      void recordUsage({ feature: 'chat', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+      void recordUsage({
+        feature: 'chat', model: recordModel, usage: recordUsageAccum, latencyMs: Date.now() - t0, ok,
+        sessionKey, semanticCache, savedUsd, degraded, denied, providerCalled,
+      })
     }
   },
 )

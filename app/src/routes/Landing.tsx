@@ -1,13 +1,17 @@
-// Public landing — the showpiece. Aurora background + a bespoke "insight graph":
-// an insurance product manager at the focal point, informed by inward-flowing
-// streams from the app's capabilities (live news, coverages & forms, an AI
-// copilot, rating, intelligent tasks). Coverages branch out from their node.
-// The hero's primary call-to-action is a single Sign-in button beneath the copy.
+// Public landing — the showpiece AND the sign-in entry point. Aurora background +
+// a bespoke "insight graph": an insurance product manager at the focal point,
+// informed by inward-flowing streams from the app's capabilities (live news,
+// coverages & forms, an AI copilot, rating, intelligent tasks). Coverages branch
+// out from their node. The hero's call-to-action is an inline username/password
+// form beneath the copy — there is no separate sign-in page.
 // Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate, Navigate } from 'react-router-dom'
+import { adapter } from '../lib/backend'
+import { useUser } from '../context/useUser'
 import { Logo } from '../components/ui'
-import { IconArrowRight, IconLayers, IconSparkle, IconTasks } from '../components/ui/icons'
+import { Input } from '../components/ui/Input'
+import { IconArrowRight, IconLayers, IconSparkle, IconTasks, IconSpinner, IconEye, IconEyeOff } from '../components/ui/icons'
 
 // A glyph accepts size / className / strokeWidth — matches the in-house icon shape.
 type Glyph = (p: { size?: number; className?: string; strokeWidth?: number }) => React.ReactElement
@@ -182,25 +186,90 @@ function InsightGraph() {
   )
 }
 
-// ─── Hero call-to-action — a single, calm Sign-in button ──────────────────────
+// ─── Hero call-to-action — an inline username / password sign-in form ─────────
 
-function HeroCTA() {
+function HeroSignIn() {
   const navigate = useNavigate()
+  const [email,    setEmail]    = useState('')
+  const [pass,     setPass]     = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [error,    setError]    = useState('')
+  const [loading,  setLoading]  = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await adapter.auth.signIn(email.trim(), pass)
+      navigate('/app', { replace: true })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Sign-in failed'
+      if (msg.includes('invalid-credential') || msg.includes('wrong-password') || msg.includes('user-not-found')) {
+        setError('Invalid username or password.')
+      } else if (msg.includes('too-many-requests')) {
+        setError('Too many attempts — try again in a moment.')
+      } else {
+        setError(msg)
+      }
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-3 items-center lg:items-start">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 w-full max-w-sm mx-auto lg:mx-0">
+      <Input
+        id="signin-username"
+        label="Username" type="text" value={email} onChange={e => setEmail(e.target.value)}
+        placeholder="sal" autoComplete="username" required disabled={loading}
+      />
+
+      {/* Password with show/hide toggle */}
+      <div className="relative">
+        <Input
+          label="Password"
+          type={showPass ? 'text' : 'password'}
+          value={pass}
+          onChange={e => setPass(e.target.value)}
+          placeholder="Password"
+          autoComplete="current-password"
+          required
+          disabled={loading}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPass(s => !s)}
+          aria-label={showPass ? 'Hide password' : 'Show password'}
+          aria-pressed={showPass}
+          tabIndex={-1}
+          className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          {showPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+        </button>
+      </div>
+
+      {error && (
+        <p role="alert" className="text-sm text-danger bg-[rgba(220,38,38,.06)] rounded-[8px] px-3 py-2">
+          {error}
+        </p>
+      )}
+
       <button
-        onClick={() => navigate('/sign-in')}
-        className="group inline-flex items-center justify-center gap-2 h-12 px-7 rounded-[13px] text-white text-[15px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        type="submit"
+        disabled={loading || !email || !pass}
+        className="group inline-flex items-center justify-center gap-2 h-12 px-7 rounded-[13px] text-white text-[15px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
         style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 8px 24px var(--glow-accent)' }}
       >
-        Sign in
-        <IconArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
+        {loading && <IconSpinner size={18} className="animate-spin" aria-hidden="true" />}
+        {loading ? 'Signing in…' : 'Sign in'}
+        {!loading && <IconArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />}
       </button>
+
       <p className="text-xs text-faint px-1 flex items-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-good shrink-0" aria-hidden="true" />
-        Grounded, governed and fully traceable — every answer cites its <span className="font-mono text-dim">refId</span>.
+        Grounded, governed and fully traceable.
       </p>
-    </div>
+    </form>
   )
 }
 
@@ -245,7 +314,12 @@ function FeatureCard({ icon: Icon, title, body, delay }: { icon: Glyph; title: s
 // ─── Landing ────────────────────────────────────────────────────────────────
 
 export default function Landing() {
-  const navigate = useNavigate()
+  const { user } = useUser()
+
+  // A real (credentialed) session belongs in the app, not on the marketing page.
+  // The adapter auto-connects an ANONYMOUS session on load (email === null); those
+  // visitors stay here so the landing — and its sign-in form — remain reachable.
+  if (user?.email) return <Navigate to="/app" replace />
 
   return (
     <div className="relative min-h-svh flex flex-col overflow-hidden bg-page">
@@ -258,7 +332,12 @@ export default function Landing() {
           <span className="font-semibold text-text text-[15px] tracking-tight">Product Reinvention Hub</span>
         </div>
         <button
-          onClick={() => navigate('/sign-in')}
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('signin-username')
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            el?.focus({ preventScroll: true })
+          }}
           className="text-sm font-medium text-dim hover:text-text transition-colors px-4 py-2 rounded-[9px] hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           Sign in →
@@ -267,27 +346,22 @@ export default function Landing() {
 
       {/* Hero */}
       <main className="relative z-10 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16 px-6 sm:px-10 pt-8 pb-16 flex-1 max-w-6xl mx-auto w-full">
-        <div className="flex flex-col gap-7 max-w-lg text-center lg:text-left">
-          <span className="rise-in inline-flex items-center gap-2 self-center lg:self-start text-xs font-medium text-accent bg-accent-soft rounded-full px-3 py-1"
-            style={{ '--rise-delay': '0ms' } as React.CSSProperties}>
-            <span className="w-1.5 h-1.5 rounded-full bg-accent" /> AI-native · P&amp;C insurance
-          </span>
-
+        <div className="flex flex-col gap-8 max-w-lg text-center lg:text-left">
           <h1 className="rise-in text-display text-[2.75rem] leading-[1.04] sm:text-6xl font-bold text-text"
-            style={{ '--rise-delay': '70ms' } as React.CSSProperties}>
+            style={{ '--rise-delay': '0ms' } as React.CSSProperties}>
             Ship insurance<br />products{' '}
             <span className="gradient-text">faster.</span>
           </h1>
 
           <p className="rise-in text-base sm:text-lg text-dim leading-relaxed max-w-md mx-auto lg:mx-0"
-            style={{ '--rise-delay': '150ms' } as React.CSSProperties}>
+            style={{ '--rise-delay': '90ms' } as React.CSSProperties}>
             The product manager sits at the centre. Coverages, rating, live market news,
             intelligent tasks and an AI copilot all flow to you — grounded, governed and
             fully traceable, from first draft to state filing.
           </p>
 
-          <div className="rise-in" style={{ '--rise-delay': '230ms' } as React.CSSProperties}>
-            <HeroCTA />
+          <div className="rise-in" style={{ '--rise-delay': '180ms' } as React.CSSProperties}>
+            <HeroSignIn />
           </div>
         </div>
 

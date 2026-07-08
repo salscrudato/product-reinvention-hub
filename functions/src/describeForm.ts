@@ -9,6 +9,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { ANTHROPIC_API_KEY, anthropic, MODEL_FAST, requireRole, CACHE_1H } from './runtime'
 import { auditedMerge } from './audited'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
+import { guardSpend } from './costGuard'
 
 if (!getApps().length) initializeApp()
 
@@ -36,6 +37,16 @@ export const describeForm = onCall<DescribeFormInput>(
     // Cache hit — return immediately if a non-empty description is already stored.
     const cached = typeof data.description === 'string' && data.description.trim().length > 0
     if (cached) return { description: data.description as string, cached: true }
+
+    // Part C — cache miss means a real model call, so respect the hard ceiling + breaker.
+    const sessionKey = req.auth.uid
+    const guard = await guardSpend({ feature: 'describeForm', sessionKey })
+    if (guard.action === 'deny' || guard.breakerOpen) {
+      void recordUsage({ feature: 'describeForm', model: MODEL_FAST, usage: emptyUsage(), latencyMs: 0, ok: true, sessionKey, denied: guard.action === 'deny', degraded: guard.breakerOpen, providerCalled: false })
+      throw new HttpsError('resource-exhausted', guard.action === 'deny'
+        ? 'AI is temporarily limited — the daily budget ceiling has been reached.'
+        : 'The AI service is temporarily unavailable. Please try again shortly.')
+    }
 
     // Generate a plain-English summary. We pass the structural metadata only — no
     // invented content. haiku-4-5 is the right model for this simple classification task.
@@ -99,7 +110,7 @@ export const describeForm = onCall<DescribeFormInput>(
       ok = false
       throw err
     } finally {
-      void recordUsage({ feature: 'describeForm', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+      void recordUsage({ feature: 'describeForm', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok, sessionKey })
     }
   },
 )

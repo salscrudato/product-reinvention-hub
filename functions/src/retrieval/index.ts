@@ -24,11 +24,21 @@ export function getProvider(voyageKey?: string): RetrievalProvider {
 export const store: VectorStore = firestoreVectorStore
 
 export interface RetrieveParams {
-  query:       string
-  topK?:       number      // final results returned to the model (default 8)
-  candidateK?: number      // KNN candidates fetched before rerank (default 3× topK)
-  filter?:     ChunkFilter
-  voyageKey?:  string      // caller passes the resolved server secret (undefined ⇒ lexical)
+  query:        string
+  topK?:        number      // final results returned to the model (default 8)
+  candidateK?:  number      // KNN candidates fetched before rerank (default 3× topK)
+  filter?:      ChunkFilter
+  voyageKey?:   string      // caller passes the resolved server secret (undefined ⇒ lexical)
+  queryVector?: number[]    // a precomputed query embedding — skip the embed call when supplied
+}
+
+/** Embed a query into a dense vector for the semantic cache / manual KNN, or null when no Voyage
+ *  key is configured or the embed fails (caller degrades — e.g. the semantic cache is skipped). */
+export async function embedQueryVector(query: string, voyageKey?: string): Promise<number[] | null> {
+  const provider = getProvider(voyageKey)
+  if (!provider.embeddings) return null
+  try { return await provider.embeddings.embedQuery(query) }
+  catch (e) { console.warn('[retrieval] embedQueryVector failed:', e instanceof Error ? e.message : e); return null }
 }
 
 /**
@@ -42,10 +52,11 @@ export async function retrieve(params: RetrieveParams): Promise<RetrievalHit[]> 
   const candidateK = params.candidateK ?? Math.max(topK * 3, 24)
   const provider   = getProvider(params.voyageKey)
 
-  // Embed the query for the dense path. A Voyage outage must NOT blank grounding — degrade
-  // to the lexical store fallback (queryVector=null) rather than throwing.
-  let queryVector: number[] | null = null
-  if (provider.embeddings) {
+  // Embed the query for the dense path (unless the caller already did — e.g. chat embeds once
+  // for the semantic-cache probe and reuses the vector here). A Voyage outage must NOT blank
+  // grounding — degrade to the lexical store fallback (queryVector=null) rather than throwing.
+  let queryVector: number[] | null = params.queryVector ?? null
+  if (!queryVector && provider.embeddings) {
     try { queryVector = await provider.embeddings.embedQuery(params.query) }
     catch (e) { console.warn('[retrieval] query embed failed; using lexical fallback:', e instanceof Error ? e.message : e) }
   }

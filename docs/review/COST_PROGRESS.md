@@ -220,3 +220,80 @@ ranking regression that stops an answer from finding its source now fails the ga
 - **Is `shared/` still platform-free?** Yes — `shared/src/retrieval` is pure TS (chunking + lexical
   ranking + int8/cosine); the vector store, Voyage client and secret live only in `functions/`.
 - **Both canaries exact?** Yes — $1,528 + $1,002.
+
+---
+
+## 2026-07-08 — Semantic cache + invalidation + caps/breakers (closes the cost ensemble)
+
+Full proof in [COST_REPORT.md](COST_REPORT.md). Same offline methodology caveat (no live
+Anthropic/Voyage key → USD deltas are structural projections; the live counters that replace
+them are now recorded per call and surfaced in Admin › AI Cost).
+
+### Gate + regression (measured, this run)
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` (all workspaces) | ✅ green |
+| `pnpm lint` (all workspaces) | ✅ green (only pre-existing `isoImport.test.ts` warnings) |
+| root `vitest` (shared + app) | ✅ **217 passed** (+22 cost: budget · breaker · semanticCache) |
+| `pnpm --filter functions test` | ✅ **30 passed** |
+| **Canary — Personal Home** | ✅ **$1,528** exact |
+| **Canary — Personal Auto** | ✅ **$1,002** exact |
+| `pnpm build` (app) + functions `tsup` | ✅ green |
+| `pnpm eval` | ✅ **4/4 cases + 4/4 guards + 8/8 retrieval** (grounding **held**, guards **+1**) |
+
+### Part A — semantic response cache
+
+Repeat grounded chat questions are cached keyed on the **query embedding** (Voyage) and reused
+only behind three gates, all required: **freshness** (every cited refId/form still resolves —
+checked first, absolute), a **conservative 0.93 cosine** similarity floor, and a **cheap haiku
+verifier** that must agree the cached answer fits the new question. A hit skips retrieval + the
+Sonnet call (streams the cached answer + an info notice); a stale-cited candidate is evicted, never
+served. Pure gate logic in `shared/src/cost/semanticCache.ts` (`decideSemanticCache`,
+`staleCitedAnchors`, `verifiedCitedAnchors`); Firestore KNN + verifier in
+`functions/src/semanticCache.ts` (`semanticCache` collection, server-only). Telemetry records
+`semanticCache` + `savedUsd`; the Admin tab shows the **semantic-cache hit rate** + est. saved. A
+per-session **Regenerate** control on Home bypasses the cache read.
+
+### Part B — invalidation (correctness), in the same server flow
+
+Nine `onDocumentWritten` triggers (`functions/src/invalidate.ts`) fire on any entity write —
+adapter `mutate()`, server `auditedMerge()`, or seed — and, in that same flow: **re-chunk** the
+changed entity + upsert its vector incrementally (delete on entity delete), **evict** every
+semantic-cache answer that cited it (by refId/form — catches edits where the refId survives),
+**mark** the owning product's summary stale, and **clear** a form's cached AI description on a
+substantive change (loop-safe). A grounded answer can no longer retrieve a stale chunk or a stale
+cached answer. Triggers write only to *other* collections (no loops) except the single guarded
+form-description clear.
+
+### Part C — cost caps + circuit breakers (safety)
+
+Pure ladder + breaker in `shared/src/cost/{budget,breaker}.ts`; Firestore counters + breaker I/O in
+`functions/src/costGuard.ts` (`costCounters`, server-only). A **hard global daily ceiling** DENIES
+(clear "temporarily limited" message + an ADMIN ceiling banner); **soft per-session / per-feature**
+caps DEGRADE (cached answer, or fewer tool turns / no escalation) rather than failing hard; a run of
+provider faults **trips a breaker, not the budget** — degrading cleanly instead of hammering a
+stalled upstream. Wired into every user-facing AI endpoint (chat full; claims/extract/rules/scaffold
+via a shared SSE gate; summarize/describe via a deny/breaker gate). Counters + breaker are kept
+current for every feature through `telemetry.recordUsage`, so tracking is universal with no
+per-endpoint code.
+
+### Part D — the proof
+
+[COST_REPORT.md](COST_REPORT.md): per-feature before/after + a **≈34 % blended reduction** ($0.0135
+→ $0.0089 per call; repeat/multi-turn sessions do materially better), the cache / semantic-cache /
+escalation rates, and the eval grounding/citation pass rate **held** (guards **+1**). The headline
+before/after + blended reduction is surfaced in **Admin › AI Cost**.
+
+### Hostile self-review
+
+- **Confidently-wrong cache hit for a similar-but-different question?** No — 0.93 floor + verifier
+  (ambiguity → miss) + product-scope match, all required.
+- **Stale answer after an edit?** No — read-path freshness gate (deletes) + invalidation trigger by
+  cited anchor (edits); freshness beats similarity even at 1.0. New eval guard proves it.
+- **Stale-chunk citation after an edit?** No — the trigger re-chunks + re-embeds in the same flow.
+- **Tripped breaker throws?** No — SSE streams a notice + `done`; onCall throws `resource-exhausted`;
+  a cache hit/denial never heals the breaker (`providerCalled:false`).
+- **Before/after asserted, not measured?** Eval + canaries measured on the same set; USD deltas are
+  labelled projections with live counters already recording the real ratios.
+- **Both canaries exact?** Yes — $1,528 + $1,002.

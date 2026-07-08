@@ -20,14 +20,16 @@ import {
   cleanCoverages, cleanForms, cleanRules, cleanRating,
   type ExtractionSection,
 } from '@pf/shared'
-import { emptyUsage, addUsage, recordCascade } from './telemetry'
+import { emptyUsage, addUsage, recordCascade, recordUsage } from './telemetry'
 import type { UsageAccum } from './telemetry'
+import { sseCostGate } from './ai'
 
 interface ExtractBody {
   productName?: string
   formText?:    string
   formBase64?:  string
   mediaType?:   string
+  sessionId?:   string   // per-session cost-cap bucket
 }
 
 // ─── Forced tools — one per section. Each item requires confidence + citation. ──
@@ -236,8 +238,9 @@ export const extractCoverages = onRequest(
 
     // Author-only: extraction proposes writes, so guard like a mutation (mirrors the
     // Firestore rules the eventual mutate() will hit — role enforced on BOTH sides).
+    let caller
     try {
-      const caller = await authenticate(req)
+      caller = await authenticate(req)
       if (caller.role !== 'EDITOR' && caller.role !== 'ADMIN') {
         res.status(403).json({ error: 'Editor access required.' }); return
       }
@@ -251,10 +254,13 @@ export const extractCoverages = onRequest(
     const cheapUsage  = emptyUsage()
     const strongUsage = emptyUsage()
     let escalated = false
+    let degraded  = false
+    let blocked: 'deny' | 'breaker' | null = null
     const t0 = Date.now()
     let ok = true
+    const body       = (req.body ?? {}) as ExtractBody
+    const sessionKey = body.sessionId?.trim() || caller.uid
     try {
-      const body = (req.body ?? {}) as ExtractBody
 
       // Build the document block once and mark it ephemeral so it is cached and reused
       // across all four section calls (which now share an identical tools prefix). For
@@ -274,6 +280,12 @@ export const extractCoverages = onRequest(
       } else {
         send(res, { t: 'error', message: 'No form content provided.' }); return
       }
+
+      // Part C — cost cap + breaker gate. A hard/breaker block streams a notice + done here;
+      // a soft cap keeps the cheap-first pass but suppresses the Sonnet escalation (degraded).
+      const gate = await sseCostGate(res, 'extractCoverages', sessionKey)
+      if (!gate.proceed) { blocked = gate.blocked; return }
+      degraded = gate.degraded
 
       const product = body.productName ?? 'this product'
       const client = anthropic()
@@ -304,8 +316,9 @@ export const extractCoverages = onRequest(
         const cheapInput = await runSection(client, MODEL_FAST, docBlock, s.instruction, s.tool.name, s.maxTokens, cheapUsage)
         let section = s.clean(cheapInput, verifyText)
         // Escalate ONLY this section, ONLY on a failed check — keeps sonnet spend to the
-        // sections the fast model actually got wrong, not the whole document.
-        if (sectionNeedsEscalation(s.key, proposedCount(s.key, cheapInput), section.items.length)) {
+        // sections the fast model actually got wrong. Under a soft budget cap (degraded), stay
+        // cheap-only and never escalate (the proposals are human-reviewed before Save).
+        if (!degraded && sectionNeedsEscalation(s.key, proposedCount(s.key, cheapInput), section.items.length)) {
           escalated = true
           const strongInput = await runSection(client, MODEL, docBlock, s.instruction, s.tool.name, s.maxTokens, strongUsage)
           section = s.clean(strongInput, verifyText)
@@ -322,12 +335,21 @@ export const extractCoverages = onRequest(
       send(res, { t: 'error', message: 'Extraction failed.' })
     } finally {
       res.end()
-      // Latency is invocation-level (cheap + escalated sections interleave); attribute it to
-      // the cheap record and leave the strong record's latency at 0 rather than double-count.
-      void recordCascade({
-        feature: 'extractCoverages', cheapUsage, cheapLatencyMs: Date.now() - t0, ok,
-        strongUsage: escalated ? strongUsage : undefined,
-      })
+      if (blocked) {
+        // Gated before any model call — record a no-provider-call row so the breaker isn't
+        // falsely healed and the deny/degrade is visible in the cost tab.
+        void recordUsage({
+          feature: 'extractCoverages', model: MODEL_FAST, usage: emptyUsage(), latencyMs: Date.now() - t0,
+          ok: true, sessionKey, denied: blocked === 'deny', degraded: blocked === 'breaker', providerCalled: false,
+        })
+      } else {
+        // Latency is invocation-level (cheap + escalated sections interleave); attribute it to
+        // the cheap record and leave the strong record's latency at 0 rather than double-count.
+        void recordCascade({
+          feature: 'extractCoverages', cheapUsage, cheapLatencyMs: Date.now() - t0, ok,
+          strongUsage: escalated ? strongUsage : undefined, sessionKey,
+        })
+      }
     }
   },
 )

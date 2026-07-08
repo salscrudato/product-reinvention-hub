@@ -1,7 +1,7 @@
 // Topbar — breadcrumb, global search (opens palette), presence slot, user menu.
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { IconSearch, IconSignOut, IconChevronDown, IconUser, IconHome, IconKey } from '../ui/icons'
+import { IconSearch, IconSignOut, IconChevronDown, IconHome, IconKey } from '../ui/icons'
 import { useUser } from '../../context/useUser'
 import { adapter } from '../../lib/backend'
 import type { Product } from '@pf/shared'
@@ -157,12 +157,6 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
             </>
           )}
         </div>
-      )}
-
-      {!user && (
-        <button onClick={() => navigate('/sign-in')} className="flex items-center gap-1.5 text-sm text-dim hover:text-text">
-          <IconUser size={14} aria-hidden="true" />Sign in
-        </button>
       )}
     </header>
   )

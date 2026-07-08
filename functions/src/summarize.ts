@@ -6,12 +6,21 @@
 // (haiku) with a timeout. Any signed-in role may summarize (read-only). AWS-SWAP: onCall
 // → Lambda URL; auth + secret handling live in runtime.ts.
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
+import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY, CACHE_1H } from './runtime'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
+import { guardSpend } from './costGuard'
 
 interface CoverageMeta { name: string; requirement?: string; rated?: boolean; sub?: boolean; forms?: string[]; limit?: string }
 interface SummarizeBody {
+  // The product doc id — when present the grounded summary is PERSISTED to
+  // `productSummaries/{productId}` (Admin SDK) so the Overview tab loads it instantly
+  // on the next visit, from any device, without re-billing the model.
+  productId?: string
+  // A cheap content signal (hash of the metadata block) stored with the summary so the
+  // client can tell when the product changed since the cached summary was generated.
+  metaHash?: string
   product: {
     name: string; lob?: string; marketSegment?: string; statesCount?: number; allStates?: boolean
     coverages?: CoverageMeta[]
@@ -74,6 +83,17 @@ export const summarizeProduct = onCall<SummarizeBody>(
     const p = req.data?.product
     if (!p?.name) throw new HttpsError('invalid-argument', 'No product metadata provided.')
 
+    // Part C — respect the hard global ceiling + provider breaker (this is already the cheap
+    // model, so there is no cheaper path to degrade to — block cleanly instead).
+    const sessionKey = req.auth.uid
+    const guard = await guardSpend({ feature: 'summarizeProduct', sessionKey })
+    if (guard.action === 'deny' || guard.breakerOpen) {
+      void recordUsage({ feature: 'summarizeProduct', model: MODEL_FAST, usage: emptyUsage(), latencyMs: 0, ok: true, sessionKey, denied: guard.action === 'deny', degraded: guard.breakerOpen, providerCalled: false })
+      throw new HttpsError('resource-exhausted', guard.action === 'deny'
+        ? 'AI is temporarily limited — the daily budget ceiling has been reached.'
+        : 'The AI service is temporarily unavailable. Please try again shortly.')
+    }
+
     // Compact, deterministic metadata block — the only grounding the model gets.
     const meta = JSON.stringify(p)
     const usageAccum = emptyUsage()
@@ -104,12 +124,34 @@ export const summarizeProduct = onCall<SummarizeBody>(
       }, { timeout: 45_000 })
       addUsage(usageAccum, msg.usage)
       const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-      return groundSummary((tu?.input as Record<string, unknown> | undefined) ?? {}, p.coverages ?? [])
+      const summary = groundSummary((tu?.input as Record<string, unknown> | undefined) ?? {}, p.coverages ?? [])
+
+      // Persist the grounded summary so the Overview tab hydrates instantly next time
+      // (any device, any signed-in role) without re-billing the model. Written via the
+      // Admin SDK to a server-only collection — the client reads it but never writes it.
+      // A write failure must never fail the request: the caller still gets the summary.
+      const productId = req.data?.productId
+      if (productId) {
+        try {
+          await getFirestore().doc(`productSummaries/${productId}`).set({
+            ...summary,
+            productName:  p.name,
+            metaHash:     req.data?.metaHash ?? null,
+            basisFormNumber: p.baseForm?.number ?? null,
+            generatedAt:  FieldValue.serverTimestamp(),
+            generatedBy:  req.auth.uid,
+            model:        MODEL_FAST,
+          }, { merge: false })
+        } catch (persistErr) {
+          console.warn('[summarizeProduct] persist failed (non-fatal):', persistErr)
+        }
+      }
+      return summary
     } catch (err) {
       ok = false
       throw err
     } finally {
-      void recordUsage({ feature: 'summarizeProduct', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+      void recordUsage({ feature: 'summarizeProduct', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok, sessionKey })
     }
   },
 )

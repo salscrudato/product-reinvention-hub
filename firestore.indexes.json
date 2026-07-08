@@ -11,6 +11,11 @@
       "collectionGroup": "groundingChunks",
       "fieldPath": "embedding",
       "vectorConfig": { "dimension": 1024, "flat": {} }
+    },
+    {
+      "collectionGroup": "semanticCache",
+      "fieldPath": "embedding",
+      "vectorConfig": { "dimension": 1024, "flat": {} }
     }
   ]
 }

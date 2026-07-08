@@ -5,9 +5,8 @@ import { ProductProvider } from '../../context/ProductContext'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
-import { copyToClipboard } from '../../lib/clipboard'
 import { Skeleton, ProductStatusPill, Badge, Button } from '../../components/ui'
-import { IconRecent, IconChat, IconUsers, IconBack, IconChevronDown, IconArrowUp, IconShare, IconEdit, IconCheck, IconClose } from '../../components/ui/icons'
+import { IconRecent, IconChat, IconBack, IconChevronDown, IconArrowUp, IconEdit, IconCheck, IconClose } from '../../components/ui/icons'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { CommentsPanel } from '../../components/product/CommentsPanel'
 import { ExportMenu } from '../../components/product/ExportMenu'
@@ -34,19 +33,9 @@ function WorkspaceInner() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [promoteOpen, setPromoteOpen] = useState(false)
-  const [sharing, setSharing] = useState(false)
-  const [viewers, setViewers] = useState<string[]>([])
   const [siblings, setSiblings] = useState<{ id: string; name: string }[]>([])
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
-
-  // Presence
-  useEffect(() => {
-    const leavePresence = adapter.presence.join(pid)
-    // Dedupe by uid — one avatar per person even with multiple open tabs/sessions.
-    const unwatch = adapter.presence.watch(pid, uids => setViewers([...new Set(uids)]))
-    return () => { leavePresence(); unwatch() }
-  }, [pid])
 
   // Sibling products — powers the "switch product" control in the back bar so a PM
   // can hop between products without returning to the hub first.
@@ -56,32 +45,6 @@ function WorkspaceInner() {
     })
     return unsub
   }, [])
-
-  async function handleShare() {
-    if (!user || (user.role !== 'EDITOR' && user.role !== 'ADMIN')) {
-      toast.error('EDITOR or ADMIN role required to create share links.')
-      return
-    }
-    setSharing(true)
-    let url: string | null = null
-    try {
-      const { shareId } = await adapter.fns.call<{ productId: string }, { shareId: string }>(
-        'createShare', { productId: pid },
-      )
-      url = `${location.origin}/share/${shareId}`
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not create share link')
-    } finally {
-      setSharing(false)
-    }
-    // Copy AFTER the create try so a clipboard failure never masquerades as a share-creation
-    // failure — the link exists either way, so surface it for the user to copy manually.
-    if (url) {
-      const copied = await copyToClipboard(url)
-      if (copied) toast.success('Share link copied to clipboard')
-      else toast.success('Share link created', { description: url, duration: 10_000 })
-    }
-  }
 
   // Inline product rename — optimistic-locked through the adapter (atomic mutate).
   async function saveName() {
@@ -196,20 +159,6 @@ function WorkspaceInner() {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Presence avatars */}
-              {viewers.length > 0 && (
-                <div className="flex items-center gap-1 mr-2">
-                  <IconUsers size={12} className="text-faint" aria-hidden="true" />
-                  <div className="flex -space-x-1">
-                    {viewers.slice(0,4).map((uid, i) => (
-                      <div key={uid} className="w-6 h-6 rounded-full bg-accent-soft border-2 border-surface flex items-center justify-center text-[9px] font-bold text-accent" title={uid}>
-                        {String.fromCharCode(65 + i)}
-                      </div>
-                    ))}
-                    {viewers.length > 4 && <div className="w-6 h-6 rounded-full bg-raised border-2 border-surface flex items-center justify-center text-[9px] text-dim">+{viewers.length-4}</div>}
-                  </div>
-                </div>
-              )}
               {product.lifecycle !== 'LAUNCHED' && canEdit && (
                 <Button variant="primary" size="sm" onClick={() => setPromoteOpen(true)}>
                   <IconArrowUp size={14} aria-hidden="true" />Promote
@@ -221,11 +170,6 @@ function WorkspaceInner() {
               <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
                 <IconRecent size={14} aria-hidden="true" />History
               </Button>
-              {canEdit && (
-                <Button variant="ghost" size="sm" onClick={() => void handleShare()} disabled={sharing}>
-                  <IconShare size={14} aria-hidden="true" />{sharing ? 'Sharing…' : 'Share'}
-                </Button>
-              )}
               <ExportMenu data={{ product, coverages, rules, forms, ldTables, rtTables, ratingProgram }} />
             </div>
           </div>

@@ -1,9 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-labelledby="mk-t mk-d">
   <title id="mk-t">Product Reinvention Hub</title>
-  <desc id="mk-d">Composed Stack — three precisely aligned plates (the composed, versioned parts of a product) descending through the brand violet, on a transparent field.</desc>
+  <desc id="mk-d">Greater Ascent — a bold greater-than tipped into an upward ascent, aimed at a crescent moon: the forward "greater" vector, with a quiet rocket-to-the-moon twist. Transparent field.</desc>
   <!-- Master glyph. Transparent background by design. Brand-asset file: carries the
-       canonical violet tones as literal hex (bright / accent / strong). See brand/README.md. -->
-  <path d="M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z" fill="#A100FF"/>
-  <path d="M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z" fill="#8B1FE0"/>
-  <path d="M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z" fill="#7A00E6"/>
+       canonical violet gradient as literal hex (bright / accent / strong). See brand/README.md. -->
+  <defs>
+    <linearGradient id="mk-v" x1="4" y1="6" x2="26" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A100FF"/><stop offset=".55" stop-color="#8B1FE0"/><stop offset="1" stop-color="#7A00E6"/>
+    </linearGradient>
+  </defs>
+  <path d="M21.4 6.44A3.15 3.15 0 1 0 25.83 10.21A3 3 0 0 1 21.4 6.44Z" fill="url(#mk-v)"/>
+  <path d="M5.69 13.94L17.6 15.4L10.05 24.73" fill="none" stroke="url(#mk-v)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

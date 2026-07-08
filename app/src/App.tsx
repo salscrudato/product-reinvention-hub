@@ -7,9 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { VersionWatcher } from './components/VersionWatcher'
 
 const Landing            = lazy(() => import('./routes/Landing'))
-const SignIn             = lazy(() => import('./routes/SignIn'))
 const MustChangePassword = lazy(() => import('./routes/MustChangePassword'))
-const Share              = lazy(() => import('./routes/Share'))
 const AppShell           = lazy(() => import('./routes/AppShell'))
 const Home               = lazy(() => import('./routes/Home'))
 const Products           = lazy(() => import('./routes/Products'))
@@ -46,10 +44,7 @@ export default function App() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/"                      element={<Landing />} />
-            <Route path="/sign-in"               element={<SignIn />} />
             <Route path="/must-change-password"  element={<MustChangePassword />} />
-            {/* Public share viewer — no auth required */}
-            <Route path="/share/:id"             element={<Share />} />
 
             <Route path="/app" element={<AppShell />}>
               <Route index                element={<Home />} />

@@ -15,7 +15,6 @@ See [../CLAUDE.md](../CLAUDE.md) for the binding invariants that apply across ev
 | `src/extract.ts` | Structured coverage extraction (forced `tool_choice`) |
 | `src/news.ts` | Market-news scout (haiku, scheduled `nightlyNews`) |
 | `src/admin.ts` | `setUserRole` — writes the JWT custom claim; ADMIN only |
-| `src/share.ts` | Share-link create/read — Admin SDK only, never exposed to client rules |
 
 ## Model constants (single source: `runtime.ts`)
 

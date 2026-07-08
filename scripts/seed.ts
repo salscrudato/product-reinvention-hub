@@ -153,6 +153,9 @@ async function main(): Promise<void> {
     'products', 'forms', 'ldTables', 'rtTables',
     'dictionary', 'tasks', 'taskTemplates', 'feedback', 'searchIndex', 'seedReports',
     'groundingChunks',
+    // A reseed changes refIds/content, so any cached answer or stale summary from a prior seed
+    // must go (Part A/B): wipe the semantic cache + product summaries alongside the corpus.
+    'semanticCache', 'productSummaries',
   ].map(c => deleteAll(db, c)))
   for (const b of bundles) {
     const pid = b.product.refId!

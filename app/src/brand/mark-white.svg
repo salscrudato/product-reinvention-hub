@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-labelledby="mkw-t">
   <title id="mkw-t">Product Reinvention Hub</title>
-  <!-- One-colour white — for dark / photographic backgrounds. Depth via opacity. -->
-  <path d="M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z" fill="#fff"/>
-  <path d="M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z" fill="#fff" opacity="0.72"/>
-  <path d="M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z" fill="#fff" opacity="0.5"/>
+  <!-- One-colour white — for dark / photographic backgrounds. Moon depth via opacity. -->
+  <path d="M21.4 6.44A3.15 3.15 0 1 0 25.83 10.21A3 3 0 0 1 21.4 6.44Z" fill="#fff" opacity="0.85"/>
+  <path d="M5.69 13.94L17.6 15.4L10.05 24.73" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -13,7 +13,7 @@
 import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY, voyageKey, CACHE_1H } from './runtime'
-import { runChatAgent, assistantText } from './ai'
+import { runChatAgent, assistantText, sseCostGate } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
 import { emptyUsage, addUsage, recordUsage, recordCascade } from './telemetry'
@@ -166,6 +166,7 @@ interface ClaimBody {
   mediaType?:  string
   formNumber?: string
   lob?:        string   // detected line ('HO' | 'GL' | …) — a hint; the form stays authoritative
+  sessionId?:  string   // per-session cost-cap bucket
 }
 
 // Human labels for the detected line, used to nudge the model toward the right product.
@@ -180,20 +181,30 @@ export const analyzeClaim = onRequest(
     if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
 
     // Any signed-in role may analyse — it only reads. Uploads are gated separately.
-    try { await authenticate(req) }
+    let caller
+    try { caller = await authenticate(req) }
     catch (e) { res.status(401).json({ error: e instanceof AuthError ? e.message : 'Unauthorized' }); return }
 
     openSse(res)
     const usageAccum = emptyUsage()
     const t0 = Date.now()
     let ok = true
+    let providerCalled = true
+    let degraded = false
+    let denied = false
+    const body       = (req.body ?? {}) as ClaimBody
+    const sessionKey = body.sessionId?.trim() || caller.uid
     try {
-      const body     = (req.body ?? {}) as ClaimBody
       const incoming = (body.messages ?? []).filter(m => m.content?.trim())
       if (incoming.length === 0) { send(res, { t: 'error', message: 'No message provided.' }); return }
       if (!body.formBase64 && !body.formText?.trim()) {
         send(res, { t: 'error', message: 'Select a base form to analyse against.' }); return
       }
+
+      // Part C — cost cap + breaker gate. A hard/breaker block streams a notice + done here.
+      const gate = await sseCostGate(res, 'analyzeClaim', sessionKey)
+      if (!gate.proceed) { providerCalled = false; denied = gate.blocked === 'deny'; degraded = gate.blocked === 'breaker'; return }
+      degraded = gate.degraded
 
       // The uploaded policy rides on the first user turn as a cached document block,
       // so it is read once per request (and reused across turns within the cache TTL)
@@ -212,7 +223,9 @@ export const analyzeClaim = onRequest(
       let chunkBlocks: Anthropic.DocumentBlockParam[] = []
       const citationIndex: ChunkMetadata[] = [formMeta]
       const vKey = voyageKey()
-      if (vKey && incoming[0]?.content) {
+      // Under a soft budget cap, skip the extra citation augmentation (the uploaded form stays
+      // the authoritative citeable source) to cut input tokens; grounding stays enforced.
+      if (vKey && !degraded && incoming[0]?.content) {
         try {
           const built = buildCiteableDocuments(await retrieve({ query: incoming[0].content, topK: 5, voyageKey: vKey }))
           chunkBlocks = built.blocks
@@ -281,7 +294,7 @@ export const analyzeClaim = onRequest(
         tools:       CLAIMS_TOOLS,
         runTool:     runClaimsTool,
         maxTokens:   2600,
-        maxTurns:    7,
+        maxTurns:    degraded ? 5 : 7,   // cost-saver: fewer tool turns under a soft cap
         usageAccum,
       })
 
@@ -308,7 +321,7 @@ export const analyzeClaim = onRequest(
       send(res, { t: 'error', message: 'Analysis failed.' })
     } finally {
       res.end()
-      void recordUsage({ feature: 'analyzeClaim', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+      void recordUsage({ feature: 'analyzeClaim', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok, sessionKey, degraded, denied, providerCalled })
     }
   },
 )

@@ -297,8 +297,3 @@ export const IconEye = (p: IconProps) => (
 export const IconEyeOff = (p: IconProps) => (
   <Glyph {...p}><path d="M17.9 17.9A10.6 10.6 0 0 1 12 19.5C7.5 19.5 4.5 17 2 12c1.1-2.2 2.6-4 4.4-5.4M9.9 5.1A9.9 9.9 0 0 1 12 4.5c4.5 0 7.5 2.5 10 7.5a12.3 12.3 0 0 1-2 3.1" /><path d="m2 2 20 20" /></Glyph>
 )
-
-/** Share — an upward arrow from a box, for sharing / exporting a snapshot. */
-export const IconShare = (p: IconProps) => (
-  <Glyph {...p}><path d="M9 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-4" /><path d="M12 3v13" /><path d="m8.5 6.5 3.5-3.5 3.5 3.5" /></Glyph>
-)

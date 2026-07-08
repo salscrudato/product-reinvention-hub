@@ -13,6 +13,7 @@
 //   never surfaces to the user.
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { MODEL, MODEL_FAST } from './runtime'
+import { bumpSpend } from './costGuard'
 
 // ─── Pricing table — single source of truth ───────────────────────────────────
 // Rates: USD per million tokens (Anthropic public pricing).
@@ -99,7 +100,15 @@ export async function recordUsage(params: {
   ok:         boolean  // false if the AI call threw before completing
   tier?:      'cheap' | 'strong'  // defaults: MODEL_FAST → cheap, else strong
   escalated?: boolean             // true for a strong record from a failed cheap check
+  // ─ Cost-ensemble fields (Part A/C observability) ─
+  sessionKey?:    string                    // session/uid bucket for the per-session cap
+  semanticCache?: 'hit' | 'miss'            // set on the chat path: was this served from cache?
+  savedUsd?:      number                    // estimated spend avoided by a cache hit / degradation
+  degraded?:      boolean                   // served under a budget/breaker degradation
+  denied?:        boolean                   // request denied by the global ceiling (no model call)
+  providerCalled?: boolean                  // false ⇒ a cache hit / denial made no upstream call
 }): Promise<void> {
+  const estimatedUsd = estimateCost(params.model, params.usage)
   try {
     await getFirestore().collection('aiUsage').add({
       feature:          params.feature,
@@ -112,12 +121,23 @@ export async function recordUsage(params: {
       ok:               params.ok,
       tier:             params.tier ?? (params.model === MODEL_FAST ? 'cheap' : 'strong'),
       escalated:        params.escalated ?? false,
-      estimatedUsd:     estimateCost(params.model, params.usage),
+      estimatedUsd,
+      // Cost-ensemble fields (omitted when undefined so old-record aggregation is unaffected).
+      ...(params.semanticCache ? { semanticCache: params.semanticCache } : {}),
+      ...(params.savedUsd != null ? { savedUsd: params.savedUsd } : {}),
+      ...(params.degraded ? { degraded: true } : {}),
+      ...(params.denied ? { denied: true } : {}),
       at:               FieldValue.serverTimestamp(),
     })
   } catch {
     console.warn('[telemetry] Failed to record AI usage — continuing')
   }
+  // Keep the rolling cost counters + provider breaker current for EVERY feature, with no
+  // per-endpoint wiring. Best-effort; a failure here never surfaces to the user.
+  void bumpSpend({
+    feature: params.feature, sessionKey: params.sessionKey ?? 'anon',
+    usd: estimatedUsd, ok: params.ok, providerCalled: params.providerCalled,
+  })
 }
 
 /**
@@ -136,15 +156,18 @@ export async function recordCascade(params: {
   ok:               boolean
   strongUsage?:     UsageAccum   // present iff we escalated to the strong model
   strongLatencyMs?: number
+  sessionKey?:      string
 }): Promise<void> {
   await recordUsage({
     feature: params.feature, model: MODEL_FAST, usage: params.cheapUsage,
     latencyMs: params.cheapLatencyMs, ok: params.ok, tier: 'cheap', escalated: false,
+    sessionKey: params.sessionKey,
   })
   if (params.strongUsage) {
     await recordUsage({
       feature: params.feature, model: MODEL, usage: params.strongUsage,
       latencyMs: params.strongLatencyMs ?? 0, ok: params.ok, tier: 'strong', escalated: true,
+      sessionKey: params.sessionKey,
     })
   }
 }

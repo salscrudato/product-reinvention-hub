@@ -16,7 +16,7 @@ import { onRequest } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY } from './runtime'
-import { runChatAgent } from './ai'
+import { runChatAgent, sseCostGate } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
 import { emptyUsage, recordUsage } from './telemetry'
@@ -157,6 +157,7 @@ async function verifyDraft(input: Record<string, unknown>): Promise<{ draft: Rul
 interface DraftBody {
   instruction?: string
   productId?:   string
+  sessionId?:   string   // per-session cost-cap bucket
   lobPrefix?:   string   // e.g. 'HO' | 'GL' — steer the model to the right line's refIds
   existingRule?: {
     refId?: string | null; category?: string; subCategory?: string
@@ -183,10 +184,19 @@ export const draftRule = onRequest(
     const usageAccum = emptyUsage()
     const t0 = Date.now()
     let ok = true
+    let providerCalled = true
+    let degraded = false
+    let denied = false
+    const body        = (req.body ?? {}) as DraftBody
+    const sessionKey  = body.sessionId?.trim() || caller.uid
     try {
-      const body        = (req.body ?? {}) as DraftBody
       const instruction = body.instruction?.trim()
       if (!instruction) { send(res, { t: 'error', message: 'Describe the rule you want to draft.' }); return }
+
+      // Part C — cost cap + breaker gate. A hard/breaker block streams a notice + done here.
+      const gate = await sseCostGate(res, 'draftRule', sessionKey)
+      if (!gate.proceed) { providerCalled = false; denied = gate.blocked === 'deny'; degraded = gate.blocked === 'breaker'; return }
+      degraded = gate.degraded
 
       const parts: string[] = []
       if (body.lobPrefix) {
@@ -220,7 +230,7 @@ export const draftRule = onRequest(
         tools:       RULES_TOOLS,
         runTool:     runDraftTool,
         maxTokens:   1800,
-        maxTurns:    7,
+        maxTurns:    degraded ? 5 : 7,   // cost-saver: fewer tool turns under a soft cap
         usageAccum,
       })
       send(res, { t: 'done' })
@@ -230,7 +240,7 @@ export const draftRule = onRequest(
       send(res, { t: 'error', message: 'Draft failed.' })
     } finally {
       res.end()
-      void recordUsage({ feature: 'draftRule', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+      void recordUsage({ feature: 'draftRule', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok, sessionKey, degraded, denied, providerCalled })
     }
   },
 )

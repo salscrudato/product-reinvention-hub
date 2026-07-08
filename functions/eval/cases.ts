@@ -19,6 +19,7 @@ import {
   PA_DICTIONARY, PA_PRODUCT,
   findUnverifiedCitations, verifyItems, cleanForms, normalizeFormNumber,
   buildBundleChunks, dedupeChunks, lexicalRetrieve,
+  verifiedCitedAnchors, staleCitedAnchors, decideSemanticCache,
 } from '@pf/shared'
 import type {
   Product, Coverage, Rule, FormRule, Form, DictionaryEntry, CorpusBundle,
@@ -360,6 +361,22 @@ export const GUARD_CASES: GuardCase[] = [
       const urls = kept.map(k => k.url)
       const pass = urls.length === 1 && urls[0] === 'https://www.iii.org/article/live'
       return { pass, note: pass ? '' : `kept ${JSON.stringify(urls)}` }
+    },
+  },
+  {
+    id:          'semantic-cache-stale-citation',
+    feature:     'chat',
+    description: 'semantic cache never serves an answer whose cited refId no longer resolves (Part A/B)',
+    run: async () => {
+      // A cached answer that cited PH.COV.001 + HO 00 03 (verified at write time).
+      const anchors = verifiedCitedAnchors('Coverage A is open-peril [PH.COV.001] on form [HO 00 03].', guardRefIds, guardForms)
+      // Now PH.COV.001 has been deleted from the live catalogue — the answer is stale.
+      const liveRefIds = new Set([...guardRefIds].filter(r => r !== 'PH.COV.001'))
+      const stale = staleCitedAnchors(anchors, liveRefIds, guardForms)
+      // Even at a perfect similarity match, a stale-cited answer must NOT be served.
+      const outcome = decideSemanticCache({ similarity: 1.0, staleAnchors: stale })
+      const pass = stale.includes('PH.COV.001') && outcome === 'stale-citation'
+      return { pass, note: pass ? '' : `expected stale-citation, got '${outcome}' (stale=${JSON.stringify(stale)})` }
     },
   },
   {

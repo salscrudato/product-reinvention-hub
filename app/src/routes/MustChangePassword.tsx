@@ -19,7 +19,7 @@ export default function MustChangePassword() {
   const [error,       setError]       = useState('')
   const [loading,     setLoading]     = useState(false)
 
-  if (!user) return <Navigate to="/sign-in" replace />
+  if (!user) return <Navigate to="/" replace />
 
   // Capture for async closure — TypeScript cannot narrow closure vars after early return
   const currentUser = user

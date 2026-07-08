@@ -10,5 +10,9 @@ export { analyzeClaim, identifyBaseForm } from './claims'
 export { setUserRole } from './admin'
 export { refreshNews, nightlyNews } from './news'
 export { describeForm } from './describeForm'
-export { createShare, getShare } from './share'
 export { reindexGrounding } from './retrieval/indexer'
+// Invalidation triggers (Part B) — re-index chunks + evict stale summaries/cache on entity write.
+export {
+  onProductWrite, onCoverageWrite, onRuleWrite, onFormRuleWrite, onRatingProgramWrite,
+  onFormWrite, onDictionaryWrite, onLdTableWrite, onRtTableWrite,
+} from './invalidate'

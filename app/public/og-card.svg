@@ -6,6 +6,9 @@
     <linearGradient id="og-brand" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#C060FF"/><stop offset="0.5" stop-color="#9020E8"/><stop offset="1" stop-color="#6010B8"/>
     </linearGradient>
+    <linearGradient id="og-mark" x1="4" y1="6" x2="26" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C77DFF"/><stop offset="0.5" stop-color="#A100FF"/><stop offset="1" stop-color="#7A00E6"/>
+    </linearGradient>
 
     <!-- Ambient auras -->
     <radialGradient id="og-aura" cx="50%" cy="50%" r="50%">
@@ -29,27 +32,24 @@
   <circle cx="980" cy="160" r="440" fill="url(#og-aura)"/>
   <circle cx="140" cy="600" r="320" fill="url(#og-aura2)"/>
 
-  <!-- Ambient Composed-Stack echo (top-right), large + faint -->
-  <g transform="translate(980 250) scale(17) translate(-16 -16)">
-    <path d="M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z" fill="rgba(200,110,255,0.05)"/>
-    <path d="M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z" fill="rgba(180,80,255,0.038)"/>
-    <path d="M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z" fill="rgba(150,50,230,0.03)"/>
+  <!-- Ambient Greater-Ascent echo (top-right), large + faint -->
+  <g transform="translate(980 250) scale(16) translate(-16 -15.5)">
+    <path d="M21.4 6.44A3.15 3.15 0 1 0 25.83 10.21A3 3 0 0 1 21.4 6.44Z" fill="rgba(200,110,255,0.05)"/>
+    <path d="M5.69 13.94L17.6 15.4L10.05 24.73" fill="none" stroke="rgba(190,90,255,0.045)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 
   <!-- Ambient echo (lower-left), small + fainter -->
-  <g transform="translate(180 520) scale(7.5) translate(-16 -16)" opacity="0.7">
-    <path d="M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z" fill="rgba(200,110,255,0.035)"/>
-    <path d="M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z" fill="rgba(180,80,255,0.028)"/>
-    <path d="M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z" fill="rgba(150,50,230,0.022)"/>
+  <g transform="translate(180 520) scale(7) translate(-16 -15.5)" opacity="0.7">
+    <path d="M21.4 6.44A3.15 3.15 0 1 0 25.83 10.21A3 3 0 0 1 21.4 6.44Z" fill="rgba(200,110,255,0.035)"/>
+    <path d="M5.69 13.94L17.6 15.4L10.05 24.73" fill="none" stroke="rgba(190,90,255,0.03)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 
-  <!-- ── Logo lockup (top-left): Composed Stack + wordmark ─────────────────── -->
-  <g transform="translate(84 86) scale(2.6)">
-    <path d="M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z" fill="#C77DFF"/>
-    <path d="M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z" fill="#A100FF"/>
-    <path d="M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z" fill="#7A00E6"/>
+  <!-- ── Logo lockup (top-left): Greater Ascent mark + wordmark ────────────── -->
+  <g transform="translate(80 92) scale(2.3)">
+    <path d="M21.4 6.44A3.15 3.15 0 1 0 25.83 10.21A3 3 0 0 1 21.4 6.44Z" fill="url(#og-mark)"/>
+    <path d="M5.69 13.94L17.6 15.4L10.05 24.73" fill="none" stroke="url(#og-mark)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
-  <text x="150" y="139" font-size="31" font-weight="600" fill="#EDE8FA" letter-spacing="-0.3">Product Reinvention Hub</text>
+  <text x="152" y="140" font-size="31" font-weight="600" fill="#EDE8FA" letter-spacing="-0.3">Product Reinvention Hub</text>
 
   <!-- ── Headline ──────────────────────────────────────────────────────── -->
   <text x="82" y="310" font-size="82" font-weight="800" fill="#FFFFFF" letter-spacing="-2.8">Reinvent insurance</text>

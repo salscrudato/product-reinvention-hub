@@ -23,6 +23,7 @@ import { LIMIT_STRUCTURES, DEDUCTIBLE_STRUCTURES, LIMIT_BASES } from '../../lib/
 import {
 	  resolveTermOptions, ensureOneDefault, syncLegacy, formatOption,
 	  isPercentTerm, deriveStructure, deriveBasis, resolveLob, validateCoverageTerms,
+	  niceLadder, suggestRange, type RangeDensity,
 	} from '@pf/shared'
 import { StateTileMap } from './StateTileMap'
 import type {
@@ -201,6 +202,10 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 
   const options = active?.optionSet ?? []
   const pct = active ? isPercentTerm(active) : false
+  const impliedActive = impliedType(active?.structure ?? (mode === 'LIMIT' ? 'SINGLE' : 'FLAT'))
+  // The Range Builder only makes sense for single-number values — split limits and
+  // waiting periods aren't laddered, so they keep the presets/paste path.
+  const showRangeBuilder = mode !== 'OPTION' && impliedActive !== 'SPLIT' && impliedActive !== 'WAITING_PERIOD'
   const { Icon: ModeIcon, title: modeTitle, noun: modeLabel } = MODE_META[mode]
 
   // Append one or more values as options in a single edit — the engine behind both
@@ -218,6 +223,14 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
       additions.push({ id: `opt-${Date.now()}-${i}`, type, value, allStates: true, states: [], isDefault: false, enabled: true })
     })
     if (additions.length) setOptions([...options, ...additions])
+  }
+
+  // Range Builder: enter min + max, get a logical ladder of round values between them
+  // (and the endpoints), plus record the [min,max] as the term's allowed range.
+  function applyRange(values: number[], bounds: { min: number; max: number }) {
+    if (!canEdit || !active) return
+    addValues(values)
+    patchActive({ min: bounds.min, max: bounds.max })
   }
 
   return (
@@ -318,6 +331,19 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
                 </Button>
               )}
             </div>
+
+            {/* Range Builder — the hero path: a PM enters a min + max and gets a logical
+                ladder of round values between them (endpoints included), tuned to the
+                coverage's existing values. Only for single-number types. */}
+            {active && showRangeBuilder && (
+              <RangeBuilder
+                key={`range-${active.id}`}
+                pct={pct} canEdit={canEdit}
+                existing={new Set(options.map(o => o.value))}
+                initial={suggestRange(mode, pct, options.filter(o => o.type !== 'SPLIT' && o.type !== 'WAITING_PERIOD').map(o => o.value))}
+                onGenerate={applyRange}
+              />
+            )}
 
             {/* Quick add — one-click presets + Excel-style paste (the fast PM path). */}
             {active && (
@@ -423,31 +449,18 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
                   </div>
                 </section>
 
-                {/* Basis + Range */}
-                <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {mode === 'LIMIT' && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">Limit basis</p>
-                      <select disabled={!canEdit} value={active.limitBasis ?? 'PER_OCCURRENCE'}
-                        onChange={e => patchActive({ limitBasis: e.target.value as LimitBasis })}
-                        className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25">
-                        {LIMIT_BASES.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
-                      </select>
-                    </div>
-                  )}
-                  <div className={mode === 'LIMIT' ? '' : 'sm:col-span-2'}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">Allowed range {pct ? '(%)' : '($)'}</p>
-                    <div className="flex items-center gap-2">
-                      <input key={`min-${active.id}`} aria-label="Minimum" defaultValue={active.min ?? ''} disabled={!canEdit}
-                        onBlur={e => patchActive({ min: e.target.value ? parseNum(e.target.value) : undefined })}
-                        placeholder="min" className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong font-mono text-sm text-text text-center focus:outline-none focus:ring-2 focus:ring-accent/25" />
-                      <span className="text-faint text-sm">–</span>
-                      <input key={`max-${active.id}`} aria-label="Maximum" defaultValue={active.max ?? ''} disabled={!canEdit}
-                        onBlur={e => patchActive({ max: e.target.value ? parseNum(e.target.value) : undefined })}
-                        placeholder="max" className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong font-mono text-sm text-text text-center focus:outline-none focus:ring-2 focus:ring-accent/25" />
-                    </div>
-                  </div>
-                </section>
+                {/* Basis (limits only) — the allowed range is entered via the Range Builder
+                    above the values, so it isn't duplicated here. */}
+                {mode === 'LIMIT' && (
+                  <section>
+                    <p className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint mb-2.5">Limit basis</p>
+                    <select disabled={!canEdit} value={active.limitBasis ?? 'PER_OCCURRENCE'}
+                      onChange={e => patchActive({ limitBasis: e.target.value as LimitBasis })}
+                      className="w-full h-10 px-3 rounded-[9px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25 sm:max-w-xs">
+                      {LIMIT_BASES.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+                    </select>
+                  </section>
+                )}
               </div>
             </details>
           )}
@@ -532,6 +545,111 @@ function QuickAdd({ mode, pct, isWaiting, canEdit, existing, onAddValues }: {
         <Button variant="default" size="sm" onClick={commit} disabled={!paste.trim()}>Add</Button>
       </div>
     </div>
+  )
+}
+
+// ─── Range Builder — min + max → a logical ladder of round values ─────────────
+// The premium fast-path for defining a limit/deductible: enter two numbers and the
+// editor fills in the standard "round" values between them (endpoints included), tuned
+// by a density control with a live preview. Non-destructive — generated values merge
+// with any existing options (the parent's addValues de-dupes and types them).
+function RangeBuilder({ pct, canEdit, existing, initial, onGenerate }: {
+  pct: boolean; canEdit: boolean
+  existing: Set<number>
+  initial: { min: number; max: number }
+  onGenerate: (values: number[], bounds: { min: number; max: number }) => void
+}) {
+  const [minStr, setMinStr] = useState(String(initial.min))
+  const [maxStr, setMaxStr] = useState(String(initial.max))
+  const [density, setDensity] = useState<RangeDensity>('standard')
+  if (!canEdit) return null
+
+  const min = parseNum(minStr)
+  const max = parseNum(maxStr)
+  const valid = Number.isFinite(min) && Number.isFinite(max) && min > 0 && max > min
+  const ladder = valid ? niceLadder(min, max, density, pct) : []
+  const newCount = ladder.filter(v => !existing.has(v)).length
+
+  const fmt = (n: number) =>
+    pct ? `${n}%`
+    : n >= 1_000_000 ? `$${(n / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })}M`
+    : n >= 1_000 ? `$${(n / 1_000).toLocaleString(undefined, { maximumFractionDigits: 1 })}k`
+    : `$${n.toLocaleString()}`
+
+  const DENSITIES: { id: RangeDensity; label: string }[] = [
+    { id: 'coarse',   label: 'Coarse'   },
+    { id: 'standard', label: 'Standard' },
+    { id: 'fine',     label: 'Fine'     },
+  ]
+
+  return (
+    <div className="mb-2.5 rounded-[12px] p-3.5 flex flex-col gap-3"
+      style={{ background: 'var(--gradient-accent-soft)', border: '1px solid var(--color-accent-line)' }}>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-[13px] font-semibold text-text flex items-center gap-1.5">
+            <IconLayers size={14} className="text-accent" aria-hidden="true" />
+            Build a range
+          </p>
+          <p className="text-[11px] text-dim mt-0.5">Enter a min and max — we&rsquo;ll fill in the logical values between.</p>
+        </div>
+        <div className="inline-flex items-center gap-0.5 p-0.5 rounded-[9px] bg-surface" style={{ border: '1px solid var(--color-border)' }} role="group" aria-label="Range density">
+          {DENSITIES.map(d => (
+            <button key={d.id} type="button" onClick={() => setDensity(d.id)} aria-pressed={density === d.id}
+              className={`px-2 py-1 rounded-[7px] text-[11px] font-medium transition-colors ${density === d.id ? 'bg-accent text-white' : 'text-dim hover:text-text'}`}>
+              {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-end gap-2 flex-wrap">
+        <RangeInput label="Minimum" value={minStr} onChange={setMinStr} pct={pct} />
+        <span className="text-faint text-sm pb-2">–</span>
+        <RangeInput label="Maximum" value={maxStr} onChange={setMaxStr} pct={pct} />
+        <Button variant="primary" size="sm" onClick={() => onGenerate(ladder, { min, max })} disabled={!valid || ladder.length === 0}>
+          <IconPlus size={13} />Generate {ladder.length || ''} value{ladder.length === 1 ? '' : 's'}
+        </Button>
+      </div>
+
+      {valid && ladder.length > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1 flex-wrap">
+            {ladder.map(v => {
+              const added = existing.has(v)
+              return (
+                <span key={v} className={`px-1.5 py-0.5 rounded-[6px] text-[11px] font-mono ${added ? 'text-faint' : 'text-accent'}`}
+                  style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
+                  title={added ? 'Already added' : 'Will be added'}>
+                  {added ? `✓ ${fmt(v)}` : fmt(v)}
+                </span>
+              )
+            })}
+          </div>
+          <p className="text-[10.5px] text-faint">
+            {ladder.length} value{ladder.length === 1 ? '' : 's'}{newCount < ladder.length ? ` · ${newCount} new` : ''}
+          </p>
+        </div>
+      ) : (
+        <p className="text-[11px] text-danger">Enter a minimum and a larger maximum.</p>
+      )}
+    </div>
+  )
+}
+
+function RangeInput({ label, value, onChange, pct }: {
+  label: string; value: string; onChange: (v: string) => void; pct: boolean
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[10px] font-semibold uppercase tracking-[.06em] text-faint">{label}</span>
+      <div className="relative">
+        {!pct && <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint text-xs pointer-events-none">$</span>}
+        <input value={value} onChange={e => onChange(e.target.value)} inputMode="numeric" aria-label={label}
+          className={`w-32 h-9 ${pct ? 'px-2.5 pr-6' : 'pl-6 pr-2.5'} rounded-[8px] bg-surface border border-border-strong font-mono text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25`} />
+        {pct && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-faint text-xs pointer-events-none">%</span>}
+      </div>
+    </label>
   )
 }
 

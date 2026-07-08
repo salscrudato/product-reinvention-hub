@@ -1,14 +1,20 @@
 // Admin (/app/admin, ADMIN only) — user management (via the setUserRole callable),
-// an audit-log explorer that opens any event to its before/after diff, a share-links
-// manager, the seed report, and local app settings.
+// an audit-log explorer that opens any event to its before/after diff, the seed
+// report, AI cost telemetry, and local app settings.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { IconShield, IconPlus, IconUserX, IconUserCheck, IconSearch, IconFileClock, IconShare, IconClose, IconWarning } from '../components/ui/icons'
-import { adapter, MutationConflictError } from '../lib/backend'
-import { copyToClipboard } from '../lib/clipboard'
+import { IconShield, IconPlus, IconUserX, IconUserCheck, IconSearch, IconFileClock, IconClose, IconWarning } from '../components/ui/icons'
+import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
+import { DEFAULT_BUDGET } from '@pf/shared'
 import type { User, AuditEvent, Version, SeedReport, Role } from '@pf/shared'
+
+// Headline cost-program result (projected — mirrors docs/review/COST_REPORT.md). No live
+// Anthropic key exists in this environment, so these are structural projections from the
+// prompt structure + the pricing table, exactly like COST_BASELINE.md's per-call estimates.
+// Blended = Σ representative after-cost ÷ Σ baseline cost across the AI features.
+const COST_HEADLINE = { beforeBlendedUsd: 0.0135, afterBlendedUsd: 0.0089, reductionPct: 34 }
 
 interface AiUsageDoc {
   id:               string
@@ -23,6 +29,10 @@ interface AiUsageDoc {
   estimatedUsd:     number
   tier?:            'cheap' | 'strong'  // cheap-first cascade tier (older records may lack it)
   escalated?:       boolean             // strong record produced by a failed cheap check
+  semanticCache?:   'hit' | 'miss'      // Part A: served from the semantic response cache?
+  savedUsd?:        number              // spend avoided by a cache hit / degradation
+  degraded?:        boolean             // Part C: served under a budget/breaker degradation
+  denied?:          boolean             // Part C: denied by the global ceiling (no model call)
   at:               unknown
 }
 
@@ -30,17 +40,6 @@ type UserDoc      = User & { id: string }
 type AuditDoc     = AuditEvent & { id: string }
 type VersionDoc   = Version & { id: string }
 type SeedReportDoc = SeedReport & { id: string }
-
-interface ShareDoc {
-  id:         string
-  productId:  string
-  note:       string
-  createdBy:  { uid: string; name: string }
-  createdAt:  unknown
-  expiresAt:  string
-  rev?:       number   // B9: createShare stamps rev:1 so the delete can guard uniformly
-  snapshot:   { product: { name?: string } }
-}
 
 function toMillis(v: unknown): number | null {
   if (v == null) return null
@@ -68,12 +67,11 @@ export default function Admin() {
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-xl font-bold text-text">Admin</h1>
-        <p className="text-sm text-dim">Users, share links, audit trail, seed report and settings.</p>
+        <p className="text-sm text-dim">Users, audit trail, seed report, AI cost and settings.</p>
       </div>
       <Tabs
         tabs={[
           { id: 'users',    label: 'Users'       },
-          { id: 'shares',   label: 'Share Links'  },
           { id: 'audit',    label: 'Audit Log'    },
           { id: 'seed',     label: 'Seed Report'  },
           { id: 'ai-cost',  label: 'AI Cost'      },
@@ -82,7 +80,6 @@ export default function Admin() {
         active={tab} onChange={setTab}
       />
       {tab === 'users'    && <UsersTab />}
-      {tab === 'shares'   && <SharesTab />}
       {tab === 'audit'    && <AuditTab />}
       {tab === 'seed'     && <SeedTab />}
       {tab === 'ai-cost'  && <AiCostTab />}
@@ -196,83 +193,6 @@ function UsersTab() {
           </div>
         </div>
       </Dialog>
-    </div>
-  )
-}
-
-// ─── Share links ─────────────────────────────────────────────────────────────
-
-function SharesTab() {
-  const { user } = useUser()
-  const [shares, setShares] = useState<ShareDoc[] | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    const unsub = adapter.db.subscribe<ShareDoc>('shares', d => {
-      if (Array.isArray(d)) setShares([...d].sort((a, b) => (toMillis(b.createdAt) ?? 0) - (toMillis(a.createdAt) ?? 0)))
-    })
-    return unsub
-  }, [])
-
-  async function deleteShare(share: ShareDoc) {
-    if (!user) return
-    setBusy(true)
-    try {
-      // Attribute the deletion to the real acting admin so the audit trail is truthful —
-      // not a hard-coded "Admin" actor. (Only ADMINs reach this tab; the guard is belt-and-braces.)
-      // B9: pass the loaded rev so the delete is optimistic-concurrency-guarded like every
-      // other mutate() call (undefined for legacy shares minted before rev:1 → safe no-op).
-      await adapter.db.mutate({ op: 'delete', path: `shares/${share.id}`, entityType: 'share', actor: { uid: user.uid, name: user.name ?? user.email ?? 'Admin' }, expectedRev: share.rev })
-      toast.success('Share link deleted')
-    } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : err instanceof Error ? err.message : 'Could not delete share link')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function copyLink(id: string) {
-    const url = `${location.origin}/share/${id}`
-    // Only claim success if the copy actually landed — otherwise the user is told it
-    // copied when it didn't (insecure context / no focus / blocked permission).
-    const ok = await copyToClipboard(url)
-    toast[ok ? 'success' : 'error'](ok ? 'Link copied' : 'Could not copy the link')
-  }
-
-  if (shares === null) return <div className="flex flex-col gap-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
-
-  if (shares.length === 0) return (
-    <EmptyState
-      icon={<IconShare size={26} />}
-      title="No share links yet"
-      description="Share buttons in the product workspace create read-only snapshot links here."
-    />
-  )
-
-  return (
-    <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-      {shares.map(s => {
-        const expired = s.expiresAt && new Date(s.expiresAt) < new Date()
-        return (
-          <div key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
-            <div className="flex-1 min-w-[200px]">
-              <div className="text-sm font-medium text-text truncate">{s.snapshot?.product?.name ?? s.productId}</div>
-              <div className="text-xs text-faint font-mono mt-0.5">{s.id}</div>
-              {s.note && <div className="text-xs text-dim mt-0.5 truncate">{s.note}</div>}
-            </div>
-            <div className="text-xs text-faint text-right shrink-0">
-              <div>{s.createdBy?.name}</div>
-              <div>{fmt(s.createdAt)}</div>
-              <div className={expired ? 'text-danger' : ''}>Exp: {s.expiresAt ? new Date(s.expiresAt).toLocaleDateString() : '—'}</div>
-            </div>
-            {expired && <Badge label="expired" color="danger" />}
-            <Button variant="ghost" size="sm" onClick={() => void copyLink(s.id)}>Copy link</Button>
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => void deleteShare(s)}>
-              <IconClose size={13} /> Delete
-            </Button>
-          </div>
-        )
-      })}
     </div>
   )
 }
@@ -551,6 +471,33 @@ function AiCostTab() {
     return map
   }, [filtered])
 
+  // Cost-ensemble metrics (Part A/C): semantic-cache hit rate + savings, plus the budget
+  // degradation/denial counts that show the caps + breaker doing their job.
+  const ensemble = useMemo(() => {
+    let hits = 0, misses = 0, saved = 0, degraded = 0, denied = 0
+    for (const r of filtered) {
+      if (r.semanticCache === 'hit')  hits++
+      if (r.semanticCache === 'miss') misses++
+      saved += r.savedUsd ?? 0
+      if (r.degraded) degraded++
+      if (r.denied)   denied++
+    }
+    const total = hits + misses
+    return { hits, misses, saved, degraded, denied, hitRate: total > 0 ? hits / total : null }
+  }, [filtered])
+
+  // Today's global spend (UTC day, ALL records — not the window) vs the server-enforced global
+  // ceiling. The ceiling is the hard "no spend without bound" backstop with this ADMIN alarm.
+  const todaySpendUsd = useMemo(() => {
+    const startOfUtcDay = new Date(new Date().toISOString().slice(0, 10)).getTime()
+    let usd = 0
+    for (const r of records ?? []) if ((toMillis(r.at) ?? 0) >= startOfUtcDay) usd += r.estimatedUsd ?? 0
+    return usd
+  }, [records])
+  const ceilingUsd = DEFAULT_BUDGET.globalDailyUsd
+  const ceilingBreached = todaySpendUsd >= ceilingUsd
+  const ceilingPct = ceilingUsd > 0 ? Math.min(100, (todaySpendUsd / ceilingUsd) * 100) : 0
+
   // Configurable cost alarm (localStorage; advisory). A rising escalation rate is the tell
   // for a drifting verifier; the spend cap catches runaway blended cost in the window.
   const [alarm, setAlarm] = useState<{ escalationPct: number; spendCapUsd: number }>(() => {
@@ -593,6 +540,38 @@ function AiCostTab() {
           <span className="text-xs text-faint ml-auto">{filtered.length} / {records?.length} records</span>
         )}
       </div>
+
+      {/* Headline — cost-program result (projected; see COST_REPORT.md). BEFORE = COST_BASELINE. */}
+      <div className="rounded-[12px] p-4" style={{ border: '1px solid var(--color-border)', background: 'var(--gradient-accent-soft)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs font-semibold text-dim uppercase">Cost reduction — blended</div>
+          <span className="text-[11px] text-faint">projected · see COST_REPORT.md</span>
+        </div>
+        <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm text-faint line-through tabular-nums">${COST_HEADLINE.beforeBlendedUsd.toFixed(4)}</span>
+            <span className="text-faint">→</span>
+            <span className="text-2xl font-bold text-text tabular-nums">${COST_HEADLINE.afterBlendedUsd.toFixed(4)}</span>
+            <span className="text-xs text-faint">/ AI call (blended)</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--color-good)' }}>−{COST_HEADLINE.reductionPct}%</span>
+            <span className="text-xs text-faint">blended reduction vs baseline</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Global daily ceiling — the ADMIN alarm for the hard "no spend without bound" backstop */}
+      {ceilingBreached && (
+        <div role="alert" className="flex items-start gap-2.5 rounded-[12px] px-4 py-3"
+          style={{ border: '1px solid var(--color-danger)', background: 'color-mix(in srgb, var(--color-danger) 8%, transparent)' }}>
+          <IconWarning size={18} className="text-danger shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="text-sm">
+            <div className="font-semibold text-danger">Global daily AI ceiling reached</div>
+            <div className="mt-0.5 text-dim">Today's spend <span className="font-semibold tabular-nums">{fmtUsd(todaySpendUsd)}</span> has reached the ${ceilingUsd} daily ceiling — new AI calls are being denied server-side with a "temporarily limited" message until the day rolls over.</div>
+          </div>
+        </div>
+      )}
 
       {/* Cost alarm — fires when a verifier drifts (escalation rate) or spend runs away */}
       {(escBreached || spendBreached) && (
@@ -685,6 +664,56 @@ function AiCostTab() {
         </div>
       </div>
 
+      {/* Semantic response cache (Part A) + cost controls (Part C) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-surface rounded-[12px] p-4" style={{ border: '1px solid var(--color-border)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs font-semibold text-dim uppercase">Semantic response cache</div>
+            <span className="text-xs text-faint">
+              hit rate{' '}
+              <span className="font-semibold tabular-nums text-text">{ensemble.hitRate == null ? '—' : `${(ensemble.hitRate * 100).toFixed(1)}%`}</span>
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            {[
+              { label: 'Cache hits',  value: ensemble.hits.toLocaleString(),   color: 'var(--color-good)' },
+              { label: 'Cache misses', value: ensemble.misses.toLocaleString(), color: 'var(--color-dim)' },
+              { label: 'Est. saved',  value: fmtUsd(ensemble.saved),           color: 'var(--color-accent)' },
+            ].map(t => (
+              <div key={t.label} className="flex flex-col gap-0.5">
+                <div className="font-semibold tabular-nums" style={{ color: t.color }}>{t.value}</div>
+                <div className="text-xs text-faint">{t.label}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-faint mt-3 leading-snug">Repeat grounded questions served from cache behind a conservative similarity threshold + a cheap verifier; a stale-cited answer is never served.</p>
+        </div>
+
+        <div className="bg-surface rounded-[12px] p-4" style={{ border: '1px solid var(--color-border)' }}>
+          <div className="text-xs font-semibold text-dim uppercase mb-3">Cost controls — caps &amp; breaker</div>
+          {/* Today's spend vs the hard global ceiling */}
+          <div className="flex items-center justify-between text-sm mb-1.5">
+            <span className="text-dim">Today's spend</span>
+            <span className="tabular-nums text-text"><span className="font-semibold">{fmtUsd(todaySpendUsd)}</span> <span className="text-faint">/ ${ceilingUsd} ceiling</span></span>
+          </div>
+          <div className="h-2 rounded-full overflow-hidden bg-raised" role="progressbar" aria-valuenow={Math.round(ceilingPct)} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full rounded-full" style={{ width: `${ceilingPct}%`, background: ceilingBreached ? 'var(--color-danger)' : 'var(--gradient-accent)' }} />
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm mt-4">
+            {[
+              { label: 'Degraded calls', value: ensemble.degraded.toLocaleString(), color: 'var(--color-warn)' },
+              { label: 'Denied calls',   value: ensemble.denied.toLocaleString(),   color: 'var(--color-danger)' },
+            ].map(t => (
+              <div key={t.label} className="flex flex-col gap-0.5">
+                <div className="font-semibold tabular-nums" style={{ color: t.color }}>{t.value}</div>
+                <div className="text-xs text-faint">{t.label}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-faint mt-3 leading-snug">Per-feature + per-session caps degrade to a cheaper/cached path; the global ceiling denies with a clear message; a stalled provider trips a breaker, not the budget.</p>
+        </div>
+      </div>
+
       {/* By feature */}
       {byFeature.length > 0 && (
         <div>
@@ -748,21 +777,19 @@ function AiCostTab() {
 const SETTINGS_KEY = 'prh:settings'
 function SettingsTab() {
   const [appName, setAppName] = useState('Product Reinvention Hub')
-  const [expiry, setExpiry]   = useState('30')
 
   useEffect(() => {
-    try { const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}'); if (s.appName) setAppName(s.appName); if (s.expiry) setExpiry(String(s.expiry)) } catch { /* ignore */ }
+    try { const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}'); if (s.appName) setAppName(s.appName) } catch { /* ignore */ }
   }, [])
 
   function save() {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ appName, expiry: Number(expiry) }))
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ appName }))
     toast.success('Settings saved')
   }
 
   return (
     <div className="flex flex-col gap-4 max-w-md">
       <Input label="App name" value={appName} onChange={e => setAppName(e.target.value)} />
-      <Input label="Default share-link expiry (days)" type="number" value={expiry} onChange={e => setExpiry(e.target.value)} min={1} />
       <p className="text-xs text-faint">Stored locally in this browser for the demo.</p>
       <div><Button variant="primary" size="sm" onClick={save}>Save settings</Button></div>
     </div>

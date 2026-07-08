@@ -96,6 +96,11 @@ service cloud.firestore {
     // ── Seed reports — read-only for all authed; write via Admin SDK ──────────
     match /seedReports/{id}       { allow read: if isAuthed(); allow write: if false; }
 
+    // ── Product AI summaries — read by any authed user (powers the Overview tab's
+    //    instant-load cache); written ONLY server-side by the summarizeProduct
+    //    callable via the Admin SDK (which bypasses these rules). Clients never write. ──
+    match /productSummaries/{pid} { allow read: if isAuthed(); allow write: if false; }
+
     // ── Presence heartbeats ───────────────────────────────────────────────────
     match /presence/{pid}/viewers/{uid} {
       allow read:  if isAuthed();
@@ -104,16 +109,6 @@ service cloud.firestore {
 
     // ── Task templates — ADMIN edits SLA config; all authed read (NewProductModal fallback) ──
     match /taskTemplates/{id} { allow read: if isAuthed(); allow write: if isAdmin(); }
-
-    // ── Share snapshots — public read (share links work unauthenticated); EDITOR/ADMIN create ──
-    // Mutation (delete) requires ADMIN to prevent abuse. getShare reads via Admin SDK but the
-    // frontend share viewer also reads directly, so public read is intentional.
-    match /shares/{shareId} {
-      allow read:   if true;
-      allow create: if canEdit();
-      allow delete: if isAdmin();
-      allow update: if false;
-    }
 
     // ── AI usage telemetry — ADMIN read-only; written via Admin SDK in Functions ──
     // Clients never write aiUsage directly; Functions write it via the Admin SDK
@@ -128,6 +123,20 @@ service cloud.firestore {
     //    via the Admin SDK (which bypasses these rules) in Functions. Denying both sides
     //    keeps the "app never imports the vector store" guardrail enforced two-sided. ──
     match /groundingChunks/{id} {
+      allow read, write: if false;
+    }
+
+    // ── Semantic response cache — server-side ONLY (retrieval seam, Part A). Cached
+    //    answers keyed on their query embedding, evicted by the invalidation trigger.
+    //    Clients never read/write it: it is built + queried via the Admin SDK in Functions. ──
+    match /semanticCache/{id} {
+      allow read, write: if false;
+    }
+
+    // ── AI cost counters + provider circuit-breaker (Part C) — server-side ONLY.
+    //    Rolling per-day / per-session spend + breaker state, written via the Admin SDK by
+    //    the cost guard; the Admin AI Cost tab derives its figures from aiUsage, not these. ──
+    match /costCounters/{id} {
       allow read, write: if false;
     }
 
