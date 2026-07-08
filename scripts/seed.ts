@@ -316,20 +316,27 @@ async function main(): Promise<void> {
   }
 
   // ── Verify worked examples → the two canaries ($1,528 and $2,789) ─────────
+  // A canary miss is FATAL. The mismatch is still recorded in the seed report below
+  // (for diagnosis), but the process then exits non-zero — a broken rating change must
+  // fail the seed (and any gate that runs it), never seed a wrong premium behind a
+  // warning nobody reads. See docs/review/OBSERVATIONS.md D1.
   console.log('\n🧮 Verifying worked examples…')
   const workedExamplePremiums: Record<string, number> = {}
+  const canaryFailures: string[] = []
 
   const ho3 = evaluate(HO3_RATING_PROGRAM, HO3_WORKED_EXAMPLE, makeHO3RtGetter(HO3_RT_TABLES), makeHO3LdGetter(HO3_LD_TABLES))
   workedExamplePremiums[HO3_PRODUCT.refId!] = ho3.finalPremium
   if (ho3.finalPremium !== 1528) {
-    warnings.push(`CRITICAL: HO-3 worked example = ${ho3.finalPremium}, expected $1,528`)
+    const msg = `CRITICAL: HO-3 worked example = ${ho3.finalPremium}, expected $1,528`
+    warnings.push(msg); canaryFailures.push(msg)
     console.error(`  ✗ HO-3 got $${ho3.finalPremium} — expected $1,528!`)
   } else console.log('  ✓ HO-3 $1,528 confirmed')
 
   const gl = evaluate(GL_RATING_PROGRAM, GL_WORKED_EXAMPLE, makeGLRtGetter(GL_RT_TABLES), makeGLLdGetter(GL_LD_TABLES))
   workedExamplePremiums[GL_PRODUCT.refId!] = gl.finalPremium
   if (gl.finalPremium !== 2789) {
-    warnings.push(`CRITICAL: GL worked example = ${gl.finalPremium}, expected $2,789`)
+    const msg = `CRITICAL: GL worked example = ${gl.finalPremium}, expected $2,789`
+    warnings.push(msg); canaryFailures.push(msg)
     console.error(`  ✗ GL got $${gl.finalPremium} — expected $2,789!`)
   } else console.log('  ✓ GL $2,789 confirmed')
 
@@ -349,6 +356,13 @@ async function main(): Promise<void> {
   console.log('\n   💰 Worked example premiums:')
   for (const [pid, prem] of Object.entries(workedExamplePremiums)) {
     console.log(`     ${pid}: $${prem.toLocaleString()}`)
+  }
+
+  // ── Fatal on a canary miss (the seed report above already persisted the detail) ──
+  if (canaryFailures.length > 0) {
+    console.error(`\n❌ Seed FAILED — ${canaryFailures.length} rating canary mismatch(es):`)
+    for (const m of canaryFailures) console.error(`   ${m}`)
+    process.exit(1)
   }
 }
 

@@ -55,6 +55,22 @@ Score legend per cell: **0** absent · **1** poor · **2** weak · **3** compete
 | Surface | Route | layout | typography | spacing/density | color/depth | motion | iconography/SVG | affordance | states | domain-truth | a11y | Current score | Notes |
 |---|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|---|
 | Must-Change-Password | `/must-change-password` | | | | | | | | | | | | `routes/MustChangePassword.tsx`; first-login forced reset. |
+| Share (public) | `/share/:id` | | | | | | | | | | | | `routes/Share.tsx`; public read-only product snapshot (no auth) — added to the instrument in the P1 refresh. |
+
+## Plan baseline refresh (P1 — verification prompt)
+
+Re-confirmed against live code at commit `730efcf` on the running emulator stack (both
+canaries green: **HO-3 $1,528**, **GL $2,789**; app serves). The instrument was checked
+against the [App.tsx](../app/src/App.tsx) route table and now lists **every** user-facing
+surface — the public **Share** viewer (`/share/:id`) was the one route missing from the
+prior baseline and has been added above.
+
+This is the **instrument**, not the scoring pass: the blank-score rows
+(**Product › Overview**, **Feedback**, **Must-Change-Password**, **Share**) are intentionally
+unscored and, together with every scored surface, will be **re-scored at the end of the
+plan**. No UI code was touched in P1 (the only code change was making the seed canary miss
+fatal — see [review/ENHANCEMENT_BACKLOG.md](review/ENHANCEMENT_BACKLOG.md) D1), so the
+existing Batch-1/Batch-2 scores below remain valid as the entry baseline.
 
 ## Batch 1 — scoring pass (Landing · Sign-in · Home · Products+framework · Coverages · Explorer · States)
 
