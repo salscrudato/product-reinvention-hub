@@ -8,6 +8,8 @@ import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API
 import type { SseResponse } from './runtime'
 import { TOOLS, SYSTEM_PROMPT, runTool } from './tools'
 import type { ToolOutput } from './tools'
+import { emptyUsage, addUsage, recordUsage } from './telemetry'
+import type { UsageAccum } from './telemetry'
 
 export interface AgentOptions {
   system?:      string             // stable feature prompt — cached alongside the house rules
@@ -19,6 +21,9 @@ export interface AgentOptions {
   // supply this to handle their own extra tools (e.g. emit_determination) while still
   // delegating the grounding tools to runTool. Keeps this the single agent loop.
   runTool?:     (name: string, input: Record<string, unknown>) => Promise<ToolOutput>
+  // When provided, per-turn API usage (input/output/cache tokens) is accumulated here.
+  // The caller records it after the agent run so one Usage record covers the full request.
+  usageAccum?:  UsageAccum
 }
 
 /**
@@ -89,6 +94,7 @@ export async function runChatAgent(
       res,
     )
     convo.push({ role: 'assistant', content: final.content })
+    if (opts.usageAccum) addUsage(opts.usageAccum, final.usage)
 
     const toolUses = final.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
     if (final.stop_reason !== 'tool_use' || toolUses.length === 0) break
@@ -122,6 +128,9 @@ export const chat = onRequest(
     catch (e) { res.status(401).json({ error: e instanceof AuthError ? e.message : 'Unauthorized' }); return }
 
     openSse(res)
+    const usageAccum = emptyUsage()
+    const t0 = Date.now()
+    let ok = true
     try {
       const body     = (req.body ?? {}) as ChatBody
       const incoming = (body.messages ?? []).filter(m => m.content?.trim())
@@ -135,12 +144,14 @@ export const chat = onRequest(
         ? `The user is focused on product ${body.productId}. Prefer that product when a productId is needed.`
         : undefined
 
-      await runChatAgent(anthropic(), messages, res, { context: focus })
+      await runChatAgent(anthropic(), messages, res, { context: focus, usageAccum })
       send(res, { t: 'done' })
     } catch (err) {
+      ok = false
       send(res, { t: 'error', message: err instanceof Error ? err.message : 'AI request failed.' })
     } finally {
       res.end()
+      void recordUsage({ feature: 'chat', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
     }
   },
 )

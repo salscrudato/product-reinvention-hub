@@ -12,6 +12,8 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { createHash } from 'crypto'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY } from './runtime'
+import { emptyUsage, addUsage, recordUsage } from './telemetry'
+import type { UsageAccum } from './telemetry'
 
 const DEFAULT_INSTRUCTION =
   'Recent U.S. homeowners insurance rate filings, regulatory changes, and competitor HO-3 product launches.'
@@ -85,8 +87,9 @@ function buildPortfolioContext(products: ProductInfo[]): string {
 
 /** Run one instruction through Claude + web search and parse the JSON items.
  *  portfolioCtx is appended to the user message so Claude can tailor the search.
- *  Handles the server-tool `pause_turn` continuation loop. */
-async function fetchForInstruction(instruction: string, portfolioCtx: string): Promise<NewsItem[]> {
+ *  Handles the server-tool `pause_turn` continuation loop.
+ *  When usageAccum is provided, per-turn API usage is accumulated into it. */
+async function fetchForInstruction(instruction: string, portfolioCtx: string, usageAccum?: UsageAccum): Promise<NewsItem[]> {
   const client      = anthropic()
   const userContent = portfolioCtx ? `${instruction}\n\n${portfolioCtx}` : instruction
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: userContent }]
@@ -102,6 +105,7 @@ async function fetchForInstruction(instruction: string, portfolioCtx: string): P
       tools:       [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }] as unknown as Anthropic.Tool[],
       messages,
     })
+    if (usageAccum) addUsage(usageAccum, res.usage)
     const text = res.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n')
     if (text.trim()) finalText = text
     if (res.stop_reason === 'pause_turn') { messages.push({ role: 'assistant', content: res.content }); continue }
@@ -195,12 +199,18 @@ export const refreshNews = onCall(
     const instruction  = (prefDoc.data()?.instruction as string | undefined)?.trim() || DEFAULT_INSTRUCTION
     const products     = await loadProducts()
     const portfolioCtx = buildPortfolioContext(products)
+    const usageAccum   = emptyUsage()
+    const t0 = Date.now()
+    let ok = true
     try {
-      const items  = await fetchForInstruction(instruction, portfolioCtx)
+      const items  = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
       const stored = await storeItems(items, products)
       return { found: items.length, stored }
     } catch (err) {
+      ok = false
       return { found: 0, stored: 0, error: err instanceof Error ? err.message : 'News fetch failed' }
+    } finally {
+      void recordUsage({ feature: 'refreshNews', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })
     }
   },
 )
@@ -217,11 +227,16 @@ export const nightlyNews = onSchedule(
       .map(d => (d.data().instruction as string | undefined)?.trim())
       .filter((s): s is string => !!s)
     const unique = [...new Set(instructions.length ? instructions : [DEFAULT_INSTRUCTION])]
+    // Accumulate usage across all instructions; one record per nightly run.
+    const usageAccum = emptyUsage()
+    const t0 = Date.now()
+    let ok = true
     for (const instruction of unique) {
       try {
-        const items = await fetchForInstruction(instruction, portfolioCtx)
+        const items = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
         await storeItems(items, products)
-      } catch { /* one bad instruction shouldn't fail the whole run */ }
+      } catch { ok = false /* one bad instruction shouldn't fail the whole run */ }
     }
+    void recordUsage({ feature: 'nightlyNews', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })
   },
 )

@@ -7,6 +7,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { ANTHROPIC_API_KEY, anthropic, MODEL_FAST } from './runtime'
+import { emptyUsage, addUsage, recordUsage } from './telemetry'
 
 if (!getApps().length) initializeApp()
 
@@ -53,23 +54,34 @@ export const describeForm = onCall<DescribeFormInput>(
       dynFields ? `Dynamic fields: ${dynFields}` : '',
     ].filter(Boolean).join('\n')
 
-    const msg = await anthropic().messages.create({
-      model: MODEL_FAST,
-      max_tokens: 200,
-      system:
-        'You are an insurance policy analyst. Write a plain-English 2-3 sentence description of the ' +
-        'given insurance form for a product manager audience. Be factual, concise, and accurate. ' +
-        'Do not invent coverage details not provided in the input.',
-      messages: [{ role: 'user', content: prompt }],
-    })
+    const usageAccum = emptyUsage()
+    const t0 = Date.now()
+    let ok = true
+    try {
+      const msg = await anthropic().messages.create({
+        model: MODEL_FAST,
+        max_tokens: 200,
+        system:
+          'You are an insurance policy analyst. Write a plain-English 2-3 sentence description of the ' +
+          'given insurance form for a product manager audience. Be factual, concise, and accurate. ' +
+          'Do not invent coverage details not provided in the input.',
+        messages: [{ role: 'user', content: prompt }],
+      })
+      addUsage(usageAccum, msg.usage)
 
-    const description = (msg.content.find((b) => b.type === 'text')?.text ?? '').trim()
-    if (!description) throw new HttpsError('internal', 'AI returned an empty description.')
+      const description = (msg.content.find((b) => b.type === 'text')?.text ?? '').trim()
+      if (!description) throw new HttpsError('internal', 'AI returned an empty description.')
 
-    // Write back to the form document. This is a direct admin SDK write (no mutate()
-    // audit overhead) because description is a derived/cached field, not an authored change.
-    await ref.set({ description }, { merge: true })
+      // Write back to the form document. This is a direct admin SDK write (no mutate()
+      // audit overhead) because description is a derived/cached field, not an authored change.
+      await ref.set({ description }, { merge: true })
 
-    return { description, cached: false }
+      return { description, cached: false }
+    } catch (err) {
+      ok = false
+      throw err
+    } finally {
+      void recordUsage({ feature: 'describeForm', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+    }
   },
 )

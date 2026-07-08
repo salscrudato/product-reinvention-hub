@@ -18,6 +18,6 @@
       "@pf/shared": ["../shared/src/index.ts"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "eval"],
   "exclude": ["lib", "node_modules"]
 }

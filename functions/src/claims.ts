@@ -16,6 +16,7 @@ import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API
 import { runChatAgent } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
+import { emptyUsage, addUsage, recordUsage } from './telemetry'
 
 // ─── Structured determination (the card contract) ──────────────────────────────
 // The model calls this exactly once, as its final action, when the user has
@@ -180,6 +181,9 @@ export const analyzeClaim = onRequest(
     catch (e) { res.status(401).json({ error: e instanceof AuthError ? e.message : 'Unauthorized' }); return }
 
     openSse(res)
+    const usageAccum = emptyUsage()
+    const t0 = Date.now()
+    let ok = true
     try {
       const body     = (req.body ?? {}) as ClaimBody
       const incoming = (body.messages ?? []).filter(m => m.content?.trim())
@@ -241,18 +245,21 @@ export const analyzeClaim = onRequest(
         : ''
 
       await runChatAgent(anthropic(), messages, res, {
-        system:    CLAIMS_SYSTEM,        // stable → cached with the house rules
-        context:   lobHint || undefined, // volatile per-request line hint → never cached
-        tools:     CLAIMS_TOOLS,
-        runTool:   runClaimsTool,
-        maxTokens: 2600,
-        maxTurns:  7,
+        system:      CLAIMS_SYSTEM,
+        context:     lobHint || undefined,
+        tools:       CLAIMS_TOOLS,
+        runTool:     runClaimsTool,
+        maxTokens:   2600,
+        maxTurns:    7,
+        usageAccum,
       })
       send(res, { t: 'done' })
     } catch (err) {
+      ok = false
       send(res, { t: 'error', message: err instanceof Error ? err.message : 'Analysis failed.' })
     } finally {
       res.end()
+      void recordUsage({ feature: 'analyzeClaim', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
     }
   },
 )
@@ -301,22 +308,33 @@ export const identifyBaseForm = onCall<IdentifyBody>(
     }
     content.push({ type: 'text', text: 'Identify this form, then call identify_form exactly once.' })
 
-    const msg = await anthropic().messages.create({
-      model:       MODEL,
-      max_tokens:  400,
-      system:      'You read the header of an uploaded P&C insurance form and report its title, form number, edition and line (HO/GL/OTHER) exactly as the document shows. Do not invent anything.',
-      tools:       [IDENTIFY_TOOL],
-      tool_choice: { type: 'tool', name: 'identify_form' },
-      messages:    [{ role: 'user', content }],
-    }, { timeout: 45_000 })
-    const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-    const out = (tu?.input as { title?: string; formNumber?: string; edition?: string; lob?: string } | undefined) ?? {}
-    const lob = (out.lob ?? '').trim().toUpperCase()
-    return {
-      title:      (out.title ?? body.fileName ?? 'Base form').trim(),
-      formNumber: (out.formNumber ?? '').trim(),
-      edition:    (out.edition ?? '').trim(),
-      lob:        lob === 'HO' || lob === 'GL' ? lob : '',
+    const t0 = Date.now()
+    let ok = true
+    const usageAccum = emptyUsage()
+    try {
+      const msg = await anthropic().messages.create({
+        model:       MODEL,
+        max_tokens:  400,
+        system:      'You read the header of an uploaded P&C insurance form and report its title, form number, edition and line (HO/GL/OTHER) exactly as the document shows. Do not invent anything.',
+        tools:       [IDENTIFY_TOOL],
+        tool_choice: { type: 'tool', name: 'identify_form' },
+        messages:    [{ role: 'user', content }],
+      }, { timeout: 45_000 })
+      addUsage(usageAccum, msg.usage)
+      const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+      const out = (tu?.input as { title?: string; formNumber?: string; edition?: string; lob?: string } | undefined) ?? {}
+      const lob = (out.lob ?? '').trim().toUpperCase()
+      return {
+        title:      (out.title ?? body.fileName ?? 'Base form').trim(),
+        formNumber: (out.formNumber ?? '').trim(),
+        edition:    (out.edition ?? '').trim(),
+        lob:        lob === 'HO' || lob === 'GL' ? lob : '',
+      }
+    } catch (err) {
+      ok = false
+      throw err
+    } finally {
+      void recordUsage({ feature: 'identifyBaseForm', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
     }
   },
 )

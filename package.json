@@ -16,7 +16,8 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "build": "pnpm --filter app build",
-    "deploy": "pnpm build && firebase deploy"
+    "deploy": "pnpm build && firebase deploy",
+    "eval": "tsx functions/eval/runner.ts"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",

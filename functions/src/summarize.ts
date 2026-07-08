@@ -8,6 +8,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY } from './runtime'
+import { emptyUsage, addUsage, recordUsage } from './telemetry'
 
 interface CoverageMeta { name: string; requirement?: string; rated?: boolean; sub?: boolean; forms?: string[]; limit?: string }
 interface SummarizeBody {
@@ -57,21 +58,31 @@ export const summarizeProduct = onCall<SummarizeBody>(
 
     // Compact, deterministic metadata block — the only grounding the model gets.
     const meta = JSON.stringify(p)
-    const msg = await anthropic().messages.create({
-      model:       MODEL_FAST,
-      max_tokens:  1200,
-      system:
-        'You are a P&C insurance product analyst. Summarize a product for its product manager ' +
-        'using ONLY the structured metadata provided. When a `baseForm` is present, treat it as ' +
-        'the coverage form the product is built on — ground the headline/overview in it and cite ' +
-        'its form number (e.g. "Built on HO 00 03"). Be concise, concrete and executive in tone. ' +
-        'Never invent facts. Then call product_summary once.',
-      tools:       [SUMMARY_TOOL],
-      tool_choice: { type: 'tool', name: 'product_summary' },
-      messages:    [{ role: 'user', content: `PRODUCT METADATA (JSON):\n\n${meta}\n\nSummarize this product, then call product_summary.` }],
-    }, { timeout: 45_000 })
-
-    const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-    return (tu?.input as Record<string, unknown> | undefined) ?? {}
+    const usageAccum = emptyUsage()
+    const t0 = Date.now()
+    let ok = true
+    try {
+      const msg = await anthropic().messages.create({
+        model:       MODEL_FAST,
+        max_tokens:  1200,
+        system:
+          'You are a P&C insurance product analyst. Summarize a product for its product manager ' +
+          'using ONLY the structured metadata provided. When a `baseForm` is present, treat it as ' +
+          'the coverage form the product is built on — ground the headline/overview in it and cite ' +
+          'its form number (e.g. "Built on HO 00 03"). Be concise, concrete and executive in tone. ' +
+          'Never invent facts. Then call product_summary once.',
+        tools:       [SUMMARY_TOOL],
+        tool_choice: { type: 'tool', name: 'product_summary' },
+        messages:    [{ role: 'user', content: `PRODUCT METADATA (JSON):\n\n${meta}\n\nSummarize this product, then call product_summary.` }],
+      }, { timeout: 45_000 })
+      addUsage(usageAccum, msg.usage)
+      const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+      return (tu?.input as Record<string, unknown> | undefined) ?? {}
+    } catch (err) {
+      ok = false
+      throw err
+    } finally {
+      void recordUsage({ feature: 'summarizeProduct', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+    }
   },
 )

@@ -19,6 +19,8 @@ import {
   cleanCoverages, cleanForms, cleanRules, cleanRating,
   type ExtractionSection,
 } from '@pf/shared'
+import { emptyUsage, addUsage, recordUsage } from './telemetry'
+import type { UsageAccum } from './telemetry'
 
 interface ExtractBody {
   productName?: string
@@ -187,6 +189,7 @@ async function runSection(
   instruction: string,
   toolName:    string,
   maxTokens:   number,
+  usageAccum?: UsageAccum,
 ): Promise<Record<string, unknown>> {
   const msg = await client.messages.create({
     model:       MODEL,
@@ -196,6 +199,7 @@ async function runSection(
     tool_choice: { type: 'tool', name: toolName },
     messages:    [{ role: 'user', content: [docBlock, { type: 'text', text: instruction }] }],
   }, { timeout: 90_000 })
+  if (usageAccum) addUsage(usageAccum, msg.usage)
   const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
   return (tu?.input as Record<string, unknown> | undefined) ?? {}
 }
@@ -217,6 +221,9 @@ export const extractCoverages = onRequest(
     }
 
     openSse(res)
+    const usageAccum = emptyUsage()
+    const t0 = Date.now()
+    let ok = true
     try {
       const body = (req.body ?? {}) as ExtractBody
 
@@ -262,7 +269,7 @@ export const extractCoverages = onRequest(
 
       for (const s of sections) {
         send(res, { t: 'tool', name: s.key, phase: 'start' })
-        const input = await runSection(client, docBlock, s.instruction, s.tool.name, s.maxTokens)
+        const input = await runSection(client, docBlock, s.instruction, s.tool.name, s.maxTokens, usageAccum)
         const section = s.clean(input, verifyText)
         const n = section.items.length
         send(res, { t: 'tool', name: s.key, phase: 'end', summary: `${n} ${s.label}${n === 1 ? '' : 's'}` })
@@ -271,9 +278,11 @@ export const extractCoverages = onRequest(
 
       send(res, { t: 'done' })
     } catch (err) {
+      ok = false
       send(res, { t: 'error', message: err instanceof Error ? err.message : 'Extraction failed.' })
     } finally {
       res.end()
+      void recordUsage({ feature: 'extractCoverages', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
     }
   },
 )

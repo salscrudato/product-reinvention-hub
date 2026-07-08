@@ -115,6 +115,14 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // ── AI usage telemetry — ADMIN read-only; written via Admin SDK in Functions ──
+    // Clients never write aiUsage directly; Functions write it via the Admin SDK
+    // (which bypasses client rules). VIEWER/EDITOR have no visibility into cost data.
+    match /aiUsage/{id} {
+      allow read:  if isAdmin();
+      allow write: if false;
+    }
+
     // ── Deny everything not explicitly matched ────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

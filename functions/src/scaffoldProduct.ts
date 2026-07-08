@@ -20,11 +20,12 @@
 import { onRequest } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, openSse, send, ANTHROPIC_API_KEY } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
 import { runChatAgent } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
 import { cleanScaffold, resolveLobByRefId, type ScaffoldPlan } from '@pf/shared'
+import { emptyUsage, recordUsage } from './telemetry'
 
 // ─── The forced final tool (the scaffold card contract) ─────────────────────────
 // Field fragments shared with extract.ts so every proposal is cited by construction.
@@ -187,6 +188,9 @@ export const scaffoldProduct = onRequest(
     }
 
     openSse(res)
+    const usageAccum = emptyUsage()
+    const t0 = Date.now()
+    let ok = true
     try {
       const body        = (req.body ?? {}) as ScaffoldBody
       const instruction = body.instruction?.trim()
@@ -214,17 +218,20 @@ export const scaffoldProduct = onRequest(
       }
 
       await runChatAgent(anthropic(), [{ role: 'user', content: parts.join('\n\n') }], res, {
-        system:    SCAFFOLD_SYSTEM,
-        tools:     SCAFFOLD_TOOLS,
-        runTool:   runScaffoldTool,
-        maxTokens: 2600,
-        maxTurns:  8,
+        system:      SCAFFOLD_SYSTEM,
+        tools:       SCAFFOLD_TOOLS,
+        runTool:     runScaffoldTool,
+        maxTokens:   2600,
+        maxTurns:    8,
+        usageAccum,
       })
       send(res, { t: 'done' })
     } catch (err) {
+      ok = false
       send(res, { t: 'error', message: err instanceof Error ? err.message : 'Scaffold failed.' })
     } finally {
       res.end()
+      void recordUsage({ feature: 'scaffoldProduct', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
     }
   },
 )

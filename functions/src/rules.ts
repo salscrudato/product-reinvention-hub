@@ -15,10 +15,11 @@
 import { onRequest } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, openSse, send, ANTHROPIC_API_KEY } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
 import { runChatAgent } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
+import { emptyUsage, recordUsage } from './telemetry'
 
 // ─── Structured draft (the composer card contract) ──────────────────────────────
 // The model calls this exactly once, as its final action. Its input is the payload
@@ -179,6 +180,9 @@ export const draftRule = onRequest(
     }
 
     openSse(res)
+    const usageAccum = emptyUsage()
+    const t0 = Date.now()
+    let ok = true
     try {
       const body        = (req.body ?? {}) as DraftBody
       const instruction = body.instruction?.trim()
@@ -205,26 +209,27 @@ export const draftRule = onRequest(
         if (name === 'emit_rule_draft') {
           const { draft, warnings } = await verifyDraft(input)
           send(res, { t: 'json', key: 'rule_draft', value: { ...draft, warnings } })
-          // Report the verification result back so the model can correct a dropped
-          // reference on a subsequent turn if it wants to; recorded ends the loop.
           return { content: JSON.stringify({ recorded: true, warnings }), summary: warnings.length ? `draft ready (${warnings.length} dropped)` : 'draft ready' }
         }
         return runTool(name, input)
       }
 
       await runChatAgent(anthropic(), messages, res, {
-        system:    RULES_SYSTEM,   // stable → cached with the house rules
-        context:   focus,          // volatile (focus product) → never cached
-        tools:     RULES_TOOLS,
-        runTool:   runDraftTool,
-        maxTokens: 1800,
-        maxTurns:  7,
+        system:      RULES_SYSTEM,
+        context:     focus,
+        tools:       RULES_TOOLS,
+        runTool:     runDraftTool,
+        maxTokens:   1800,
+        maxTurns:    7,
+        usageAccum,
       })
       send(res, { t: 'done' })
     } catch (err) {
+      ok = false
       send(res, { t: 'error', message: err instanceof Error ? err.message : 'Draft failed.' })
     } finally {
       res.end()
+      void recordUsage({ feature: 'draftRule', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })
     }
   },
 )

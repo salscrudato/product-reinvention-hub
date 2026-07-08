@@ -10,6 +10,20 @@ import { useUser } from '../context/useUser'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
 import type { User, AuditEvent, Version, SeedReport, Role } from '@pf/shared'
 
+interface AiUsageDoc {
+  id:               string
+  feature:          string
+  model:            string
+  inputTokens:      number
+  outputTokens:     number
+  cacheReadTokens:  number
+  cacheWriteTokens: number
+  latencyMs:        number
+  ok:               boolean
+  estimatedUsd:     number
+  at:               unknown
+}
+
 type UserDoc      = User & { id: string }
 type AuditDoc     = AuditEvent & { id: string }
 type VersionDoc   = Version & { id: string }
@@ -52,11 +66,12 @@ export default function Admin() {
       </div>
       <Tabs
         tabs={[
-          { id: 'users',  label: 'Users'       },
-          { id: 'shares', label: 'Share Links'  },
-          { id: 'audit',  label: 'Audit Log'    },
-          { id: 'seed',   label: 'Seed Report'  },
-          { id: 'settings', label: 'Settings'  },
+          { id: 'users',    label: 'Users'       },
+          { id: 'shares',   label: 'Share Links'  },
+          { id: 'audit',    label: 'Audit Log'    },
+          { id: 'seed',     label: 'Seed Report'  },
+          { id: 'ai-cost',  label: 'AI Cost'      },
+          { id: 'settings', label: 'Settings'     },
         ]}
         active={tab} onChange={setTab}
       />
@@ -64,6 +79,7 @@ export default function Admin() {
       {tab === 'shares'   && <SharesTab />}
       {tab === 'audit'    && <AuditTab />}
       {tab === 'seed'     && <SeedTab />}
+      {tab === 'ai-cost'  && <AiCostTab />}
       {tab === 'settings' && <SettingsTab />}
     </div>
   )
@@ -401,6 +417,217 @@ function SeedTab() {
           <span className="text-xs font-semibold text-warn uppercase">Warnings</span>
           {latest.warnings.map((w, i) => <span key={i} className="text-xs text-dim">• {w}</span>)}
         </div>
+      )}
+    </div>
+  )
+}
+
+// ─── AI Cost ────────────────────────────────────────────────────────────────
+
+type Window = '7d' | '30d' | '90d' | 'all'
+
+const WINDOWS: { id: Window; label: string }[] = [
+  { id: '7d',  label: 'Last 7 days'  },
+  { id: '30d', label: 'Last 30 days' },
+  { id: '90d', label: 'Last 90 days' },
+  { id: 'all', label: 'All time'     },
+]
+
+function windowStart(w: Window): number {
+  if (w === 'all') return 0
+  const days: Record<Window, number> = { '7d': 7, '30d': 30, '90d': 90, all: 0 }
+  return Date.now() - days[w] * 86_400_000
+}
+
+function fmtUsd(n: number): string {
+  return n >= 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(6)}`
+}
+
+function fmtTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+  return String(n)
+}
+
+function AiCostTab() {
+  const [records, setRecords] = useState<AiUsageDoc[] | null>(null)
+  const [win, setWin]         = useState<Window>('30d')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    // Read-only; server-side ADMIN gate in Firestore rules + Admin component gate above.
+    adapter.db.list<AiUsageDoc>('aiUsage', { orderBy: [{ field: 'at', dir: 'desc' }], limit: 2000 })
+      .then(setRecords)
+      .catch(() => setRecords([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const filtered = useMemo(() => {
+    if (!records) return []
+    const cutoff = windowStart(win)
+    return records.filter(r => (toMillis(r.at) ?? 0) >= cutoff)
+  }, [records, win])
+
+  // Aggregate totals
+  const totals = useMemo(() => {
+    const base = { calls: 0, usd: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, latencyMs: 0, errors: 0 }
+    for (const r of filtered) {
+      base.calls++
+      base.usd       += r.estimatedUsd    ?? 0
+      base.input     += r.inputTokens     ?? 0
+      base.output    += r.outputTokens    ?? 0
+      base.cacheRead += r.cacheReadTokens ?? 0
+      base.cacheWrite += r.cacheWriteTokens ?? 0
+      base.latencyMs += r.latencyMs       ?? 0
+      if (!r.ok) base.errors++
+    }
+    return base
+  }, [filtered])
+
+  // By feature
+  const byFeature = useMemo(() => {
+    const map = new Map<string, typeof totals>()
+    for (const r of filtered) {
+      const f = r.feature ?? 'unknown'
+      if (!map.has(f)) map.set(f, { calls: 0, usd: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, latencyMs: 0, errors: 0 })
+      const a = map.get(f)!
+      a.calls++; a.usd += r.estimatedUsd ?? 0; a.input += r.inputTokens ?? 0
+      a.output += r.outputTokens ?? 0; a.cacheRead += r.cacheReadTokens ?? 0
+      a.cacheWrite += r.cacheWriteTokens ?? 0; a.latencyMs += r.latencyMs ?? 0
+      if (!r.ok) a.errors++
+    }
+    return [...map.entries()].sort((a, b) => b[1].usd - a[1].usd)
+  }, [filtered])
+
+  // By model
+  const byModel = useMemo(() => {
+    const map = new Map<string, typeof totals>()
+    for (const r of filtered) {
+      const m = r.model ?? 'unknown'
+      if (!map.has(m)) map.set(m, { calls: 0, usd: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, latencyMs: 0, errors: 0 })
+      const a = map.get(m)!
+      a.calls++; a.usd += r.estimatedUsd ?? 0; a.input += r.inputTokens ?? 0
+      a.output += r.outputTokens ?? 0; a.cacheRead += r.cacheReadTokens ?? 0
+      a.cacheWrite += r.cacheWriteTokens ?? 0; a.latencyMs += r.latencyMs ?? 0
+      if (!r.ok) a.errors++
+    }
+    return [...map.entries()].sort((a, b) => b[1].usd - a[1].usd)
+  }, [filtered])
+
+  const totalTokens = totals.input + totals.output + totals.cacheRead + totals.cacheWrite
+  const cacheHitRatio = totalTokens > 0 ? totals.cacheRead / totalTokens : 0
+  const avgLatency    = totals.calls > 0 ? Math.round(totals.latencyMs / totals.calls) : 0
+
+  if (loading) return <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+  if (!records || records.length === 0) return (
+    <EmptyState
+      icon={<IconFileClock size={26} />}
+      title="No AI usage data yet"
+      description="Usage records appear here after the first AI call is made."
+    />
+  )
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Window selector */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-xs font-medium text-dim uppercase">Window</span>
+        <div className="flex gap-1">
+          {WINDOWS.map(w => (
+            <button
+              key={w.id}
+              onClick={() => setWin(w.id)}
+              className={`px-3 py-1 rounded-[8px] text-xs font-medium transition-colors ${win === w.id ? 'text-white' : 'text-dim hover:text-text bg-surface'}`}
+              style={win === w.id ? { background: 'var(--gradient-accent)' } : { border: '1px solid var(--color-border)' }}
+            >{w.label}</button>
+          ))}
+        </div>
+        {filtered.length < (records?.length ?? 0) && (
+          <span className="text-xs text-faint ml-auto">{filtered.length} / {records?.length} records</span>
+        )}
+      </div>
+
+      {/* Summary tiles */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total spend', value: fmtUsd(totals.usd) },
+          { label: 'Total calls', value: totals.calls.toLocaleString() },
+          { label: 'Cache-hit ratio', value: `${(cacheHitRatio * 100).toFixed(1)}%` },
+          { label: 'Avg latency', value: `${avgLatency.toLocaleString()} ms` },
+        ].map(t => (
+          <div key={t.label} className="bg-surface rounded-[12px] p-3" style={{ border: '1px solid var(--color-border)' }}>
+            <div className="text-lg font-bold text-text tabular-nums">{t.value}</div>
+            <div className="text-xs text-faint">{t.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Token volume */}
+      <div className="bg-surface rounded-[12px] p-4" style={{ border: '1px solid var(--color-border)' }}>
+        <div className="text-xs font-semibold text-dim uppercase mb-3">Token volume</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+          {[
+            { label: 'Input', value: fmtTokens(totals.input), color: 'var(--color-accent)' },
+            { label: 'Output', value: fmtTokens(totals.output), color: 'var(--color-good)' },
+            { label: 'Cache read', value: fmtTokens(totals.cacheRead), color: 'var(--color-warn)' },
+            { label: 'Cache write', value: fmtTokens(totals.cacheWrite), color: 'var(--color-dim)' },
+          ].map(t => (
+            <div key={t.label} className="flex flex-col gap-0.5">
+              <div className="font-semibold tabular-nums" style={{ color: t.color }}>{t.value}</div>
+              <div className="text-xs text-faint">{t.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* By feature */}
+      {byFeature.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-dim uppercase mb-2">By feature</div>
+          <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 px-4 py-2 text-[11px] font-semibold text-faint uppercase bg-raised">
+              <span>Feature</span><span>Calls</span><span>Tokens</span><span>Cost</span><span>Errors</span>
+            </div>
+            {byFeature.map(([feat, a]) => (
+              <div key={feat} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-center px-4 py-2.5 text-sm bg-surface" style={{ borderTop: '1px solid var(--color-border)' }}>
+                <span className="font-mono text-text text-xs truncate">{feat}</span>
+                <span className="text-dim tabular-nums text-right">{a.calls}</span>
+                <span className="text-dim tabular-nums text-right">{fmtTokens(a.input + a.output + a.cacheRead)}</span>
+                <span className="font-semibold tabular-nums text-right" style={{ color: 'var(--color-accent)' }}>{fmtUsd(a.usd)}</span>
+                <span className={`tabular-nums text-right ${a.errors > 0 ? 'text-danger' : 'text-faint'}`}>{a.errors}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* By model */}
+      {byModel.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold text-dim uppercase mb-2">By model</div>
+          <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2 text-[11px] font-semibold text-faint uppercase bg-raised">
+              <span>Model</span><span>Calls</span><span>Tokens</span><span>Cost</span>
+            </div>
+            {byModel.map(([model, a]) => (
+              <div key={model} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 items-center px-4 py-2.5 text-sm bg-surface" style={{ borderTop: '1px solid var(--color-border)' }}>
+                <span className="font-mono text-text text-xs truncate">{model}</span>
+                <span className="text-dim tabular-nums text-right">{a.calls}</span>
+                <span className="text-dim tabular-nums text-right">{fmtTokens(a.input + a.output + a.cacheRead)}</span>
+                <span className="font-semibold tabular-nums text-right" style={{ color: 'var(--color-accent)' }}>{fmtUsd(a.usd)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {filtered.length === 0 && (
+        <EmptyState
+          icon={<IconFileClock size={26} />}
+          title="No records in this window"
+          description="Select a wider time window or wait for AI calls to be made."
+        />
       )}
     </div>
   )
