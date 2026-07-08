@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { evaluateRules, resolveLob } from '@pf/shared'
-import type { RuleCategory, SelectionContext, RulesResult, HoOccupancy } from '@pf/shared'
+import type { RuleCategory, SelectionContext, PASelectionContext, PaVehicleUse, RulesResult, HoOccupancy } from '@pf/shared'
 import { useProductCtx } from '../../context/useProductCtx'
 import type { WithId } from '../../context/ProductContext'
 import { useUser } from '../../context/useUser'
@@ -21,7 +21,64 @@ import type { Rule } from '@pf/shared'
 const CAT_COLOR: Record<RuleCategory, 'purple'|'blue'|'warn'> = { PRODUCT: 'purple', RATING: 'blue', FORMS: 'warn' }
 const CAT_ORDER: RuleCategory[] = ['PRODUCT', 'RATING', 'FORMS']
 
-// ─── Simulate panel ───────────────────────────────────────────────────────────
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+const selectCls = 'h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-accent/25'
+const usd = (n: number) => `$${n.toLocaleString()}`
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="flex items-center gap-2"><span className="text-xs text-dim w-36 shrink-0">{label}</span>{children}</div>
+}
+
+/** Engine result column — shared by both Simulate panels (violations, forms, blocked options). */
+function EngineResultPanel({ result }: { result: RulesResult | null }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm font-semibold text-text">Engine result</p>
+      {!result ? <Skeleton className="h-32" /> : (
+        <>
+          {result.violations.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-faint uppercase tracking-wide">Violations</p>
+              {result.violations.map((v, i) => (
+                <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-[8px] text-sm"
+                  style={{ background: v.severity === 'warning'
+                    ? 'color-mix(in srgb, var(--color-warn) 8%, var(--color-surface))'
+                    : 'color-mix(in srgb, var(--color-danger) 6%, var(--color-surface))' }}>
+                  <span className={`text-xs ${v.severity === 'warning' ? 'text-warn' : 'text-danger'}`}>{v.message}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-good"><IconCheckCircle size={14} />No violations — this submission is valid</div>
+          )}
+
+          <div>
+            <p className="text-xs font-medium text-faint uppercase tracking-wide mb-2">Forms that attach ({result.formsThatAttach.length})</p>
+            <div className="flex flex-wrap gap-1.5">
+              {result.formsThatAttach.map(fn => <Badge key={fn} label={fn} color="blue" mono />)}
+            </div>
+          </div>
+
+          {Object.entries(result.availableOptions).map(([tableRef, opts]) => {
+            const blocked = opts.filter(o => !o.available)
+            if (!blocked.length) return null
+            return (
+              <div key={tableRef}>
+                <p className="text-xs font-medium text-faint uppercase tracking-wide mb-1">{tableRef} — blocked options</p>
+                {blocked.map(o => (
+                  <div key={o.value} className="text-xs text-warn leading-snug">{o.label}: {o.violationReason}</div>
+                ))}
+              </div>
+            )
+          })}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Personal Home Simulate panel ──────────────────────────────────────────────
 
 const DEFAULT_SEL: SelectionContext = {
   riskState: 'TX', covELimit: 300000, covFLimit: 1000, allPerilDed: 1000,
@@ -44,15 +101,8 @@ const COVF   = [1000, 2000, 5000]
 const DED    = [500, 1000, 2500, 5000]
 const WHPCT  = [1, 2, 5]
 const DEVICE = [{ v: 'none', l: 'None' }, { v: 'local', l: 'Local alarm' }, { v: 'central', l: 'Central station' }]
-const usd = (n: number) => `$${n.toLocaleString()}`
 
-const selectCls = 'h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-accent/25'
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="flex items-center gap-2"><span className="text-xs text-dim w-36 shrink-0">{label}</span>{children}</div>
-}
-
-function SimulatePanel({ sel, onChange, result, coastal, states }: {
+function PHSimulatePanel({ sel, onChange, result, coastal, states }: {
   sel: SelectionContext
   onChange: (p: Partial<SelectionContext>) => void
   result: RulesResult | null
@@ -69,7 +119,6 @@ function SimulatePanel({ sel, onChange, result, coastal, states }: {
   ]
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-      {/* Inputs — every field the engine reads, so every branch is reachable */}
       <div className="flex flex-col gap-2.5">
         <p className="text-sm font-semibold text-text">Sample submission</p>
 
@@ -134,57 +183,137 @@ function SimulatePanel({ sel, onChange, result, coastal, states }: {
         ))}
       </div>
 
-      {/* Results — the engine's actual output */}
-      <div className="flex flex-col gap-3">
-        <p className="text-sm font-semibold text-text">Engine result</p>
-        {!result ? <Skeleton className="h-32" /> : (
-          <>
-            {result.violations.length > 0 ? (
-              <div className="flex flex-col gap-1.5">
-                <p className="text-xs font-medium text-faint uppercase tracking-wide">Violations</p>
-                {result.violations.map((v, i) => (
-                  <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-[8px] text-sm" style={{ background: 'color-mix(in srgb, var(--color-danger) 6%, var(--color-surface))' }}>
-                    <span className="text-danger text-xs">{v.message}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-good"><IconCheckCircle size={14} />No violations — this submission is valid</div>
-            )}
-
-            <div>
-              <p className="text-xs font-medium text-faint uppercase tracking-wide mb-2">Forms that attach ({result.formsThatAttach.length})</p>
-              <div className="flex flex-wrap gap-1.5">
-                {result.formsThatAttach.map(fn => <Badge key={fn} label={fn} color="blue" mono />)}
-              </div>
-            </div>
-
-            {Object.entries(result.availableOptions).map(([tableRef, opts]) => {
-              const blocked = opts.filter(o => !o.available)
-              if (!blocked.length) return null
-              return (
-                <div key={tableRef}>
-                  <p className="text-xs font-medium text-faint uppercase tracking-wide mb-1">{tableRef} — blocked options</p>
-                  {blocked.map(o => (
-                    <div key={o.value} className="text-xs text-warn leading-snug">{o.label}: {o.violationReason}</div>
-                  ))}
-                </div>
-              )
-            })}
-          </>
-        )}
-      </div>
+      <EngineResultPanel result={result} />
     </div>
   )
 }
 
-// ─── Main route ───────────────────────────────────────────────────────────────
+// ── Personal Auto Simulate panel ──────────────────────────────────────────────
+
+const DEFAULT_PA_SEL: PASelectionContext = {
+  riskState:        'OH',
+  vehicleUse:       'personal',
+  biLimit:          100000,
+  pdLimit:          100000,
+  medPayElected:    true,
+  medPayLimit:      5000,
+  umElected:        true,
+  umLimit:          100000,
+  collisionElected: true,
+  collisionDed:     500,
+  compElected:      true,
+  compDed:          250,
+  rentalElected:    false,
+  towingElected:    false,
+  loanLeaseGapElected: false,
+  namedNonOwner:    false,
+}
+
+const PA_BI_LIMITS  = [{ label: '25/50', value: 25000 }, { label: '50/100', value: 50000 }, { label: '100/300', value: 100000 }, { label: '250/500', value: 250000 }]
+const PA_PD_LIMITS  = [{ label: '$25,000', value: 25000 }, { label: '$50,000', value: 50000 }, { label: '$100,000', value: 100000 }, { label: '$300,000', value: 300000 }]
+const PA_UM_LIMITS  = PA_BI_LIMITS  // same scale as BI
+const PA_COLL_DEDS  = [{ label: '$100', value: 100 }, { label: '$250', value: 250 }, { label: '$500', value: 500 }, { label: '$1,000', value: 1000 }]
+const PA_COMP_DEDS  = PA_COLL_DEDS
+
+function PASimulatePanel({ sel, onChange, result, states }: {
+  sel: PASelectionContext
+  onChange: (p: Partial<PASelectionContext>) => void
+  result: RulesResult | null
+  states: readonly string[]
+}) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="flex flex-col gap-2.5">
+        <p className="text-sm font-semibold text-text">Sample submission</p>
+
+        <Row label="Vehicle use">
+          <select className={selectCls} value={sel.vehicleUse} onChange={e => onChange({ vehicleUse: e.target.value as PaVehicleUse })}>
+            <option value="personal">Personal use</option>
+            <option value="commercial">Commercial use</option>
+          </select>
+        </Row>
+
+        <Row label="Risk state">
+          <select className={selectCls} value={sel.riskState} onChange={e => onChange({ riskState: e.target.value })}>
+            {states.map(s => <option key={s}>{s}</option>)}
+          </select>
+        </Row>
+
+        <Row label="BI limit (per person)">
+          <select className={selectCls} value={sel.biLimit} onChange={e => onChange({ biLimit: Number(e.target.value) })}>
+            {PA_BI_LIMITS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Row>
+
+        <Row label="PD limit">
+          <select className={selectCls} value={sel.pdLimit} onChange={e => onChange({ pdLimit: Number(e.target.value) })}>
+            {PA_PD_LIMITS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Row>
+
+        {/* Part B — Medical Payments */}
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="pa-medPay" checked={sel.medPayElected} onChange={e => onChange({ medPayElected: e.target.checked })} className="accent-accent" />
+          <label htmlFor="pa-medPay" className="text-xs text-dim flex-1">Medical Payments (Part B)</label>
+        </div>
+
+        {/* Part C — UM/UIM */}
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="pa-um" checked={sel.umElected} onChange={e => onChange({ umElected: e.target.checked })} className="accent-accent" />
+          <label htmlFor="pa-um" className="text-xs text-dim">UM/UIM (Part C)</label>
+          {sel.umElected && (
+            <select className="h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs ml-auto" value={sel.umLimit} onChange={e => onChange({ umLimit: Number(e.target.value) })}>
+              {PA_UM_LIMITS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Part D — Physical Damage */}
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="pa-collision" checked={sel.collisionElected} onChange={e => onChange({ collisionElected: e.target.checked })} className="accent-accent" />
+          <label htmlFor="pa-collision" className="text-xs text-dim">Collision (Part D)</label>
+          {sel.collisionElected && (
+            <select className="h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs ml-auto" value={sel.collisionDed} onChange={e => onChange({ collisionDed: Number(e.target.value) })}>
+              {PA_COLL_DEDS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="pa-comp" checked={sel.compElected} onChange={e => onChange({ compElected: e.target.checked })} className="accent-accent" />
+          <label htmlFor="pa-comp" className="text-xs text-dim">Comprehensive (Part D)</label>
+          {sel.compElected && (
+            <select className="h-7 px-2 rounded-[6px] bg-surface border border-border-strong text-xs ml-auto" value={sel.compDed} onChange={e => onChange({ compDed: Number(e.target.value) })}>
+              {PA_COMP_DEDS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Optional endorsements */}
+        {([
+          { key: 'rentalElected',       label: 'Rental Reimbursement (PP 13 01)' },
+          { key: 'towingElected',        label: 'Towing and Labor (PP 03 28)' },
+          { key: 'loanLeaseGapElected',  label: 'Loan/Lease Gap (PP 04 46)' },
+          { key: 'namedNonOwner',        label: 'Named Non-Owner (PP 03 01)' },
+        ] as { key: keyof PASelectionContext; label: string }[]).map(({ key, label }) => (
+          <div key={String(key)} className="flex items-center gap-2">
+            <input type="checkbox" id={`pa-${String(key)}`} checked={Boolean(sel[key])} onChange={e => onChange({ [key]: e.target.checked })} className="accent-accent" />
+            <label htmlFor={`pa-${String(key)}`} className="text-xs text-dim">{label}</label>
+          </div>
+        ))}
+      </div>
+
+      <EngineResultPanel result={result} />
+    </div>
+  )
+}
+
+// ── Main route ────────────────────────────────────────────────────────────────
 
 export default function ProductRules() {
   const ctx = useProductCtx()
   const { pid, product, rules, formRules, coverages, forms, ldTables, loading } = ctx
   const lob = resolveLob(product)
-  const lobPrefix = lob.prefix   // refId prefix is line-driven (HO, GL…)
+  const lobPrefix = lob.prefix   // refId prefix is line-driven (PH, PA…)
   // The Simulate panel runs the line's rules engine; only lines whose LOB definition
   // sets supportsRulesSimulation:true have an evaluateRules() implementation.
   const canSimulate = lob.supportsRulesSimulation
@@ -195,14 +324,19 @@ export default function ProductRules() {
   const canEdit  = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const [query,  setQuery]  = useState('')
   const [simOpen, setSimOpen] = useState(false)
-  const [sel, setSel] = useState<SelectionContext>(DEFAULT_SEL)
+  // PH selection state
+  const [sel,   setSel]   = useState<SelectionContext>(DEFAULT_SEL)
+  // PA selection state (kept separate; only one is active at a time based on lob)
+  const [paSel, setPaSel] = useState<PASelectionContext>(DEFAULT_PA_SEL)
   const [composerOpen, setComposerOpen] = useState(false)
   const [editing, setEditing] = useState<WithId<Rule> | null>(null)
 
   const result = useMemo<RulesResult | null>(() => {
     if (!canSimulate || !Object.keys(ldTables).length) return null
+    if (lob.prefix === 'PA') return evaluateRules({ ldTables, lob: 'PA', selection: paSel })
     return evaluateRules({ ldTables, selection: sel })
-  }, [canSimulate, ldTables, sel])
+  }, [canSimulate, ldTables, sel, paSel, lob.prefix])
+
   const simActive = simOpen && canSimulate && !!result
   const simFor = (r: RuleLike) => (simActive ? simulateRule(r, result!) : undefined)
 
@@ -338,7 +472,10 @@ export default function ProductRules() {
         <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
           <p className="text-sm font-semibold text-text mb-1">Simulate — run the shared rules engine against a sample submission</p>
           <p className="text-xs text-faint mb-4">Every card below shows its own live outcome from this same engine run.</p>
-          <SimulatePanel sel={sel} onChange={p => setSel(prev => ({ ...prev, ...p }))} result={result} coastal={coastal} states={lob.footprintStates} />
+          {lob.prefix === 'PA'
+            ? <PASimulatePanel sel={paSel} onChange={p => setPaSel(prev => ({ ...prev, ...p }))} result={result} states={lob.footprintStates} />
+            : <PHSimulatePanel sel={sel} onChange={p => setSel(prev => ({ ...prev, ...p }))} result={result} coastal={coastal} states={lob.footprintStates} />
+          }
         </div>
       )}
 

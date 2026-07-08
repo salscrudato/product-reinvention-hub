@@ -1,26 +1,43 @@
-// Rules engine: derives available term options, which forms attach, and violations.
+// Rules engine: evaluates product rules for any registered LOB, dispatching by
+// line so a single public function covers both Personal Home and Personal Auto.
 // Pure function; no Firestore imports — all domain data is injected as constants.
 import type {
-  LDTable, SelectionContext, RulesResult, TermOption, RuleViolation,
+  LDTable, SelectionContext, PASelectionContext, RulesResult, TermOption, RuleViolation,
 } from '../types'
 import { PH_LOB } from '../insurance/lobRegistry'
 
-// Coastal states for wind/hail eligibility [PH.RU.008] — owned by the LOB registry.
-const COASTAL_STATES = new Set<string>(PH_LOB.peril.eligibleStates)
-const COASTAL_LABEL  = PH_LOB.peril.eligibleStates.join(' ')
+// ── Personal Home: coastal states for wind/hail eligibility [PH.RU.008] ─────
+const PH_COASTAL       = new Set<string>(PH_LOB.peril.eligibleStates)
+const PH_COASTAL_LABEL = PH_LOB.peril.eligibleStates.join(' ')
 
-export interface RulesEngineInput {
-  ldTables:   Record<string, LDTable>
-  selection:  SelectionContext
-}
+// ── Personal Auto: states where UM/UIM is mandatory unless waived in writing ─
+// [PA.RU.006] — representative footprint subset; source: ISO state mandates.
+const PA_UM_MANDATORY = new Set<string>([
+  'AZ', 'CO', 'CT', 'DC', 'FL', 'GA', 'IL', 'IN', 'KY', 'MA', 'MD', 'MI',
+  'MN', 'MO', 'NC', 'ND', 'NE', 'NH', 'NJ', 'NM', 'OH', 'OR', 'SC', 'SD',
+  'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV',
+])
+
+// ── Discriminated input union — the `lob` field routes to the correct evaluator
+
+export type RulesEngineInput =
+  | { ldTables: Record<string, LDTable>; lob?: 'PH'; selection: SelectionContext }
+  | { ldTables: Record<string, LDTable>; lob: 'PA'; selection: PASelectionContext }
 
 /**
- * Evaluate all Personal Home product rules against the current selection.
- * Returns available term options (with constraint violations noted),
- * the list of form numbers that must attach, and any hard violations.
+ * Evaluate all product rules for the line identified by `lob` (default PH).
+ * Returns available term options (with constraint violations noted), the form
+ * numbers that must attach, and any hard violations. The result shape is
+ * identical for all lines so the Rules screen needs no line-specific logic.
  */
 export function evaluateRules(input: RulesEngineInput): RulesResult {
-  const { ldTables, selection } = input
+  if (input.lob === 'PA') return evaluateRulesPA(input.ldTables, input.selection)
+  return evaluateRulesPH(input.ldTables, input.selection)
+}
+
+// ── Personal Home evaluator ─────────────────────────────────────────────────
+
+function evaluateRulesPH(ldTables: Record<string, LDTable>, selection: SelectionContext): RulesResult {
   const violations: RuleViolation[] = []
 
   // ── Available options per LD table ──────────────────────────────────────────
@@ -28,7 +45,7 @@ export function evaluateRules(input: RulesEngineInput): RulesResult {
   // PH.LD.001 — Coverage E limits (no constraints)
   const covEOptions = buildOptions(ldTables['PH.LD.001'], () => null)
 
-  // PH.LD.002 — Coverage F limits; 5,000 requires E ≥ 300,000 [PH.RU.006]
+  // PH.LD.002 — Coverage F limits; $5,000 requires E ≥ $300,000 [PH.RU.006]
   const covFOptions = buildOptions(ldTables['PH.LD.002'], (row) => {
     if (row.value === 5000 && selection.covELimit < 300000) {
       return 'Available only when Coverage E ≥ 300,000'
@@ -40,10 +57,10 @@ export function evaluateRules(input: RulesEngineInput): RulesResult {
   const allPerilDedOptions = buildOptions(ldTables['PH.LD.003'], () => null)
 
   // PH.LD.004 — Wind/hail % deductible [PH.RU.008]
-  const isCoastal = COASTAL_STATES.has(selection.riskState)
+  const isCoastal = PH_COASTAL.has(selection.riskState)
   const windHailOptions = buildOptions(ldTables['PH.LD.004'], (row) => {
-    if (!isCoastal) return `Available in coastal states only (${COASTAL_LABEL})`
-    // dollar amount (pct% × covA) must be ≥ all-peril deductible
+    if (!isCoastal) return `Available in coastal states only (${PH_COASTAL_LABEL})`
+    // dollar amount (pct% × covA) must be ≥ the all-peril deductible
     const dollarAmt = (row.value / 100) * selection.covA
     if (dollarAmt < selection.allPerilDed) {
       return `${row.value}% of $${selection.covA.toLocaleString()} = $${dollarAmt.toLocaleString()} — must be ≥ all-peril deductible ($${selection.allPerilDed.toLocaleString()})`
@@ -59,7 +76,7 @@ export function evaluateRules(input: RulesEngineInput): RulesResult {
 
   // ── Hard violations ─────────────────────────────────────────────────────────
 
-  // [PH.RU.006] Coverage F 5,000 selected but E < 300,000
+  // [PH.RU.006] Coverage F $5,000 selected but E < $300,000
   if (selection.covFLimit === 5000 && selection.covELimit < 300000) {
     violations.push({
       ruleRefId: 'PH.RU.006',
@@ -89,7 +106,7 @@ export function evaluateRules(input: RulesEngineInput): RulesResult {
     }
   }
 
-  // ── Eligibility [PH.RU.001] / [PH.RU.010] ─────────────────────────────────────
+  // ── Eligibility [PH.RU.001] / [PH.RU.010] ──────────────────────────────────
   // Undefined occupancy defaults to the eligible base case (owner-occupied primary),
   // so callers that don't collect occupancy see no eligibility violation.
   const occupancy = selection.occupancy ?? 'PRIMARY_OWNER'
@@ -147,12 +164,121 @@ export function evaluateRules(input: RulesEngineInput): RulesResult {
     },
     formsThatAttach,
     violations,
-    // The rules whose conditions this engine evaluates directly (eligibility + hard
-    // constraints). LD-table-gated rules (PH.RU.003/005/007) and form-attachment rules
-    // surface through availableOptions / formsThatAttach, so they are not repeated here.
+    // Rules whose conditions are directly evaluated (eligibility + hard constraints).
+    // LD-table-gated and form-attachment rules surface via availableOptions / formsThatAttach.
     evaluatedRuleRefIds: ['PH.RU.001', 'PH.RU.006', 'PH.RU.008', 'PH.RU.010'],
   }
 }
+
+// ── Personal Auto evaluator ─────────────────────────────────────────────────
+
+function evaluateRulesPA(ldTables: Record<string, LDTable>, sel: PASelectionContext): RulesResult {
+  const violations: RuleViolation[] = []
+
+  // ── Available options per LD table ──────────────────────────────────────────
+
+  // PA.LD.001 — BI limits; no cross-coverage constraint at the engine level
+  const biOptions = buildOptions(ldTables['PA.LD.001'], () => null)
+
+  // PA.LD.002 — PD limits; no cross-coverage constraint
+  const pdOptions = buildOptions(ldTables['PA.LD.002'], () => null)
+
+  // PA.LD.003 — Med Pay limits; no cross-coverage constraint
+  const medOptions = buildOptions(ldTables['PA.LD.003'], () => null)
+
+  // PA.LD.004 — UM/UIM limits must not exceed the elected BI limit [PA.RU.007]
+  const umOptions = buildOptions(ldTables['PA.LD.004'], (row) => {
+    if (row.value > sel.biLimit) {
+      return `UM/UIM limit may not exceed BI limit ($${sel.biLimit.toLocaleString()})`
+    }
+    return null
+  })
+
+  // PA.LD.005 — Collision deductible; no cross-coverage constraint
+  const colDedOptions = buildOptions(ldTables['PA.LD.005'], () => null)
+
+  // PA.LD.006 — Comprehensive deductible; no cross-coverage constraint
+  const compDedOptions = buildOptions(ldTables['PA.LD.006'], () => null)
+
+  // ── Hard violations ─────────────────────────────────────────────────────────
+
+  // [PA.RU.001] Eligibility — PP 00 01 covers personal-use vehicles only
+  if (sel.vehicleUse === 'commercial') {
+    violations.push({
+      ruleRefId: 'PA.RU.001',
+      message:   'PP 00 01 covers personal-use vehicles only; commercial-use vehicles are not eligible',
+      severity:  'error',
+    })
+  }
+
+  // [PA.RU.006] UM/UIM is mandatory (unless waived in writing) in most states
+  if (!sel.umElected && PA_UM_MANDATORY.has(sel.riskState)) {
+    violations.push({
+      ruleRefId: 'PA.RU.006',
+      message:   `UM/UIM coverage is mandatory (unless waived in writing) in ${sel.riskState}`,
+      severity:  'warning',
+    })
+  }
+
+  // [PA.RU.007] UIM limit may not exceed BI limit per occurrence
+  if (sel.umElected && sel.umLimit !== undefined && sel.umLimit > sel.biLimit) {
+    violations.push({
+      ruleRefId: 'PA.RU.007',
+      message:   `UIM limit ($${sel.umLimit.toLocaleString()}) may not exceed BI limit ($${sel.biLimit.toLocaleString()})`,
+      severity:  'error',
+    })
+  }
+
+  // [PA.RU.008] Rental Reimbursement requires physical damage coverage in force
+  if (sel.rentalElected && !sel.collisionElected && !sel.compElected) {
+    violations.push({
+      ruleRefId: 'PA.RU.008',
+      message:   'Rental Reimbursement (PP 13 01) requires Collision or Comprehensive to be in force',
+      severity:  'error',
+    })
+  }
+
+  // [PA.RU.009] Towing and Labor requires physical damage coverage in force
+  if (sel.towingElected && !sel.collisionElected && !sel.compElected) {
+    violations.push({
+      ruleRefId: 'PA.RU.009',
+      message:   'Towing and Labor (PP 03 28) requires Collision or Comprehensive to be in force',
+      severity:  'error',
+    })
+  }
+
+  // ── Forms that attach ───────────────────────────────────────────────────────
+
+  const formsThatAttach: string[] = ['PP 00 01', 'PP DS 01', 'PN PP 01']
+
+  // [PA.FORM.RU.001] Rental Reimbursement
+  if (sel.rentalElected)         formsThatAttach.push('PP 13 01')
+  // [PA.FORM.RU.002] Towing and Labor
+  if (sel.towingElected)         formsThatAttach.push('PP 03 28')
+  // [PA.FORM.RU.003] Loan/Lease Gap
+  if (sel.loanLeaseGapElected)   formsThatAttach.push('PP 04 46')
+  // [PA.FORM.RU.004] Named Non-Owner
+  if (sel.namedNonOwner)         formsThatAttach.push('PP 03 01')
+  // [PA.FORM.RU.006] State amendatories
+  if (sel.riskState === 'CA')    formsThatAttach.push('PP 01 75')
+  if (sel.riskState === 'TX')    formsThatAttach.push('PP 01 79')
+
+  return {
+    availableOptions: {
+      'PA.LD.001': biOptions,
+      'PA.LD.002': pdOptions,
+      'PA.LD.003': medOptions,
+      'PA.LD.004': umOptions,
+      'PA.LD.005': colDedOptions,
+      'PA.LD.006': compDedOptions,
+    },
+    formsThatAttach,
+    violations,
+    evaluatedRuleRefIds: ['PA.RU.001', 'PA.RU.006', 'PA.RU.007', 'PA.RU.008', 'PA.RU.009'],
+  }
+}
+
+// ── Shared helper ───────────────────────────────────────────────────────────
 
 /** Map an LDTable's rows to TermOption[], marking constrained rows as unavailable.
  *  row.constraintNote is informational only; only constraintFn controls availability. */
@@ -164,11 +290,11 @@ function buildOptions(
   return table.rows.map((row) => {
     const reason = constraintFn(row)
     return {
-      label:            row.label,
-      value:            row.value,
-      constraintNote:   row.constraintNote,
-      available:        reason === null,
-      violationReason:  reason ?? undefined,
+      label:           row.label,
+      value:           row.value,
+      constraintNote:  row.constraintNote,
+      available:       reason === null,
+      violationReason: reason ?? undefined,
     }
   })
 }

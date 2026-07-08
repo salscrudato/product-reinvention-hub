@@ -145,7 +145,7 @@ export const PA_LOB: LobDefinition = {
   personalOrCommercial: 'Personal',
   sectionTaxonomy:      PA_SECTIONS,
   perilModel:           PA_PERIL,
-  supportsRulesSimulation: false,
+  supportsRulesSimulation: true,
   marketSegments:       ['Personal Lines'],
 }
 

@@ -495,6 +495,31 @@ export interface EvaluatorResult {
 // PRIMARY_OWNER is the eligible base case; the others gate [HO.RU.001]/[HO.RU.010].
 export type HoOccupancy = 'PRIMARY_OWNER' | 'TENANT_NONOWNER' | 'SEASONAL' | 'SECONDARY'
 
+// How a vehicle is used — the input the PA eligibility rule reads [PA.RU.001].
+// 'personal' is the eligible base case; 'commercial' is ineligible for PP 00 01.
+export type PaVehicleUse = 'personal' | 'commercial'
+
+/** Submission context the Personal Auto rules engine reads. Each field maps
+ *  directly to a PA rule or LD table so every engine branch is traceable. */
+export interface PASelectionContext {
+  riskState:            string          // 2-letter garaging-state code
+  vehicleUse:           PaVehicleUse    // personal vs commercial [PA.RU.001]
+  biLimit:              number          // elected BI per-person limit (PA.LD.001)
+  pdLimit:              number          // elected PD per-occurrence limit (PA.LD.002)
+  medPayElected:        boolean         // Part B elected
+  medPayLimit?:         number          // PA.LD.003 (when medPayElected)
+  umElected:            boolean         // Part C UM/UIM elected [PA.RU.006]
+  umLimit?:             number          // PA.LD.004; must be ≤ biLimit [PA.RU.007]
+  collisionElected:     boolean         // Part D Collision elected
+  collisionDed?:        number          // PA.LD.005 (when collisionElected)
+  compElected:          boolean         // Part D Comprehensive elected
+  compDed?:             number          // PA.LD.006 (when compElected)
+  rentalElected:        boolean         // Rental Reimbursement; requires physical damage [PA.RU.008]
+  towingElected:        boolean         // Towing and Labor; requires physical damage [PA.RU.009]
+  loanLeaseGapElected?: boolean         // when true → PP 04 46
+  namedNonOwner?:       boolean         // when true → PP 03 01
+}
+
 export interface SelectionContext {
   riskState:          string   // 2-letter state code
   covELimit:          number
