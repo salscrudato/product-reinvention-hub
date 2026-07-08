@@ -11,13 +11,13 @@
 // No live API calls are made. All cases are pre-recorded golden fixtures.
 
 import {
-  HO3_COVERAGES, HO3_LD_TABLES, HO3_RT_TABLES, HO3_FORMS,
-  HO3_RULES, HO3_FORM_RULES, HO3_DICTIONARY, HO3_PRODUCT,
-  GL_COVERAGES, GL_LD_TABLES, GL_RT_TABLES, GL_FORMS,
-  GL_RULES, GL_FORM_RULES, GL_DICTIONARY, GL_PRODUCT,
+  PH_COVERAGES, PH_LD_TABLES, PH_RT_TABLES, PH_FORMS,
+  PH_RULES, PH_FORM_RULES, PH_DICTIONARY, PH_PRODUCT,
+  PA_COVERAGES, PA_LD_TABLES, PA_RT_TABLES, PA_FORMS,
+  PA_RULES, PA_FORM_RULES, PA_DICTIONARY, PA_PRODUCT,
 } from '@pf/shared'
-import { EVAL_CASES } from './cases'
-import type { EvalCase } from './cases'
+import { EVAL_CASES, GUARD_CASES } from './cases'
+import type { EvalCase, GuardCase } from './cases'
 
 // ── Build known-entity sets from live seed data ────────────────────────────────
 //
@@ -29,26 +29,26 @@ import type { EvalCase } from './cases'
 // before building the set so the type stays Set<string>.
 const KNOWN_REF_IDS = new Set<string>(
   [
-    HO3_PRODUCT.refId,
-    ...HO3_COVERAGES.map((c) => c.refId),
-    ...Object.keys(HO3_LD_TABLES),
-    ...Object.keys(HO3_RT_TABLES),
-    ...HO3_RULES.map((r) => r.refId),
-    ...HO3_FORM_RULES.map((r) => r.refId),
-    ...HO3_DICTIONARY.map((d) => d.refId),
-    GL_PRODUCT.refId,
-    ...GL_COVERAGES.map((c) => c.refId),
-    ...Object.keys(GL_LD_TABLES),
-    ...Object.keys(GL_RT_TABLES),
-    ...GL_RULES.map((r) => r.refId),
-    ...GL_FORM_RULES.map((r) => r.refId),
-    ...GL_DICTIONARY.map((d) => d.refId),
+    PH_PRODUCT.refId,
+    ...PH_COVERAGES.map((c) => c.refId),
+    ...Object.keys(PH_LD_TABLES),
+    ...Object.keys(PH_RT_TABLES),
+    ...PH_RULES.map((r) => r.refId),
+    ...PH_FORM_RULES.map((r) => r.refId),
+    ...PH_DICTIONARY.map((d) => d.refId),
+    PA_PRODUCT.refId,
+    ...PA_COVERAGES.map((c) => c.refId),
+    ...Object.keys(PA_LD_TABLES),
+    ...Object.keys(PA_RT_TABLES),
+    ...PA_RULES.map((r) => r.refId),
+    ...PA_FORM_RULES.map((r) => r.refId),
+    ...PA_DICTIONARY.map((d) => d.refId),
   ].filter((r): r is string => r != null),
 )
 
 const KNOWN_FORM_NUMBERS = new Set<string>([
-  ...HO3_FORMS.map((f) => f.number),
-  ...GL_FORMS.map((f) => f.number),
+  ...PH_FORMS.map((f) => f.number),
+  ...PA_FORMS.map((f) => f.number),
 ])
 
 // RefId pattern: e.g. HO.COV.001, HO.COV.001.001, GL.PROD.001, HO.LD.003
@@ -178,8 +178,46 @@ function renderTable(results: CaseResult[]): void {
   console.log()
 }
 
+// ── Guard cases (hostile inputs the grounding guards must reject) ───────────────
+
+interface GuardResult { id: string; feature: string; description: string; pass: boolean; note: string }
+
+async function runGuards(cases: GuardCase[]): Promise<GuardResult[]> {
+  const out: GuardResult[] = []
+  for (const c of cases) {
+    const { pass, note } = await c.run()
+    out.push({ id: c.id, feature: c.feature, description: c.description, pass, note })
+  }
+  return out
+}
+
+function renderGuardTable(results: GuardResult[]): void {
+  const W = { id: 32, feat: 18, pass: 4 }
+  const header = pad('GUARD CASE', W.id) + pad('FEATURE', W.feat) + 'PASS'
+  const sep = '─'.repeat(header.length)
+  console.log('\nGROUNDING GUARDS (adversarial — must reject)')
+  console.log(sep)
+  console.log(header)
+  console.log(sep)
+  for (const r of results) {
+    console.log(pad(r.id, W.id) + pad(r.feature, W.feat) + (r.pass ? 'PASS' : 'FAIL'))
+    if (!r.pass && r.note) console.log(`${''.padEnd(W.id + W.feat)}  ^ ${r.note}`)
+  }
+  const passed = results.filter((r) => r.pass).length
+  console.log(sep)
+  console.log(`\n${passed}/${results.length} guard cases passed`)
+  console.log()
+}
+
 // ── Entry point ────────────────────────────────────────────────────────────────
 
-const results = EVAL_CASES.map(scoreCase)
-renderTable(results)
-process.exit(results.every((r) => r.pass) ? 0 : 1)
+async function main(): Promise<void> {
+  const results = EVAL_CASES.map(scoreCase)
+  renderTable(results)
+  const guardResults = await runGuards(GUARD_CASES)
+  renderGuardTable(guardResults)
+  const allPass = results.every((r) => r.pass) && guardResults.every((r) => r.pass)
+  process.exit(allPass ? 0 : 1)
+}
+
+void main()

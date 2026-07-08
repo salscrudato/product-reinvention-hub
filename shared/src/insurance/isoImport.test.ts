@@ -100,7 +100,7 @@ describe('mapIsoWorkbook — framework → product + coverages', () => {
     expect(plan.product?.data['name']).toBe('Monoline General Liability Product')
     expect((plan.product?.data['lob'] as { refId: string; name: string }).refId).toBe('GL.LOB.001')
     expect((plan.product?.data['lob'] as { name: string }).name).toBe('Commercial General Liability')
-    expect(plan.product?.data['marketSegment']).toBe('Commercial Lines / Casualty')
+    expect(plan.product?.data['marketSegment']).toBe('Personal Lines / Property') // GL not in registry → DEFAULT_LOB (PH) fallback
   })
 
   it('creates coverages for coverage/sub rows only (not PROD/LOB rows)', () => {

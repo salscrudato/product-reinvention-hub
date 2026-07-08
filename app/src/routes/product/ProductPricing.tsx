@@ -154,7 +154,7 @@ export default function ProductPricing() {
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'User' }
   const lob  = useMemo(() => resolveLob(product), [product])
   const kit  = useMemo(() => resolveRatingKit(lob.prefix), [lob.prefix])
-  const isHO = lob.prefix === 'HO'
+  const isHO = lob.prefix === 'PH'
   const coastal = useMemo(() => new Set<string>(lob.peril.eligibleStates), [lob])
   const [inputs, setInputs]       = useState<RatingInputMap>(() => ({ ...kit.workedExample }))
   const [riskState, setRiskState] = useState('OH')

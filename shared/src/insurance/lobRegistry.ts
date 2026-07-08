@@ -2,16 +2,15 @@
 // line-specific behavior so the platform is genuinely multi-line rather than
 // Homeowners-only. Each entry owns its refId prefix, coverage-section taxonomy
 // (how Overview/Explorer group coverages), and peril/territorial deductible rules
-// (Homeowners gates a wind/hail % deductible to a coastal state subset; other lines
-// use rating territories instead). Every line-aware decision in shared/ and the UI
-// resolves through here rather than hard-coding Homeowners-isms. Both Homeowners and
-// General Liability are fully described (each has a seed reference product).
+// (Personal Home gates a wind/hail % deductible to a coastal state subset; Personal
+// Auto rates by territory instead). Every line-aware decision in shared/ and the UI
+// resolves through here rather than hard-coding line-specific logic. Both Personal
+// Home and Personal Auto are fully described (each has a seed reference product).
 // Pure TypeScript — zero platform imports.
 
-// Personal vs Commercial market vertical; Property vs Casualty family — the two
-// grouping hints the portfolio/segment surfaces use to describe a line.
+// Personal vs Commercial market vertical; Property vs Casualty vs Automobile family.
 export type MarketVertical = 'Personal Lines' | 'Commercial Lines'
-export type CoverageFamily = 'Property' | 'Casualty'
+export type CoverageFamily = 'Property' | 'Casualty' | 'Automobile'
 
 // PROPERTY vs CASUALTY — the canonical line category used by the task-specified
 // LOB registry contract. Maps one-to-one with CoverageFamily (Property → PROPERTY).
@@ -28,9 +27,9 @@ export interface LobSection {
   match:     (coverageName: string) => boolean
 }
 
-// How a line expresses peril-based territorial deductible eligibility. Homeowners
-// gates a wind/hail % deductible to coastal states; a casualty line rates by
-// territory and has no coastal peril at all.
+// How a line expresses peril-based territorial deductible eligibility. Personal Home
+// gates a wind/hail % deductible to coastal states; an auto line rates by territory
+// and has no coastal peril at all.
 export type PerilKind = 'COASTAL_WIND_HAIL' | 'TERRITORY' | 'NONE'
 
 export interface PerilRule {
@@ -45,9 +44,9 @@ export interface PerilRule {
 // `sections`/`sectionTaxonomy`, `peril`/`perilModel` — so callers may use either.
 export interface LobDefinition {
   // ── original fields (kept for backward compatibility) ──────────────────────
-  refId:    string                 // e.g. "HO.LOB.001"
-  prefix:   string                 // refId prefix for this line's entities, e.g. "HO"
-  name:     string                 // "Homeowners"
+  refId:    string                 // e.g. "PH.LOB.001"
+  prefix:   string                 // refId prefix for this line's entities, e.g. "PH"
+  name:     string                 // "Personal Home"
   vertical: MarketVertical
   family:   CoverageFamily
   sections: LobSection[]           // ordered; drives coverage grouping
@@ -71,94 +70,95 @@ export interface LobDefinition {
   marketSegments:       readonly string[]
 }
 
-// ─── Homeowners (fully described — the seed reference line) ────────────────────
+// ─── Personal Home (fully described — the seed reference line) ────────────────
 
 // ISO Homeowners splits coverages into Section I (property: Coverages A–D) and
 // Section II (liability + medical payments: Coverages E–F).
-const isHoLiability = (name: string) => /liabilit|medical/i.test(name)
+const isPHLiability = (name: string) => /liabilit|medical/i.test(name)
 
-const HO_SECTIONS: LobSection[] = [
-  { label: 'Section I — Property',   shortName: 'Section I',  match: (n) => !isHoLiability(n) },
-  { label: 'Section II — Liability', shortName: 'Section II', match: isHoLiability },
+const PH_SECTIONS: LobSection[] = [
+  { label: 'Section I — Property',   shortName: 'Section I',  match: (n) => !isPHLiability(n) },
+  { label: 'Section II — Liability', shortName: 'Section II', match: isPHLiability },
 ]
 
-const HO_PERIL: PerilRule = {
+const PH_PERIL: PerilRule = {
   kind:           'COASTAL_WIND_HAIL',
   eligibleStates: ['FL', 'GA', 'NC', 'SC', 'TX'],
   label:          'Coastal wind/hail',
 }
 
-export const HO_LOB: LobDefinition = {
-  refId:    'HO.LOB.001',
-  prefix:   'HO',
-  name:     'Homeowners',
+export const PH_LOB: LobDefinition = {
+  refId:    'PH.LOB.001',
+  prefix:   'PH',
+  name:     'Personal Home',
   vertical: 'Personal Lines',
   family:   'Property',
-  sections: HO_SECTIONS,
-  peril:    HO_PERIL,
+  sections: PH_SECTIONS,
+  peril:    PH_PERIL,
   footprintStates: ['AZ','CA','CO','FL','GA','IL','IN','MI','NC','OH','PA','SC','TN','TX','VA'],
   // canonical additive fields
-  code:                 'HO',
-  displayName:          'Homeowners',
-  refIdPrefix:          'HO',
+  code:                 'PH',
+  displayName:          'Personal Home',
+  refIdPrefix:          'PH',
   lineCategory:         'PROPERTY',
   personalOrCommercial: 'Personal',
-  sectionTaxonomy:      HO_SECTIONS,
-  perilModel:           HO_PERIL,
+  sectionTaxonomy:      PH_SECTIONS,
+  perilModel:           PH_PERIL,
   supportsRulesSimulation: true,
   marketSegments:       ['Personal Lines'],
 }
 
-// ─── General Liability (the second seed reference line — commercial casualty) ──
+// ─── Personal Auto (the second seed reference line — personal automobile) ──────
 
-// ISO CGL groups coverage into coverage parts A/B/C; GL rates by territory and has
-// no coastal peril. The final catch-all keeps any unclassified coverage visible.
-const GL_SECTIONS: LobSection[] = [
-  { label: 'Coverage A — Bodily Injury & Property Damage', shortName: 'Coverage A', match: (n) => /bodily|property damage/i.test(n) },
-  { label: 'Coverage B — Personal & Advertising Injury',   shortName: 'Coverage B', match: (n) => /personal|advertising/i.test(n) },
-  { label: 'Coverage C — Medical Payments',                shortName: 'Coverage C', match: (n) => /medical/i.test(n) },
-  { label: 'Other Coverages',                              shortName: 'Other',      match: () => true },
+// ISO PAP groups coverage into four Parts: A (Liability), B (Med Pay),
+// C (UM/UIM), D (Physical Damage). The final catch-all keeps any unclassified
+// coverage visible.
+const PA_SECTIONS: LobSection[] = [
+  { label: 'Part A — Liability Coverage',                  shortName: 'Part A', match: (n) => /liabilit/i.test(n) },
+  { label: 'Part B — Medical Payments Coverage',           shortName: 'Part B', match: (n) => /medical/i.test(n) },
+  { label: 'Part C — Uninsured Motorists Coverage',        shortName: 'Part C', match: (n) => /uninsured|underinsured|motorist/i.test(n) },
+  { label: 'Part D — Coverage for Damage to Your Auto',   shortName: 'Part D', match: () => true },
 ]
 
-const GL_PERIL: PerilRule = {
+const PA_PERIL: PerilRule = {
   kind: 'TERRITORY', eligibleStates: [], label: 'Rating territory',
 }
 
-export const GL_LOB: LobDefinition = {
-  refId:    'GL.LOB.001',
-  prefix:   'GL',
-  name:     'General Liability',
-  vertical: 'Commercial Lines',
-  family:   'Casualty',
-  sections: GL_SECTIONS,
-  peril:    GL_PERIL,
+export const PA_LOB: LobDefinition = {
+  refId:    'PA.LOB.001',
+  prefix:   'PA',
+  name:     'Personal Auto',
+  vertical: 'Personal Lines',
+  family:   'Automobile',
+  sections: PA_SECTIONS,
+  peril:    PA_PERIL,
   footprintStates: [
     'AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','ID','IL','IN','IA','KS','KY',
     'ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NC','ND','OH',
-    'OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV',
+    'OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI',
   ],
   // canonical additive fields
-  code:                 'GL',
-  displayName:          'General Liability',
-  refIdPrefix:          'GL',
+  code:                 'PA',
+  displayName:          'Personal Auto',
+  refIdPrefix:          'PA',
   lineCategory:         'CASUALTY',
-  personalOrCommercial: 'Commercial',
-  sectionTaxonomy:      GL_SECTIONS,
-  perilModel:           GL_PERIL,
+  personalOrCommercial: 'Personal',
+  sectionTaxonomy:      PA_SECTIONS,
+  perilModel:           PA_PERIL,
   supportsRulesSimulation: false,
-  marketSegments:       ['Small Commercial', 'Middle Market'],
+  marketSegments:       ['Personal Lines'],
 }
 
 // ─── Registry + resolution ─────────────────────────────────────────────────────
 
 export const LOB_REGISTRY: Record<string, LobDefinition> = {
-  [HO_LOB.refId]: HO_LOB,
-  [GL_LOB.refId]: GL_LOB,
+  [PH_LOB.refId]: PH_LOB,
+  [PA_LOB.refId]: PA_LOB,
 }
 
-// Homeowners is the seed reference line and the safe default when a product's LOB
+// Personal Home is the seed reference line and the safe default when a product's LOB
 // is missing or unrecognised.
-export const DEFAULT_LOB = HO_LOB
+export const DEFAULT_LOB = PH_LOB
 
 function lobByPrefix(refId?: string | null): LobDefinition | undefined {
   if (!refId) return undefined
@@ -167,15 +167,15 @@ function lobByPrefix(refId?: string | null): LobDefinition | undefined {
 }
 
 /** Resolve a product's line-of-business definition. Matches the LOB refId exactly,
- *  then falls back to the refId prefix, then to Homeowners (the reference line). */
+ *  then falls back to the refId prefix, then to Personal Home (the reference line). */
 export function resolveLob(product?: { lob?: { refId?: string | null } | null } | null): LobDefinition {
   const refId = product?.lob?.refId ?? null
   if (refId && LOB_REGISTRY[refId]) return LOB_REGISTRY[refId]
   return lobByPrefix(refId) ?? DEFAULT_LOB
 }
 
-/** Resolve a LOB from any entity refId by its prefix (e.g. "HO.COV.003" →
- *  Homeowners). Returns undefined when no line claims the prefix. */
+/** Resolve a LOB from any entity refId by its prefix (e.g. "PH.COV.003" →
+ *  Personal Home). Returns undefined when no line claims the prefix. */
 export function resolveLobByRefId(refId?: string | null): LobDefinition | undefined {
   return lobByPrefix(refId)
 }
@@ -204,9 +204,9 @@ export function isPerilState(lob: LobDefinition, state: string): boolean {
 // ─── Portfolio segmentation (registry-driven) ──────────────────────────────────
 // The portfolio surfaces (Products list, inventory, hierarchy) segment products
 // along three axes: market vertical (Personal vs Commercial), coverage family
-// (Property vs Casualty), and market segment (Small / Middle Market, …). Every
-// facet's *values* are derived from LOB_REGISTRY below — nothing is hard-coded in
-// the UI — so registering a new line automatically extends every axis.
+// (Property vs Casualty vs Automobile), and market segment (Personal Lines, …).
+// Every facet's *values* are derived from LOB_REGISTRY below — nothing is hard-coded
+// in the UI — so registering a new line automatically extends every axis.
 
 /** The identifier of a segmentation axis. */
 export type SegmentAxisId = 'vertical' | 'family' | 'marketSegment'

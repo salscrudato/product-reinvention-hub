@@ -144,7 +144,8 @@ export interface CoverageTerm {
   default:     string | number | boolean
   basis:       string                // free-text legacy basis (e.g. "per occurrence")
   unit?:       string
-  notes?:      string
+  notes?:          string
+  constraintNote?: string   // display-only note about a coverage term constraint
   // ── Canonical typed model (optional; derived from the legacy fields above when
   //    absent, and written back on first edit). See shared/insurance/terms.ts. ──
   structure?:   LimitStructure | DeductibleStructure

@@ -126,18 +126,18 @@ export function validateHoDemonstratives(
   product: Parameters<typeof resolveLob>[0],
   ldTables?: Record<string, LDTable>,
 ): TermIssue[] {
-  if (resolveLob(product).prefix !== 'HO') return []
+  if (resolveLob(product).prefix !== 'PH') return []
   const issues: TermIssue[] = []
 
   for (const term of coverage.terms ?? []) {
-    const isCovF = term.kind === 'LIMIT' && (term.ldTableRef === 'HO.LD.002' || nameIsCoverage(coverage.name, 'F'))
+    const isCovF = term.kind === 'LIMIT' && (term.ldTableRef === 'PH.LD.002' || nameIsCoverage(coverage.name, 'F'))
     const isWindHail = term.kind === 'DEDUCTIBLE' &&
-      (term.ldTableRef === 'HO.LD.004' || /wind|hail/i.test(`${term.label} ${coverage.name}`))
+      (term.ldTableRef === 'PH.LD.004' || /wind|hail/i.test(`${term.label} ${coverage.name}`))
 
-    // [HO.RU.006] Coverage F $5,000 requires Coverage E ≥ $300,000.
+    // [PH.RU.006] Coverage F $5,000 requires Coverage E ≥ $300,000.
     if (isCovF) {
       const covE = allCoverages.find(c =>
-        (c.terms ?? []).some(t => t.kind === 'LIMIT' && t.ldTableRef === 'HO.LD.001') || nameIsCoverage(c.name, 'E'))
+        (c.terms ?? []).some(t => t.kind === 'LIMIT' && t.ldTableRef === 'PH.LD.001') || nameIsCoverage(c.name, 'E'))
       const covEMax = covE
         ? Math.max(0, ...(covE.terms ?? []).filter(t => t.kind === 'LIMIT').flatMap(t => offeredNumbers(t, ldTables)))
         : 0
@@ -168,7 +168,7 @@ export function validateHoDemonstratives(
       // coverage, else anywhere in the product.
       const allPerilTerms = [coverage, ...allCoverages].flatMap(c => (c.terms ?? []).filter(t =>
         t.kind === 'DEDUCTIBLE' && t.id !== term.id &&
-        (t.ldTableRef === 'HO.LD.003' || /all.?peril|aop/i.test(t.label))))
+        (t.ldTableRef === 'PH.LD.003' || /all.?peril|aop/i.test(t.label))))
       const allPerilMax = allPerilTerms.length
         ? Math.max(0, ...allPerilTerms.flatMap(t => offeredNumbers(t, ldTables)))
         : undefined

@@ -1,5 +1,5 @@
 // @pf/shared — pure TypeScript; zero platform imports.
-// Exports types, rating evaluator, rules engine, retrieval ranker, and HO-3 seed.
+// Exports types, rating evaluator, rules engine, retrieval ranker, and seed data.
 export * from './types'
 export * from './rating/evaluator'
 export * from './rating/rtGrid'
@@ -13,6 +13,8 @@ export * from './insurance/isoImport'
 export * from './insurance/extraction'
 export * from './insurance/scaffold'
 export * from './dictionary/usage'
+export * from './grounding/citations'
+export * from './grounding/sources'
 export * from './search/rank'
-export * from './seed/ho3'
-export * from './seed/gl'
+export * from './seed/personalHome'
+export * from './seed/personalAuto'

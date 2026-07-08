@@ -1,17 +1,17 @@
 // termConstraints tests — lock the premium-editor validation both the app editor and
-// the mutate() seam depend on: the intrinsic typed-model invariants, the Homeowners
-// demonstrative cross-coverage constraints, and (critically) that the real HO-3 seed
+// the mutate() seam depend on: the intrinsic typed-model invariants, the Personal Home
+// demonstrative cross-coverage constraints, and (critically) that the real PH seed
 // validates clean once its terms are resolved into option matrices — no false alarms.
 import { describe, it, expect } from 'vitest'
 import {
   validateTerm, validateCoverageTerms, assertCoverageTermsValid,
 } from './termConstraints'
 import { resolveTermOptions } from './terms'
-import { HO3_COVERAGES, HO3_FOOTPRINT_STATES } from '../seed/ho3'
-import { HO3_LD_TABLES } from '../seed/ho3'
+import { PH_COVERAGES, PH_FOOTPRINT_STATES } from '../seed/personalHome'
+import { PH_LD_TABLES } from '../seed/personalHome'
 import type { Coverage, CoverageTerm, StandardOption } from '../types'
 
-const HO = { lob: { refId: 'HO.LOB.001' } }
+const HO = { lob: { refId: 'PH.LOB.001' } }
 
 function opt(o: Partial<StandardOption> & { id: string }): StandardOption {
   return { type: 'FLAT', value: 0, allStates: true, states: [], isDefault: false, enabled: true, ...o }
@@ -85,14 +85,14 @@ describe('HO demonstrative — Coverage F $5,000 requires Coverage E ≥ $300,00
     limitTerm('cov-f', [
       opt({ id: 'f1', value: 1000, isDefault: true }),
       opt({ id: 'f5', value: 5000 }),
-    ], { ldTableRef: 'HO.LD.002' }),
+    ], { ldTableRef: 'PH.LD.002' }),
   ])
 
   it('errors when Coverage E tops out below $300,000', () => {
     const covE = coverage('Coverage E — Personal Liability', [
-      limitTerm('cov-e', [opt({ id: 'e1', value: 100000, isDefault: true })], { ldTableRef: 'HO.LD.001' }),
+      limitTerm('cov-e', [opt({ id: 'e1', value: 100000, isDefault: true })], { ldTableRef: 'PH.LD.001' }),
     ])
-    const issues = validateCoverageTerms(covF, [covF, covE], HO, HO3_LD_TABLES, null)
+    const issues = validateCoverageTerms(covF, [covF, covE], HO, PH_LD_TABLES, null)
     const hit = issues.find(i => i.code === 'covF-requires-covE')
     expect(hit).toBeTruthy()
     expect(hit!.optionId).toBe('f5')
@@ -103,44 +103,44 @@ describe('HO demonstrative — Coverage F $5,000 requires Coverage E ≥ $300,00
       limitTerm('cov-e', [
         opt({ id: 'e1', value: 100000 }),
         opt({ id: 'e3', value: 300000, isDefault: true }),
-      ], { ldTableRef: 'HO.LD.001' }),
+      ], { ldTableRef: 'PH.LD.001' }),
     ])
-    const issues = validateCoverageTerms(covF, [covF, covE], HO, HO3_LD_TABLES, null)
+    const issues = validateCoverageTerms(covF, [covF, covE], HO, PH_LD_TABLES, null)
     expect(issues.find(i => i.code === 'covF-requires-covE')).toBeFalsy()
   })
 
-  it('does not fire for a non-HO product', () => {
-    const covE = coverage('Coverage E', [limitTerm('cov-e', [opt({ id: 'e1', value: 100000, isDefault: true })], { ldTableRef: 'HO.LD.001' })])
-    const GL = { lob: { refId: 'GL.LOB.001' } }
-    expect(validateCoverageTerms(covF, [covF, covE], GL, HO3_LD_TABLES, null).find(i => i.code === 'covF-requires-covE')).toBeFalsy()
+  it('does not fire for a non-PH product', () => {
+    const covE = coverage('Coverage E', [limitTerm('cov-e', [opt({ id: 'e1', value: 100000, isDefault: true })], { ldTableRef: 'PH.LD.001' })])
+    const PA = { lob: { refId: 'PA.LOB.001' } }
+    expect(validateCoverageTerms(covF, [covF, covE], PA, PH_LD_TABLES, null).find(i => i.code === 'covF-requires-covE')).toBeFalsy()
   })
 })
 
 describe('HO demonstrative — wind/hail % deductible ≥ all-peril deductible', () => {
   const covA = coverage('Coverage A — Dwelling', [
     limitTerm('cov-a', [opt({ id: 'a', value: 100000, isDefault: true })]),
-  ], { refId: 'HO.COV.001' })
+  ], { refId: 'PH.COV.001' })
 
   function windHailCoverage(pct: number, allPerilMax: number): Coverage {
     return coverage('Deductibles', [
       { id: 'aop', kind: 'DEDUCTIBLE', label: 'All-Peril Deductible', basis: 'flat', default: allPerilMax,
-        optionSet: [opt({ id: 'aop1', value: allPerilMax, isDefault: true })], ldTableRef: 'HO.LD.003' },
+        optionSet: [opt({ id: 'aop1', value: allPerilMax, isDefault: true })], ldTableRef: 'PH.LD.003' },
       { id: 'wh', kind: 'DEDUCTIBLE', label: 'Wind/Hail % Deductible', basis: 'percent', default: pct, unit: '%',
-        optionSet: [opt({ id: 'wh1', type: 'PERCENT', value: pct, isDefault: true })], ldTableRef: 'HO.LD.004' },
+        optionSet: [opt({ id: 'wh1', type: 'PERCENT', value: pct, isDefault: true })], ldTableRef: 'PH.LD.004' },
     ])
   }
 
   it('errors when the % of the smallest dwelling is below the all-peril deductible', () => {
     // 1% of $100,000 = $1,000 < $2,500 all-peril → violation
     const cov = windHailCoverage(1, 2500)
-    const issues = validateCoverageTerms(cov, [cov, covA], HO, HO3_LD_TABLES, null)
+    const issues = validateCoverageTerms(cov, [cov, covA], HO, PH_LD_TABLES, null)
     expect(issues.find(i => i.code === 'windHail-lt-allPeril')).toBeTruthy()
   })
 
   it('passes when the % clears the all-peril deductible', () => {
     // 5% of $100,000 = $5,000 ≥ $2,500 all-peril → ok
     const cov = windHailCoverage(5, 2500)
-    const issues = validateCoverageTerms(cov, [cov, covA], HO, HO3_LD_TABLES, null)
+    const issues = validateCoverageTerms(cov, [cov, covA], HO, PH_LD_TABLES, null)
     expect(issues.find(i => i.code === 'windHail-lt-allPeril')).toBeFalsy()
   })
 })
@@ -168,14 +168,14 @@ describe('mutate() seam assert', () => {
   })
 })
 
-describe('no false positives on the real HO-3 seed', () => {
+describe('no false positives on the real PH seed', () => {
   it('every seeded coverage validates clean once its terms resolve into option matrices', () => {
-    const resolved: Coverage[] = HO3_COVERAGES.map(c => ({
+    const resolved: Coverage[] = PH_COVERAGES.map(c => ({
       ...(c as unknown as Coverage),
-      terms: (c.terms ?? []).map(t => ({ ...t, optionSet: resolveTermOptions(t, t.ldTableRef ? HO3_LD_TABLES[t.ldTableRef] : undefined) })),
+      terms: (c.terms ?? []).map(t => ({ ...t, optionSet: resolveTermOptions(t, t.ldTableRef ? PH_LD_TABLES[t.ldTableRef] : undefined) })),
     }))
     for (const cov of resolved) {
-      const issues = validateCoverageTerms(cov, resolved, HO, HO3_LD_TABLES, [...HO3_FOOTPRINT_STATES])
+      const issues = validateCoverageTerms(cov, resolved, HO, PH_LD_TABLES, [...PH_FOOTPRINT_STATES])
       const errors = issues.filter(i => i.severity === 'error')
       expect(errors, `${cov.name}: ${errors.map(e => e.message).join(' | ')}`).toEqual([])
     }

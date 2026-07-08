@@ -99,18 +99,18 @@ describe('buildInventoryRows', () => {
 
 describe('productDisplayIdentity', () => {
   it('splits an "Offering — Form" name on an em/en dash but preserves hyphens (HO-3)', () => {
-    const id = productDisplayIdentity({ refId: 'HO.PROD.001', name: 'Homeowners — HO-3 Special Form', lob: { refId: 'HO.LOB.001', name: 'Homeowners' } })
-    expect(id.offeringName).toBe('Homeowners — HO-3 Special Form')
+    const id = productDisplayIdentity({ refId: 'PH.PROD.001', name: 'Personal Home — HO-3 Special Form', lob: { refId: 'PH.LOB.001', name: 'Personal Home' } })
+    expect(id.offeringName).toBe('Personal Home — HO-3 Special Form')
     expect(id.productName).toBe('HO-3 Special Form') // hyphen in HO-3 kept intact
-    expect(id.productCode).toBe('HO')
-    expect(id.frameworkId).toBe('HO.PROD.001')
-    expect(id.lobName).toBe('Homeowners')
+    expect(id.productCode).toBe('PH')
+    expect(id.frameworkId).toBe('PH.PROD.001')
+    expect(id.lobName).toBe('Personal Home')
   })
 
   it('uses the whole name as the product name when there is no dash separator', () => {
-    const id = productDisplayIdentity({ refId: 'GL.PROD.001', name: 'Monoline General Liability Product', lob: { refId: 'GL.LOB.001', name: 'General Liability' } })
-    expect(id.offeringName).toBe('Monoline General Liability Product')
-    expect(id.productName).toBe('Monoline General Liability Product')
-    expect(id.productCode).toBe('GL')
+    const id = productDisplayIdentity({ refId: 'PA.PROD.001', name: 'Personal Auto PAP Product', lob: { refId: 'PA.LOB.001', name: 'Personal Auto' } })
+    expect(id.offeringName).toBe('Personal Auto PAP Product')
+    expect(id.productName).toBe('Personal Auto PAP Product')
+    expect(id.productCode).toBe('PA')
   })
 })

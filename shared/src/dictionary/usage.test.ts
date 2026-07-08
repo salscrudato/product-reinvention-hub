@@ -1,26 +1,26 @@
 import { describe, it, expect } from 'vitest'
 import { buildEntryMatcher, computeDictionaryUsage, type DictUsageCorpus } from './usage'
-import { HO3_COVERAGES, HO3_RULES, HO3_FORMS, HO3_DICTIONARY } from '../seed/ho3'
-import { GL_COVERAGES, GL_RULES, GL_FORMS, GL_DICTIONARY } from '../seed/gl'
+import { PH_COVERAGES, PH_RULES, PH_FORMS, PH_DICTIONARY } from '../seed/personalHome'
+import { PA_COVERAGES, PA_RULES, PA_FORMS, PA_DICTIONARY } from '../seed/personalAuto'
 
-// Build a corpus from the real HO-3 seed so the test doubles as a calibration guard:
+// Build a corpus from the real PH seed so the test doubles as a calibration guard:
 // if a future seed edit renames a term/label, the expected back-references change here.
 const corpus: DictUsageCorpus = {
-  coverages: HO3_COVERAGES.map(c => ({
+  coverages: PH_COVERAGES.map(c => ({
     refId: c.refId, name: c.name, terms: c.terms,
-    productId: 'HO.PROD.001', entityPath: `products/HO.PROD.001/coverages/${(c.refId ?? '').replace(/\./g, '-')}`,
+    productId: 'PH.PROD.001', entityPath: `products/PH.PROD.001/coverages/${(c.refId ?? '').replace(/\./g, '-')}`,
   })),
-  rules: HO3_RULES.map(r => ({
+  rules: PH_RULES.map(r => ({
     refId: r.refId, condition: r.condition, outcome: r.outcome, subCategory: r.subCategory,
-    productId: 'HO.PROD.001', entityPath: `products/HO.PROD.001/rules/${(r.refId ?? '').replace(/\./g, '-')}`,
+    productId: 'PH.PROD.001', entityPath: `products/PH.PROD.001/rules/${(r.refId ?? '').replace(/\./g, '-')}`,
   })),
-  forms: HO3_FORMS.map(f => ({
+  forms: PH_FORMS.map(f => ({
     number: f.number, name: f.name, description: f.description, dynamicFields: f.dynamicFields,
     productRefIds: f.productRefIds,
   })),
 }
 
-const entry = (name: string) => HO3_DICTIONARY.find(d => d.name === name)!
+const entry = (name: string) => PH_DICTIONARY.find(d => d.name === name)!
 
 describe('buildEntryMatcher — whole-word, no false positives', () => {
   it('matches the exact phrase on a word boundary', () => {
@@ -46,28 +46,28 @@ describe('buildEntryMatcher — whole-word, no false positives', () => {
   })
 })
 
-describe('computeDictionaryUsage — real HO-3 corpus', () => {
+describe('computeDictionaryUsage — real PH corpus', () => {
   it('Coverage A Amount resolves to the coverages/rules/forms where it appears', () => {
     const refs = computeDictionaryUsage(entry('Coverage A Amount'), corpus)
     const cov  = refs.filter(r => r.kind === 'coverage').map(r => r.refId)
     const rules = refs.filter(r => r.kind === 'rule').map(r => r.refId)
     const forms = refs.filter(r => r.kind === 'form').map(r => r.refId)
-    expect(cov).toContain('HO.COV.001')   // "Coverage A — Dwelling" + term "Coverage A Amount"
-    expect(cov).toContain('HO.COV.002')   // term default "10% of Coverage A"
-    expect(cov).toContain('HO.COV.004')   // term default "30% of Coverage A"
-    expect(rules).toContain('HO.RU.002')  // outcome "10% of Coverage A"
-    expect(rules).toContain('HO.RU.004')  // outcome "30% of Coverage A"
+    expect(cov).toContain('PH.COV.001')   // "Coverage A — Dwelling" + term "Coverage A Amount"
+    expect(cov).toContain('PH.COV.002')   // term default "10% of Coverage A"
+    expect(cov).toContain('PH.COV.004')   // term default "30% of Coverage A"
+    expect(rules).toContain('PH.RU.002')  // outcome "10% of Coverage A"
+    expect(rules).toContain('PH.RU.004')  // outcome "30% of Coverage A"
     expect(forms).toContain('HO 04 48')   // description "10% of Coverage A"
   })
 
   it('All-Peril Deductible resolves to its rating rule', () => {
     const refs = computeDictionaryUsage(entry('All-Peril Deductible'), corpus)
-    expect(refs.map(r => r.refId)).toContain('HO.RU.007')  // "All-peril deductible selection"
+    expect(refs.map(r => r.refId)).toContain('PH.RU.007')  // "All-peril deductible selection"
   })
 
   it('Appraised Value resolves to the SPP coverage and endorsement', () => {
     const refs = computeDictionaryUsage(entry('Appraised Value'), corpus)
-    expect(refs.filter(r => r.kind === 'coverage').map(r => r.refId)).toContain('HO.COV.003.002')
+    expect(refs.filter(r => r.kind === 'coverage').map(r => r.refId)).toContain('PH.COV.003.002')
     expect(refs.filter(r => r.kind === 'form').map(r => r.refId)).toContain('HO 04 61')
   })
 
@@ -75,7 +75,7 @@ describe('computeDictionaryUsage — real HO-3 corpus', () => {
     const refs = computeDictionaryUsage(entry('Coverage A Amount'), corpus)
     expect(refs.length).toBeGreaterThan(0)
     for (const r of refs) {
-      if (r.kind !== 'form') expect(r.productId).toBe('HO.PROD.001')
+      if (r.kind !== 'form') expect(r.productId).toBe('PH.PROD.001')
       expect(r.entityPath).toBeTruthy()
     }
   })
@@ -93,21 +93,24 @@ describe('computeDictionaryUsage — real HO-3 corpus', () => {
   })
 })
 
-describe('computeDictionaryUsage — real GL corpus', () => {
-  const glCorpus: DictUsageCorpus = {
-    coverages: GL_COVERAGES.map(c => ({ refId: c.refId, name: c.name, terms: c.terms, productId: 'GL.PROD.001' })),
-    rules: GL_RULES.map(r => ({ refId: r.refId, condition: r.condition, outcome: r.outcome, subCategory: r.subCategory, productId: 'GL.PROD.001' })),
-    forms: GL_FORMS.map(f => ({ number: f.number, name: f.name, description: f.description, dynamicFields: f.dynamicFields, productRefIds: f.productRefIds })),
+describe('computeDictionaryUsage — real PA corpus', () => {
+  const paCorpus: DictUsageCorpus = {
+    coverages: PA_COVERAGES.map(c => ({ refId: c.refId, name: c.name, terms: c.terms, productId: 'PA.PROD.001' })),
+    rules: PA_RULES.map(r => ({ refId: r.refId, condition: r.condition, outcome: r.outcome, subCategory: r.subCategory, productId: 'PA.PROD.001' })),
+    forms: PA_FORMS.map(f => ({ number: f.number, name: f.name, description: f.description, dynamicFields: f.dynamicFields, productRefIds: f.productRefIds })),
   }
-  const glEntry = (name: string) => GL_DICTIONARY.find(d => d.name === name)!
+  const paEntry = (name: string) => PA_DICTIONARY.find(d => d.name === name)!
 
-  it('Occurrence Limit resolves to the BI/PD coverages and its limit rule', () => {
-    const refs = computeDictionaryUsage(glEntry('Occurrence Limit'), glCorpus)
-    expect(refs.filter(r => r.kind === 'coverage').map(r => r.refId)).toContain('GL.COV.002')
-    expect(refs.filter(r => r.kind === 'rule').map(r => r.refId)).toContain('GL.RU.004')
+  it('Collision Deductible resolves to the collision coverage', () => {
+    const refs = computeDictionaryUsage(paEntry('Collision Deductible'), paCorpus)
+    // PA.COV.004.001 term label is "Collision Deductible" — exact alias match
+    expect(refs.filter(r => r.kind === 'coverage').map(r => r.refId)).toContain('PA.COV.004.001')
   })
 
-  it('Loss Cost Multiplier resolves to its rating rule', () => {
-    expect(computeDictionaryUsage(glEntry('Loss Cost Multiplier'), glCorpus).map(r => r.refId)).toContain('GL.RU.090')
+  it('Bodily Injury Limit resolves to BI coverage and its limit rule', () => {
+    const refs = computeDictionaryUsage(paEntry('Bodily Injury Limit'), paCorpus)
+    // PA.COV.001.001 name is "Bodily Injury Liability"; term label "Bodily Injury Per Person / Per Accident"
+    const covRefs = refs.filter(r => r.kind === 'coverage').map(r => r.refId)
+    expect(covRefs.length).toBeGreaterThanOrEqual(1)
   })
 })

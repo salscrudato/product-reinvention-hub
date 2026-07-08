@@ -12,6 +12,14 @@
 // itself. To extend the harness, add a new EvalCase here and the runner picks
 // it up automatically.
 
+import {
+  PH_COVERAGES, PH_LD_TABLES, PH_RT_TABLES, PH_FORMS, PH_RULES, PH_FORM_RULES,
+  PH_DICTIONARY, PH_PRODUCT,
+  PA_COVERAGES, PA_LD_TABLES, PA_RT_TABLES, PA_FORMS, PA_RULES, PA_FORM_RULES,
+  PA_DICTIONARY, PA_PRODUCT,
+  findUnverifiedCitations, verifyItems, cleanForms, normalizeFormNumber,
+} from '@pf/shared'
+
 export interface EvalCase {
   id:              string
   feature:         string   // matches recordUsage feature name
@@ -37,7 +45,7 @@ const claimsDetermination: Record<string, unknown> = {
   coverages: [
     {
       name:       'Coverage A — Dwelling',
-      refId:      'HO.COV.001',
+      refId:      'PH.COV.001',
       formNumber: 'HO 00 03',
       definition: 'Covers risk of direct physical loss to the dwelling structure from sudden and accidental discharge or overflow of water from within a plumbing system.',
     },
@@ -51,19 +59,19 @@ const claimsDetermination: Record<string, unknown> = {
   ],
   limits: [
     { label: 'Coverage A Limit', value: 'Per the Declarations', source: 'Declarations' },
-    { label: 'All-peril deductible', value: 'Per the Declarations', source: 'HO.LD.003' },
+    { label: 'All-peril deductible', value: 'Per the Declarations', source: 'PH.LD.003' },
   ],
   reasoning: [
     'The loss — a burst internal pipe causing water damage to the dwelling — is a direct physical loss from sudden and accidental water discharge [Coverage A — Dwelling, HO 00 03].',
     'Section I exclusions address wear and tear, gradual seepage and backup from sewers/drains; none of these apply to a sudden internal pipe burst [Section I – Exclusions, HO 00 03].',
-    'Coverage A responds for the dwelling structure damage; the insured\'s Coverage A limit (per Declarations) applies, subject to the all-peril deductible [HO.COV.001, HO.LD.003].',
+    'Coverage A responds for the dwelling structure damage; the insured\'s Coverage A limit (per Declarations) applies, subject to the all-peril deductible [PH.COV.001, PH.LD.003].',
   ],
   openItems: [
     'Declarations page: Coverage A dwelling limit',
     'Declarations page: all-peril deductible amount',
     'Adjuster inspection: scope of structural damage vs. personal property',
   ],
-  citations: ['Section I – Exclusions', 'Coverage A — Dwelling', 'HO.COV.001', 'HO 00 03', 'HO.LD.003'],
+  citations: ['Section I – Exclusions', 'Coverage A — Dwelling', 'PH.COV.001', 'HO 00 03', 'PH.LD.003'],
 }
 
 // ─── Case 2: extractCoverages — HO-3 form extraction ─────────────────────────
@@ -165,9 +173,9 @@ const extractionResult: Record<string, unknown> = {
   },
 }
 
-// ─── Case 3: summarizeProduct — HO.PROD.001 ───────────────────────────────────
-// Represents the structured summary returned by summarizeProduct for the HO-3
-// product. All facts are drawn from the product metadata; nothing is invented.
+// ─── Case 3: summarizeProduct — PH.PROD.001 ───────────────────────────────────
+// Represents the structured summary returned by summarizeProduct for the Personal
+// Home product. All facts are drawn from the product metadata; nothing is invented.
 const productSummary: Record<string, unknown> = {
   headline:  'An ISO-style HO-3 open-peril homeowners product across 15 states, built on HO 00 03.',
   overview:
@@ -189,7 +197,7 @@ const productSummary: Record<string, unknown> = {
     { name: 'Water Back-Up & Sump Overflow', note: 'Optional endorsement (HO 04 95) for sewer/drain backup losses.' },
   ],
   considerations: [
-    'Wind/hail percentage deductible is available in coastal states only (HO.LD.004 restriction).',
+    'Wind/hail percentage deductible is available in coastal states only (PH.LD.004 restriction).',
     'Replacement cost coverage for personal property requires HO 04 90 endorsement election.',
     'Scheduled personal property riders (HO 04 61) must be individually appraised.',
   ],
@@ -197,20 +205,20 @@ const productSummary: Record<string, unknown> = {
 
 // ─── Case 4: draftRule — Coverage F requires Coverage E ≥ 300k ───────────────
 // Represents a correctly-drafted rule from draftRule. The rule condition and
-// outcome are grounded in real coverage refIds from the HO-3 portfolio.
+// outcome are grounded in real coverage refIds from the Personal Home portfolio.
 const ruleDraft: Record<string, unknown> = {
   category:       'PRODUCT',
   subCategory:    'Coverage Constraints',
   condition:      'Coverage F — Medical Payments $5,000 limit elected',
   outcome:        'Coverage E — Personal Liability limit must be ≥ $300,000',
-  coverageRefIds: ['HO.COV.005', 'HO.COV.006'],
+  coverageRefIds: ['PH.COV.005', 'PH.COV.006'],
   formNumbers:    ['HO 00 03'],
-  ldTableRef:     'HO.LD.002',
+  ldTableRef:     'PH.LD.002',
   rationale: [
-    'The $5,000 Coverage F option is only available when Coverage E is at least $300,000 [HO.LD.002].',
-    'This mirrors the constraint in the seeded Coverage F LD table and the existing rule HO.RU.004 [HO.COV.005, HO.COV.006].',
+    'The $5,000 Coverage F option is only available when Coverage E is at least $300,000 [PH.LD.002].',
+    'This mirrors the constraint in the seeded Coverage F LD table and the existing rule PH.RU.006 [PH.COV.005, PH.COV.006].',
   ],
-  citations: ['HO.COV.005', 'HO.COV.006', 'HO.LD.002', 'HO 00 03'],
+  citations: ['PH.COV.005', 'PH.COV.006', 'PH.LD.002', 'HO 00 03'],
   warnings:  [],
 }
 
@@ -220,9 +228,9 @@ export const EVAL_CASES: EvalCase[] = [
   {
     id:             'claims-pipe-burst',
     feature:        'analyzeClaim',
-    description:    'Sudden pipe burst / Coverage A — COVERED determination, cites HO.COV.001',
+    description:    'Sudden pipe burst / Coverage A — COVERED determination, cites PH.COV.001',
     response:       claimsDetermination,
-    expectedRefIds: ['HO.COV.001', 'HO.LD.003'],
+    expectedRefIds: ['PH.COV.001', 'PH.LD.003'],
     requiredFields: ['verdict', 'summary', 'coverages', 'citations', 'formNumber'],
   },
   {
@@ -236,7 +244,7 @@ export const EVAL_CASES: EvalCase[] = [
   {
     id:             'summarize-ho3-product',
     feature:        'summarizeProduct',
-    description:    'HO.PROD.001 product summary — headline, highlights, coverageHighlights',
+    description:    'PH.PROD.001 product summary — headline, highlights, coverageHighlights',
     response:       productSummary,
     expectedRefIds: [],  // summary cites product metadata, not refIds
     requiredFields: ['headline', 'overview', 'highlights', 'coverageHighlights'],
@@ -244,9 +252,84 @@ export const EVAL_CASES: EvalCase[] = [
   {
     id:             'draft-rule-cov-f',
     feature:        'draftRule',
-    description:    'Rule: Coverage F $5k requires Coverage E ≥ $300k — grounded in HO.COV.005, HO.COV.006',
+    description:    'Rule: Coverage F $5k requires Coverage E ≥ $300k — grounded in PH.COV.005, PH.COV.006',
     response:       ruleDraft,
-    expectedRefIds: ['HO.COV.005', 'HO.COV.006', 'HO.LD.002'],
+    expectedRefIds: ['PH.COV.005', 'PH.COV.006', 'PH.LD.002'],
     requiredFields: ['category', 'condition', 'outcome', 'coverageRefIds', 'citations'],
+  },
+]
+
+// ─── Guard cases — hostile inputs that must be REJECTED by the grounding guards ──
+// The four cases above assert a CORRECT fixture stays green. These assert the guards
+// bite: each feeds an adversarial input to the pure guard shipped for a P4 fix and
+// verifies the fabrication is caught. Deterministic + offline (no live API, no network:
+// the news probe is stubbed). One per new guard — regressions here fail `pnpm eval`.
+
+export interface GuardCase {
+  id:          string
+  feature:     string
+  description: string
+  run:         () => Promise<{ pass: boolean; note: string }>
+}
+
+// The live catalogue's stand-in, built from the seed: refIds upper-cased, form numbers
+// normalised — exactly what functions/src/tools.ts loadKnownCitations produces at runtime.
+const guardRefIds = new Set<string>(
+  [
+    PH_PRODUCT.refId, ...PH_COVERAGES.map(c => c.refId), ...Object.keys(PH_LD_TABLES),
+    ...Object.keys(PH_RT_TABLES), ...PH_RULES.map(r => r.refId), ...PH_FORM_RULES.map(r => r.refId),
+    ...PH_DICTIONARY.map(d => d.refId),
+    PA_PRODUCT.refId, ...PA_COVERAGES.map(c => c.refId), ...Object.keys(PA_LD_TABLES),
+    ...Object.keys(PA_RT_TABLES), ...PA_RULES.map(r => r.refId), ...PA_FORM_RULES.map(r => r.refId),
+    ...PA_DICTIONARY.map(d => d.refId),
+  ].filter((r): r is string => r != null).map(r => r.toUpperCase()),
+)
+const guardForms = new Set<string>([...PH_FORMS, ...PA_FORMS].map(f => normalizeFormNumber(f.number)))
+
+export const GUARD_CASES: GuardCase[] = [
+  {
+    id:          'chat-uncited-refid',
+    feature:     'chat',
+    description: 'chat citation guard flags a fabricated refId, keeps a real one + descriptive cites',
+    run: async () => {
+      const text = 'Coverage A is open-peril [PH.COV.001] under [Section I – Exclusions]; the phantom rule [PH.RU.999] also applies.'
+      const un = findUnverifiedCitations(text, guardRefIds, guardForms)
+      const pass = un.length === 1 && un[0] === 'PH.RU.999'
+      return { pass, note: pass ? '' : `expected ['PH.RU.999'], got ${JSON.stringify(un)}` }
+    },
+  },
+  {
+    id:          'news-dead-url',
+    feature:     'refreshNews',
+    description: 'news URL verifier drops a dead + a malformed URL, keeps the live one (probe stubbed)',
+    run: async () => {
+      const items = [
+        { url: 'https://www.iii.org/article/live', title: 'live' },
+        { url: 'https://hallucinated.example.test/nope', title: 'dead' },
+        { url: 'not-a-real-url', title: 'malformed' },
+      ]
+      const kept = await verifyItems(items, async (u) => u.includes('iii.org'))
+      const urls = kept.map(k => k.url)
+      const pass = urls.length === 1 && urls[0] === 'https://www.iii.org/article/live'
+      return { pass, note: pass ? '' : `kept ${JSON.stringify(urls)}` }
+    },
+  },
+  {
+    id:          'pdf-unverifiable-formnumber',
+    feature:     'extractCoverages',
+    description: 'form-number verification drops a number absent from the (PDF) source text, keeps a present one',
+    run: async () => {
+      // The verifyText a PDF upload now yields server-side (see functions/src/pdfText.ts).
+      const pdfText = 'HOMEOWNERS 3 – SPECIAL FORM  HO 00 03 10 00 ... Water Back-Up HO 04 95 ...'
+      const section = cleanForms({
+        forms: [
+          { number: 'HO 00 03', category: 'BASE_COVERAGE', citation: 'form header',   confidence: 0.99 },
+          { number: 'HO 99 99', category: 'ENDORSEMENT',   citation: 'invented',      confidence: 0.5  },
+        ],
+      }, pdfText)
+      const numbers = section.items.map(i => i.number)
+      const pass = numbers.length === 1 && numbers[0] === 'HO 00 03' && !!section.note?.includes('dropped')
+      return { pass, note: pass ? '' : `kept ${JSON.stringify(numbers)}; note="${section.note ?? ''}"` }
+    },
   },
 ]

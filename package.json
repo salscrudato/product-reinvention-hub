@@ -25,6 +25,7 @@
     "concurrently": "^9.1.2",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.10.0",
+    "pdf-lib": "^1.17.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^3.1.4"

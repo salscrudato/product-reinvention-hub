@@ -47,32 +47,32 @@ const TOOL_LABELS: Record<string, string> = {
 }
 
 // Domain-true examples, per line — they become one-tap starters once a form is selected.
-// HO exercises water discharge, sump back-up, fire, and off-premises theft; GL exercises
-// premises bodily injury, products liability, third-party property damage, and Coverage B.
+// PH exercises water discharge, sump back-up, fire, and off-premises theft; PA exercises
+// bodily injury liability, collision, comprehensive, and uninsured motorist claims.
 const HO_EXAMPLES = [
   'A pipe burst upstairs and soaked the hardwood floors and the ceiling below.',
   'Water backed up through my basement floor drain from the sump — is that covered?',
   'A wildfire damaged my detached garage and we lived in a hotel for two weeks.',
   'My laptop was stolen from my car at the mall.',
 ]
-const GL_EXAMPLES = [
-  'A customer slipped on a wet floor in our store and broke a wrist.',
-  'A product we manufactured failed months after sale and injured the user.',
-  "Our crew accidentally damaged a client's equipment while working on their site.",
-  'A competitor claims our new ad copied their slogan and is suing us.',
+const PA_EXAMPLES = [
+  "Another driver ran a red light and hit my car — who pays for the other driver's injuries?",
+  'I rear-ended someone on the highway; my car needs $8,000 in repairs.',
+  'My car was stolen from the parking garage overnight — is that under comprehensive?',
+  'A deer jumped out and hit my windshield; no other car was involved.',
 ]
 // Zero-state (no form selected yet): a representative blend so the surface reads multi-line.
-const BLENDED_EXAMPLES = [HO_EXAMPLES[0]!, GL_EXAMPLES[0]!, HO_EXAMPLES[2]!, GL_EXAMPLES[3]!]
+const BLENDED_EXAMPLES = [HO_EXAMPLES[0]!, PA_EXAMPLES[0]!, HO_EXAMPLES[2]!, PA_EXAMPLES[3]!]
 
-// Pick the starter set matching the selected form's line (defaults to HO when unknown).
+// Pick the starter set matching the selected form's line (defaults to PH when unknown).
 function examplesFor(lob?: string): string[] {
   const l = (lob ?? '').toUpperCase()
-  if (l === 'GL') return GL_EXAMPLES
+  if (l === 'PA') return PA_EXAMPLES
   return HO_EXAMPLES
 }
 
 // Full-name tooltip for the compact line chip in the context header.
-const LINE_TITLE: Record<string, string> = { HO: 'Homeowners', GL: 'General Liability' }
+const LINE_TITLE: Record<string, string> = { PH: 'Personal Home', PA: 'Personal Auto' }
 
 function toMillis(v: unknown): number {
   const o = v as { toDate?: () => Date; seconds?: number } | null

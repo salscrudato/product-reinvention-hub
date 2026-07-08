@@ -2,16 +2,16 @@
 import { describe, it, expect } from 'vitest'
 import { evaluate } from './evaluator'
 import {
-  HO3_RATING_PROGRAM, HO3_RT_TABLES, HO3_LD_TABLES,
-  HO3_WORKED_EXAMPLE, makeHO3RtGetter, makeHO3LdGetter,
-} from '../seed/ho3'
+  PH_RATING_PROGRAM, PH_RT_TABLES, PH_LD_TABLES,
+  PH_WORKED_EXAMPLE, makePHRtGetter, makePHLdGetter,
+} from '../seed/personalHome'
 
-const rtGetter = makeHO3RtGetter(HO3_RT_TABLES)
-const ldGetter = makeHO3LdGetter(HO3_LD_TABLES)
+const rtGetter = makePHRtGetter(PH_RT_TABLES)
+const ldGetter = makePHLdGetter(PH_LD_TABLES)
 
 describe('HO-3 rating evaluator', () => {
   it('produces $1,528 for the DOMAIN_HO worked example with exact per-step trace', () => {
-    const result = evaluate(HO3_RATING_PROGRAM, HO3_WORKED_EXAMPLE, rtGetter, ldGetter)
+    const result = evaluate(PH_RATING_PROGRAM, PH_WORKED_EXAMPLE, rtGetter, ldGetter)
 
     expect(result.finalPremium).toBe(1528)
 
@@ -39,8 +39,8 @@ describe('HO-3 rating evaluator', () => {
   })
 
   it('is deterministic — identical inputs yield an identical premium and trace', () => {
-    const a = evaluate(HO3_RATING_PROGRAM, HO3_WORKED_EXAMPLE, rtGetter, ldGetter)
-    const b = evaluate(HO3_RATING_PROGRAM, HO3_WORKED_EXAMPLE, rtGetter, ldGetter)
+    const a = evaluate(PH_RATING_PROGRAM, PH_WORKED_EXAMPLE, rtGetter, ldGetter)
+    const b = evaluate(PH_RATING_PROGRAM, PH_WORKED_EXAMPLE, rtGetter, ldGetter)
     expect(b.finalPremium).toBe(a.finalPremium)
     expect(b.trace.map(t => [t.stepId, t.runningTotal])).toEqual(a.trace.map(t => [t.stepId, t.runningTotal]))
     // The reported premium is exactly the final trace step's running total — no drift.
@@ -49,7 +49,7 @@ describe('HO-3 rating evaluator', () => {
 
   it('produces minimum premium $500 when calculated premium is lower', () => {
     const lowInputs = {
-      ...HO3_WORKED_EXAMPLE,
+      ...PH_WORKED_EXAMPLE,
       territory: 'T001',
       covA: 200000,
       covCPct: 50,
@@ -62,14 +62,14 @@ describe('HO-3 rating evaluator', () => {
       sppElected: false,
       sppItems: [],
     }
-    const result = evaluate(HO3_RATING_PROGRAM, lowInputs, rtGetter, ldGetter)
+    const result = evaluate(PH_RATING_PROGRAM, lowInputs, rtGetter, ldGetter)
     expect(result.finalPremium).toBeGreaterThanOrEqual(500)
   })
 
   it('wind/hail step is skipped when not elected', () => {
     const result = evaluate(
-      HO3_RATING_PROGRAM,
-      { ...HO3_WORKED_EXAMPLE, windHailElected: false },
+      PH_RATING_PROGRAM,
+      { ...PH_WORKED_EXAMPLE, windHailElected: false },
       rtGetter, ldGetter,
     )
     expect(result.trace.find(t => t.stepId === 's4b')).toBeUndefined()
@@ -77,13 +77,13 @@ describe('HO-3 rating evaluator', () => {
 
   it('wind/hail step executes and reduces premium when elected for coastal input', () => {
     // FL risk, CovA 400k, all-peril ded 1000; 2% WH = 0.94 factor
-    const coastalInputs: typeof HO3_WORKED_EXAMPLE = {
-      ...HO3_WORKED_EXAMPLE,
+    const coastalInputs: typeof PH_WORKED_EXAMPLE = {
+      ...PH_WORKED_EXAMPLE,
       windHailElected: true,
       windHailPct: 2,
     }
-    const withWH    = evaluate(HO3_RATING_PROGRAM, coastalInputs, rtGetter, ldGetter)
-    const withoutWH = evaluate(HO3_RATING_PROGRAM, { ...coastalInputs, windHailElected: false }, rtGetter, ldGetter)
+    const withWH    = evaluate(PH_RATING_PROGRAM, coastalInputs, rtGetter, ldGetter)
+    const withoutWH = evaluate(PH_RATING_PROGRAM, { ...coastalInputs, windHailElected: false }, rtGetter, ldGetter)
     expect(withWH.finalPremium).toBeLessThan(withoutWH.finalPremium)
     const s4b = withWH.trace.find(t => t.stepId === 's4b')
     expect(s4b).toBeDefined()
