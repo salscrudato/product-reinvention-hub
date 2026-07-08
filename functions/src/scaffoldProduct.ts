@@ -20,7 +20,7 @@
 import { onRequest } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY } from './runtime'
 import { runChatAgent } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
@@ -174,7 +174,7 @@ async function verifyScaffold(input: Record<string, unknown>): Promise<ScaffoldP
 interface ScaffoldBody { instruction?: string; lobPrefix?: string }
 
 export const scaffoldProduct = onRequest(
-  { secrets: [ANTHROPIC_API_KEY], cors: true, timeoutSeconds: 300, memory: '512MiB' },
+  { secrets: [ANTHROPIC_API_KEY, VOYAGE_API_KEY], cors: true, timeoutSeconds: 300, memory: '512MiB' },
   async (req, res) => {
     if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
 

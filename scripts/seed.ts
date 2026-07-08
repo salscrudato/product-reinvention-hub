@@ -19,7 +19,11 @@ import {
   makePARtGetter, makePALdGetter,
 } from '../shared/src/seed/personalAuto'
 import { evaluate } from '../shared/src/rating/evaluator'
+import { buildBundleChunks, dedupeChunks } from '../shared/src/retrieval/chunk'
 import type { SearchEntityType } from '../shared/src/types'
+import type {
+  Product, Coverage, Rule, FormRule, Form, DictionaryEntry, RatingProgram, LDTable, RTTable,
+} from '../shared/src/types'
 import * as readline from 'readline'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -148,6 +152,7 @@ async function main(): Promise<void> {
   await Promise.all([
     'products', 'forms', 'ldTables', 'rtTables',
     'dictionary', 'tasks', 'taskTemplates', 'feedback', 'searchIndex', 'seedReports',
+    'groundingChunks',
   ].map(c => deleteAll(db, c)))
   for (const b of bundles) {
     const pid = b.product.refId!
@@ -291,6 +296,42 @@ async function main(): Promise<void> {
     await batch.commit()
   }
   inc('searchIndex', searchEntries.length)
+
+  // ── Grounding vector index (chunked corpus for retrieval) ──────────────────
+  // Chunk every bundle with the shared builders and write to `groundingChunks`. Offline
+  // there is no VOYAGE_API_KEY, so chunks are stored WITHOUT vectors — the retrieval layer
+  // ranks them lexically (still a valid, queryable index). Run the ADMIN `reindexGrounding`
+  // callable with a key bound to add dense embeddings. Non-fatal: a failure here never
+  // breaks the seed. Doc id = chunk id (only '/' is illegal in a Firestore id; chunk ids
+  // use ':' and '.', which are legal).
+  try {
+    const chunks = dedupeChunks(bundles.flatMap(b => buildBundleChunks({
+      product:       b.product as unknown as Product,
+      coverages:     b.coverages as unknown as Coverage[],
+      rules:         b.rules as unknown as Rule[],
+      formRules:     b.formRules as unknown as FormRule[],
+      forms:         b.forms as unknown as Form[],
+      dictionary:    b.dictionary as unknown as DictionaryEntry[],
+      ratingProgram: b.ratingProgram as unknown as RatingProgram,
+      ldTables:      b.ldTables as unknown as Record<string, LDTable>,
+      rtTables:      b.rtTables as unknown as Record<string, RTTable>,
+    })))
+    for (let i = 0; i < chunks.length; i += 400) {
+      const batch = db.batch()
+      for (const c of chunks.slice(i, i + 400)) {
+        batch.set(db.doc(`groundingChunks/${c.id.replace(/\//g, '_')}`), {
+          id: c.id, text: c.text, contentHash: c.contentHash, metadata: c.metadata,
+          type: c.metadata.type, productId: c.metadata.productId, updatedAt: now,
+        })
+      }
+      await batch.commit()
+    }
+    inc('groundingChunks', chunks.length)
+    console.log(`  📇 ${chunks.length} grounding chunks indexed (lexical; run reindexGrounding with VOYAGE_API_KEY for dense vectors)`)
+  } catch (e) {
+    const msg = `  ⚠ Grounding index skipped: ${(e as Error).message}`
+    console.warn(msg); warnings.push(msg)
+  }
 
   // ── Auth Users ────────────────────────────────────────────────────────────
   console.log('\n👤 Creating auth users…')

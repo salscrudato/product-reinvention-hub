@@ -12,11 +12,14 @@
 // secret handling live in runtime.ts.
 import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, ANTHROPIC_API_KEY, CACHE_1H } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY, voyageKey, CACHE_1H } from './runtime'
 import { runChatAgent, assistantText } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
 import { emptyUsage, addUsage, recordUsage, recordCascade } from './telemetry'
+import type { ChunkMetadata } from '@pf/shared'
+import { retrieve } from './retrieval/index'
+import { buildCiteableDocuments, citationsFromConvo, verifyCitations } from './retrieval/citations'
 
 // ─── Structured determination (the card contract) ──────────────────────────────
 // The model calls this exactly once, as its final action, when the user has
@@ -172,7 +175,7 @@ const LINE_LABELS: Record<string, string> = {
 }
 
 export const analyzeClaim = onRequest(
-  { secrets: [ANTHROPIC_API_KEY], cors: true, timeoutSeconds: 300, memory: '512MiB' },
+  { secrets: [ANTHROPIC_API_KEY, VOYAGE_API_KEY], cors: true, timeoutSeconds: 300, memory: '512MiB' },
   async (req, res) => {
     if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
 
@@ -196,6 +199,27 @@ export const analyzeClaim = onRequest(
       // so it is read once per request (and reused across turns within the cache TTL)
       // rather than re-sent on every history item.
       const formNumber = body.formNumber?.trim() || 'the base form'
+      // The uploaded form is ALWAYS the first citeable document (index 0). Its citations
+      // resolve to the base form itself (char/page-level cited_text into the real clause).
+      const formMeta: ChunkMetadata = {
+        type: 'baseForm', refId: null, formNumber: body.formNumber?.trim() || null, productId: null,
+        path: body.formNumber ? `forms/${body.formNumber.trim().replace(/\s+/g, '-')}` : '', title: formNumber,
+      }
+
+      // Additional citeable structured chunks for the described scenario (gated on a Voyage
+      // key). These add refId-level product data the model can cite alongside the form; the
+      // parallel citationIndex maps each returned citation back to a verifiable anchor.
+      let chunkBlocks: Anthropic.DocumentBlockParam[] = []
+      const citationIndex: ChunkMetadata[] = [formMeta]
+      const vKey = voyageKey()
+      if (vKey && incoming[0]?.content) {
+        try {
+          const built = buildCiteableDocuments(await retrieve({ query: incoming[0].content, topK: 5, voyageKey: vKey }))
+          chunkBlocks = built.blocks
+          citationIndex.push(...built.index)   // documents order: [form, ...chunks]
+        } catch (e) { console.warn('[analyzeClaim] citation pre-retrieval skipped:', e) }
+      }
+
       const messages: Anthropic.MessageParam[] = incoming.map((m, i) => {
         const role = m.role === 'assistant' ? 'assistant' : 'user'
         if (i === 0 && role === 'user') {
@@ -204,11 +228,16 @@ export const analyzeClaim = onRequest(
             content.push({
               type: 'document',
               source: { type: 'base64', media_type: 'application/pdf', data: body.formBase64 },
-              cache_control: CACHE_1H,
+              title: formNumber, citations: { enabled: true }, cache_control: CACHE_1H,
             })
           } else if (body.formText?.trim()) {
-            content.push({ type: 'text', text: `BASE COVERAGE FORM (${formNumber}):\n\n${body.formText.slice(0, 200_000)}`, cache_control: CACHE_1H })
+            content.push({
+              type: 'document',
+              source: { type: 'text', media_type: 'text/plain', data: body.formText.slice(0, 200_000) },
+              title: `BASE COVERAGE FORM (${formNumber})`, citations: { enabled: true }, cache_control: CACHE_1H,
+            })
           }
+          for (const b of chunkBlocks) content.push(b)
           content.push({ type: 'text', text: m.content })
           return { role, content }
         }
@@ -263,6 +292,14 @@ export const analyzeClaim = onRequest(
       // text, so this fires ONLY on the truly-empty case.
       if (!determinationEmitted && !assistantText(convo).trim()) {
         send(res, { t: 'error', message: "I couldn't reach a grounded determination for that scenario. Add detail about what happened and what was damaged, or rephrase, and I'll try again." })
+      }
+
+      // Resolve the model's Citations-API citations back to the supplied documents (the base
+      // form + retrieved chunks): each valid citation points at a real, known source. An
+      // out-of-set citation index (`invalid`) is an anomaly worth surfacing.
+      const cv = verifyCitations(citationsFromConvo(convo), citationIndex)
+      if (cv.invalid > 0) {
+        send(res, { t: 'notice', level: 'warn', message: `${cv.invalid} citation${cv.invalid === 1 ? '' : 's'} referenced a source outside the grounded set — treat as unconfirmed.` })
       }
       send(res, { t: 'done' })
     } catch (err) {

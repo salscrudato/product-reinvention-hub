@@ -123,6 +123,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── Grounding chunk index — server-side ONLY (retrieval seam). Clients never
+    //    read or write it: embeddings + vectors are a backend concern, built + queried
+    //    via the Admin SDK (which bypasses these rules) in Functions. Denying both sides
+    //    keeps the "app never imports the vector store" guardrail enforced two-sided. ──
+    match /groundingChunks/{id} {
+      allow read, write: if false;
+    }
+
     // ── Deny everything not explicitly matched ────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

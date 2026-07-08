@@ -6,5 +6,11 @@
     { "collectionGroup": "auditEvents", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "productId", "order": "ASCENDING" }, { "fieldPath": "at", "order": "DESCENDING" }] },
     { "collectionGroup": "searchIndex", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "type", "order": "ASCENDING" }, { "fieldPath": "title", "order": "ASCENDING" }] }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "groundingChunks",
+      "fieldPath": "embedding",
+      "vectorConfig": { "dimension": 1024, "flat": {} }
+    }
+  ]
 }

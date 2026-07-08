@@ -18,6 +18,10 @@ import {
   PA_COVERAGES, PA_LD_TABLES, PA_RT_TABLES, PA_FORMS, PA_RULES, PA_FORM_RULES,
   PA_DICTIONARY, PA_PRODUCT,
   findUnverifiedCitations, verifyItems, cleanForms, normalizeFormNumber,
+  buildBundleChunks, dedupeChunks, lexicalRetrieve,
+} from '@pf/shared'
+import type {
+  Product, Coverage, Rule, FormRule, Form, DictionaryEntry, CorpusBundle,
 } from '@pf/shared'
 
 export interface EvalCase {
@@ -285,6 +289,50 @@ const guardRefIds = new Set<string>(
   ].filter((r): r is string => r != null).map(r => r.toUpperCase()),
 )
 const guardForms = new Set<string>([...PH_FORMS, ...PA_FORMS].map(f => normalizeFormNumber(f.number)))
+
+// ─── Retrieval-quality cases — "did we retrieve the refId the answer needs?" ────
+// The indexed grounding tools only help if the chunk carrying the answer's citation is
+// actually retrieved. These cases build the real chunk corpus from BOTH seeded products
+// and assert the expected refId / form number is in the top-k for a natural-language
+// query — via the lexical fallback that runs offline (and in prod when no VOYAGE_API_KEY
+// is set). A regression here means a grounded answer can no longer FIND its source.
+
+const bundle = (
+  product: unknown, coverages: unknown, rules: unknown, formRules: unknown,
+  forms: unknown, dictionary: unknown, ldTables: CorpusBundle['ldTables'], rtTables: CorpusBundle['rtTables'],
+): CorpusBundle => ({
+  product: product as Product, coverages: coverages as Coverage[], rules: rules as Rule[],
+  formRules: formRules as FormRule[], forms: forms as Form[], dictionary: dictionary as DictionaryEntry[],
+  ldTables, rtTables,
+})
+
+const RETRIEVAL_CORPUS = dedupeChunks([
+  ...buildBundleChunks(bundle(PH_PRODUCT, PH_COVERAGES, PH_RULES, PH_FORM_RULES, PH_FORMS, PH_DICTIONARY, PH_LD_TABLES, PH_RT_TABLES)),
+  ...buildBundleChunks(bundle(PA_PRODUCT, PA_COVERAGES, PA_RULES, PA_FORM_RULES, PA_FORMS, PA_DICTIONARY, PA_LD_TABLES, PA_RT_TABLES)),
+])
+
+export const RETRIEVAL_CORPUS_SIZE = RETRIEVAL_CORPUS.length
+
+export interface RetrievalCase { id: string; query: string; expect: string; k: number }
+
+export const RETRIEVAL_CASES: RetrievalCase[] = [
+  { id: 'water-backup-endorsement', query: 'water backing up through a sewer or drain endorsement', expect: 'HO 04 95', k: 6 },
+  { id: 'covF-requires-covE',       query: 'coverage F medical payments $5,000 requires coverage E limit', expect: 'PH.RU.006', k: 6 },
+  { id: 'scheduled-property',       query: 'scheduled personal property jewelry appraised value', expect: 'PH.COV.003.002', k: 6 },
+  { id: 'coverage-a-dwelling',      query: 'coverage A dwelling replacement value', expect: 'PH.COV.001', k: 6 },
+  { id: 'windhail-coastal',         query: 'wind and hail percentage deductible in coastal states', expect: 'PH.RU.008', k: 6 },
+  { id: 'auto-bodily-injury',       query: 'personal auto bodily injury liability part A', expect: 'PA.COV.001.001', k: 6 },
+  { id: 'auto-uninsured-motorist',  query: 'uninsured motorist coverage auto', expect: 'PA.COV.003', k: 6 },
+  { id: 'auto-collision',           query: 'collision coverage damage to your auto deductible', expect: 'PA.COV.004.001', k: 6 },
+]
+
+/** Anchors (refIds + form numbers) retrieved in the top-k for a query, via the offline
+ *  lexical ranker over the real chunk corpus — the same path prod uses without a key. */
+export function retrievedAnchors(query: string, k: number): string[] {
+  return lexicalRetrieve(query, RETRIEVAL_CORPUS, { topK: k })
+    .flatMap(h => [h.chunk.metadata.refId, h.chunk.metadata.formNumber])
+    .filter((x): x is string => !!x)
+}
 
 export const GUARD_CASES: GuardCase[] = [
   {

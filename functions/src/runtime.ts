@@ -19,6 +19,21 @@ if (!getApps().length) initializeApp()
 // Secrets (prod). Bind via `secrets: [ANTHROPIC_API_KEY]` on every AI function.
 export const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY')
 
+// The Voyage embeddings/rerank key — same handling model as the Anthropic key: a SERVER
+// secret (functions/.env.local locally, Firebase Secret in prod), read only inside
+// functions/, NEVER a VITE_* var, never sent to the browser, never logged. Bind via
+// `secrets: [VOYAGE_API_KEY]` on functions that retrieve or reindex. Optional: with no key
+// the retrieval layer falls back to the dependency-free lexical ranker (see retrieval/).
+export const VOYAGE_API_KEY = defineSecret('VOYAGE_API_KEY')
+
+/** The Voyage key if configured (bound + non-empty), else undefined → lexical retrieval.
+ *  `.value()` throws when the secret isn't bound to the running function; we treat any
+ *  failure or empty value as "not configured" so retrieval degrades safely to lexical. */
+export function voyageKey(): string | undefined {
+  try { const v = VOYAGE_API_KEY.value(); return v && v.trim() ? v : undefined }
+  catch { return undefined }
+}
+
 // Two GA models per spec: a reasoning model for chat/analysis and a fast model for
 // bulk/simple generations. Sonnet 5 runs adaptive thinking by default and REJECTS
 // non-default sampling params (temperature/top_p/top_k → 400), so the reasoning

@@ -16,8 +16,8 @@ import {
   PA_COVERAGES, PA_LD_TABLES, PA_RT_TABLES, PA_FORMS,
   PA_RULES, PA_FORM_RULES, PA_DICTIONARY, PA_PRODUCT,
 } from '@pf/shared'
-import { EVAL_CASES, GUARD_CASES } from './cases'
-import type { EvalCase, GuardCase } from './cases'
+import { EVAL_CASES, GUARD_CASES, RETRIEVAL_CASES, RETRIEVAL_CORPUS_SIZE, retrievedAnchors } from './cases'
+import type { EvalCase, GuardCase, RetrievalCase } from './cases'
 
 // ── Build known-entity sets from live seed data ────────────────────────────────
 //
@@ -209,6 +209,34 @@ function renderGuardTable(results: GuardResult[]): void {
   console.log()
 }
 
+// ── Retrieval-quality cases (is the expected refId retrieved in the top-k?) ─────
+
+interface RetrievalResult { id: string; expect: string; k: number; pass: boolean; note: string }
+
+function scoreRetrieval(c: RetrievalCase): RetrievalResult {
+  const anchors = retrievedAnchors(c.query, c.k)
+  const pass = anchors.includes(c.expect)
+  return { id: c.id, expect: c.expect, k: c.k, pass, note: pass ? '' : `top-${c.k}: ${anchors.join(', ') || '(none)'}` }
+}
+
+function renderRetrievalTable(results: RetrievalResult[]): void {
+  const W = { id: 32, exp: 18, k: 4 }
+  const header = pad('RETRIEVAL CASE', W.id) + pad('EXPECT', W.exp) + pad('K', W.k) + 'PASS'
+  const sep = '─'.repeat(header.length)
+  console.log('\nRETRIEVAL QUALITY (expected anchor in top-k — offline lexical over the chunk corpus)')
+  console.log(sep)
+  console.log(header)
+  console.log(sep)
+  for (const r of results) {
+    console.log(pad(r.id, W.id) + pad(r.expect, W.exp) + pad(String(r.k), W.k) + (r.pass ? 'PASS' : 'FAIL'))
+    if (!r.pass && r.note) console.log(`${''.padEnd(W.id + W.exp)}  ^ ${r.note}`)
+  }
+  const passed = results.filter((r) => r.pass).length
+  console.log(sep)
+  console.log(`\n${passed}/${results.length} retrieval cases passed (corpus: ${RETRIEVAL_CORPUS_SIZE} chunks)`)
+  console.log()
+}
+
 // ── Entry point ────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -216,7 +244,12 @@ async function main(): Promise<void> {
   renderTable(results)
   const guardResults = await runGuards(GUARD_CASES)
   renderGuardTable(guardResults)
-  const allPass = results.every((r) => r.pass) && guardResults.every((r) => r.pass)
+  const retrievalResults = RETRIEVAL_CASES.map(scoreRetrieval)
+  renderRetrievalTable(retrievalResults)
+  const allPass =
+    results.every((r) => r.pass) &&
+    guardResults.every((r) => r.pass) &&
+    retrievalResults.every((r) => r.pass)
   process.exit(allPass ? 0 : 1)
 }
 

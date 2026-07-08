@@ -4,11 +4,14 @@
 // with their own system context and tool set.
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, isRetryableAnthropicError, CACHE_1H } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY, voyageKey, isRetryableAnthropicError, CACHE_1H } from './runtime'
 import type { SseResponse } from './runtime'
 import { TOOLS, SYSTEM_PROMPT, runTool, loadKnownCitations } from './tools'
 import type { ToolOutput } from './tools'
 import { findUnverifiedCitations } from '@pf/shared'
+import type { ChunkMetadata } from '@pf/shared'
+import { retrieve } from './retrieval/index'
+import { buildCiteableDocuments, citationsFromConvo, verifyCitations } from './retrieval/citations'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 import type { UsageAccum } from './telemetry'
 
@@ -133,7 +136,7 @@ interface ChatBody {
 }
 
 export const chat = onRequest(
-  { secrets: [ANTHROPIC_API_KEY], cors: true, timeoutSeconds: 300, memory: '512MiB' },
+  { secrets: [ANTHROPIC_API_KEY, VOYAGE_API_KEY], cors: true, timeoutSeconds: 300, memory: '512MiB' },
   async (req, res) => {
     if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return }
 
@@ -151,12 +154,34 @@ export const chat = onRequest(
       if (incoming.length === 0) { send(res, { t: 'error', message: 'No message provided.' }); return }
 
       const messages: Anthropic.MessageParam[] = incoming.map(m => ({
-        role:    m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content,
+        role:    (m.role === 'assistant' ? 'assistant' : 'user') as 'assistant' | 'user',
+        content: m.content as string | Anthropic.ContentBlockParam[],
       }))
       const focus = body.productId
         ? `The user is focused on product ${body.productId}. Prefer that product when a productId is needed.`
         : undefined
+
+      // Retrieval-augmented citations (gated on a configured Voyage key → prod only; with
+      // no key the flow is exactly today's tools-only path, so offline behavior is
+      // unchanged). Attach the chunks most relevant to the LATEST question as citeable
+      // `document` blocks so the model cites chunk-level sources we then verify server-side.
+      let citationIndex: ChunkMetadata[] = []
+      const vKey = voyageKey()
+      if (vKey) {
+        let li = -1
+        for (let i = messages.length - 1; i >= 0; i--) if (messages[i]!.role === 'user') { li = i; break }
+        if (li >= 0) {
+          const q = incoming[li]!.content
+          try {
+            const hits = await retrieve({ query: q, topK: 6, filter: body.productId ? { productId: body.productId } : undefined, voyageKey: vKey })
+            const { blocks, index } = buildCiteableDocuments(hits)
+            if (blocks.length) {
+              citationIndex = index
+              messages[li] = { role: 'user', content: [...blocks, { type: 'text', text: q }] }
+            }
+          } catch (e) { console.warn('[chat] citation pre-retrieval skipped:', e) }
+        }
+      }
 
       const convo = await runChatAgent(anthropic(), messages, res, { context: focus, usageAccum })
 
@@ -182,6 +207,17 @@ export const chat = onRequest(
           }
         } catch (e) {
           console.warn('[chat] citation verification skipped:', e)
+        }
+
+        // When citeable chunks were supplied, resolve the model's Citations-API citations
+        // back to those chunks: every valid citation points at a REAL chunk whose refId we
+        // know (server-verifiable grounding, C1). `invalid` (a citation outside the supplied
+        // set) should never happen — surface it if it does.
+        if (citationIndex.length) {
+          const v = verifyCitations(citationsFromConvo(convo), citationIndex)
+          if (v.invalid > 0) {
+            send(res, { t: 'notice', level: 'warn', message: `${v.invalid} citation${v.invalid === 1 ? '' : 's'} referenced a source outside the grounded set — treat as unconfirmed.` })
+          }
         }
       }
       send(res, { t: 'done' })

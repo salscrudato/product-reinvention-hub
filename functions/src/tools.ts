@@ -8,11 +8,13 @@ import {
   evaluate, resolveRatingKit, resolveLobByRefId, DEFAULT_LOB, rankDocuments,
   computeDictionaryUsage, normalizeFormNumber,
 } from '@pf/shared'
-import type { RankDoc, DictUsageCorpus } from '@pf/shared'
+import type { RankDoc, DictUsageCorpus, ChunkSourceType } from '@pf/shared'
 import type {
   RatingInputMap, RatingProgram, RTTable, LDTable, Coverage, Rule, Form,
   Product, DictionaryEntry, SearchIndexEntry,
 } from '@pf/shared'
+import { retrieve } from './retrieval/index'
+import { voyageKey } from './runtime'
 
 // ─── Tool definitions (Anthropic schema) ───────────────────────────────────────
 
@@ -163,14 +165,47 @@ async function resolveProductId(given?: string): Promise<string | null> {
   return snap.size === 1 ? snap.docs[0]!.id : null
 }
 
+// Map the tool's coarse `type` filter to the chunk source types the index carries.
+const SEARCH_TYPE_MAP: Record<string, ChunkSourceType[]> = {
+  product:    ['product'],
+  coverage:   ['coverage'],
+  rule:       ['rule', 'formRule'],
+  form:       ['form', 'baseForm'],
+  ldTable:    ['ldTable'],
+  rtTable:    ['rtTable'],
+  dictionary: ['dictionary'],
+}
+
 async function searchEntities(query: string, type?: string): Promise<ToolOutput> {
+  // Indexed retrieval (OBSERVATIONS B10): embed the query (or lexically rank), fetch the
+  // top-k reranked chunks and return ONLY those with their metadata — not the whole
+  // searchIndex. This is the input-token reduction per grounded turn.
+  const types = type ? SEARCH_TYPE_MAP[type] : undefined
+  const hits = await retrieve({ query, topK: 8, filter: types?.length ? { types } : undefined, voyageKey: voyageKey() })
+
+  if (hits.length === 0) {
+    // Safety net: the grounding index hasn't been built yet (reindexGrounding not run) —
+    // fall back to the legacy searchIndex rank so discovery never returns empty meanwhile.
+    return legacySearchEntities(query, type)
+  }
+
+  const results = hits.map(h => ({
+    type: h.chunk.metadata.type, refId: h.chunk.metadata.refId, formNumber: h.chunk.metadata.formNumber,
+    title: h.chunk.metadata.title, path: h.chunk.metadata.path,
+    snippet: h.chunk.text.replace(/\s+/g, ' ').slice(0, 240),
+    score: Math.round(h.score * 1000) / 1000,
+  }))
+  return { content: JSON.stringify(results), summary: `${results.length} result${results.length === 1 ? '' : 's'}` }
+}
+
+/** The original full-collection searchIndex rank — retained ONLY as the empty-index
+ *  fallback for searchEntities (before the first reindexGrounding). Not the hot path. */
+async function legacySearchEntities(query: string, type?: string): Promise<ToolOutput> {
   const snap = await getFirestore().collection('searchIndex').get()
   const entries = snap.docs
     .map(d => d.data() as SearchIndexEntry)
     .filter(e => !type || e.type === type)
 
-  // Vector-space (TF-IDF cosine) retrieval so the model gets the most relevant
-  // entities, not merely ones containing a token. refId is repeated to weight it.
   const docs: RankDoc[] = entries.map((e, i) => ({
     id: String(i),
     text: `${e.title} ${e.subtitle} ${e.refId ?? ''} ${e.refId ?? ''} ${(e.keywords ?? []).join(' ')}`,
@@ -253,26 +288,52 @@ async function getRules(coverageRefId?: string, productIdArg?: string): Promise<
   return { content: JSON.stringify(rules), summary: `${rules.length} rule${rules.length === 1 ? '' : 's'}` }
 }
 
+function projectForm(f: Form) {
+  return {
+    number: f.number, name: f.name, edition: f.edition, category: f.category,
+    mandatoryDefault: f.mandatoryDefault, attachmentCondition: f.attachmentCondition,
+    coverageParts: f.coverageParts, description: f.description || null,
+  }
+}
+
 async function getForms(filter: Record<string, unknown>): Promise<ToolOutput> {
-  const snap    = await getFirestore().collection('forms').get()
+  const db         = getFirestore()
+  const formNumber = (filter.formNumber as string | undefined)?.replace(/\s+/g, ' ').trim()
+  const search     = (filter.search as string | undefined)?.trim()
+
+  // Exact lookup by number → a direct doc read (the doc key is the number, spaces→dashes).
+  if (formNumber) {
+    const doc = await db.doc(`forms/${formNumber.replace(/\s+/g, '-')}`).get()
+    const out = doc.exists ? [projectForm(doc.data() as Form)] : []
+    return { content: JSON.stringify(out), summary: `${out.length} form${out.length === 1 ? '' : 's'}` }
+  }
+
+  // Free-text discovery → semantic retrieval over form chunks, then targeted reads of the
+  // matched forms (top-k, not a full-collection scan).
+  if (search) {
+    const hits = await retrieve({ query: search, topK: 10, filter: { types: ['form'] }, voyageKey: voyageKey() })
+    if (hits.length) {
+      const docs  = await Promise.all(hits.map(h => db.doc(h.chunk.metadata.path).get()))
+      const forms = docs.filter(d => d.exists).map(d => projectForm(d.data() as Form))
+      return { content: JSON.stringify(forms), summary: `${forms.length} form${forms.length === 1 ? '' : 's'}` }
+    }
+    // fall through to the structured read if the index isn't built yet
+  }
+
+  // Structured filters (category/state/coveragePart) over the small global forms collection.
+  const snap         = await db.collection('forms').get()
   const category     = filter.category as string | undefined
   const state        = (filter.state as string | undefined)?.toUpperCase()
-  const formNumber   = (filter.formNumber as string | undefined)?.replace(/\s+/g, ' ').trim().toLowerCase()
   const coveragePart = (filter.coveragePart as string | undefined)?.toUpperCase()
-  const search       = (filter.search as string | undefined)?.toLowerCase()
+  const searchLc     = search?.toLowerCase()
 
   const forms = snap.docs.map(d => d.data() as Form).filter(f => {
     if (category && f.category !== category) return false
     if (state && !f.allStates && !(f.states ?? []).includes(state)) return false
-    if (formNumber && f.number.toLowerCase() !== formNumber) return false
     if (coveragePart && !(f.coverageParts ?? []).includes(coveragePart)) return false
-    if (search && !`${f.number} ${f.name}`.toLowerCase().includes(search)) return false
+    if (searchLc && !`${f.number} ${f.name}`.toLowerCase().includes(searchLc)) return false
     return true
-  }).slice(0, 25).map(f => ({
-    number: f.number, name: f.name, edition: f.edition, category: f.category,
-    mandatoryDefault: f.mandatoryDefault, attachmentCondition: f.attachmentCondition,
-    coverageParts: f.coverageParts, description: f.description || null,
-  }))
+  }).slice(0, 25).map(projectForm)
   return { content: JSON.stringify(forms), summary: `${forms.length} form${forms.length === 1 ? '' : 's'}` }
 }
 
@@ -309,23 +370,42 @@ async function runRating(programRef: string, partial: Partial<RatingInputMap>): 
 }
 
 async function getDictionary(name?: string, refId?: string): Promise<ToolOutput> {
-  const wantedRef  = refId?.trim().toLowerCase()
-  const wantedName = name?.trim().toLowerCase()
+  const wantedRef  = refId?.trim()
+  const wantedName = name?.trim()
   if (!wantedRef && !wantedName) return { content: JSON.stringify({ error: 'Provide a dictionary refId or name.' }), summary: 'error' }
 
-  const db   = getFirestore()
-  const snap = await db.collection('dictionary').get()
-  const all  = snap.docs.map(d => d.data() as DictionaryEntry)
+  const db = getFirestore()
+  let entry: DictionaryEntry | undefined
 
-  // refId is exact-match and authoritative; name falls back to exact-then-contains.
-  const entry =
-    (wantedRef  ? all.find(e => (e.refId ?? '').toLowerCase() === wantedRef) : undefined) ??
-    (wantedName ? (all.find(e => e.name.toLowerCase() === wantedName) ?? all.find(e => e.name.toLowerCase().includes(wantedName))) : undefined)
+  // refId is exact + authoritative → a targeted query (no full-collection scan).
+  if (wantedRef) {
+    const snap = await db.collection('dictionary').where('refId', '==', wantedRef).limit(1).get()
+    entry = snap.empty ? undefined : (snap.docs[0]!.data() as DictionaryEntry)
+  }
+
+  // Name → semantic retrieval to find the right definition, then a targeted read of it.
+  if (!entry && wantedName) {
+    const hits   = await retrieve({ query: wantedName, topK: 3, filter: { types: ['dictionary'] }, voyageKey: voyageKey() })
+    const hitRef = hits.map(h => h.chunk.metadata.refId).find((r): r is string => !!r)
+    if (hitRef) {
+      const snap = await db.collection('dictionary').where('refId', '==', hitRef).limit(1).get()
+      entry = snap.empty ? undefined : (snap.docs[0]!.data() as DictionaryEntry)
+    }
+    if (!entry) {
+      // Fallback (index not built): exact-then-contains over the collection.
+      const all = (await db.collection('dictionary').get()).docs.map(d => d.data() as DictionaryEntry)
+      const lc  = wantedName.toLowerCase()
+      entry = all.find(e => e.name.toLowerCase() === lc) ?? all.find(e => e.name.toLowerCase().includes(lc))
+    }
+  }
 
   if (!entry) return { content: JSON.stringify({ found: false, query: refId ?? name ?? '' }), summary: 'not found' }
 
   // Recompute "used in" LIVE from the current corpus so a cited definition never points
-  // at a stale reference. The AI can cite both the definition's refId and each usage's.
+  // at a stale reference. This back-reference list is deliberately EXHAUSTIVE (not a top-k
+  // retrieval): completeness of "where a term is used" is a data-truth guarantee, so
+  // loadUsageCorpus stays a bounded corpus read here rather than a lossy nearest-neighbour
+  // query. (The definition LOOKUP above is what moved to indexed retrieval.)
   const usage = computeDictionaryUsage(entry, await loadUsageCorpus())
   return {
     content: JSON.stringify({

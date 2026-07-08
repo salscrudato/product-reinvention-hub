@@ -139,3 +139,84 @@ cache), **with grounding held** (eval 4/4 + guards 3/3, validation layer untouch
 - **Escalation rate can climb to ~100% unnoticed?** No — it is recorded per feature, surfaced,
   and alarmed.
 - **Any grounding case regressed?** No — eval 4/4 + guards 3/3; both canaries exact.
+
+---
+
+## 2026-07-08 — Grounded retrieval (Voyage seam) + Citations API
+
+### Gate + regression (measured, this run)
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` (all workspaces) | ✅ green |
+| `pnpm lint` (all workspaces) | ✅ green (only pre-existing `isoImport.test.ts` warnings) |
+| `pnpm test:unit` (187 shared/app + 30 functions) | ✅ **217 passed** (+23: 18 shared retrieval, 5 citations) |
+| **Canary — Personal Home** | ✅ **$1,528** exact |
+| **Canary — Personal Auto** | ✅ **$1,002** exact |
+| `pnpm build` (app) | ✅ green |
+| `pnpm eval` | ✅ **4/4 cases + 3/3 grounding guards + 8/8 retrieval-quality** (grounding pass rate **held**; retrieval-quality check **added**) |
+
+Same methodology caveat as prior entries applies: **no live Anthropic/Voyage key** in this
+environment, so per-turn token counts are **structural projections**, not live counters. The
+new retrieval path is exercised offline via its **lexical fallback** (the eval's 8/8
+retrieval-quality section and 18 shared unit tests); the dense Voyage path + Citations API are
+typechecked, unit-tested at the seams, and activate in prod when a key is set.
+
+### What changed — retrieval behind a provider seam
+
+A grounded turn no longer pulls whole collections. The scan tools (OBSERVATIONS **B10**) now go
+through an indexed retriever behind a small provider seam (`functions/src/retrieval`, mirroring
+the app's Firebase→AWS adapter seam), with a **dependency-free lexical fallback** so nothing
+external is required offline. `VOYAGE_API_KEY` is a **server secret** (read only in
+`runtime.ts`, never `VITE_*`, never client, never logged).
+
+| Tool | Before | After |
+|---|---|---|
+| `search_entities` | read **all** `searchIndex`, TF-IDF in memory, return top-15 | embed query → **indexed KNN** (`findNearest`) → rerank → top-8 chunks + metadata (lexical fallback + legacy safety net) |
+| `get_dictionary` (name) | read **all** `dictionary` | semantic retrieval → targeted read of the matched entry |
+| `get_dictionary` (refId) | read **all** `dictionary`, match in memory | targeted `where('refId','==')` |
+| `get_forms` (search) | read **all** `forms`, filter in memory | semantic retrieval → targeted reads of matched forms |
+| `get_forms` (formNumber) | read **all** `forms`, match in memory | direct doc read |
+| `get_coverage` / `run_rating` / `get_ld_table` | direct exact reads | **unchanged** (exact lookups stay direct) |
+| dictionary **"used in"** | exhaustive corpus read | **unchanged** (completeness is a data-truth guarantee — deliberately not truncated to top-k) |
+
+### Projected per-turn delta (structural — live counters pending)
+
+- **Firestore read volume ↓ per grounded turn.** The dominant per-turn read — `search_entities`
+  scanning the entire `searchIndex` on *every* call — becomes an indexed KNN over ~`candidateK`
+  candidates (dense) or a single top-k pass (lexical). `get_dictionary`/`get_forms` discovery
+  and exact lookups become targeted reads instead of whole-collection scans. At portfolio scale
+  this is the difference between O(corpus) and O(k) per call.
+- **Model input tokens ↓ per grounded turn.** Retrieval returns a *small, ranked, semantically
+  relevant* set (top-8 chunks) with the refId/form anchor inline, so the model needs fewer
+  discovery round-trips before it can answer — each avoided tool turn removes a full
+  system+tools prefix re-send (even cached, a read at 0.1×) plus its tool-result tokens.
+- **Citations API on chat + claims.** Retrieved chunks (and, for claims, the uploaded base form)
+  are passed as citeable `document` blocks with `citations.enabled`. `cited_text` does **not**
+  count as output tokens, so grounding evidence moves off the billed output channel; and each
+  citation is **server-verifiable** — it resolves via `document_index` back to a real chunk whose
+  refId/form number we know (closes **C1**: chat grounding was prompt-only). Kept on the prose
+  channel only; the structured `emit_*` tools are untouched (citations ≠ structured outputs).
+
+### Retrieval-quality eval (new)
+
+`pnpm eval` gained a **retrieval-quality** section: 8 natural-language queries, each asserting the
+expected `refId`/form number is in the top-k over the real 132-chunk corpus (offline lexical —
+the prod-without-key path). This is the "are the expected refIds retrieved?" check; a chunking or
+ranking regression that stops an answer from finding its source now fails the gate.
+
+### Hostile self-review
+
+- **Can a Voyage key reach the client or a log?** No — `VOYAGE_API_KEY.value()` is read only in
+  `runtime.ts:voyageKey()`; nothing under `functions/src/retrieval` is imported by `app/`;
+  `groundingChunks` is denied to all clients in `firestore.rules` (Admin-SDK only); the Voyage
+  client surfaces only HTTP status on error, never the body/key.
+- **Does retrieval miss a refId the answer needs?** Guarded by the 8/8 retrieval-quality eval +
+  `candidateK` over-fetch before rerank; and a Voyage/rerank outage **degrades to lexical /
+  vector order** rather than blanking grounding, plus `search_entities` falls back to the legacy
+  `searchIndex` rank if the index hasn't been built yet.
+- **Did citation validity drop?** No — the bracket-citation post-check is unchanged; the Citations
+  API *adds* a server-verifiable layer (every citation resolves to a known chunk).
+- **Is `shared/` still platform-free?** Yes — `shared/src/retrieval` is pure TS (chunking + lexical
+  ranking + int8/cosine); the vector store, Voyage client and secret live only in `functions/`.
+- **Both canaries exact?** Yes — $1,528 + $1,002.
