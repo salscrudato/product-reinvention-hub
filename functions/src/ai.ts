@@ -148,7 +148,8 @@ export const chat = onRequest(
       send(res, { t: 'done' })
     } catch (err) {
       ok = false
-      send(res, { t: 'error', message: err instanceof Error ? err.message : 'AI request failed.' })
+      console.error('[chat] internal error:', err)
+      send(res, { t: 'error', message: 'AI request failed.' })
     } finally {
       res.end()
       void recordUsage({ feature: 'chat', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })

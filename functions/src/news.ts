@@ -11,7 +11,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { createHash } from 'crypto'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY } from './runtime'
+import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY, requireRole } from './runtime'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 import type { UsageAccum } from './telemetry'
 
@@ -100,11 +100,9 @@ async function fetchForInstruction(instruction: string, portfolioCtx: string, us
       max_tokens:  2048,
       temperature: 0,   // grounded extraction → deterministic, low-variance output
       system:      NEWS_SYSTEM,
-      // Basic web-search variant — supported on the fast (Haiku) tier; the parser
-      // only reads final text, so it is agnostic to the result-block shape.
-      tools:       [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }] as unknown as Anthropic.Tool[],
+      tools:       [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 } satisfies Anthropic.WebSearchTool20250305],
       messages,
-    })
+    }, { timeout: 60_000 })
     if (usageAccum) addUsage(usageAccum, res.usage)
     const text = res.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n')
     if (text.trim()) finalText = text
@@ -194,6 +192,8 @@ export const refreshNews = onCall(
   { secrets: [ANTHROPIC_API_KEY], maxInstances: 3, timeoutSeconds: 180 },
   async (req) => {
     if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in to refresh news.')
+    // Mirror firestore.rules: news/{id} write requires isAdmin().
+    requireRole(req.auth, 'ADMIN')
     const db           = getFirestore()
     const prefDoc      = await db.doc(`newsPrefs/${req.auth.uid}`).get()
     const instruction  = (prefDoc.data()?.instruction as string | undefined)?.trim() || DEFAULT_INSTRUCTION
@@ -208,7 +208,8 @@ export const refreshNews = onCall(
       return { found: items.length, stored }
     } catch (err) {
       ok = false
-      return { found: 0, stored: 0, error: err instanceof Error ? err.message : 'News fetch failed' }
+      console.error('[refreshNews] internal error:', err)
+      return { found: 0, stored: 0, error: 'News fetch failed.' }
     } finally {
       void recordUsage({ feature: 'refreshNews', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })
     }

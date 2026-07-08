@@ -1,5 +1,6 @@
 // Root vitest config — covers shared engines and app units.
-// Functions integration tests run separately against the emulators.
+// Functions unit tests run via `pnpm --filter functions test` (chained in pnpm test).
+// Functions integration tests run separately via pnpm test:rules (emulator required).
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({

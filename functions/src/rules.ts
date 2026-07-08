@@ -226,7 +226,8 @@ export const draftRule = onRequest(
       send(res, { t: 'done' })
     } catch (err) {
       ok = false
-      send(res, { t: 'error', message: err instanceof Error ? err.message : 'Draft failed.' })
+      console.error('[draftRule] internal error:', err)
+      send(res, { t: 'error', message: 'Draft failed.' })
     } finally {
       res.end()
       void recordUsage({ feature: 'draftRule', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })

@@ -1,6 +1,4 @@
-// Sign-in — email + password through the adapter, plus a no-credentials "Continue as
-// admin" button that performs a REAL sign-in as the seeded demo admin (real token +
-// ADMIN claim → full access and persistence). Premium, calm, Apple-inspired.
+// Sign-in — email + password through the adapter. Premium, calm, Apple-inspired.
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'

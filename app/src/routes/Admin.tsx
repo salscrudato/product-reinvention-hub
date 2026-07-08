@@ -51,10 +51,13 @@ function toMillis(v: unknown): number | null {
 const fmt = (v: unknown) => { const m = toMillis(v); return m ? new Date(m).toLocaleString() : '—' }
 
 export default function Admin() {
-  const { profile } = useUser()
+  const { profile, loading } = useUser()
   const [tab, setTab] = useState('users')
 
-  if (profile && profile.role !== 'ADMIN') {
+  // Hold until the profile resolves — prevents console content from flashing
+  // to non-admins while the Firestore user doc is still in-flight.
+  if (loading || !profile) return null
+  if (profile.role !== 'ADMIN') {
     return <EmptyState icon={<IconShield size={28} />} title="Admins only" description="You need the ADMIN role to view the admin console." />
   }
 

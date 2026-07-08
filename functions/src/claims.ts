@@ -256,7 +256,8 @@ export const analyzeClaim = onRequest(
       send(res, { t: 'done' })
     } catch (err) {
       ok = false
-      send(res, { t: 'error', message: err instanceof Error ? err.message : 'Analysis failed.' })
+      console.error('[analyzeClaim] internal error:', err)
+      send(res, { t: 'error', message: 'Analysis failed.' })
     } finally {
       res.end()
       void recordUsage({ feature: 'analyzeClaim', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })

@@ -11,7 +11,7 @@
     "seed": "tsx scripts/seed.ts",
     "cors:set": "gsutil cors set storage.cors.json gs://productreinvention.firebasestorage.app",
     "cors:get": "gsutil cors get gs://productreinvention.firebasestorage.app",
-    "test": "vitest run",
+    "test": "vitest run && pnpm --filter functions test",
     "test:rules": "firebase emulators:exec --only firestore --project productreinvention \"vitest run --config vitest.rules.config.ts\"",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",

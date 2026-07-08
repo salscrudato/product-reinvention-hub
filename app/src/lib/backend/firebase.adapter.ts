@@ -79,17 +79,16 @@ const INDEXABLE = new Set(['product', 'coverage', 'rule', 'form', 'ldTable', 'rt
 // ─── TEMPORARY dev-only admin bypass (no Firebase auth) ───────────────────────
 // A fake ADMIN session held entirely client-side. Dev builds only; because there is
 // no real ID token, Firestore rules reject every read/write (the workspace loads
-// empty). Persisted in sessionStorage so a reload keeps it. Remove before production.
+// empty). Persisted in sessionStorage so a reload keeps it.
 // Bare-username sign-in maps "name" → "name@USERNAME_DOMAIN" (the address the seeded
 // accounts are provisioned under), so users can log in with just "sal" / "rebecca".
 const USERNAME_DOMAIN = 'productreinvention.app'
 const DEV_BYPASS_KEY = 'pf.devAdminBypass'
 const DEV_ADMIN: AuthUser = { uid: 'dev-admin', email: 'dev-admin@local', name: 'Dev Admin (bypass)', role: 'ADMIN' }
-// Seeded demo-admin account (see shared HO3_SEED_USERS: admin@admin.com, no forced
-// password change). The no-credentials "Continue as admin" button signs in as this
-// real account so the session carries a genuine token + ADMIN claim → full access.
-const DEMO_ADMIN_EMAIL    = 'admin@admin.com'
-const DEMO_ADMIN_PASSWORD = 'admin123'
+// Seeded demo-admin account (HO3_SEED_USERS: sal@productreinvention.app / scrudato).
+// Used by signInAsAdmin() for a real sign-in that carries a genuine token + ADMIN claim.
+const DEMO_ADMIN_EMAIL    = 'sal@productreinvention.app'
+const DEMO_ADMIN_PASSWORD = 'scrudato'
 let bypassActive = import.meta.env.DEV && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(DEV_BYPASS_KEY) === '1'
 const bypassListeners = new Set<(u: AuthUser | null) => void>()
 // One-shot guard so we don't loop endlessly if anonymous sign-in fails or is disabled.
@@ -159,7 +158,7 @@ export const adapter: BackendAdapter = {
       return { user, token }
     },
 
-    // TEMPORARY dev-only admin bypass — see types.ts. No-op outside dev builds.
+    // REMOVE-BEFORE-PROD: dev-only admin bypass. No-op outside dev builds (import.meta.env.DEV guard).
     signInAsDevAdmin() {
       if (!import.meta.env.DEV) return
       bypassActive = true

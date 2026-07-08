@@ -5,6 +5,7 @@
 // AWS-SWAP: secret → Secrets Manager; verifyIdToken → Cognito JWT verify; SSE is
 // plain HTTPS and ports to Lambda URLs unchanged.
 import { defineSecret } from 'firebase-functions/params'
+import { HttpsError } from 'firebase-functions/v2/https'
 import type { Request } from 'firebase-functions/v2/https'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
@@ -57,6 +58,25 @@ export interface Caller {
 }
 
 export class AuthError extends Error {}
+
+/**
+ * Assert that the onCall auth token carries one of the required roles.
+ * Mirrors the Firestore rule on the same collection — both sides must agree.
+ * Throws HttpsError('permission-denied') if the role does not match.
+ *
+ * Usage:
+ *   requireRole(req.auth, 'EDITOR', 'ADMIN')  // canEdit() surfaces
+ *   requireRole(req.auth, 'ADMIN')             // isAdmin() surfaces
+ */
+export function requireRole(
+  auth: { token: Record<string, unknown> } | null | undefined,
+  ...roles: Role[]
+): void {
+  const role = auth?.token?.['role'] as string | undefined
+  if (!roles.includes(role as Role)) {
+    throw new HttpsError('permission-denied', `${roles.join(' or ')} access required.`)
+  }
+}
 
 /** Verify the caller's Firebase ID token (Bearer header) and return uid + role. */
 export async function authenticate(req: Request): Promise<Caller> {

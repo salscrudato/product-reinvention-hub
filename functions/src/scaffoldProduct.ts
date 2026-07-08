@@ -228,7 +228,8 @@ export const scaffoldProduct = onRequest(
       send(res, { t: 'done' })
     } catch (err) {
       ok = false
-      send(res, { t: 'error', message: err instanceof Error ? err.message : 'Scaffold failed.' })
+      console.error('[scaffoldProduct] internal error:', err)
+      send(res, { t: 'error', message: 'Scaffold failed.' })
     } finally {
       res.end()
       void recordUsage({ feature: 'scaffoldProduct', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })

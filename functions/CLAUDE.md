@@ -32,7 +32,7 @@ Always import `MODEL` / `MODEL_FAST` from `runtime.ts`. Never hardcode a model s
 
 **Auth first:** every endpoint calls `authenticate(req)` → `{ uid, role, name }`. Throw before doing any work if the token is invalid.
 
-**Role guard:** VIEWER is read-only. Check `caller.role !== 'VIEWER'` (or use the `canEdit()` helper) before any write. This mirrors the Firestore rules — both sides must agree.
+**Role guard:** VIEWER is read-only. Check `caller.role !== 'VIEWER'` before any write (or the exact role the Firestore rule requires — EDITOR|ADMIN for `canEdit()` surfaces, ADMIN for `isAdmin()` surfaces). There is no `canEdit()` server helper; inline the check. This mirrors the Firestore rules — both sides must agree.
 
 **AI grounded:** the model must use tool results, not free-generate facts. Every determination / analysis response must cite the source clause or document.
 

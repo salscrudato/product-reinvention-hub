@@ -279,7 +279,8 @@ export const extractCoverages = onRequest(
       send(res, { t: 'done' })
     } catch (err) {
       ok = false
-      send(res, { t: 'error', message: err instanceof Error ? err.message : 'Extraction failed.' })
+      console.error('[extractCoverages] internal error:', err)
+      send(res, { t: 'error', message: 'Extraction failed.' })
     } finally {
       res.end()
       void recordUsage({ feature: 'extractCoverages', model: MODEL, usage: usageAccum, latencyMs: Date.now() - t0, ok })

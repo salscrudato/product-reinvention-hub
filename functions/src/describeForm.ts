@@ -1,12 +1,12 @@
 // describeForm — cache-first plain-English form description via claude-haiku-4-5.
-// Any authenticated role may call it. If the form already has a non-empty description
-// the cached value is returned immediately (no AI call). Otherwise haiku generates
-// a 2-3 sentence plain-English summary and writes it back to forms/{formKey} so the
-// next caller gets an instant cache hit.
+// EDITOR or ADMIN only — writing back to forms/{formKey} requires canEdit() in rules.
+// Cache-hit path returns immediately (no AI call or write). Miss path generates a
+// 2-3 sentence plain-English summary and writes it back so the next caller gets an
+// instant cache hit.
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
-import { ANTHROPIC_API_KEY, anthropic, MODEL_FAST } from './runtime'
+import { ANTHROPIC_API_KEY, anthropic, MODEL_FAST, requireRole } from './runtime'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 
 if (!getApps().length) initializeApp()
@@ -19,6 +19,8 @@ export const describeForm = onCall<DescribeFormInput>(
   { secrets: [ANTHROPIC_API_KEY], maxInstances: 5 },
   async (req) => {
     if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in to generate form descriptions.')
+    // Mirror firestore.rules: forms/{formKey} write requires canEdit() (EDITOR | ADMIN).
+    requireRole(req.auth, 'EDITOR', 'ADMIN')
 
     const { formKey } = req.data
     if (!formKey?.trim()) throw new HttpsError('invalid-argument', 'formKey is required.')
@@ -66,7 +68,7 @@ export const describeForm = onCall<DescribeFormInput>(
           'given insurance form for a product manager audience. Be factual, concise, and accurate. ' +
           'Do not invent coverage details not provided in the input.',
         messages: [{ role: 'user', content: prompt }],
-      })
+      }, { timeout: 45_000 })
       addUsage(usageAccum, msg.usage)
 
       const description = (msg.content.find((b) => b.type === 'text')?.text ?? '').trim()

@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'no linter configured for functions'"
+    "lint": "echo 'no linter configured for functions'",
+    "test": "vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
@@ -17,6 +18,7 @@
   "devDependencies": {
     "@types/node": "^20.19.0",
     "tsup": "^8.5.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^3.1.4"
   }
 }
