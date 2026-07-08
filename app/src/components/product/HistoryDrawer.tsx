@@ -106,6 +106,7 @@ export function HistoryDrawer({ onClose }: Props) {
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
   const [expanded, setExpanded] = useState<string | null>(null)
   const [restoring, setRestoring] = useState<string | null>(null)
+  const [confirmRestoreId, setConfirmRestoreId] = useState<string | null>(null)   // A5: inline restore confirm (no native window.confirm)
   const [filter, setFilter] = useState<string>('all')
   const [q, setQ] = useState('')
 
@@ -132,10 +133,15 @@ export function HistoryDrawer({ onClose }: Props) {
     })
   }, [all, filter, q])
 
-  async function handleRestore(v: WithId<Version>) {
+  // Restore is gated by an inline confirm (A5: no native window.confirm). `askRestore`
+  // arms the confirm on a row; `doRestore` performs the write once the user confirms.
+  function askRestore(v: WithId<Version>) {
     if (!v.snapshot) { toast.error('No snapshot available for this version'); return }
-    const confirmed = window.confirm(`Restore ${ENTITY_META[v.entityType]?.label ?? v.entityType} "${entityName(v)}" to the version from ${timeAgo(v.at)}? This overwrites current values.`)
-    if (!confirmed) return
+    setConfirmRestoreId(v.id)
+  }
+
+  async function doRestore(v: WithId<Version>) {
+    if (!v.snapshot) return
     setRestoring(v.id)
     try {
       // Restore targets the version's OWN entity — not the product doc — so restoring a
@@ -146,6 +152,7 @@ export function HistoryDrawer({ onClose }: Props) {
         entityType: v.entityType, productId: v.productId ?? pid, actor,
       })
       toast.success('Restored to selected version')
+      setConfirmRestoreId(null)
     } catch (err) {
       if (err instanceof MutationConflictError) toast.error('Conflict — refresh and try again.')
       else toast.error('Restore failed')
@@ -196,7 +203,7 @@ export function HistoryDrawer({ onClose }: Props) {
                 <div key={v.id} className="rounded-[12px] bg-raised overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
                   <button
                     className="w-full flex items-start gap-2.5 px-3.5 py-3 text-sm text-left hover:bg-[var(--color-ghost)]"
-                    onClick={() => setExpanded(e => e === v.id ? null : v.id)}
+                    onClick={() => { setExpanded(e => e === v.id ? null : v.id); setConfirmRestoreId(null) }}
                     aria-expanded={isOpen}
                   >
                     <span className="mt-0.5 text-faint shrink-0">{isOpen ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}</span>
@@ -224,11 +231,28 @@ export function HistoryDrawer({ onClose }: Props) {
                     <div className="px-3.5 pb-3.5 flex flex-col gap-3" style={{ borderTop: '1px solid var(--color-border)' }}>
                       <div className="pt-3"><DiffView diff={v.diff ?? []} /></div>
                       {canEdit && v.snapshot != null && (
-                        <Button variant="ghost" size="sm" disabled={restoring === v.id}
-                          onClick={() => handleRestore(v)}>
-                          <IconRestore size={12} />
-                          {restoring === v.id ? 'Restoring…' : 'Restore to this version'}
-                        </Button>
+                        confirmRestoreId === v.id ? (
+                          // Inline restore confirmation — on-brand replacement for the native
+                          // window.confirm (A5), kept in-drawer to avoid a modal-on-modal. Warn
+                          // (not danger) tokens: a restore overwrites, it doesn't destroy.
+                          <div className="flex flex-col gap-2 rounded-[9px] bg-surface p-3" style={{ border: '1px solid var(--color-warn-line)' }}>
+                            <p className="text-[12px] text-warn">
+                              Restore to the version from {timeAgo(v.at)}? This overwrites the current values.
+                            </p>
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => setConfirmRestoreId(null)} disabled={restoring === v.id}>Cancel</Button>
+                              <Button variant="primary" size="sm" onClick={() => doRestore(v)} disabled={restoring === v.id}>
+                                <IconRestore size={12} />
+                                {restoring === v.id ? 'Restoring…' : 'Restore'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => askRestore(v)}>
+                            <IconRestore size={12} />
+                            Restore to this version
+                          </Button>
+                        )
                       )}
                     </div>
                   )}

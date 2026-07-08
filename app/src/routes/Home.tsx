@@ -251,7 +251,7 @@ export default function Home() {
 
 // Map a search-index hit to its in-app route (mirrors Explorer's toRoute).
 function routeFor(entry: SearchIndexEntry): string {
-  const pid = entry.path.split('/')[1] ?? 'HO.PROD.001'
+  const pid = entry.path.split('/')[1] ?? 'PH.PROD.001'
   switch (entry.type) {
     case 'product':    return `/app/products/${pid}/overview`
     case 'coverage':   return `/app/products/${pid}/coverages`

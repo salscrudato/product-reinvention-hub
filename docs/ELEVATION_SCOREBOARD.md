@@ -226,6 +226,87 @@ declared exception in `app/CLAUDE.md` because CSS vars don't survive serialisati
 - **No change to `shared/rating` or `shared/types`.** All fixes are CSS-token, ARIA, and
   UI-polish edits. The HO-3 **$1,528** canary is structurally untouched.
 
+## Re-score — post-reseed (Personal Home $1,528 + Personal Auto $1,002) · friction + consistency pass
+
+Date **2026-07-08**. Re-scored **every** surface hostile-stance against live code after the
+portfolio reseed (HO-3 + GL → **Personal Home** HO-3 and **Personal Auto** ISO PAP `PP 00 01`)
+and this prompt's friction/consistency work. Deterministic gate re-run **green**
+(typecheck · lint · **322** app+shared unit tests incl. the **$1,528** Personal Home *and*
+**$1,002** Personal Auto canaries · **36** functions tests · **build**); the offline AI eval is
+**16/16** (4/4 grounding+citation+shape, 4/4 adversarial guards, 8/8 retrieval — corpus 132
+chunks, 108 known refIds). The emulator-gated suites (rules / integration / e2e) were **not**
+re-run this pass — the local emulator ports were held by the running dev stack — but no change
+in this pass touches the Firestore rules, the `mutate()` / Storage path, auth, or the
+sign-in→portfolio e2e flow, so they are structurally unaffected. **Every surface remains ≥ 4.5
+on every axis; no axis dropped.**
+
+**What changed this pass (all friction / consistency — no visual overhaul):**
+- **Last native `window.confirm` removed (A5 completion).** `HistoryDrawer` version-restore
+  was the one native confirm surviving after Coverages/Dictionary were converted. It is now an
+  **on-brand inline confirm** in-drawer (warn-token framed — a restore *overwrites*, it doesn't
+  destroy — so it uses `--color-warn` / `--color-warn-line`, not danger), keyboard/SR-reachable,
+  auto-resets when the row collapses. Deliberately **inline, not a nested Dialog**, to avoid a
+  modal-on-modal inside the already-modal Drawer (and its double-Escape). **No native confirm
+  remains anywhere in the app** (grep-clean).
+- **News surface refined.** The header/preference/filter stack became a sticky two-column
+  layout (Agent-tracking card + Filter-feed card with one-tap popular-topic chips); the two
+  redundant search inputs (`query` + `nlFilter`) collapsed into a single natural-language
+  filter; an inline `<svg>` close glyph became the in-house `IconClose`. The G3
+  `role="feed"`/`role="article"` semantics are preserved. layout / consistency / iconography
+  strengthen.
+- **Consistency + domain-truth sweep (post-reseed).** Every *user-facing* and *AI-grounding*
+  reference to the retired GL line was moved to Personal Auto: News LOB keywords + base
+  instruction, `BaseFormsLibrary` / `StateTileMap` / `Dictionary` / `BaseFormExtract` labels &
+  comments, and — load-bearing — the `functions/src/tools.ts` chat `SYSTEM_PROMPT` + `run_rating`
+  / `get_dictionary` tool descriptions (now HO-3 $1,528 / **Personal Auto $1,002**, `PP 00 01`,
+  `PA.*` refId exemplars). The assistant now describes the portfolio it actually has. GL
+  deliberately survives *only* in the **line-agnostic** ISO-import / extraction **test fixtures**
+  and the claims copilot's `HO/PA/GL/OTHER` form detection (it can analyse any uploaded form,
+  not just seeded lines).
+- **Stale route fallbacks fixed.** `Home.routeFor` and `CommandPalette.toRoute` fell back to the
+  now-nonexistent `HO.PROD.001`; both now fall back to `PH.PROD.001` (the primary product).
+- **Confirmed already-landed — NOT redone:** **A4** generate-gates (manual Generate/Regenerate
+  control + server-side per-session call-gating & prompt-caching from the cost phase; the
+  one-time auto-summary is a deliberate, in-code-documented UX choice so Overview lands
+  populated), **A6** admin-flash (`Admin` returns `null` until the profile resolves).
+
+**Re-scored surfaces (current score · one-line note):**
+
+| Surface | Score | Note (current state · this-pass delta) |
+|---|:--:|---|
+| Landing | **4.85** | ✅ Static marketing hero; token-clean, reduced-motion aurora. a11y 4.5 (HeroSignIn eye-toggle still unverified). |
+| Sign-in | **4.75** | ✅ Keyboard-reachable password reveal, honest demo copy. |
+| Home | **4.90** | ✅ Grounded assistant; debounced SR "Response ready" (G1); citation route fallback → `PH.PROD.001`. |
+| Products | **4.90** | ✅ `page-in` transition, token-clean, real loading/empty states. |
+| Product › Overview | **4.90** | ✅ Optimistic rename via `mutate()` + conflict toast; honest "summarized from metadata" label (A3). |
+| Product › Coverages | **4.90** | ✅ On-brand delete Dialog (A5); rise-in stagger; full states. |
+| Product › Forms | **4.65** | ✅ Dense table by design; keyboard row-open; token-clean. |
+| Product › Pricing | **4.85** | ✅ Real premium value (A7), spring + step-trace **intact** (reference surface); **$1,528** canary; reduced-motion aware. |
+| Product › States | **4.65** | ✅ Registry-driven peril (copy now "Personal Auto → no coastal badge"); token-driven map. |
+| Product › Rules | **4.75** | ✅ PA-aware engine + Simulate; grounding guard re-validates before `mutate()`. |
+| Product framework (History / audit) | **4.85** | ⬆ Restore confirm now on-brand **inline** (A5) — the last native `window.confirm` removed; audited restore via `mutate()`. |
+| Explorer | **4.90** | ✅ Reference-grade roving-tabindex keyboard nav — verified **not regressed**. |
+| Tasks | **4.80** | ✅ Board/List/Project; dnd-kit `KeyboardSensor`; `aria-pressed` filters. |
+| News | **4.90** | ⬆ Sidebar layout + topic chips + single NL filter + `IconClose`; PA keywords; G3 articles preserved. |
+| Claims | **4.90** | ✅ Grounded copilot; debounced SR announce (G1); PA starters + line labels. |
+| Data Dictionary | **4.90** | ✅ Inline delete confirm (A5); live "used-in" back-refs; PA-aware refId scan. |
+| Feedback | **4.80** | ✅ ⌘. capture; drag-rank via `mutate()`; keyboard dnd. |
+| Admin | **4.80** | ✅ No-flash guard (A6/E5); real audit actor; per-product worked-example premiums. |
+| Builder / Drafts | **4.85** | ✅ Grounded entry points; typed-confirm promote gate; lineage + refId. |
+| Must-Change-Password | **4.95** | ✅ Keyboard eye-toggle; token-clean aurora; rev-guarded `mutate()`. |
+| Command palette | **4.85** | ✅ Focus trap + `aria-modal`; tokenized overlay; route fallback → `PH.PROD.001`. |
+| Share (public) | N/A | Route still absent from `App.tsx`. |
+
+**Cross-cutting invariants re-confirmed:** **no colour value lives outside the token layer** —
+the only literals are `index.css` (the token layer itself), `lib/svg/ratingFlow.tsx` (the SVG
+serialiser exception per `app/CLAUDE.md`) and `brand/icon-preview.html` (dev tool); every
+in-browser tint is either a `var(--color-*)` token or a `color-mix()` **derived from** a token
+(the app-wide wash idiom — 12 call-sites — no hex/`rgba()` literal among them). `--color-danger`
+is AA (`#B91C1C`); reduced-motion is honored globally (incl. the new inline confirm's parent
+`page-in`); both canaries exact; models `sonnet-5` / `haiku-4-5` (no `fable`); the adapter seam
+and `mutate()` atomicity are untouched. The two reference surfaces — **Explorer** keyboard nav
+and **Pricing** spring + trace — were re-exercised and are **not regressed**.
+
 ## Baseline divergences (code vs. archived docs)
 
 Recorded per the "code wins" rule; the reference docs were removed from the working tree
@@ -240,10 +321,13 @@ in commit `61bddd1 "chore: lean the repo to code only"` and now live only in git
 2. **Claims is now a real surface.** Archived `app/CLAUDE.md` described "builder + claims
    (StubRoute)". Code wires `claims` → a full `Claims` component (App.tsx:71); only
    `builder` remains a `StubRoute`. The scoreboard reflects the code.
-3. **Multi-line (GL) product exists.** The HO-only reference docs predate a second seeded
-   product — **Monoline General Liability (GL.PROD.001)** with its own worked example
-   ($2,789). `shared/src/seed/gl.ts`, `rating/gl.evaluator.test.ts`, `rating/kits.ts`,
-   `insurance/lobRegistry.ts`, `insurance/isoImport.ts` and `rating/rtGrid.ts` are new
-   code with no doc coverage. The $1,528 HO-3 canary is unchanged and still load-bearing.
+3. **Multi-line portfolio.** The HO-only reference docs predate a second seeded product.
+   The portfolio is now **Personal Home (HO-3, PH.PROD.001)** and **Personal Auto
+   (ISO PAP PP 00 01, PA.PROD.001)** — each with its own worked-example canary
+   (**$1,528** and **$1,002**; see `docs/DOMAIN_PA.md`). `shared/src/seed/personalHome.ts`,
+   `seed/personalAuto.ts`, `rating/personalAuto.evaluator.test.ts`, `rating/kits.ts`,
+   `insurance/lobRegistry.ts`, `insurance/isoImport.ts` and `rating/rtGrid.ts` carry the
+   multi-line machinery. (An earlier Monoline General Liability seed was replaced by
+   Personal Auto.) The $1,528 HO-3 canary is unchanged and still load-bearing.
 4. **`baseForms` collection** (Claims base-form library) exists in `firestore.rules`
    (line 96) but is not in the archived DATA_MODEL.md.
