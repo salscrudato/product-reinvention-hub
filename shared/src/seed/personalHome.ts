@@ -237,8 +237,9 @@ export const PH_RT_TABLES: Record<string, RTTable> = {
 
 // ─── RT getter (Personal Home — identical algorithm to legacy HO-3) ────────────
 
-import type { RtGetter, LdGetter } from '../rating/evaluator'
+import type { RtGetter } from '../rating/evaluator'
 import { genericRtLookup } from '../rating/rtGrid'
+import { makeLdGetter } from '../rating/ldGetter'
 
 export function makePHRtGetter(tables: Record<string, RTTable>): RtGetter {
   return (tableRef: string, q: Record<string, unknown>): number => {
@@ -272,9 +273,14 @@ export function makePHRtGetter(tables: Record<string, RTTable>): RtGetter {
         const covA = q['covA'] as number
         const exact = rows.find(r => r['covA'] === covA)
         if (exact) return exact['factor'] as number
-        // Extrapolate above 600k: +0.32 per additional 100k (ceiling increments)
-        if (covA > 600000) {
-          return 1.94 + Math.ceil((covA - 600000) / 100000) * 0.32
+        // Above the top tabulated Coverage A, extrapolate linearly from the LAST table row —
+        // never a hard-coded factor — so editing that row moves the extrapolation base with it
+        // (D2: no literal that duplicates a table cell). The +0.32 per additional $100k is the
+        // extrapolation slope (an algorithm parameter, not table data, so it duplicates nothing).
+        const top = rows.reduce((hi, r) => ((r['covA'] as number) > (hi['covA'] as number) ? r : hi))
+        const topCovA = top['covA'] as number
+        if (covA > topCovA) {
+          return (top['factor'] as number) + Math.ceil((covA - topCovA) / 100000) * 0.32
         }
         throw new Error(`PH.RT.003: no row for covA=${covA}`)
       }
@@ -335,23 +341,26 @@ export function makePHRtGetter(tables: Record<string, RTTable>): RtGetter {
   }
 }
 
-// LD values flow as INPUTs after user selection — getter exists for interface completeness.
-export function makePHLdGetter(_tables: Record<string, LDTable>): LdGetter {
-  return (_tableRef: string, _selectedValue: number | string): number => {
-    throw new Error('LdGetter should not be called by any PH.RAT.1 step')
-  }
-}
+// LD-source getter. PH's rating program routes limit/deductible selections in as numeric
+// INPUTs, so no PH.RAT.1 step uses an LD source today; the shared getter is wired (not a
+// throwing stub) so a PM-authored LD step still evaluates correctly. See rating/ldGetter.ts (D6).
+export const makePHLdGetter = makeLdGetter
 
 // ─── Rating program (PH.RAT.1 — 11 logical steps, 14 executable steps) ────────
 // Identical algorithm to legacy HO.RAT.1; table refs updated to PH.RT.* prefix.
 // The $1,528 canary is preserved exactly.
+
+// Single source of truth for the Personal Home minimum premium. The `minimumPremium` field
+// (displayed on the pricing card + fed to AI context) and the s11 MIN_FLOOR step BOTH read this
+// one constant, so the declared floor and the applied floor can never desync (D3: one mechanism).
+const PH_MINIMUM_PREMIUM = 500
 
 export const PH_RATING_PROGRAM: Omit<RatingProgram, 'createdAt' | 'updatedAt'> & {
   createdAt: null; updatedAt: null
 } = {
   refId:          'PH.RAT.1',
   name:           'Personal Home Rating Program',
-  minimumPremium: 500,
+  minimumPremium: PH_MINIMUM_PREMIUM,
   ...FOOTPRINT_SCOPE,
   ...gov(),
   steps: [
@@ -368,7 +377,7 @@ export const PH_RATING_PROGRAM: Omit<RatingProgram, 'createdAt' | 'updatedAt'> &
     { id: 's9',  order: 11, label: 'Tier factor',                             op: 'MUL',       source: { type: 'RT',    ref: 'PH.RT.009', keys: ['tier'] } },
     { id: 's10a',order: 12, label: 'Water back-up flat premium',              op: 'ADD',       source: { type: 'RT',    ref: 'PH.RT.010', keys: ['waterBackupLimit'] },     condition: 'waterBackupElected' },
     { id: 's10b',order: 13, label: 'Scheduled Personal Property premium',     op: 'ADD',       source: { type: 'SPP',   ref: 'PH.RT.007' },                                condition: 'sppElected' },
-    { id: 's11', order: 14, label: 'Apply minimum premium ($500)',             op: 'MIN_FLOOR', source: { type: 'CONST', value: 500 },                                       roundTo: 0 },
+    { id: 's11', order: 14, label: `Apply minimum premium ($${PH_MINIMUM_PREMIUM})`, op: 'MIN_FLOOR', source: { type: 'CONST', value: PH_MINIMUM_PREMIUM },                       roundTo: 0 },
   ],
 }
 

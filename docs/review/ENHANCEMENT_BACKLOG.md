@@ -33,12 +33,12 @@ epics those phases roll up to.
 | Severity | Count | IDs |
 |---|---|---|
 | **HIGH** | 2 open | B6, B7 *(E1✅)* |
-| **MEDIUM** | 15 open | A1, A3, B1, B2, B4, B8, B10, C1, C2, C3, D1✅, D2, D5, E2, E3 *(E5✅ G5✅)* |
-| **LOW** | 19 open | A2, A4, A5, A7, B3, B9, B11, B12, D3, D4, D6, E4, F1, F3, F4, G1, G2, G3, G4 *(A6✅ B5✅ C4✅ C5✅ E6✅ E7✅)* |
+| **MEDIUM** | 13 open | A1, A3, B1, B2, B4, B8, B10, C1, C2, C3, E2, E3 *(D1✅ D2✅ D5✅ E5✅ G5✅)* |
+| **LOW** | 15 open | A2, A4, A5, A7, B3, B9, B11, E4, F1, F3, F4, G1, G2, G3, G4 *(B5✅ B12✅ C4✅ C5✅ D3✅ D4✅ D6✅ E6✅ E7✅)* |
 | **INFO** | 1 | F2 (console noise — verified clean, no action) |
 | **EPIC** | 6 | H1–H6 |
 
-**Status roll-up:** 9 DONE (D1, E1, B5, C4, C5, E5, E6, E7, H1) · 43 OPEN. Total rows: 52.
+**Status roll-up:** 16 DONE (D1, D2, D3, D4, D5, D6, B5, B12, C4, C5, E1, E5, E6, E7, H1, H5) · 36 OPEN. Total rows: 52.
 
 ## Backlog
 
@@ -62,18 +62,18 @@ epics those phases roll up to.
 | **B9** | `expectedRev` applied inconsistently (omitted on Dictionary/share delete, News prefs, MustChangePassword) | LOW | S | P8 | OPEN | `Dictionary.tsx:143`; `Admin.tsx:201`; `News.tsx:184`; `MustChangePassword.tsx:34`. |
 | **B10** | Grounding tools do full-collection scans (searchIndex/forms/dictionary/usage corpus) | MED | M | P4 | OPEN | `tools.ts:167,257,317,345-351`. Fine at seed scale; index before scale. |
 | **B11** | `describeForm` writes a domain doc outside `mutate()` (no audit/version/searchIndex) | LOW | S | P2 | OPEN | `describeForm.ts:71`. Deliberate derived cache; tension with atomic invariant (= E3). |
-| **B12** | rtGrid key separator is a NUL (`\0`) rendered as a space — a "cleanup" would silently break grid keys | LOW | S | P6 | OPEN | `rtGrid.ts:39`. Add explicit comment / guard. |
+| **B12** | rtGrid key separator is a NUL (`\0`) rendered as a space — a "cleanup" would silently break grid keys | LOW | S | P6 | **DONE** | `rtGrid.ts` — `SEP` is now written as an explicit `U+0000` escape (identical runtime value, no raw NUL byte in source) with a 5-line warning comment against turning it into a space; `joinKey`/`splitKey` and the app grid editor that shares them are unchanged. *This prompt (P6).* |
 | **C1** | Grounding enforcement uneven — `chat` has **no** server citation guard (prompt-only) | MED | M | P4 | OPEN | `ai.ts` vs `claims.ts:222-230`. Add lightweight post-check or mark chat advisory. (= E2.) |
 | **C2** | `refreshNews`/`nightlyNews` store **unverified URLs** (no existence check) | MED | M | P4 | OPEN | `news.ts:112,178`. HEAD-check or drop unresolved. |
 | **C3** | PDF extraction can't verify form numbers (`verifyText=null` for base64 PDFs) | MED | M | P4 | OPEN | `extract.ts:230-232`. Extract PDF text server-side to enable grep-verify. |
 | **C4** | `err.message` echoed to clients in several catch blocks | LOW | S | P4 | **DONE** | Generic client messages + `console.error` server logs in ai/claims/extract/rules/scaffoldProduct/news. |
 | **C5** | `web_search` tool cast `as unknown as Anthropic.Tool[]` — type hole | LOW | S | P4 | **DONE** | Typed with `satisfies Anthropic.WebSearchTool20250305` — SDK schema changes now caught at compile time. |
 | **D1** | Seed canary verification was non-fatal (CRITICAL warning, still completed) | MED | S | P1 | **DONE** | `scripts/seed.ts` — canary miss now accumulates + `process.exit(1)` after report; proven exit 0 (pass) / 1 (miss). *This prompt.* |
-| **D2** | Rating literals duplicate table data → silent desync (`HO.RT.003` magic nums, RC `CONST 1.10`, GL terrorism `CONST 50`) | MED | M | P6 | OPEN | `ho3.ts:287,385`; `gl.ts:245`. Pull literals into tables. |
-| **D3** | `RatingProgram.minimumPremium` is a dead field (floor applied via `MIN_FLOOR` step) | LOW | S | P6 | OPEN | `evaluator.ts` never reads it; `ho3.ts:364,395`; `gl.ts:235,246`. Retire the field. |
-| **D4** | GL ILF trace shows `aggregateLimit` key that doesn't affect the result ("rides along for display") | LOW | S | P6 | OPEN | `gl.ts:196-198,242`. Misleading provenance in the auditable artifact. |
-| **D5** | refId scheme inconsistent across lines (HO `HO.LD.*`/`HO.RT.*` vs GL `LDTable.*`/`RTTable.*`) | MED | M | P6 | OPEN | `ho3.ts:66,125` vs `gl.ts:62,114`. Normalize the scheme. |
-| **D6** | Entire `LD` source path is dead code for seeded data (both getters throw) | LOW | S | P6 | OPEN | `evaluator.ts:82-87`; `ho3.ts:349-355`; `gl.ts:219-223`. Wire or remove. |
+| **D2** | Rating literals duplicate table data → silent desync (`HO.RT.003` magic nums, RC `CONST 1.10`, GL terrorism `CONST 50`) | MED | M | P6 | **DONE** | `personalHome.ts` — `PH.RT.003` extrapolation now reads the top tabulated row (removed the `1.94`/`600000` literals that duplicated table cells); the `+0.32/100k` slope is an algorithm param, duplicates nothing. RC `CONST 1.10` is the *sole* source (no RC table → not a duplicate; kept). GL removed in P4. Locked by `seed/seedIntegrity.test.ts` (editing a factor moves the premium). *P6.* |
+| **D3** | `RatingProgram.minimumPremium` is a dead field (floor applied via `MIN_FLOOR` step) | LOW | S | P6 | **DONE** | Superseded: the field is now *live* (displayed on `PremiumCard`, fed to AI context via `summarize`/`tools`), so it is NOT retired. Instead single-sourced — a per-line `P{H,A}_MINIMUM_PREMIUM` const feeds BOTH the field and the `MIN_FLOOR` step's `CONST`, so declared floor == applied floor. One mechanism. Test asserts field == step const. *P6.* |
+| **D4** | GL ILF trace shows `aggregateLimit` key that doesn't affect the result ("rides along for display") | LOW | S | P6 | **DONE** | Verified clean in the P4 seeds: audited every step in both `PH.RAT.1` / `PA.RAT.1` — each declared `keys` entry is consumed by its getter (no ride-along). The offending GL step was removed with the GL seed in P4. Nothing to fix. *P6.* |
+| **D5** | refId scheme inconsistent across lines (HO `HO.LD.*`/`HO.RT.*` vs GL `LDTable.*`/`RTTable.*`) | MED | M | P6 | **DONE** | The P4 reseed made both lines uniformly line-prefixed (`PH.*` / `PA.*`) — the un-prefixed GL `LDTable.*`/`RTTable.*` are gone. Locked by `seedIntegrity.test.ts` (every seeded refId for each product carries its line prefix). Forms keep ISO numbers by design (separate scheme). *P6.* |
+| **D6** | Entire `LD` source path is dead code for seeded data (both getters throw) | LOW | S | P6 | **DONE** | **Chose WIRE** (not remove): `'LD'` is a valid `RatingStep.source.type` in the shared contract (additive-types invariant forbids removing it) **and** the rating-step editor offers it, so the branch is reachable via user data — it must work, not throw. New shared `rating/ldGetter.ts` (`makeLdGetter`) resolves the selected option to its numeric value; both seeds re-export it (no more throwing stubs). Test proves it evaluates end-to-end; INPUT branch also covered. *P6.* |
 | **E1** | **Role invariant drift** — `describeForm`/`refreshNews` gate only on `req.auth` then write role-protected collections | **HIGH** | S | P2 | **DONE** | `requireRole(req.auth,'EDITOR','ADMIN')` in `describeForm`; `requireRole(req.auth,'ADMIN')` in `refreshNews`. `requireRole` helper in `runtime.ts`; unit tests in `functions/src/roleGuard.test.ts`. |
 | **E2** | AI grounded+cited drift — chat unguarded, summarize unverified, PDF extract unverifiable | MED | M | P4 | OPEN | See §C1/C3. |
 | **E3** | `mutate()` atomic invariant correct but untested + a few Functions write domain-ish docs outside it | MED | M | P3 | OPEN | See §B6/B11. |
@@ -81,7 +81,7 @@ epics those phases roll up to.
 | **E5** | Admin gate flashes (`if (profile && profile.role!=='ADMIN')`) — console renders while `profile` null | MED | S | P2 | **DONE** | `Admin.tsx` now returns `null` while `loading \|\| !profile`; role enforced after resolve. |
 | **E6** | Docs match code — `signInAsAdmin` targets unseeded `admin@admin.com`; SignIn header stale; `canEdit()` server helper doesn't exist | LOW | S | P8 | **DONE** | `DEMO_ADMIN_EMAIL` → `sal@productreinvention.app`; SignIn.tsx header cleaned; `functions/CLAUDE.md` corrected. |
 | **E7** | Dev-only bypass `signInAsDevAdmin()` still present (`import.meta.env.DEV`-guarded) | LOW | S | P8 | **DONE** | Kept (DEV-guarded, harmless in prod); comment updated to `// REMOVE-BEFORE-PROD`. Intentional. |
-| **F1** | Dead code — `StubRoute.tsx` (imported by nothing), the `LD` branch + getters, `minimumPremium` | LOW | S | P8 | OPEN | `routes/stub/StubRoute.tsx`; see D3/D6. Remove. |
+| **F1** | Dead code — `StubRoute.tsx` (imported by nothing), the `LD` branch + getters, `minimumPremium` | LOW | S | P8 | OPEN | Partly resolved by P6: the `LD` branch is now wired+tested (D6) and `minimumPremium` is live+single-sourced (D3) — neither is dead. Remaining: `routes/stub/StubRoute.tsx` (unused) still to remove (P8). |
 | **F2** | Console noise — verified essentially clean (only intentional `ErrorBoundary` + adapter warn) | INFO | — | — | OPEN | `ErrorBoundary.tsx:19`; `firebase.adapter.ts:205`. No action. |
 | **F3** | Hard-coded color inventory — `rgba()` literals (= E4) **plus** hex in browser-rendered brand SVGs | LOW | S-M | P8 | OPEN | **New drift found this prompt:** `Logo.tsx:15` (`#A100FF`/`#8B1FE0`/`#6D28D9`), `HeroMark.tsx:48-53` (`#FFFFFF`) render in-browser (not disk-export). Tokenize or document as brand-mark exception. |
 | **F4** | Tooling gaps — `functions`/`shared` lint are `echo` no-ops; `pnpm test` excludes `test:rules`; TS drift (app ~6.0 vs ~5.7) | LOW | S | P8 | OPEN | Workspace `package.json`s; root `package.json`. |
@@ -94,5 +94,5 @@ epics those phases roll up to.
 | **H2** | **Epic:** test the load-bearing write path + role guards + wire Playwright | EPIC | M-L | P3 | OPEN | Rolls up B6, B7 (+ E3). |
 | **H3** | **Epic:** make AI grounding uniform (chat post-check, verify news URLs, PDF text) | EPIC | M | P4 | OPEN | Rolls up C1, C2, C3 (+ B1, B2, E2). |
 | **H4** | **Epic:** fix the local Storage prod-write footgun | EPIC | M | P5 | OPEN | Rolls up B8. |
-| **H5** | **Epic:** data-truth hardening of the rating seams | EPIC | M | P6 | OPEN | Rolls up D1✅, D2, D3, D4 (+ D5, D6, B12). |
+| **H5** | **Epic:** data-truth hardening of the rating seams | EPIC | M | P6 | **DONE** | All rolled-up findings closed: D1✅ D2✅ D3✅ D4✅ D5✅ D6✅ B12✅. The $1,528/$1,002 provenance is now self-consistent (no literal/table desync, one minimum-premium mechanism, uniform line-prefixed refIds, no throwing/dead engine branch, explicit grid separator) and each is locked by a test. *P6.* |
 | **H6** | **Epic:** demo-readiness (seed sample base form + news) | EPIC | S-M | P7 | OPEN | Rolls up A1, A2. |

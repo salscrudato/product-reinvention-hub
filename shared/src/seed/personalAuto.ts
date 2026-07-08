@@ -5,8 +5,9 @@ import type {
   Product, Coverage, LDTable, RTTable, RatingProgram, Form,
   Rule, FormRule, DictionaryEntry, RatingInputField,
 } from '../types'
-import type { RtGetter, LdGetter } from '../rating/evaluator'
+import type { RtGetter } from '../rating/evaluator'
 import { genericRtLookup } from '../rating/rtGrid'
+import { makeLdGetter } from '../rating/ldGetter'
 import { PA_LOB } from '../insurance/lobRegistry'
 
 // ─── State footprint ───────────────────────────────────────────────────────────
@@ -327,12 +328,10 @@ export function makePARtGetter(tables: Record<string, RTTable>): RtGetter {
   }
 }
 
-// LD values flow as INPUTs — getter exists for interface completeness.
-export function makePALdGetter(_tables: Record<string, LDTable>): LdGetter {
-  return (): number => {
-    throw new Error('LdGetter should not be called by any PA.RAT.1 step')
-  }
-}
+// LD-source getter. PA routes limit/deductible selections in as numeric INPUTs, so no PA.RAT.1
+// step uses an LD source today; the shared getter is wired (not a throwing stub) so a PM-authored
+// LD step still evaluates correctly. See rating/ldGetter.ts (D6).
+export const makePALdGetter = makeLdGetter
 
 // ─── Rating program (PA.RAT.1 — 11 logical steps, 12 executable steps) ─────────
 // Territory base → driver class → limit factor → vehicle age → med pay (conditional)
@@ -340,12 +339,17 @@ export function makePALdGetter(_tables: Record<string, LDTable>): LdGetter {
 // → tier factor → rental (conditional) → towing (conditional) → minimum floor.
 // Canary: T002/DC2/100-300-100/Standard/medPay/UM/sym12-$500/sym12-$250/Standard/rental → $1,002.
 
+// Single source of truth for the Personal Auto minimum premium. The `minimumPremium` field
+// (displayed on the pricing card + fed to AI context) and the s11 MIN_FLOOR step BOTH read this
+// one constant, so the declared floor and the applied floor can never desync (D3: one mechanism).
+const PA_MINIMUM_PREMIUM = 250
+
 export const PA_RATING_PROGRAM: Omit<RatingProgram, 'createdAt' | 'updatedAt'> & {
   createdAt: null; updatedAt: null
 } = {
   refId:          'PA.RAT.1',
   name:           'Personal Auto Policy Rating Program',
-  minimumPremium: 250,
+  minimumPremium: PA_MINIMUM_PREMIUM,
   ...FOOTPRINT_SCOPE,
   ...gov(),
   steps: [
@@ -372,7 +376,7 @@ export const PA_RATING_PROGRAM: Omit<RatingProgram, 'createdAt' | 'updatedAt'> &
     // s10b: Towing and labor flat rate (ADD, conditional)
     { id: 's10b',order: 11, label: 'Towing and labor premium',           op: 'ADD',       source: { type: 'RT', ref: 'PA.RT.011', keys: ['towingLimit'] },      condition: 'towingElected' },
     // s11: Minimum premium floor; round to $
-    { id: 's11', order: 12, label: 'Apply minimum premium ($250)',        op: 'MIN_FLOOR', source: { type: 'CONST', value: 250 },                               roundTo: 0 },
+    { id: 's11', order: 12, label: `Apply minimum premium ($${PA_MINIMUM_PREMIUM})`, op: 'MIN_FLOOR', source: { type: 'CONST', value: PA_MINIMUM_PREMIUM },             roundTo: 0 },
   ],
 }
 
