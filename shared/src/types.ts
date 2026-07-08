@@ -301,12 +301,14 @@ export interface Version {
 }
 
 export interface AuditEvent {
-  actor:      { uid: string; name: string }
-  action:     'create' | 'update' | 'delete'
-  entityType: string
-  entityPath: string
-  productId?: string
-  at:         unknown
+  actor:        { uid: string; name: string }
+  action:       'create' | 'update' | 'delete' | 'export-duckcreek'
+  entityType:   string
+  entityPath:   string
+  productId?:   string
+  // export-duckcreek only: the manuScriptID that was emitted in the downloaded file.
+  manuScriptID?: string
+  at:           unknown
 }
 
 // ─── Collaboration ───────────────────────────────────────────────────────────

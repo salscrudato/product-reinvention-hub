@@ -24,7 +24,7 @@ const TABS = [
 ]
 
 function WorkspaceInner() {
-  const { pid, product, coverages, rules, forms, ldTables, rtTables, ratingProgram, loading } = useProductCtx()
+  const { pid, product, coverages, rules, formRules, forms, ldTables, rtTables, ratingProgram, loading } = useProductCtx()
   const navigate     = useNavigate()
   const { pathname } = useLocation()
   const { user }     = useUser()
@@ -170,7 +170,7 @@ function WorkspaceInner() {
               <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
                 <IconRecent size={14} aria-hidden="true" />History
               </Button>
-              <ExportMenu data={{ product, coverages, rules, forms, ldTables, rtTables, ratingProgram }} />
+              <ExportMenu data={{ product, coverages, rules, formRules, forms, ldTables, rtTables, ratingProgram }} />
             </div>
           </div>
         </div>

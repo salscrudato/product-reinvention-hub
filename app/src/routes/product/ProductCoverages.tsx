@@ -19,22 +19,11 @@ import { TermOptionsDialog } from '../../components/product/TermOptionsDialog'
 import { CoverageStatesDialog } from '../../components/product/CoverageStatesDialog'
 import { CoverageFormsDialog } from '../../components/product/CoverageFormsDialog'
 import { CoverageEditDialog } from '../../components/product/CoverageEditDialog'
-import { groupBySection, resolveLob } from '@pf/shared'
 import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
 const VIEW_KEY = 'pf.coverages.view'
 const byOrder = (a: WithId<Coverage>, b: WithId<Coverage>) => (a.order ?? 0) - (b.order ?? 0)
-
-function SectionHeader({ label, count }: { label: string; count: number }) {
-  return (
-    <div className="flex items-center gap-3">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[.09em] text-faint">{label}</h3>
-      <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
-      <span className="text-[11px] text-faint tnum">{count}</span>
-    </div>
-  )
-}
 
 export default function ProductCoverages() {
   const { pid, product, coverages, forms, rules, loading } = useProductCtx()
@@ -52,27 +41,20 @@ export default function ProductCoverages() {
   const [dialog, setDialog] = useState<{ kind: 'limits' | 'deductibles' | 'options' | 'states' | 'forms'; cov: WithId<Coverage> } | null>(null)
   const [editCov, setEditCov] = useState<WithId<Coverage> | 'new' | null>(null)
 
-  const lob = resolveLob(product)
   const fuse = useMemo(() => new Fuse(coverages, { keys: ['name', 'refId', 'claimsBasis'], threshold: 0.4 }), [coverages])
   const filtered = query ? fuse.search(query).map(r => r.item) : coverages
   const roots = filtered.filter(c => !c.parentId).sort(byOrder)
   const endorsements = filtered.filter(c => c.parentId).sort(byOrder)
   const parentName = (refId?: string | null) => coverages.find(c => c.refId === refId)?.name
 
-  // Organise the way a P&C PM reads a product: coverages grouped into the line's
-  // sections (Homeowners Section I / II, GL coverage parts…), each parent immediately
-  // followed by its sub-coverages. Sub-coverages whose parent fell out of a search
-  // trail in a final "Other sub-coverages" group so nothing silently disappears.
-  const sections = useMemo(() => {
-    const grouped = groupBySection(lob, roots).map(s => ({
-      label: s.label,
-      items: s.items.flatMap(r => [r, ...endorsements.filter(e => e.parentId === r.refId)]),
-    }))
-    const shown = new Set(grouped.flatMap(s => s.items.map(c => c.id)))
-    const orphans = endorsements.filter(e => !shown.has(e.id))
-    if (orphans.length) grouped.push({ label: 'Other sub-coverages', items: orphans })
-    return grouped.filter(s => s.items.length)
-  }, [lob, roots, endorsements])
+  // One flat collection — no section grouping. Each parent is immediately followed by
+  // its sub-coverages; any sub-coverage orphaned by a search is appended so nothing
+  // silently disappears.
+  const items = useMemo(() => {
+    const withKids = roots.flatMap(r => [r, ...endorsements.filter(e => e.parentId === r.refId)])
+    const shown = new Set(withKids.map(c => c.id))
+    return [...withKids, ...endorsements.filter(e => !shown.has(e.id))]
+  }, [roots, endorsements])
 
   // A deep link (?cov=<id|refId>) auto-opens that coverage's Limits editor once,
   // after coverages have loaded (guarded so closing it doesn't reopen).
@@ -136,26 +118,17 @@ export default function ProductCoverages() {
           action={canEdit ? <Button variant="primary" size="sm" onClick={() => setEditCov('new')}><IconPlus size={14} />Add coverage</Button> : undefined} />
       ) : filtered.length === 0 ? (
         <EmptyState icon={<IconSearch size={32} />} title={`No coverages match "${query}"`} />
-      ) : (
-        <div className="flex flex-col gap-6">
-          {sections.map(section => (
-            <section key={section.label} className="flex flex-col gap-3">
-              <SectionHeader label={section.label} count={section.items.length} />
-              {view === 'cards' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {section.items.map((cov, i) => (
-                    <div key={cov.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(i, 10) * 40}ms` } as React.CSSProperties}>
-                      <CoverageHubCard parentName={cov.parentId ? parentName(cov.parentId) : undefined} {...hubProps(cov)} />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
-                  {section.items.map(cov => <CoverageRow key={cov.id} isEndorsement={!!cov.parentId} {...hubProps(cov)} />)}
-                </div>
-              )}
-            </section>
+      ) : view === 'cards' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {items.map((cov, i) => (
+            <div key={cov.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(i, 10) * 40}ms` } as React.CSSProperties}>
+              <CoverageHubCard parentName={cov.parentId ? parentName(cov.parentId) : undefined} {...hubProps(cov)} />
+            </div>
           ))}
+        </div>
+      ) : (
+        <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
+          {items.map(cov => <CoverageRow key={cov.id} isEndorsement={!!cov.parentId} {...hubProps(cov)} />)}
         </div>
       )}
 
