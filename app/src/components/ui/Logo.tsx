@@ -1,42 +1,28 @@
-// Logo — the Product Reinvention Hub mark. A luminous product core (the hub) with a
-// single node tracing a tilted orbit around it: one clean gesture that reads as
-// continuous reinvention (motion) resolving on a bright, focused centre. Bespoke on a
-// violet gradient tile with a soft top sheen and an inner core-glow for premium depth.
-// Fully self-contained and crisp from 16px up; the gradient fills the whole tile so no
-// white shows beneath the mark. Mirrored byte-for-byte by /public/{favicon,icon}.svg.
-import { useId } from 'react'
+// Logo — the Product Reinvention Hub brand mark: "Composed Stack".
+//
+// Three precisely aligned plates descending through the brand violet: the composed,
+// versioned parts of a product (coverages, forms, rules, rating) stacked into one
+// governed whole. Layers = composition + versioning; the shared centre axis = precision
+// and governance. Flat, calm, Apple-restrained.
+//
+// The mark is a transparent glyph — no container, no fill behind it — so it sits cleanly
+// on any surface, light or dark. Colour is token-driven (var(--color-accent-*)) so it
+// restyles with the palette; the three tones sample the brand gradient (bright → accent
+// → strong). Standalone assets in app/src/brand/ and /public carry the literal hex as the
+// canonical definition; the .png OS icons are generated from those.
 
-export function Logo({ size = 28, className = '', rounded = 8 }: { size?: number; className?: string; rounded?: number }) {
-  const id = useId()
+// Optical grid: 32-unit box, centre (16,16). Three isometric plates (2.2:1), gently
+// rounded corners, stacked on the centre axis with even 1.2-unit gaps.
+const TOP = 'M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z'
+const MID = 'M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z'
+const BOT = 'M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z'
+
+export function Logo({ size = 28, className = '' }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className} role="img" aria-label="Product Reinvention Hub">
-      <defs>
-        <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#A100FF" /><stop offset="0.5" stopColor="#8B1FE0" /><stop offset="1" stopColor="#6D28D9" />
-        </linearGradient>
-        <linearGradient id={`${id}-sheen`} x1="4" y1="2" x2="20" y2="27" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fff" stopOpacity="0.24" /><stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-        <radialGradient id={`${id}-core`} cx="0.5" cy="0.42" r="0.6">
-          <stop offset="55%" stopColor="#fff" /><stop offset="100%" stopColor="#fff" stopOpacity="0.9" />
-        </radialGradient>
-        <radialGradient id={`${id}-glow`} cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0%" stopColor="#fff" stopOpacity="0.55" /><stop offset="100%" stopColor="#fff" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-
-      <rect width="32" height="32" rx={rounded} fill={`url(#${id}-bg)`} />
-      <rect width="32" height="32" rx={rounded} fill={`url(#${id}-sheen)`} />
-
-      {/* Tilted orbit + node, then the luminous hub core on top */}
-      <g transform="translate(16 16)">
-        <g transform="rotate(-24)">
-          <ellipse rx="10.6" ry="5.5" fill="none" stroke="#fff" strokeOpacity="0.9" strokeWidth="1.9" />
-          <circle cx="6.1" cy="-4.5" r="2.25" fill="#fff" />
-        </g>
-        <circle r="6.3" fill={`url(#${id}-glow)`} />
-        <circle r="3.3" fill={`url(#${id}-core)`} />
-      </g>
+    <svg width={size} height={size} viewBox="0 0 32 32" className={className} role="img" aria-label="Product Reinvention Hub">
+      <path d={TOP} style={{ fill: 'var(--color-accent-bright)' }} />
+      <path d={MID} style={{ fill: 'var(--color-accent)' }} />
+      <path d={BOT} style={{ fill: 'var(--color-accent-strong)' }} />
     </svg>
   )
 }

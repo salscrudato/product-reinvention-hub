@@ -69,7 +69,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-4 h-14 shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <Logo size={26} rounded={7} className="shrink-0 shadow-[0_2px_8px_rgba(139,31,224,.25)]" />
+        <Logo size={26} className="shrink-0" />
         {!collapsed && <span className="font-semibold text-sm text-text tracking-tight truncate">Product Reinvention Hub</span>}
       </div>
 

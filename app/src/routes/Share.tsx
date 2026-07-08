@@ -47,7 +47,7 @@ export default function Share() {
     <div className="min-h-svh bg-page">
       {/* Topbar */}
       <header className="flex items-center gap-3 h-14 px-6 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <Logo size={24} rounded={6} />
+        <Logo size={24} />
         <span className="text-sm font-semibold text-text">Product Reinvention Hub</span>
         <span className="ml-2 text-xs text-faint">· Shared snapshot</span>
         <Link to="/sign-in" className="ml-auto text-xs text-accent hover:underline">Sign in →</Link>

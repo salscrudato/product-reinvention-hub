@@ -1,17 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="512" height="512" role="img" aria-label="Product Reinvention Hub">
-  <!-- App icon: the Composed Stack on a deep near-black squircle with a soft violet glow.
-       OS/PWA icons need an opaque field; the in-app mark and favicon stay transparent.
-       Brand-asset file: carries the canonical violet tones as literal hex. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="512" height="512" role="img" aria-labelledby="ai-t ai-d">
+  <title id="ai-t">Product Reinvention Hub</title>
+  <desc id="ai-d">App icon — the Composed Stack in the brand violet on a deep near-black squircle with a soft violet glow. (OS/PWA icons require an opaque field; the in-app mark stays transparent.)</desc>
   <defs>
-    <linearGradient id="ic-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+    <linearGradient id="ai-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
       <stop stop-color="#170C30"/><stop offset="1" stop-color="#090514"/>
     </linearGradient>
-    <radialGradient id="ic-glow" cx="16" cy="16" r="13" gradientUnits="userSpaceOnUse">
+    <radialGradient id="ai-glow" cx="16" cy="16" r="13" gradientUnits="userSpaceOnUse">
       <stop stop-color="#A100FF" stop-opacity="0.30"/><stop offset="1" stop-color="#A100FF" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="32" height="32" rx="7" fill="url(#ic-bg)"/>
-  <circle cx="16" cy="16" r="13" fill="url(#ic-glow)"/>
+  <rect width="32" height="32" rx="7" fill="url(#ai-bg)"/>
+  <circle cx="16" cy="16" r="13" fill="url(#ai-glow)"/>
   <path d="M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z" fill="#B65CFF"/>
   <path d="M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z" fill="#A100FF"/>
   <path d="M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z" fill="#7A00E6"/>

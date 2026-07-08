@@ -254,7 +254,7 @@ export default function Landing() {
       {/* Nav */}
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">
         <div className="flex items-center gap-2.5">
-          <Logo size={32} rounded={9} className="shadow-[0_2px_10px_rgba(139,31,224,.3)]" />
+          <Logo size={32} />
           <span className="font-semibold text-text text-[15px] tracking-tight">Product Reinvention Hub</span>
         </div>
         <button

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="256" height="256" role="img" aria-labelledby="pm-t pm-d">
+  <title id="pm-t">Product Reinvention Hub — alternate: Monogram</title>
+  <desc id="pm-d">Alternate direction considered: a bold geometric "P" lettermark. Kept for the record; the shipped mark is Composed Stack.</desc>
+  <defs>
+    <linearGradient id="pm-v" x1="6" y1="6" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A100FF"/><stop offset="1" stop-color="#7A00E6"/>
+    </linearGradient>
+  </defs>
+  <rect x="9" y="6" width="3.6" height="20" rx="1.8" fill="url(#pm-v)"/>
+  <path d="M12 7.6 C19.2 7.6 22.2 10 22.2 12.9 C22.2 15.8 19.2 18.2 12 18.2" fill="none" stroke="url(#pm-v)" stroke-width="3.4" stroke-linecap="round"/>
+</svg>

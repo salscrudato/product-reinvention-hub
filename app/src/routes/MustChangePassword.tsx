@@ -56,7 +56,7 @@ export default function MustChangePassword() {
 
       <div className="relative w-full max-w-sm rise-in">
         <div className="flex flex-col items-center gap-4 mb-8">
-          <Logo size={48} rounded={14} className="shadow-[0_6px_20px_rgba(139,31,224,.3)]" />
+          <Logo size={48} />
           <div className="text-center">
             <h1 className="text-xl font-bold text-text">Set a new password</h1>
             <p className="text-sm text-dim mt-1">Your account requires a password change before you can continue.</p>

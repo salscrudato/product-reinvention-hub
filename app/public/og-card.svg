@@ -1,91 +1,77 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" font-family="'Inter', 'Segoe UI', system-ui, sans-serif">
   <defs>
     <linearGradient id="og-bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0C0914"/><stop offset="0.55" stop-color="#150F27"/><stop offset="1" stop-color="#0B0812"/>
+      <stop stop-color="#0C0914"/><stop offset="0.55" stop-color="#130D24"/><stop offset="1" stop-color="#080710"/>
     </linearGradient>
     <linearGradient id="og-brand" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#B24BFF"/><stop offset="0.5" stop-color="#8B1FE0"/><stop offset="1" stop-color="#6D28D9"/>
+      <stop stop-color="#C060FF"/><stop offset="0.5" stop-color="#9020E8"/><stop offset="1" stop-color="#6010B8"/>
     </linearGradient>
+
+    <!-- Ambient auras -->
     <radialGradient id="og-aura" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="rgba(161,0,255,0.34)"/><stop offset="100%" stop-color="rgba(161,0,255,0)"/>
+      <stop offset="0%" stop-color="rgba(140,0,255,0.28)"/><stop offset="100%" stop-color="rgba(140,0,255,0)"/>
     </radialGradient>
     <radialGradient id="og-aura2" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="rgba(122,0,230,0.20)"/><stop offset="100%" stop-color="rgba(122,0,230,0)"/>
+      <stop offset="0%" stop-color="rgba(100,0,200,0.18)"/><stop offset="100%" stop-color="rgba(100,0,200,0)"/>
     </radialGradient>
-    <!-- Logo-mark gradients -->
-    <linearGradient id="og-mbg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#A100FF"/><stop offset="0.5" stop-color="#8B1FE0"/><stop offset="1" stop-color="#6D28D9"/>
-    </linearGradient>
-    <linearGradient id="og-msheen" x1="4" y1="2" x2="20" y2="27" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#fff" stop-opacity="0.24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
-    </linearGradient>
-    <radialGradient id="og-mcore" cx="0.5" cy="0.42" r="0.6">
-      <stop offset="55%" stop-color="#fff"/><stop offset="100%" stop-color="#fff" stop-opacity="0.9"/>
-    </radialGradient>
-    <radialGradient id="og-mglow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0%" stop-color="#fff" stop-opacity="0.55"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="og-hubglow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0%" stop-color="rgba(178,75,255,0.55)"/><stop offset="100%" stop-color="rgba(178,75,255,0)"/>
-    </radialGradient>
+
+    <!-- Subtle dot grid -->
+    <pattern id="og-dots" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="14" cy="14" r="1" fill="rgba(255,255,255,0.035)"/>
+    </pattern>
   </defs>
 
+  <!-- Background -->
   <rect width="1200" height="630" fill="url(#og-bg)"/>
-  <circle cx="1010" cy="120" r="460" fill="url(#og-aura)"/>
-  <circle cx="120" cy="620" r="340" fill="url(#og-aura2)"/>
+  <rect width="1200" height="630" fill="url(#og-dots)"/>
 
-  <!-- Ambient orbit motif (top-right) — the logo, oversized and quiet, for depth -->
-  <g transform="translate(980 232)" opacity="0.9">
-    <circle r="150" fill="url(#og-hubglow)"/>
-    <g transform="rotate(-24)" fill="none" stroke="#ffffff">
-      <ellipse rx="250" ry="128" stroke-opacity="0.10" stroke-width="2"/>
-      <ellipse rx="188" ry="96"  stroke-opacity="0.08" stroke-width="2"/>
-    </g>
-    <g transform="rotate(-24)">
-      <circle cx="250" cy="0" r="7" fill="#ffffff" fill-opacity="0.5"/>
-      <circle cx="-188" cy="0" r="5" fill="#ffffff" fill-opacity="0.32"/>
-    </g>
-    <circle r="7" fill="#ffffff" fill-opacity="0.65"/>
+  <!-- Ambient aura blobs -->
+  <circle cx="980" cy="160" r="440" fill="url(#og-aura)"/>
+  <circle cx="140" cy="600" r="320" fill="url(#og-aura2)"/>
+
+  <!-- Ambient Composed-Stack echo (top-right), large + faint -->
+  <g transform="translate(980 250) scale(17) translate(-16 -16)">
+    <path d="M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z" fill="rgba(200,110,255,0.05)"/>
+    <path d="M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z" fill="rgba(180,80,255,0.038)"/>
+    <path d="M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z" fill="rgba(150,50,230,0.03)"/>
   </g>
 
-  <!-- Brand row -->
-  <g transform="translate(84 88)">
-    <g transform="scale(2.625)">
-      <rect width="32" height="32" rx="8" fill="url(#og-mbg)"/>
-      <rect width="32" height="32" rx="8" fill="url(#og-msheen)"/>
-      <g transform="translate(16 16)">
-        <g transform="rotate(-24)">
-          <ellipse rx="10.6" ry="5.5" fill="none" stroke="#fff" stroke-opacity="0.9" stroke-width="1.9"/>
-          <circle cx="6.1" cy="-4.5" r="2.25" fill="#fff"/>
-        </g>
-        <circle r="6.3" fill="url(#og-mglow)"/>
-        <circle r="3.3" fill="url(#og-mcore)"/>
-      </g>
-    </g>
-    <text x="106" y="56" font-size="31" font-weight="600" fill="#F4F2FA" letter-spacing="-0.4">Product Reinvention Hub</text>
+  <!-- Ambient echo (lower-left), small + fainter -->
+  <g transform="translate(180 520) scale(7.5) translate(-16 -16)" opacity="0.7">
+    <path d="M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z" fill="rgba(200,110,255,0.035)"/>
+    <path d="M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z" fill="rgba(180,80,255,0.028)"/>
+    <path d="M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z" fill="rgba(150,50,230,0.022)"/>
   </g>
 
-  <!-- Headline -->
-  <text x="82" y="322" font-size="80" font-weight="800" fill="#FFFFFF" letter-spacing="-2.6">Reinvent insurance</text>
-  <text x="82" y="416" font-size="80" font-weight="800" letter-spacing="-2.6">
+  <!-- ── Logo lockup (top-left): Composed Stack + wordmark ─────────────────── -->
+  <g transform="translate(84 86) scale(2.6)">
+    <path d="M17.27 5.78 21.73 7.82Q23 8.4 21.73 8.98L17.27 11.02Q16 11.6 14.73 11.02L10.27 8.98Q9 8.4 10.27 7.82L14.73 5.78Q16 5.2 17.27 5.78Z" fill="#C77DFF"/>
+    <path d="M17.27 13.38 21.73 15.42Q23 16 21.73 16.58L17.27 18.62Q16 19.2 14.73 18.62L10.27 16.58Q9 16 10.27 15.42L14.73 13.38Q16 12.8 17.27 13.38Z" fill="#A100FF"/>
+    <path d="M17.27 20.98 21.73 23.02Q23 23.6 21.73 24.18L17.27 26.22Q16 26.8 14.73 26.22L10.27 24.18Q9 23.6 10.27 23.02L14.73 20.98Q16 20.4 17.27 20.98Z" fill="#7A00E6"/>
+  </g>
+  <text x="150" y="139" font-size="31" font-weight="600" fill="#EDE8FA" letter-spacing="-0.3">Product Reinvention Hub</text>
+
+  <!-- ── Headline ──────────────────────────────────────────────────────── -->
+  <text x="82" y="310" font-size="82" font-weight="800" fill="#FFFFFF" letter-spacing="-2.8">Reinvent insurance</text>
+  <text x="82" y="406" font-size="82" font-weight="800" letter-spacing="-2.8">
     <tspan fill="#FFFFFF">products, </tspan><tspan fill="url(#og-brand)">faster.</tspan>
   </text>
 
-  <!-- Subcopy -->
-  <text x="84" y="474" font-size="26" fill="#ABA7BF">The AI-native workspace for P&amp;C insurance product management.</text>
+  <!-- ── Subcopy ───────────────────────────────────────────────────────── -->
+  <text x="84" y="462" font-size="26" fill="#A8A4BC" letter-spacing="-0.2">The AI-native workspace for P&amp;C insurance product management.</text>
 
-  <!-- Capability tags (no internal ids — clean, on-brand) -->
-  <g font-size="19" font-weight="500" fill="rgba(255,255,255,0.74)" text-anchor="middle">
-    <g transform="translate(84 516)"><rect width="128" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="64" y="26">Coverages</text></g>
-    <g transform="translate(224 516)"><rect width="96" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="48" y="26">Rating</text></g>
-    <g transform="translate(332 516)"><rect width="90" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="45" y="26">Forms</text></g>
-    <g transform="translate(434 516)"><rect width="88" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="44" y="26">Rules</text></g>
-    <g transform="translate(534 516)"><rect width="132" height="40" rx="20" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)"/><text x="66" y="26">AI Copilot</text></g>
+  <!-- ── Capability pills ──────────────────────────────────────────────── -->
+  <g font-size="18" font-weight="500" fill="rgba(255,255,255,0.72)" text-anchor="middle">
+    <g transform="translate(84 502)"><rect width="130" height="38" rx="19" fill="rgba(180,80,255,0.08)" stroke="rgba(180,80,255,0.28)" stroke-width="1"/><text x="65" y="25">Coverages</text></g>
+    <g transform="translate(226 502)"><rect width="96" height="38" rx="19" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" stroke-width="1"/><text x="48" y="25">Rating</text></g>
+    <g transform="translate(334 502)"><rect width="90" height="38" rx="19" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" stroke-width="1"/><text x="45" y="25">Forms</text></g>
+    <g transform="translate(436 502)"><rect width="88" height="38" rx="19" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" stroke-width="1"/><text x="44" y="25">Rules</text></g>
+    <g transform="translate(536 502)"><rect width="130" height="38" rx="19" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.14)" stroke-width="1"/><text x="65" y="25">AI Copilot</text></g>
   </g>
 
-  <!-- URL -->
-  <text x="1116" y="556" text-anchor="end" font-size="20" fill="rgba(255,255,255,0.42)" letter-spacing="0.2">productreinvention.web.app</text>
+  <!-- ── URL ───────────────────────────────────────────────────────────── -->
+  <text x="1116" y="558" text-anchor="end" font-size="19" fill="rgba(255,255,255,0.38)" letter-spacing="0.3">productreinvention.web.app</text>
 
-  <!-- Bottom brand hairline -->
+  <!-- ── Bottom brand hairline ─────────────────────────────────────────── -->
   <rect x="0" y="626" width="1200" height="4" fill="url(#og-brand)"/>
 </svg>
