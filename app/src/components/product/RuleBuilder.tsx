@@ -236,6 +236,7 @@ export function RuleComposer({ productId, lobPrefix, coverages, forms, existingR
     if (!text || streaming) return
     setStreaming(true); setError(null); setTools([]); setRationale([]); setWarnings([]); setCitations([])
     let gotDraft = false
+    let sawError = false
     const payload = {
       instruction: text, productId, lobPrefix,
       ...(existingRule ? { existingRule: { refId: existingRule.refId, category: existingRule.category, subCategory: existingRule.subCategory, condition: existingRule.condition, outcome: existingRule.outcome, coverageRefIds: existingRule.coverageRefIds, formNumbers: existingRule.formNumbers, ldTableRef: existingRule.ldTableRef } } : {}),
@@ -257,11 +258,14 @@ export function RuleComposer({ productId, lobPrefix, coverages, forms, existingR
           case 'json':
             if (ev.key === 'rule_draft') { gotDraft = true; applyDraft(ev.value as RuleDraft) }
             break
-          case 'error': setError(ev.message); break
+          case 'error': sawError = true; setError(ev.message); break
           case 'token': case 'done': break
         }
       })
-      if (!gotDraft) setError('The assistant didn’t return a draft. Try rephrasing, or write it manually below.')
+      // The server now forces a final draft when the model doesn't commit to one, so a
+      // missing draft here means the stream ended abnormally. Don't clobber a specific
+      // server error message with the generic fallback.
+      if (!gotDraft && !sawError) setError('The assistant didn’t return a draft. Try rephrasing, or write it manually below.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Draft failed.')
     } finally {

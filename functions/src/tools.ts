@@ -269,23 +269,43 @@ async function getCoverage(refId: string): Promise<ToolOutput> {
   return { content: JSON.stringify(out), summary: c.name }
 }
 
-async function getRules(coverageRefId?: string, productIdArg?: string): Promise<ToolOutput> {
-  const db = getFirestore()
-  let snap
-  if (coverageRefId) {
-    snap = await db.collectionGroup('rules').where('coverageRefIds', 'array-contains', coverageRefId).get()
-  } else {
-    const productId = await resolveProductId(productIdArg)
-    const ref = productId ? db.collection(`products/${productId}/rules`) : db.collectionGroup('rules')
-    snap = await ref.get()
-  }
-
-  const rules = snap.docs.map(d => d.data() as Rule).map(r => ({
+function projectRule(r: Rule) {
+  return {
     refId: r.refId, category: r.category, subCategory: r.subCategory,
     condition: r.condition, outcome: r.outcome,
     coverageRefIds: r.coverageRefIds, formNumbers: r.formNumbers, ldTableRef: r.ldTableRef ?? null,
-  }))
-  return { content: JSON.stringify(rules), summary: `${rules.length} rule${rules.length === 1 ? '' : 's'}` }
+  }
+}
+
+/** Read the rules the model needs to ground a draft/answer. Filtering by coverage uses a
+ *  collection-group `array-contains` query; if that can't run in this environment (e.g. the
+ *  collection-group index isn't provisioned), fall back to a broad read + in-memory filter so
+ *  grounding degrades gracefully instead of dead-ending the agent on a tool error. */
+async function getRules(coverageRefId?: string, productIdArg?: string): Promise<ToolOutput> {
+  const db = getFirestore()
+
+  const scoped = async () => {
+    const productId = await resolveProductId(productIdArg)
+    const ref = productId ? db.collection(`products/${productId}/rules`) : db.collectionGroup('rules')
+    return ref.get()
+  }
+
+  let rules
+  if (coverageRefId) {
+    try {
+      const snap = await db.collectionGroup('rules').where('coverageRefIds', 'array-contains', coverageRefId).get()
+      rules = snap.docs.map(d => d.data() as Rule)
+    } catch {
+      const snap = await scoped()
+      rules = snap.docs.map(d => d.data() as Rule).filter(r => (r.coverageRefIds ?? []).includes(coverageRefId))
+    }
+  } else {
+    const snap = await scoped()
+    rules = snap.docs.map(d => d.data() as Rule)
+  }
+
+  const projected = rules.map(projectRule)
+  return { content: JSON.stringify(projected), summary: `${projected.length} rule${projected.length === 1 ? '' : 's'}` }
 }
 
 function projectForm(f: Form) {

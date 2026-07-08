@@ -15,11 +15,13 @@
 import { onRequest } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
-import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY } from './runtime'
+import { anthropic, authenticate, AuthError, MODEL, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY, CACHE_1H } from './runtime'
+import type { SseResponse } from './runtime'
 import { runChatAgent, sseCostGate } from './ai'
-import { TOOLS, runTool } from './tools'
+import { TOOLS, SYSTEM_PROMPT, runTool } from './tools'
 import type { ToolOutput } from './tools'
-import { emptyUsage, recordUsage } from './telemetry'
+import { emptyUsage, addUsage, recordUsage } from './telemetry'
+import type { UsageAccum } from './telemetry'
 
 // ─── Structured draft (the composer card contract) ──────────────────────────────
 // The model calls this exactly once, as its final action. Its input is the payload
@@ -152,6 +154,77 @@ async function verifyDraft(input: Record<string, unknown>): Promise<{ draft: Rul
   return { draft, warnings }
 }
 
+// ─── Forced final draft (the "always returns a draft" guarantee) ────────────────
+// The grounded loop can end WITHOUT emit_rule_draft — it ran out of tool turns, or the
+// model narrated/asked a question instead of committing. That is exactly the dead-end
+// the composer showed ("didn't return a draft"). Rather than surface a generic failure,
+// we take the conversation the model has ALREADY grounded and force ONE final turn
+// constrained to emit_rule_draft (tool_choice) — the same mechanism extract.ts and
+// identifyBaseForm rely on (forced tool_choice is compatible with Sonnet 5's adaptive
+// thinking on the first-party API). verifyDraft still drops any unverifiable reference,
+// so forcing the call never weakens the never-invents guarantee: it only guarantees the
+// product manager gets an editable, grounded starting point instead of an error.
+const FORCE_DRAFT_NUDGE =
+  'Call emit_rule_draft now — exactly once — with your best rule draft grounded in what the ' +
+  'tools returned above. Write a tight IF condition and THEN outcome in the house voice. Include ' +
+  'only coverageRefIds, formNumbers and an ldTableRef that a tool actually returned; if you could ' +
+  'not ground a reference, omit it and note the gap in notes. Do not ask for more information.'
+
+async function forceRuleDraft(
+  client:     Anthropic,
+  convo:      Anthropic.MessageParam[],
+  focus:      string,
+  res:        SseResponse,
+  usageAccum: UsageAccum,
+): Promise<boolean> {
+  // Reuse the SAME cached prefix the agent loop used (house rules + composer prompt), then
+  // the volatile focus after the breakpoint, so this forced turn hits the warm cache.
+  const system: Anthropic.TextBlockParam[] = [
+    { type: 'text', text: SYSTEM_PROMPT },
+    { type: 'text', text: RULES_SYSTEM, cache_control: CACHE_1H },
+    { type: 'text', text: focus },
+  ]
+
+  // End on a user turn that carries the nudge. First drop a dangling trailing assistant
+  // turn that still holds an unanswered tool_use (only reachable if a turn stopped on
+  // max_tokens mid tool-call) — the API rejects that shape. Then merge the nudge into a
+  // trailing tool_result turn, or append a fresh user turn after an assistant text turn.
+  const msgs = [...convo]
+  const tail = msgs[msgs.length - 1]
+  if (tail && tail.role === 'assistant' && Array.isArray(tail.content) && tail.content.some(b => b.type === 'tool_use')) {
+    msgs.pop()
+  }
+  const nudge: Anthropic.TextBlockParam = { type: 'text', text: FORCE_DRAFT_NUDGE }
+  const last = msgs[msgs.length - 1]
+  if (last && last.role === 'user' && Array.isArray(last.content)) {
+    msgs[msgs.length - 1] = { role: 'user', content: [...last.content, nudge] }
+  } else {
+    msgs.push({ role: 'user', content: [nudge] })
+  }
+
+  send(res, { t: 'tool', name: 'emit_rule_draft', phase: 'start' })
+  let summary = 'no draft'
+  try {
+    const msg = await client.messages.create({
+      model:       MODEL,
+      max_tokens:  1800,
+      system,
+      tools:       RULES_TOOLS,
+      tool_choice: { type: 'tool', name: 'emit_rule_draft' },
+      messages:    msgs,
+    }, { timeout: 120_000 })
+    addUsage(usageAccum, msg.usage)
+    const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+    if (!tu) return false
+    const { draft, warnings } = await verifyDraft((tu.input as Record<string, unknown>) ?? {})
+    send(res, { t: 'json', key: 'rule_draft', value: { ...draft, warnings } })
+    summary = warnings.length ? `draft ready (${warnings.length} dropped)` : 'draft ready'
+    return true
+  } finally {
+    send(res, { t: 'tool', name: 'emit_rule_draft', phase: 'end', summary })
+  }
+}
+
 // ─── draftRule — the grounded composer (SSE) ────────────────────────────────────
 
 interface DraftBody {
@@ -215,24 +288,34 @@ export const draftRule = onRequest(
 
       // Custom executor: verify + surface the structured draft as a `json` event;
       // delegate every grounding tool to the shared runTool.
+      let emitted = false
       const runDraftTool = async (name: string, input: Record<string, unknown>): Promise<ToolOutput> => {
         if (name === 'emit_rule_draft') {
           const { draft, warnings } = await verifyDraft(input)
           send(res, { t: 'json', key: 'rule_draft', value: { ...draft, warnings } })
+          emitted = true
           return { content: JSON.stringify({ recorded: true, warnings }), summary: warnings.length ? `draft ready (${warnings.length} dropped)` : 'draft ready' }
         }
         return runTool(name, input)
       }
 
-      await runChatAgent(anthropic(), messages, res, {
+      const client = anthropic()
+      const convo = await runChatAgent(client, messages, res, {
         system:      RULES_SYSTEM,
         context:     focus,
         tools:       RULES_TOOLS,
         runTool:     runDraftTool,
         maxTokens:   1800,
-        maxTurns:    degraded ? 5 : 7,   // cost-saver: fewer tool turns under a soft cap
+        maxTurns:    degraded ? 6 : 9,   // room to ground fully; cost-saver trims it under a soft cap
         usageAccum,
       })
+
+      // Robustness guarantee: if the loop finished without committing to emit_rule_draft,
+      // force one final turn so the composer never dead-ends on "didn't return a draft".
+      if (!emitted) emitted = await forceRuleDraft(client, convo, focus, res, usageAccum)
+      if (!emitted) {
+        send(res, { t: 'error', message: 'Couldn’t draft a rule from the product for that request. Try rephrasing it, or write the rule manually below.' })
+      }
       send(res, { t: 'done' })
     } catch (err) {
       ok = false
