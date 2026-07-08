@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   verifiedCitedAnchors, staleCitedAnchors, decideSemanticCache, SEMANTIC_CACHE_THRESHOLD,
+  localQueryEmbedding,
 } from './semanticCache'
+import { cosineSim } from '../retrieval/retrieve'
 
 const refIds = new Set(['PH.COV.001', 'PH.RU.006'])
 const forms  = new Set(['HO0003', 'HO0495'])
@@ -50,5 +52,27 @@ describe('decideSemanticCache', () => {
 
   it('conservative default threshold is high (near-duplicate only)', () => {
     expect(SEMANTIC_CACHE_THRESHOLD).toBeGreaterThanOrEqual(0.9)
+  })
+})
+
+describe('localQueryEmbedding (provider-agnostic cache key)', () => {
+  it('is deterministic + unit-length', () => {
+    const a = localQueryEmbedding('What is Coverage A?')
+    const b = localQueryEmbedding('What is Coverage A?')
+    expect(a).toEqual(b)
+    const norm = Math.sqrt(a.reduce((s, x) => s + x * x, 0))
+    expect(norm).toBeCloseTo(1, 5)
+  })
+
+  it('scores near-identical wording ABOVE the threshold and unrelated questions below it', () => {
+    const q       = localQueryEmbedding('What is the water back-up endorsement on the home product?')
+    const nearDup = localQueryEmbedding('What is the water back-up endorsement on the home product')  // trailing punctuation only
+    const other   = localQueryEmbedding('Trace the personal auto collision premium by territory.')
+    expect(cosineSim(q, nearDup)).toBeGreaterThan(SEMANTIC_CACHE_THRESHOLD)
+    expect(cosineSim(q, other)).toBeLessThan(SEMANTIC_CACHE_THRESHOLD)
+  })
+
+  it('an empty query yields a zero vector (never a spurious match)', () => {
+    expect(localQueryEmbedding('').every(x => x === 0)).toBe(true)
   })
 })

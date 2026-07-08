@@ -8,13 +8,14 @@ import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, A
 import type { SseResponse } from './runtime'
 import { TOOLS, SYSTEM_PROMPT, runTool, loadKnownCitations } from './tools'
 import type { ToolOutput } from './tools'
-import { findUnverifiedCitations, verifiedCitedAnchors } from '@pf/shared'
+import { findUnverifiedCitations, verifiedCitedAnchors, localQueryEmbedding } from '@pf/shared'
 import type { ChunkMetadata } from '@pf/shared'
 import { retrieve, embedQueryVector } from './retrieval/index'
 import { buildCiteableDocuments, citationsFromConvo, verifyCitations } from './retrieval/citations'
 import { emptyUsage, addUsage, recordUsage, estimateCost } from './telemetry'
 import type { UsageAccum } from './telemetry'
 import { semanticCacheGet, semanticCachePut } from './semanticCache'
+import type { CacheMode } from './semanticCache'
 import { guardSpend, estCostFor } from './costGuard'
 
 /** Concatenate every assistant text block across a completed conversation — the full
@@ -205,9 +206,18 @@ export const chat = onRequest(
       const query = li >= 0 ? incoming[li]!.content : ''
 
       const vKey = voyageKey()
-      // Embed the query ONCE (Voyage/prod only): reused for the cache probe AND, on a miss, for
-      // citation retrieval (no double embed). Null offline → cache skipped, tools-only path.
-      const queryVector = vKey && query ? await embedQueryVector(query, vKey) : null
+      // Provider-agnostic cache key: a dense Voyage vector when a key is configured, else a
+      // deterministic LOCAL hash embedding — so the semantic cache activates in prod AND offline
+      // (mirroring retrieval's dense→lexical degradation). Embedded ONCE; the dense vector is
+      // also reused for citation retrieval (no double embed). Only the DENSE vector is Voyage-
+      // space, so a local vector is never fed to the groundingChunks KNN.
+      let queryVector: number[] | null = null
+      let cacheMode: CacheMode = 'local'
+      if (query) {
+        if (vKey) { const dv = await embedQueryVector(query, vKey); if (dv) { queryVector = dv; cacheMode = 'dense' } }
+        if (!queryVector) { queryVector = localQueryEmbedding(query); cacheMode = 'local' }
+      }
+      const denseVector = cacheMode === 'dense' && queryVector ? queryVector : undefined
 
       // The live citation catalogue: used both to check cache freshness up-front AND for the
       // post-answer verification below — loaded once. Best-effort (empty on failure).
@@ -219,7 +229,7 @@ export const chat = onRequest(
       // skips retrieval + the Sonnet call; a stale-cited candidate is never served + evicted.
       if (queryVector && !body.regenerate) {
         try {
-          const r = await semanticCacheGet({ client: anthropic(), query, queryVector, productId, known })
+          const r = await semanticCacheGet({ client: anthropic(), query, queryVector, productId, known, mode: cacheMode })
           if (r.hit) {
             send(res, { t: 'token', v: r.hit.answer })
             send(res, { t: 'notice', level: 'info', message: 'Answered from a cached response for a near-identical question. Use Regenerate for a fresh answer.' })
@@ -270,7 +280,7 @@ export const chat = onRequest(
       let citationIndex: ChunkMetadata[] = []
       if (vKey && !degraded && li >= 0) {
         try {
-          const hits = await retrieve({ query, topK: 6, queryVector: queryVector ?? undefined, filter: productId ? { productId } : undefined, voyageKey: vKey })
+          const hits = await retrieve({ query, topK: 6, queryVector: denseVector, filter: productId ? { productId } : undefined, voyageKey: vKey })
           const { blocks, index } = buildCiteableDocuments(hits)
           if (blocks.length) {
             citationIndex = index
@@ -315,7 +325,7 @@ export const chat = onRequest(
         // moment a cited entity changes. `regenerate` refreshes the entry in place.
         if (queryVector) {
           const anchors = verifiedCitedAnchors(answer, known.refIds, known.formNumbers)
-          void semanticCachePut({ query, queryVector, answer, anchors, productId, model: MODEL })
+          void semanticCachePut({ query, queryVector, answer, anchors, productId, model: MODEL, mode: cacheMode })
         }
       }
       send(res, { t: 'done' })

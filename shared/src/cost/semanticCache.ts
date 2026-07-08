@@ -84,6 +84,30 @@ export function staleCitedAnchors(
   return stale
 }
 
+/**
+ * A deterministic, dependency-free query embedding for when no dense provider (Voyage) is
+ * configured — feature-hashing the query's tokens into a fixed-dim L2-normalized vector. It
+ * captures LEXICAL overlap (near-identical wording → high cosine), which behind the same
+ * conservative threshold + the cheap verifier is a safe, provider-agnostic cache key. Dense
+ * Voyage vectors are still used when available; this is the offline / no-Voyage fallback, exactly
+ * mirroring how retrieval degrades dense→lexical. Pure + stable, so it is unit-tested in the gate.
+ */
+export function localQueryEmbedding(text: string, dim = 256): number[] {
+  const v = new Array<number>(dim).fill(0)
+  const tokens = text.toLowerCase().match(/[a-z0-9]+/g) ?? []
+  for (const t of tokens) {
+    let h = 0x811c9dc5
+    for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) }
+    const bucket = (h >>> 0) % dim
+    const sign = ((h >>> 16) & 1) ? 1 : -1   // a second hash bit → signed counts, fewer collisions
+    v[bucket]! += sign
+  }
+  let norm = 0
+  for (const x of v) norm += x * x
+  norm = Math.sqrt(norm)
+  return norm === 0 ? v : v.map(x => x / norm)
+}
+
 export type SemanticCacheOutcome = 'hit' | 'below-threshold' | 'stale-citation'
 
 /**

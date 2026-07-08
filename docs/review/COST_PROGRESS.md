@@ -285,10 +285,23 @@ per-endpoint code.
 escalation rates, and the eval grounding/citation pass rate **held** (guards **+1**). The headline
 before/after + blended reduction is surfaced in **Admin › AI Cost**.
 
+### Made it actually run (provider-agnostic key + real-infra proof)
+
+The cache no longer requires Voyage. The query embedding degrades **dense → local** (a
+deterministic `localQueryEmbedding` hash vector when no Voyage key), and the local path uses an
+in-memory cosine over the small cache collection (no `findNearest` → emulator-friendly). The
+verifier is injectable (live Haiku default; stub in tests). Proven end-to-end:
+- **Firestore emulator** (`tests/integration/costEnsemble.test.ts`, in `pnpm test:integration`): 8/8
+  — MISS→store→HIT (sim 1.000), verifier-veto, below-threshold (sim 0.183), stale eviction, anchor
+  invalidation, global deny / session degrade / breaker-open.
+- **Live Anthropic API** (curl, `claude-haiku-4-5`): the cheap verifier returns "YES" for a fitting
+  paraphrase and "NO" for a different-topic question.
+
 ### Hostile self-review
 
 - **Confidently-wrong cache hit for a similar-but-different question?** No — 0.93 floor + verifier
-  (ambiguity → miss) + product-scope match, all required.
+  (ambiguity → miss) + product-scope match, all required. (Local-hash keys require lexical overlap,
+  so they're if anything MORE conservative than dense — plus the same verifier.)
 - **Stale answer after an edit?** No — read-path freshness gate (deletes) + invalidation trigger by
   cited anchor (edits); freshness beats similarity even at 1.0. New eval guard proves it.
 - **Stale-chunk citation after an edit?** No — the trigger re-chunks + re-embeds in the same flow.
