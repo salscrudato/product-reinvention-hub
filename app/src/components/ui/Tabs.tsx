@@ -31,7 +31,7 @@ export function Tabs({ tabs, active, onChange }: TabsProps) {
         >
           {tab.label}
           {tab.count !== undefined && (
-            <span className={`text-xs rounded-full px-1.5 py-0.5 ${active === tab.id ? 'bg-accent-soft text-accent' : 'bg-[rgba(19,19,26,.06)] text-faint'}`}>
+            <span className={`text-xs rounded-full px-1.5 py-0.5 ${active === tab.id ? 'bg-accent-soft text-accent' : 'bg-[var(--color-chip)] text-faint'}`}>
               {tab.count}
             </span>
           )}

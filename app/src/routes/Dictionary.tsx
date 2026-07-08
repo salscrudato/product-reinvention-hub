@@ -59,6 +59,7 @@ export default function Dictionary() {
   const [typeFilter, setTypeFilter] = useState<DynamicFieldType | ''>('')
   const [draft, setDraft]     = useState<Draft | null>(null)
   const [saving, setSaving]   = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Citation focus: /app/dictionary?term=HO.DEF.003 scrolls to + rings that entry.
   const [params, setParams] = useSearchParams()
@@ -143,7 +144,6 @@ export default function Dictionary() {
 
   async function remove() {
     if (!draft?.source || !user) return
-    if (!window.confirm(`Delete the “${draft.source.name}” field? This can be restored from version history.`)) return
     setSaving(true)
     try {
       await adapter.db.mutate({
@@ -153,6 +153,7 @@ export default function Dictionary() {
       })
       toast.success('Field deleted')
       setDraft(null)
+      setConfirmDelete(false)
     } catch (err) {
       toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Delete failed')
     } finally {
@@ -286,7 +287,7 @@ export default function Dictionary() {
       )}
 
       {/* Editor dialog */}
-      <Dialog open={!!draft} onClose={() => setDraft(null)} title={draft?.source ? 'Edit field' : 'New field'}>
+      <Dialog open={!!draft} onClose={() => { setDraft(null); setConfirmDelete(false) }} title={draft?.source ? 'Edit field' : 'New field'}>
         {draft && (
           <div className="flex flex-col gap-4">
             <Input label="Name" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Coverage A Amount" autoFocus />
@@ -310,15 +311,30 @@ export default function Dictionary() {
               <span className="text-[11px] text-faint">Other surface forms this term appears under — drives the “used in” back-references.</span>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              {draft.source
-                ? <Button variant="destructive" size="sm" onClick={remove} disabled={saving}><IconTrash size={14} /> Delete</Button>
-                : <span />}
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setDraft(null)} disabled={saving}>Cancel</Button>
-                <Button variant="primary" size="sm" onClick={save} disabled={saving || !draft.name.trim()}>{saving ? 'Saving…' : 'Save'}</Button>
+            {/* Footer — inline delete confirmation replaces window.confirm (A5) */}
+            {confirmDelete ? (
+              <div className="flex flex-col gap-3 pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+                <p className="text-sm text-danger">
+                  Delete <span className="font-semibold">{draft.source?.name}</span>? It can be restored from version history.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)} disabled={saving}>Cancel</Button>
+                  <Button variant="destructive" size="sm" onClick={remove} disabled={saving}>
+                    {saving ? 'Deleting…' : 'Delete'}
+                  </Button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-between pt-2">
+                {draft.source
+                  ? <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)} disabled={saving}><IconTrash size={14} /> Delete</Button>
+                  : <span />}
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => { setDraft(null); setConfirmDelete(false) }} disabled={saving}>Cancel</Button>
+                  <Button variant="primary" size="sm" onClick={save} disabled={saving || !draft.name.trim()}>{saving ? 'Saving…' : 'Save'}</Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Dialog>

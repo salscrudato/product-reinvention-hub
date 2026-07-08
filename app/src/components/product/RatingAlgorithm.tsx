@@ -93,7 +93,7 @@ function StepCard({ step, index, total, changed, canEdit, gridEditable, covCount
               <IconEdit size={14} aria-hidden="true" />
             </button>
             <button onClick={onDelete} title="Delete step" aria-label={`Delete ${step.label}`}
-              className="w-7 h-7 rounded-[6px] flex items-center justify-center text-faint hover:text-danger hover:bg-[rgba(220,38,38,.08)] transition-colors">
+              className="w-7 h-7 rounded-[6px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors">
               <IconTrash size={14} aria-hidden="true" />
             </button>
           </div>

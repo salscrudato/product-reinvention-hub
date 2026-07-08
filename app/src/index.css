@@ -36,7 +36,10 @@
      recognisable emerald and distinct from the violet accent. */
   --color-good:        #047857;
   --color-warn:        #B45309;
-  --color-danger:      #DC2626;
+  /* Danger red — darkened from #DC2626 (4.37:1 on raised, below WCAG AA) to clear AA
+     as body text on every surface (page/surface/raised all ≥ 4.5:1). Still a
+     recognisable danger red; distinct from the violet accent. */
+  --color-danger:      #B91C1C;
   --color-info:        #2563EB;
 
   /* State-scope map — semantic tile tokens so the map renders with zero raw hex.
@@ -56,6 +59,23 @@
 
   --shadow-card:       0 1px 2px rgba(19,19,26,.04), 0 14px 34px rgba(139,31,224,.06);
   --shadow-card-hover: 0 2px 4px rgba(19,19,26,.06), 0 20px 48px rgba(139,31,224,.13);
+
+  /* ── Semantic status soft tints ─────────────────────────────────────────────
+     Badge backgrounds (.10) and interactive wash (.08/.14) aligned to AA-safe
+     foreground tokens. danger-* uses the darkened #B91C1C base. */
+  --color-good-soft:    rgba(4,120,87,.10);
+  --color-danger-badge: rgba(185,28,28,.10);
+  --color-danger-hover: rgba(185,28,28,.08);
+  --color-danger-press: rgba(185,28,28,.14);
+  --color-danger-line:  rgba(185,28,28,.20);
+  --color-warn-badge:   rgba(180,83,9,.10);
+  --color-info-soft:    rgba(37,99,235,.08);
+
+  /* ── UI micro-tints ─────────────────────────────────────────────────────────
+     Count-badge chip bg (.06), table zebra stripe (.018), ghost list-row hover (.02). */
+  --color-chip:   rgba(19,19,26,.06);
+  --color-stripe: rgba(19,19,26,.018);
+  --color-ghost:  rgba(19,19,26,.02);
 }
 
 /* Gradient + glow tokens — kept as plain custom properties (not @theme) so they
@@ -67,6 +87,59 @@
   --gradient-accent-soft:  linear-gradient(135deg, rgba(161,0,255,.12) 0%, rgba(122,0,230,.09) 100%);
   --glow-accent:  rgba(139,31,224,.30);
   --glow-accent-strong: rgba(139,31,224,.45);
+
+  /* ── Aurora background fills (Landing, MustChangePassword) ─────────────────
+     Three elliptical glows staggered in size; values are the brand violet
+     progressively darkened so the composition reads as a single light source. */
+  --gradient-aurora-a: radial-gradient(ellipse at center, rgba(161,0,255,.5) 0%, transparent 70%);
+  --gradient-aurora-b: radial-gradient(ellipse at center, rgba(109,40,217,.42) 0%, transparent 70%);
+  --gradient-aurora-c: radial-gradient(ellipse at center, rgba(139,31,224,.4) 0%, transparent 70%);
+
+  /* ── Modal / command-palette overlays ──────────────────────────────────────
+     Semi-transparent dark scrim + elevated panel shadow; used by Dialog and
+     CommandPalette so both have identical backdrop feel. */
+  --color-overlay:  rgba(19,19,26,.50);
+  --shadow-overlay: 0 24px 64px rgba(19,19,26,.18);
+
+  /* ── Semantic status tints (body-level washes at low opacity) ──────────────
+     Paired with their foreground tokens (`--color-danger`, `--color-warn`).
+     danger-soft updated to match the darkened #B91C1C danger foreground. */
+  --color-danger-soft: rgba(185,28,28,.06);
+  --color-warn-soft:   rgba(180,83,9,.08);
+  --color-warn-line:   rgba(180,83,9,.20);
+
+  /* ── Product workspace hero gradient ────────────────────────────────────────
+     A subtle accent wash behind the hero header card — same hue family as the
+     accent but at very low opacity so product content stays legible over it. */
+  --gradient-hero: linear-gradient(135deg, rgba(139,31,224,.08) 0%, rgba(122,0,230,.06) 100%);
+
+  /* ── Tab-strip inactive-hover border ────────────────────────────────────────
+     Heavier than `--color-border` (.08) but lighter than `--color-border-strong`
+     (.12); used for the hovered-but-not-active tab underline. */
+  --color-border-hover: rgba(19,19,26,.20);
+
+  /* ── Glassy SVG node fill ────────────────────────────────────────────────────
+     Near-white translucent fill for inline insight-graph nodes and the HeroMark
+     disc background; NOT used in disk-exported SVGs (those keep literal hex). */
+  --fill-glass: rgba(255,255,255,.96);
+
+  /* ── Drawer backdrop (lighter than Dialog/CommandPalette) ───────────────────
+     Side-panel scrims feel less totalising than fullscreen modals (.40 vs .50). */
+  --color-overlay-light: rgba(19,19,26,.40);
+
+  /* ── Dropdown + chip micro-shadows ─────────────────────────────────────────
+     Avatar menu / Combobox dropdown panel; filter-chip selected state. */
+  --shadow-dropdown: 0 8px 24px rgba(19,19,26,.12);
+  --shadow-chip:     0 1px 2px rgba(19,19,26,.06);
+
+  /* ── Landing insight-graph node glows (CSS filter drop-shadow) ──────────────
+     Three depth levels: leaf circle (sm), feature circle (md), PM node (lg). */
+  --shadow-node-sm: drop-shadow(0 1px 5px rgba(139,31,224,.10));
+  --shadow-node-md: drop-shadow(0 3px 12px rgba(139,31,224,.12));
+  --shadow-node-lg: drop-shadow(0 8px 26px rgba(139,31,224,.34));
+
+  /* ── Combobox/input focused hover border (stronger than tab-strip hover) ─── */
+  --color-border-hover-strong: rgba(19,19,26,.22);
 
   /* Type — a deliberate, Apple-adjacent scale. Display sizes get tighter tracking. */
   --tracking-display: -0.022em;
@@ -211,6 +284,14 @@ h1, h2 { text-wrap: balance; }
 @keyframes flow-pulse { 0% { opacity: .5; } 100% { opacity: 0; } }
 .flow-pulse { animation: flow-pulse 1.1s var(--ease-spring) both; }
 
+/* ─── Route-level page entrance (AppShell outlet) ───────────────────────── */
+/* Faster and shallower than rise-in; fires once per top-level route change. */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.page-in { animation: page-in .22s var(--ease-spring) both; }
+
 /* ─── Staggered entrance for hero + cards ────────────────────────────────── */
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(14px); }
@@ -279,6 +360,7 @@ h1, h2 { text-wrap: balance; }
   .aurora-a, .aurora-b, .aurora-c { animation: none !important; opacity: .35 !important; }
   .edge-flow { animation: none !important; stroke-dasharray: none !important; opacity: 0 !important; }
   .node-glow, .graph-float { animation: none !important; }
+  .page-in { animation: none !important; }
   .rise-in, .flow-step, .flow-changed, .col-in { animation: none !important; }
   .flow-pulse, .algo-pulse { animation: none !important; opacity: 0 !important; }
   .state-tile__cell, .state-tile__ring { transition: none !important; }

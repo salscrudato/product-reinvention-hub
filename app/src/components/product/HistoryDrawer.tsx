@@ -195,7 +195,7 @@ export function HistoryDrawer({ onClose }: Props) {
               return (
                 <div key={v.id} className="rounded-[12px] bg-raised overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
                   <button
-                    className="w-full flex items-start gap-2.5 px-3.5 py-3 text-sm text-left hover:bg-[rgba(19,19,26,.02)]"
+                    className="w-full flex items-start gap-2.5 px-3.5 py-3 text-sm text-left hover:bg-[var(--color-ghost)]"
                     onClick={() => setExpanded(e => e === v.id ? null : v.id)}
                     aria-expanded={isOpen}
                   >

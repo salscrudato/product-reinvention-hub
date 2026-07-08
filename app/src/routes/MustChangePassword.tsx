@@ -57,7 +57,7 @@ export default function MustChangePassword() {
       {/* Aurora wash */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="aurora-a absolute -top-40 left-1/2 -translate-x-1/2 w-[680px] h-[380px] rounded-full blur-3xl opacity-15"
-          style={{ background: 'radial-gradient(ellipse, var(--color-warn), var(--color-accent-strong))' }} />
+          style={{ background: 'radial-gradient(ellipse, var(--color-warn) 0%, var(--color-accent-strong) 100%)' }} />
       </div>
 
       <div className="relative w-full max-w-sm rise-in">
@@ -91,8 +91,8 @@ export default function MustChangePassword() {
               type="button"
               onClick={() => setShowNext(s => !s)}
               aria-label={showNext ? 'Hide password' : 'Show password'}
-              tabIndex={-1}
-              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors"
+              aria-pressed={showNext}
+              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
             >
               {showNext ? <IconEyeOff size={16} /> : <IconEye size={16} />}
             </button>
@@ -113,8 +113,8 @@ export default function MustChangePassword() {
               type="button"
               onClick={() => setShowConfirm(s => !s)}
               aria-label={showConfirm ? 'Hide confirmation' : 'Show confirmation'}
-              tabIndex={-1}
-              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors"
+              aria-pressed={showConfirm}
+              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
             >
               {showConfirm ? <IconEyeOff size={16} /> : <IconEye size={16} />}
             </button>
@@ -125,7 +125,7 @@ export default function MustChangePassword() {
             <p className="text-xs text-warn -mt-1">Password is too short ({next.length}/8).</p>
           )}
 
-          {error && <p role="alert" className="text-sm text-danger bg-[rgba(220,38,38,.06)] rounded-[8px] px-3 py-2">{error}</p>}
+          {error && <p role="alert" className="text-sm text-danger bg-[var(--color-danger-soft)] rounded-[8px] px-3 py-2">{error}</p>}
 
           <Button type="submit" variant="primary" className="w-full mt-1" disabled={loading || !next || !confirm}>
             {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}

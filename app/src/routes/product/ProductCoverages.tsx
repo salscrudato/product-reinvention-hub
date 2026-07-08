@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
-import { Button, Skeleton, EmptyState, ViewToggle, type ViewMode } from '../../components/ui'
+import { Button, Skeleton, EmptyState, ViewToggle, Dialog, type ViewMode } from '../../components/ui'
 import { IconPlus, IconSearch, IconCoverage } from '../../components/ui/icons'
 import { CoverageHubCard } from '../../components/product/CoverageHubCard'
 import { CoverageRow } from '../../components/product/CoverageRow'
@@ -40,6 +40,8 @@ export default function ProductCoverages() {
   // Aspect editors (dialogs) + coverage create/edit.
   const [dialog, setDialog] = useState<{ kind: 'limits' | 'deductibles' | 'options' | 'states' | 'forms'; cov: WithId<Coverage> } | null>(null)
   const [editCov, setEditCov] = useState<WithId<Coverage> | 'new' | null>(null)
+  const [deletePending, setDeletePending] = useState<WithId<Coverage> | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fuse = useMemo(() => new Fuse(coverages, { keys: ['name', 'refId', 'claimsBasis'], threshold: 0.4 }), [coverages])
   const filtered = query ? fuse.search(query).map(r => r.item) : coverages
@@ -75,16 +77,24 @@ export default function ProductCoverages() {
     }
   }
 
-  async function onDelete(cov: WithId<Coverage>) {
+  function onDelete(cov: WithId<Coverage>) {
     if (!canEdit) return
     const children = coverages.filter(c => c.parentId === cov.refId)
     if (children.length) { toast.error(`Reassign or remove its ${children.length} endorsement${children.length === 1 ? '' : 's'} first.`); return }
-    if (!window.confirm(`Delete "${cov.name}"? This cannot be undone.`)) return
+    setDeletePending(cov)
+  }
+
+  async function confirmDelete() {
+    if (!deletePending) return
+    setDeleting(true)
     try {
-      await adapter.db.mutate({ op: 'delete', path: `products/${pid}/coverages/${cov.id}`, entityType: 'coverage', productId: pid, actor })
+      await adapter.db.mutate({ op: 'delete', path: `products/${pid}/coverages/${deletePending.id}`, entityType: 'coverage', productId: pid, actor })
       toast.success('Coverage deleted')
+      setDeletePending(null)
     } catch (err) {
       toast.error(err instanceof MutationConflictError ? 'Conflict — please refresh.' : err instanceof Error ? err.message : 'Delete failed')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -139,6 +149,19 @@ export default function ProductCoverages() {
       {dialog?.kind === 'states' && <CoverageStatesDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'forms' && <CoverageFormsDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
       {editCov !== null && <CoverageEditDialog cov={editCov === 'new' ? null : editCov} onClose={() => setEditCov(null)} />}
+
+      {/* Delete confirmation — replaces the native window.confirm (A5) */}
+      <Dialog open={!!deletePending} onClose={() => { if (!deleting) setDeletePending(null) }} title="Delete coverage" width="max-w-sm">
+        <p className="text-sm text-dim mb-5">
+          Delete <span className="font-semibold text-text">{deletePending?.name}</span>? This cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setDeletePending(null)} disabled={deleting}>Cancel</Button>
+          <Button variant="destructive" size="sm" onClick={confirmDelete} disabled={deleting}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </Button>
+        </div>
+      </Dialog>
     </div>
   )
 }

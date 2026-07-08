@@ -260,7 +260,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
               </button>
               {canEdit && kindTerms.length > 1 && t.id === activeId && (
                 <button onClick={() => deleteTerm(t.id)} aria-label={`Remove ${t.label}`}
-                  className="w-6 h-6 rounded-[6px] flex items-center justify-center text-faint hover:text-danger hover:bg-[rgba(220,38,38,.08)] transition-colors">
+                  className="w-6 h-6 rounded-[6px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors">
                   <IconClose size={12} />
                 </button>
               )}
@@ -359,7 +359,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
                 row is collapsed, so the PM sees exactly what stops the save. */}
             {(errorCount > 0 || activeTermIssues.length > 0) && (
               <div className="mb-2.5 flex flex-col gap-1.5 rounded-[10px] px-3 py-2.5"
-                style={{ background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.2)' }}>
+                style={{ background: 'var(--color-danger-soft)', border: '1px solid var(--color-danger-line)' }}>
                 {[...new Set(issues.filter(i => i.severity === 'error').map(i => i.message))].map(msg => (
                   <div key={msg} className="flex items-start gap-1.5">
                     <IconWarning size={12} className="text-danger shrink-0 mt-0.5" />
@@ -725,7 +725,7 @@ function OptionRow({ o, mode, scopeStates, peril, canEdit, hasError, onChange, o
         {/* State applicability */}
 	        <button disabled={!canEdit} onClick={() => setExpanded(v => !v)} aria-expanded={expanded} aria-label="Edit state applicability"
           className={`h-8 px-2.5 rounded-[7px] text-xs font-medium shrink-0 transition-colors
-            ${o.allStates ? 'bg-raised text-dim' : activeStateCount === 0 ? 'bg-[rgba(220,38,38,.08)] text-danger' : 'bg-accent-soft text-accent'}
+            ${o.allStates ? 'bg-raised text-dim' : activeStateCount === 0 ? 'bg-[var(--color-danger-hover)] text-danger' : 'bg-accent-soft text-accent'}
             hover:text-accent`}>
           {o.allStates ? 'All states' : `${activeStateCount} state${activeStateCount === 1 ? '' : 's'}`}
         </button>
@@ -751,7 +751,7 @@ function OptionRow({ o, mode, scopeStates, peril, canEdit, hasError, onChange, o
         {/* Remove */}
         {canEdit && (
           <button onClick={onRemove} aria-label="Remove option"
-            className="w-8 h-8 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[rgba(220,38,38,.08)] transition-colors shrink-0">
+            className="w-8 h-8 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors shrink-0">
             <IconTrash size={15} />
           </button>
         )}

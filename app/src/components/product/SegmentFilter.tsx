@@ -27,7 +27,7 @@ export function SegmentFilter({ axes, selection, onChange, counts }: SegmentFilt
 
   const pill = (active: boolean) =>
     `inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[7px] text-[12px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
-      active ? 'bg-surface text-accent shadow-[0_1px_2px_rgba(19,19,26,.06)]' : 'text-dim hover:text-text'
+      active ? 'bg-surface text-accent shadow-[var(--shadow-chip)]' : 'text-dim hover:text-text'
     }`
 
   return (

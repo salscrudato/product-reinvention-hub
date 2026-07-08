@@ -67,7 +67,7 @@ export function Combobox<T>({ items, value, onChange, getLabel, getValue, placeh
     <div className={`relative ${className}`}>
       <div
         className={`flex items-center gap-2 h-9 px-3 rounded-[10px] bg-surface border cursor-text
-          ${open ? 'border-accent ring-2 ring-accent/25' : 'border-border-strong hover:border-[rgba(19,19,26,.22)]'}`}
+          ${open ? 'border-accent ring-2 ring-accent/25' : 'border-border-strong hover:border-[var(--color-border-hover-strong)]'}`}
         onClick={() => { setOpen(true); inputRef.current?.focus() }}
       >
         <input
@@ -100,7 +100,7 @@ export function Combobox<T>({ items, value, onChange, getLabel, getValue, placeh
           id={`${id}-list`}
           role="listbox"
           className="absolute z-50 w-full mt-1 bg-surface rounded-[10px] overflow-hidden overflow-y-auto max-h-56 text-sm"
-          style={{ boxShadow: '0 8px 24px rgba(19,19,26,.12)', border: '1px solid var(--color-border)' }}
+          style={{ boxShadow: 'var(--shadow-dropdown)', border: '1px solid var(--color-border)' }}
           onMouseLeave={() => setActive(0)}
         >
           {results.length === 0 && (

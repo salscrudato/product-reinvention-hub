@@ -125,6 +125,8 @@ export default function Claims() {
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef  = useRef<AbortController | null>(null)   // cancels the in-flight SSE stream
+  // G1: single "Response ready" polite announcement when streaming ends.
+  const [srAnnounce, setSrAnnounce] = useState('')
 
   // Live base-forms library.
   useEffect(() => {
@@ -177,6 +179,17 @@ export default function Claims() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  // Announce once when the stream settles; clear after a short hold so the region resets.
+  useEffect(() => {
+    if (streaming) return
+    const last = messages[messages.length - 1]
+    if (last?.role === 'assistant' && (last.text.trim() || last.determination)) {
+      setSrAnnounce('Response ready')
+      const t = setTimeout(() => setSrAnnounce(''), 1500)
+      return () => clearTimeout(t)
+    }
+  }, [streaming]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const composerReady = !!selectedForm && !!formData && formState === 'idle'
 
@@ -299,7 +312,10 @@ export default function Claims() {
           </div>
         )}
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 pr-1" role="log" aria-live="polite" aria-relevant="additions text">
+        {/* Single polite announcement on stream completion — replaces per-token noise (G1) */}
+        <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">{srAnnounce}</div>
+        {/* aria-live="off" overrides the implicit polite from role="log" to suppress per-token noise */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 pr-1" role="log" aria-live="off" aria-relevant="additions text">
           {!selectedForm ? (
             <ZeroState />
           ) : messages.length === 0 ? (

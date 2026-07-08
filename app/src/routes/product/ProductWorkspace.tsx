@@ -80,7 +80,7 @@ function WorkspaceInner() {
       {/* Hero header */}
       <div
         className="rounded-[16px] p-6 mb-5 relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, rgba(139,31,224,.08) 0%, rgba(122,0,230,.06) 100%)', border: '1px solid var(--color-border)' }}
+        style={{ background: 'var(--gradient-hero)', border: '1px solid var(--color-border)' }}
       >
         {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
@@ -186,7 +186,7 @@ function WorkspaceInner() {
             className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px rounded-t-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               activeTab === tab.id
                 ? 'text-accent border-accent'
-                : 'text-dim border-transparent hover:text-text hover:border-[rgba(19,19,26,.2)]'
+                : 'text-dim border-transparent hover:text-text hover:border-[var(--color-border-hover)]'
             }`}
           >
             {tab.label}

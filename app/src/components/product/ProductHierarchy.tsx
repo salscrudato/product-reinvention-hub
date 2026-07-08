@@ -47,7 +47,7 @@ export function ProductHierarchy({ products, byProduct, loading, error, groupBy 
   if (loading) return <div className="flex flex-col gap-3">{[1, 2].map(i => <Skeleton key={i} className="h-40 rounded-[16px]" />)}</div>
   if (error) {
     return (
-      <div className="flex items-center gap-2.5 rounded-[12px] px-4 py-3 text-sm" style={{ background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.2)' }}>
+      <div className="flex items-center gap-2.5 rounded-[12px] px-4 py-3 text-sm" style={{ background: 'var(--color-danger-soft)', border: '1px solid var(--color-danger-line)' }}>
         <IconAlertCircle size={16} className="text-danger shrink-0" aria-hidden="true" />
         <span className="text-danger">Couldn't load the framework — {error}</span>
       </div>

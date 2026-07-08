@@ -22,11 +22,11 @@ function Aurora() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
       <div className="aurora-a absolute w-[720px] h-[520px] rounded-full opacity-30 -top-48 -left-40"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(161,0,255,.5) 0%, transparent 70%)' }} />
+        style={{ background: 'var(--gradient-aurora-a)' }} />
       <div className="aurora-b absolute w-[620px] h-[460px] rounded-full opacity-25 top-1/4 -right-32"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(109,40,217,.42) 0%, transparent 70%)' }} />
+        style={{ background: 'var(--gradient-aurora-b)' }} />
       <div className="aurora-c absolute w-[520px] h-[420px] rounded-full opacity-20 bottom-0 left-1/4"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(139,31,224,.4) 0%, transparent 70%)' }} />
+        style={{ background: 'var(--gradient-aurora-c)' }} />
     </div>
   )
 }
@@ -148,8 +148,8 @@ function InsightGraph() {
       {COV_LEAVES.map((leaf, i) => (
         <g key={`cov${leaf.letter}`} className="rise-in" style={{ '--rise-delay': `${1100 + i * 70}ms` } as React.CSSProperties}>
           <line x1={COV.x} y1={COV.y} x2={leaf.x} y2={leaf.y} stroke="var(--color-accent-line)" strokeWidth={1} />
-          <circle cx={leaf.x} cy={leaf.y} r={9} fill="rgba(255,255,255,.95)" stroke="var(--color-accent-line)" strokeWidth={1}
-            style={{ filter: 'drop-shadow(0 1px 5px rgba(139,31,224,.10))' }} />
+          <circle cx={leaf.x} cy={leaf.y} r={9} stroke="var(--color-accent-line)" strokeWidth={1}
+            style={{ fill: 'var(--fill-glass)', filter: 'var(--shadow-node-sm)' }} />
           <text x={leaf.x} y={leaf.y + 3} textAnchor="middle" fontSize="8.5" fontWeight="700" fill="var(--color-accent)"
             style={{ fontFamily: 'JetBrains Mono Variable, monospace' }}>{leaf.letter}</text>
         </g>
@@ -160,8 +160,8 @@ function InsightGraph() {
         <g key={f.id} className="rise-in" style={{ '--rise-delay': `${250 + i * 110}ms` } as React.CSSProperties}>
           <circle cx={f.x} cy={f.y} r={RN + 7} fill="url(#ig-glow)" className="node-glow"
             style={{ '--breathe-delay': `${i * 420}ms` } as React.CSSProperties} />
-          <circle cx={f.x} cy={f.y} r={RN} fill="rgba(255,255,255,.96)" stroke="var(--color-accent-line)" strokeWidth={1}
-            style={{ filter: 'drop-shadow(0 3px 12px rgba(139,31,224,.12))' }} />
+          <circle cx={f.x} cy={f.y} r={RN} stroke="var(--color-accent-line)" strokeWidth={1}
+            style={{ fill: 'var(--fill-glass)', filter: 'var(--shadow-node-md)' }} />
           <g transform={`translate(${f.x} ${f.y})`}><Glyph id={f.id} /></g>
           <text x={f.x} y={f.y - RN - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--color-text)">{f.label}</text>
         </g>
@@ -174,7 +174,7 @@ function InsightGraph() {
         <circle cx={PM.x} cy={PM.y} r={RPM + 9} fill="none" stroke="var(--color-accent-line)" strokeWidth={1.25}
           className="edge-flow" style={{ strokeDasharray: '3 9' } as React.CSSProperties} />
         <circle cx={PM.x} cy={PM.y} r={RPM} fill="url(#ig-medallion)"
-          style={{ filter: 'drop-shadow(0 8px 26px rgba(139,31,224,.34))' }} />
+          style={{ filter: 'var(--shadow-node-lg)' }} />
         {/* Product-manager glyph: head + shoulders */}
         <g fill="var(--color-surface)">
           <circle cx={PM.x} cy={PM.y - 9} r={11} />
@@ -249,7 +249,7 @@ function HeroSignIn() {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-danger bg-[rgba(220,38,38,.06)] rounded-[8px] px-3 py-2">
+        <p role="alert" className="text-sm text-danger bg-[var(--color-danger-soft)] rounded-[8px] px-3 py-2">
           {error}
         </p>
       )}

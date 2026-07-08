@@ -31,18 +31,6 @@ type StreamEvent =
 interface ToolChip { name: string; done: boolean; summary?: string }
 interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[]; notice?: string; noticeLevel?: 'info' | 'warn' }
 
-// Short pill labels around the composer. Clicking one PRIMES the composer with its prompt
-// (A4) — it no longer auto-fires a billed chat turn; the user reviews and hits send. Prompts
-// track the seeded portfolio (Personal Home HO-3 · Personal Auto) so a primed ask lands on
-// real, citable data.
-const SUGGESTIONS: Array<{ label: string; prompt: string }> = [
-  { label: 'Trace Personal Home premium', prompt: 'Trace the premium for the default Personal Home (HO-3) worked example.' },
-  { label: 'Water back-up endorsement',   prompt: 'Which endorsement adds water back-up coverage on the Personal Home product, and when does it attach?' },
-  { label: 'Personal Auto coverages',     prompt: 'What coverages does the Personal Auto product include, and which are mandatory?' },
-  { label: 'Compare both products',       prompt: 'Compare the Personal Home and Personal Auto products at a glance.' },
-]
-
-
 // ─── Cockpit ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -61,6 +49,9 @@ export default function Home() {
   })
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef  = useRef<AbortController | null>(null)   // cancels the in-flight SSE stream
+  // G1: single "Response ready" polite announcement when streaming ends.
+  // The log uses aria-live="off" to suppress per-token noise; this element announces once.
+  const [srAnnounce, setSrAnnounce] = useState('')
 
   // Abort any in-flight chat on unmount so it doesn't keep consuming tokens/network.
   useEffect(() => () => abortRef.current?.abort(), [])
@@ -78,6 +69,17 @@ export default function Home() {
   }, [])
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }) }, [messages])
+
+  // Announce once when the stream settles; clear after a short hold so the region resets.
+  useEffect(() => {
+    if (streaming) return
+    const last = messages[messages.length - 1]
+    if (last?.role === 'assistant' && last.text.trim()) {
+      setSrAnnounce('Response ready')
+      const t = setTimeout(() => setSrAnnounce(''), 1500)
+      return () => clearTimeout(t)
+    }
+  }, [streaming]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resolve a cited refId / form number to an entity route and navigate there.
   function openCitation(cite: string) {
@@ -181,7 +183,9 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-5 py-4" role="log" aria-live="polite" aria-label="Conversation">
+              <div className="flex flex-col gap-5 py-4" role="log" aria-live="off" aria-label="Conversation">
+                {/* aria-live="off" overrides the implicit polite from role="log" so token-by-token
+                    streaming is not announced; the sr-only region below fires once on completion. */}
                 {messages.map((m, i) => (
                   <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                     <div className={m.role === 'user'
@@ -224,22 +228,11 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Composer — with one-tap starter pills around it while the thread is empty */}
+        {/* Single polite announcement on stream completion — replaces per-token noise (G1) */}
+        <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">{srAnnounce}</div>
+
+        {/* Composer */}
         <div className="mt-3 max-w-3xl w-full mx-auto">
-          {empty && (
-            <div className="flex flex-wrap justify-center gap-2 mb-3">
-              {SUGGESTIONS.map(s => (
-                <button
-                  key={s.label} onClick={() => setInput(s.prompt)} title={s.prompt}
-                  className="group inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-[12.5px] text-dim bg-surface hover:text-text transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                  style={{ border: '1px solid var(--color-border)' }}
-                >
-                  <IconSparkle size={12} className="text-accent opacity-70 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          )}
           <ChatComposer value={input} onChange={setInput} onSubmit={() => ask(input)} streaming={streaming} />
         </div>
       </section>

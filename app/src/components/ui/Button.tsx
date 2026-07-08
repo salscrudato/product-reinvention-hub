@@ -10,7 +10,7 @@ const variants: Record<Variant, string> = {
   default:     'bg-raised text-text hover:bg-hover focus-visible:outline-accent',
   primary:     'text-white focus-visible:outline-accent',
   ghost:       'bg-transparent text-dim hover:bg-raised hover:text-text focus-visible:outline-accent',
-  destructive: 'bg-[rgba(220,38,38,.08)] text-danger hover:bg-[rgba(220,38,38,.14)] focus-visible:outline-danger',
+  destructive: 'bg-[var(--color-danger-hover)] text-danger hover:bg-[var(--color-danger-press)] focus-visible:outline-danger',
 }
 
 const sizes: Record<Size, string> = {

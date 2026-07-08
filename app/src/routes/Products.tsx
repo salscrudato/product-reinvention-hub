@@ -242,7 +242,7 @@ function ViewSwitch({ view, onChange }: { view: ProductView; onChange: (v: Produ
         return (
           <button key={id} type="button" onClick={() => onChange(id)} aria-pressed={active} aria-label={`${label} view`}
             className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
-              active ? 'bg-surface text-accent shadow-[0_1px_2px_rgba(19,19,26,.06)]' : 'text-dim hover:text-text'}`}
+              active ? 'bg-surface text-accent shadow-[var(--shadow-chip)]' : 'text-dim hover:text-text'}`}
             style={active ? { border: '1px solid var(--color-border)' } : undefined}>
             <Icon size={15} strokeWidth={active ? 1.9 : 1.6} />
             <span className="hidden sm:inline">{label}</span>

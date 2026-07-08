@@ -1,6 +1,6 @@
 // ⌘K command palette — fuzzy search over searchIndex + action shortcuts.
 // Opens via keyboard shortcut or the topbar search field click.
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Fuse, { type FuseResultMatch, type FuseResult } from 'fuse.js'
 import { createPortal } from 'react-dom'
@@ -93,8 +93,25 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [query,   setQuery]   = useState('')
   const [entries, setEntries] = useState<SearchIndexEntry[]>([])
   const [cursor,  setCursor]  = useState(0)
-  const inputRef              = useRef<HTMLInputElement>(null)
-  const navigate              = useNavigate()
+  const inputRef    = useRef<HTMLInputElement>(null)
+  const dialogRef   = useRef<HTMLDivElement>(null)
+  const navigate    = useNavigate()
+
+  // Focus trap: Tab/Shift+Tab cycle within the dialog (keyboard completeness).
+  const handleDialogKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab') return
+    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'input, button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )
+    if (!focusable || focusable.length === 0) return
+    const first = focusable[0]!
+    const last  = focusable[focusable.length - 1]!
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus() }
+    } else {
+      if (document.activeElement === last)  { e.preventDefault(); first.focus() }
+    }
+  }, [])
 
   // Subscribe to searchIndex while open
   useEffect(() => {
@@ -180,14 +197,17 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-[rgba(19,19,26,.55)] backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'var(--color-overlay)' }} onClick={onClose} aria-hidden="true" />
 
       {/* Panel */}
       <div
         role="dialog"
         aria-label="Command palette"
+        aria-modal="true"
+        ref={dialogRef}
+        onKeyDown={handleDialogKeyDown}
         className="relative w-full max-w-xl bg-surface rounded-[16px] overflow-hidden"
-        style={{ boxShadow: '0 24px 64px rgba(19,19,26,.18)', border: '1px solid var(--color-border)' }}
+        style={{ boxShadow: 'var(--shadow-overlay)', border: '1px solid var(--color-border)' }}
       >
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: '1px solid var(--color-border)' }}>

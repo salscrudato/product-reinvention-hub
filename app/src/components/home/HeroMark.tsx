@@ -43,14 +43,14 @@ export function HeroMark({ size = 108 }: { size?: number }) {
         <circle className="hero-mark__orbit" cx="84" cy="52" r="30" fill="none"
           stroke="var(--color-accent-bright)" strokeOpacity="0.5" strokeWidth="1.5" strokeDasharray="1.5 6.5" strokeLinecap="round" />
 
-        {/* The PM node — single source of truth */}
+        {/* The PM node — white highlights use CSS var so they recolour with the surface token */}
         <circle cx="84" cy="52" r="23" fill="url(#hm-node)" />
-        <circle cx="84.6" cy="52.6" r="22.4" fill="none" stroke="#FFFFFF" strokeOpacity="0.28" strokeWidth="1.25" />
+        <circle cx="84.6" cy="52.6" r="22.4" fill="none" strokeOpacity="0.28" strokeWidth="1.25" style={{ stroke: 'var(--color-surface)' }} />
         {/* Person */}
-        <circle cx="84" cy="45.5" r="6.6" fill="#FFFFFF" />
-        <path d="M72.5 66 C72.5 55 95.5 55 95.5 66 Z" fill="#FFFFFF" />
+        <circle cx="84" cy="45.5" r="6.6" style={{ fill: 'var(--color-surface)' }} />
+        <path d="M72.5 66 C72.5 55 95.5 55 95.5 66 Z" style={{ fill: 'var(--color-surface)' }} />
         {/* Sharp top-left rim light */}
-        <path d="M69 44 A23 23 0 0 1 84 29.5" stroke="#FFFFFF" strokeOpacity="0.4" strokeWidth="1.25" fill="none" strokeLinecap="round" />
+        <path d="M69 44 A23 23 0 0 1 84 29.5" strokeOpacity="0.4" strokeWidth="1.25" fill="none" strokeLinecap="round" style={{ stroke: 'var(--color-surface)' }} />
       </svg>
     </div>
   )

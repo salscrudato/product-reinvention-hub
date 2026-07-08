@@ -28,7 +28,7 @@ export function Drawer({ open, onClose, title, children, width = 'w-96' }: Drawe
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-[rgba(19,19,26,.4)] backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'var(--color-overlay-light)' }} onClick={onClose} aria-hidden="true" />
       <div
         role="dialog"
         aria-modal="true"

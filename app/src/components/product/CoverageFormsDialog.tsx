@@ -216,7 +216,7 @@ function AttachedFormRow({ number, docs, footprintSize, canEdit, onOpen, onDetac
         </div>
         {canEdit && (
           <button onClick={onDetach} aria-label={`Remove ${number}`}
-            className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[rgba(220,38,38,.08)] transition-colors shrink-0">
+            className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors shrink-0">
             <IconTrash size={14} />
           </button>
         )}

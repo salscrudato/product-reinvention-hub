@@ -51,7 +51,7 @@ export function Table<T>({ columns, rows, rowKey, sortKey, sortDir, onSort, empt
           {rows.map((row, i) => (
             <tr
               key={rowKey(row)}
-              className={`transition-colors hover:bg-raised ${i % 2 === 1 ? 'bg-[rgba(19,19,26,.018)]' : ''}`}
+              className={`transition-colors hover:bg-raised ${i % 2 === 1 ? 'bg-[var(--color-stripe)]' : ''}`}
               style={{ borderBottom: '1px solid var(--color-border)' }}
             >
               {columns.map(col => (

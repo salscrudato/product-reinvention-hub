@@ -42,7 +42,7 @@ export function CoverageRow({ cov, isEndorsement, canEdit, onTile, onEdit, onDel
       {canEdit && (
         <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => onEdit(cov)} aria-label={`Edit ${cov.name}`} className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-accent hover:bg-accent-soft transition-colors"><IconEdit size={15} /></button>
-          <button onClick={() => onDelete(cov)} aria-label={`Delete ${cov.name}`} className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[rgba(220,38,38,.08)] transition-colors"><IconTrash size={15} /></button>
+          <button onClick={() => onDelete(cov)} aria-label={`Delete ${cov.name}`} className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors"><IconTrash size={15} /></button>
         </div>
       )}
     </div>

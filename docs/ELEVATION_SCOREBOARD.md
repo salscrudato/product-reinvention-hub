@@ -31,31 +31,31 @@ Score legend per cell: **0** absent · **1** poor · **2** weak · **3** compete
 
 | Surface | Route | layout | typography | spacing/density | color/depth | motion | iconography/SVG | affordance | states | domain-truth | a11y | Current score | Notes |
 |---|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|---|
-| Landing | `/` | 5 | 5 | 5 | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 4.5 | **4.85** | ✅ Batch-1. Bespoke insight-graph SVG + aurora; refId claim is honest. `states` scored 4.5 as *correctly stateless* (static marketing surface — no data ⇒ no loading/empty/error to ship). a11y lifted by the AA `--color-faint` fix. |
-| Sign-in | `/sign-in` | 5 | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 4.5 | 4.5 | 4.5 | **4.75** | ✅ Batch-1. **Fixed weakest (a11y):** password show/hide was `tabIndex=-1` (keyboard users couldn't reveal) → now reachable + `aria-pressed` + focus ring. Honest admin-demo copy. |
-| Home | `/app` (index) | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | 5 | 5 | 4.5 | **4.75** | ✅ Batch-1. **Fixed weakest (a11y):** chat transcript now `role="log"` `aria-live="polite"` so streamed answers reach SR users; caret `aria-hidden`. Cited/grounded, inquiry-only (no VIEWER leak). |
-| Products | `/app/products` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 5 | 5 | 5 | 4.5 | **4.80** | ✅ Batch-1 (+ framework tree). **Fixed:** domain-truth — card showed a fabricated `50` when `allStates` → now "All states"; motion — added `rise-in` stagger to match the Coverage grid; a11y — search input labelled. Drafts can't leak (LAUNCHED-only). |
-| Product › Overview | `/app/products/:id/overview` | | | | | | | | | | | | `routes/product/ProductOverview.tsx`; health, governance. |
-| Product › Coverages | `.../coverages` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 5 | 5 | 5 | 4.5 | **4.80** | ✅ Batch-1 (coverage detail). **Fixed:** affordance/a11y — edit/delete revealed on hover only (keyboard users tabbed onto invisible controls) → now `focus-within` too; search labelled. Live counts + refId chips are canonical. |
-| Product › Forms | `.../forms` | 4.5 | 5 | 4.5 | 4.5 | 4.5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | **4.60** | ✅ Batch-2. **Fixed weakest (affordance/a11y):** the detail Drawer opened on **mouse-click only** — keyboard/SR users were locked out. Rows are now `role="button"` + `tabIndex=0` + Enter/Space + `aria-label`, with a contained focus ring; table wrapped in `overflow-x-auto`. Two-way coverage↔form links; AI descriptions cached + cited. iconography 4.5: "Dyn" column uses a ✓/— text convention. |
-| Product › Pricing | `.../pricing` | 5 | 5 | 4.5 | 4.5 | 5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.80** | ✅ Batch-2. **Fixed weakest (states + a11y):** `!result` showed a forever-spinning "Loading tables…" even when `evaluate()` had *failed* → now distinguishes tables-loading from an eval failure ("Couldn't evaluate these inputs"); trace-view toggle was `aria-pressed` buttons inside a `role="tablist"` → now real `role="tab"`/`aria-selected`. Spring premium, SVG export == on-screen, **$1,528** canary intact. color/depth 4.5: SVG export hard-codes `#F7F7FA` (allowed serialised exception). |
-| Product › States | `.../states` | 4.5 | 4.5 | 4.5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | 5 | 4.5 | **4.60** | ✅ Batch-1 (states map). **Fixed:** iconography — grid chips used a `⚡` emoji → now the same bespoke amber bolt badge as the map/legend; domain-truth — peril follows the *state* (coastal), not selection, so chips now badge every coastal footprint state exactly as the map does; a11y — chips gained `aria-pressed` + descriptive labels. |
-| Product › Rules | `.../rules` | 5 | 5 | 4.5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | 5 | 4.5 | **4.70** | ✅ Batch-2. **Fixed weakest (a11y):** the "No violations — this submission is valid" line was green **body text** on `--color-good #059669` (**3.4:1, below AA**) → token darkened to `#047857` (**≈5:1**, cross-cutting; see below). Runs the *shared* rules engine; every card's outcome is derived from that one run; the composer's grounding guard re-validates every coverage/form/table ref before `mutate()`. iconography 4.5: a lone "coastal ✓" text glyph in a label. |
-| Explorer | `/app/explorer` | 5 | 5 | 5 | 5 | 4.5 | 5 | 5 | 4.5 | 5 | 5 | **4.90** | ✅ Batch-1. The a11y reference surface — roving tabindex, ↑↓/→/←/Home/End, `aria-current`, labelled search, reduced-motion. No code change needed beyond the AA `--color-faint` lift. `states` 4.5: subscribe-error path isn't surfaced (per-column loading/empty are). |
-| Tasks | `/app/tasks` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.75** | ✅ Batch-2. **No fix required — all axes ≥4.5.** Board/List/Project views; dnd-kit `KeyboardSensor` makes cards keyboard-draggable (role/tabindex/aria from `useDraggable`); filters labelled + `aria-pressed`; `ViewSwitch` is a proper `role=tab`/`aria-selected` group; the move `mutate()` is EDITOR+ with a conflict toast. states 4.5: loading + empty ship, subscribe-error isn't surfaced (same honest caveat as Explorer). Incidentally lifted by the `--color-good` AA fix. |
-| News | `/app/news` | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.80** | ✅ Batch-2. **No fix required — all axes ≥4.5.** Portfolio-relevance ranking with provenance badges (which LOBs/states matched); `role="feed"`; labelled search + clear; preference textarea labelled + `aria-describedby`. states 4.5: loading + empty(query/no-news) ship, no subscribe-error path. a11y 4.5: `role="feed"` children are anchors, not `role="article"` (minor). |
-| Claims | `/app/claims` | 5 | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 5 | 5 | 4.5 | **4.85** | ✅ Batch-2. **No fix required — all axes ≥4.5.** Grounded coverage-copilot: SSE stream with honest tool chips, deterministic `DeterminationCard`, **refuses + asks for a rephrase on an uncited verdict** (defence-in-depth over the server guard), `role="log"`/`aria-live` transcript, composer disabled until the policy bytes load, form-read error surfaced. iconography 4.5: a ⚠️ glyph only in transient streamed error text (not chrome). a11y 4.5: token-by-token log can be verbose under SR (same caveat as Home). |
-| Data Dictionary | `/app/dictionary` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | 5 | 5 | 5 | **4.80** | ✅ Batch-2. **No fix required — all axes ≥4.5; the batch-2 `states` reference:** loading / error / empty(query-aware) / corpus-loading / corpus-error all ship. Live "used in" back-refs (never a stored snapshot) deep-link to the exact tab; refId cite hints; type filters `aria-pressed` + focus-visible; citation focus-flash scroll. affordance 4.5: delete uses a native `window.confirm` (accessible + functional, just not the on-brand Dialog). |
-| Feedback | `/app/feedback` | | | | | | | | | | | | `routes/Feedback.tsx`; ⌘. capture, one-vote, priority lanes. |
-| Admin | `/app/admin` | 5 | 5 | 4.5 | 4.5 | 4.5 | 5 | 5 | 5 | 4.5 | 4.5 | **4.75** | ✅ Batch-2. **Fixed weakest (domain-truth):** the share-link delete wrote a **hard-coded `{uid:'admin', name:'Admin'}`** into the audit trail → now attributes to the *real* acting admin (uid/name/email). Five tabs each with loading + empty states; the audit explorer correlates events → version diffs (before/after); ADMIN-only guard. motion 4.5: utilitarian console — transitions are functional by design. The `--color-good` AA fix also lifts the audit diff's green "after" values (small body text). |
-| Builder / Drafts | `/app/builder` | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.80** | ✅ Batch-2. **Code wins:** the instrument called this a STUB, but `builder` → a full Builder/Drafts workbench (App.tsx:67). **No fix required — all axes ≥4.5.** Four grounded entry points (AI scaffold / import / clone / blank); a draft can't reach Products without the typed-confirmation promote (LAUNCHED-only); lineage + refId + live counts; focus-visible outlines throughout; canEdit-aware empty copy. motion 4.5: hover lift only, no entrance stagger (intentional restraint). |
+| Landing | `/` | 5 | 5 | 5 | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 4.5 | **4.85** | ✅ Final. Drop-shadow filter `rgba()` literals now tokenized as `--shadow-node-{sm,md,lg}`; insight-graph SVG fills use `--fill-glass`. `--color-danger` AA-compliant (#B91C1C). color/depth was already 5 (batch-1 tolerated rgba; now strictly clean). a11y 4.5 conservatively held: HeroSignIn eye-toggle tabIndex fix not confirmed (standalone /sign-in was fixed in batch-1; HeroSignIn not re-verified this pass). |
+| Sign-in | `/sign-in` | 5 | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 4.5 | 4.5 | 4.5 | **4.75** | ✅ Batch-1. **Fixed (a11y):** password show/hide was `tabIndex=-1` → now keyboard-reachable + `aria-pressed` + focus ring. Honest admin-demo copy. |
+| Home | `/app` (index) | 5 | 5 | 4.5 | 5 | 5 | 5 | 4.5 | 5 | 5 | 5 | **4.90** | ✅ Final (was 4.75). **G1:** `aria-live="off"` on `role="log"` + separate `role="status"` fires "Response ready" once per streaming response; HeroMark `#FFFFFF` presentation attributes → `style={{ fill/stroke: 'var(--color-surface)' }}`; page-in route transition on section switches. color/depth 4.5→5, motion 4.5→5, a11y 4.5→5. |
+| Products | `/app/products` | 5 | 5 | 4.5 | 5 | 5 | 5 | 5 | 5 | 5 | 4.5 | **4.90** | ✅ Final (was 4.80). page-in transition lifts motion; comprehensive token cleanup lifts color/depth. a11y 4.5: search-error path not surfaced (same honest caveat as Explorer). |
+| Product › Overview | `/app/products/:id/overview` | 5 | 5 | 5 | 5 | 5 | 4.5 | 5 | 5 | 5 | 4.5 | **4.90** | ✅ Final (first-time scored). Vitals strip (live counts, each a tab shortcut) → AI summary (grounded + cited) → editable details card. Rise-in stagger 0/70/140 ms; full skeleton loading; optimistic rename via `adapter.db.mutate()` with conflict toast. icon 4.5: sub-component icons not individually re-verified. a11y 4.5: same conservative call. |
+| Product › Coverages | `.../coverages` | 5 | 5 | 4.5 | 5 | 4.5 | 5 | 5 | 5 | 5 | 5 | **4.90** | ✅ Final (was 4.80). **A5:** on-brand `Dialog` replaces `window.confirm` for deletes — focus-trapped, keyboard/SR-accessible, Escape closes. color/depth 4.5→5, a11y 4.5→5. |
+| Product › Forms | `.../forms` | 4.5 | 5 | 4.5 | 5 | 4.5 | 4.5 | 4.5 | 4.5 | 5 | 4.5 | **4.65** | ✅ Final (was 4.60). color/depth 4.5→5 from comprehensive token cleanup. Remaining 4.5s are honest minima: dense table layout, text ✓/— convention, Drawer click-to-open (batch-2 fix added keyboard too), subscribe-error not surfaced. |
+| Product › Pricing | `.../pricing` | 5 | 5 | 4.5 | 5 | 5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.85** | ✅ Final (was 4.80). **A7:** dead ternary `tablesReady ? null : null` simplified to `result?.finalPremium ?? null`; color/depth 4.5→5. Spring premium, SVG export == on-screen. **HO-3 $1,528 canary intact.** states 4.5: eval-fail vs. tables-loading distinction (batch-2). a11y 4.5: real `role="tab"` (batch-2); trace panel minor. |
+| Product › States | `.../states` | 4.5 | 4.5 | 4.5 | 5 | 4.5 | 4.5 | 5 | 4.5 | 5 | 4.5 | **4.65** | ✅ Final (was 4.60). color/depth 4.5→5: `StateTileMap` is fully token-driven (`--color-tile-oos` / `--color-peril`; all shared-component rgba now tokenized). Remaining 4.5s: compact tile typography, peril-badge-only iconography, subscribe-error not surfaced. |
+| Product › Rules | `.../rules` | 5 | 5 | 4.5 | 5 | 4.5 | 4.5 | 5 | 4.5 | 5 | 4.5 | **4.75** | ✅ Final (was 4.70). color/depth 4.5→5 from token cleanup; `--color-good` AA body text fixed in batch-2. Shared rules engine; every card outcome derived from one run; grounding guard re-validates before `mutate()`. |
+| Explorer | `/app/explorer` | 5 | 5 | 5 | 5 | 4.5 | 5 | 5 | 4.5 | 5 | 5 | **4.90** | ✅ Final (unchanged). a11y reference surface — roving tabindex, ↑↓/→/←/Home/End, `aria-current`, labelled search, reduced-motion. Reference-grade confirmed intact after all session changes. states 4.5: subscribe-error not surfaced. |
+| Tasks | `/app/tasks` | 5 | 5 | 4.5 | 5 | 4.5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.80** | ✅ Final (was 4.75). color/depth 4.5→5 from token cleanup. Board/List/Project views; dnd-kit `KeyboardSensor`; filters `aria-pressed`; `ViewSwitch` is `role=tab`/`aria-selected`. states 4.5: subscribe-error not surfaced. |
+| News | `/app/news` | 5 | 5 | 5 | 5 | 4.5 | 5 | 5 | 4.5 | 5 | 5 | **4.90** | ✅ Final (was 4.80). **G3:** `<article className="contents">` wrapper gives each feed item real `role="article"` inside `role="feed"` while `display:contents` keeps grid intact. color/depth 4.5→5; a11y 4.5→5. states 4.5: no subscribe-error path. |
+| Claims | `/app/claims` | 5 | 5 | 5 | 5 | 4.5 | 4.5 | 5 | 5 | 5 | 5 | **4.90** | ✅ Final (was 4.85). **G1:** `aria-live="off"` on `role="log"` + single polite "Response ready" on streaming end; a11y 4.5→5. Grounded coverage-copilot, deterministic `DeterminationCard`, refuses uncited verdicts. icon 4.5: ⚠️ in transient streamed text only. |
+| Data Dictionary | `/app/dictionary` | 5 | 5 | 4.5 | 5 | 4.5 | 5 | 5 | 5 | 5 | 5 | **4.90** | ✅ Final (was 4.80). **A5:** on-brand `Dialog` replaces `window.confirm` for term deletes; color/depth 4.5→5, afford 4.5→5. Loading/error/empty(query-aware)/corpus states all ship; live "used in" back-refs; `aria-pressed` type filters. |
+| Feedback | `/app/feedback` | 5 | 5 | 4.5 | 5 | 4.5 | 4.5 | 5 | 5 | 5 | 4.5 | **4.80** | ✅ Final (first-time scored). ⌘. capture; heat = votes×recency (14-day half-life); drag-rank persisted via `mutate()` (EDITOR+, audited); dnd-kit `KeyboardSensor`; vote `aria-pressed`; status select labelled. icon 4.5: `●○○` text-glyph dots for impact/effort (not in-house SVG). a11y 4.5: status labels are ALL_CAPS (SR reads verbatim). |
+| Admin | `/app/admin` | 5 | 5 | 4.5 | 5 | 4.5 | 5 | 5 | 5 | 4.5 | 4.5 | **4.80** | ✅ Final (was 4.75). color/depth 4.5→5 from token cleanup. Fixed batch-2: audit trail now records real acting admin uid/name/email. Five tabs each with loading + empty; ADMIN-only guard. domain-truth 4.5: audit lag on in-flight mutations. motion 4.5: utilitarian console by design. |
+| Builder / Drafts | `/app/builder` | 5 | 5 | 5 | 5 | 4.5 | 5 | 5 | 4.5 | 5 | 4.5 | **4.85** | ✅ Final (was 4.80). color/depth 4.5→5 from token cleanup. Four grounded entry points; typed-confirmation promote gate; lineage + refId; focus-visible throughout; canEdit-aware empty copy. states 4.5: in-flight save state not surfaced. motion 4.5: hover lift only (intentional restraint). |
 
 ### Additional real surfaces (not in the base list, but user-facing)
 
 | Surface | Route | layout | typography | spacing/density | color/depth | motion | iconography/SVG | affordance | states | domain-truth | a11y | Current score | Notes |
 |---|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|---|
-| Must-Change-Password | `/must-change-password` | | | | | | | | | | | | `routes/MustChangePassword.tsx`; first-login forced reset. |
-| Share (public) | `/share/:id` | | | | | | | | | | | | `routes/Share.tsx`; public read-only product snapshot (no auth) — added to the instrument in the P1 refresh. |
+| Must-Change-Password | `/must-change-password` | 5 | 5 | 5 | 5 | 4.5 | 5 | 5 | 5 | 5 | 5 | **4.95** | ✅ Final (first-time scored). **Fixed (a11y):** eye-toggle buttons had `tabIndex=-1` → now keyboard-reachable + `aria-pressed` + focus ring (same patch as Sign-in batch-1). All tokens clean: `--color-danger-soft` error bg, `--color-warn` aurora, danger AA. Optimistic-rev-guarded `mutate()`. `role="alert"` error. Strength hint at <8 chars. motion 4.5: rise-in entrance; aurora is decorative-static (no animation). |
+| Share (public) | `/share/:id` | — | — | — | — | — | — | — | — | — | — | **N/A** | Route absent from codebase (no `Share.tsx` in `App.tsx`); scoreboard entry reserved for when the public read-only product snapshot ships. |
 
 ## Plan baseline refresh (P1 — verification prompt)
 
@@ -162,6 +162,69 @@ Dictionary, Claims. Each is documented in its row; the highest remaining nits ar
 - **No batch-2 change touched `shared/rating` or `shared/types`.** The fixes are CSS-token,
   ARIA, state-branch and audit-actor edits — structurally incapable of moving a premium.
   The HO-3 **$1,528** and GL **$2,789** canaries are re-run green regardless.
+
+## Final pass — re-score and remaining rgba() sweep (this session)
+
+Re-scored every surface hostile-stance, then fixed all discovered gaps. Gate re-run green
+(typecheck · lint · tests incl. HO-3 **$1,528** · build). Every surface ≥ 4.5 on every axis.
+
+**Cross-cutting fix 1 — `--color-danger` AA (#B91C1C):** was `#DC2626` (4.37:1 on raised,
+below WCAG AA as body text). Darkened to `#B91C1C` (**5.75:1** on white, **5.34:1** on raised,
+**5.58:1** on page) — AA-clear everywhere. Lifts every surface that displays danger text on a
+raised card; the change is invisible on white but removes the fail on `raised`. All
+danger-family tokens updated (`--color-danger-soft`, `--color-danger-badge`,
+`--color-danger-hover`, `--color-danger-press`, `--color-danger-line`) to use the new base.
+
+**Cross-cutting fix 2 — complete rgba() token sweep:** the batch-1 caveat tolerated
+`rgba()` in depth/glow/glass effects as a convention. This pass closes the loophole
+entirely: **every** `rgba()` literal outside `index.css` has been converted to a named token,
+including:
+- SVG drop-shadow filters in Landing → `--shadow-node-{sm,md,lg}`
+- Drawer backdrop → `--color-overlay-light` (.40, preserving the lighter-than-Dialog feel)
+- Topbar/Combobox dropdown shadows → `--shadow-dropdown`
+- Filter-chip/view-toggle active shadows → `--shadow-chip`
+- Badge semantic backgrounds → `--color-{good,danger,warn,info}-soft/badge`
+- Destructive button wash → `--color-danger-hover` + `--color-danger-press`
+- Delete-button hover states (8 components) → `--color-danger-hover`
+- Danger error boxes (InventoryTable, ProductHierarchy, TermOptionsDialog, RatingTableEditor) → `--color-danger-soft` + `--color-danger-line`
+- Table zebra stripe → `--color-stripe`, ghost hover → `--color-ghost`, count-chip bg → `--color-chip`
+- Combobox hover border → `--color-border-hover-strong`
+- HeroMark SVG `#FFFFFF` presentation attributes → `style={{ fill/stroke: 'var(--color-surface)' }}`
+
+The only `rgba()` remaining in source are: `index.css` (the token layer itself),
+`brand/icon-preview.html` (dev tool), and `lib/svg/ratingFlow.tsx` (SVG serialiser — the
+declared exception in `app/CLAUDE.md` because CSS vars don't survive serialisation to file).
+
+**Per-surface fixes (this pass):**
+- **A5 — Coverages + Dictionary:** `window.confirm` → on-brand `Dialog` with focus trap,
+  keyboard/SR navigation, Escape close. a11y lifts to 5 on both surfaces.
+- **A7 — Pricing:** dead ternary `tablesReady ? null : null` (both branches identical)
+  simplified to `result?.finalPremium ?? null`. Code clarity fix; no UX change.
+- **G1 — Home + Claims:** `aria-live="off"` overrides the implicit polite on `role="log"`;
+  separate `role="status" aria-live="polite" aria-atomic="true"` div fires "Response ready"
+  once when streaming ends and auto-clears after 1 500 ms. Visible streaming unaffected.
+  a11y lifts to 5 on both surfaces.
+- **G2 — `--color-danger` AA:** see cross-cutting fix 1 above.
+- **G3 — News:** `<article className="contents">` wraps each feed `<a>` — transparent to the
+  grid layout (display:contents) but present in the accessibility tree with implicit
+  `role="article"` inside `role="feed"`. a11y lifts to 5.
+- **Must-Change-Password a11y:** eye-toggle buttons had `tabIndex=-1` — same defect as
+  Sign-in batch-1. Fixed: `tabIndex` removed, `aria-pressed` added, focus ring added.
+  a11y lifts to 5 (surface first-time scored at 4.95).
+- **CommandPalette:** focus trap on Tab/Shift+Tab (queries focusable descendants, cycles
+  first↔last); `aria-modal="true"` on the panel; backdrop tokenized.
+- **Route transitions:** AppShell wraps `<Outlet>` in `<div key={topSegment}>` with `page-in`
+  CSS animation — fires on top-level section changes (Home → Products → Explorer) but not
+  on product-tab sub-navigation. `prefers-reduced-motion` neutralises it globally.
+
+**Honest caveats remaining after this pass:**
+- **Landing/Sign-in HeroSignIn a11y 4.5:** the standalone `/sign-in` route's eye-toggle
+  fix was verified in batch-1; HeroSignIn on Landing was not re-verified this pass. If it
+  shares the same fix, Landing a11y → 5 (score → 4.90). Treat as a quick followup check.
+- **Forms / States / Rules spacing/motion 4.5:** dense table, static tile map, and text
+  glyphs — honest product-specific constraints, not defects.
+- **No change to `shared/rating` or `shared/types`.** All fixes are CSS-token, ARIA, and
+  UI-polish edits. The HO-3 **$1,528** canary is structurally untouched.
 
 ## Baseline divergences (code vs. archived docs)
 

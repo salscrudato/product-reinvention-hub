@@ -223,7 +223,7 @@ export default function ProductPricing() {
 
         {/* Right — calculated premium + scenario inputs */}
         <div className="flex flex-col gap-5">
-          <PremiumCard premium={result?.finalPremium ?? (tablesReady ? null : null)} minimum={ratingProgram?.minimumPremium} />
+          <PremiumCard premium={result?.finalPremium ?? null} minimum={ratingProgram?.minimumPremium} />
 
           <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
             <div className="flex items-center justify-between mb-4">

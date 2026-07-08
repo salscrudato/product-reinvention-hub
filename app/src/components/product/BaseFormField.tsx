@@ -35,7 +35,7 @@ export function BaseFormField({ file, onFile, disabled }: {
           <span className="text-sm text-text truncate flex-1" title={file.name}>{file.name}</span>
           {!disabled && (
             <button type="button" onClick={() => onFile(null)} aria-label="Remove file"
-              className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[rgba(220,38,38,.08)] transition-colors shrink-0">
+              className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors shrink-0">
               <IconTrash size={14} aria-hidden="true" />
             </button>
           )}

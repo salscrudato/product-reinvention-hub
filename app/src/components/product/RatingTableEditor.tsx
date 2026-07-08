@@ -393,7 +393,7 @@ function GridEditor({ step, table, model0, candidateDimensions, seedInputs, pid,
                         onKeyDown={e => onCellKeyDown(e, r, c)}
                         onPaste={e => onCellPaste(e, r, c)}
                         onFocus={e => e.currentTarget.select()}
-                        className={`w-full min-w-[92px] h-9 px-3 text-right font-mono tabular-nums bg-transparent text-text outline-none focus:bg-accent-soft focus:ring-2 focus:ring-inset focus:ring-accent/40 transition-colors ${invalid ? 'text-danger bg-[rgba(220,38,38,.06)]' : ''} disabled:text-dim`}
+                        className={`w-full min-w-[92px] h-9 px-3 text-right font-mono tabular-nums bg-transparent text-text outline-none focus:bg-accent-soft focus:ring-2 focus:ring-inset focus:ring-accent/40 transition-colors ${invalid ? 'text-danger bg-[var(--color-danger-soft)]' : ''} disabled:text-dim`}
                       />
                     </td>
                   )
@@ -459,7 +459,7 @@ function DimensionChip({ dim, index, structural, onRename, onMove, onRemoveValue
                     <>
                       <button onClick={() => onMove(j, -1)} disabled={j === 0} aria-label="Move up" className="w-6 h-7 rounded-[6px] flex items-center justify-center text-faint hover:text-text hover:bg-raised disabled:opacity-30 transition-colors"><IconChevronUp size={13} /></button>
                       <button onClick={() => onMove(j, 1)} disabled={j === dim.values.length - 1} aria-label="Move down" className="w-6 h-7 rounded-[6px] flex items-center justify-center text-faint hover:text-text hover:bg-raised disabled:opacity-30 transition-colors"><IconChevronDown size={13} /></button>
-                      <button onClick={() => onRemoveValue(j)} aria-label="Remove value" className="w-6 h-7 rounded-[6px] flex items-center justify-center text-faint hover:text-danger hover:bg-[rgba(220,38,38,.08)] transition-colors"><IconTrash size={12} /></button>
+                      <button onClick={() => onRemoveValue(j)} aria-label="Remove value" className="w-6 h-7 rounded-[6px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors"><IconTrash size={12} /></button>
                     </>
                   )}
                 </div>

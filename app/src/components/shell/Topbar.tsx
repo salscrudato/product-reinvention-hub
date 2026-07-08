@@ -130,7 +130,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
               <div
                 role="menu"
                 className="absolute right-0 top-full mt-1 z-50 min-w-[200px] bg-surface rounded-[12px] py-1 text-sm"
-                style={{ boxShadow: '0 8px 24px rgba(19,19,26,.12)', border: '1px solid var(--color-border)' }}
+                style={{ boxShadow: 'var(--shadow-dropdown)', border: '1px solid var(--color-border)' }}
               >
                 <div className="px-3 py-2.5" style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <p className="font-medium text-text truncate">{user.name ?? user.email}</p>

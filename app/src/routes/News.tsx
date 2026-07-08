@@ -325,9 +325,11 @@ export default function News() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" role="feed" aria-label="Market news feed">
+          {/* G3: each feed item is wrapped in <article> (role="article") per WAI-ARIA
+              role="feed" spec; `contents` display keeps the <a> as the grid item. */}
           {displayed.map(n => (
+            <article key={n.id} className="contents">
             <a
-              key={n.id}
               href={n.url}
               target="_blank"
               rel="noreferrer"
@@ -380,6 +382,7 @@ export default function News() {
                 </div>
               </div>
             </a>
+            </article>
           ))}
         </div>
       )}

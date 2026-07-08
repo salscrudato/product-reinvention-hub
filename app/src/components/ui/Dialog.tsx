@@ -32,7 +32,8 @@ export function Dialog({ open, onClose, title, children, width = 'max-w-lg' }: D
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-[rgba(19,19,26,.5)] backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{ background: 'var(--color-overlay)' }}
         onClick={onClose}
         aria-hidden="true"
       />

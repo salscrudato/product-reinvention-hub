@@ -56,7 +56,7 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
               </Tooltip>
               <Tooltip content="Delete coverage">
                 <button onClick={() => onDelete(cov)} aria-label={`Delete ${cov.name}`}
-                  className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[rgba(220,38,38,.08)] transition-colors">
+                  className="w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors">
                   <IconTrash size={15} />
                 </button>
               </Tooltip>

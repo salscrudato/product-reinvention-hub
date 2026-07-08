@@ -213,7 +213,7 @@ export function HomeownersRatingPanel({ inputs, onChange, riskState, setRiskStat
                 </div>
                 <button aria-label="Remove item"
                   onClick={() => { const s = (inputs.sppItems ?? []).filter((_, j) => j !== i); upd({ sppItems: s }) }}
-                  className="w-8 h-8 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[rgba(220,38,38,.08)] transition-colors">
+                  className="w-8 h-8 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors">
                   <IconTrash size={14} />
                 </button>
               </div>
