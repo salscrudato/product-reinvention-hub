@@ -40,3 +40,8 @@ emulator-data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Codebase review pack — keep ONLY the two markdown deliverables; ignore heavy/generated artifacts
+docs/review/*
+!docs/review/FUNCTIONAL_CODEBASE.md
+!docs/review/OBSERVATIONS.md
