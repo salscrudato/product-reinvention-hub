@@ -110,6 +110,19 @@ async function markSummaryStale(kind: Kind, params: Record<string, string>): Pro
   } catch { /* no summary to invalidate — nothing to do */ }
 }
 
+/** Bump the dictionary corpus version so the client-side useDictionaryCorpus hook
+ *  re-fetches all back-references when product-scoped entity content changes.
+ *  Written with merge:true so the first write creates the doc automatically. */
+async function bumpDictionaryCorpusVersion(kind: Kind): Promise<void> {
+  if (!PRODUCT_SCOPED.has(kind) && kind !== 'form' && kind !== 'dictionary') return
+  try {
+    await getFirestore().doc('meta/dictionaryCorpusVersion').set(
+      { v: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    )
+  } catch (e) { console.warn('[invalidate] corpus version bump failed:', e instanceof Error ? e.message : e) }
+}
+
 /** Re-embed + upsert (dense when a Voyage key is bound, else a lexical null-vector chunk). */
 async function upsertChunk(chunk: GroundingChunk): Promise<void> {
   const provider = getProvider(voyageKey())
@@ -135,6 +148,7 @@ async function handleWrite(kind: Kind, event: WriteEvent): Promise<void> {
     if (chunk) { try { await db.doc(`groundingChunks/${chunk.id.replace(/\//g, '_')}`).delete() } catch { /* best-effort */ } }
     await invalidateSemanticCacheByAnchors(anchorsFor(kind, before, params))
     await markSummaryStale(kind, params)
+    await bumpDictionaryCorpusVersion(kind)
     return
   }
 
@@ -161,6 +175,7 @@ async function handleWrite(kind: Kind, event: WriteEvent): Promise<void> {
   // Evict cached answers that cited this entity even when its refId still resolves (edits).
   await invalidateSemanticCacheByAnchors(anchorsFor(kind, after, params))
   await markSummaryStale(kind, params)
+  await bumpDictionaryCorpusVersion(kind)
 }
 
 // ─── Triggers — one per grounded collection (Firestore paths can't wildcard a collection) ──

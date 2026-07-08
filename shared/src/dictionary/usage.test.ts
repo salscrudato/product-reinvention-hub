@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildEntryMatcher, computeDictionaryUsage, type DictUsageCorpus } from './usage'
-import { PH_COVERAGES, PH_RULES, PH_FORMS, PH_DICTIONARY } from '../seed/personalHome'
+import { PH_COVERAGES, PH_RULES, PH_FORMS, PH_DICTIONARY, PH_RATING_PROGRAM } from '../seed/personalHome'
 import { PA_COVERAGES, PA_RULES, PA_FORMS, PA_DICTIONARY } from '../seed/personalAuto'
 
 // Build a corpus from the real PH seed so the test doubles as a calibration guard:
@@ -112,5 +112,62 @@ describe('computeDictionaryUsage — real PA corpus', () => {
     // PA.COV.001.001 name is "Bodily Injury Liability"; term label "Bodily Injury Per Person / Per Accident"
     const covRefs = refs.filter(r => r.kind === 'coverage').map(r => r.refId)
     expect(covRefs.length).toBeGreaterThanOrEqual(1)
+  })
+})
+
+// ─── EVAL: rating-step back-references (Part B calibration) ───────────────────
+// Verifies that rating-step label scanning finds the expected term mentions across
+// the PH rating program, with no false positives for terms not in any step label.
+describe('computeDictionaryUsage — rating steps (PH) [EVAL]', () => {
+  const phStepCorpus: DictUsageCorpus = {
+    ...corpus,
+    ratingSteps: PH_RATING_PROGRAM.steps.map(s => ({
+      programRefId: PH_RATING_PROGRAM.refId!,
+      stepId:       s.id,
+      label:        s.label,
+      productId:    'PH.PROD.001',
+      entityPath:   'products/PH.PROD.001/ratingPrograms/PH-RAT-1',
+    })),
+  }
+
+  it('Coverage A Amount resolves to rating step s3 (Coverage A key factor)', () => {
+    const refs = computeDictionaryUsage(entry('Coverage A Amount'), phStepCorpus)
+    const stepRefs = refs.filter(r => r.kind === 'ratingStep').map(r => r.refId)
+    expect(stepRefs).toContain(`${PH_RATING_PROGRAM.refId}/s3`)
+  })
+
+  it('All-Peril Deductible resolves to rating step s4a', () => {
+    const refs = computeDictionaryUsage(entry('All-Peril Deductible'), phStepCorpus)
+    const stepRefs = refs.filter(r => r.kind === 'ratingStep').map(r => r.refId)
+    expect(stepRefs).toContain(`${PH_RATING_PROGRAM.refId}/s4a`)
+  })
+
+  it('Device Type resolves to rating step s8b (Protective device credit)', () => {
+    const refs = computeDictionaryUsage(entry('Device Type'), phStepCorpus)
+    const stepRefs = refs.filter(r => r.kind === 'ratingStep').map(r => r.refId)
+    expect(stepRefs).toContain(`${PH_RATING_PROGRAM.refId}/s8b`)
+  })
+
+  it('Territory Code does NOT match "Territory base rate" — no false positive', () => {
+    // Step s1 label is "Territory base rate"; aliases are "Territory Code" and
+    // "rating territory" — neither appears verbatim in that label.
+    const refs = computeDictionaryUsage(entry('Territory Code'), phStepCorpus)
+    expect(refs.filter(r => r.kind === 'ratingStep')).toEqual([])
+  })
+
+  it('rating step refs carry correct kind / productId / entityPath / label', () => {
+    const refs = computeDictionaryUsage(entry('Coverage A Amount'), phStepCorpus)
+    const step = refs.find(r => r.kind === 'ratingStep' && r.refId === `${PH_RATING_PROGRAM.refId}/s3`)
+    expect(step).toBeDefined()
+    expect(step!.productId).toBe('PH.PROD.001')
+    expect(step!.entityPath).toBeTruthy()
+    expect(step!.label).toBe('Coverage A key factor → Key Premium')
+  })
+
+  it('rating steps appear AFTER coverages/rules/forms in the sorted output', () => {
+    const refs = computeDictionaryUsage(entry('Coverage A Amount'), phStepCorpus)
+    const lastNonStep = refs.reduce((idx, r, i) => r.kind !== 'ratingStep' ? i : idx, -1)
+    const firstStep   = refs.findIndex(r => r.kind === 'ratingStep')
+    if (firstStep !== -1) expect(firstStep).toBeGreaterThan(lastNonStep)
   })
 })

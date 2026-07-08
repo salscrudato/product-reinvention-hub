@@ -100,7 +100,7 @@ export const TOOLS: Anthropic.Tool[] = [
   {
     name: 'get_dictionary',
     description:
-      'Return a governed data-dictionary definition by refId (e.g. HO.DEF.003) or name (e.g. "Coverage A Amount"). Gives type, description, allowed values, format, tags and a LIVE "used in" list of the coverages/rules/forms where the term actually appears (each with its own refId). Cite the definition by its refId, e.g. [HO.DEF.003].',
+      'Return a governed data-dictionary definition by refId (e.g. HO.DEF.003) or name (e.g. "Coverage A Amount"). Gives type, description, allowed values, format, tags and a LIVE "used in" list of the coverages/rules/forms/rating-steps where the term actually appears (each with its own refId). Cite the definition by its refId, e.g. [HO.DEF.003].',
     input_schema: {
       type: 'object',
       properties: {
@@ -463,15 +463,16 @@ export async function loadKnownCitations(): Promise<KnownCitations> {
   return { refIds, formNumbers }
 }
 
-/** Load the coverages + rules + forms corpus for computing dictionary back-references.
- *  Uses collection-group reads so every product contributes; productId is parsed from
- *  the sub-collection path (products/{pid}/coverages/{cid}). */
+/** Load the coverages + rules + forms + rating-step corpus for computing dictionary
+ *  back-references. Uses collection-group reads so every product contributes; productId
+ *  is parsed from the sub-collection path (products/{pid}/coverages/{cid}). */
 async function loadUsageCorpus(): Promise<DictUsageCorpus> {
   const db = getFirestore()
-  const [covSnap, ruleSnap, formSnap] = await Promise.all([
+  const [covSnap, ruleSnap, formSnap, rpSnap] = await Promise.all([
     db.collectionGroup('coverages').get(),
     db.collectionGroup('rules').get(),
     db.collection('forms').get(),
+    db.collectionGroup('ratingPrograms').get(),
   ])
   const pidOf = (path: string) => path.split('/')[1]   // products/<pid>/...
   return {
@@ -486,6 +487,14 @@ async function loadUsageCorpus(): Promise<DictUsageCorpus> {
     forms: formSnap.docs.map(d => {
       const f = d.data() as Form
       return { number: f.number, name: f.name, description: f.description, dynamicFields: f.dynamicFields, productRefIds: f.productRefIds, entityPath: d.ref.path }
+    }),
+    ratingSteps: rpSnap.docs.flatMap(d => {
+      const rp = d.data() as RatingProgram
+      const pid = pidOf(d.ref.path)
+      return (rp.steps ?? []).map((s: { id: string; label: string }) => ({
+        programRefId: rp.refId ?? d.id, stepId: s.id, label: s.label,
+        productId: pid, entityPath: d.ref.path,
+      }))
     }),
   }
 }

@@ -13,7 +13,7 @@
 //
 // Pure TypeScript — zero platform imports (mirrors inventory.ts).
 
-export type DictUsageKind = 'coverage' | 'rule' | 'form'
+export type DictUsageKind = 'coverage' | 'rule' | 'form' | 'ratingStep'
 
 /** One resolved back-reference: enough to render a deep-linked, chip-cited row. */
 export interface DictUsageRef {
@@ -56,10 +56,20 @@ export interface FormUsageLike {
   entityPath?:    string
 }
 
+/** One rating-program step whose label text is scanned for dictionary term mentions. */
+export interface RatingStepUsageLike {
+  programRefId: string   // e.g. 'PH.RAT.1'
+  stepId:       string   // e.g. 's4a'
+  label:        string   // step label text to scan
+  productId?:   string
+  entityPath?:  string   // Firestore path to the owning ratingProgram document
+}
+
 export interface DictUsageCorpus {
-  coverages: CoverageUsageLike[]
-  rules:     RuleUsageLike[]
-  forms:     FormUsageLike[]
+  coverages:    CoverageUsageLike[]
+  rules:        RuleUsageLike[]
+  forms:        FormUsageLike[]
+  ratingSteps?: RatingStepUsageLike[]
 }
 
 // ── Matching ────────────────────────────────────────────────────────────────────
@@ -125,7 +135,13 @@ export function computeDictionaryUsage(entry: DictEntryLike, corpus: DictUsageCo
         productId: f.productRefIds?.[0] })
     }
   }
+  for (const s of corpus.ratingSteps ?? []) {
+    if (matches(s.label)) {
+      add({ kind: 'ratingStep', refId: `${s.programRefId}/${s.stepId}`, label: s.label,
+        entityPath: s.entityPath ?? '', productId: s.productId })
+    }
+  }
 
-  const rank: Record<DictUsageKind, number> = { coverage: 0, rule: 1, form: 2 }
+  const rank: Record<DictUsageKind, number> = { coverage: 0, rule: 1, form: 2, ratingStep: 3 }
   return out.sort((a, b) => rank[a.kind] - rank[b.kind] || a.refId.localeCompare(b.refId))
 }

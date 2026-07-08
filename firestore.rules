@@ -96,6 +96,11 @@ service cloud.firestore {
     // ── Seed reports — read-only for all authed; write via Admin SDK ──────────
     match /seedReports/{id}       { allow read: if isAuthed(); allow write: if false; }
 
+    // ── System metadata — lightweight version documents written only by Functions
+    //    (Admin SDK bypasses these rules). Clients subscribe read-only to detect
+    //    when derived state (e.g. dictionary corpus) needs re-fetching. ──────────
+    match /meta/{doc}             { allow read: if isAuthed(); allow write: if false; }
+
     // ── Product AI summaries — read by any authed user (powers the Overview tab's
     //    instant-load cache); written ONLY server-side by the summarizeProduct
     //    callable via the Admin SDK (which bypasses these rules). Clients never write. ──

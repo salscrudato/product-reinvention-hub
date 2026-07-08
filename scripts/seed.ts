@@ -4,6 +4,7 @@
 // Pass --project productreinvention to target production (typed confirmation required).
 import * as admin from 'firebase-admin'
 import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore'
+import { createHash } from 'crypto'
 import type { Auth } from 'firebase-admin/auth'
 import {
   PH_PRODUCT, PH_COVERAGES, PH_LD_TABLES, PH_RT_TABLES,
@@ -385,9 +386,70 @@ async function main(): Promise<void> {
     console.error(`  ✗ PA got $${pa.finalPremium} — expected $1,002!`)
   } else console.log('  ✓ Personal Auto $1,002 confirmed')
 
-  // ── Storage: upload seed PDF forms ────────────────────────────────────────
+  // ── Storage: upload seed PDF forms + baseForms Firestore docs ─────────────
   if (!targetProd) {
-    await seedStorageForms()
+    const baseFormCount = await seedStorageForms(db)
+    if (baseFormCount > 0) inc('baseForms', baseFormCount)
+  }
+
+  // ── Sample news items ──────────────────────────────────────────────────────
+  // Clearly labelled sample data — NOT live news. Gives the News feed a non-empty
+  // state on a fresh environment without triggering a live Anthropic scout call.
+  if (!targetProd) {
+    const sampleNewsItems = [
+      {
+        url:     'https://sample-data.local/news/iso-ho3-coastal-factors-2026',
+        source:  'Sample Data — Product Reinvention Hub',
+        title:   '[SAMPLE] ISO Releases Updated HO-3 Rating Factors for Coastal Properties',
+        summary: 'ISO has published revised base rates and territory factors for coastal HO-3 programs, reflecting increased CAT frequency in Gulf and Atlantic markets. Carriers should review their Coverage A rate levels and deductible options.',
+        tags:    ['homeowners', 'rating', 'coastal', 'iso'],
+        relatedProductIds: ['PH.PROD.001'],
+      },
+      {
+        url:     'https://sample-data.local/news/naic-wildfire-underwriting-2026',
+        source:  'Sample Data — Product Reinvention Hub',
+        title:   '[SAMPLE] NAIC Urges Carriers to Strengthen Wildfire Underwriting Guidelines',
+        summary: 'The NAIC has issued guidance encouraging state regulators and carriers to revisit homeowners underwriting criteria in wildfire-prone areas, citing a 30% surge in wildfire-related losses in recent policy years.',
+        tags:    ['homeowners', 'underwriting', 'wildfire', 'naic'],
+        relatedProductIds: ['PH.PROD.001'],
+      },
+      {
+        url:     'https://sample-data.local/news/auto-distracted-driving-claims-2026',
+        source:  'Sample Data — Product Reinvention Hub',
+        title:   '[SAMPLE] Personal Auto Loss Trends: Distracted Driving Liability Claims Up 12%',
+        summary: 'Industry data shows bodily injury liability claims linked to distracted driving (Part A) increased 12% year-over-year. Telematics-based pricing programs continue to show promise for risk segmentation.',
+        tags:    ['auto', 'claims', 'liability', 'telematics'],
+        relatedProductIds: ['PA.PROD.001'],
+      },
+      {
+        url:     'https://sample-data.local/news/iso-pp0001-rental-car-amendment-2026',
+        source:  'Sample Data — Product Reinvention Hub',
+        title:   '[SAMPLE] ISO PP 00 01 Advisory: Rental Car Coverage Clarification Under Part D',
+        summary: 'ISO has issued an advisory clarifying how Part D (Coverage for Damage to Your Auto) applies to rental vehicles. Carriers writing PP 00 01 should confirm their endorsement stack includes the appropriate rental coverage option.',
+        tags:    ['auto', 'forms', 'rental', 'iso', 'part-d'],
+        relatedProductIds: ['PA.PROD.001'],
+      },
+      {
+        url:     'https://sample-data.local/news/insurtech-telematics-pricing-2026',
+        source:  'Sample Data — Product Reinvention Hub',
+        title:   '[SAMPLE] InsurTech Startups Drive Real-Time Telematics Pricing Innovation',
+        summary: 'New InsurTech entrants are combining UBI telematics with real-time weather data to price both auto and homeowners risk dynamically. Traditional carriers are exploring partnership models to access these capabilities without building proprietary platforms.',
+        tags:    ['auto', 'homeowners', 'telematics', 'pricing', 'insurtech'],
+        relatedProductIds: ['PA.PROD.001', 'PH.PROD.001'],
+      },
+    ]
+    const batch = db.batch()
+    for (const item of sampleNewsItems) {
+      const urlHash = createHash('sha1').update(item.url).digest('hex')
+      batch.set(db.doc(`news/${urlHash}`), {
+        urlHash, url: item.url, source: item.source, title: item.title,
+        summary: item.summary, tags: item.tags, relatedProductIds: item.relatedProductIds,
+        fetchedAt: now,
+      })
+    }
+    await batch.commit()
+    inc('news', sampleNewsItems.length)
+    console.log(`  📰 ${sampleNewsItems.length} sample news items seeded`)
   }
 
   // ── Seed Report ───────────────────────────────────────────────────────────
@@ -421,13 +483,15 @@ async function main(): Promise<void> {
 // Requires pdf-lib (installed as a devDependency in the root package.json).
 // B8 note: FIREBASE_STORAGE_EMULATOR_HOST must be set before initializeApp.
 
-async function seedStorageForms(): Promise<void> {
-  console.log('\n📄 Seeding Storage PDFs…')
+async function seedStorageForms(db: Firestore): Promise<number> {
+  console.log('\n📄 Seeding Storage PDFs + baseForms library…')
+  let baseFormCount = 0
   try {
     // Dynamic import: pdf-lib is only needed during seeding.
     const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib')
     const storage = admin.storage()
     const bucket  = storage.bucket('productreinvention.firebasestorage.app')
+    const storageEmulatorHost = process.env['FIREBASE_STORAGE_EMULATOR_HOST'] ?? '127.0.0.1:9199'
 
     interface FormSpec {
       storagePath: string
@@ -976,16 +1040,34 @@ async function seedStorageForms(): Promise<void> {
         })
         pdfCount++
         console.log(`  ✓ ${spec.storagePath} (${Math.round(bytes.length / 1024)} KB, ${pdfDoc.getPageCount()} pages)`)
+
+        // ── Write baseForms Firestore doc so the Claims library is non-empty ────
+        // This is seed/sample data — NEVER runs against prod Storage (guarded by
+        // the `if (!targetProd)` block in main()). URL points to the emulator.
+        const fileName = spec.storagePath.split('/').pop()!
+        const docId    = `seed-${fileName.replace('.pdf', '')}`
+        const lobRaw   = spec.formNumber.split(' ')[0].toUpperCase()
+        const lob      = lobRaw === 'HO' ? 'HO' : lobRaw === 'PP' ? 'PA' : ''
+        const url      = `http://${storageEmulatorHost}/v0/b/productreinvention.firebasestorage.app/o/${encodeURIComponent(spec.storagePath)}?alt=media`
+        await db.doc(`baseForms/${docId}`).set({
+          title: spec.title, formNumber: spec.formNumber, edition: spec.edition,
+          lob, fileName, storagePath: spec.storagePath, url,
+          mediaType: 'application/pdf', status: 'READY',
+          uploadedBy: 'seed', uploadedByName: 'Product Factory Seed — SAMPLE DATA',
+          createdAt: FieldValue.serverTimestamp(),
+        })
+        baseFormCount++
       } catch (e) {
         console.warn(`  ⚠ Skipped ${spec.storagePath}: ${(e as Error).message}`)
       }
     }
-    if (pdfCount > 0) console.log(`  📄 ${pdfCount} PDF(s) uploaded to Storage emulator`)
+    if (pdfCount > 0) console.log(`  📄 ${pdfCount} PDF(s) uploaded + ${baseFormCount} baseForms docs seeded`)
   } catch (e) {
     // pdf-lib not installed or Storage emulator unavailable — warn but don't fail the seed.
     console.warn(`  ⚠ Storage PDF seeding skipped: ${(e as Error).message}`)
     console.warn('    Run: pnpm add -D pdf-lib  (from repo root) to enable PDF seeding.')
   }
+  return baseFormCount
 }
 
 main().catch(err => { console.error('Seed failed:', err); process.exit(1) })

@@ -69,3 +69,84 @@ describe('shouldRenderDetermination', () => {
     expect(shouldRenderDetermination({ ...base, verdict: 'NOT_ADDRESSED' })).toBe(true)
   })
 })
+
+// ─── EVAL: real PH + PA determinations (COVERED / NOT_COVERED) ────────────────
+// Each scenario mirrors what the grounded claims copilot emits when run against the
+// seeded base forms. Tests here exercise the citation guard with realistic payloads
+// so a regression in determinationIsCited is caught before it can reach the UI.
+
+describe('EVAL — Personal Home (HO 00 03) determination scenarios', () => {
+  it('COVERED: sudden pipe burst → Coverage A Dwelling — passes guard via coverage refId', () => {
+    const d: Determination = {
+      verdict: 'COVERED',
+      summary: 'Sudden and accidental discharge from a burst supply pipe is covered under Coverage A — Dwelling.',
+      formNumber: 'HO 00 03',
+      coverages: [{ name: 'Coverage A — Dwelling', refId: 'PH.COV.001', definition: 'Open-peril coverage for the dwelling against direct physical loss.' }],
+      exclusions: [{ name: 'The failed pipe itself', formNumber: 'HO 00 03 §I.B.12.b(1)', note: 'The pipe that burst is not covered — only resulting damage to the structure.' }],
+      limits: [{ label: 'All-peril deductible', value: 'Per the Declarations', source: 'PH.LD.003' }],
+      reasoning: [
+        'Sudden and accidental discharge of water from a plumbing system is an open-peril event not excluded by Section I Exclusions [PH.COV.001].',
+        'The damage to the dwelling structure (walls, floors) is covered; the failed pipe itself is excluded [HO 00 03 §I.B.12.b(1)].',
+      ],
+      citations: ['Section I – Property Coverages', 'PH.COV.001', 'HO 00 03'],
+    }
+    expect(isDeterminationCited(d)).toBe(true)
+    expect(shouldRenderDetermination(d)).toBe(true)
+  })
+
+  it('NOT_COVERED: sewer backup without endorsement — passes guard via exclusion form section', () => {
+    const d: Determination = {
+      verdict: 'NOT_COVERED',
+      summary: 'Water backing up through a sewer or drain is excluded under the base HO 00 03 form without the Water Back-Up endorsement.',
+      formNumber: 'HO 00 03',
+      coverages: [],
+      exclusions: [{ name: 'Water Back-Up / Sump Overflow', formNumber: 'HO 00 03 §I.B.8', note: 'Water backup through sewers/drains is excluded under the base form.' }],
+      limits: [],
+      reasoning: [
+        'The base HO 00 03 form excludes water that backs up through sewers or drains [HO 00 03 §I.B.8].',
+        'Coverage is available only if the Water Back-Up endorsement (HO 04 95) is attached to the policy [PH.RU.006].',
+      ],
+      citations: ['Section I – Exclusions', 'HO 00 03 §I.B.8', 'PH.RU.006'],
+    }
+    expect(isDeterminationCited(d)).toBe(true)
+    expect(shouldRenderDetermination(d)).toBe(true)
+  })
+})
+
+describe('EVAL — Personal Auto (PP 00 01) determination scenarios', () => {
+  it('COVERED: third-party BI from at-fault collision — passes guard via coverage refId', () => {
+    const d: Determination = {
+      verdict: 'COVERED',
+      summary: 'Bodily injury to a third party from an at-fault collision is covered under Part A — Liability.',
+      formNumber: 'PP 00 01',
+      coverages: [{ name: 'Part A — Bodily Injury Liability', refId: 'PA.COV.001.001', definition: 'Pays damages for bodily injury to others for which the insured is legally responsible.' }],
+      exclusions: [],
+      limits: [{ label: 'Bodily Injury per person / per accident', value: 'Per the Declarations', source: 'PA.LD.001' }],
+      reasoning: [
+        'An at-fault auto collision causing bodily injury to another driver is a classic Part A occurrence [PA.COV.001.001].',
+        'The per-person and per-accident limits are set on the Declarations page [PA.LD.001].',
+      ],
+      citations: ['Part A – Liability', 'PA.COV.001.001', 'PP 00 01'],
+    }
+    expect(isDeterminationCited(d)).toBe(true)
+    expect(shouldRenderDetermination(d)).toBe(true)
+  })
+
+  it('NOT_COVERED: mechanical breakdown — passes guard via bracketed reasoning cite', () => {
+    const d: Determination = {
+      verdict: 'NOT_COVERED',
+      summary: 'Mechanical breakdown is a standard exclusion under Part D of the Personal Auto Policy.',
+      formNumber: 'PP 00 01',
+      coverages: [],
+      exclusions: [{ name: 'Mechanical Breakdown', refId: 'PA.RU.005', note: 'Wear, tear and mechanical breakdown are excluded from Part D coverage.' }],
+      limits: [],
+      reasoning: [
+        'Part D (Coverage for Damage to Your Auto) excludes loss due to wear, tear, freezing, mechanical or electrical breakdown [PA.RU.005].',
+        'The exclusion applies regardless of whether Collision or OTC coverage is elected [PP 00 01 Part D Exclusions].',
+      ],
+      citations: [],
+    }
+    expect(isDeterminationCited(d)).toBe(true)
+    expect(shouldRenderDetermination(d)).toBe(true)
+  })
+})

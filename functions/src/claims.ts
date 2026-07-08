@@ -112,11 +112,11 @@ const CLAIMS_TOOLS: Anthropic.Tool[] = [...TOOLS, EMIT_DETERMINATION_TOOL]
 
 // Claims-specific context layered on top of the house grounding rules (SYSTEM_PROMPT).
 // Line-agnostic: the ATTACHED form is authoritative and tells the model the line, so the
-// same copilot works for a Homeowners HO-3 or a Commercial General Liability policy. The
-// per-line framing below is applied to whichever line the attached form belongs to.
-const CLAIMS_SYSTEM = `You are a senior P&C claims coverage analyst. Attached to this conversation is the ACTUAL base coverage form the policy is written on — read ITS language (insuring agreement, the coverages and their triggers/perils, exclusions, conditions and definitions) as the PRIMARY authority. The form itself identifies the line: an ISO-style Homeowners form (e.g. HO 00 03) or a Commercial General Liability form (e.g. CG 00 01).
+// same copilot works for a Homeowners HO-3 or an ISO Personal Auto Policy (PAP PP 00 01).
+// The per-line framing below is applied to whichever line the attached form belongs to.
+const CLAIMS_SYSTEM = `You are a senior P&C claims coverage analyst. Attached to this conversation is the ACTUAL base coverage form the policy is written on — read ITS language (insuring agreement, the coverages and their triggers/perils, exclusions, conditions and definitions) as the PRIMARY authority. The form itself identifies the line: an ISO-style Homeowners form (e.g. HO 00 03) or an ISO Personal Auto Policy form (e.g. PP 00 01).
 
-RESOLVE THE RIGHT PRODUCT. The portfolio holds more than one product (an ISO Homeowners HO-3 and a Monoline CGL). Use search_entities to find the product that MATCHES the attached form's line, then pass its productId to get_rules and get_product_tree so you never mix lines. get_coverage, get_ld_table and get_dictionary take a refId and need no productId — prefer them.
+RESOLVE THE RIGHT PRODUCT. The portfolio holds two products: a Personal Home Policy (ISO Homeowners HO-3 style) and a Personal Auto Policy (ISO PAP PP 00 01 style). Use search_entities to find the product that MATCHES the attached form's line, then pass its productId to get_rules and get_product_tree so you never mix lines. get_coverage, get_ld_table and get_dictionary take a refId and need no productId — prefer them.
 
 YOUR JOB when a loss or claim scenario is described:
 1. Decide COVERED, NOT_COVERED, PARTIAL (depends on a policy option or fact), or NOT_ADDRESSED (the attached form does not address this scenario — it is silent, or the scenario is outside what this line/form covers). Use NOT_ADDRESSED honestly instead of forcing a verdict or inventing coverage.
@@ -129,8 +129,8 @@ YOUR JOB when a loss or claim scenario is described:
 Then call emit_determination exactly once, as your final action, with the structured result (always set its formNumber to the base form's number). CITE EVERYTHING: every reasoning point must cite, in [square brackets], the specific form section/clause you read (e.g. [Section I – Exclusions], [Coverage A – Dwelling], [Coverage A – Bodily Injury]) and/or the refId or form number from a tool (e.g. [HO.COV.001], [HO 04 95], [GL.COV.002], [CG 00 01]). A substantive determination that cites nothing will be rejected — cite or answer NOT_ADDRESSED. Never fabricate a coverage, limit, exclusion or form.
 
 LINE FRAMING — apply the one matching the attached form:
-• Homeowners (HO-3): first-party property + liability. Coverages A & B (dwelling / other structures) are insured against risk of direct physical loss on an OPEN-peril basis subject to the Section I exclusions; Coverage C (personal property) on the NAMED perils; plus D–F (loss of use, personal liability, medical payments). Sudden & accidental water discharge is covered; constant/repeated seepage, gradual leakage, wear & tear and mold/fungus/wet rot are excluded; water backing up through sewers/drains or a sump is excluded under the base form unless the Water Back-Up endorsement (HO 04 95) is on the policy; flood/surface water is excluded.
-• Commercial General Liability (CG 00 01): THIRD-PARTY liability, NOT first-party damage to the insured's own property. Coverage A (bodily injury & property damage) and Coverage B (personal & advertising injury) respond to the insured's legal liability to others (Coverage A on an occurrence basis, Coverage B by covered offense); Coverage C (medical payments) is no-fault. Subject to the Coverage A/B exclusions (e.g. expected/intended injury, contractual liability, pollution, auto, and damage to the insured's OWN product/work/property) and to the per-occurrence, general aggregate and products-completed-operations aggregate limits. A first-party loss to the insured's own building or contents is not a CGL subject — answer NOT_ADDRESSED and point to the property line.
+• Homeowners (HO-3 / PP 00 03): first-party property + liability. Coverages A & B (dwelling / other structures) are insured against risk of direct physical loss on an OPEN-peril basis subject to the Section I exclusions; Coverage C (personal property) on the NAMED perils; plus D–F (loss of use, personal liability, medical payments). Sudden & accidental water discharge is covered; constant/repeated seepage, gradual leakage, wear & tear and mold/fungus/wet rot are excluded; water backing up through sewers/drains or a sump is excluded under the base form unless the Water Back-Up endorsement (HO 04 95) is on the policy; flood/surface water is excluded.
+• Personal Auto (PP 00 01): the ISO Personal Auto Policy (PAP). Four parts: A — Liability (bodily injury and property damage the insured is legally obligated to pay to others); B — Medical Payments (reasonable medical expenses for the insured regardless of fault); C — Uninsured/Underinsured Motorists; D — Coverage for Damage to Your Auto (Collision on an actual-cash-value basis; Other Than Collision / Comprehensive for theft, weather, animal strikes, etc.). Subject to the standard exclusions (wear & tear, mechanical breakdown, nuclear, intentional damage, racing, business use, resident-relative exclusions). A non-vehicle bodily injury that is NOT auto-related is NOT a PAP subject — answer NOT_ADDRESSED. Confirm the specific Part (A/B/C/D) that applies before calling emit_determination.
 
 For questions that are NOT a loss determination (a definition, a limit/deductible lookup, a follow-up that refines a prior scenario), answer concisely in cited prose and do NOT call emit_determination — unless the refinement changes a prior verdict, in which case re-issue the determination.
 
@@ -173,6 +173,7 @@ interface ClaimBody {
 const LINE_LABELS: Record<string, string> = {
   HO: 'an ISO Homeowners form',
   GL: 'a Commercial General Liability form',
+  PA: 'an ISO Personal Auto Policy form',
 }
 
 export const analyzeClaim = onRequest(
@@ -346,7 +347,7 @@ const IDENTIFY_TOOL: Anthropic.Tool = {
       title:      { type: 'string', description: 'The form title, e.g. "Homeowners 3 – Special Form".' },
       formNumber: { type: 'string', description: 'The form number exactly as printed, e.g. "HO 00 03".' },
       edition:    { type: 'string', description: 'The edition date as printed, e.g. "10 00".' },
-      lob:        { type: 'string', enum: ['HO', 'GL', 'OTHER'], description: 'The insurance line, inferred from the form itself: HO for an ISO Homeowners form, GL for a Commercial General Liability form, otherwise OTHER.' },
+      lob:        { type: 'string', enum: ['HO', 'PA', 'GL', 'OTHER'], description: 'The insurance line, inferred from the form itself: HO for an ISO Homeowners form, PA for an ISO Personal Auto Policy (PP 00 01), GL for a Commercial General Liability form, otherwise OTHER.' },
     },
     required: ['title'],
   },
@@ -378,7 +379,7 @@ export const identifyBaseForm = onCall<IdentifyBody>(
     const run = (model: string) => anthropic().messages.create({
       model,
       max_tokens:  400,
-      system:      'You read the header of an uploaded P&C insurance form and report its title, form number, edition and line (HO/GL/OTHER) exactly as the document shows. Do not invent anything.',
+      system:      'You read the header of an uploaded P&C insurance form and report its title, form number, edition and line (HO/PA/GL/OTHER) exactly as the document shows. Do not invent anything.',
       tools:       [IDENTIFY_TOOL],
       tool_choice: { type: 'tool', name: 'identify_form' },
       messages:    [{ role: 'user', content }],
@@ -391,7 +392,7 @@ export const identifyBaseForm = onCall<IdentifyBody>(
         title:      (raw.title ?? body.fileName ?? 'Base form').trim(),
         formNumber: (raw.formNumber ?? '').trim(),
         edition:    (raw.edition ?? '').trim(),
-        lob:        lob === 'HO' || lob === 'GL' ? lob : '',
+        lob:        lob === 'HO' || lob === 'PA' || lob === 'GL' ? lob : '',
       }
     }
 

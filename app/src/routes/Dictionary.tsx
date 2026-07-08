@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { IconBook, IconPlus, IconSearch, IconTrash, IconEdit, IconCoverage, IconRule, IconForm } from '../components/ui/icons'
+import { IconBook, IconPlus, IconSearch, IconTrash, IconEdit, IconCoverage, IconRule, IconForm, IconPricing } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { useLiveCollection } from '../lib/useLiveCollection'
@@ -22,13 +22,14 @@ const TYPES: DynamicFieldType[] = ['TEXT', 'CURRENCY', 'DATE', 'LIST', 'PERCENT'
 const TYPE_COLOR: Record<DynamicFieldType, 'blue' | 'good' | 'purple' | 'warn' | 'default'> = {
   TEXT: 'default', CURRENCY: 'good', DATE: 'blue', LIST: 'purple', PERCENT: 'warn',
 }
-const KIND_ICON: Record<DictUsageKind, typeof IconCoverage> = { coverage: IconCoverage, rule: IconRule, form: IconForm }
-const KIND_LABEL: Record<DictUsageKind, string> = { coverage: 'Coverage', rule: 'Rule', form: 'Form' }
+const KIND_ICON: Record<DictUsageKind, typeof IconCoverage> = { coverage: IconCoverage, rule: IconRule, form: IconForm, ratingStep: IconPricing }
+const KIND_LABEL: Record<DictUsageKind, string> = { coverage: 'Coverage', rule: 'Rule', form: 'Form', ratingStep: 'Rating Step' }
 
 /** Deep link a back-reference to the exact product tab the entity lives on, focusing it.
  *  Falls back to the Explorer when no owning product is known (e.g. an orphan form). */
 function routeForUsage(u: DictUsageRef): string {
   if (!u.productId) return '/app/explorer'
+  if (u.kind === 'ratingStep') return `/app/products/${u.productId}/pricing`
   const tab = u.kind === 'coverage' ? 'coverages' : u.kind === 'rule' ? 'rules' : 'forms'
   return `/app/products/${u.productId}/${tab}?focus=${encodeURIComponent(u.refId)}`
 }
