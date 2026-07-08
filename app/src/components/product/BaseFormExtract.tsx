@@ -181,7 +181,7 @@ export function BaseFormExtract({ product, coverages, forms, rules, canEdit, act
     const covByName  = new Map<string, string>()
     for (const c of coverages) if (c.refId) covByName.set(normName(c.name), c.refId)
 
-    // refId allocators — LOB-aware (HO.COV.NNN / GL.COV.NNN, HO.RU.NNN / GL.RU.NNN).
+    // refId allocators — LOB-aware (HO.COV.NNN / PA.COV.NNN, HO.RU.NNN / PA.RU.NNN).
     const covRe = new RegExp(`^${prefix}\\.COV\\.(\\d+)$`)
     let covNum = Math.max(0, ...coverages.map(c => Number(covRe.exec(c.refId ?? '')?.[1] ?? 0)))
     let order  = Math.max(0, ...coverages.map(c => c.order ?? 0))

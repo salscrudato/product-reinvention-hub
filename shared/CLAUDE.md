@@ -9,13 +9,14 @@ Zero platform imports. Consumed by both `app/` and `functions/`. Any change here
 | File | Purpose |
 |---|---|
 | `src/types.ts` | Canonical domain types — Product, Coverage, Form, Rule, TraceEntry, … |
-| `src/rating/evaluator.ts` | HO-3 + GL rating evaluator |
-| `src/rating/evaluator.test.ts` | **Load-bearing canary — must produce $1,528 for HO-3 on every run** |
+| `src/rating/evaluator.ts` | Line-agnostic rating evaluator (Personal Home HO-3 + Personal Auto) |
+| `src/rating/evaluator.test.ts` | **Load-bearing canary — must produce $1,528 for Personal Home HO-3 on every run** |
+| `src/rating/personalAuto.evaluator.test.ts` | **Sibling canary — must produce $1,002 for Personal Auto on every run** |
 | `src/rating/rtGrid.ts` | Rate-table / grid lookups |
 | `src/rating/kits.ts` | Per-coverage premium kits |
 | `src/rules/engine.ts` | Condition / outcome rules engine |
-| `src/seed/ho3.ts` | HO-3 canonical seed (the product at the centre of every worked example) |
-| `src/seed/gl.ts` | GL (General Liability) seed |
+| `src/seed/personalHome.ts` | Personal Home (HO-3) canonical seed — the product at the centre of every worked example |
+| `src/seed/personalAuto.ts` | Personal Auto (ISO PAP, PP 00 01) seed |
 | `src/search/rank.ts` | Retrieval ranker for cross-entity search |
 | `src/insurance/` | LOB registry, ISO import helpers, insurance terms |
 

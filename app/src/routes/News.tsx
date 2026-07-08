@@ -8,10 +8,10 @@
 // Provenance badges on each card show which LOBs and states triggered the match.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { IconNews, IconRefresh, IconExternalLink, IconSparkle, IconProduct, IconStates, IconFilter } from '../components/ui/icons'
+import { IconNews, IconRefresh, IconExternalLink, IconSparkle, IconProduct, IconStates, IconFilter, IconSearch, IconClose } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
-import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
+import { Badge, Button, Card, Skeleton, EmptyState } from '../components/ui'
 import { useLiveCollection } from '../lib/useLiveCollection'
 import type { News as NewsType, NewsPrefs, Product } from '@pf/shared'
 
@@ -45,13 +45,13 @@ const STATE_NAMES: Record<string, string> = {
 // LOB keyword expansions beyond the bare LOB name (keyed by the refId prefix).
 const LOB_KEYWORDS: Record<string, string[]> = {
   HO: ['homeowners', 'homeowner', 'ho-3', 'ho3', 'dwelling', 'renters', 'property insurance', 'home insurance'],
-  GL: ['general liability', 'cgl', 'commercial general liability', 'business liability'],
+  PA: ['personal auto', 'auto insurance', 'automobile', 'private passenger auto', 'car insurance', 'pp 00 01', 'motor'],
 }
 
 // The shared baseline every user starts from — what the agent should always pull. A
 // user's own edit refines it, but everyone begins from the same instruction.
 const BASE_NEWS_INSTRUCTION =
-  'Track U.S. P&C insurance market developments: rate filings and approvals, competitor product and endorsement launches, regulatory and legislative changes, catastrophe and reinsurance trends, and distribution / insurtech moves — with emphasis on Homeowners (HO) and commercial General Liability (GL).'
+  'Track U.S. P&C insurance market developments: rate filings and approvals, competitor product and endorsement launches, regulatory and legislative changes, catastrophe and reinsurance trends, and distribution / insurtech moves — with emphasis on Homeowners (HO) and Personal Auto (PA).'
 
 // Natural-language article filter: keep items containing every significant word in the
 // phrase (case-insensitive, stop-words dropped). Empty phrase → keep everything.
@@ -128,8 +128,7 @@ export default function News() {
   const [refreshing, setRefreshing]   = useState(false)
   const [saving, setSaving]           = useState(false)
   const [savedRev, setSavedRev]       = useState<number | undefined>(undefined)   // B9: rev of the stored pref
-  const [query, setQuery]             = useState('')
-  const [nlFilter, setNlFilter]       = useState('')
+  const [filter, setFilter]           = useState('')   // single natural-language feed filter (sidebar)
 
   const products = useLiveCollection<Product>('products')
 
@@ -162,22 +161,24 @@ export default function News() {
       )
   }, [items, products.items])
 
+  // Single natural-language filter over title + summary + source + tags. An empty
+  // phrase keeps everything; otherwise every significant word must appear (nlMatch).
   const displayed = useMemo(() => {
-    let list = ranked
-    if (query) {
-      const q = query.toLowerCase()
-      list = list.filter(n =>
-        n.title.toLowerCase().includes(q) ||
-        (n.summary ?? '').toLowerCase().includes(q) ||
-        (n.source ?? '').toLowerCase().includes(q) ||
-        (n.tags ?? []).some((t: string) => t.toLowerCase().includes(q)),
-      )
-    }
-    if (nlFilter.trim()) {
-      list = list.filter(n => nlMatch(`${n.title} ${n.summary ?? ''} ${(n.tags ?? []).join(' ')}`, nlFilter))
-    }
-    return list
-  }, [ranked, query, nlFilter])
+    if (!filter.trim()) return ranked
+    return ranked.filter(n =>
+      nlMatch(`${n.title} ${n.summary ?? ''} ${n.source ?? ''} ${(n.tags ?? []).join(' ')}`, filter),
+    )
+  }, [ranked, filter])
+
+  // Portfolio-match count for the feed toolbar summary.
+  const matchCount = useMemo(() => ranked.filter(n => n.rel.score > 0).length, [ranked])
+
+  // Most common tags across the ranked feed → one-tap topic chips in the sidebar.
+  const topTags = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const it of ranked) for (const t of it.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1)
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([t]) => t)
+  }, [ranked])
 
   async function savePrefs() {
     if (!user) return
@@ -218,116 +219,148 @@ export default function News() {
   return (
     <div className="flex flex-col gap-5">
       {/* Page header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-text">Market News</h1>
-          <p className="text-sm text-dim">Curated nightly by an AI agent and ranked against your portfolio.</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span aria-hidden="true" className="grid place-items-center w-10 h-10 rounded-[12px] shrink-0"
+            style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
+            <IconNews size={20} />
+          </span>
+          <div>
+            <h1 className="text-xl font-bold text-text">Market News</h1>
+            <p className="text-sm text-dim">Curated nightly by an AI agent and ranked against your portfolio.</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Title / summary typeahead */}
-          <div className="relative">
-            <input
-              type="search"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search news…"
-              aria-label="Search news by title, summary, or tag"
-              className="h-8 pl-3 pr-7 rounded-[9px] bg-surface border text-sm text-text placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 w-48"
-              style={{ borderColor: query ? 'var(--color-accent)' : 'var(--color-border-strong)' }}
+        <Button variant="default" size="sm" onClick={refresh} disabled={refreshing} aria-label="Refresh news feed now">
+          <IconRefresh size={14} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
+          {refreshing ? 'Fetching…' : 'Refresh now'}
+        </Button>
+      </header>
+
+      {/* Two-column: natural-language preferences rail + portfolio-ranked feed */}
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6">
+        {/* ── Preferences sidebar ─────────────────────────────────────────── */}
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-0" aria-label="News preferences">
+          {/* Agent tracking — the persisted natural-language brief for the nightly agent */}
+          <Card className="flex flex-col gap-3">
+            <div className="flex flex-col gap-0.5">
+              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-text">
+                <IconSparkle size={14} className="text-accent" aria-hidden="true" />
+                Agent tracking
+              </h2>
+              <p className="text-xs text-faint">Plain-English brief for the nightly agent.</p>
+            </div>
+            <textarea
+              id="news-instr"
+              value={instruction}
+              onChange={e => setInstr(e.target.value)}
+              rows={6}
+              placeholder="e.g. Track competitor HO-3 launches and personal auto rate filings in TX and FL"
+              className="rounded-[10px] bg-surface border text-[13px] leading-relaxed text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none"
+              style={{ borderColor: unsaved ? 'var(--color-accent)' : 'var(--color-border-strong)' }}
+              aria-label="News tracking instruction"
+              aria-describedby="news-instr-hint"
             />
-            {query && (
-              <button onClick={() => setQuery('')} aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-faint hover:text-text transition-colors">
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M1 1l8 8M9 1L1 9"/></svg>
-              </button>
+            <p id="news-instr-hint" className="text-xs text-faint">
+              Refines the shared baseline alongside your portfolio ({products.items.length} product{products.items.length === 1 ? '' : 's'}).
+            </p>
+            <div className="flex items-center justify-between gap-2">
+              {instruction.trim() !== BASE_NEWS_INSTRUCTION
+                ? <button onClick={() => setInstr(BASE_NEWS_INSTRUCTION)} className="text-xs text-dim hover:text-accent transition-colors">Reset to baseline</button>
+                : <span className="text-xs text-faint">{unsaved ? 'Unsaved changes' : 'On baseline'}</span>}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={savePrefs}
+                disabled={!instruction.trim() || !unsaved || saving}
+                aria-label="Save news tracking preference"
+              >
+                {saving ? 'Saving…' : unsaved ? 'Save' : 'Saved'}
+              </Button>
+            </div>
+          </Card>
+
+          {/* Filter feed — single natural-language filter, non-destructive to the brief */}
+          <Card className="flex flex-col gap-3">
+            <div className="flex flex-col gap-0.5">
+              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-text">
+                <IconFilter size={14} className="text-accent" aria-hidden="true" />
+                Filter feed
+              </h2>
+              <p className="text-xs text-faint">Natural language — keeps articles mentioning every key word.</p>
+            </div>
+            <div className="relative">
+              <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" aria-hidden="true" />
+              <input
+                id="news-filter"
+                value={filter}
+                onChange={e => setFilter(e.target.value)}
+                placeholder="e.g. Florida rate hikes and reinsurance"
+                className="w-full h-9 rounded-[10px] bg-surface border text-sm text-text pl-9 pr-8 focus:outline-none focus:ring-2 focus:ring-accent/25"
+                style={{ borderColor: filter ? 'var(--color-accent)' : 'var(--color-border-strong)' }}
+                aria-label="Filter articles by natural-language phrase"
+              />
+              {filter && (
+                <button onClick={() => setFilter('')} aria-label="Clear filter"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-faint hover:text-text transition-colors">
+                  <IconClose size={12} />
+                </button>
+              )}
+            </div>
+            {topTags.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-medium text-faint uppercase tracking-wide">Popular topics</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {topTags.map(t => {
+                    const active = filter.trim().toLowerCase() === t.toLowerCase()
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setFilter(active ? '' : t)}
+                        aria-pressed={active}
+                        className={`px-2 py-0.5 rounded-full text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${active ? 'text-white' : 'text-accent'}`}
+                        style={{ background: active ? 'var(--color-accent)' : 'var(--color-accent-soft)' }}
+                      >
+                        {t}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             )}
+          </Card>
+        </aside>
+
+        {/* ── Feed ─────────────────────────────────────────────────────────── */}
+        <section className="flex flex-col gap-3 min-w-0" aria-label="Market news">
+          {/* Toolbar: live count + relevance note */}
+          <div className="flex items-center justify-between gap-3 px-0.5 min-h-[20px]">
+            <p className="text-xs text-dim" aria-live="polite">
+              {items === null
+                ? 'Loading…'
+                : filter.trim()
+                  ? `${displayed.length} of ${ranked.length} article${ranked.length === 1 ? '' : 's'} · “${filter.trim()}”`
+                  : `${ranked.length} article${ranked.length === 1 ? '' : 's'}${matchCount > 0 ? ` · ${matchCount} match your portfolio` : ''}`}
+            </p>
+            <span className="text-xs text-faint hidden sm:inline">Sorted by portfolio relevance</span>
           </div>
-          <Button variant="default" size="sm" onClick={refresh} disabled={refreshing} aria-label="Refresh news feed now">
-            <IconRefresh size={14} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
-            {refreshing ? 'Fetching…' : 'Refresh now'}
-          </Button>
-        </div>
-      </div>
 
-      {/* Preference box */}
-      <div
-        className="bg-surface rounded-[14px] p-4 flex flex-col gap-2"
-        style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
-      >
-        <label htmlFor="news-instr" className="flex items-center gap-1.5 text-sm font-medium text-text">
-          <IconSparkle size={14} className="text-accent" aria-hidden="true" />
-          What should the agent track?
-        </label>
-        <textarea
-          id="news-instr"
-          value={instruction}
-          onChange={e => setInstr(e.target.value)}
-          rows={2}
-          placeholder="e.g. Track competitor HO-3 launches and GL rate filings in TX and FL"
-          className="rounded-[10px] bg-surface border text-sm text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none"
-          style={{ borderColor: 'var(--color-border-strong)' }}
-          aria-label="News tracking instruction"
-          aria-describedby="news-instr-hint"
-        />
-        <div className="flex items-center justify-between gap-2">
-          <p id="news-instr-hint" className="text-xs text-faint">
-            Starts from a shared baseline — your edits refine what the nightly agent pulls, alongside your portfolio ({products.items.length} product{products.items.length === 1 ? '' : 's'}).
-          </p>
-          <div className="flex items-center gap-2 shrink-0">
-            {instruction.trim() !== BASE_NEWS_INSTRUCTION && (
-              <button onClick={() => setInstr(BASE_NEWS_INSTRUCTION)} className="text-xs text-dim hover:text-accent transition-colors">Reset to baseline</button>
-            )}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={savePrefs}
-              disabled={!instruction.trim() || !unsaved || saving}
-              aria-label="Save news tracking preference"
-            >
-              {saving ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
-        </div>
-
-        {/* Natural-language article filter — narrows the feed below without re-fetching */}
-        <div className="flex flex-col gap-1.5 pt-3 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <label htmlFor="news-nl-filter" className="flex items-center gap-1.5 text-sm font-medium text-text">
-            <IconFilter size={14} className="text-accent" aria-hidden="true" />
-            Filter articles (natural language)
-          </label>
-          <input
-            id="news-nl-filter"
-            value={nlFilter}
-            onChange={e => setNlFilter(e.target.value)}
-            placeholder="e.g. Florida rate hikes and reinsurance"
-            className="h-9 rounded-[10px] bg-surface border text-sm text-text px-3 focus:outline-none focus:ring-2 focus:ring-accent/25"
-            style={{ borderColor: nlFilter ? 'var(--color-accent)' : 'var(--color-border-strong)' }}
-            aria-describedby="news-nl-hint"
-          />
-          <p id="news-nl-hint" className="text-xs text-faint">
-            {nlFilter.trim()
-              ? `Showing ${displayed.length} of ${ranked.length} articles matching “${nlFilter.trim()}”.`
-              : 'Type a phrase — only articles mentioning every key word are shown.'}
-          </p>
-        </div>
-      </div>
-
-      {/* Feed */}
-      {items === null ? (
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
-        </div>
-      ) : displayed.length === 0 ? (
-        <EmptyState
-          icon={<IconNews size={28} />}
-          title={query ? 'No results' : 'No news yet'}
-          description={query ? `No items match "${query}".` : 'A nightly agent (06:00 ET) searches the web for your tracking instruction and files what it finds here. Set a preference above, then use "Refresh now" to fetch immediately.'}
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" role="feed" aria-label="Market news feed">
-          {/* G3: each feed item is wrapped in <article> (role="article") per WAI-ARIA
-              role="feed" spec; `contents` display keeps the <a> as the grid item. */}
-          {displayed.map(n => (
+          {items === null ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40" />)}
+            </div>
+          ) : displayed.length === 0 ? (
+            <EmptyState
+              icon={<IconNews size={28} />}
+              title={filter.trim() ? 'No matching articles' : 'No news yet'}
+              description={filter.trim()
+                ? `Nothing matches “${filter.trim()}”. Try fewer or different words, or clear the filter.`
+                : 'A nightly agent (06:00 ET) searches the web for your tracking brief and files what it finds here. Set a brief in the sidebar, then use "Refresh now" to fetch immediately.'}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4" role="feed" aria-label="Market news feed">
+              {/* G3: each feed item is wrapped in <article> (role="article") per WAI-ARIA
+                  role="feed" spec; `contents` display keeps the <a> as the grid item. */}
+              {displayed.map(n => (
             <article key={n.id} className="contents">
             <a
               href={n.url}
@@ -383,9 +416,11 @@ export default function News() {
               </div>
             </a>
             </article>
-          ))}
-        </div>
-      )}
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   )
 }

@@ -51,7 +51,7 @@ const KNOWN_FORM_NUMBERS = new Set<string>([
   ...PA_FORMS.map((f) => f.number),
 ])
 
-// RefId pattern: e.g. HO.COV.001, HO.COV.001.001, GL.PROD.001, HO.LD.003
+// RefId pattern: e.g. HO.COV.001, HO.COV.001.001, PA.PROD.001, HO.LD.003
 // Two uppercase segments separated by dots, followed by a numeric suffix.
 const REF_ID_RE = /\b([A-Z]{2,}\.[A-Z]+\.\d[\w.]*)/g
 

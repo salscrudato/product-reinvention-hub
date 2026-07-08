@@ -1,7 +1,7 @@
 // SegmentFilter — the portfolio segmentation toolbar. Every facet (Vertical,
 // Coverage family, Market segment) and every value in it is derived from the LOB
 // registry via `deriveSegmentAxes()`, so registering a new line extends the filter
-// automatically — nothing here is hard-coded to Homeowners or GL. Selecting a value
+// automatically — nothing here is hard-coded to Homeowners or Personal Auto. Selecting a value
 // filters; clicking it again (or "All") clears that axis.
 import type { SegmentAxis, SegmentAxisId, SegmentSelection } from '@pf/shared'
 

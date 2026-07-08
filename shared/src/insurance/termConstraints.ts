@@ -8,8 +8,8 @@
 //   2. The Homeowners demonstrative cross-coverage constraints — Coverage F $5,000
 //      requires Coverage E ≥ $300,000, and a wind/hail % deductible must be ≥ the
 //      all-peril deductible in dollar terms. These are line-specific and resolve
-//      through the LOB registry exactly like the rules engine, so GL (and any other
-//      line) is left untouched.
+//      through the LOB registry exactly like the rules engine, so Personal Auto (and any
+//      other line) is left untouched.
 import type { Coverage, CoverageTerm, LDTable } from '../types'
 import { resolveLob } from './lobRegistry'
 import { resolveTermOptions, formatOption } from './terms'

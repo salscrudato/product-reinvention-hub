@@ -15,7 +15,7 @@ export interface BaseForm {
   title:          string
   formNumber:     string
   edition:        string
-  lob?:           string   // detected line: 'HO' | 'GL' | '' — labels the card + grounds analysis
+  lob?:           string   // detected line: 'HO' | 'PA' | 'GL' | '' — labels the card + grounds analysis
   fileName:       string
   storagePath:    string
   url:            string
@@ -27,7 +27,7 @@ export interface BaseForm {
 }
 
 // Full-name tooltip for the compact line chip.
-const LINE_TITLE: Record<string, string> = { HO: 'Homeowners', GL: 'General Liability' }
+const LINE_TITLE: Record<string, string> = { HO: 'Homeowners', PA: 'Personal Auto', GL: 'General Liability' }
 
 interface Props {
   forms:      BaseForm[]
@@ -179,7 +179,7 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
             compact
             icon={<IconFile size={26} />}
             title="No base forms yet"
-            description={canEdit ? 'Upload a Homeowners or General Liability base form to start a coverage conversation.' : 'Ask an editor to upload a base form to start.'}
+            description={canEdit ? 'Upload a Homeowners or Personal Auto base form to start a coverage conversation.' : 'Ask an editor to upload a base form to start.'}
           />
         ) : (
           forms.map(f => {

@@ -40,7 +40,12 @@ export default function AppShell() {
     )
   }
 
-  if (!user) return <Navigate to="/" replace />
+  // Require a *credentialed* session, not just any truthy user. The adapter auto-connects
+  // an ANONYMOUS session (email === null) whenever Firebase reports no user — including right
+  // after sign-out. Gating on `!user` alone would let that anonymous session linger inside the
+  // app, stranding a signed-out user on /app. Mirror Landing's `user?.email` guard so anonymous
+  // (and null) sessions are sent back to the landing/sign-in page.
+  if (!user?.email) return <Navigate to="/" replace />
 
   return (
     <FeedbackProvider>

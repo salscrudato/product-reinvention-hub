@@ -19,7 +19,9 @@ export default function MustChangePassword() {
   const [error,       setError]       = useState('')
   const [loading,     setLoading]     = useState(false)
 
-  if (!user) return <Navigate to="/" replace />
+  // Require a credentialed session (see AppShell): an anonymous session has no real account to
+  // change a password for, so send it back to the landing/sign-in page.
+  if (!user?.email) return <Navigate to="/" replace />
 
   // Capture for async closure — TypeScript cannot narrow closure vars after early return
   const currentUser = user

@@ -1,6 +1,6 @@
 // Explorer — a left-to-right cascading column browser (Miller columns) for the
 // product hierarchy: Products → Coverages → Sub-coverages → a peek panel. It is
-// line-agnostic: HO-3 and GL cascade through the exact same model because the
+// line-agnostic: HO-3 and Personal Auto cascade through the exact same model because the
 // hierarchy is pure data — a coverage's `parentId` holds its parent's refId, so
 // top-level = (parentId === null) and children = (parentId === parent.refId).
 //

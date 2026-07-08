@@ -30,7 +30,7 @@ const normName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim
 
 const EXAMPLES = [
   'A coastal Homeowners HO-3 focused on wind/hail states',
-  'A monoline General Liability product for restaurants',
+  'A usage-based telematics Personal Auto product modelled on our PP 00 01',
   'A landlord dwelling product modelled on our HO-3',
 ]
 
@@ -71,7 +71,7 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
         if (ev.t === 'error') streamErr = ev.message ?? 'Scaffold failed'
       })
       if (streamErr) throw new Error(streamErr)
-      if (!got || !(got as ScaffoldPlan).product) throw new Error('The assistant could not ground a product for that request — try naming a line (e.g. Homeowners or GL).')
+      if (!got || !(got as ScaffoldPlan).product) throw new Error('The assistant could not ground a product for that request — try naming a line (e.g. Homeowners or Personal Auto).')
 
       const p = got as ScaffoldPlan
       setPlan(p)

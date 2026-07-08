@@ -9,7 +9,7 @@
 // target for shapes too small to click).
 //
 // Peril overlay is fully registry-driven: Homeowners' COASTAL_WIND_HAIL states earn
-// an amber wind/hail badge; General Liability's TERRITORY model carries no coastal
+// an amber wind/hail badge; Personal Auto's TERRITORY model carries no coastal
 // states, so the same component renders no badge — no line-specific code lives here.
 //
 // Interaction: hover to preview (native <title>), click to toggle, and full keyboard
@@ -43,7 +43,7 @@ interface Props {
 	footprint: Set<string>
 	/** The line's peril model from the LOB registry (`lob.perilModel`). Drives the
 	 *  peril badge + legend: COASTAL_WIND_HAIL badges its eligible states, TERRITORY
-	 *  (e.g. GL) carries none and renders badge-free. Never hard-code peril facts. */
+	 *  (e.g. Personal Auto) carries none and renders badge-free. Never hard-code peril facts. */
 	peril: PerilRule
 	onToggle?: (state: string) => void
 	canEdit?: boolean
@@ -97,7 +97,7 @@ export function StateTileMap({ active, footprint, peril, onToggle, canEdit = fal
 	}
 
 	// Peril-eligible states, clipped to the footprint — a coastal state outside the
-	// footprint earns no badge. Empty for TERRITORY / NONE lines (e.g. GL), so the
+	// footprint earns no badge. Empty for TERRITORY / NONE lines (e.g. Personal Auto), so the
 	// overlay and its legend entry simply don't render.
 	const perilSet = new Set(peril.eligibleStates.filter(st => footprint.has(st)))
 	const showPeril = perilSet.size > 0

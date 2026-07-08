@@ -107,7 +107,7 @@ export function CoverageCollection({ coverages, onOpen, lob = resolveLob() }: {
   const roots = coverages.filter(c => !c.parentId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const endorsementsOf = (refId: string | null) => refId ? coverages.filter(c => c.parentId === refId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : []
 
-  // Section grouping is line-driven (Homeowners Section I / II, GL coverage parts…).
+  // Section grouping is line-driven (Homeowners Section I / II, Personal Auto Parts A–D…).
   const sections = groupBySection(lob, roots)
 
   if (!roots.length) return <p className="text-sm text-faint py-8 text-center">No coverages yet.</p>

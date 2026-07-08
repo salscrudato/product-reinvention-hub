@@ -65,7 +65,7 @@ The following project-scoped commands are available under `.claude/commands/`:
 ### 6. One-command local stack
 
 `pnpm dev:seed` (root) starts the Firebase emulator suite, waits for Firestore, seeds
-HO-3 + GL, then starts Vite — full local stack in a single terminal command.
+Personal Home (HO-3) + Personal Auto, then starts Vite — full local stack in a single terminal command.
 
 ## Consequences
 

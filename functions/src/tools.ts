@@ -87,12 +87,12 @@ export const TOOLS: Anthropic.Tool[] = [
   {
     name: 'run_rating',
     description:
-      'Execute the rating algorithm and return the final premium with a step-by-step trace. Pass programRef (e.g. HO.RAT.1 or GL.RAT.1) and any subset of inputs; unspecified inputs default to that line\'s worked example (HO-3 $1,528, GL $2,789). Use to trace or re-price a premium.',
+      'Execute the rating algorithm and return the final premium with a step-by-step trace. Pass programRef (e.g. HO.RAT.1 or PA.RAT.1) and any subset of inputs; unspecified inputs default to that line\'s worked example (HO-3 $1,528, Personal Auto $1,002). Use to trace or re-price a premium.',
     input_schema: {
       type: 'object',
       properties: {
-        programRef: { type: 'string', description: 'Rating program refId, e.g. HO.RAT.1 or GL.RAT.1.' },
-        inputs:     { type: 'object', description: 'Partial rating inputs merged over the line\'s worked example. HO-3: territory, pc, construction, covA, allPerilDed, covCPct, covELimit, covFLimit, tier, deviceCredit, rcElected, windHailElected/windHailPct, waterBackupElected/waterBackupLimit, sppElected/sppItems. GL: classTable, lossCost, exposureUnits, perOccurrenceLimit, aggregateLimit, lcmState, scheduleMod, tierFactor, terrorismElected.' },
+        programRef: { type: 'string', description: 'Rating program refId, e.g. HO.RAT.1 or PA.RAT.1.' },
+        inputs:     { type: 'object', description: 'Partial rating inputs merged over the line\'s worked example. HO-3: territory, pc, construction, covA, allPerilDed, covCPct, covELimit, covFLimit, tier, deviceCredit, rcElected, windHailElected/windHailPct, waterBackupElected/waterBackupLimit, sppElected/sppItems. PA: territory, driverClass, biPdLimitCode, vehicleAgeClass, vehicleSymbol, tier, medPayElected, umElected, collisionElected/collisionDed, compElected/compDed, rentalElected/rentalCode, towingElected/towingLimit.' },
       },
       required: ['programRef'],
     },
@@ -104,7 +104,7 @@ export const TOOLS: Anthropic.Tool[] = [
     input_schema: {
       type: 'object',
       properties: {
-        refId: { type: 'string', description: 'Dictionary definition refId, e.g. HO.DEF.003 or GL.DEF.001. Preferred when known.' },
+        refId: { type: 'string', description: 'Dictionary definition refId, e.g. HO.DEF.003 or PA.DEF.001. Preferred when known.' },
         name:  { type: 'string', description: 'Dictionary term name, e.g. "Coverage A Amount" or "Occurrence Limit".' },
       },
     },
@@ -113,14 +113,14 @@ export const TOOLS: Anthropic.Tool[] = [
 
 // ─── System prompt (cacheable) ─────────────────────────────────────────────────
 
-export const SYSTEM_PROMPT = `You are the Product Reinvention Hub portfolio analyst for P&C insurance product managers. The reference products are an ISO-style Homeowners HO-3 and a Monoline General Liability (CGL); the platform is multi-line, so resolve every fact from the tools rather than assuming a line.
+export const SYSTEM_PROMPT = `You are the Product Reinvention Hub portfolio analyst for P&C insurance product managers. The reference products are an ISO-style Homeowners HO-3 and an ISO-style Personal Auto Policy (PP 00 01); the platform is multi-line, so resolve every fact from the tools rather than assuming a line.
 
 DATA MODEL (Firestore, all reachable via the tools):
-- products → coverages (line-specific, e.g. HO-3 Coverage A–F or GL premises/products BI/PD plus endorsements; each has terms of kind LIMIT | DEDUCTIBLE | OPTION), rules (category PRODUCT | RATING | FORMS, each a condition → outcome), formRules, and ratingPrograms (ordered SET/MUL/ADD/MIN_FLOOR steps).
-- forms — policy documents keyed by number (e.g. "HO 04 61", "CG 00 01"), with category, attachment condition and coverage parts.
-- ldTables — Limit/Deductible option tables (refIds like HO.LD.002, LDTable.001). rtTables — rate tables (refIds like HO.RT.003, RTTable.001). dictionary — governed field definitions, each with a citable refId (HO.DEF.003, GL.DEF.001) and a live list of the coverages/rules/forms it is used in.
+- products → coverages (line-specific, e.g. HO-3 Coverage A–F or Personal Auto Parts A–D plus endorsements; each has terms of kind LIMIT | DEDUCTIBLE | OPTION), rules (category PRODUCT | RATING | FORMS, each a condition → outcome), formRules, and ratingPrograms (ordered SET/MUL/ADD/MIN_FLOOR steps).
+- forms — policy documents keyed by number (e.g. "HO 04 61", "PP 00 01"), with category, attachment condition and coverage parts.
+- ldTables — Limit/Deductible option tables (refIds like HO.LD.002, PA.LD.005). rtTables — rate tables (refIds like HO.RT.003, PA.RT.001). dictionary — governed field definitions, each with a citable refId (HO.DEF.003, PA.DEF.001) and a live list of the coverages/rules/forms it is used in.
 
-REFERENCE IDs are the traceability backbone and must be preserved and cited exactly: coverage refIds (HO.COV.003.002, GL.COV.002.001), rule refIds (HO.RU.006, GL.RU.004), form-rule refIds (HO.FORM.RU.003, GL.FORM.RU.001), table refIds (HO.LD.002, RTTable.001), dictionary definition refIds (HO.DEF.003, GL.DEF.001) and form numbers (HO 04 61, CG 00 01). When you define or explain what a field means, ground it with get_dictionary and cite the definition by its refId, e.g. [HO.DEF.003]. Never cite a definition refId that get_dictionary did not return.
+REFERENCE IDs are the traceability backbone and must be preserved and cited exactly: coverage refIds (HO.COV.003.002, PA.COV.001.001), rule refIds (HO.RU.006, PA.RU.007), form-rule refIds (HO.FORM.RU.003, PA.FORM.RU.001), table refIds (HO.LD.002, PA.RT.001), dictionary definition refIds (HO.DEF.003, PA.DEF.001) and form numbers (HO 04 61, PP 00 01). When you define or explain what a field means, ground it with get_dictionary and cite the definition by its refId, e.g. [HO.DEF.003]. Never cite a definition refId that get_dictionary did not return.
 
 HOUSE RULES — non-negotiable:
 1. Assert ONLY what the tools return. Never invent coverages, forms, rules, limits, factors or premiums.
@@ -357,7 +357,7 @@ async function runRating(programRef: string, partial: Partial<RatingInputMap>): 
   const ldTables: Record<string, LDTable> = {}
   for (const d of ldSnap.docs) ldTables[d.id] = d.data() as LDTable
 
-  // Resolve the line's rating kit from the program refId (HO.RAT.1 → HO, GL.RAT.1 → GL)
+  // Resolve the line's rating kit from the program refId (HO.RAT.1 → HO, PA.RAT.1 → PA)
   // so the getters + worked-example defaults match the product being priced.
   const kit = resolveRatingKit((resolveLobByRefId(programRef) ?? DEFAULT_LOB).prefix)
   const inputs: RatingInputMap = { ...kit.workedExample, ...partial }

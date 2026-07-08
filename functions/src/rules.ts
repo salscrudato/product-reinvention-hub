@@ -158,7 +158,7 @@ interface DraftBody {
   instruction?: string
   productId?:   string
   sessionId?:   string   // per-session cost-cap bucket
-  lobPrefix?:   string   // e.g. 'HO' | 'GL' — steer the model to the right line's refIds
+  lobPrefix?:   string   // e.g. 'HO' | 'PA' — steer the model to the right line's refIds
   existingRule?: {
     refId?: string | null; category?: string; subCategory?: string
     condition?: string; outcome?: string

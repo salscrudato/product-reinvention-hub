@@ -381,7 +381,7 @@ export interface NewsPrefs {
 
 export interface DictionaryEntry extends GovernanceBlock {
   // Citable definition id — the traceability token the grounded AI cites in brackets,
-  // e.g. [DEF.003]. Seeded terms use a line prefix (HO.DEF.001, GL.DEF.001); terms a
+  // e.g. [DEF.003]. Seeded terms use a line prefix (HO.DEF.001, PA.DEF.001); terms a
   // user creates in-app get a neutral DEF.NNN. Nullable to mirror the other refId shapes.
   refId:         string | null
   name:          string
@@ -419,7 +419,7 @@ export interface SeedReport {
   counts:                Record<string, number>
   warnings:              string[]
   workedExamplePremium:  number                  // HO-3 canary ($1,528) — kept for back-compat
-  workedExamplePremiums?: Record<string, number> // per-product worked examples (HO-3, GL, …)
+  workedExamplePremiums?: Record<string, number> // per-product worked examples (HO-3, Personal Auto, …)
   at:                    unknown
 }
 
@@ -431,9 +431,9 @@ export interface SppItem {
 }
 
 /** The generic input bag the evaluator reads by key. Each line supplies its own
- *  concrete inputs shape — HO-3 `RatingInputs`, GL `GLRatingInputs` — and both
- *  satisfy this, so `evaluate()` stays line-agnostic (no Homeowners assumption).
- *  `sppItems` is typed because the SPP source kind reads it directly. */
+ *  concrete inputs shape — the Homeowners `RatingInputs` bag, the Personal Auto
+ *  worked-example inputs — and both satisfy this, so `evaluate()` stays line-agnostic
+ *  (no Homeowners assumption). `sppItems` is typed because the SPP source kind reads it directly. */
 export interface RatingInputMap {
   sppItems?:      SppItem[]
   [key: string]:  unknown

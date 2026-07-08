@@ -1,8 +1,8 @@
 // RefChip — the canonical treatment for a real, user-meaningful identifier: an ISO
-// form number (HO 04 90, CG 00 01). Monospace, tabular, subtly chipped so form
+// form number (HO 04 90, PP 00 01). Monospace, tabular, subtly chipped so form
 // numbers read as precise, scannable tokens. Optional onClick makes it a jump link.
 //
-// Internal refIds (HO.COV.001, HO.DEF.004, GL.RU.090, HO.FORM.RU.001, RTTable.002…)
+// Internal refIds (HO.COV.001, HO.DEF.004, PA.RU.007, HO.FORM.RU.001, PA.RT.002…)
 // mean nothing to a product manager, so RefChip renders NOTHING for them — they
 // survive only in exports. The tell: an internal refId has dot-separated segments
 // and no space; an ISO form number has spaces and no dots.

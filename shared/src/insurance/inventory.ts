@@ -179,7 +179,7 @@ export interface ProductLike {
 export interface ProductIdentity {
   offeringName: string   // the offering as marketed (the product's full name)
   productName:  string   // the specific policy-form name (suffix after an em/en dash)
-  productCode:  string   // short line code from the registry (e.g. "HO", "GL")
+  productCode:  string   // short line code from the registry (e.g. "HO", "PA")
   frameworkId:  string   // the Product Framework ID — the product refId
   lobName:      string   // line-of-business display name
 }

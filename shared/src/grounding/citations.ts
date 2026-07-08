@@ -20,7 +20,7 @@ const FORM_LEAD_RE = /^([A-Z]{2}\s\d{2}\s\d{2})/
 
 /** True when a token has the shape of a domain refId: a 2+ letter prefix followed by one
  *  or more dotted segments, and containing at least one digit. Matches HO.COV.001,
- *  HO.COV.001.001, HO.FORM.RU.003, GL.RAT.1, RTTable.001, LDTable.002 — but not a plain
+ *  HO.COV.001.001, HO.FORM.RU.003, PA.RAT.1, PA.RT.001, PA.LD.005 — but not a plain
  *  word, a phrase with spaces, or a bare "Section I". */
 function isRefIdShaped(token: string): boolean {
   return /^[A-Za-z]{2,}(?:\.[A-Za-z0-9]+)+$/.test(token) && /\d/.test(token)

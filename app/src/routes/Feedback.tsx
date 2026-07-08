@@ -10,10 +10,10 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { toast } from 'sonner'
-import { IconArrowUp, IconLink, IconDrag } from '../components/ui/icons'
+import { IconArrowUp, IconLink, IconDrag, IconCheckCircle, IconTrash } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { useUser } from '../context/useUser'
-import { Badge, Skeleton } from '../components/ui'
+import { Badge, Skeleton, Dialog, Button } from '../components/ui'
 import type { Feedback, FeedbackType, FeedbackStatus } from '@pf/shared'
 
 type FeedbackDoc = Feedback & { id: string }
@@ -45,15 +45,34 @@ export default function Feedback() {
   const { user, profile } = useUser()
   const canEdit = profile?.role === 'EDITOR' || profile?.role === 'ADMIN'
   const [items, setItems] = useState<FeedbackDoc[] | null>(null)
+  // Ids hidden optimistically while their delete is in flight. mutate() is a Firestore
+  // transaction (no latency compensation), so without this the card lingers until the
+  // server round-trips and the subscription echoes the removal back.
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set())
+  const [pendingDelete, setPendingDelete] = useState<FeedbackDoc | null>(null)
 
   useEffect(() => {
     const unsub = adapter.db.subscribe<FeedbackDoc>('feedback', d => { if (Array.isArray(d)) setItems(d) })
     return unsub
   }, [])
 
-  const maxHeat = useMemo(() => Math.max(0.001, ...(items ?? []).map(heatOf)), [items])
+  // Once the subscription reflects a confirmed delete, stop tracking the id so the
+  // hidden set never grows without bound.
+  useEffect(() => {
+    if (!items) return
+    setHiddenIds(prev => {
+      if (prev.size === 0) return prev
+      const present = new Set(items.map(i => i.id))
+      const next = new Set<string>()
+      prev.forEach(id => { if (present.has(id)) next.add(id) })
+      return next.size === prev.size ? prev : next
+    })
+  }, [items])
+
+  const visibleItems = useMemo(() => (items ?? []).filter(f => !hiddenIds.has(f.id)), [items, hiddenIds])
+  const maxHeat = useMemo(() => Math.max(0.001, ...visibleItems.map(heatOf)), [visibleItems])
   const lanes = useMemo(() => {
-    const by = (s: FeedbackStatus) => (items ?? []).filter(f => f.status === s)
+    const by = (s: FeedbackStatus) => visibleItems.filter(f => f.status === s)
     return {
       NEW:       by('NEW').sort((a, b) => heatOf(b) - heatOf(a)),
       REVIEWING: by('REVIEWING').sort((a, b) => heatOf(b) - heatOf(a)),
@@ -61,7 +80,7 @@ export default function Feedback() {
       SHIPPED:   by('SHIPPED').sort((a, b) => toMillis(b.updatedAt) - toMillis(a.updatedAt)),
       DECLINED:  by('DECLINED'),
     }
-  }, [items])
+  }, [visibleItems])
 
   async function vote(fb: FeedbackDoc) {
     if (!user) return
@@ -85,6 +104,29 @@ export default function Feedback() {
     }
   }
 
+  // One-click completion: send any active card straight to the SHIPPED (Completed)
+  // board, no matter which lane it is in — the JIRA-style "Done" transition.
+  function complete(fb: FeedbackDoc) { patch(fb, { status: 'SHIPPED' }, 'Marked complete') }
+
+  // Delete is destructive (audited, but the doc is gone), so it goes through a confirm.
+  // Hide the card at once and dismiss the dialog; if the write fails, reveal it again.
+  async function remove(fb: FeedbackDoc) {
+    if (!user) return
+    setPendingDelete(null)
+    setHiddenIds(prev => new Set(prev).add(fb.id))
+    try {
+      await adapter.db.mutate({
+        op: 'delete', path: `feedback/${fb.id}`, entityType: 'feedback',
+        actor: { uid: user.uid, name: user.name ?? user.email ?? 'User' },
+        expectedRev: (fb as { rev?: number }).rev,
+      })
+      toast.success('Feedback deleted')
+    } catch (err) {
+      setHiddenIds(prev => { const next = new Set(prev); next.delete(fb.id); return next })
+      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Delete failed')
+    }
+  }
+
   async function reorderPlanned(ordered: FeedbackDoc[]) {
     // Persist new sequential ranks for any item whose rank changed (audited).
     await Promise.all(ordered.map((fb, i) => (fb.rank ?? -1) === i ? null : patch(fb, { rank: i }, 'Backlog reordered')).filter(Boolean) as Promise<void>[])
@@ -94,7 +136,7 @@ export default function Feedback() {
     return <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-64" />)}</div>
   }
 
-  const cardProps = { canEdit, uid: user?.uid, maxHeat, onVote: vote, onPatch: patch, navigate }
+  const cardProps = { canEdit, uid: user?.uid, maxHeat, onVote: vote, onPatch: patch, onComplete: complete, onDelete: setPendingDelete, navigate }
 
   return (
     <div className="flex flex-col gap-6">
@@ -124,15 +166,25 @@ export default function Feedback() {
         </Lane>
       </div>
 
-      {/* Shipped changelog */}
+      {/* Completed board — the "Done" column. Shipped items land here as a changelog. */}
       {lanes.SHIPPED.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold text-good uppercase tracking-wide">Shipped</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-good uppercase tracking-wide">Completed</span>
+            <span className="text-[11px] text-faint tabular-nums">{lanes.SHIPPED.length}</span>
+          </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
             {lanes.SHIPPED.map(fb => (
-              <div key={fb.id} className="shrink-0 w-56 bg-surface rounded-[12px] p-3 flex flex-col gap-1" style={{ border: '1px solid var(--color-border)' }}>
-                <span className="text-sm font-medium text-text truncate">{fb.title}</span>
+              <div key={fb.id} className="group relative shrink-0 w-56 bg-surface rounded-[12px] p-3 flex flex-col gap-1" style={{ border: '1px solid var(--color-border)' }}>
+                <span className="flex items-center gap-1.5 text-good"><IconCheckCircle size={13} className="shrink-0" aria-hidden="true" /><span className="text-sm font-medium text-text truncate">{fb.title}</span></span>
                 <span className="text-[11px] text-faint">{new Date(toMillis(fb.updatedAt)).toLocaleDateString()}</span>
+                {canEdit && (
+                  <button onClick={() => setPendingDelete(fb)}
+                    className="absolute top-2 right-2 text-faint hover:text-danger opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity rounded-[6px] p-0.5"
+                    title="Delete" aria-label={`Delete ${fb.title}`}>
+                    <IconTrash size={14} aria-hidden="true" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -148,6 +200,19 @@ export default function Feedback() {
           </div>
         </details>
       )}
+
+      {/* Delete confirmation — destructive, so never one-click. */}
+      <Dialog open={pendingDelete !== null} onClose={() => setPendingDelete(null)} title="Delete feedback?">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-dim">
+            This permanently removes <span className="font-medium text-text">“{pendingDelete?.title}”</span> and its votes. This can’t be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setPendingDelete(null)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={() => pendingDelete && remove(pendingDelete)}>Delete</Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   )
 }
@@ -190,10 +255,12 @@ function PlannedList({ items, canEdit, onReorder, children }: {
 
 // ─── Card ───────────────────────────────────────────────────────────────────
 
+// Lateral / back moves offered by the "Move…" dropdown. Completion is handled by
+// the dedicated ✓ button (any lane → SHIPPED), so SHIPPED is not listed here.
 const NEXT: Record<FeedbackStatus, FeedbackStatus[]> = {
   NEW:       ['REVIEWING', 'PLANNED', 'DECLINED'],
   REVIEWING: ['PLANNED', 'DECLINED', 'NEW'],
-  PLANNED:   ['SHIPPED', 'REVIEWING', 'DECLINED'],
+  PLANNED:   ['REVIEWING', 'DECLINED'],
   SHIPPED:   ['PLANNED'],
   DECLINED:  ['NEW'],
 }
@@ -205,11 +272,13 @@ interface CardProps {
   maxHeat: number
   onVote: (fb: FeedbackDoc) => void
   onPatch: (fb: FeedbackDoc, c: Partial<Feedback>, ok: string) => void
+  onComplete: (fb: FeedbackDoc) => void
+  onDelete: (fb: FeedbackDoc) => void
   navigate: (to: string) => void
   sortable?: boolean
 }
 
-function Card({ fb, canEdit, uid, maxHeat, onVote, onPatch, navigate, sortable }: CardProps) {
+function Card({ fb, canEdit, uid, maxHeat, onVote, onPatch, onComplete, onDelete, navigate, sortable }: CardProps) {
   const sort = useSortable({ id: fb.id, disabled: !sortable || !canEdit })
   const voted = uid ? (fb.votes?.voters ?? []).includes(uid) : false
   const heat  = heatOf(fb)
@@ -268,6 +337,20 @@ function Card({ fb, canEdit, uid, maxHeat, onVote, onPatch, navigate, sortable }
             <option value="">Move…</option>
             {NEXT[fb.status].map(s => <option key={s} value={s}>{s}</option>)}
           </select>
+        )}
+        {canEdit && fb.status !== 'SHIPPED' && fb.status !== 'DECLINED' && (
+          <button onClick={() => onComplete(fb)}
+            className="h-6 inline-flex items-center gap-1 px-1.5 rounded-[7px] bg-raised text-dim hover:text-good hover:bg-[var(--color-good-soft)] transition-colors"
+            title="Mark complete" aria-label="Mark complete">
+            <IconCheckCircle size={13} aria-hidden="true" />
+          </button>
+        )}
+        {canEdit && (
+          <button onClick={() => onDelete(fb)}
+            className="h-6 inline-flex items-center px-1.5 rounded-[7px] bg-raised text-dim hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors"
+            title="Delete" aria-label="Delete">
+            <IconTrash size={13} aria-hidden="true" />
+          </button>
         )}
       </div>
     </div>

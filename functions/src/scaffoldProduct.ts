@@ -49,7 +49,7 @@ const EMIT_SCAFFOLD_TOOL: Anthropic.Tool = {
         description: 'The product shell to create.',
         properties: {
           name:          { type: 'string', description: 'The product name the manager asked for, e.g. "Coastal Homeowners HO-3".' },
-          lobPrefix:     { type: 'string', description: 'The line-of-business prefix of the reference line — MUST be one you saw in the portfolio, e.g. "HO" or "GL".' },
+          lobPrefix:     { type: 'string', description: 'The line-of-business prefix of the reference line — MUST be one you saw in the portfolio, e.g. "HO" or "PA".' },
           marketSegment: { type: 'string', description: 'Market segment, e.g. "Personal Lines / Property".' },
           description:   { type: 'string', description: 'One or two sentences describing the product.' },
           citation:      CITATION,

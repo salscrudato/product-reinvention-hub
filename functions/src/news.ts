@@ -49,7 +49,7 @@ const STATE_NAMES: Record<string, string> = {
 // LOB keyword expansions beyond the bare LOB name (keyed by the refId prefix).
 const LOB_EXTRA: Record<string, string[]> = {
   HO: ['homeowners', 'homeowner', 'ho-3', 'ho3', 'dwelling', 'renters', 'property insurance', 'home insurance'],
-  GL: ['general liability', 'cgl', 'commercial general liability', 'business liability'],
+  PA: ['personal auto', 'auto insurance', 'automobile', 'private passenger auto', 'car insurance', 'pp 00 01', 'motor'],
 }
 
 const NEWS_SYSTEM = `You are a P&C insurance news scout for a product manager. Use the web_search tool to find recent, real, relevant news items matching the user's instruction. Prefer primary sources (regulator sites, carrier newsrooms, trade press). Return ONLY a JSON array (max 8 items) — no prose before or after — where each item is:

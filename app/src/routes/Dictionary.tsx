@@ -35,7 +35,7 @@ function routeForUsage(u: DictUsageRef): string {
 }
 
 /** Next neutral refId (DEF.NNN) for a user-created term — max existing trailing number +1,
- *  scanning all prefixes (HO.DEF/GL.DEF/DEF) so ids never collide across lines. */
+ *  scanning all prefixes (HO.DEF/PA.DEF/DEF) so ids never collide across lines. */
 function nextRefId(entries: DictDoc[]): string {
   const max = entries.reduce((m, e) => {
     const n = Number(/(\d+)\s*$/.exec(e.refId ?? '')?.[1] ?? '0')
