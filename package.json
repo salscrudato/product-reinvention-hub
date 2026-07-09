@@ -1,0 +1,36 @@
+{
+  "name": "product-reinvention-hub",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "pnpm --filter app dev",
+    "emulators": "firebase emulators:start",
+    "dev:all": "concurrently \"pnpm emulators\" \"pnpm --filter app dev\"",
+    "dev:seed": "pnpm --filter functions build && concurrently -n emu,seed,app -c magenta,green,cyan \"pnpm emulators\" \"node scripts/wait-and-seed.mjs\" \"pnpm --filter app dev\"",
+    "spinup": "pnpm --filter functions build && concurrently -n emu,seed -c magenta,green \"pnpm emulators\" \"node scripts/wait-and-seed.mjs\"",
+    "seed": "tsx scripts/seed.ts",
+    "cors:set": "gsutil cors set storage.cors.json gs://productreinvention.firebasestorage.app",
+    "cors:get": "gsutil cors get gs://productreinvention.firebasestorage.app",
+    "test": "pnpm test:unit && pnpm test:rules && pnpm test:integration && pnpm test:e2e",
+    "test:unit": "vitest run && pnpm --filter functions test",
+    "test:rules": "firebase emulators:exec --only firestore --project productreinvention \"vitest run --config vitest.rules.config.ts\"",
+    "test:integration": "firebase emulators:exec --only firestore,storage --project productreinvention \"vitest run --config vitest.integration.config.ts\"",
+    "test:e2e": "playwright test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "build": "pnpm --filter app build",
+    "deploy": "pnpm build && firebase deploy",
+    "eval": "tsx functions/eval/runner.ts"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "@playwright/test": "^1.61.1",
+    "concurrently": "^9.1.2",
+    "firebase": "^11.10.0",
+    "firebase-admin": "^13.10.0",
+    "pdf-lib": "^1.17.1",
+    "tsx": "^4.19.2",
+    "typescript": "~6.0.2",
+    "vitest": "^3.1.4"
+  }
+}

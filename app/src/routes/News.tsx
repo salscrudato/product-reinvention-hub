@@ -1,0 +1,426 @@
+// News (/app/news) — a market-news feed curated by the nightly agent, plus a
+// natural-language preference box (stored per user as newsPrefs) and a manual
+// "Refresh now" for on-demand fetches.
+//
+// Items are ranked by portfolio relevance: LOB name/keyword matches score +3,
+// each matching state scores +2, and server-assigned relatedProductIds score +4.
+// Within the same score tier, more-recent items appear first.
+// Provenance badges on each card show which LOBs and states triggered the match.
+import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { IconNews, IconRefresh, IconExternalLink, IconSparkle, IconProduct, IconStates, IconFilter, IconSearch, IconClose } from '../components/ui/icons'
+import { adapter, MutationConflictError } from '../lib/backend'
+import { useUser } from '../context/useUser'
+import { Badge, Button, Card, Skeleton, EmptyState } from '../components/ui'
+import { useLiveCollection } from '../lib/useLiveCollection'
+import type { News as NewsType, NewsPrefs, Product } from '@pf/shared'
+
+type NewsDoc = NewsType & { id: string }
+
+function toMillis(v: unknown): number {
+  if (typeof v === 'number') return v
+  const o = v as { toDate?: () => Date; seconds?: number }
+  if (o && typeof o.toDate === 'function') return o.toDate().getTime()
+  if (o && typeof o.seconds === 'number') return o.seconds * 1000
+  return 0
+}
+
+// ─── Portfolio-aware relevance scoring ──────────────────────────────────────
+
+// US state code → full name for unambiguous text matching in news bodies.
+const STATE_NAMES: Record<string, string> = {
+  AL:'Alabama', AK:'Alaska', AZ:'Arizona', AR:'Arkansas', CA:'California',
+  CO:'Colorado', CT:'Connecticut', DE:'Delaware', FL:'Florida', GA:'Georgia',
+  HI:'Hawaii', ID:'Idaho', IL:'Illinois', IN:'Indiana', IA:'Iowa',
+  KS:'Kansas', KY:'Kentucky', LA:'Louisiana', ME:'Maine', MD:'Maryland',
+  MA:'Massachusetts', MI:'Michigan', MN:'Minnesota', MS:'Mississippi', MO:'Missouri',
+  MT:'Montana', NE:'Nebraska', NV:'Nevada', NH:'New Hampshire', NJ:'New Jersey',
+  NM:'New Mexico', NY:'New York', NC:'North Carolina', ND:'North Dakota', OH:'Ohio',
+  OK:'Oklahoma', OR:'Oregon', PA:'Pennsylvania', RI:'Rhode Island', SC:'South Carolina',
+  SD:'South Dakota', TN:'Tennessee', TX:'Texas', UT:'Utah', VT:'Vermont',
+  VA:'Virginia', WA:'Washington', WV:'West Virginia', WI:'Wisconsin', WY:'Wyoming',
+  DC:'District of Columbia',
+}
+
+// LOB keyword expansions beyond the bare LOB name (keyed by the refId prefix).
+const LOB_KEYWORDS: Record<string, string[]> = {
+  HO: ['homeowners', 'homeowner', 'ho-3', 'ho3', 'dwelling', 'renters', 'property insurance', 'home insurance'],
+  PA: ['personal auto', 'auto insurance', 'automobile', 'private passenger auto', 'car insurance', 'pp 00 01', 'motor'],
+}
+
+// The shared baseline every user starts from — what the agent should always pull. A
+// user's own edit refines it, but everyone begins from the same instruction.
+const BASE_NEWS_INSTRUCTION =
+  'Track U.S. P&C insurance market developments: rate filings and approvals, competitor product and endorsement launches, regulatory and legislative changes, catastrophe and reinsurance trends, and distribution / insurtech moves — with emphasis on Homeowners (HO) and Personal Auto (PA).'
+
+// Natural-language article filter: keep items containing every significant word in the
+// phrase (case-insensitive, stop-words dropped). Empty phrase → keep everything.
+const STOP = new Set(['the','a','an','and','or','for','to','of','in','on','with','is','are','by','at','about','me','show','only','news','article','articles','that'])
+function nlMatch(text: string, phrase: string): boolean {
+  const terms = phrase.toLowerCase().split(/\W+/).filter(w => w.length > 2 && !STOP.has(w))
+  if (terms.length === 0) return true
+  const hay = text.toLowerCase()
+  return terms.every(t => hay.includes(t))
+}
+
+interface RelevanceResult {
+  score:  number
+  lobs:   string[]  // matched LOB names shown in provenance row
+  states: string[]  // matched state codes shown in provenance row
+}
+
+/** Score a news item against the PM's product portfolio.
+ *  Returns the score and the reasons (LOBs + states) that contributed to it. */
+function computeRelevance(
+  item: NewsDoc,
+  products: (Product & { id: string })[],
+): RelevanceResult {
+  if (products.length === 0) return { score: 0, lobs: [], states: [] }
+
+  const rawText = `${item.title} ${item.summary} ${(item.tags ?? []).join(' ')}`
+  const lower   = rawText.toLowerCase()
+  let score = 0
+  const matchedLobs   = new Set<string>()
+  const matchedStates = new Set<string>()
+
+  for (const product of products) {
+    const lobName   = product.lob.name.toLowerCase()
+    const lobPrefix = (product.lob.refId ?? '').split('.')[0] ?? ''
+    const extras    = LOB_KEYWORDS[lobPrefix] ?? []
+
+    // LOB match: the bare LOB name or any known expansion keyword appears in the text.
+    if (lower.includes(lobName) || extras.some(kw => lower.includes(kw))) {
+      score += 3
+      matchedLobs.add(product.lob.name)
+    }
+
+    // State match: full state name (unambiguous) OR uppercase word-boundary code.
+    const productStates = product.allStates ? [] : (product.states ?? [])
+    for (const code of productStates) {
+      const fullName = STATE_NAMES[code]?.toLowerCase() ?? ''
+      if (
+        (fullName && lower.includes(fullName)) ||
+        new RegExp(`\\b${code}\\b`).test(rawText)
+      ) {
+        score += 2
+        matchedStates.add(code)
+      }
+    }
+
+    // Server-assigned relatedProductIds — the nightly agent already matched this item
+    // to a specific product via LOB/state analysis; a direct hit is the strongest signal.
+    if ((item.relatedProductIds ?? []).includes(product.id)) {
+      score += 4
+      matchedLobs.add(product.lob.name)
+    }
+  }
+
+  return { score, lobs: [...matchedLobs], states: [...matchedStates] }
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+export default function News() {
+  const { user } = useUser()
+  const [items, setItems]             = useState<NewsDoc[] | null>(null)
+  const [instruction, setInstr]       = useState(BASE_NEWS_INSTRUCTION)
+  const [savedInstr, setSaved]        = useState(BASE_NEWS_INSTRUCTION)
+  const [refreshing, setRefreshing]   = useState(false)
+  const [saving, setSaving]           = useState(false)
+  const [savedRev, setSavedRev]       = useState<number | undefined>(undefined)   // B9: rev of the stored pref
+  const [filter, setFilter]           = useState('')   // single natural-language feed filter (sidebar)
+
+  const products = useLiveCollection<Product>('products')
+
+  useEffect(() => {
+    const u1 = adapter.db.subscribe<NewsDoc>('news', d => { if (Array.isArray(d)) setItems(d) })
+    let u2: (() => void) | undefined
+    if (user) {
+      u2 = adapter.db.subscribe<NewsPrefs & { rev?: number }>(`newsPrefs/${user.uid}`, d => {
+        // Fall back to the shared baseline so everyone starts from the same instruction.
+        if (d && !Array.isArray(d)) {
+          const instr = d.instruction?.trim() ? d.instruction : BASE_NEWS_INSTRUCTION
+          setInstr(instr); setSaved(instr)
+          setSavedRev(d.rev)   // B9: track rev so the next save can guard against a lost update
+        }
+      })
+    }
+    return () => { u1(); u2?.() }
+  }, [user])
+
+  // Rank by portfolio relevance score (desc), then recency (desc) as tiebreaker.
+  // Re-runs whenever products load so the initial empty-portfolio pass (score=0,
+  // pure recency order) is replaced by a scored sort as soon as products arrive.
+  const ranked = useMemo(() => {
+    return (items ?? [])
+      .map(item => ({ ...item, rel: computeRelevance(item, products.items) }))
+      .sort((a, b) =>
+        b.rel.score !== a.rel.score
+          ? b.rel.score - a.rel.score
+          : toMillis(b.fetchedAt) - toMillis(a.fetchedAt),
+      )
+  }, [items, products.items])
+
+  // Single natural-language filter over title + summary + source + tags. An empty
+  // phrase keeps everything; otherwise every significant word must appear (nlMatch).
+  const displayed = useMemo(() => {
+    if (!filter.trim()) return ranked
+    return ranked.filter(n =>
+      nlMatch(`${n.title} ${n.summary ?? ''} ${n.source ?? ''} ${(n.tags ?? []).join(' ')}`, filter),
+    )
+  }, [ranked, filter])
+
+  // Portfolio-match count for the feed toolbar summary.
+  const matchCount = useMemo(() => ranked.filter(n => n.rel.score > 0).length, [ranked])
+
+  // Most common tags across the ranked feed → one-tap topic chips in the sidebar.
+  const topTags = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const it of ranked) for (const t of it.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1)
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([t]) => t)
+  }, [ranked])
+
+  async function savePrefs() {
+    if (!user) return
+    setSaving(true)
+    try {
+      await adapter.db.mutate({
+        op:          savedInstr ? 'update' : 'create',
+        path:        `newsPrefs/${user.uid}`,
+        data:        { instruction: instruction.trim() },
+        entityType:  'newsPrefs',
+        actor:       { uid: user.uid, name: user.name ?? user.email ?? 'User' },
+        expectedRev: savedRev,   // B9: guard the update against a lost update (undefined on first save → no-op)
+      })
+      setSaved(instruction.trim())
+      toast.success('Tracking preference saved')
+    } catch (err) {
+      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not save preference')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function refresh() {
+    setRefreshing(true)
+    try {
+      const r = await adapter.fns.call<Record<string, never>, { found: number; stored: number; error?: string }>('refreshNews', {})
+      if (r.error) toast.error(r.error)
+      else toast.success(`Found ${r.found}, added ${r.stored} new item${r.stored === 1 ? '' : 's'}`)
+    } catch {
+      toast.error('Refresh failed')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const unsaved = instruction.trim() !== savedInstr
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Page header */}
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span aria-hidden="true" className="grid place-items-center w-10 h-10 rounded-[12px] shrink-0"
+            style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
+            <IconNews size={20} />
+          </span>
+          <div>
+            <h1 className="text-xl font-bold text-text">Market News</h1>
+            <p className="text-sm text-dim">Curated nightly by an AI agent and ranked against your portfolio.</p>
+          </div>
+        </div>
+        <Button variant="default" size="sm" onClick={refresh} disabled={refreshing} aria-label="Refresh news feed now">
+          <IconRefresh size={14} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
+          {refreshing ? 'Fetching…' : 'Refresh now'}
+        </Button>
+      </header>
+
+      {/* Two-column: natural-language preferences rail + portfolio-ranked feed */}
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6">
+        {/* ── Preferences sidebar ─────────────────────────────────────────── */}
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-0" aria-label="News preferences">
+          {/* Agent tracking — the persisted natural-language brief for the nightly agent */}
+          <Card className="flex flex-col gap-3">
+            <div className="flex flex-col gap-0.5">
+              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-text">
+                <IconSparkle size={14} className="text-accent" aria-hidden="true" />
+                Agent tracking
+              </h2>
+              <p className="text-xs text-faint">Plain-English brief for the nightly agent.</p>
+            </div>
+            <textarea
+              id="news-instr"
+              value={instruction}
+              onChange={e => setInstr(e.target.value)}
+              rows={6}
+              placeholder="e.g. Track competitor HO-3 launches and personal auto rate filings in TX and FL"
+              className="rounded-[10px] bg-surface border text-[13px] leading-relaxed text-text p-3 focus:outline-none focus:ring-2 focus:ring-accent/25 resize-none"
+              style={{ borderColor: unsaved ? 'var(--color-accent)' : 'var(--color-border-strong)' }}
+              aria-label="News tracking instruction"
+              aria-describedby="news-instr-hint"
+            />
+            <p id="news-instr-hint" className="text-xs text-faint">
+              Refines the shared baseline alongside your portfolio ({products.items.length} product{products.items.length === 1 ? '' : 's'}).
+            </p>
+            <div className="flex items-center justify-between gap-2">
+              {instruction.trim() !== BASE_NEWS_INSTRUCTION
+                ? <button onClick={() => setInstr(BASE_NEWS_INSTRUCTION)} className="text-xs text-dim hover:text-accent transition-colors">Reset to baseline</button>
+                : <span className="text-xs text-faint">{unsaved ? 'Unsaved changes' : 'On baseline'}</span>}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={savePrefs}
+                disabled={!instruction.trim() || !unsaved || saving}
+                aria-label="Save news tracking preference"
+              >
+                {saving ? 'Saving…' : unsaved ? 'Save' : 'Saved'}
+              </Button>
+            </div>
+          </Card>
+
+          {/* Filter feed — single natural-language filter, non-destructive to the brief */}
+          <Card className="flex flex-col gap-3">
+            <div className="flex flex-col gap-0.5">
+              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-text">
+                <IconFilter size={14} className="text-accent" aria-hidden="true" />
+                Filter feed
+              </h2>
+              <p className="text-xs text-faint">Natural language — keeps articles mentioning every key word.</p>
+            </div>
+            <div className="relative">
+              <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" aria-hidden="true" />
+              <input
+                id="news-filter"
+                value={filter}
+                onChange={e => setFilter(e.target.value)}
+                placeholder="e.g. Florida rate hikes and reinsurance"
+                className="w-full h-9 rounded-[10px] bg-surface border text-sm text-text pl-9 pr-8 focus:outline-none focus:ring-2 focus:ring-accent/25"
+                style={{ borderColor: filter ? 'var(--color-accent)' : 'var(--color-border-strong)' }}
+                aria-label="Filter articles by natural-language phrase"
+              />
+              {filter && (
+                <button onClick={() => setFilter('')} aria-label="Clear filter"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-faint hover:text-text transition-colors">
+                  <IconClose size={12} />
+                </button>
+              )}
+            </div>
+            {topTags.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-medium text-faint uppercase tracking-wide">Popular topics</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {topTags.map(t => {
+                    const active = filter.trim().toLowerCase() === t.toLowerCase()
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setFilter(active ? '' : t)}
+                        aria-pressed={active}
+                        className={`px-2 py-0.5 rounded-full text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${active ? 'text-white' : 'text-accent'}`}
+                        style={{ background: active ? 'var(--color-accent)' : 'var(--color-accent-soft)' }}
+                      >
+                        {t}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </Card>
+        </aside>
+
+        {/* ── Feed ─────────────────────────────────────────────────────────── */}
+        <section className="flex flex-col gap-3 min-w-0" aria-label="Market news">
+          {/* Toolbar: live count + relevance note */}
+          <div className="flex items-center justify-between gap-3 px-0.5 min-h-[20px]">
+            <p className="text-xs text-dim" aria-live="polite">
+              {items === null
+                ? 'Loading…'
+                : filter.trim()
+                  ? `${displayed.length} of ${ranked.length} article${ranked.length === 1 ? '' : 's'} · “${filter.trim()}”`
+                  : `${ranked.length} article${ranked.length === 1 ? '' : 's'}${matchCount > 0 ? ` · ${matchCount} match your portfolio` : ''}`}
+            </p>
+            <span className="text-xs text-faint hidden sm:inline">Sorted by portfolio relevance</span>
+          </div>
+
+          {items === null ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40" />)}
+            </div>
+          ) : displayed.length === 0 ? (
+            <EmptyState
+              icon={<IconNews size={28} />}
+              title={filter.trim() ? 'No matching articles' : 'No news yet'}
+              description={filter.trim()
+                ? `Nothing matches “${filter.trim()}”. Try fewer or different words, or clear the filter.`
+                : 'A nightly agent (06:00 ET) searches the web for your tracking brief and files what it finds here. Set a brief in the sidebar, then use "Refresh now" to fetch immediately.'}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4" role="feed" aria-label="Market news feed">
+              {/* G3: each feed item is wrapped in <article> (role="article") per WAI-ARIA
+                  role="feed" spec; `contents` display keeps the <a> as the grid item. */}
+              {displayed.map(n => (
+            <article key={n.id} className="contents">
+            <a
+              href={n.url}
+              target="_blank"
+              rel="noreferrer"
+              className="group relative bg-surface rounded-[16px] overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5 border border-[color:var(--color-border)] shadow-[var(--shadow-card)] hover:border-[color:var(--color-accent-line)] hover:shadow-[0_16px_36px_-14px_var(--glow-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              aria-label={`${n.title} — ${n.source || 'Web'}`}
+            >
+              {/* Brand rail */}
+              <span aria-hidden="true" className="block h-[3px] w-full opacity-70 group-hover:opacity-100 transition-opacity"
+                style={{ background: 'linear-gradient(90deg, var(--color-accent-bright) 0%, var(--color-accent-strong) 60%, transparent 100%)' }} />
+
+              <div className="p-4 flex flex-col gap-2 flex-1">
+                {/* Meta row: source · date · portfolio-match · external-link */}
+                <div className="flex items-center gap-2 text-xs text-faint">
+                  <span className="font-medium text-dim truncate max-w-[45%]">{n.source || 'Web'}</span>
+                  {n.fetchedAt ? (
+                    <><span aria-hidden="true">·</span><time dateTime={new Date(toMillis(n.fetchedAt)).toISOString()}>{new Date(toMillis(n.fetchedAt)).toLocaleDateString()}</time></>
+                  ) : null}
+                  {n.rel.score > 0 && (
+                    <span className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium shrink-0"
+                      style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent)' }} title="Matches your portfolio">
+                      <IconProduct size={9} aria-hidden="true" /> Match
+                    </span>
+                  )}
+                  <IconExternalLink size={12} className={`${n.rel.score > 0 ? '' : 'ml-auto'} opacity-0 group-hover:opacity-100 transition-opacity shrink-0`} aria-hidden="true" />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-[15px] font-semibold text-text group-hover:text-accent transition-colors leading-snug line-clamp-2">
+                  {n.title}
+                </h3>
+
+                {/* Summary — clamped so cards stay even */}
+                {n.summary && (
+                  <p className="text-[13px] text-dim leading-relaxed line-clamp-3">{n.summary}</p>
+                )}
+
+                {/* Footer — just-enough metadata: match reasons + up to 3 tags */}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-auto pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+                  {n.rel.lobs.length > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-faint">
+                      <IconProduct size={9} aria-hidden="true" />{n.rel.lobs.join(', ')}
+                    </span>
+                  )}
+                  {n.rel.states.length > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-faint">
+                      <IconStates size={9} aria-hidden="true" />{n.rel.states.slice(0, 3).join(' · ')}{n.rel.states.length > 3 ? '…' : ''}
+                    </span>
+                  )}
+                  {(n.tags ?? []).slice(0, 3).map((t: string) => <Badge key={t} label={t} color="purple" />)}
+                </div>
+              </div>
+            </a>
+            </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  )
+}

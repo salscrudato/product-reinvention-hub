@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    { "collectionGroup": "tasks",       "queryScope": "COLLECTION", "fields": [{ "fieldPath": "column", "order": "ASCENDING" }, { "fieldPath": "order", "order": "ASCENDING" }] },
+    { "collectionGroup": "feedback",    "queryScope": "COLLECTION", "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "priorityScore", "order": "DESCENDING" }] },
+    { "collectionGroup": "versions",    "queryScope": "COLLECTION", "fields": [{ "fieldPath": "entityPath", "order": "ASCENDING" }, { "fieldPath": "at", "order": "DESCENDING" }] },
+    { "collectionGroup": "auditEvents", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "productId", "order": "ASCENDING" }, { "fieldPath": "at", "order": "DESCENDING" }] },
+    { "collectionGroup": "searchIndex", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "type", "order": "ASCENDING" }, { "fieldPath": "title", "order": "ASCENDING" }] },
+
+    { "collectionGroup": "groundingChunks", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "embedding", "vectorConfig": { "dimension": 1024, "flat": {} } }] },
+    { "collectionGroup": "semanticCache",   "queryScope": "COLLECTION", "fields": [{ "fieldPath": "embedding", "vectorConfig": { "dimension": 1024, "flat": {} } }] }
+  ],
+  "fieldOverrides": []
+}

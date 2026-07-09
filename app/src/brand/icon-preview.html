@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Product Reinvention Hub — brand mark contact sheet</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',system-ui,sans-serif;background:#ececef;color:#131318;padding:32px 40px 64px;line-height:1.5}
+  h1{font-size:20px;font-weight:700;letter-spacing:-.02em}
+  .sub{color:#5B5C6B;font-size:13px;margin:4px 0 28px}
+  h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#6B6D7E;margin:26px 0 10px}
+  .panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .panel{border-radius:16px;padding:20px 22px}
+  .light{background:#F7F7FA;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+  .dark{background:#0C0914}
+  .dark .cap{color:#8A86A0}
+  .row{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap}
+  .item{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .cap{font-size:11px;color:#6B6D7E}
+  img,svg{display:block}
+  .s16{width:16px;height:16px}.s24{width:24px;height:24px}.s32{width:32px;height:32px}
+  .s64{width:64px;height:64px}.s128{width:128px;height:128px}.s512{width:180px;height:180px}
+  .iconR{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+  .lockRow{display:flex;flex-direction:column;gap:16px}
+  .lockRow .p{border-radius:14px;padding:18px 22px}
+  .note{margin-top:34px;font-size:12px;color:#6B6D7E;max-width:720px}
+  code{font-family:'JetBrains Mono',ui-monospace,monospace;background:rgba(139,31,224,.08);padding:1px 5px;border-radius:4px;font-size:11.5px}
+</style>
+</head>
+<body>
+  <h1>Product Reinvention Hub — “Greater Ascent”</h1>
+  <p class="sub">A greater-than climbing to a crescent moon · transparent glyph · light + dark · 16→512px</p>
+
+  <!-- ── Master glyph across sizes ─────────────────────────────────────── -->
+  <h2>Master glyph · full colour</h2>
+  <div class="panels">
+    <div class="panel light">
+      <div class="row">
+        <div class="item"><img class="s16" src="mark.svg" alt=""><span class="cap">16</span></div>
+        <div class="item"><img class="s24" src="mark.svg" alt=""><span class="cap">24</span></div>
+        <div class="item"><img class="s32" src="mark.svg" alt=""><span class="cap">32</span></div>
+        <div class="item"><img class="s64" src="mark.svg" alt=""><span class="cap">64</span></div>
+        <div class="item"><img class="s128" src="mark.svg" alt=""><span class="cap">128</span></div>
+      </div>
+    </div>
+    <div class="panel dark">
+      <div class="row">
+        <div class="item"><img class="s16" src="mark.svg" alt=""><span class="cap">16</span></div>
+        <div class="item"><img class="s24" src="mark.svg" alt=""><span class="cap">24</span></div>
+        <div class="item"><img class="s32" src="mark.svg" alt=""><span class="cap">32</span></div>
+        <div class="item"><img class="s64" src="mark.svg" alt=""><span class="cap">64</span></div>
+        <div class="item"><img class="s128" src="mark.svg" alt=""><span class="cap">128</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── One-colour variants ───────────────────────────────────────────── -->
+  <h2>One colour · mono (currentColor) · white · black</h2>
+  <div class="panels">
+    <div class="panel light">
+      <div class="row">
+        <!-- inline mono so currentColor takes the ink token -->
+        <div class="item" style="color:#131318">
+          <svg class="s64" viewBox="0 0 32 32" role="img" aria-label="mono">
+            <path d="M21.4 6.44A3.15 3.15 0 1 0 25.83 10.21A3 3 0 0 1 21.4 6.44Z" fill="currentColor" opacity=".85"/>
+            <path d="M5.69 13.94L17.6 15.4L10.05 24.73" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="cap">currentColor = ink</span>
+        </div>
+        <div class="item" style="color:#8B1FE0">
+          <svg class="s64" viewBox="0 0 32 32" role="img" aria-label="mono violet">
+            <path d="M21.4 6.44A3.15 3.15 0 1 0 25.83 10.21A3 3 0 0 1 21.4 6.44Z" fill="currentColor" opacity=".85"/>
+            <path d="M5.69 13.94L17.6 15.4L10.05 24.73" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="cap">currentColor = accent</span>
+        </div>
+        <div class="item"><img class="s64" src="mark-black.svg" alt=""><span class="cap">black</span></div>
+      </div>
+    </div>
+    <div class="panel dark">
+      <div class="row">
+        <div class="item"><img class="s64" src="mark-white.svg" alt=""><span class="cap">white</span></div>
+        <div class="item"><img class="s32" src="mark-white.svg" alt=""><span class="cap">32</span></div>
+        <div class="item"><img class="s24" src="mark-white.svg" alt=""><span class="cap">24</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── App icon + favicon ────────────────────────────────────────────── -->
+  <h2>App icon (opaque OS tile) · favicon (transparent)</h2>
+  <div class="panels">
+    <div class="panel light">
+      <div class="iconR">
+        <div class="item"><img class="s512" src="app-icon.svg" alt=""><span class="cap">app-icon · 512</span></div>
+        <div class="item"><img class="s64" src="app-icon.svg" alt=""><span class="cap">64</span></div>
+        <div class="item"><img class="s32" src="../../public/favicon.svg" alt=""><span class="cap">favicon 32</span></div>
+        <div class="item"><img class="s16" src="../../public/favicon.svg" alt=""><span class="cap">favicon 16</span></div>
+      </div>
+    </div>
+    <div class="panel dark">
+      <div class="iconR">
+        <div class="item"><img class="s128" src="../../public/icon-maskable.svg" alt=""><span class="cap">maskable</span></div>
+        <div class="item"><img class="s32" src="../../public/favicon.svg" alt=""><span class="cap">favicon 32</span></div>
+        <div class="item"><img class="s16" src="../../public/favicon.svg" alt=""><span class="cap">favicon 16</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Lockup ────────────────────────────────────────────────────────── -->
+  <h2>Horizontal lockup</h2>
+  <div class="lockRow">
+    <div class="p light"><img src="lockup.svg" width="290" alt="Product Factory lockup"></div>
+    <!-- Dark-surface lockup: white mark + white wordmark (the SVG lockup is tuned for light). -->
+    <div class="p dark" style="display:flex;align-items:center;gap:14px">
+      <img src="mark-white.svg" width="40" height="40" alt="">
+      <span style="font-size:27px;font-weight:640;letter-spacing:-.02em;color:#fff">Product <span style="color:#C77DFF">Factory</span></span>
+    </div>
+  </div>
+
+  <p class="note">
+    The mark is a single <b>transparent glyph</b> — no container. In components it is token-driven
+    (<code>var(--color-accent-bright / accent / strong)</code>); these standalone assets and the
+    <code>/public</code> icons carry the literal brand hex as the canonical definition. OS/PWA icons
+    (<code>app-icon</code>, <code>icon.svg</code>, <code>icon-maskable.svg</code>, <code>icon-512.png</code>)
+    use a deep field because launchers require an opaque background. Lockup wordmark reads
+    “Product Factory”; the running app still displays “Product Reinvention Hub”. See
+    <code>README.md</code>.
+  </p>
+</body>
+</html>

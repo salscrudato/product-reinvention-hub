@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="512" height="512" role="img" aria-labelledby="ai-t ai-d">
+  <title id="ai-t">Product Reinvention Hub</title>
+  <desc id="ai-d">App icon — Greater Ascent (a greater-than climbing to a crescent moon) in the brand violet on a deep near-black squircle, lit by a soft violet glow behind the moon. (OS/PWA icons require an opaque field; the in-app mark stays transparent.)</desc>
+  <defs>
+    <linearGradient id="ai-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#170C30"/><stop offset="1" stop-color="#090514"/>
+    </linearGradient>
+    <radialGradient id="ai-glow" cx="19" cy="11" r="15" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A100FF" stop-opacity="0.34"/><stop offset="1" stop-color="#A100FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ai-fg" x1="4" y1="6" x2="26" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B65CFF"/><stop offset=".5" stop-color="#A100FF"/><stop offset="1" stop-color="#7A00E6"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#ai-bg)"/>
+  <circle cx="19" cy="11" r="15" fill="url(#ai-glow)"/>
+  <path d="M21.4 6.44A3.15 3.15 0 1 0 25.83 10.21A3 3 0 0 1 21.4 6.44Z" fill="#E9C6FF"/>
+  <path d="M5.69 13.94L17.6 15.4L10.05 24.73" fill="none" stroke="url(#ai-fg)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

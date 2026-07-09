@@ -1,0 +1,58 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build outputs
+dist/
+build/
+# tsup output; not needed in repo
+/functions/lib/
+.svelte-kit/
+
+# secrets — NEVER commit
+# .env.local and .env.*.local are overrides (secret); .env.development etc. are shared (committed)
+.env.local
+.env.*.local
+*.local
+apikeys.md
+tmp_key.md
+
+# Firebase
+.firebase/
+firebase-debug*.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+storage.rules.swp
+.firebaserc.backup
+
+# emulator export dirs
+emulator-data/
+.emulator/
+
+# Playwright e2e artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# IDE
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Codebase review pack — keep ONLY the markdown deliverables; ignore heavy/generated artifacts
+docs/review/*
+!docs/review/FUNCTIONAL_CODEBASE.md
+!docs/review/OBSERVATIONS.md
+!docs/review/ENHANCEMENT_BACKLOG.md
+!docs/review/COST_BASELINE.md
+!docs/review/COST_PROGRESS.md
+!docs/review/COST_REPORT.md

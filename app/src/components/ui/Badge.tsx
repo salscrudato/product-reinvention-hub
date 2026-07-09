@@ -1,0 +1,64 @@
+// Badge + StatusPill — semantic color chips for status, lifecycle and reviewStatus.
+import type { Status, Lifecycle, ReviewStatus } from '@pf/shared'
+
+// ─── Generic badge ────────────────────────────────────────────────────────────
+
+type BadgeColor = 'default' | 'accent' | 'good' | 'warn' | 'danger' | 'blue' | 'purple'
+
+const badgeColors: Record<BadgeColor, string> = {
+  default: 'bg-raised text-dim',
+  accent:  'text-white',
+  good:    'bg-[var(--color-good-soft)] text-good',
+  warn:    'bg-[var(--color-warn-badge)] text-warn',
+  danger:  'bg-[var(--color-danger-badge)] text-danger',
+  blue:    'bg-[var(--color-info-soft)] text-info',
+  purple:  'bg-accent-soft text-accent',
+}
+
+interface BadgeProps {
+  label: string
+  color?: BadgeColor
+  mono?: boolean
+  className?: string
+}
+
+export function Badge({ label, color = 'default', mono = false, className = '' }: BadgeProps) {
+  const isAccent = color === 'accent'
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium leading-none
+        ${badgeColors[color]} ${mono ? 'font-mono' : ''} ${className}`}
+      style={isAccent ? { background: 'var(--gradient-accent)' } : undefined}
+    >
+      {label}
+    </span>
+  )
+}
+
+// ─── StatusPill ───────────────────────────────────────────────────────────────
+
+const statusColors: Record<Status, BadgeColor>        = { ACTIVE: 'good', INACTIVE: 'default', FUTURE: 'blue' }
+const lifecycleColors: Record<Lifecycle, BadgeColor>  = { LAUNCHED: 'good', APPROVED: 'purple', IN_REVIEW: 'warn', DRAFT: 'default' }
+const reviewColors: Record<ReviewStatus, BadgeColor>  = {
+  APPROVED: 'good', BUSINESS_REVIEW: 'warn', IN_PROGRESS: 'blue',
+  NOT_STARTED: 'default', REJECTED: 'danger',
+}
+
+export function StatusPill({ status }:        { status: Status })       { return <Badge label={status}   color={statusColors[status]}   /> }
+export function LifecyclePill({ lifecycle }:  { lifecycle: Lifecycle }) { return <Badge label={lifecycle} color={lifecycleColors[lifecycle]} /> }
+export function ReviewPill({ review }:        { review: ReviewStatus }) { return <Badge label={review.replace(/_/g,' ')} color={reviewColors[review]} /> }
+
+// ─── ProductStatusPill ──────────────────────────────────────────────────────────
+// A single, human product status. ACTIVE + LAUNCHED read as one thing to a PM, so a
+// product carries ONE pill derived from its lifecycle (draft → in review → approved →
+// live) instead of a redundant status+lifecycle pair.
+const productStatusMeta: Record<Lifecycle, { label: string; color: BadgeColor }> = {
+  DRAFT:     { label: 'Draft',     color: 'default' },
+  IN_REVIEW: { label: 'In review', color: 'warn' },
+  APPROVED:  { label: 'Approved',  color: 'purple' },
+  LAUNCHED:  { label: 'Live',      color: 'good' },
+}
+export function ProductStatusPill({ lifecycle }: { lifecycle: Lifecycle }) {
+  const m = productStatusMeta[lifecycle] ?? productStatusMeta.DRAFT
+  return <Badge label={m.label} color={m.color} />
+}
