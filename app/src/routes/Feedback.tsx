@@ -16,9 +16,6 @@
 // Story cards render the shaped user story: canonical title, type chip, affected surface +
 // refId chip (monospace), collapsible acceptance criteria, a vote button + count, the live
 // WSJF priorityScore, and the heat bar. Inbox sorts by priorityScore (desc), then heat.
-//
-// The board-level "Copy prompt for Claude Code" button is intentionally left in place for
-// now — it is removed in the next step (per-card copy-prompt).
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -115,51 +112,6 @@ function heatOf(fb: FeedbackDoc): number {
 const priorityOf = (fb: FeedbackDoc): number =>
   priorityScore(fb.impact ?? 2, fb.effort ?? 2, fb.votes?.count ?? 0, ageDays(fb))
 
-// Build a Claude Code prompt from all pending (non-shipped/declined) feedback items.
-function buildPrompt(items: FeedbackDoc[]): string {
-  const pending = items.filter(f => f.status !== 'SHIPPED' && f.status !== 'DECLINED')
-    .sort((a, b) => heatOf(b) - heatOf(a))
-  if (pending.length === 0) return ''
-
-  const lines: string[] = [
-    'You are helping build the Product Reinvention Hub (Insurance Platforms AI, monorepo: app/ React+Vite, functions/ Cloud Functions, shared/ types+rating).',
-    '',
-    'Below is a prioritised list of user-submitted feedback. Address issues first, then ideas by vote heat. For each item the page context tells you which surface is affected.',
-    '',
-    `## Pending Feedback (${pending.length} item${pending.length === 1 ? '' : 's'})`,
-    '',
-  ]
-
-  const issues = pending.filter(f => f.type === 'ISSUE')
-  const ideas  = pending.filter(f => f.type !== 'ISSUE')
-
-  if (issues.length) {
-    lines.push('### 🐛 Issues (fix first)')
-    issues.forEach((fb, i) => {
-      const ctx = fb.context as { route?: string; label?: string } | undefined
-      lines.push(`${i + 1}. [${fb.votes?.count ?? 0} vote${(fb.votes?.count ?? 0) !== 1 ? 's' : ''}] **${fb.title}**`)
-      if (ctx?.label || ctx?.route) lines.push(`   Page: ${ctx.label ?? ctx.route}`)
-      if (fb.detail) lines.push(`   Detail: ${fb.detail}`)
-      if (fb.screenshotUrl) lines.push(`   Screenshot: ${fb.screenshotUrl}`)
-      lines.push('')
-    })
-  }
-
-  if (ideas.length) {
-    lines.push('### 💡 Ideas & Praise')
-    ideas.forEach((fb, i) => {
-      const ctx = fb.context as { route?: string; label?: string } | undefined
-      lines.push(`${issues.length + i + 1}. [${fb.votes?.count ?? 0} vote${(fb.votes?.count ?? 0) !== 1 ? 's' : ''}] **${fb.title}**`)
-      if (ctx?.label || ctx?.route) lines.push(`   Page: ${ctx.label ?? ctx.route}`)
-      if (fb.detail) lines.push(`   Detail: ${fb.detail}`)
-      lines.push('')
-    })
-  }
-
-  lines.push('Please implement these in a focused session. Run `pnpm typecheck && pnpm lint && pnpm test` before finishing.')
-  return lines.join('\n')
-}
-
 // Free-text haystack for the instant typeahead filter.
 function matchesQuery(fb: FeedbackDoc, q: string): boolean {
   if (!q) return true
@@ -171,12 +123,78 @@ function matchesQuery(fb: FeedbackDoc, q: string): boolean {
   return hay.includes(q.toLowerCase())
 }
 
+// ─── Per-card Claude Code prompt (ADMIN-only builder affordance) ───────────────
+
+const GUARDRAILS = `## Binding invariants (never violate)
+
+| Invariant | Rule |
+|---|---|
+| **Adapter seam** | All app reads/writes go through \`adapter\` (\`app/src/lib/backend/\`). Never import Firebase SDK directly in components. |
+| **Atomic mutations** | Every entity write uses \`adapter.db.mutate()\`. It batches entity + auditEvent + version + searchIndex atomically. No bare Firestore writes. |
+| **Role enforcement** | \`VIEWER\` is read-only. Enforced in Firestore security rules **and** in every Function — both sides, always. |
+| **AI server-side** | All Anthropic calls live in \`functions/\`. The browser never calls the Anthropic API. |
+| **AI grounded + cited** | AI responses must cite their source documents. Free invention is a bug. |
+| **refId / form chips** | \`refId\` and form-number chips are load-bearing display elements. Never strip them. |
+| **HO-3 $1,528 canary** | \`shared/src/rating/evaluator.test.ts\` must produce exactly $1,528. |
+| **Design tokens** | No hard-coded hex outside \`app/src/index.css\`. Use \`var(--color-*)\` in browser-rendered code. SVG files exported to disk are the only exception. |
+| **Model IDs** | \`claude-sonnet-5\` (reasoning) and \`claude-haiku-4-5\` (bulk/simple), defined once in \`functions/src/runtime.ts\`. Never \`claude-fable-5\`. |`
+
+function buildCardPrompt(fb: FeedbackDoc): string {
+  const ctx     = fb.context as { route?: string; label?: string; refId?: string } | undefined
+  const surface = ctx?.label ?? ctx?.route ?? 'the affected surface'
+  const refId   = ctx?.refId ?? ''
+  const refLine = refId ? `${surface} · \`${refId}\`` : surface
+
+  const ac    = fb.acceptanceCriteria ?? []
+  const repro = fb.type === 'ISSUE' ? (fb.reproSteps  ?? []) : []
+  const files = fb.type === 'ISSUE' ? (fb.likelyFiles ?? []) : []
+
+  const lines: string[] = [
+    'Ultrathink.',
+    '',
+    'You are a principal product engineer in the "Product Reinvention Hub" monorepo (AI-native P&C insurance product management; one persona: the insurance product manager). Solo monorepo on master. Do NOT create branches. Commit locally only; do NOT push or deploy.',
+    '',
+    'Set /model to claude-opus-4-8. Never select claude-fable-5.',
+    '',
+    `READ FIRST: ${refLine}`,
+  ]
+
+  if (files.length > 0) files.forEach(f => lines.push(`  - ${f}`))
+
+  lines.push('', GUARDRAILS, '', '---', '', `TASK: ${fb.title}`)
+
+  if (fb.detail) lines.push('', fb.detail)
+
+  if (repro.length > 0) {
+    lines.push('', '**Steps to reproduce:**')
+    repro.forEach((s, i) => lines.push(`${i + 1}. ${s}`))
+  }
+
+  if (files.length > 0) {
+    lines.push('', '**Likely files (start here):**')
+    files.forEach(f => lines.push(`- \`${f}\``))
+  }
+
+  lines.push('', 'DONE WHEN')
+  if (ac.length > 0) {
+    ac.forEach(c => lines.push(`- [ ] ${c}`))
+  } else {
+    lines.push(`- [ ] ${fb.title} is implemented as described.`)
+  }
+  lines.push('- [ ] Gate green: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`. $1,528 intact.')
+
+  lines.push('', 'FINISH: hostile self-review; re-run the gate; commit locally.')
+
+  return lines.join('\n')
+}
+
 // ─── Board ────────────────────────────────────────────────────────────────────
 
 export default function Feedback() {
   const navigate = useNavigate()
   const { user, profile } = useUser()
   const canEdit = profile?.role === 'EDITOR' || profile?.role === 'ADMIN'
+  const isAdmin = profile?.role === 'ADMIN'
   const actor: Actor | null = user ? { uid: user.uid, name: user.name ?? user.email ?? 'User' } : null
 
   const [items, setItems] = useState<FeedbackDoc[] | null>(null)
@@ -310,12 +328,6 @@ export default function Feedback() {
     }
   }
 
-  function copyPrompt() {
-    const prompt = buildPrompt(visible)
-    if (!prompt) { toast.info('No pending feedback to summarise'); return }
-    void navigator.clipboard.writeText(prompt).then(() => toast.success('Prompt copied — paste into Claude Code'))
-  }
-
   // ── Drag handlers (pointer). Keyboard moves go through the card ← / → controls. ──
 
   function onDragEnd(e: DragEndEvent) {
@@ -328,7 +340,7 @@ export default function Feedback() {
     if (next !== fb.status) moveTo(fb, next)
   }
 
-  const cardProps = { canEdit, uid: user?.uid, maxHeat, onVote: vote, onMove: moveTo, onDelete: setPendingDelete, onViewScreenshot: setLightboxUrl, navigate }
+  const cardProps = { canEdit, isAdmin, uid: user?.uid, maxHeat, onVote: vote, onMove: moveTo, onDelete: setPendingDelete, onViewScreenshot: setLightboxUrl, navigate }
 
   // ── Loading ──
   if (items === null && !loadError) {
@@ -352,17 +364,6 @@ export default function Feedback() {
             Capture with ⌘. · {canEdit ? 'Drag or use ← → to move cards · ' : ''}Vote to surface priorities.
           </p>
         </div>
-        {canEdit && (
-          <button
-            type="button" onClick={copyPrompt}
-            className="inline-flex items-center gap-2 h-9 px-3 rounded-[10px] text-sm font-medium text-dim bg-raised hover:text-accent hover:bg-accent-soft transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            style={{ border: '1px solid var(--color-border)' }}
-            title="Copy a Claude Code prompt summarising all pending feedback"
-          >
-            <IconCopy size={14} aria-hidden="true" />
-            Copy prompt for Claude Code
-          </button>
-        )}
       </div>
 
       {/* Toolbar — instant typeahead + type + archived */}
@@ -554,6 +555,7 @@ interface CardProps {
   fb: FeedbackDoc
   lane: LaneId | 'archived'
   canEdit: boolean
+  isAdmin: boolean
   uid?: string
   maxHeat: number
   onVote: (fb: FeedbackDoc) => void
@@ -563,7 +565,7 @@ interface CardProps {
   navigate: (to: string) => void
 }
 
-function Card({ fb, lane, canEdit, uid, maxHeat, onVote, onMove, onDelete, onViewScreenshot, navigate }: CardProps) {
+function Card({ fb, lane, canEdit, isAdmin, uid, maxHeat, onVote, onMove, onDelete, onViewScreenshot, navigate }: CardProps) {
   const [open, setOpen] = useState(false)
   const draggable = canEdit && lane !== 'archived'
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: fb.id, disabled: !draggable })
@@ -583,6 +585,15 @@ function Card({ fb, lane, canEdit, uid, maxHeat, onVote, onMove, onDelete, onVie
   const repro = fb.type === 'ISSUE' ? (fb.reproSteps ?? []) : []
   const files = fb.type === 'ISSUE' ? (fb.likelyFiles ?? []) : []
   const hasDetails = ac.length > 0 || repro.length > 0 || files.length > 0
+
+  const [copied, setCopied] = useState(false)
+  function handleCopyPrompt() {
+    const prompt = buildCardPrompt(fb)
+    void navigator.clipboard.writeText(prompt).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   return (
     <div
@@ -741,6 +752,20 @@ function Card({ fb, lane, canEdit, uid, maxHeat, onVote, onMove, onDelete, onVie
                 <IconBtn label="Decline (archive)" icon={IconArchive} tone="warn" onClick={() => onMove(fb, 'DECLINED')} />
               )}
             </>
+          )}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={handleCopyPrompt}
+              title="Copy a Claude Code prompt scoped to this story (ADMIN only)"
+              aria-label={copied ? 'Prompt copied to clipboard' : 'Copy prompt for Claude Code'}
+              className={`h-7 inline-flex items-center gap-1 px-2 rounded-[7px] text-[11px] font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${copied ? 'text-good bg-[var(--color-good-soft)]' : 'bg-raised text-dim hover:text-accent hover:bg-accent-soft'}`}
+            >
+              {copied
+                ? <><IconCheck size={12} aria-hidden="true" /> Copied</>
+                : <><IconCopy size={12} aria-hidden="true" /> Copy prompt</>
+              }
+            </button>
           )}
         </div>
       )}
