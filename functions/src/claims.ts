@@ -49,7 +49,7 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
         enum: ['COVERED', 'NOT_COVERED', 'PARTIAL', 'NOT_ADDRESSED'],
         description: 'COVERED; NOT_COVERED; PARTIAL (partially covered / depends on a policy option or fact); or NOT_ADDRESSED (the attached form does not address this scenario — it is silent, or the scenario is outside what this line/form covers). Use NOT_ADDRESSED honestly rather than forcing a verdict or inventing coverage.',
       },
-      summary: { type: 'string', description: 'One plain-English sentence stating the outcome.' },
+      summary: { type: 'string', description: 'One plain-English sentence, in coverage language, stating whether the policy covers this and the crux — e.g. "The policy covers the water damage to the dwelling, but not the failed pipe itself." Keep it tight.' },
       coverages: {
         type: 'array',
         description: 'The specific coverages and endorsements that apply. Empty if none apply.',
@@ -94,7 +94,7 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
       },
       reasoning: {
         type: 'array',
-        description: '2–4 tight sentences explaining the determination, each citing the decisive coverage/rule/exclusion in [brackets]. Name the decisive exclusion when NOT_COVERED.',
+        description: 'EXACTLY 3 short bullet points (one sentence each) — why the policy does or does not cover this — each citing its decisive coverage/rule/exclusion in [brackets]. Name the decisive exclusion when NOT_COVERED. Be concise.',
         items: { type: 'string' },
       },
       openItems: {
@@ -155,7 +155,8 @@ For questions that are NOT a loss determination (a definition, a limit/deductibl
 
 WORKING STYLE — important:
 - Use tools SILENTLY first. Do not write any prose until you have finished gathering facts. Never describe your process, your plan, or which tool you are about to use, and never mention the tools or "emit_determination" in the text you output — the claims professional sees only your final answer. Lead with the answer. Do not preface a prose answer by classifying the question or saying a determination isn't needed — just give the answer.
-- Ground every specific coverage, limit, sub-limit, deductible, rule or exclusion in the form's text and/or a tool result, and cite the refId or form number in [brackets]. Never fabricate. If the form is silent or a fact is unknown, say so plainly.`
+- Ground every specific coverage, limit, sub-limit, deductible, rule or exclusion in the form's text and/or a tool result, and cite the refId or form number in [brackets]. Never fabricate. If the form is silent or a fact is unknown, say so plainly.
+- Be fast and concise: make only the few targeted tool calls you actually need — do not over-explore — then answer. Keep every field tight: a one-sentence summary and EXACTLY 3 short "why" bullets.`
 
 // ─── Untrusted-form sandbox boundary (prompt-injection defense) ─────────────────
 // The uploaded form is DATA, not instructions. This boundary — placed immediately before the
@@ -384,8 +385,8 @@ export const analyzeClaim = onRequest(
         context:     lineBriefing,
         tools:       CLAIMS_TOOLS,
         runTool:     runClaimsTool,
-        maxTokens:   2600,
-        maxTurns:    degraded ? 5 : 7,   // cost-saver: fewer tool turns under a soft cap
+        maxTokens:   1800,               // concise determinations — smaller cap = faster generation
+        maxTurns:    degraded ? 5 : 6,   // fewer tool round-trips (each is a full model call) = faster
         usageAccum,
       })
 
