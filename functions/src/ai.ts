@@ -17,6 +17,7 @@ import type { UsageAccum } from './telemetry'
 import { semanticCacheGet, semanticCachePut } from './semanticCache'
 import type { CacheMode } from './semanticCache'
 import { guardSpend, estCostFor } from './costGuard'
+import { getPortfolioDigest } from './portfolioDigest'
 
 /** Concatenate every assistant text block across a completed conversation — the full
  *  answer the user saw (tokens are appended across turns in the UI). Used to detect a
@@ -79,6 +80,23 @@ async function streamTurn(
 }
 
 /**
+ * Assemble the system blocks with the ephemeral-cache breakpoint on the LAST stable block.
+ * Order (a prefix match, so it matters): house rules → optional stable feature prompt (e.g. the
+ * chat portfolio digest). The breakpoint sits on that last stable block, so [tools + system]
+ * caches across a conversation's tool-loop turns AND across requests. Any volatile per-request
+ * context (the focused product) is pushed AFTER the breakpoint so it never invalidates the cache.
+ * Exported so the placement (breakpoint on the last stable block; volatile suffix uncached) and
+ * the retained house rules can be unit-tested without a live model call.
+ */
+export function buildSystemBlocks(opts: { system?: string; context?: string }): Anthropic.TextBlockParam[] {
+  const system: Anthropic.TextBlockParam[] = [{ type: 'text', text: SYSTEM_PROMPT }]
+  if (opts.system) system.push({ type: 'text', text: opts.system })
+  system[system.length - 1]!.cache_control = CACHE_1H
+  if (opts.context) system.push({ type: 'text', text: opts.context })
+  return system
+}
+
+/**
  * Drive a tool-grounded conversation to completion, streaming as it goes.
  * Returns the full message list (including the final assistant turn) so callers
  * can persist or post-process it. Tool errors surface to the model, not the client.
@@ -89,15 +107,7 @@ export async function runChatAgent(
   res: SseResponse,
   opts: AgentOptions = {},
 ): Promise<Anthropic.MessageParam[]> {
-  // Stable, cacheable context first: the shared house rules, then any feature prompt.
-  // One cache breakpoint (explicit 1h TTL) on the LAST stable block caches the whole prefix
-  // (tools + system) across this conversation's tool-loop turns AND across requests.
-  // Volatile per-request context goes AFTER the breakpoint so it never invalidates the cache.
-  const system: Anthropic.TextBlockParam[] = [{ type: 'text', text: SYSTEM_PROMPT }]
-  if (opts.system) system.push({ type: 'text', text: opts.system })
-  system[system.length - 1]!.cache_control = CACHE_1H
-  if (opts.context) system.push({ type: 'text', text: opts.context })
-
+  const system    = buildSystemBlocks(opts)
   const tools     = opts.tools ?? TOOLS
   const maxTokens = opts.maxTokens ?? 2048
   const maxTurns  = opts.maxTurns ?? 6
@@ -289,8 +299,15 @@ export const chat = onRequest(
         } catch (e) { console.warn('[chat] citation pre-retrieval skipped:', e) }
       }
 
+      // Portfolio digest — cached, budget-bounded fast facts. Injected as the STABLE feature
+      // system block so it sits INSIDE the ephemeral-cache breakpoint (buildSystemBlocks caches
+      // the last stable block); digest-covered questions can then answer without a tool round-trip
+      // while still citing [refId]/[form]. Best-effort: '' when unavailable → no digest block, and
+      // grounding still runs through the tools. Volatile focus stays AFTER the breakpoint (context).
+      const digest = await getPortfolioDigest().catch(() => '')
+
       const convo = await runChatAgent(anthropic(), messages, res, {
-        context: focus, usageAccum, maxTurns: degraded ? 3 : undefined,
+        system: digest || undefined, context: focus, usageAccum, maxTurns: degraded ? 3 : undefined,
       })
 
       const answer = assistantText(convo)
