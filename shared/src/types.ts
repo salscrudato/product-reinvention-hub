@@ -423,15 +423,19 @@ export interface News {
   url:               string
   source:            string
   title:             string
-  summary:           string
+  summary:           string         // card lead sentence + legacy fallback
+  bullets:           string[]       // 3 structured PM takeaways (What/Who/Why); 2 when only 2 are substantiated
+  imageUrl?:         string         // absolute https hero image; omitted when none found
+  imageAlt?:         string         // alt text for the hero image
   tags:              string[]
   relatedProductIds: string[]
   fetchedAt:         unknown
 }
 
 export interface NewsPrefs {
-  instruction: string
-  updatedAt:   unknown
+  instruction:   string
+  pinnedHashes?: string[]   // SHA-1 url hashes the user has pinned
+  updatedAt:     unknown
 }
 
 // ─── Dictionary ──────────────────────────────────────────────────────────────

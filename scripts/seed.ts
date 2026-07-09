@@ -403,6 +403,12 @@ async function main(): Promise<void> {
         source:  'Sample Data — Product Reinvention Hub',
         title:   '[SAMPLE] ISO Releases Updated HO-3 Rating Factors for Coastal Properties',
         summary: 'ISO has published revised base rates and territory factors for coastal HO-3 programs, reflecting increased CAT frequency in Gulf and Atlantic markets. Carriers should review their Coverage A rate levels and deductible options.',
+        bullets: [
+          'ISO filed revised HO-3 base rates and territory factors for coastal properties effective 2026, reflecting increased CAT frequency from consecutive above-average Atlantic hurricane seasons.',
+          'The filing affects personal lines homeowners programs in Gulf and Atlantic coastal states including Florida, Texas, Louisiana, and the Carolinas, with changes to Coverage A rate levels and wind/hail deductible structures.',
+          'Product managers in coastal markets should benchmark current rate adequacy against the new ISO territory relativities and assess whether named-storm deductible options align before competitors adopt the revised factors.',
+        ],
+        imageUrl: 'https://sample-data.local/images/iso-ho3-coastal.jpg',
         tags:    ['homeowners', 'rating', 'coastal', 'iso'],
         relatedProductIds: ['PH.PROD.001'],
       },
@@ -411,6 +417,12 @@ async function main(): Promise<void> {
         source:  'Sample Data — Product Reinvention Hub',
         title:   '[SAMPLE] NAIC Urges Carriers to Strengthen Wildfire Underwriting Guidelines',
         summary: 'The NAIC has issued guidance encouraging state regulators and carriers to revisit homeowners underwriting criteria in wildfire-prone areas, citing a 30% surge in wildfire-related losses in recent policy years.',
+        bullets: [
+          'The NAIC released a white paper recommending that state regulators require carriers to incorporate wildfire risk scores and defensible-space inspections into residential underwriting guidelines for properties in designated high-hazard zones.',
+          'The guidance targets personal lines homeowners programs in California, Colorado, Oregon, Washington, and Arizona, where wildfire-related losses have surged over the prior three policy years.',
+          'A regulatory cascade is likely as state commissioners translate NAIC guidance into mandatory standards; product managers should evaluate their inspection workflow, underwriting rule triggers, and non-renewal notice procedures against incoming state-specific mandates.',
+        ],
+        imageUrl: 'https://sample-data.local/images/naic-wildfire.jpg',
         tags:    ['homeowners', 'underwriting', 'wildfire', 'naic'],
         relatedProductIds: ['PH.PROD.001'],
       },
@@ -419,6 +431,12 @@ async function main(): Promise<void> {
         source:  'Sample Data — Product Reinvention Hub',
         title:   '[SAMPLE] Personal Auto Loss Trends: Distracted Driving Liability Claims Up 12%',
         summary: 'Industry data shows bodily injury liability claims linked to distracted driving (Part A) increased 12% year-over-year. Telematics-based pricing programs continue to show promise for risk segmentation.',
+        bullets: [
+          'Industry loss data shows bodily injury liability claims linked to distracted driving increased 12% year-over-year, driven primarily by smartphone use and in-vehicle infotainment distractions.',
+          'The trend is most pronounced in personal passenger auto programs (Part A liability) in high-density urban markets, where distracted-driving accidents now represent a rising share of total BI frequency.',
+          'Carriers should assess whether current BI limit relativities reflect the worsening loss trend and evaluate telematics-based pricing endorsements as a risk-segmentation tool ahead of the next rate revision cycle.',
+        ],
+        // No imageUrl — exercises the missing-image fallback path in the frontend
         tags:    ['auto', 'claims', 'liability', 'telematics'],
         relatedProductIds: ['PA.PROD.001'],
       },
@@ -427,6 +445,12 @@ async function main(): Promise<void> {
         source:  'Sample Data — Product Reinvention Hub',
         title:   '[SAMPLE] ISO PP 00 01 Advisory: Rental Car Coverage Clarification Under Part D',
         summary: 'ISO has issued an advisory clarifying how Part D (Coverage for Damage to Your Auto) applies to rental vehicles. Carriers writing PP 00 01 should confirm their endorsement stack includes the appropriate rental coverage option.',
+        bullets: [
+          'ISO issued an advisory clarifying that Part D (Coverage for Damage to Your Auto) under PP 00 01 does not extend to rented vehicles unless a rental reimbursement endorsement is separately attached.',
+          'The advisory applies to all personal auto programs written on the PP 00 01 base form in every state, directly affecting how coverage-stacking disputes are adjudicated in rental-car damage claims.',
+          'Product managers should audit endorsement attachment rules to ensure rental coverage options are clearly disclosed in declarations, reducing claim disputes and the risk of regulatory scrutiny over coverage ambiguity.',
+        ],
+        imageUrl: 'https://sample-data.local/images/pp0001-rental.jpg',
         tags:    ['auto', 'forms', 'rental', 'iso', 'part-d'],
         relatedProductIds: ['PA.PROD.001'],
       },
@@ -435,6 +459,12 @@ async function main(): Promise<void> {
         source:  'Sample Data — Product Reinvention Hub',
         title:   '[SAMPLE] InsurTech Startups Drive Real-Time Telematics Pricing Innovation',
         summary: 'New InsurTech entrants are combining UBI telematics with real-time weather data to price both auto and homeowners risk dynamically. Traditional carriers are exploring partnership models to access these capabilities without building proprietary platforms.',
+        bullets: [
+          'Several InsurTech carriers have launched pilot programs combining UBI telematics with real-time weather and IoT sensor data to dynamically price personal auto and homeowners risk at the policy level.',
+          'The pilots target personal lines markets in weather-volatile states including Florida, Colorado, and Texas, where static rating factors have struggled to capture short-term risk fluctuations across auto and property lines.',
+          'Traditional carriers face competitive pressure to match dynamic pricing sophistication or risk adverse selection as telematics adopters attract low-risk segments; product managers should model the impact on current tier structures.',
+        ],
+        // No imageUrl — exercises the missing-image fallback path in the frontend
         tags:    ['auto', 'homeowners', 'telematics', 'pricing', 'insurtech'],
         relatedProductIds: ['PA.PROD.001', 'PH.PROD.001'],
       },
@@ -444,7 +474,9 @@ async function main(): Promise<void> {
       const urlHash = createHash('sha1').update(item.url).digest('hex')
       batch.set(db.doc(`news/${urlHash}`), {
         urlHash, url: item.url, source: item.source, title: item.title,
-        summary: item.summary, tags: item.tags, relatedProductIds: item.relatedProductIds,
+        summary: item.summary, bullets: item.bullets, tags: item.tags,
+        relatedProductIds: item.relatedProductIds,
+        ...('imageUrl' in item ? { imageUrl: item.imageUrl, imageAlt: item.title } : {}),
         fetchedAt: now,
       })
     }

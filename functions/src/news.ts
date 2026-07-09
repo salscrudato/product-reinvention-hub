@@ -12,14 +12,23 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { createHash } from 'crypto'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY, requireRole, CACHE_1H } from './runtime'
-import { verifyItems } from '@pf/shared'
+import { verifyItems, sanitizeNewsUrl, extractOgImage } from '@pf/shared'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 import type { UsageAccum } from './telemetry'
 
 const DEFAULT_INSTRUCTION =
   'Recent U.S. homeowners insurance rate filings, regulatory changes, and competitor HO-3 product launches.'
 
-interface NewsItem { url: string; source: string; title: string; summary: string; tags: string[] }
+interface NewsItem {
+  url:       string
+  source:    string
+  title:     string
+  summary:   string
+  bullets:   string[]    // 3 structured PM takeaways (What/Who/Why); 2 when only 2 substantiated
+  imageUrl?: string      // absolute https hero image, populated by enrichWithImage post-verify
+  imageAlt?: string      // alt text for the hero image
+  tags:      string[]
+}
 
 /** Minimal product projection — only what the matching + prompt logic needs. */
 interface ProductInfo {
@@ -53,7 +62,13 @@ const LOB_EXTRA: Record<string, string[]> = {
 }
 
 const NEWS_SYSTEM = `You are a P&C insurance news scout for a product manager. Use the web_search tool to find recent, real, relevant news items matching the user's instruction. Prefer primary sources (regulator sites, carrier newsrooms, trade press). Return ONLY a JSON array (max 8 items) — no prose before or after — where each item is:
-{"url": string, "source": string, "title": string, "summary": string (1–2 sentences), "tags": string[] (2–4 short topical labels)}.
+{"url": string, "source": string, "title": string, "summary": string (1–2 sentence card lead), "bullets": [string, string, string], "tags": string[] (2–4 short topical labels)}.
+
+Each bullet is ONE concrete sentence grounded only in content the web_search returned — never invent figures, dates, carrier names, coverages, forms, rules, or rate numbers:
+  Bullet 1 — What happened: the concrete development (filing, product launch, endorsement, statute, catastrophe, M&A).
+  Bullet 2 — Who and what it touches: affected line(s) of business, state(s), market segment.
+  Bullet 3 — Why it matters to a product manager: rate pressure, coverage trend, filing precedent, or competitive move; market context only, never assert an internal product/coverage/form fact.
+If only 2 bullets can be substantiated from the article, return 2. Drop rather than pad with unsubstantiated content.
 If you find nothing relevant, return [].`
 
 /** Pull the first balanced JSON array out of text (tolerant of prose + [1] citations). */
@@ -117,7 +132,14 @@ async function fetchForInstruction(instruction: string, portfolioCtx: string, us
   return extractJsonArray(finalText)
     .map(x => x as Partial<NewsItem>)
     .filter(x => x.url && x.title)
-    .map(x => ({ url: x.url!, source: x.source ?? '', title: x.title!, summary: x.summary ?? '', tags: x.tags ?? [] }))
+    .map(x => ({
+      url:     x.url!,
+      source:  x.source ?? '',
+      title:   x.title!,
+      summary: x.summary ?? '',
+      bullets: Array.isArray(x.bullets) ? x.bullets.filter((b): b is string => typeof b === 'string') : [],
+      tags:    x.tags ?? [],
+    }))
 }
 
 /** Return the product IDs whose LOB or state footprint overlaps with the item text.
@@ -192,6 +214,30 @@ async function headIsAlive(url: string): Promise<boolean> {
   }
 }
 
+/** Best-effort hero-image extraction: fetches article HTML (first 10 KB), parses
+ *  og:image / twitter:image, validates URL shape + liveness, then attaches imageUrl
+ *  and imageAlt. Returns the item unchanged on any error or timeout. Never throws. */
+async function enrichWithImage(item: NewsItem): Promise<NewsItem> {
+  const ctrl  = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 4000)
+  try {
+    const res = await fetch(item.url, { method: 'GET', redirect: 'follow', signal: ctrl.signal })
+    if (!res.ok) return item
+    const html      = (await res.text()).slice(0, 10240)
+    const candidate = extractOgImage(html)
+    if (!candidate) return item
+    const validUrl  = sanitizeNewsUrl(candidate)
+    if (!validUrl) return item
+    const live = await headIsAlive(validUrl)
+    if (!live) return item
+    return { ...item, imageUrl: validUrl, imageAlt: item.title }
+  } catch {
+    return item
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /** Store items, deduped by a hash of the URL. Returns how many were newly stored.
  *  relatedProductIds is populated on each new item via LOB + state matching. */
 async function storeItems(items: NewsItem[], products: ProductInfo[]): Promise<number> {
@@ -208,6 +254,8 @@ async function storeItems(items: NewsItem[], products: ProductInfo[]): Promise<n
       if ((await tx.get(ref)).exists) return false
       tx.set(ref, {
         urlHash, url: it.url, source: it.source, title: it.title, summary: it.summary,
+        bullets: it.bullets,
+        ...(it.imageUrl ? { imageUrl: it.imageUrl, imageAlt: it.imageAlt ?? it.title } : {}),
         tags: it.tags, relatedProductIds, fetchedAt: Timestamp.now(),
       })
       return true
@@ -234,9 +282,10 @@ export const refreshNews = onCall(
     const t0 = Date.now()
     let ok = true
     try {
-      const items  = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
-      const live   = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
-      const stored = await storeItems(live, products)
+      const items    = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
+      const live     = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
+      const enriched = await Promise.all(live.map(enrichWithImage))  // best-effort hero images, parallel
+      const stored   = await storeItems(enriched, products)
       return { found: items.length, verified: live.length, stored }
     } catch (err) {
       ok = false
@@ -266,9 +315,10 @@ export const nightlyNews = onSchedule(
     let ok = true
     for (const instruction of unique) {
       try {
-        const items = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
-        const live  = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
-        await storeItems(live, products)
+        const items    = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
+        const live     = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
+        const enriched = await Promise.all(live.map(enrichWithImage))  // best-effort hero images, parallel
+        await storeItems(enriched, products)
       } catch { ok = false /* one bad instruction shouldn't fail the whole run */ }
     }
     void recordUsage({ feature: 'nightlyNews', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })
