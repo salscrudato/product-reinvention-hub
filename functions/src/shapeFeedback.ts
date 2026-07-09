@@ -29,6 +29,8 @@ if (!getApps().length) initializeApp()
 
 // ─── Wire contract ──────────────────────────────────────────────────────────────
 
+interface Attachment { url: string; name: string; mediaType: string }
+
 interface ShapeFeedbackInput {
   rawTitle:       string
   rawDetail?:     string
@@ -37,6 +39,7 @@ interface ShapeFeedbackInput {
   entityPath?:    string
   refId?:         string   // exact on-screen refId or form number — echoed, NEVER invented
   screenshotUrl?: string
+  attachments?:   Attachment[]   // supporting docs/images — fed to the vision/document pass
 }
 
 type ShapedType = 'IDEA' | 'ISSUE' | 'PRAISE'
@@ -44,6 +47,7 @@ type ShapedType = 'IDEA' | 'ISSUE' | 'PRAISE'
 interface ShapedStory {
   title:              string          // canonical, ≤ 80 chars
   type:               ShapedType      // auto-detected
+  userStory:          string          // "As a … I want … so that …"
   summary:            string          // one line
   affectedSurface:    string          // human label
   acceptanceCriteria: string[]        // 2..4 testable bullets
@@ -52,6 +56,7 @@ interface ShapedStory {
   refId?:             string          // echoed caller refId/form (never model-generated)
   reproSteps?:        string[]        // ISSUE only, 2..5 bullets
   likelyFiles?:       string[]        // ISSUE only, ⊆ the surface allowlist, may be []
+  implementationPrompt: string        // deploy-ready Claude Code brief (maintainer-only in UI)
   groundingNote?:     string          // plain-words honesty when a claim can't be cited
 }
 
@@ -106,13 +111,14 @@ const SHAPE_TOOL: Anthropic.Tool = {
   input_schema: {
     type: 'object',
     properties: {
-      title:   { type: 'string', description: 'Canonical, action-oriented title. MUST be 80 characters or fewer.' },
+      title:   { type: 'string', description: 'Canonical, action-oriented, product-quality title. MUST be 80 characters or fewer.' },
       type:    { type: 'string', enum: ['IDEA', 'ISSUE', 'PRAISE'], description: 'ISSUE = something is broken/wrong; IDEA = a request, improvement or new capability; PRAISE = positive feedback.' },
-      summary: { type: 'string', description: 'One-line plain-English summary of the story.' },
+      userStory: { type: 'string', description: 'The story in one crisp line: "As a [persona], I want [capability], so that [outcome]." Infer the persona from the surface (usually the P&C product manager). Concrete and outcome-driven.' },
+      summary: { type: 'string', description: 'One or two plain-English sentences that frame the problem and the desired result — the way a top product team would write it.' },
       affectedSurface: { type: 'string', description: 'Human label for the surface this concerns, e.g. "Coverages tab" or "Pricing". Prefer the route label provided.' },
       acceptanceCriteria: {
         type: 'array', minItems: 2, maxItems: 4, items: { type: 'string' },
-        description: '2 to 4 short, testable bullets describing what "done" looks like.',
+        description: '2 to 4 short, testable bullets describing what "done" looks like — specific and verifiable.',
       },
       impact: { type: 'integer', enum: [1, 2, 3], description: 'User value / severity: 1 low, 2 medium, 3 high.' },
       effort: { type: 'integer', enum: [1, 2, 3], description: 'Estimated build size: 1 small, 2 medium, 3 large.' },
@@ -122,32 +128,45 @@ const SHAPE_TOOL: Anthropic.Tool = {
       },
       likelyFiles: {
         type: 'array', items: { type: 'string' },
-        description: 'ISSUE only: repo-relative source paths, chosen ONLY from the candidate file list given in the user message. If none of the candidates fit, return an empty array. NEVER guess a path that is not in that list.',
+        description: 'Repo-relative source paths, chosen ONLY from the candidate file list given in the user message. If none of the candidates fit, return an empty array. NEVER guess a path that is not in that list.',
+      },
+      implementationPrompt: {
+        type: 'string',
+        description:
+          'A precise, deploy-ready brief a senior engineer (Claude Code) can paste and execute END TO END to ship this — as a top-tier team would write it. Structure it with: Objective (one line); Context (the affected surface + the exact on-screen refId/form if given + what the screenshot/attachments show); Plan (concrete, ordered steps naming ONLY files from the candidate list — never invent a path); Acceptance criteria (mirror the story); Guardrails (grounded AI cites sources and never invents; keep design tokens; keep the gate green: pnpm typecheck && pnpm lint && pnpm test && pnpm build); and Ship (commit locally, and if the change is server-side, deploy the affected Cloud Function). Ground every specific claim in the user input + screenshot/attachments; where a fact is unknown, say so rather than inventing it. Plain markdown, no code fences around the whole thing.',
       },
       groundingNote: {
         type: 'string',
         description: 'If any claim would need a citation you do not have (a specific coverage, form, rule, limit, factor or refId), say so here in plain words instead of inventing one. Otherwise omit.',
       },
     },
-    required: ['title', 'type', 'summary', 'affectedSurface', 'acceptanceCriteria', 'impact', 'effort'],
+    required: ['title', 'type', 'userStory', 'summary', 'affectedSurface', 'acceptanceCriteria', 'impact', 'effort', 'implementationPrompt'],
   },
 }
 
 const SHAPE_SYSTEM =
-  'You are a product-operations analyst for an AI-native P&C insurance product platform. You ' +
-  'turn one raw piece of user feedback into a single structured user story by calling the ' +
-  'shape_feedback tool exactly once.\n' +
+  'You are a world-class product lead + staff engineer for an AI-native P&C insurance product ' +
+  'platform — the bar is Apple/Tesla/Google. You turn one raw piece of user feedback into a ' +
+  'single, crisp, ship-ready user story by calling the shape_feedback tool exactly once.\n' +
+  '- Read EVERYTHING the user gave you: their wording, the annotated screenshot (drawings and ' +
+  'text callouts point at exactly what they mean), and any attached documents. Synthesise all ' +
+  'of it into one coherent story.\n' +
   '- Detect the type: ISSUE (something is broken or wrong), IDEA (a request, improvement or new ' +
   'capability) or PRAISE (positive feedback).\n' +
-  '- Ground everything in what the user actually said and, when attached, the annotated ' +
-  'screenshot. NEVER invent product facts — do not fabricate a coverage, form number, rule, ' +
-  'limit, factor or refId. If a claim would need a citation you do not have, say so plainly in ' +
-  'groundingNote rather than making one up.\n' +
-  '- The title must be canonical and 80 characters or fewer. acceptanceCriteria must be 2 to 4 ' +
-  'short, testable bullets. impact and effort are 1 (low/small) to 3 (high/large).\n' +
-  '- For an ISSUE, also provide reproSteps (2 to 5) and likelyFiles. Choose likelyFiles ONLY ' +
-  'from the candidate source files listed in the user message; if none fit, return an empty ' +
-  'array — never guess a path. For IDEA and PRAISE, omit reproSteps and likelyFiles.'
+  '- Write a userStory as "As a [persona], I want [capability], so that [outcome]" — concrete, ' +
+  'outcome-driven, no fluff. Title is canonical and ≤ 80 chars. summary is 1–2 sharp sentences. ' +
+  'acceptanceCriteria are 2–4 specific, testable bullets. impact/effort are 1–3.\n' +
+  '- For an ISSUE, also provide reproSteps (2 to 5). Provide likelyFiles chosen ONLY from the ' +
+  'candidate source files listed in the user message; if none fit, return an empty array — never ' +
+  'guess a path.\n' +
+  '- implementationPrompt: write a precise, deploy-ready brief a senior engineer (Claude Code) ' +
+  'can paste and execute end to end — Objective, Context (surface + exact refId/form + what the ' +
+  'screenshot/attachments show), Plan (ordered steps naming ONLY candidate files), Acceptance ' +
+  'criteria, Guardrails (grounded + cited AI, design tokens, keep the gate green), and Ship ' +
+  '(commit; deploy the affected function if server-side). Make it genuinely executable.\n' +
+  '- GROUNDING (non-negotiable): never invent product facts — no fabricated coverage, form ' +
+  'number, rule, limit, factor, refId or file path. If a claim would need a citation you do not ' +
+  'have, say so plainly in groundingNote instead of inventing one.'
 
 // ─── Screenshot — fetched server-side so shaping degrades gracefully if it's unreachable ─
 const SUPPORTED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
@@ -175,6 +194,42 @@ async function fetchScreenshot(url: string): Promise<Anthropic.ImageBlockParam |
   }
 }
 
+// ─── Attachments — supporting docs/images the submitter added, fed to the AI ─────
+const MAX_ATTACHMENTS      = 4
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
+const TEXT_ATTACH_RE       = /^(text\/|application\/(json|csv|xml))/i
+
+/** Fetch each attachment into an Anthropic content block — an image, a PDF document block, or
+ *  inline text — skipping anything unreadable or oversized. Best-effort + bounded (count/size)
+ *  so a bad attachment never fails shaping and the cost stays capped. */
+async function fetchAttachmentBlocks(attachments: Attachment[]): Promise<Anthropic.ContentBlockParam[]> {
+  const out: Anthropic.ContentBlockParam[] = []
+  for (const att of attachments.slice(0, MAX_ATTACHMENTS)) {
+    const ctrl  = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 10_000)
+    try {
+      const res = await fetch(att.url, { redirect: 'follow', signal: ctrl.signal })
+      if (!res.ok) continue
+      const type = (att.mediaType || res.headers.get('content-type') || '').split(';')[0]!.trim().toLowerCase()
+      const buf  = Buffer.from(await res.arrayBuffer())
+      if (buf.byteLength === 0 || buf.byteLength > MAX_ATTACHMENT_BYTES) continue
+      if (SUPPORTED_IMAGE_TYPES.has(type)) {
+        out.push({ type: 'image', source: { type: 'base64', media_type: type as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp', data: buf.toString('base64') } })
+      } else if (type === 'application/pdf') {
+        out.push({ type: 'document', title: att.name, source: { type: 'base64', media_type: 'application/pdf', data: buf.toString('base64') } })
+      } else if (TEXT_ATTACH_RE.test(type)) {
+        out.push({ type: 'text', text: `Attached document "${att.name}":\n${buf.toString('utf-8').slice(0, 12_000)}` })
+      }
+      // else: unreadable type — skip (its name is still listed in the prompt text).
+    } catch (e) {
+      console.warn('[shapeFeedback] attachment fetch failed; skipping:', att.name, e)
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  return out
+}
+
 // ─── Sanitizer — enforce the output contract server-side (the forced tool guarantees a call,
 //     not perfect fields). Also the ONE place that echoes the caller refId and grounds files. ─
 function sanitizeStory(raw: Record<string, unknown>, input: ShapeFeedbackInput, candidates: string[]): ShapedStory {
@@ -189,14 +244,22 @@ function sanitizeStory(raw: Record<string, unknown>, input: ShapeFeedbackInput, 
 
   const surface = str(raw.affectedSurface) || str(input.routeLabel) || str(input.route) || 'the app'
 
+  // userStory + implementationPrompt are required outputs; fall back to a grounded derivation
+  // from the fields we DO have (never invented) if the model omitted them.
+  const userStory = (str(raw.userStory) || `As a product manager, I want ${title.toLowerCase()}, so that the platform better serves my work.`).slice(0, 400)
+  const implementationPrompt = (str(raw.implementationPrompt) ||
+    `Objective: ${title}\n\nContext: ${surface}${str(input.refId) ? ` — on-screen ${str(input.refId)}` : ''}.\n\n${str(raw.summary) || title}\n\nKeep the gate green (pnpm typecheck && pnpm lint && pnpm test && pnpm build), then commit.`).slice(0, 8000)
+
   const story: ShapedStory = {
     title,
     type,
+    userStory,
     summary: str(raw.summary) || title,
     affectedSurface: surface,
     acceptanceCriteria: arr(raw.acceptanceCriteria).slice(0, 4),
     impact: scale(raw.impact),
     effort: scale(raw.effort),
+    implementationPrompt,
   }
 
   // refId: echo the caller's on-screen value verbatim — never the model's (the tool has none).
@@ -220,37 +283,41 @@ function sanitizeStory(raw: Record<string, unknown>, input: ShapeFeedbackInput, 
  *  Sonnet 5 rejects them; grounding comes from the system prompt + the screenshot. */
 async function shapeStory(
   client: Anthropic, imageBlock: Anthropic.ImageBlockParam | null,
+  attachmentBlocks: Anthropic.ContentBlockParam[],
   input: ShapeFeedbackInput, candidates: string[],
 ): Promise<ShapedStory> {
   const surface = str(input.routeLabel) || str(input.route) || 'the app'
+  const attachNames = (input.attachments ?? []).map(a => a.name).filter(Boolean)
   const lines = [
-    `Raw title: ${input.rawTitle.trim()}`,
-    input.rawDetail?.trim() ? `Raw detail: ${input.rawDetail.trim()}` : 'Raw detail: (none provided)',
+    `Raw feedback: ${input.rawTitle.trim()}`,
+    input.rawDetail?.trim() && input.rawDetail.trim() !== input.rawTitle.trim() ? `More detail: ${input.rawDetail.trim()}` : '',
     `Surface: ${surface}${input.route ? ` (route ${input.route})` : ''}`,
     input.entityPath?.trim() ? `Entity in context: ${input.entityPath.trim()}` : '',
     input.refId?.trim() ? `On-screen refId / form number: ${input.refId.trim()}` : '',
     input.screenshotUrl
-      ? (imageBlock ? 'An annotated screenshot is attached — read it.' : 'A screenshot was provided but could not be loaded; shape from the text alone.')
+      ? (imageBlock ? 'An annotated screenshot is attached — read its drawings and text callouts, they point at exactly what the user means.' : 'A screenshot was provided but could not be loaded; shape from the text alone.')
       : '',
+    attachNames.length ? `Attached documents (read them): ${attachNames.join(', ')}.` : '',
     candidates.length
-      ? `Candidate source files for this surface (for an ISSUE, choose likelyFiles ONLY from these; return an empty list if none fit):\n${candidates.map(f => `- ${f}`).join('\n')}`
-      : 'No candidate source files are known for this surface; return an empty likelyFiles.',
+      ? `Candidate source files for this surface (choose likelyFiles + implementation-plan files ONLY from these; return an empty list if none fit):\n${candidates.map(f => `- ${f}`).join('\n')}`
+      : 'No candidate source files are known for this surface; return an empty likelyFiles and keep the implementation plan high-level.',
     '',
-    'Shape this into one structured story, then call shape_feedback exactly once.',
+    'Shape this into one structured, ship-ready story, then call shape_feedback exactly once.',
   ].filter(Boolean)
 
   const content: Anthropic.ContentBlockParam[] = []
   if (imageBlock) content.push(imageBlock)
+  for (const b of attachmentBlocks) content.push(b)
   content.push({ type: 'text', text: lines.join('\n') })
 
   const msg = await client.messages.create({
     model:       MODEL,   // claude-sonnet-5 — vision-capable; adaptive thinking, no sampling params
-    max_tokens:  1500,
+    max_tokens:  3000,    // room for the deploy-ready implementation brief
     system:      SHAPE_SYSTEM,
     tools:       [SHAPE_TOOL],
     tool_choice: { type: 'tool', name: SHAPE_TOOL.name },
     messages:    [{ role: 'user', content }],
-  }, { timeout: 60_000 })
+  }, { timeout: 90_000 })
 
   const tu = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
   return sanitizeStory((tu?.input as Record<string, unknown> | undefined) ?? {}, input, candidates)
@@ -300,14 +367,22 @@ export const shapeFeedback = onCall<ShapeFeedbackInput>(
     if (!rawTitle) throw new HttpsError('invalid-argument', 'rawTitle is required.')
 
     // Bound every field so a huge paste can't blow the prompt or cost.
+    const attachments = Array.isArray(raw.attachments)
+      ? raw.attachments.slice(0, MAX_ATTACHMENTS).map(a => ({
+          url:       String(a?.url ?? ''),
+          name:      String(a?.name ?? 'attachment').slice(0, 120),
+          mediaType: String(a?.mediaType ?? '').slice(0, 80),
+        })).filter(a => a.url)
+      : undefined
     const input: ShapeFeedbackInput = {
-      rawTitle:      rawTitle.slice(0, 300),
+      rawTitle:      rawTitle.slice(0, 500),
       rawDetail:     raw.rawDetail?.slice(0, 4000),
       routeLabel:    raw.routeLabel?.slice(0, 120),
       route:         raw.route?.slice(0, 300),
       entityPath:    raw.entityPath?.slice(0, 300),
       refId:         raw.refId?.slice(0, 60),
       screenshotUrl: raw.screenshotUrl,
+      ...(attachments?.length ? { attachments } : {}),
     }
     const candidates = candidateFiles(input.route, input.routeLabel)
 
@@ -316,8 +391,11 @@ export const shapeFeedback = onCall<ShapeFeedbackInput>(
     try {
       const client = anthropic()
       const shaping = (async () => {
-        const imageBlock = input.screenshotUrl ? await fetchScreenshot(input.screenshotUrl) : null
-        return shapeStory(client, imageBlock, input, candidates)
+        const [imageBlock, attachmentBlocks] = await Promise.all([
+          input.screenshotUrl ? fetchScreenshot(input.screenshotUrl) : Promise.resolve(null),
+          input.attachments?.length ? fetchAttachmentBlocks(input.attachments) : Promise.resolve([] as Anthropic.ContentBlockParam[]),
+        ])
+        return shapeStory(client, imageBlock, attachmentBlocks, input, candidates)
       })()
       const [nearMatch, story] = await Promise.all([
         findNearMatch(rawTitle, input.rawDetail),

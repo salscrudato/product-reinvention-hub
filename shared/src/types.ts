@@ -406,11 +406,18 @@ export interface Feedback {
   rank?:          number
   // AI-shaped story fields (additive; the capture drawer turns raw input into a structured
   // story before it lands). All optional so pre-shaping and seed records stay valid.
+  userStory?:          string     // "As a … I want … so that …" one-liner narrative
   acceptanceCriteria?: string[]   // 2..4 testable "done" bullets
   reproSteps?:         string[]   // ISSUE only — ordered steps to reproduce
   likelyFiles?:        string[]   // ISSUE only — grounded repo paths for the affected surface
+  // A deploy-ready Claude Code implementation brief the AI writes for this story. Sensitive
+  // (it names files/approach) so the UI reveals it to the maintainer only — never invented.
+  implementationPrompt?: string
   author:         { uid: string; name: string }
   screenshotUrl?:  string
+  // Supporting documents/images the submitter attached (Storage URLs) — fed to the AI vision/
+  // document pass and kept for reference. `mediaType` drives how each is rendered/downloaded.
+  attachments?:    { name: string; url: string; mediaType: string }[]
   completionNote?: string
   createdAt:       unknown
   updatedAt:       unknown
