@@ -204,7 +204,10 @@ export default function Claims() {
 
   async function ask(text: string) {
     const question = text.trim()
-    if (!question || streaming || !selectedForm) return
+    // Only analyze a form that is genuinely analyzable (READY + stored document). Mirrors the
+    // composer gate so a stray call can never send an invalid payload for a selected-but-not-
+    // ready form — the invariant behind "form selected, yet analysis reports no form".
+    if (!question || streaming || !selectedForm || !isFormAnalyzable(selectedForm)) return
     setInput('')
 
     const history: ChatMessage[] = [...messages, { role: 'user', text: question, tools: [] }]
