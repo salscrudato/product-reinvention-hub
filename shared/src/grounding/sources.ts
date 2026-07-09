@@ -74,9 +74,16 @@ export function extractInlineImage(html: string): string | null {
 /** Resolve a potentially relative URL against a base origin.
  *  Returns the absolute URL if valid, else null. */
 export function resolveImageUrl(candidate: string, baseUrl: string): string | null {
+  // A real image URL — absolute, root-relative or protocol-relative — never contains raw
+  // whitespace. Reject it up front (mirrors sanitizeNewsUrl's gate): the WHATWG URL parser
+  // would otherwise silently percent-encode the space and resolve e.g. "not a url" to a bogus
+  // <base>/not%20a%20url rather than throwing — and that encoded href slips past the later
+  // sanitizeNewsUrl whitespace check too.
+  const c = (candidate ?? '').trim()
+  if (!c || /\s/.test(c)) return null
   try {
     const base = new URL(baseUrl)
-    const resolved = new URL(candidate, base)
+    const resolved = new URL(c, base)
     return resolved.href
   } catch {
     return null
