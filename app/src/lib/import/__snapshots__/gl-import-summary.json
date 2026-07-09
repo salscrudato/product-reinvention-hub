@@ -1,0 +1,143 @@
+{
+  "counts": {
+    "products": 1,
+    "coverages": 105,
+    "forms": 795,
+    "dynamicFields": 200,
+    "rules": 146,
+    "formRules": 259,
+    "ratingSteps": 55,
+    "rtTables": 4,
+    "ldTables": 37
+  },
+  "sheetsRecognized": [
+    "GL Product Framework",
+    "Limits and Deductibles",
+    "GL Rating Tables",
+    "GL Forms Dynamic Data",
+    "GL Forms Specifications",
+    "GL Rules Specifications",
+    "GL Optional Forms Rules",
+    "GL Rating Specifications"
+  ],
+  "sheetsSkipped": [
+    "Revision History",
+    "Definitions-Product Framework",
+    "Data Validation",
+    "Revision History",
+    "Definitions-Forms Specification",
+    "Data Validation",
+    "Revision History",
+    "Definitions",
+    "Definitions - Rules Categories",
+    "Data Validation",
+    "Revision History",
+    "Definitions-Rating Specificants",
+    "Data Validation"
+  ],
+  "warningCount": 32,
+  "warnings": [
+    "RT table RTTable.002 appears more than once — rows merged.",
+    "RT table RTTable.004 appears more than once — rows merged.",
+    "RT table RTTable.006 appears more than once — rows merged.",
+    "Form category \"Policy Conditions\" mapped to ENDORSEMENT.",
+    "Form category \"Other Coverage Form\" mapped to ENDORSEMENT.",
+    "Form CG 04 37 appears on multiple rows — applicability merged.",
+    "Form CG 04 71 appears on multiple rows — applicability merged.",
+    "Form CG 20 03 appears on multiple rows — applicability merged.",
+    "Form CG 20 05 appears on multiple rows — applicability merged.",
+    "Form CG 20 10 appears on multiple rows — applicability merged.",
+    "Form CG 20 11 appears on multiple rows — applicability merged.",
+    "Form CG 20 12 appears on multiple rows — applicability merged.",
+    "Form CG 20 13 appears on multiple rows — applicability merged.",
+    "Form CG 20 15 appears on multiple rows — applicability merged.",
+    "Form CG 20 17 appears on multiple rows — applicability merged.",
+    "Form CG 20 18 appears on multiple rows — applicability merged.",
+    "Form CG 20 24 appears on multiple rows — applicability merged.",
+    "Form CG 20 26 appears on multiple rows — applicability merged.",
+    "Form CG 20 27 appears on multiple rows — applicability merged.",
+    "Form CG 20 37 appears on multiple rows — applicability merged.",
+    "Form CG 21 06 appears on multiple rows — applicability merged.",
+    "Form CG 21 31 appears on multiple rows — applicability merged.",
+    "Form CG 21 54 appears on multiple rows — applicability merged.",
+    "Form CG 22 36 appears on multiple rows — applicability merged.",
+    "Form CG 24 04 appears on multiple rows — applicability merged.",
+    "Form CG 29 88 appears on multiple rows — applicability merged.",
+    "Form category \"Other Policy Documents\" mapped to ENDORSEMENT.",
+    "Form rule GL.FORM.RU.007 appears on multiple rows — form numbers merged.",
+    "Form rule GL.FORM.RU.018 appears on multiple rows — form numbers merged.",
+    "Form rule GL.FORM.RU.021 appears on multiple rows — form numbers merged.",
+    "Form rule GL.FORM.RU.154 appears on multiple rows — form numbers merged.",
+    "Form rule GL.FORM.RU.238 appears on multiple rows — form numbers merged."
+  ],
+  "unmappedColumnSheets": [
+    {
+      "sheet": "GL Product Framework",
+      "columns": [
+        "COVERAGE FORM(S)",
+        "QUESTIONS / COMMENTS"
+      ]
+    },
+    {
+      "sheet": "GL Forms Dynamic Data",
+      "columns": [
+        "FORM NAME",
+        "EFFECTIVE DATE OF DYNAMIC FIELD",
+        "EXPIRATION DATE OF DYNAMIC FIELD"
+      ]
+    },
+    {
+      "sheet": "GL Forms Specifications",
+      "columns": [
+        "FORM EFFECTIVE DATE",
+        "FORM EXPIRATION DATE",
+        "DYNAMIC DATA\n\nEnter \"Not Applicable\" if no dynamic data;\nIf there is dynamic data, enter the form number hyperlinked to the \"Dynamic Data\" tab",
+        "MIDDLE MARKET",
+        "INTERLINE FORM"
+      ]
+    },
+    {
+      "sheet": "GL Rules Specifications",
+      "columns": [
+        "PRODUCT",
+        "LOB",
+        "COVERAGE",
+        "SUB\nCOVERAGE",
+        "PROPRIETARY",
+        "SUBMISSION",
+        "POLICY CHANGE",
+        "RENEWAL",
+        "REWRITE",
+        "REWRITE NEW ACCOUNT",
+        "CANCELLATION",
+        "REINSTATEMENT",
+        "FINAL AUDIT",
+        "RULE STATUS (ACCENTURE TEAM)",
+        "RULES REVIEWER",
+        "DATE REVIEW COMPLETED",
+        "COMMENTS"
+      ]
+    },
+    {
+      "sheet": "GL Optional Forms Rules",
+      "columns": [
+        "RULE CATEGORY",
+        "RULE SUB-CATEGORY",
+        "RULE STATUS (ACCENTURE TEAM)",
+        "RULES REVIEWER",
+        "DATE REVIEW COMPLETED"
+      ]
+    },
+    {
+      "sheet": "GL Rating Specifications",
+      "columns": [
+        "PARENTHESES",
+        "PROPRIETARY",
+        "RATING ITEM STATUS (ACCENTURE TEAM)",
+        "REVIEW STATUS\n(CLIENT EAM)",
+        "<client name>REVIEWER",
+        "DATE COMPLETED"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GL golden fixtures — Phase 0 baseline counts > LD tables: stacked-block count (golden=37) 1`] = `37`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > RT tables: stacked-block count (golden=4, ids 001/002/004/006) 1`] = `
+{
+  "count": 4,
+  "ids": [
+    "RTTable.001",
+    "RTTable.002",
+    "RTTable.004",
+    "RTTable.006",
+  ],
+}
+`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > counts snapshot (locks current parser output as regression baseline) 1`] = `
+{
+  "coverages": 105,
+  "dynamicFields": 200,
+  "formRules": 259,
+  "forms": 795,
+  "ldTables": 37,
+  "products": 1,
+  "ratingSteps": 55,
+  "rtTables": 4,
+  "rules": 146,
+}
+`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > form-rules: merge-aware count (golden=259, likely < due to merged-anchor gap) 1`] = `259`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > forms: distinct form-number count (golden=795) 1`] = `795`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > framework: coverage count (golden=105) 1`] = `105`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > numeric coercion trap: rating step 1.10 vs 1.1 (Phase 1 fix target) 1`] = `
+{
+  "has11": true,
+  "has110": false,
+}
+`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > rating steps: count (golden=55) 1`] = `55`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > rules: rule-ID count (golden=146) 1`] = `146`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > sheets recognized — all 8 known GL sheets found 1`] = `
+[
+  "GL Product Framework",
+  "Limits and Deductibles",
+  "GL Rating Tables",
+  "GL Forms Dynamic Data",
+  "GL Forms Specifications",
+  "GL Rules Specifications",
+  "GL Optional Forms Rules",
+  "GL Rating Specifications",
+]
+`;
+
+exports[`GL golden fixtures — Phase 0 baseline counts > warnings — logs all summary warnings for review 1`] = `32`;
