@@ -24,6 +24,11 @@ export interface Determination {
   openItems?:  string[]
   citations?:  string[]
   formNumber?: string
+  // Set by the SERVER when one or more cited refIds/form numbers did not resolve against the
+  // live catalogue. The server already downgrades such a determination to NOT_ADDRESSED; this
+  // is the signal the client mirrors — a substantive verdict carrying it is never rendered as
+  // authoritative (defense in depth: a fabricated citation must never reach the card).
+  unverifiedCitations?: string[]
 }
 
 // Verdicts that assert coverage either way — these MUST be grounded in a cited source.
@@ -47,8 +52,12 @@ export function isDeterminationCited(d: Determination): boolean {
   return explicit || coverage || exclusion || limit || reasoning
 }
 
-/** The gate the UI applies before rendering a determination card: a substantive verdict
- *  must be cited; NOT_ADDRESSED is always allowed (it is the "form is silent" answer). */
+/** The gate the UI applies before rendering a determination card: a substantive verdict must
+ *  be cited AND must not carry any citation the server couldn't resolve against the catalogue;
+ *  NOT_ADDRESSED is always allowed (it is the honest "form is silent" answer). Mirrors the
+ *  server's resolve-or-downgrade rule so a fabricated refId never renders as authoritative. */
 export function shouldRenderDetermination(d: Determination): boolean {
-  return !SUBSTANTIVE_VERDICTS.includes(d.verdict) || isDeterminationCited(d)
+  if (!SUBSTANTIVE_VERDICTS.includes(d.verdict)) return true
+  if (d.unverifiedCitations && d.unverifiedCitations.length > 0) return false
+  return isDeterminationCited(d)
 }

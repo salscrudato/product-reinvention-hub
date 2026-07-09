@@ -68,6 +68,30 @@ describe('shouldRenderDetermination', () => {
   it('always allows NOT_ADDRESSED — the honest "form is silent" answer — even uncited', () => {
     expect(shouldRenderDetermination({ ...base, verdict: 'NOT_ADDRESSED' })).toBe(true)
   })
+
+  // Client mirror of the server's resolve-or-downgrade rule: a fabricated citation the server
+  // could not resolve must never render as an authoritative substantive verdict.
+  it('blocks a substantive verdict that carries a server-flagged unverified citation', () => {
+    const d: Determination = {
+      ...base, verdict: 'NOT_COVERED',
+      coverages: [{ name: 'Phantom', refId: 'PH.COV.999', definition: 'invented' }],
+      reasoning: ['Excluded per [PH.COV.999].'],
+      unverifiedCitations: ['PH.COV.999'],
+    }
+    // even though it is structurally "cited", the unresolved flag wins — do not render as fact
+    expect(isDeterminationCited(d)).toBe(true)
+    expect(shouldRenderDetermination(d)).toBe(false)
+  })
+
+  it('still renders the downgraded NOT_ADDRESSED card the server produces for an unverifiable cite', () => {
+    // The server downgrades to NOT_ADDRESSED + carries the flag + an explanatory openItem.
+    const d: Determination = {
+      ...base, verdict: 'NOT_ADDRESSED',
+      openItems: ['A cited reference (PH.COV.999) could not be verified against the catalog.'],
+      unverifiedCitations: ['PH.COV.999'],
+    }
+    expect(shouldRenderDetermination(d)).toBe(true)
+  })
 })
 
 // ─── EVAL: real PH + PA determinations (COVERED / NOT_COVERED) ────────────────
