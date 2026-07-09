@@ -155,6 +155,8 @@ export const IconExpand = (p: IconProps) => (<Glyph {...p}><path d="M9 4H5v4M15 
 export const IconRefresh = (p: IconProps) => (<Glyph {...p}><path d="M4.6 12a7.4 7.4 0 0 1 12.6-5.2L20 9.4" /><path d="M20 4v5.5h-5.5" /><path d="M19.4 12a7.4 7.4 0 0 1-12.6 5.2L4 14.6" /><path d="M4 20v-5.5h5.5" /></Glyph>)
 /** Restore — a return arrow looping back, for reverting to a prior version. */
 export const IconRestore = (p: IconProps) => (<Glyph {...p}><path d="m8.5 5.5-4.5 4.5 4.5 4.5" /><path d="M4 10h9a5.5 5.5 0 0 1 0 11H9" /></Glyph>)
+/** Archive — a lidded box, for setting an item aside (declined / archived). */
+export const IconArchive = (p: IconProps) => (<Glyph {...p}><rect x="3.5" y="4.5" width="17" height="4.2" rx="1.1" /><path d="M5 8.7v9a1.6 1.6 0 0 0 1.6 1.6h10.8a1.6 1.6 0 0 0 1.6-1.6v-9" /><path d="M9.7 12.4h4.6" /></Glyph>)
 /** Copy — two overlapping sheets. */
 export const IconCopy = (p: IconProps) => (<Glyph {...p}><rect x="8.5" y="8.5" width="11" height="11" rx="2.2" /><path d="M15.5 8.5V6.2A2.2 2.2 0 0 0 13.3 4H6.2A2.2 2.2 0 0 0 4 6.2v7.1a2.2 2.2 0 0 0 2.2 2.2h2.3" /></Glyph>)
 /** External link — a framed box with an out-arrow. */
