@@ -41,6 +41,71 @@ export function extractOgImage(html: string): string | null {
   return null
 }
 
+/** Extract the first plausible inline <img> src from raw HTML.
+ *  Returns the raw src value; caller must sanitize and resolve relative URLs.
+ *  "Plausible" = has width OR height attribute >= 200, or no dimension attrs at all
+ *  (many real hero images omit dimensions). Skips obvious tracking pixels. */
+export function extractInlineImage(html: string): string | null {
+  // Match <img> tags with src, capturing the full tag to inspect dimension attributes.
+  const imgPattern = /<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi
+  let match: RegExpExecArray | null
+  while ((match = imgPattern.exec(html)) !== null) {
+    const fullTag = match[0]!
+    const src     = match[1]?.trim()
+    if (!src) continue
+
+    // Extract width and height if present (handles both width="300" and width='300').
+    const widthMatch  = /\bwidth=["']?(\d+)["']?/i.exec(fullTag)
+    const heightMatch = /\bheight=["']?(\d+)["']?/i.exec(fullTag)
+    const w = widthMatch  ? parseInt(widthMatch[1]!,  10) : null
+    const h = heightMatch ? parseInt(heightMatch[1]!, 10) : null
+
+    // Skip obvious tracking pixels (dimension < 10).
+    if ((w !== null && w < 10) || (h !== null && h < 10)) continue
+
+    // Keep if no dimensions specified OR at least one dimension >= 200.
+    if ((w === null && h === null) || (w !== null && w >= 200) || (h !== null && h >= 200)) {
+      return src
+    }
+  }
+  return null
+}
+
+/** Resolve a potentially relative URL against a base origin.
+ *  Returns the absolute URL if valid, else null. */
+export function resolveImageUrl(candidate: string, baseUrl: string): string | null {
+  try {
+    const base = new URL(baseUrl)
+    const resolved = new URL(candidate, base)
+    return resolved.href
+  } catch {
+    return null
+  }
+}
+
+/** Derive a deterministic hex color from a seed string (source name).
+ *  Simple hash → hue → saturated, medium-lightness color. */
+export function deterministicColor(seed: string): string {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (Math.imul(h, 31) + seed.charCodeAt(i)) | 0
+  const hue = Math.abs(h) % 360
+  // HSL: saturated color (70% saturation, 50% lightness) for brand-like appearance.
+  const s = 70, l = 50
+  // Convert HSL to RGB (simple algorithm).
+  const c = (1 - Math.abs(2 * l / 100 - 1)) * (s / 100)
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1))
+  const m = l / 100 - c / 2
+  let r = 0, g = 0, b = 0
+  if (hue < 60)       { r = c; g = x; b = 0 }
+  else if (hue < 120) { r = x; g = c; b = 0 }
+  else if (hue < 180) { r = 0; g = c; b = x }
+  else if (hue < 240) { r = 0; g = x; b = c }
+  else if (hue < 300) { r = x; g = 0; b = c }
+  else                { r = c; g = 0; b = x }
+  const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
 /** Keep only items whose URL passes the shape gate AND resolves via `isLive`.
  *  Shape-gate is applied first (sync), then existence-probes run in parallel; the
  *  surviving items carry their sanitized URL. */

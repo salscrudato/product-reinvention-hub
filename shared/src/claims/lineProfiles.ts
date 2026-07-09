@@ -131,3 +131,15 @@ export function resolveClaimsLineProfile(code?: string | null): ClaimsLineProfil
   const c = (code ?? '').trim().toUpperCase()
   return (c in PROFILES ? PROFILES[c as ClaimsLineCode] : DEFAULT_CLAIMS_LINE_PROFILE)
 }
+
+/** Map an ISO base-form number to its claims line code by prefix — HO* → HO, PP* → PA,
+ *  CG* → GL. Returns '' for an unrecognised prefix (the copilot then handles it generically).
+ *  A small, deterministic classifier the seed uses to tag its specimen forms and that identify
+ *  can fall back on. Kept here so the form-number→line mapping lives in one place. */
+export function claimsLineCodeFromFormNumber(formNumber?: string | null): ClaimsLineCode | '' {
+  const prefix = (formNumber ?? '').trim().toUpperCase().split(/\s+/)[0]
+  if (prefix === 'HO') return 'HO'
+  if (prefix === 'PP') return 'PA'
+  if (prefix === 'CG') return 'GL'
+  return ''
+}

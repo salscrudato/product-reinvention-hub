@@ -12,7 +12,15 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { createHash } from 'crypto'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, MODEL_FAST, ANTHROPIC_API_KEY, requireRole, CACHE_1H } from './runtime'
-import { verifyItems, sanitizeNewsUrl, extractOgImage } from '@pf/shared'
+import {
+  verifyItems,
+  sanitizeNewsUrl,
+  extractOgImage,
+  extractInlineImage,
+  resolveImageUrl,
+  deterministicColor,
+  type NewsImage,
+} from '@pf/shared'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 import type { UsageAccum } from './telemetry'
 
@@ -20,14 +28,13 @@ const DEFAULT_INSTRUCTION =
   'Recent U.S. homeowners insurance rate filings, regulatory changes, and competitor HO-3 product launches.'
 
 interface NewsItem {
-  url:       string
-  source:    string
-  title:     string
-  summary:   string
-  bullets:   string[]    // 3 structured PM takeaways (What/Who/Why); 2 when only 2 substantiated
-  imageUrl?: string      // absolute https hero image, populated by enrichWithImage post-verify
-  imageAlt?: string      // alt text for the hero image
-  tags:      string[]
+  url:     string
+  source:  string
+  title:   string
+  summary: string
+  bullets: string[]    // 3 structured PM takeaways (What/Who/Why); 2 when only 2 substantiated
+  image?:  NewsImage   // structured image metadata, resolved at scout time
+  tags:    string[]
 }
 
 /** Minimal product projection — only what the matching + prompt logic needs. */
@@ -214,32 +221,80 @@ async function headIsAlive(url: string): Promise<boolean> {
   }
 }
 
-/** Best-effort hero-image extraction: fetches article HTML (first 10 KB), parses
- *  og:image / twitter:image, validates URL shape + liveness, then attaches imageUrl
- *  and imageAlt. Returns the item unchanged on any error or timeout. Never throws. */
-async function enrichWithImage(item: NewsItem): Promise<NewsItem> {
+/** Resolve a NewsImage for an article via layered fallback (no AI, deterministic parse):
+ *  1. Fetch the article HTML (first 16 KB, 5s timeout, realistic User-Agent).
+ *  2. Try og:image, then twitter:image, then first plausible inline <img>.
+ *  3. Resolve relative URLs against the article origin.
+ *  4. Best-effort validate with a HEAD request (content-type starts with image/).
+ *  5. If nothing usable is found, set kind:'generated' with a deterministic color.
+ *  Never throws; tolerates timeouts, bot-blocks, and broken pages. */
+async function resolveImage(articleUrl: string, title: string, source: string): Promise<NewsImage> {
   const ctrl  = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 4000)
+  const timer = setTimeout(() => ctrl.abort(), 5000)
+
   try {
-    const res = await fetch(item.url, { method: 'GET', redirect: 'follow', signal: ctrl.signal })
-    if (!res.ok) return item
-    const html      = (await res.text()).slice(0, 10240)
-    const candidate = extractOgImage(html)
-    if (!candidate) return item
-    const validUrl  = sanitizeNewsUrl(candidate)
-    if (!validUrl) return item
-    const live = await headIsAlive(validUrl)
-    if (!live) return item
-    return { ...item, imageUrl: validUrl, imageAlt: item.title }
+    // Realistic User-Agent reduces bot-blocking (many sites serve a different page to curl-like UAs).
+    const res = await fetch(articleUrl, {
+      method:  'GET',
+      redirect: 'follow',
+      signal:   ctrl.signal,
+      headers:  { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' },
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+    const html = (await res.text()).slice(0, 16384)   // first 16 KB is sufficient for meta + hero
+
+    // Layered fallback: og:image → twitter:image → first plausible inline img.
+    // extractOgImage checks og:image first, then twitter:image, so we inspect HTML to determine kind.
+    const ogCandidate     = extractOgImage(html)
+    const inlineCandidate = ogCandidate ? null : extractInlineImage(html)
+    const rawCandidate    = ogCandidate ?? inlineCandidate
+    if (!rawCandidate) throw new Error('no image candidate found')
+
+    // Determine the kind based on what tag was found.
+    let kind: 'og' | 'twitter' | 'inline' = 'inline'
+    if (ogCandidate) {
+      // Check which tag produced the candidate: og:image takes priority in extractOgImage.
+      const hasOg      = /<meta\s+[^>]*property=["']og:image["']/i.test(html)
+      const hasTwitter = /<meta\s+[^>]*name=["']twitter:image["']/i.test(html)
+      kind = hasOg ? 'og' : hasTwitter ? 'twitter' : 'og'
+    }
+
+    // Resolve relative URLs against the article origin.
+    const absoluteUrl = resolveImageUrl(rawCandidate, articleUrl)
+    if (!absoluteUrl) throw new Error('failed to resolve image URL')
+
+    // Validate shape (sanitizeNewsUrl rejects non-http schemes, localhost, etc.).
+    const validUrl = sanitizeNewsUrl(absoluteUrl)
+    if (!validUrl) throw new Error('image URL failed sanitize')
+
+    // Best-effort liveness + content-type check (HEAD request, short timeout).
+    const headCtrl  = new AbortController()
+    const headTimer = setTimeout(() => headCtrl.abort(), 3000)
+    try {
+      const headRes = await fetch(validUrl, { method: 'HEAD', redirect: 'follow', signal: headCtrl.signal })
+      if (!headRes.ok) throw new Error(`HEAD ${headRes.status}`)
+      const contentType = headRes.headers.get('content-type')?.toLowerCase() ?? ''
+      if (!contentType.startsWith('image/')) throw new Error('not an image content-type')
+    } finally {
+      clearTimeout(headTimer)
+    }
+
+    // Success: return the resolved image with its kind.
+    return { url: validUrl, kind, alt: title }
+
   } catch {
-    return item
+    // Any failure (timeout, bot-block, 404, bad parse) → generated fallback.
+    // Deterministic color seeded from the source name so the same source always gets the same color.
+    return { kind: 'generated', dominantColor: deterministicColor(source), alt: title }
   } finally {
     clearTimeout(timer)
   }
 }
 
 /** Store items, deduped by a hash of the URL. Returns how many were newly stored.
- *  relatedProductIds is populated on each new item via LOB + state matching. */
+ *  relatedProductIds is populated on each new item via LOB + state matching.
+ *  If a doc already exists but has no image, upgrade it in place (no duplicate). */
 async function storeItems(items: NewsItem[], products: ProductInfo[]): Promise<number> {
   const db = getFirestore()
   let stored = 0
@@ -247,18 +302,30 @@ async function storeItems(items: NewsItem[], products: ProductInfo[]): Promise<n
     const urlHash = createHash('sha1').update(it.url).digest('hex')
     const ref     = db.doc(`news/${urlHash}`)
     const relatedProductIds = matchToProductIds(it, products)   // pure; safe to compute before the tx
-    // B4: dedup as an atomic check-and-set. The previous get-then-set could let two concurrent
-    // runs (a manual refresh racing the nightly agent) both see "not present" and both write —
-    // the transactional read+write closes that window (a duplicate simply no-ops).
+
+    // Dedup + in-place image upgrade: if the doc exists but has no image field, upgrade it.
     const created = await db.runTransaction(async (tx) => {
-      if ((await tx.get(ref)).exists) return false
-      tx.set(ref, {
-        urlHash, url: it.url, source: it.source, title: it.title, summary: it.summary,
-        bullets: it.bullets,
-        ...(it.imageUrl ? { imageUrl: it.imageUrl, imageAlt: it.imageAlt ?? it.title } : {}),
-        tags: it.tags, relatedProductIds, fetchedAt: Timestamp.now(),
-      })
-      return true
+      const snap = await tx.get(ref)
+      const data = snap.data()
+
+      // Brand-new item → write it.
+      if (!snap.exists) {
+        tx.set(ref, {
+          urlHash, url: it.url, source: it.source, title: it.title, summary: it.summary,
+          bullets: it.bullets,
+          ...(it.image ? { image: it.image } : {}),
+          tags: it.tags, relatedProductIds, fetchedAt: Timestamp.now(),
+        })
+        return true
+      }
+
+      // Existing item without image → upgrade in place.
+      if (it.image && !data?.image) {
+        tx.update(ref, { image: it.image })
+        return false   // not a new item, but we upgraded it
+      }
+
+      return false   // already exists with image, no-op
     })
     if (created) stored++
   }
@@ -282,10 +349,13 @@ export const refreshNews = onCall(
     const t0 = Date.now()
     let ok = true
     try {
-      const items    = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
-      const live     = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
-      const enriched = await Promise.all(live.map(enrichWithImage))  // best-effort hero images, parallel
-      const stored   = await storeItems(enriched, products)
+      const items = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
+      const live  = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
+      // Resolve images in parallel (each tolerates timeouts + bot-blocks).
+      const withImages = await Promise.all(
+        live.map(async (it) => ({ ...it, image: await resolveImage(it.url, it.title, it.source) })),
+      )
+      const stored = await storeItems(withImages, products)
       return { found: items.length, verified: live.length, stored }
     } catch (err) {
       ok = false
@@ -315,12 +385,64 @@ export const nightlyNews = onSchedule(
     let ok = true
     for (const instruction of unique) {
       try {
-        const items    = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
-        const live     = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
-        const enriched = await Promise.all(live.map(enrichWithImage))  // best-effort hero images, parallel
-        await storeItems(enriched, products)
+        const items = await fetchForInstruction(instruction, portfolioCtx, usageAccum)
+        const live  = await verifyItems(items, headIsAlive)   // C2: drop dead / hallucinated source URLs
+        // Resolve images in parallel (each tolerates timeouts + bot-blocks).
+        const withImages = await Promise.all(
+          live.map(async (it) => ({ ...it, image: await resolveImage(it.url, it.title, it.source) })),
+        )
+        await storeItems(withImages, products)
       } catch { ok = false /* one bad instruction shouldn't fail the whole run */ }
     }
     void recordUsage({ feature: 'nightlyNews', model: MODEL_FAST, usage: usageAccum, latencyMs: Date.now() - t0, ok })
+  },
+)
+
+// ─── Backfill (ADMIN-only, idempotent) ────────────────────────────────────────
+
+/** Backfill existing news docs missing the image field.
+ *  Best-effort resolves og:image for each; marks the rest as generated.
+ *  Rate-limited to 5 concurrent fetches; tolerates per-item failures.
+ *  Idempotent: re-running is safe (only touches docs without image). */
+export const backfillNewsImages = onCall(
+  { timeoutSeconds: 540, maxInstances: 1 },
+  async (req) => {
+    if (!req.auth) throw new HttpsError('unauthenticated', 'Sign in to backfill.')
+    requireRole(req.auth, 'ADMIN')   // ADMIN-only guard
+
+    const db   = getFirestore()
+    const snap = await db.collection('news').get()
+    const missing = snap.docs.filter(d => !d.data().image)
+
+    if (missing.length === 0) return { total: snap.size, backfilled: 0, message: 'All items already have images.' }
+
+    let backfilled = 0
+    const CONCURRENCY = 5   // polite rate limit
+
+    // Process in batches of CONCURRENCY to avoid hammering sources.
+    for (let i = 0; i < missing.length; i += CONCURRENCY) {
+      const batch = missing.slice(i, i + CONCURRENCY)
+      await Promise.all(
+        batch.map(async (doc) => {
+          const data = doc.data() as { url?: string; title?: string; source?: string }
+          if (!data.url || !data.title) return   // skip malformed doc
+
+          try {
+            const image = await resolveImage(data.url, data.title, data.source ?? 'Unknown')
+            await doc.ref.update({ image })
+            backfilled++
+          } catch (err) {
+            console.warn(`[backfillNewsImages] failed to resolve image for ${doc.id}:`, err)
+            // Tolerate per-item failures; mark as generated on any error.
+            await doc.ref.update({
+              image: { kind: 'generated', dominantColor: deterministicColor(data.source ?? 'Unknown'), alt: data.title },
+            })
+            backfilled++
+          }
+        }),
+      )
+    }
+
+    return { total: snap.size, missing: missing.length, backfilled }
   },
 )

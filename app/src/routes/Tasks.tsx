@@ -27,7 +27,7 @@ import { TaskCard, CompletedRow } from '../components/tasks/gtm/TaskCard'
 import { ProjectDialog } from '../components/tasks/gtm/ProjectDialog'
 import { SeedProcessDialog } from '../components/tasks/gtm/SeedProcessDialog'
 import { AdhocTaskDialog } from '../components/tasks/gtm/AdhocTaskDialog'
-import { EditTaskDialog } from '../components/tasks/gtm/EditTaskDialog'
+import { TaskDetailDrawer } from '../components/tasks/gtm/TaskDetailDrawer'
 
 type ProductDoc = Product & { id: string }
 type Dialog = 'project' | 'seed' | 'task' | null
@@ -49,7 +49,7 @@ export default function Tasks() {
   const [products, setProducts] = useState<ProductDoc[]>([])
   const [currentId, setCurrentId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<Dialog>(null)
-  const [editFor, setEditFor] = useState<TaskDoc | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [completedOpen, setCompletedOpen] = useState(true)
   const [params, setParams] = useSearchParams()
 
@@ -88,6 +88,9 @@ export default function Tasks() {
   function onProjectCreated(id: string) { switchProject(id); setDialog('seed') }
 
   const current = projects?.find(p => p.id === currentId) ?? null
+  // The task whose detail slide-over is open — resolved LIVE from the subscription so the
+  // panel always edits against the freshest revision (and closes if the task disappears).
+  const detailTask = detailId ? (tasks ?? []).find(t => t.id === detailId) ?? null : null
   const nowMs = startOfTodayMs()
   const today = todayISO()
 
@@ -312,7 +315,7 @@ export default function Tasks() {
                   </div>
                   <div className="flex flex-col gap-2 px-1.5 pb-1.5">
                     {items.length > 0
-                      ? items.map(t => <TaskCard key={t.id} task={t} canEdit={canEdit} todayIso={today} onToggle={toggleDone} onEdit={setEditFor} />)
+                      ? items.map(t => <TaskCard key={t.id} task={t} canEdit={canEdit} todayIso={today} onToggle={toggleDone} onOpen={t => setDetailId(t.id)} />)
                       : <div className="text-xs text-faint text-center italic py-4">Nothing here</div>}
                   </div>
                 </section>
@@ -334,7 +337,7 @@ export default function Tasks() {
             {completedOpen && (
               <div className="flex flex-col gap-1.5 mt-3">
                 {completedRows.length > 0
-                  ? completedRows.map(t => <CompletedRow key={t.id} task={t} canEdit={canEdit} onToggle={toggleDone} />)
+                  ? completedRows.map(t => <CompletedRow key={t.id} task={t} canEdit={canEdit} onToggle={toggleDone} onOpen={t => setDetailId(t.id)} />)
                   : <p className="text-[12.5px] text-faint italic px-0.5">No completed tasks yet. Check off a card above and it will move here.</p>}
               </div>
             )}
@@ -353,8 +356,11 @@ export default function Tasks() {
       {dialog === 'task' && canEdit && actor && (
         <AdhocTaskDialog project={current} actor={actor} onClose={() => setDialog(null)} />
       )}
-      {editFor && canEdit && actor && (
-        <EditTaskDialog task={editFor} actor={actor} onClose={() => setEditFor(null)} />
+      {/* Task-detail slide-over — keyed by task id so switching tasks remounts with a fresh
+          edit baseline. Opens for every role; VIEWER sees the identical panel read-only. */}
+      {detailTask && (
+        <TaskDetailDrawer key={detailTask.id} task={detailTask} project={current}
+          canEdit={canEdit} actor={actor} onClose={() => setDetailId(null)} />
       )}
     </div>
   )

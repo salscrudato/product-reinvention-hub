@@ -15,6 +15,7 @@ import { BaseFormsLibrary, type BaseForm } from '../components/claims/BaseFormsL
 import { DeterminationCard, type Determination } from '../components/claims/DeterminationCard'
 import { shouldRenderDetermination } from '../lib/claims/determination'
 import { assistantBubbleContent, EMPTY_TURN_FALLBACK } from '../lib/claims/bubble'
+import { isFormAnalyzable } from '../lib/claims/baseForm'
 import { RefChip } from '../components/ui'
 import { IconCheck, IconSpinner, IconShield, IconInfo, IconWarning } from '../components/ui/icons'
 
@@ -198,7 +199,7 @@ export default function Claims() {
     }
   }, [streaming]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const composerReady = !!selectedForm && selectedForm.status === 'READY' && !!selectedForm.storagePath?.trim()
+  const composerReady = isFormAnalyzable(selectedForm)
 
   async function ask(text: string) {
     const question = text.trim()
@@ -395,11 +396,13 @@ export default function Claims() {
             placeholder={
               !selectedForm ? 'Select a base form on the left to begin'
               : selectedForm.status === 'PROCESSING' ? 'Reading the form…'
+              : selectedForm.status === 'NEEDS_REVIEW' ? "This form couldn't be identified — an editor needs to review it before analysis"
               : !selectedForm.storagePath?.trim() ? 'This form has no stored document — please remove and re-upload it'
               : 'Describe a loss — e.g. "a pipe burst and flooded the kitchen"…'
             }
             hint={
               !selectedForm ? 'Select a base form to start a coverage conversation'
+              : selectedForm.status === 'NEEDS_REVIEW' ? "We couldn't read this form's number or line, so analysis is disabled. An editor should remove it and re-upload a clearer copy."
               : !selectedForm.storagePath?.trim() ? 'The PDF for this form is missing — remove the card and upload the form again'
               : 'Grounded in the selected form — every answer cites its source'
             }

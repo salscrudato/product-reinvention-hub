@@ -8,6 +8,7 @@ import {
   resolveClaimsLineProfile,
   DEFAULT_CLAIMS_LINE_PROFILE,
   CLAIMS_LINE_PROFILES,
+  claimsLineCodeFromFormNumber,
 } from './lineProfiles'
 
 describe('resolveClaimsLineProfile', () => {
@@ -73,5 +74,25 @@ describe('GL parity — General Liability is briefed as fully as Homeowners', ()
     expect(gl.briefing.toLowerCase()).not.toContain('open-peril')
     expect(ho.briefing.toLowerCase()).toContain('open-peril')
     expect(gl.displayName).toBe('General Liability')
+  })
+})
+
+describe('claimsLineCodeFromFormNumber', () => {
+  it('maps ISO form-number prefixes to their claims line code', () => {
+    expect(claimsLineCodeFromFormNumber('HO 00 03')).toBe('HO')
+    expect(claimsLineCodeFromFormNumber('PP 00 01')).toBe('PA')
+    expect(claimsLineCodeFromFormNumber('CG 00 01')).toBe('GL')  // the seeded GL specimen tags as GL
+  })
+
+  it('is case/space tolerant', () => {
+    expect(claimsLineCodeFromFormNumber('  cg 00 01 ')).toBe('GL')
+    expect(claimsLineCodeFromFormNumber('ho\t04 95')).toBe('HO')
+  })
+
+  it('returns empty for an unrecognised or missing prefix (handled generically)', () => {
+    expect(claimsLineCodeFromFormNumber('BP 00 03')).toBe('')
+    expect(claimsLineCodeFromFormNumber('')).toBe('')
+    expect(claimsLineCodeFromFormNumber(null)).toBe('')
+    expect(claimsLineCodeFromFormNumber(undefined)).toBe('')
   })
 })
