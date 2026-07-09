@@ -24,6 +24,10 @@ export interface Determination {
   openItems?:  string[]
   citations?:  string[]
   formNumber?: string
+  // PM coverage-QA signal, present only for NOT_ADDRESSED / PARTIAL: where the product/form is
+  // SILENT or AMBIGUOUS on this scenario. `sources` are the specific silent/ambiguous forms/
+  // rules (refIds / form numbers), catalog-resolved server-side like any other citation.
+  coverageGap?: { note: string; sources?: string[] }
   // Set by the SERVER when one or more cited refIds/form numbers did not resolve against the
   // live catalogue. The server already downgrades such a determination to NOT_ADDRESSED; this
   // is the signal the client mirrors — a substantive verdict carrying it is never rendered as

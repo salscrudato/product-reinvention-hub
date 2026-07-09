@@ -74,6 +74,7 @@ export function DeterminationCard({ d }: { d: Determination }) {
   const limits     = d.limits ?? []
   const reasoning  = d.reasoning ?? []
   const openItems  = d.openItems ?? []
+  const gap        = d.coverageGap
 
   return (
     <article
@@ -180,6 +181,27 @@ export function DeterminationCard({ d }: { d: Determination }) {
                   <li key={i} className="text-[12px] text-dim leading-relaxed"><CitedText text={o} /></li>
                 ))}
               </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Coverage gap — the product-QA signal, shown ONLY for the ambiguous verdicts it is
+            meant for (NOT_ADDRESSED / PARTIAL): where this product is silent or ambiguous, with
+            the specific silent/ambiguous forms/rules as chips. */}
+        {(d.verdict === 'NOT_ADDRESSED' || d.verdict === 'PARTIAL') && gap?.note?.trim() && (
+          <div
+            className="flex gap-2.5 rounded-[12px] p-3"
+            style={{ background: 'var(--color-warn-soft)', border: '1px solid var(--color-warn-line)' }}
+          >
+            <IconInfo size={15} className="shrink-0 mt-0.5" style={{ color: 'var(--color-warn)' }} aria-hidden="true" />
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <span className="text-[12px] font-semibold" style={{ color: 'var(--color-warn)' }}>Coverage gap</span>
+              <p className="text-[12px] text-dim leading-relaxed"><CitedText text={gap.note} /></p>
+              {gap.sources && gap.sources.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  {gap.sources.map((s, i) => <RefChip key={i} id={s} />)}
+                </div>
+              )}
             </div>
           </div>
         )}

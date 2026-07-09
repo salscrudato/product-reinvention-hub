@@ -228,3 +228,24 @@ describe('EVAL — General Liability (CG 00 01) determination scenarios', () => 
     expect(shouldRenderDetermination(d)).toBe(true)
   })
 })
+
+// ─── EVAL: coverage-gap surfacing (PM product-QA) ─────────────────────────────
+// A scenario the product does not clearly cover surfaces a cited "coverage gap" note that
+// names the silent/ambiguous form — grounded, not invented. NOT_ADDRESSED renders as the
+// neutral card; the gap note tells a product manager exactly where their product is unclear.
+describe('EVAL — coverage-gap surfacing on NOT_ADDRESSED', () => {
+  it('a NOT_ADDRESSED determination carries a cited coverage gap pointing at the silent form', () => {
+    const d: Determination = {
+      verdict: 'NOT_ADDRESSED',
+      summary: 'The base Homeowners form does not address flood / surface water.',
+      formNumber: 'HO 00 03',
+      coverages: [], limits: [], reasoning: [],
+      coverageGap: {
+        note: 'The base form is silent on flood / rising surface water and no endorsement in the product grants it [HO 00 03].',
+        sources: ['HO 00 03'],
+      },
+    }
+    expect(d.coverageGap?.sources).toContain('HO 00 03')
+    expect(shouldRenderDetermination(d)).toBe(true)   // NOT_ADDRESSED renders the neutral card + gap
+  })
+})

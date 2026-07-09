@@ -81,6 +81,7 @@ function determinationToText(d: Determination): string {
     lim && `Limits & deductibles: ${lim}`,
     d.reasoning.length ? `Reasoning: ${d.reasoning.join(' ')}` : '',
     d.openItems?.length ? `Not determined by the form: ${d.openItems.join('; ')}` : '',
+    d.coverageGap?.note ? `Coverage gap: ${d.coverageGap.note}${d.coverageGap.sources?.length ? ` [${d.coverageGap.sources.join('] [')}]` : ''}` : '',
   ].filter(Boolean).join('\n')
 }
 

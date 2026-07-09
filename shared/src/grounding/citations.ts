@@ -83,11 +83,12 @@ export function findUnverifiedCitations(
 
 /** The citation-bearing subset of a coverage determination (structural — no platform types). */
 export interface DeterminationLike {
-  citations?:  unknown
-  coverages?:  unknown
-  exclusions?: unknown
-  limits?:     unknown
-  reasoning?:  unknown
+  citations?:   unknown
+  coverages?:   unknown
+  exclusions?:  unknown
+  limits?:      unknown
+  reasoning?:   unknown
+  coverageGap?: unknown   // { note?: string; sources?: string[] } — the PM coverage-gap note
 }
 
 /** Every candidate citation token a determination points at: explicit citations[], each
@@ -104,6 +105,13 @@ export function collectDeterminationCitationTokens(d: DeterminationLike): string
   for (const e of arr(d.exclusions)) { const o = e as Record<string, unknown>; const r = str(o.refId); const f = str(o.formNumber); if (r) out.push(r); if (f) out.push(f) }
   for (const l of arr(d.limits))     { const o = l as Record<string, unknown>; const s = str(o.source); if (s) out.push(s) }
   for (const r of arr(d.reasoning))  out.push(...extractBracketCitations(str(r)))
+  // The PM coverage-gap note: its named silent/ambiguous sources + any [bracketed] cite in the
+  // note. A fabricated gap source must be caught like any other cited reference.
+  const gap = (d.coverageGap && typeof d.coverageGap === 'object') ? d.coverageGap as Record<string, unknown> : null
+  if (gap) {
+    for (const s of arr(gap.sources)) { const v = str(s); if (v) out.push(v) }
+    out.push(...extractBracketCitations(str(gap.note)))
+  }
   return out
 }
 

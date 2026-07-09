@@ -47,6 +47,12 @@ describe('registry shape', () => {
     expect(DEFAULT_CLAIMS_LINE_PROFILE.scenarios).toHaveLength(0)
     expect(DEFAULT_CLAIMS_LINE_PROFILE.briefing.toLowerCase()).toContain('form')
   })
+
+  it('each line offers a gap-probing scenario that stress-tests an exclusion (PM coverage QA)', () => {
+    expect(resolveClaimsLineProfile('HO').scenarios.join(' ').toLowerCase()).toContain('flood')
+    expect(resolveClaimsLineProfile('PA').scenarios.join(' ').toLowerCase()).toContain('mechanical breakdown')
+    expect(resolveClaimsLineProfile('GL').scenarios.join(' ').toLowerCase()).toContain('pollut')
+  })
 })
 
 describe('GL parity — General Liability is briefed as fully as Homeowners', () => {

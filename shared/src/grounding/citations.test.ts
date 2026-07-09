@@ -102,4 +102,13 @@ describe('findUnverifiedDeterminationCitations', () => {
     const glBad = { coverages: [{ name: 'x', refId: 'GL.COV.999', formNumber: 'CG 00 01' }] }
     expect(findUnverifiedDeterminationCitations(glBad, knownRefIds, knownForms)).toEqual(['GL.COV.999'])
   })
+
+  it('resolves a grounded coverage-gap note + sources, and flags a fabricated gap source', () => {
+    // A NOT_ADDRESSED determination whose gap note points at real silent sources passes.
+    const good = { coverageGap: { note: 'The base form is silent on this peril [HO 00 03].', sources: ['HO 00 03', 'HO.RU.006'] } }
+    expect(findUnverifiedDeterminationCitations(good, knownRefIds, knownForms)).toEqual([])
+    // An invented gap source (rule + form) must be caught — a gap note can't cite a phantom.
+    const bad = { coverageGap: { note: 'No endorsement grants it [HO.RU.999].', sources: ['HO.RU.999', 'ZZ 00 00'] } }
+    expect(findUnverifiedDeterminationCitations(bad, knownRefIds, knownForms)).toEqual(['HO.RU.999', 'ZZ 00 00'])
+  })
 })

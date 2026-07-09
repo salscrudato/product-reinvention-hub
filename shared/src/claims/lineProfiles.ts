@@ -45,6 +45,7 @@ const HO_PROFILE: ClaimsLineProfile = {
     'A tree fell on the roof during a windstorm',
     'A guest slipped on the icy front steps and was injured',
     'Jewelry was stolen during a break-in',
+    'Rising floodwater from a storm surge entered the basement', // stress-tests the flood exclusion
   ],
 }
 
@@ -67,6 +68,7 @@ const PA_PROFILE: ClaimsLineProfile = {
     'A hailstorm dented the hood and roof',
     'The car was stolen from a parking lot',
     'A deer ran into the car on the highway',
+    'The engine failed from a mechanical breakdown', // stress-tests the wear/mechanical-breakdown exclusion
   ],
 }
 
@@ -92,8 +94,9 @@ const GL_PROFILE: ClaimsLineProfile = {
   scenarios: [
     'A customer slipped and fell in the store aisle',
     'A product we manufactured injured a consumer',
-    'Faulty work we completed damaged a client’s property',
+    'Faulty work we completed damaged a client’s property', // stress-tests the damage-to-your-work exclusion
     'A competitor says our advertisement libeled them',
+    'A pollutant we released at a job site injured neighbors', // stress-tests the pollution exclusion
   ],
 }
 

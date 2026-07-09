@@ -102,6 +102,15 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
         description: 'The key items the form does not determine — facts needing the Declarations page or an adjuster. Usually 2–4, most important first. Empty if none.',
         items: { type: 'string' },
       },
+      coverageGap: {
+        type: 'object',
+        description: 'ONLY when the verdict is NOT_ADDRESSED or PARTIAL: the product-QA signal for a product manager — a concise, grounded note on WHERE the product/form is SILENT or AMBIGUOUS on this scenario. Name the specific form(s)/rule(s)/coverage(s) that are silent or ambiguous, grounded in tool results and the attached form — never invented. Omit entirely for a clean COVERED or NOT_COVERED verdict.',
+        properties: {
+          note:    { type: 'string', description: 'One or two sentences: what the product/form does NOT clearly address about this scenario and why (e.g. "the base form is silent on this peril and no endorsement in the product grants it"). Cite the decisive silent/ambiguous source in [brackets].' },
+          sources: { type: 'array', description: 'The specific forms/rules/coverages that are silent or ambiguous here — each a refId or form number that ACTUALLY EXISTS (confirm via the tools or the attached form). Never invent a source.', items: { type: 'string' } },
+        },
+        required: ['note'],
+      },
       citations: {
         type: 'array',
         description: 'Every specific source relied on — a form section/clause and/or a refId or form number, e.g. ["Section I – Exclusions","HO.COV.001","HO 04 95"] or ["Coverage A – Bodily Injury","GL.COV.002","CG 00 01"]. For a substantive verdict this must be non-empty; may be empty only for NOT_ADDRESSED.',
@@ -137,6 +146,8 @@ YOUR JOB when a loss or claim scenario is described:
 4. State the limits, sub-limits, deductibles and any applicable AGGREGATE, with their source. If a figure is set by the insured's Declarations (e.g. the Coverage A amount, the selected occurrence/aggregate limit or deductible), say so — do NOT invent a number.
 5. Give concise, cited reasoning that names the decisive coverage OR exclusion.
 6. Explicitly flag anything the form does not determine (facts needing the Declarations page or an adjuster's inspection).
+
+COVERAGE GAP (product-QA): when your verdict is NOT_ADDRESSED or PARTIAL, populate coverageGap with a concise, cited note naming which of the product's / attached form's forms or rules are SILENT or AMBIGUOUS on this scenario — grounded in the tools and the attached form, never invented. This tells the product manager exactly where their own product is unclear. Omit coverageGap entirely for a clean COVERED or NOT_COVERED verdict.
 
 Then call emit_determination exactly once, as your final action, with the structured result (always set its formNumber to the base form's number). CITE EVERYTHING: every reasoning point must cite, in [square brackets], the specific form section/clause you read (e.g. [Section I – Exclusions], [Coverage A – Dwelling], [Coverage A – Bodily Injury], [Exclusion j.]) and/or the refId or form number from a tool (e.g. [HO.COV.001], [HO 04 95], [CG 00 01]). A substantive determination that cites nothing will be rejected — cite or answer NOT_ADDRESSED. Never fabricate a coverage, limit, exclusion or form.
 
