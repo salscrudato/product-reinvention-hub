@@ -1,10 +1,13 @@
 // Skeleton — shimmer placeholder for content loading states.
-interface SkeletonProps { className?: string; rounded?: string }
+import type { CSSProperties } from 'react'
 
-export function Skeleton({ className = '', rounded = 'rounded-[8px]' }: SkeletonProps) {
+interface SkeletonProps { className?: string; rounded?: string; style?: CSSProperties }
+
+export function Skeleton({ className = '', rounded = 'rounded-[8px]', style }: SkeletonProps) {
   return (
     <div
       className={`bg-raised animate-pulse ${rounded} ${className}`}
+      style={style}
       aria-hidden="true"
     />
   )
