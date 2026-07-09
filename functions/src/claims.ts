@@ -21,6 +21,7 @@ import { runChatAgent, assistantText, sseCostGate } from './ai'
 import { TOOLS, runTool } from './tools'
 import type { ToolOutput } from './tools'
 import { emptyUsage, addUsage, recordUsage, recordCascade } from './telemetry'
+import { resolveClaimsLineProfile } from '@pf/shared'
 import type { ChunkMetadata } from '@pf/shared'
 import { retrieve } from './retrieval/index'
 import { buildCiteableDocuments, citationsFromConvo, verifyCitations } from './retrieval/citations'
@@ -65,7 +66,7 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
       },
       exclusions: {
         type: 'array',
-        description: 'The specific exclusions, limitations or carve-outs that shaped the verdict — what is NOT covered and why (e.g. the failed pipe/appliance itself, gradual/repeated seepage, mold/fungus conditions, or the decisive Coverage A/B or Section I exclusion). Empty if none are relevant. Cite each in source (a form section, refId or form number).',
+        description: 'The specific exclusions, limitations or carve-outs that shaped the verdict — what is NOT covered and why (e.g. for property: the failed pipe/appliance itself, gradual/repeated seepage, or mold/fungus; for liability: an occurrence barred by the contractual-liability, pollution, auto, or damage-to-the-insured\'s-own-product/work exclusion). Empty if none are relevant. Cite each in source (a form section, refId or form number).',
         items: {
           type: 'object',
           properties: {
@@ -83,7 +84,7 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
         items: {
           type: 'object',
           properties: {
-            label:  { type: 'string', description: 'What the figure is, e.g. "All-peril deductible" or "Water back-up sub-limit".' },
+            label:  { type: 'string', description: 'What the figure is, e.g. "All-peril deductible", "Water back-up sub-limit", "Each-occurrence limit" or "General Aggregate".' },
             value:  { type: 'string', description: 'The figure, e.g. "$1,000", "10% of Coverage A", or "Per the Declarations".' },
             source: { type: 'string', description: 'A single source it comes from: one refId (HO.LD.003), one form number, or "Declarations".' },
             note:   { type: 'string', description: 'Optional caveat, e.g. "coastal states only; must be ≥ the all-peril deductible".' },
@@ -115,26 +116,29 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
 const CLAIMS_TOOLS: Anthropic.Tool[] = [...TOOLS, EMIT_DETERMINATION_TOOL]
 
 // Claims-specific context layered on top of the house grounding rules (SYSTEM_PROMPT).
-// Line-agnostic: the ATTACHED form is authoritative and tells the model the line, so the
-// same copilot works for a Homeowners HO-3 or an ISO Personal Auto Policy (PAP PP 00 01).
-// The per-line framing below is applied to whichever line the attached form belongs to.
-const CLAIMS_SYSTEM = `You are a senior P&C claims coverage analyst. Attached to this conversation is the ACTUAL base coverage form the policy is written on — read ITS language (insuring agreement, the coverages and their triggers/perils, exclusions, conditions and definitions) as the PRIMARY authority. The form itself identifies the line: an ISO-style Homeowners form (e.g. HO 00 03) or an ISO Personal Auto Policy form (e.g. PP 00 01).
+// FORM-DRIVEN and line-agnostic: the ATTACHED form is authoritative and tells the model the
+// line, so the same copilot works for a Homeowners HO-3, an ISO Personal Auto Policy, a
+// Commercial General Liability form, or any other P&C coverage form. This prompt gives the
+// GENERAL framework for reading any coverage form; a per-line briefing (from the shared
+// claims line-profile registry) is appended as volatile context based on the detected line.
+const CLAIMS_SYSTEM = `You are a senior P&C claims coverage analyst. Attached to this conversation is the ACTUAL base coverage form the policy is written on — read ITS language (insuring agreement, the coverages and their triggers/perils, exclusions, conditions and definitions) as the PRIMARY authority. The form self-identifies its line and edition (e.g. an ISO Homeowners, Personal Auto, or Commercial General Liability form, or any other P&C coverage form). Determine the line FROM THE FORM, and never assume a line the form does not state.
 
-RESOLVE THE RIGHT PRODUCT. The portfolio holds two products: a Personal Home Policy (ISO Homeowners HO-3 style) and a Personal Auto Policy (ISO PAP PP 00 01 style). Use search_entities to find the product that MATCHES the attached form's line, then pass its productId to get_rules and get_product_tree so you never mix lines. get_coverage, get_ld_table and get_dictionary take a refId and need no productId — prefer them.
+RESOLVE THE RIGHT PRODUCT. Use search_entities to find a product in the catalog whose line MATCHES the attached form; when one matches, pass its productId to get_rules and get_product_tree so you never mix lines. get_coverage, get_ld_table and get_dictionary take a refId and need no productId — prefer them. If NO catalog product matches the form's line, ground your analysis in the ATTACHED FORM itself (it is the authority) and say plainly when structured product data isn't available — never borrow another line's coverages, limits or rules to fill the gap.
+
+DETERMINE THE LINE'S SHAPE FROM THE FORM (a LINE BRIEFING for the detected line may be appended below as context — apply it ONLY insofar as it matches the attached form; the FORM always wins):
+• Coverage trigger — for property, risk of direct physical loss on an open- or named-peril basis; for liability, whether the form is OCCURRENCE-triggered or CLAIMS-MADE. The form states which; never guess.
+• Limit structure — single limits, OR per-occurrence limits capped by one or more AGGREGATES (e.g. a General Aggregate and a separate Products-Completed-Operations Aggregate) that reset each policy period.
+• The form's OWN exclusions — apply the exclusion families the attached form actually contains; never import another line's exclusions.
 
 YOUR JOB when a loss or claim scenario is described:
-1. Decide COVERED, NOT_COVERED, PARTIAL (depends on a policy option or fact), or NOT_ADDRESSED (the attached form does not address this scenario — it is silent, or the scenario is outside what this line/form covers). Use NOT_ADDRESSED honestly instead of forcing a verdict or inventing coverage.
+1. Decide COVERED, NOT_COVERED, PARTIAL (depends on a policy option or fact), or NOT_ADDRESSED (the attached form does not address this scenario — it is silent, or the scenario is outside what this line/form covers). Use NOT_ADDRESSED honestly instead of forcing a verdict or inventing coverage. Never apply one line's logic to another line's form.
 2. Identify the exact coverages and endorsements that apply, each with a concise definition drawn from the form.
-3. Name the specific exclusions and carve-outs that shape the verdict — what is NOT covered and why (e.g. the failed pipe/appliance itself, gradual or repeated seepage, mold/fungus, or the decisive Coverage A/B or Section I exclusion). Populate the determination's exclusions with these, each cited; note when a plausible exclusion does NOT apply.
-4. State the limits, sub-limits and deductibles that apply, with their source. If a figure is set by the insured's Declarations (e.g. the Coverage A amount, the selected occurrence limit or deductible), say so — do NOT invent a number.
+3. Name the specific exclusions and carve-outs that shape the verdict — what is NOT covered and why (e.g. for property, the failed pipe/appliance itself, gradual or repeated seepage, or mold/fungus; for liability, an occurrence barred by the contractual-liability, pollution, auto, or damage-to-the-insured's-own-product/work exclusions). Populate the determination's exclusions with these, each cited; note when a plausible exclusion does NOT apply.
+4. State the limits, sub-limits, deductibles and any applicable AGGREGATE, with their source. If a figure is set by the insured's Declarations (e.g. the Coverage A amount, the selected occurrence/aggregate limit or deductible), say so — do NOT invent a number.
 5. Give concise, cited reasoning that names the decisive coverage OR exclusion.
 6. Explicitly flag anything the form does not determine (facts needing the Declarations page or an adjuster's inspection).
 
-Then call emit_determination exactly once, as your final action, with the structured result (always set its formNumber to the base form's number). CITE EVERYTHING: every reasoning point must cite, in [square brackets], the specific form section/clause you read (e.g. [Section I – Exclusions], [Coverage A – Dwelling], [Coverage A – Bodily Injury]) and/or the refId or form number from a tool (e.g. [HO.COV.001], [HO 04 95], [GL.COV.002], [CG 00 01]). A substantive determination that cites nothing will be rejected — cite or answer NOT_ADDRESSED. Never fabricate a coverage, limit, exclusion or form.
-
-LINE FRAMING — apply the one matching the attached form:
-• Homeowners (HO-3 / PP 00 03): first-party property + liability. Coverages A & B (dwelling / other structures) are insured against risk of direct physical loss on an OPEN-peril basis subject to the Section I exclusions; Coverage C (personal property) on the NAMED perils; plus D–F (loss of use, personal liability, medical payments). Sudden & accidental water discharge is covered; constant/repeated seepage, gradual leakage, wear & tear and mold/fungus/wet rot are excluded; water backing up through sewers/drains or a sump is excluded under the base form unless the Water Back-Up endorsement (HO 04 95) is on the policy; flood/surface water is excluded.
-• Personal Auto (PP 00 01): the ISO Personal Auto Policy (PAP). Four parts: A — Liability (bodily injury and property damage the insured is legally obligated to pay to others); B — Medical Payments (reasonable medical expenses for the insured regardless of fault); C — Uninsured/Underinsured Motorists; D — Coverage for Damage to Your Auto (Collision on an actual-cash-value basis; Other Than Collision / Comprehensive for theft, weather, animal strikes, etc.). Subject to the standard exclusions (wear & tear, mechanical breakdown, nuclear, intentional damage, racing, business use, resident-relative exclusions). A non-vehicle bodily injury that is NOT auto-related is NOT a PAP subject — answer NOT_ADDRESSED. Confirm the specific Part (A/B/C/D) that applies before calling emit_determination.
+Then call emit_determination exactly once, as your final action, with the structured result (always set its formNumber to the base form's number). CITE EVERYTHING: every reasoning point must cite, in [square brackets], the specific form section/clause you read (e.g. [Section I – Exclusions], [Coverage A – Dwelling], [Coverage A – Bodily Injury], [Exclusion j.]) and/or the refId or form number from a tool (e.g. [HO.COV.001], [HO 04 95], [CG 00 01]). A substantive determination that cites nothing will be rejected — cite or answer NOT_ADDRESSED. Never fabricate a coverage, limit, exclusion or form.
 
 For questions that are NOT a loss determination (a definition, a limit/deductible lookup, a follow-up that refines a prior scenario), answer concisely in cited prose and do NOT call emit_determination — unless the refinement changes a prior verdict, in which case re-issue the determination.
 
@@ -186,13 +190,6 @@ async function fetchFormContent(storagePath: string, mediaType: string): Promise
     return { formBase64: (buf as Buffer).toString('base64'), mediaType }
   }
   return { formText: (buf as Buffer).toString('utf-8'), mediaType }
-}
-
-// Human labels for the detected line, used to nudge the model toward the right product.
-const LINE_LABELS: Record<string, string> = {
-  HO: 'an ISO Homeowners form',
-  GL: 'a Commercial General Liability form',
-  PA: 'an ISO Personal Auto Policy form',
 }
 
 export const analyzeClaim = onRequest(
@@ -315,15 +312,18 @@ export const analyzeClaim = onRequest(
         return runTool(name, input)
       }
 
-      // The detected line is a hint only — the attached form remains authoritative.
-      const lob = (body.lob ?? '').toUpperCase()
-      const lobHint = LINE_LABELS[lob]
-        ? `The attached form has been identified as ${LINE_LABELS[lob]} — analyze on that line and resolve the matching product.`
-        : ''
+      // The detected line is a HINT only — the attached form remains authoritative. Resolve
+      // the claims line profile (a recognised line, else the generic form-driven fallback) and
+      // append its briefing as VOLATILE context (never cached). The briefing tells the model to
+      // apply it only insofar as it matches the attached form, so a wrong/empty hint can't steer.
+      const profile = resolveClaimsLineProfile(body.lob)
+      const lineBriefing = profile.code === 'GENERIC'
+        ? `LINE BRIEFING — the attached form's line was not recognised on upload; treat the attached form as the sole authority. ${profile.briefing}`
+        : `LINE BRIEFING — the attached form was identified as ${profile.displayName}; apply this only insofar as it matches the attached form (the form is authoritative). ${profile.briefing}`
 
       const convo = await runChatAgent(anthropic(), messages, res, {
         system:      CLAIMS_SYSTEM,
-        context:     lobHint || undefined,
+        context:     lineBriefing,
         tools:       CLAIMS_TOOLS,
         runTool:     runClaimsTool,
         maxTokens:   2600,

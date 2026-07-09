@@ -150,3 +150,57 @@ describe('EVAL — Personal Auto (PP 00 01) determination scenarios', () => {
     expect(shouldRenderDetermination(d)).toBe(true)
   })
 })
+
+// ─── EVAL: General Liability (CG 00 01) — GL parity with HO ────────────────────
+// The multi-line mandate: a GL loss must render as gracefully as an HO loss. These
+// mirror the HO/PA scenarios but exercise the CGL shape — an OCCURRENCE-triggered
+// Coverage A capped by the Each-Occurrence limit and the General Aggregate, and the
+// completed-operations own-work exclusion — proving a GL determination cites GL forms
+// (CG 00 01) and applies occurrence/aggregate logic while passing the same citation guard.
+
+describe('EVAL — General Liability (CG 00 01) determination scenarios', () => {
+  it('COVERED: customer slip-and-fall bodily injury → Coverage A occurrence, capped by the General Aggregate', () => {
+    const d: Determination = {
+      verdict: 'COVERED',
+      summary: 'A customer’s slip-and-fall injury on the premises is a covered occurrence under Coverage A — Bodily Injury Liability.',
+      formNumber: 'CG 00 01',
+      coverages: [{ name: 'Coverage A — Bodily Injury and Property Damage Liability', formNumber: 'CG 00 01', definition: 'Pays sums the insured is legally obligated to pay as damages for bodily injury caused by an occurrence during the policy period.' }],
+      exclusions: [],
+      limits: [
+        { label: 'Each Occurrence Limit', value: 'Per the Declarations', source: 'CG 00 01', note: 'Caps a single occurrence.' },
+        { label: 'General Aggregate Limit', value: 'Per the Declarations', source: 'CG 00 01', note: 'Caps all Coverage A/B/C loss except products-completed operations; resets each policy period.' },
+      ],
+      reasoning: [
+        'A slip-and-fall causing bodily injury to a third party is an "occurrence" during the policy period covered by Coverage A [Coverage A — Bodily Injury, CG 00 01].',
+        'Payment is subject to the Each-Occurrence limit and erodes the General Aggregate (not the Products-Completed-Operations Aggregate, which is separate) [CG 00 01].',
+      ],
+      citations: ['Coverage A — Bodily Injury', 'CG 00 01'],
+    }
+    // cites a GL form (not HO/PA) and applies occurrence + aggregate logic
+    expect(d.formNumber).toBe('CG 00 01')
+    const cited = [...d.reasoning, ...d.limits.map(l => `${l.label} ${l.note ?? ''}`)].join(' ').toLowerCase()
+    expect(cited).toContain('occurrence')
+    expect(cited).toContain('general aggregate')
+    expect(isDeterminationCited(d)).toBe(true)
+    expect(shouldRenderDetermination(d)).toBe(true)
+  })
+
+  it('NOT_COVERED: faulty completed work damaging the insured’s own work → "damage to your work" exclusion', () => {
+    const d: Determination = {
+      verdict: 'NOT_COVERED',
+      summary: 'Damage to the insured’s own completed work arising out of that work is excluded under the CGL — it is not third-party liability the form insures.',
+      formNumber: 'CG 00 01',
+      coverages: [],
+      exclusions: [{ name: 'Damage to Your Work', formNumber: 'CG 00 01 Coverage A Excl. l.', note: 'Property damage to "your work" arising out of it and included in the products-completed operations hazard is excluded.' }],
+      limits: [],
+      reasoning: [
+        'The CGL is third-party liability; property damage to the insured’s OWN completed work is barred by the "damage to your work" exclusion [Exclusion l., CG 00 01].',
+        'Because the loss is excluded, it does not erode either the General Aggregate or the Products-Completed-Operations Aggregate [CG 00 01].',
+      ],
+      citations: ['Exclusion l. — Damage to Your Work', 'CG 00 01'],
+    }
+    expect(d.formNumber).toBe('CG 00 01')
+    expect(isDeterminationCited(d)).toBe(true)
+    expect(shouldRenderDetermination(d)).toBe(true)
+  })
+})

@@ -6,6 +6,7 @@
 // conversation; VIEWER never sees the upload control. No firebase/* imports here.
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { resolveClaimsLineProfile } from '@pf/shared'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { RefChip, Skeleton, EmptyState } from '../ui'
 import { IconUpload, IconFile, IconSpinner, IconCheck, IconTrash, IconShield } from '../ui/icons'
@@ -26,8 +27,13 @@ export interface BaseForm {
   createdAt?:     unknown
 }
 
-// Full-name tooltip for the compact line chip.
-const LINE_TITLE: Record<string, string> = { HO: 'Homeowners', PA: 'Personal Auto', GL: 'General Liability' }
+// Full-name tooltip for the compact line chip — derived from the shared claims line-profile
+// registry (never a hard-coded list), so a recognised line shows its full name and any other
+// code shows verbatim. Adding a line profile automatically labels its forms here.
+function lineTitle(code: string): string {
+  const p = resolveClaimsLineProfile(code)
+  return p.code === 'GENERIC' ? code : p.displayName
+}
 
 interface Props {
   forms:      BaseForm[]
@@ -179,7 +185,7 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
             compact
             icon={<IconFile size={26} />}
             title="No base forms yet"
-            description={canEdit ? 'Upload a Homeowners or Personal Auto base form to start a coverage conversation.' : 'Ask an editor to upload a base form to start.'}
+            description={canEdit ? 'Upload any P&C base coverage form — Homeowners, General Liability, Personal Auto or another line — to start a coverage conversation.' : 'Ask an editor to upload a base coverage form to start.'}
           />
         ) : (
           forms.map(f => {
@@ -203,7 +209,7 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
                       {f.lob && (
                         <span
                           className="text-[10px] font-medium px-1.5 py-0.5 rounded-[5px] bg-raised text-dim"
-                          title={LINE_TITLE[f.lob] ?? f.lob}
+                          title={lineTitle(f.lob)}
                         >
                           {f.lob}
                         </span>

@@ -6,6 +6,7 @@
 // deterministic DeterminationCard. The browser never calls Anthropic — everything
 // goes through the adapter seam.
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { resolveClaimsLineProfile } from '@pf/shared'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { ChatComposer } from '../components/chat/ChatComposer'
@@ -46,9 +47,13 @@ const TOOL_LABELS: Record<string, string> = {
   emit_determination:'Forming the determination',
 }
 
-// Domain-true examples, per line — they become one-tap starters once a form is selected.
-// Full-name tooltip for the compact line chip in the context header.
-const LINE_TITLE: Record<string, string> = { PH: 'Personal Home', PA: 'Personal Auto' }
+// Full-name tooltip for the compact line chip in the context header — resolved through the
+// shared claims line-profile registry (never a hard-coded per-line list), so HO/PA/GL and any
+// future line label consistently, and an unrecognised code shows verbatim.
+function lineTitle(code: string): string {
+  const p = resolveClaimsLineProfile(code)
+  return p.code === 'GENERIC' ? code : p.displayName
+}
 
 function toMillis(v: unknown): number {
   const o = v as { toDate?: () => Date; seconds?: number } | null
@@ -110,6 +115,10 @@ export default function Claims() {
     () => sortedForms.find(f => f.id === selectedId) ?? null,
     [sortedForms, selectedId],
   )
+  // Line-aware quick scenarios: derived from the selected form's DETECTED line via the shared
+  // claims line-profile registry (generic fallback for an unrecognised line), so the one-tap
+  // starters exercise THIS line's coverage grants/exclusions — never a hard-coded HO-only list.
+  const lineProfile = useMemo(() => resolveClaimsLineProfile(selectedForm?.lob), [selectedForm])
 
   // A new selection starts a fresh conversation (a different policy) — abort any stream
   // still running against the previous form so its tokens can't bleed into the new thread.
@@ -258,7 +267,7 @@ export default function Claims() {
                 {selectedForm.lob && (
                   <span
                     className="text-[10px] font-medium px-1.5 py-0.5 rounded-[5px] bg-raised text-dim shrink-0"
-                    title={LINE_TITLE[selectedForm.lob] ?? selectedForm.lob}
+                    title={lineTitle(selectedForm.lob)}
                   >
                     {selectedForm.lob}
                   </span>
@@ -274,7 +283,7 @@ export default function Claims() {
         {/* aria-live="off" overrides the implicit polite from role="log" to suppress per-token noise */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 pr-1" role="log" aria-live="off" aria-relevant="additions text">
           {messages.length === 0 ? (
-            <Starters />
+            <Starters scenarios={composerReady ? lineProfile.scenarios : []} onPick={ask} />
           ) : (
             <div className="flex flex-col gap-5 py-4">
               {messages.map((m, i) => (
@@ -352,9 +361,11 @@ export default function Claims() {
 }
 
 // ─── Hero shown when no messages yet (before or after form selection) ───────────
-// Animated shield + voice-wave SVG. No chips; the composer is the CTA.
+// Animated shield + voice-wave SVG, plus line-aware one-tap scenario starters once a form is
+// selected. The scenarios are passed in from the selected form's claims line profile, so a GL
+// form offers GL losses and an HO form offers HO losses — never a hard-coded list here.
 
-function Starters() {
+function Starters({ scenarios, onPick }: { scenarios: readonly string[]; onPick: (s: string) => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center gap-7 py-8 select-none">
       {/* Animated shield + voice-wave SVG */}
@@ -401,6 +412,25 @@ function Starters() {
           Speak or type in plain English — every determination cites the exact coverage, limit and exclusion it relied on.
         </p>
       </div>
+
+      {/* Line-aware one-tap starters (only once a form is selected + ready). */}
+      {scenarios.length > 0 && (
+        <div className="flex flex-col items-center gap-2.5">
+          <span className="text-[11px] font-medium uppercase tracking-[.06em] text-faint">Try one of these</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 max-w-md">
+            {scenarios.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => onPick(s)}
+                className="text-[12.5px] text-dim px-3 py-1.5 rounded-full bg-surface hover:bg-hover hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                style={{ border: '1px solid var(--color-border)' }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
