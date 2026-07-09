@@ -71,6 +71,11 @@ export interface BackendAdapter {
     /** Narrow, un-audited vote: arrayUnion the uid into votes.voters and +1 votes.count.
      *  Matches the VIEWER vote-only path in firestore.rules (only `votes` may change). */
     vote(path: string, uid: string): Promise<void>
+    /** Narrow, un-audited owner write to the caller's own `newsPrefs/{uid}` document.
+     *  News is per-user content, not a governed entity, so pins persist WITHOUT the
+     *  mutate() audit/version envelope (and match the owner-only newsPrefs rule). MERGES,
+     *  so a pin update never clobbers the instruction the editor writes to the same doc. */
+    setNewsPins(uid: string, pinnedHashes: string[]): Promise<void>
     /** Rev-checked transaction wrapper for optimistic concurrency. */
     tx<T>(fn: (helpers: { get: BackendAdapter['db']['get'] }) => Promise<T>): Promise<T>
   }

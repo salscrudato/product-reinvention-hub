@@ -37,6 +37,8 @@ export const adapter: BackendAdapter = {
     mutateBatch: (_ms) => notImplemented('db.mutateBatch'),
     // AWS-SWAP: DynamoDB UpdateItem with ADD (votes.voters, votes.count)
     vote: (_path, _uid) => notImplemented('db.vote'),
+    // AWS-SWAP: DynamoDB UpdateItem SET pinnedHashes on newsPrefs/{uid}
+    setNewsPins: (_uid, _hashes) => notImplemented('db.setNewsPins'),
     // AWS-SWAP: DynamoDB TransactGetItems + condition expressions for optimistic lock
     tx: (_fn) => notImplemented('db.tx'),
   },

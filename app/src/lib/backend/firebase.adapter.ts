@@ -428,6 +428,19 @@ export const adapter: BackendAdapter = {
       })
     },
 
+    async setNewsPins(uid: string, pinnedHashes: string[]): Promise<void> {
+      if (bypassActive) throw new Error('Dev admin bypass — pins are not saved (no backend).')
+      // Owner-scoped merge write to newsPrefs/{uid} (matches the owner-only rule). Merges
+      // so the `instruction` the editor writes to the same doc is preserved; no audit/
+      // version envelope — pins are personal UI state, not governed content.
+      // AWS-SWAP: DynamoDB UpdateItem SET pinnedHashes.
+      await setDoc(
+        doc(db, `newsPrefs/${uid}`),
+        { pinnedHashes, updatedAt: serverTimestamp() },
+        { merge: true },
+      )
+    },
+
     async tx<T>(fn: (helpers: { get: BackendAdapter['db']['get'] }) => Promise<T>): Promise<T> {
       // runTransaction gives Firestore-level atomicity; the helpers.get respects the transaction.
       return runTransaction(db, (fsTx) => {
