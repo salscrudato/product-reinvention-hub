@@ -6,9 +6,11 @@
 // conversation; VIEWER never sees the upload control. No firebase/* imports here.
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { resolveClaimsLineProfile } from '@pf/shared'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { statusAfterIdentify, type BaseFormStatus } from '../../lib/claims/baseForm'
 import { RefChip, Skeleton, EmptyState } from '../ui'
-import { IconUpload, IconFile, IconSpinner, IconCheck, IconTrash, IconShield } from '../ui/icons'
+import { IconUpload, IconFile, IconSpinner, IconCheck, IconTrash, IconShield, IconWarning } from '../ui/icons'
 
 export interface BaseForm {
   id:             string
@@ -20,14 +22,19 @@ export interface BaseForm {
   storagePath:    string
   url:            string
   mediaType:      string
-  status:         'PROCESSING' | 'READY'
+  status:         BaseFormStatus   // PROCESSING | READY | NEEDS_REVIEW (unidentified — held from analysis)
   uploadedBy:     string
   uploadedByName: string
   createdAt?:     unknown
 }
 
-// Full-name tooltip for the compact line chip.
-const LINE_TITLE: Record<string, string> = { HO: 'Homeowners', PA: 'Personal Auto', GL: 'General Liability' }
+// Full-name tooltip for the compact line chip — derived from the shared claims line-profile
+// registry (never a hard-coded list), so a recognised line shows its full name and any other
+// code shows verbatim. Adding a line profile automatically labels its forms here.
+function lineTitle(code: string): string {
+  const p = resolveClaimsLineProfile(code)
+  return p.code === 'GENERIC' ? code : p.displayName
+}
 
 interface Props {
   forms:      BaseForm[]
@@ -100,14 +107,17 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
           ? { formBase64: toBase64(buf), mediaType, fileName: file.name }
           : { formText: new TextDecoder().decode(buf), fileName: file.name }
         const meta = await adapter.fns.call<typeof payload, { title: string; formNumber: string; edition: string; lob: string }>('identifyBaseForm', payload)
+        // Honest identification: only a form we could actually identify (a printed form number
+        // OR a recognised line) becomes READY. Neither → NEEDS_REVIEW, not a silent empty READY.
         await adapter.db.mutate({
           op: 'update', path: `baseForms/${id}`,
-          data: { title: meta.title || file.name, formNumber: meta.formNumber || '', edition: meta.edition || '', lob: meta.lob || '', status: 'READY' },
+          data: { title: meta.title || file.name, formNumber: meta.formNumber || '', edition: meta.edition || '', lob: meta.lob || '', status: statusAfterIdentify(meta) },
           entityType: 'baseForm', actor,
         })
       } catch {
-        // Identify is best-effort — the form is still usable; just mark it ready.
-        await adapter.db.mutate({ op: 'update', path: `baseForms/${id}`, data: { status: 'READY' }, entityType: 'baseForm', actor })
+        // Identify failed entirely — we know neither the form number nor the line. Hold it for
+        // review rather than marking it READY: an unidentified form must not be analyzable.
+        await adapter.db.mutate({ op: 'update', path: `baseForms/${id}`, data: { status: 'NEEDS_REVIEW' }, entityType: 'baseForm', actor })
       }
     } catch (err) {
       const msg = err instanceof MutationConflictError ? 'Conflict — please refresh.'
@@ -179,7 +189,7 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
             compact
             icon={<IconFile size={26} />}
             title="No base forms yet"
-            description={canEdit ? 'Upload a Homeowners or Personal Auto base form to start a coverage conversation.' : 'Ask an editor to upload a base form to start.'}
+            description={canEdit ? 'Upload any P&C base coverage form — Homeowners, General Liability, Personal Auto or another line — to start a coverage conversation.' : 'Ask an editor to upload a base coverage form to start.'}
           />
         ) : (
           forms.map(f => {
@@ -203,7 +213,7 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
                       {f.lob && (
                         <span
                           className="text-[10px] font-medium px-1.5 py-0.5 rounded-[5px] bg-raised text-dim"
-                          title={LINE_TITLE[f.lob] ?? f.lob}
+                          title={lineTitle(f.lob)}
                         >
                           {f.lob}
                         </span>
@@ -213,6 +223,8 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
                     <div className="flex items-center gap-1.5 text-[10px] text-faint">
                       {f.status === 'PROCESSING' ? (
                         <span className="inline-flex items-center gap-1 text-accent"><IconSpinner size={10} className="animate-spin" aria-hidden="true" /> Reading form…</span>
+                      ) : f.status === 'NEEDS_REVIEW' ? (
+                        <span className="inline-flex items-center gap-1 text-warn"><IconWarning size={10} aria-hidden="true" /> Needs review</span>
                       ) : (
                         <span className="inline-flex items-center gap-1"><IconCheck size={10} className="text-good" aria-hidden="true" /> Ready</span>
                       )}

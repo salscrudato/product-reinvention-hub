@@ -31,22 +31,18 @@ export function extractBracketCitations(text: string): string[] {
   return [...text.matchAll(/\[([^\]]+)\]/g)].map(m => m[1]!.trim())
 }
 
-/**
- * Return the cited tokens that do NOT resolve against the known catalogue — the
- * fabricated/stale references a grounded answer must never present as fact. `knownRefIds`
- * must be upper-cased by the caller; `knownFormNumbers` must be normalised via
- * normalizeFormNumber. Only refId-shaped and form-number-shaped tokens are checked;
- * anything else (a clause/section/coverage name) is descriptive and returned to no one.
- * Duplicates collapse to a single entry, in first-seen order.
- */
-export function findUnverifiedCitations(
-  text: string,
+/** Core: of a list of candidate citation tokens, return the refId-shaped and form-number-
+ *  shaped ones that do NOT resolve against the known catalogue. Descriptive tokens (a clause,
+ *  section or coverage name) are never checked and never returned. Duplicates collapse to a
+ *  single entry, in first-seen order. Shared by the prose guard and the determination guard. */
+function unverifiedFromTokens(
+  tokens: Iterable<string>,
   knownRefIds: ReadonlySet<string>,
   knownFormNumbers: ReadonlySet<string>,
 ): string[] {
   const unresolved: string[] = []
   const seen = new Set<string>()
-  for (const token of extractBracketCitations(text)) {
+  for (const token of tokens) {
     if (!token || seen.has(token)) continue
     const form = FORM_LEAD_RE.exec(token)
     if (form) {
@@ -60,4 +56,66 @@ export function findUnverifiedCitations(
     }
   }
   return unresolved
+}
+
+/**
+ * Return the cited tokens that do NOT resolve against the known catalogue — the
+ * fabricated/stale references a grounded answer must never present as fact. `knownRefIds`
+ * must be upper-cased by the caller; `knownFormNumbers` must be normalised via
+ * normalizeFormNumber. Only refId-shaped and form-number-shaped tokens are checked;
+ * anything else (a clause/section/coverage name) is descriptive and returned to no one.
+ * Duplicates collapse to a single entry, in first-seen order.
+ */
+export function findUnverifiedCitations(
+  text: string,
+  knownRefIds: ReadonlySet<string>,
+  knownFormNumbers: ReadonlySet<string>,
+): string[] {
+  return unverifiedFromTokens(extractBracketCitations(text), knownRefIds, knownFormNumbers)
+}
+
+// ─── Determination citation verification (the Claims card's grounding guard) ────
+// The prose guard above checks a free-text answer. A structured coverage determination
+// cites its sources across STRUCTURED fields (coverage/exclusion refIds + form numbers,
+// limit sources, explicit citations[]) and [bracketed] reasoning. This applies the SAME
+// resolve-against-the-catalogue rule to that shape, so a plausible-but-invented refId
+// (e.g. PH.COV.999) or form number can never render on the card as if it were real.
+
+/** The citation-bearing subset of a coverage determination (structural — no platform types). */
+export interface DeterminationLike {
+  citations?:  unknown
+  coverages?:  unknown
+  exclusions?: unknown
+  limits?:     unknown
+  reasoning?:  unknown
+}
+
+/** Every candidate citation token a determination points at: explicit citations[], each
+ *  coverage/exclusion refId + formNumber, each limit source, and [bracketed] reasoning cites.
+ *  The base `formNumber` footer is deliberately excluded — it is the ATTACHED form itself,
+ *  which may be a user-uploaded form legitimately absent from the catalogue; the caller adds
+ *  the attached form number to the known set instead. */
+export function collectDeterminationCitationTokens(d: DeterminationLike): string[] {
+  const out: string[] = []
+  const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+  const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+  for (const c of arr(d.citations)) { const s = str(c); if (s) out.push(s) }
+  for (const c of arr(d.coverages))  { const o = c as Record<string, unknown>; const r = str(o.refId); const f = str(o.formNumber); if (r) out.push(r); if (f) out.push(f) }
+  for (const e of arr(d.exclusions)) { const o = e as Record<string, unknown>; const r = str(o.refId); const f = str(o.formNumber); if (r) out.push(r); if (f) out.push(f) }
+  for (const l of arr(d.limits))     { const o = l as Record<string, unknown>; const s = str(o.source); if (s) out.push(s) }
+  for (const r of arr(d.reasoning))  out.push(...extractBracketCitations(str(r)))
+  return out
+}
+
+/** The cited refId/form tokens in a determination that do NOT resolve against the known
+ *  catalogue — the fabricated/stale references the card must never present as authoritative.
+ *  Same conservative shape rules as findUnverifiedCitations: only refId-shaped and
+ *  form-number-shaped tokens are checked; descriptive names (a section/coverage name,
+ *  "Declarations") are never flagged. */
+export function findUnverifiedDeterminationCitations(
+  d: DeterminationLike,
+  knownRefIds: ReadonlySet<string>,
+  knownFormNumbers: ReadonlySet<string>,
+): string[] {
+  return unverifiedFromTokens(collectDeterminationCitationTokens(d), knownRefIds, knownFormNumbers)
 }

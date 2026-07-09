@@ -20,6 +20,7 @@ import {
   makePARtGetter, makePALdGetter,
 } from '../shared/src/seed/personalAuto'
 import { evaluate } from '../shared/src/rating/evaluator'
+import { claimsLineCodeFromFormNumber } from '../shared/src/claims/lineProfiles'
 import { buildBundleChunks, dedupeChunks } from '../shared/src/retrieval/chunk'
 import type { SearchEntityType } from '../shared/src/types'
 import type {
@@ -955,6 +956,87 @@ async function seedStorageForms(db: Firestore): Promise<number> {
           },
         ],
       },
+
+      // ── General Liability — CG 00 01 (illustrative CGL specimen) ─────────
+      // A minimal, clearly-labelled Commercial General Liability form so the Claims library
+      // ships a General Liability base form out of the box (multi-line parity with HO/PA).
+      // Occurrence-based Coverage A + the CGL aggregate structure + the key exclusion families.
+      {
+        storagePath: 'base-forms/CG-00-01-04-13.pdf',
+        title:       'COMMERCIAL GENERAL LIABILITY COVERAGE FORM',
+        formNumber:  'CG 00 01',
+        edition:     '04 13',
+        pages: [
+          {
+            heading: 'SECTION I — COVERAGE A — BODILY INJURY AND PROPERTY DAMAGE LIABILITY',
+            body: [
+              '1. Insuring Agreement',
+              '',
+              'a. We will pay those sums that the insured becomes legally obligated to pay as damages',
+              '   because of "bodily injury" or "property damage" to which this insurance applies. We',
+              '   will have the right and duty to defend the insured against any "suit" seeking those',
+              '   damages. However, we will have no duty to defend the insured against any "suit"',
+              '   seeking damages for "bodily injury" or "property damage" to which this insurance does',
+              '   not apply.',
+              '',
+              'b. This insurance applies to "bodily injury" and "property damage" only if:',
+              '   (1) The "bodily injury" or "property damage" is caused by an "occurrence" that takes',
+              '       place in the "coverage territory"; and',
+              '   (2) The "bodily injury" or "property damage" occurs during the policy period.',
+              '',
+              '"Occurrence" means an accident, including continuous or repeated exposure to',
+              'substantially the same general harmful conditions. This is an OCCURRENCE-based form',
+              '(it responds to injury or damage that occurs during the policy period), not claims-made.',
+            ],
+          },
+          {
+            heading: 'COVERAGE A — 2. EXCLUSIONS',
+            body: [
+              'This insurance does not apply to:',
+              '',
+              'a. Expected Or Intended Injury — injury or damage expected or intended by the insured.',
+              'b. Contractual Liability — liability assumed in a contract or agreement (with exceptions).',
+              'c. Liquor Liability.',
+              'd. Workers\' Compensation And Similar Laws.',
+              'e. Employer\'s Liability.',
+              'f. Pollution.',
+              'g. Aircraft, Auto Or Watercraft.',
+              'j. Damage To Property — property you own, rent or occupy, and personal property in your',
+              '   care, custody or control.',
+              'k. Damage To Your Product — "property damage" to "your product" arising out of it.',
+              'l. Damage To Your Work — "property damage" to "your work" arising out of it and included',
+              '   in the "products-completed operations hazard".',
+              'm. Damage To Impaired Property Or Property Not Physically Injured.',
+              'n. Recall Of Products, Work Or Impaired Property.',
+              '',
+              'A Commercial General Liability policy is THIRD-PARTY liability insurance: it does not pay',
+              'for first-party damage to the insured\'s own product or completed work.',
+            ],
+          },
+          {
+            heading: 'SECTION III — LIMITS OF INSURANCE',
+            body: [
+              '1. The Limits of Insurance shown in the Declarations and the rules below fix the most we',
+              '   will pay regardless of the number of insureds, claims made or "suits" brought.',
+              '',
+              '2. The General Aggregate Limit is the most we will pay for the sum of:',
+              '   a. Medical expenses under Coverage C;',
+              '   b. Damages under Coverage A, EXCEPT damages because of "bodily injury" or "property',
+              '      damage" included in the "products-completed operations hazard"; and',
+              '   c. Damages under Coverage B.',
+              '',
+              '3. The Products-Completed Operations Aggregate Limit is the most we will pay under',
+              '   Coverage A for damages included in the "products-completed operations hazard".',
+              '',
+              '5. The Each Occurrence Limit is the most we will pay for the sum of damages under',
+              '   Coverage A and medical expenses under Coverage C arising out of any one "occurrence".',
+              '',
+              'The Limits of Insurance apply separately to each consecutive annual period — the',
+              'aggregates RESET at the start of each policy period.',
+            ],
+          },
+        ],
+      },
     ]
 
     let pdfCount = 0
@@ -1079,8 +1161,9 @@ async function seedStorageForms(db: Firestore): Promise<number> {
         // the `if (!targetProd)` block in main()). URL points to the emulator.
         const fileName = spec.storagePath.split('/').pop()!
         const docId    = `seed-${fileName.replace('.pdf', '')}`
-        const lobRaw   = spec.formNumber.split(' ')[0].toUpperCase()
-        const lob      = lobRaw === 'HO' ? 'HO' : lobRaw === 'PP' ? 'PA' : ''
+        // Detected line from the ISO form number (HO*→HO, PP*→PA, CG*→GL), via the shared
+        // classifier so the mapping lives in one place and a new line seeds correctly.
+        const lob      = claimsLineCodeFromFormNumber(spec.formNumber)
         const url      = `http://${storageEmulatorHost}/v0/b/productreinvention.firebasestorage.app/o/${encodeURIComponent(spec.storagePath)}?alt=media`
         await db.doc(`baseForms/${docId}`).set({
           title: spec.title, formNumber: spec.formNumber, edition: spec.edition,

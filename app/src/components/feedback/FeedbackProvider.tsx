@@ -522,8 +522,10 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       const note = detail.trim() || (draft?.summary?.trim() ?? '') || title.trim()
 
       if (canEdit) {
-        const { id: _id, rev: _rev, ...rest } = cur
-        void _id; void _rev
+        // Pass the full doc (minus id) like the Feedback board does, so the version diff +
+        // snapshot stay correct; we only actually change `detail` and `votes`.
+        const rest: Record<string, unknown> = { ...cur }
+        delete rest.id
         const appendedDetail = note ? `${cur.detail}\n\n— ${actor.name}: ${note}` : cur.detail
         await adapter.db.mutate({
           op: 'update', path, entityType: 'feedback', actor, expectedRev: cur.rev,

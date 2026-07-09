@@ -418,6 +418,13 @@ export interface Feedback {
 
 // ─── News ────────────────────────────────────────────────────────────────────
 
+export interface NewsImage {
+  url?:           string   // absolute https URL; omitted when kind='generated'
+  kind:           'og' | 'twitter' | 'inline' | 'generated'
+  dominantColor?: string   // hex color or deterministic fallback
+  alt:            string   // always present, defaults to article title
+}
+
 export interface News {
   urlHash:           string
   url:               string
@@ -425,8 +432,9 @@ export interface News {
   title:             string
   summary:           string         // card lead sentence + legacy fallback
   bullets:           string[]       // 3 structured PM takeaways (What/Who/Why); 2 when only 2 are substantiated
-  imageUrl?:         string         // absolute https hero image; omitted when none found
-  imageAlt?:         string         // alt text for the hero image
+  imageUrl?:         string         // DEPRECATED: absolute https hero image; omitted when none found (backward compat)
+  imageAlt?:         string         // DEPRECATED: alt text for the hero image (backward compat)
+  image?:            NewsImage      // structured image metadata (additive; docs without it are still valid)
   tags:              string[]
   relatedProductIds: string[]
   fetchedAt:         unknown

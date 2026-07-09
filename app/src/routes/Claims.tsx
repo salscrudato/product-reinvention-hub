@@ -6,6 +6,7 @@
 // deterministic DeterminationCard. The browser never calls Anthropic — everything
 // goes through the adapter seam.
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { resolveClaimsLineProfile } from '@pf/shared'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { ChatComposer } from '../components/chat/ChatComposer'
@@ -13,14 +14,17 @@ import { Markdown } from '../components/chat/Markdown'
 import { BaseFormsLibrary, type BaseForm } from '../components/claims/BaseFormsLibrary'
 import { DeterminationCard, type Determination } from '../components/claims/DeterminationCard'
 import { shouldRenderDetermination } from '../lib/claims/determination'
+import { assistantBubbleContent, EMPTY_TURN_FALLBACK } from '../lib/claims/bubble'
+import { isFormAnalyzable } from '../lib/claims/baseForm'
 import { RefChip } from '../components/ui'
-import { IconCheck, IconSpinner, IconShield } from '../components/ui/icons'
+import { IconCheck, IconSpinner, IconShield, IconInfo, IconWarning } from '../components/ui/icons'
 
 // ─── Stream protocol (mirror of functions/src/runtime.ts StreamEvent) ───────────
 type StreamEvent =
   | { t: 'token'; v: string }
   | { t: 'tool';  name: string; phase: 'start' | 'end'; summary?: string }
   | { t: 'json';  key: string; value: unknown }
+  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[] }
   | { t: 'error'; message: string }
   | { t: 'done' }
 
@@ -30,6 +34,10 @@ interface ChatMessage {
   text: string
   tools: ToolChip[]
   determination?: Determination
+  // A non-fatal advisory from a `notice` event (budget cap, breaker, unverified citation,
+  // degrade). Kept separate from text so a token flush can't wipe it — and so a turn that
+  // produces ONLY a notice still renders something visible instead of a blank bubble.
+  notice?: { level: 'info' | 'warn'; message: string }
   historyText?: string   // what we send back as history (card turns serialise their determination)
 }
 
@@ -46,9 +54,13 @@ const TOOL_LABELS: Record<string, string> = {
   emit_determination:'Forming the determination',
 }
 
-// Domain-true examples, per line — they become one-tap starters once a form is selected.
-// Full-name tooltip for the compact line chip in the context header.
-const LINE_TITLE: Record<string, string> = { PH: 'Personal Home', PA: 'Personal Auto' }
+// Full-name tooltip for the compact line chip in the context header — resolved through the
+// shared claims line-profile registry (never a hard-coded per-line list), so HO/PA/GL and any
+// future line label consistently, and an unrecognised code shows verbatim.
+function lineTitle(code: string): string {
+  const p = resolveClaimsLineProfile(code)
+  return p.code === 'GENERIC' ? code : p.displayName
+}
 
 function toMillis(v: unknown): number {
   const o = v as { toDate?: () => Date; seconds?: number } | null
@@ -70,6 +82,56 @@ function determinationToText(d: Determination): string {
     d.reasoning.length ? `Reasoning: ${d.reasoning.join(' ')}` : '',
     d.openItems?.length ? `Not determined by the form: ${d.openItems.join('; ')}` : '',
   ].filter(Boolean).join('\n')
+}
+
+// A non-fatal advisory surfaced from a `notice` SSE event — budget cap / breaker / degrade /
+// unverified citation. Tokenised per level; never a blank or hard-coded hex.
+function NoticeBanner({ level, message }: { level: 'info' | 'warn'; message: string }) {
+  const warn = level === 'warn'
+  return (
+    <div
+      role="status"
+      className="flex items-start gap-2 rounded-[10px] px-3 py-2 text-[12.5px] leading-snug"
+      style={{
+        background: warn ? 'var(--color-warn-soft)' : 'var(--color-raised)',
+        border: `1px solid ${warn ? 'var(--color-warn-line)' : 'var(--color-border)'}`,
+        color: warn ? 'var(--color-warn)' : 'var(--color-dim)',
+      }}
+    >
+      {warn
+        ? <IconWarning size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
+        : <IconInfo size={14} className="shrink-0 mt-0.5" aria-hidden="true" />}
+      <span>{message}</span>
+    </div>
+  )
+}
+
+// The assistant turn's visible body. A single pure decision (assistantBubbleContent) guarantees
+// it is NEVER empty: a determination card, streamed text, a notice advisory, a thinking spinner
+// while streaming, or a plain-language fallback — so every terminal SSE path shows something.
+function AssistantContent({ m, streamingThisTurn }: { m: ChatMessage; streamingThisTurn: boolean }) {
+  const content = assistantBubbleContent(
+    { text: m.text, hasDetermination: !!m.determination, notice: m.notice ?? null },
+    streamingThisTurn,
+  )
+  return (
+    <>
+      {m.notice && <NoticeBanner level={m.notice.level} message={m.notice.message} />}
+      {content === 'determination' && m.determination && <DeterminationCard d={m.determination} />}
+      {content === 'text' && (
+        <div className="text-sm text-text">
+          <Markdown text={m.text} />
+          {streamingThisTurn && <span aria-hidden="true" className="inline-block text-accent animate-pulse ml-0.5 select-none opacity-70" style={{ lineHeight: 1 }}>▍</span>}
+        </div>
+      )}
+      {content === 'thinking' && (
+        <span className="inline-flex items-center gap-2 text-[13px] text-faint">
+          <IconSpinner size={13} className="animate-spin text-accent" aria-hidden="true" /> Reading the policy…
+        </span>
+      )}
+      {content === 'fallback' && <p className="text-[13px] text-dim leading-relaxed">{EMPTY_TURN_FALLBACK}</p>}
+    </>
+  )
 }
 
 export default function Claims() {
@@ -110,6 +172,10 @@ export default function Claims() {
     () => sortedForms.find(f => f.id === selectedId) ?? null,
     [sortedForms, selectedId],
   )
+  // Line-aware quick scenarios: derived from the selected form's DETECTED line via the shared
+  // claims line-profile registry (generic fallback for an unrecognised line), so the one-tap
+  // starters exercise THIS line's coverage grants/exclusions — never a hard-coded HO-only list.
+  const lineProfile = useMemo(() => resolveClaimsLineProfile(selectedForm?.lob), [selectedForm])
 
   // A new selection starts a fresh conversation (a different policy) — abort any stream
   // still running against the previous form so its tokens can't bleed into the new thread.
@@ -133,7 +199,7 @@ export default function Claims() {
     }
   }, [streaming]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const composerReady = !!selectedForm && selectedForm.status === 'READY' && !!selectedForm.storagePath?.trim()
+  const composerReady = isFormAnalyzable(selectedForm)
 
   async function ask(text: string) {
     const question = text.trim()
@@ -213,9 +279,14 @@ export default function Claims() {
               }
             }
             break
+          case 'notice':
+            // Budget/breaker/degrade/unverified-citation advisory. Stored in its own field so a
+            // later token flush can't wipe it and a notice-only turn is never a blank bubble.
+            patchAssistant(m => ({ ...m, notice: { level: ev.level, message: ev.message } })); break
           case 'error':
             patchAssistant(m => ({ ...m, text: m.text + `\n\n⚠️ ${ev.message}` })); break
           case 'done': break
+          default: break   // forward-compat: ignore an unknown event type safely (bubble fallback still applies)
         }
       }, controller.signal)
     } catch (err) {
@@ -258,7 +329,7 @@ export default function Claims() {
                 {selectedForm.lob && (
                   <span
                     className="text-[10px] font-medium px-1.5 py-0.5 rounded-[5px] bg-raised text-dim shrink-0"
-                    title={LINE_TITLE[selectedForm.lob] ?? selectedForm.lob}
+                    title={lineTitle(selectedForm.lob)}
                   >
                     {selectedForm.lob}
                   </span>
@@ -274,7 +345,7 @@ export default function Claims() {
         {/* aria-live="off" overrides the implicit polite from role="log" to suppress per-token noise */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 pr-1" role="log" aria-live="off" aria-relevant="additions text">
           {messages.length === 0 ? (
-            <Starters />
+            <Starters scenarios={composerReady ? lineProfile.scenarios : []} onPick={ask} />
           ) : (
             <div className="flex flex-col gap-5 py-4">
               {messages.map((m, i) => (
@@ -307,17 +378,7 @@ export default function Claims() {
                           ))}
                         </div>
                       )}
-                      {m.determination ? (
-                        <DeterminationCard d={m.determination} />
-                      ) : m.text ? (
-                        <div className="text-sm text-text"><Markdown text={m.text} />{streaming && i === messages.length - 1 && <span aria-hidden="true" className="inline-block text-accent animate-pulse ml-0.5 select-none opacity-70" style={{ lineHeight: 1 }}>▍</span>}</div>
-                      ) : (
-                        streaming && i === messages.length - 1 && (
-                          <span className="inline-flex items-center gap-2 text-[13px] text-faint">
-                            <IconSpinner size={13} className="animate-spin text-accent" aria-hidden="true" /> Reading the policy…
-                          </span>
-                        )
-                      )}
+                      <AssistantContent m={m} streamingThisTurn={streaming && i === messages.length - 1} />
                     </div>
                   )}
                 </div>
@@ -335,11 +396,13 @@ export default function Claims() {
             placeholder={
               !selectedForm ? 'Select a base form on the left to begin'
               : selectedForm.status === 'PROCESSING' ? 'Reading the form…'
+              : selectedForm.status === 'NEEDS_REVIEW' ? "This form couldn't be identified — an editor needs to review it before analysis"
               : !selectedForm.storagePath?.trim() ? 'This form has no stored document — please remove and re-upload it'
               : 'Describe a loss — e.g. "a pipe burst and flooded the kitchen"…'
             }
             hint={
               !selectedForm ? 'Select a base form to start a coverage conversation'
+              : selectedForm.status === 'NEEDS_REVIEW' ? "We couldn't read this form's number or line, so analysis is disabled. An editor should remove it and re-upload a clearer copy."
               : !selectedForm.storagePath?.trim() ? 'The PDF for this form is missing — remove the card and upload the form again'
               : 'Grounded in the selected form — every answer cites its source'
             }
@@ -352,9 +415,11 @@ export default function Claims() {
 }
 
 // ─── Hero shown when no messages yet (before or after form selection) ───────────
-// Animated shield + voice-wave SVG. No chips; the composer is the CTA.
+// Animated shield + voice-wave SVG, plus line-aware one-tap scenario starters once a form is
+// selected. The scenarios are passed in from the selected form's claims line profile, so a GL
+// form offers GL losses and an HO form offers HO losses — never a hard-coded list here.
 
-function Starters() {
+function Starters({ scenarios, onPick }: { scenarios: readonly string[]; onPick: (s: string) => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center gap-7 py-8 select-none">
       {/* Animated shield + voice-wave SVG */}
@@ -401,6 +466,25 @@ function Starters() {
           Speak or type in plain English — every determination cites the exact coverage, limit and exclusion it relied on.
         </p>
       </div>
+
+      {/* Line-aware one-tap starters (only once a form is selected + ready). */}
+      {scenarios.length > 0 && (
+        <div className="flex flex-col items-center gap-2.5">
+          <span className="text-[11px] font-medium uppercase tracking-[.06em] text-faint">Try one of these</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 max-w-md">
+            {scenarios.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => onPick(s)}
+                className="text-[12.5px] text-dim px-3 py-1.5 rounded-full bg-surface hover:bg-hover hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                style={{ border: '1px solid var(--color-border)' }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

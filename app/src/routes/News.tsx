@@ -199,51 +199,86 @@ function glyphForTag(tag?: string): IconType {
 // monospaced chip even when it surfaces as a news tag. (Distinct from plain word tags.)
 const FORM_NUMBER = /^[A-Z]{1,4}(?:\s\d{2}){2,3}$/
 
-// ─── Hero media (image with a never-broken generated fallback) ──────────────────
+// ─── Priority spine color (token-based, not raw hex) ────────────────────────────
 
-function HeroMedia({ item }: { item: FeedItem }) {
+/** Map relevance tier to a left-spine color token for compact cards. */
+function prioritySpineColor(tier: 'High' | 'Med' | 'Low' | null): string {
+  if (tier === 'High') return 'var(--color-accent)'
+  if (tier === 'Med')  return 'var(--color-info)'
+  if (tier === 'Low')  return 'var(--color-faint)'
+  return 'var(--color-border-strong)'
+}
+
+// ─── Resilient image component (real + generated fallback) ──────────────────────
+
+/** Renders an article image with onError fallback to a branded placeholder.
+ *  Never shows a broken image; always has alt text and explicit dimensions. */
+function ArticleImage({
+  item,
+  variant,
+  className,
+}: {
+  item: FeedItem
+  variant: 'hero' | 'thumbnail'
+  className?: string
+}) {
   const [failed, setFailed] = useState(false)
-  const alt = item.imageAlt || item.title
+  const image = item.image
+  const alt   = image?.alt ?? item.imageAlt ?? item.title
 
-  if (item.imageUrl && !failed) {
+  // Real image (og:image, twitter:image, inline) — attempt to load unless already failed.
+  const imageUrl = image?.url ?? (!image && item.imageUrl ? item.imageUrl : null)
+
+  if (imageUrl && !failed) {
     return (
       <img
-        src={item.imageUrl}
+        src={imageUrl}
         alt={alt}
         loading="lazy"
         decoding="async"
+        width={variant === 'hero' ? 1200 : 400}
+        height={variant === 'hero' ? 630 : 300}
         onError={() => setFailed(true)}
-        className="w-full aspect-video max-h-[360px] object-cover bg-raised"
+        className={className}
+        style={{ aspectRatio: variant === 'hero' ? '1200/630' : '3/2' }}
       />
     )
   }
 
-  // Deterministic fallback: a brand gradient keyed to the source + a category glyph.
+  // Generated placeholder: deterministic color + category glyph + source wordmark.
   const Glyph = glyphForTag(item.tags?.[0])
-  const grad  = HERO_GRADIENTS[hashString(item.source || item.title) % HERO_GRADIENTS.length]
+  const bg    = image?.dominantColor ?? HERO_GRADIENTS[hashString(item.source || item.title) % HERO_GRADIENTS.length]
+
   return (
     <div
       role="img"
       aria-label={alt}
-      className="w-full aspect-video max-h-[360px] flex flex-col items-center justify-center gap-2 select-none"
-      style={{ background: grad }}
+      className={className}
+      style={{
+        background: bg,
+        aspectRatio: variant === 'hero' ? '1200/630' : '3/2',
+      }}
     >
-      <Glyph size={46} strokeWidth={1.3} className="text-white" aria-hidden="true" />
-      {item.source && (
-        <span className="text-white opacity-80 text-xs font-medium tracking-wide px-6 text-center line-clamp-1">
-          {item.source}
-        </span>
-      )}
+      <div className="w-full h-full flex flex-col items-center justify-center gap-2 select-none">
+        <Glyph
+          size={variant === 'hero' ? 46 : 32}
+          strokeWidth={1.3}
+          className="text-white"
+          aria-hidden="true"
+        />
+        {item.source && (
+          <span className="text-white opacity-80 text-xs font-medium tracking-wide px-4 text-center line-clamp-1">
+            {item.source}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
 
-// ─── News card ──────────────────────────────────────────────────────────────────
+// ─── Featured hero card (editorial lead) ────────────────────────────────────────
 
-const ACTION_BTN =
-  'inline-flex items-center gap-1.5 text-xs font-medium text-dim hover:text-accent rounded-[8px] px-2 py-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-
-function NewsCard({
+function HeroCard({
   item, pinned, onTogglePin, onCopy,
 }: {
   item: FeedItem
@@ -257,94 +292,97 @@ function NewsCard({
   const hash  = pinKey(item)
   const ms    = toMillis(item.fetchedAt)
   const tier  = relevanceTier(item.rel.score)
-  const bullets = (item.bullets ?? []).filter(b => b && b.trim())
-  const tags = (item.tags ?? []).slice(0, 5)
+  const tags  = (item.tags ?? []).slice(0, 5)
+
+  // Dominant color for scrim tint (or fallback gradient).
+  const dominantColor = item.image?.dominantColor ?? 'var(--color-accent-strong)'
 
   return (
     <article
       aria-labelledby={headingId}
-      className="group bg-surface rounded-[16px] overflow-hidden flex flex-col border border-[color:var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-accent-line)] hover:shadow-[var(--shadow-card-hover)]"
+      className="group bg-surface rounded-[16px] overflow-hidden border border-[color:var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:border-[color:var(--color-accent-line)] hover:shadow-[var(--shadow-card-hover)] motion-reduce:hover:translate-y-0"
     >
-      <HeroMedia item={item} />
-
-      <div className="p-4 sm:p-5 flex flex-col gap-2.5">
-        {/* Header row: source · relative time · relevance · pin */}
-        <div className="flex items-center gap-2 text-xs text-faint">
-          <span className="font-semibold text-dim truncate max-w-[45%]">{item.source || 'Web'}</span>
-          {ms > 0 && (
-            <>
-              <span aria-hidden="true">·</span>
-              <time dateTime={new Date(ms).toISOString()} title={new Date(ms).toLocaleString()}>{relTime(ms)}</time>
-            </>
-          )}
-          {tier && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-              style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}
-              title={`Portfolio relevance: ${tier} (score ${item.rel.score})`}
-            >
-              <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-accent" />
-              {tier}
-            </span>
-          )}
-          <button
-            onClick={() => onTogglePin(hash)}
-            aria-pressed={pinned}
-            aria-label={pinned ? 'Unpin article' : 'Pin article'}
-            title={pinned ? 'Unpin' : 'Pin'}
-            className="ml-auto shrink-0 p-1 rounded-[8px] hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            <IconStar size={16} className={pinned ? 'text-accent fill-current' : 'text-faint'} aria-hidden="true" />
-          </button>
+      {/* Hero image with scrim overlay */}
+      <div className="relative overflow-hidden">
+        <div className="overflow-hidden transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:group-hover:scale-100">
+          <ArticleImage
+            item={item}
+            variant="hero"
+            className="w-full object-cover"
+          />
         </div>
 
-        {/* Headline — the primary open-source link */}
-        <h3 id={headingId} className="text-[17px] font-bold leading-tight tracking-[-.014em]">
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-text hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[4px]"
-          >
-            {item.title}
-          </a>
-        </h3>
+        {/* Bottom-up scrim tinted from dominantColor */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `linear-gradient(to top, ${dominantColor} 0%, transparent 60%)`,
+          }}
+        />
 
-        {/* Three structured takeaways — legacy fallback to the summary paragraph */}
-        {bullets.length > 0 ? (
-          <ul className="flex flex-col gap-1.5">
-            {bullets.map((b, i) => (
-              <li key={i} className="flex gap-2 text-[13px] text-dim leading-relaxed">
-                <span aria-hidden="true" className="mt-[7px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-accent-line)' }} />
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
-        ) : item.summary ? (
-          <p className="text-[13px] text-dim leading-relaxed">{item.summary}</p>
-        ) : null}
-
-        {/* Applicability — LOB (accent) + state (neutral) chips; visually distinct from tags */}
-        {(item.rel.lobs.length > 0 || item.rel.states.length > 0) && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            {item.rel.lobs.map(lob => (
-              <span key={lob} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-                style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
-                <IconProduct size={11} aria-hidden="true" />{lob}
-              </span>
-            ))}
-            {item.rel.states.slice(0, 6).map(code => (
-              <span key={code} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-raised text-dim">
-                <IconStates size={11} aria-hidden="true" />{code}
-              </span>
-            ))}
-            {item.rel.states.length > 6 && (
-              <span className="text-[11px] text-faint">+{item.rel.states.length - 6}</span>
+        {/* Overlay content: title, byline, metadata */}
+        <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+          {/* Source byline + time + priority */}
+          <div className="flex items-center gap-2 mb-3 text-xs text-white">
+            <span className="font-semibold tracking-wide">{item.source || 'Web'}</span>
+            {ms > 0 && (
+              <>
+                <span aria-hidden="true">·</span>
+                <time dateTime={new Date(ms).toISOString()} title={new Date(ms).toLocaleString()}>
+                  {relTime(ms)}
+                </time>
+              </>
+            )}
+            {tier && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: 'rgba(255,255,255,.20)', color: 'white' }}
+                  title={`Portfolio relevance: ${tier} (score ${item.rel.score})`}
+                >
+                  <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full" style={{ background: 'white' }} />
+                  {tier}
+                </span>
+              </>
             )}
           </div>
-        )}
 
-        {/* Topical tags — secondary weight; a form-number tag keeps its mono chip */}
+          {/* Headline — primary link, AA contrast over scrim */}
+          <h2 id={headingId} className="text-[22px] sm:text-[26px] font-bold leading-tight tracking-[-.018em] text-white mb-2">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded-[4px]"
+            >
+              {item.title}
+            </a>
+          </h2>
+
+          {/* Summary (first bullet or summary field) */}
+          {(item.bullets?.[0] || item.summary) && (
+            <p className="text-[14px] text-white/90 leading-relaxed line-clamp-2 max-w-3xl">
+              {item.bullets?.[0] || item.summary}
+            </p>
+          )}
+        </div>
+
+        {/* Pin button — absolute top-right */}
+        {pinned && (
+          <div
+            className="absolute top-4 right-4 px-2 py-1 rounded-full text-[10px] font-semibold text-white flex items-center gap-1"
+            style={{ background: 'var(--color-accent)' }}
+          >
+            <IconStar size={12} className="fill-current" aria-hidden="true" />
+            Pinned
+          </div>
+        )}
+      </div>
+
+      {/* Footer: tags + actions */}
+      <div className="p-4 sm:p-5 flex flex-col gap-3">
+        {/* Tags */}
         {tags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
             {tags.map(t =>
@@ -356,29 +394,48 @@ function NewsCard({
         )}
 
         {/* Actions */}
-        <div className="flex flex-wrap items-center gap-1 mt-1 pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <a href={item.url} target="_blank" rel="noopener noreferrer" className={ACTION_BTN} aria-label={`Open source at ${item.source || 'the publisher'} (opens in a new tab)`}>
-            <IconExternalLink size={13} aria-hidden="true" />Open source
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-dim hover:text-accent rounded-[8px] px-2 py-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            aria-label={`Open source at ${item.source || 'the publisher'} (opens in a new tab)`}
+          >
+            <IconExternalLink size={13} aria-hidden="true" />
+            Open source
           </a>
-          <button onClick={() => onTogglePin(hash)} className={ACTION_BTN} aria-pressed={pinned} aria-label={pinned ? 'Unpin article' : 'Pin article'}>
-            <IconStar size={13} className={pinned ? 'fill-current' : ''} aria-hidden="true" />{pinned ? 'Pinned' : 'Pin'}
+          <button
+            onClick={() => onTogglePin(hash)}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-dim hover:text-accent rounded-[8px] px-2 py-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            aria-pressed={pinned}
+            aria-label={pinned ? 'Unpin article' : 'Pin article'}
+          >
+            <IconStar size={13} className={pinned ? 'fill-current' : ''} aria-hidden="true" />
+            {pinned ? 'Pinned' : 'Pin'}
           </button>
-          <button onClick={() => onCopy(item.url)} className={ACTION_BTN} aria-label="Copy article link">
-            <IconCopy size={13} aria-hidden="true" />Copy link
+          <button
+            onClick={() => onCopy(item.url)}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-dim hover:text-accent rounded-[8px] px-2 py-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            aria-label="Copy article link"
+          >
+            <IconCopy size={13} aria-hidden="true" />
+            Copy link
           </button>
           {item.rel.score > 0 && (
             <button
               onClick={() => setWhyOpen(o => !o)}
-              className={`${ACTION_BTN} ml-auto`}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-dim hover:text-accent rounded-[8px] px-2 py-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ml-auto"
               aria-expanded={whyOpen}
               aria-controls={whyId}
             >
-              <IconInfo size={13} aria-hidden="true" />Why this matched
+              <IconInfo size={13} aria-hidden="true" />
+              Why this matched
             </button>
           )}
         </div>
 
-        {/* Why this matched — the grounded signal breakdown */}
+        {/* Why this matched panel */}
         {whyOpen && item.rel.score > 0 && (
           <div id={whyId} className="flex flex-col gap-1.5 rounded-[10px] bg-page p-3 text-[12px]" style={{ border: '1px solid var(--color-border)' }}>
             {item.rel.lobs.length > 0 && (
@@ -407,17 +464,203 @@ function NewsCard({
   )
 }
 
-// ─── Loading skeleton (mirrors the card silhouette) ─────────────────────────────
+// ─── Compact horizontal card ─────────────────────────────────────────────────────
 
-function FeedSkeleton() {
+function CompactCard({
+  item, pinned, onTogglePin, onCopy,
+}: {
+  item: FeedItem
+  pinned: boolean
+  onTogglePin: (hash: string) => void
+  onCopy: (url: string) => void
+}) {
+  const [whyOpen, setWhyOpen] = useState(false)
+  const whyId = useId()
+  const headingId = useId()
+  const hash  = pinKey(item)
+  const ms    = toMillis(item.fetchedAt)
+  const tier  = relevanceTier(item.rel.score)
+  const tags  = (item.tags ?? []).slice(0, 3)
+
+  // Dominant color for faint wash.
+  const dominantColor = item.image?.dominantColor
+  const washOpacity   = dominantColor ? '0.04' : '0'
+  const wash          = dominantColor ? `${dominantColor}${Math.round(parseFloat(washOpacity) * 255).toString(16).padStart(2, '0')}` : 'transparent'
+
+  return (
+    <article
+      aria-labelledby={headingId}
+      className="group relative bg-surface rounded-[14px] overflow-hidden border border-[color:var(--color-border)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-accent-line)] hover:shadow-[var(--shadow-card)] motion-reduce:hover:translate-y-0"
+      style={{ background: wash }}
+    >
+      {/* Priority left spine */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1"
+        style={{ background: prioritySpineColor(tier) }}
+        aria-hidden="true"
+      />
+
+      <div className="flex gap-4 p-4 pl-5">
+        {/* Thumbnail */}
+        <div className="shrink-0 w-[140px] sm:w-[180px] overflow-hidden rounded-[10px] transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:group-hover:scale-100">
+          <ArticleImage
+            item={item}
+            variant="thumbnail"
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 flex flex-col gap-2">
+          {/* Byline: source + time + pinned indicator */}
+          <div className="flex items-center gap-2 text-xs text-faint">
+            <span className="font-semibold text-dim">{item.source || 'Web'}</span>
+            {ms > 0 && (
+              <>
+                <span aria-hidden="true">·</span>
+                <time dateTime={new Date(ms).toISOString()} title={new Date(ms).toLocaleString()}>
+                  {relTime(ms)}
+                </time>
+              </>
+            )}
+            {pinned && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="inline-flex items-center gap-1 text-accent font-medium">
+                  <IconStar size={11} className="fill-current" aria-hidden="true" />
+                  Pinned
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Headline */}
+          <h3 id={headingId} className="text-[15px] sm:text-[16px] font-bold leading-tight tracking-[-.012em]">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-text hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[4px]"
+            >
+              {item.title}
+            </a>
+          </h3>
+
+          {/* One-line summary */}
+          {item.summary && (
+            <p className="text-[13px] text-dim leading-relaxed line-clamp-1">
+              {item.summary}
+            </p>
+          )}
+
+          {/* Tags (condensed) */}
+          {tags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              {tags.map(t =>
+                FORM_NUMBER.test(t)
+                  ? <RefChip key={t} id={t} />
+                  : <Badge key={t} label={t} color="default" />,
+              )}
+            </div>
+          )}
+
+          {/* Actions row */}
+          <div className="flex flex-wrap items-center gap-2 mt-auto pt-1">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-dim hover:text-accent rounded-[8px] px-2 py-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              aria-label={`Open source at ${item.source || 'the publisher'} (opens in a new tab)`}
+            >
+              <IconExternalLink size={12} aria-hidden="true" />
+              <span className="hidden sm:inline">Open</span>
+            </a>
+            <button
+              onClick={() => onTogglePin(hash)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-dim hover:text-accent rounded-[8px] px-2 py-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              aria-pressed={pinned}
+              aria-label={pinned ? 'Unpin article' : 'Pin article'}
+            >
+              <IconStar size={12} className={pinned ? 'fill-current' : ''} aria-hidden="true" />
+              <span className="hidden sm:inline">{pinned ? 'Pinned' : 'Pin'}</span>
+            </button>
+            <button
+              onClick={() => onCopy(item.url)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-dim hover:text-accent rounded-[8px] px-2 py-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              aria-label="Copy article link"
+            >
+              <IconCopy size={12} aria-hidden="true" />
+              <span className="hidden sm:inline">Copy</span>
+            </button>
+            {item.rel.score > 0 && (
+              <button
+                onClick={() => setWhyOpen(o => !o)}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-dim hover:text-accent rounded-[8px] px-2 py-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ml-auto"
+                aria-expanded={whyOpen}
+                aria-controls={whyId}
+              >
+                <IconInfo size={12} aria-hidden="true" />
+                <span className="hidden sm:inline">Why</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Why this matched panel (full-width below the card) */}
+      {whyOpen && item.rel.score > 0 && (
+        <div id={whyId} className="mx-4 mb-4 flex flex-col gap-1.5 rounded-[10px] bg-page p-3 text-[12px]" style={{ border: '1px solid var(--color-border)' }}>
+          {item.rel.lobs.length > 0 && (
+            <div className="flex items-start gap-2 text-dim">
+              <IconProduct size={13} className="mt-0.5 text-accent shrink-0" aria-hidden="true" />
+              <span><span className="font-medium text-text">Lines of business:</span> {item.rel.lobs.join(', ')}</span>
+            </div>
+          )}
+          {item.rel.states.length > 0 && (
+            <div className="flex items-start gap-2 text-dim">
+              <IconStates size={13} className="mt-0.5 text-accent shrink-0" aria-hidden="true" />
+              <span><span className="font-medium text-text">Footprint states:</span> {item.rel.states.join(', ')}</span>
+            </div>
+          )}
+          {item.matchedProducts.length > 0 && (
+            <div className="flex items-start gap-2 text-dim">
+              <IconSparkle size={13} className="mt-0.5 text-accent shrink-0" aria-hidden="true" />
+              <span><span className="font-medium text-text">Linked product{item.matchedProducts.length === 1 ? '' : 's'}:</span> {item.matchedProducts.join(', ')}</span>
+            </div>
+          )}
+          <p className="text-faint pt-0.5">Relevance score {item.rel.score} · ranks this item in your For You feed.</p>
+        </div>
+      )}
+    </article>
+  )
+}
+
+// ─── Loading skeletons ───────────────────────────────────────────────────────────
+
+function HeroSkeleton() {
   return (
     <div className="bg-surface rounded-[16px] overflow-hidden border border-[color:var(--color-border)] shadow-[var(--shadow-card)]">
-      <Skeleton className="w-full aspect-video max-h-[360px]" rounded="rounded-none" />
-      <div className="p-5 flex flex-col gap-2.5">
-        <Skeleton className="h-3 w-1/3" />
-        <Skeleton className="h-5 w-11/12" />
-        <Skeleton className="h-3 w-full" />
+      <Skeleton className="w-full" style={{ aspectRatio: '1200/630' }} rounded="rounded-none" />
+      <div className="p-5 flex flex-col gap-2">
+        <Skeleton className="h-3 w-1/4" />
+        <Skeleton className="h-6 w-11/12" />
         <Skeleton className="h-3 w-4/5" />
+      </div>
+    </div>
+  )
+}
+
+function CompactSkeleton() {
+  return (
+    <div className="bg-surface rounded-[14px] overflow-hidden border border-[color:var(--color-border)] shadow-sm">
+      <div className="flex gap-4 p-4">
+        <Skeleton className="shrink-0 w-[140px] sm:w-[180px]" style={{ aspectRatio: '3/2' }} rounded="rounded-[10px]" />
+        <div className="flex-1 flex flex-col gap-2">
+          <Skeleton className="h-3 w-1/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-3 w-4/5" />
+        </div>
       </div>
     </div>
   )
@@ -846,7 +1089,8 @@ export default function News() {
       <div className="pt-4">
         {items === null ? (
           <div className="flex flex-col gap-4">
-            {Array.from({ length: 4 }).map((_, i) => <FeedSkeleton key={i} />)}
+            <HeroSkeleton />
+            {Array.from({ length: 3 }).map((_, i) => <CompactSkeleton key={i} />)}
           </div>
         ) : enriched.length === 0 ? (
           <EmptyState
@@ -880,20 +1124,31 @@ export default function News() {
           )
         ) : (
           <>
-            {/* key={tab} replays the entrance on tab switch (not on each filter keystroke).
+            {/* Editorial feed: hero (first item) + compact cards (rest).
+                key={tab} replays the entrance on tab switch (not on each filter keystroke).
                 Each card is a self-labelled <article> region; no role="feed" (that ARIA
                 pattern promises a keyboard model — Page Up/Down between articles — we don't
                 implement, so claiming it would mislead AT users). */}
             <div key={tab} className="flex flex-col gap-4 page-in">
-              {shown.map(n => (
-                <NewsCard
-                  key={n.id}
-                  item={n}
-                  pinned={pinnedSet.has(pinKey(n))}
-                  onTogglePin={togglePin}
-                  onCopy={copyLink}
-                />
-              ))}
+              {shown.map((n, idx) =>
+                idx === 0 ? (
+                  <HeroCard
+                    key={n.id}
+                    item={n}
+                    pinned={pinnedSet.has(pinKey(n))}
+                    onTogglePin={togglePin}
+                    onCopy={copyLink}
+                  />
+                ) : (
+                  <CompactCard
+                    key={n.id}
+                    item={n}
+                    pinned={pinnedSet.has(pinKey(n))}
+                    onTogglePin={togglePin}
+                    onCopy={copyLink}
+                  />
+                ),
+              )}
             </div>
             {hasMore && (
               <div className="flex justify-center pt-5">
