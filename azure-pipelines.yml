@@ -64,15 +64,23 @@ steps:
 
   - script: |
       set -e
-      rm -rf "$(Build.BinariesDirectory)"/*
-      mkdir -p "$(Build.BinariesDirectory)/public"
-      cp server/server.js  "$(Build.BinariesDirectory)/server.js"
-      cp server/package.json "$(Build.BinariesDirectory)/package.json"
-      cp -r app/dist/. "$(Build.BinariesDirectory)/public/"
+      npm ci --omit=dev --prefix server || npm install --omit=dev --prefix server
+    displayName: 'Install host deps (Express + Cosmos, prod only)'
+
+  - script: |
+      set -e
+      DEST="$(Build.BinariesDirectory)"
+      rm -rf "$DEST"/*
+      mkdir -p "$DEST/public"
+      cp -r server/server.js server/lib server/package.json "$DEST/"
+      cp -r server/node_modules "$DEST/node_modules"
+      cp -r app/dist/. "$DEST/public/"
       echo "=== artifact tree (top) ==="
-      ls -la "$(Build.BinariesDirectory)"
-      test -f "$(Build.BinariesDirectory)/public/index.html"
-    displayName: 'Assemble deploy artifact (server.js + public/)'
+      ls -la "$DEST"
+      test -f "$DEST/public/index.html"
+      test -f "$DEST/server.js"
+      test -d "$DEST/node_modules/express"
+    displayName: 'Assemble deploy artifact (Express host + node_modules + public/)'
 
   - task: ArchiveFiles@2
     displayName: 'Zip deploy artifact'

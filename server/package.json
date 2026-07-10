@@ -1,13 +1,17 @@
 {
   "name": "prodhub-azure-host",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Azure App Service host for Product Hub — serves the Vite SPA + GET /api/health. Zero runtime dependencies.",
+  "description": "Azure App Service host for Product Hub — serves the Vite SPA and the full /api backend (auth, Cosmos data, AI). Replaces Firebase/GCloud.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.2.0",
+    "express": "^4.21.2"
   }
 }
