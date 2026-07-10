@@ -14,8 +14,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     {
-      // Write dist/version.json after the bundle is emitted. Firebase serves it with a
-      // no-cache header (see firebase.json), so every poll sees the freshest build id.
+      // Write dist/version.json after the bundle is emitted. The Azure host (server/server.js)
+      // serves it no-cache, so every VersionWatcher poll sees the freshest build id.
       name: 'emit-version-json',
       apply: 'build',
       closeBundle() {
@@ -23,4 +23,18 @@ export default defineConfig({
       },
     },
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Pin the stable React runtime into its own long-cache vendor chunk so an app-code
+        // deploy doesn't invalidate it. Route chunks + heavy libs (exceljs) already code-split
+        // via React.lazy() / dynamic import() — see App.tsx.
+        manualChunks(id) {
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) {
+            return 'vendor-react'
+          }
+        },
+      },
+    },
+  },
 })

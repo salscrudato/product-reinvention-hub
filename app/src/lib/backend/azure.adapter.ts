@@ -6,9 +6,9 @@
 // this contract (see types.ts).
 //
 // Real-time: Firestore onSnapshot has no Cosmos equivalent in the browser, so
-// subscribe() degrades to polling (initial fetch + interval). Semantics match
-// the Firebase adapter: string paths only, even segments = document, odd =
-// collection, degrade to null/[] + onError on failure.
+// subscribe() degrades to SMART POLLING (see the "smart polling" block below).
+// Semantics match the Firebase adapter: string paths only, even segments =
+// document, odd = collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
 import type { AuthUser, BackendAdapter, ManagedUser, MutationPayload, Query, Session, TenantInfo } from './types'
@@ -16,7 +16,6 @@ import { MutationConflictError } from './types'
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 const TOKEN_KEY = 'pf.azure.token'
-const POLL_MS = 3500
 
 // ─── token + fetch helpers ───────────────────────────────────────────────────
 let token: string | null = (typeof localStorage !== 'undefined' && localStorage.getItem(TOKEN_KEY)) || null
@@ -58,6 +57,43 @@ function setToken(t: string | null) {
 }
 
 const isDoc = (path: string) => path.split('/').filter(Boolean).length % 2 === 0
+
+// ─── smart polling ─────────────────────────────────────────────────────────────
+// Cosmos has no browser onSnapshot, so subscribe() polls. Naive fixed-interval
+// polling hammers Cosmos (RU cost) for every tab left open, so the poller:
+//   1. PAUSES entirely when the tab is hidden (Page Visibility API) and resumes
+//      with an immediate fresh fetch on visibility/focus — a backgrounded tab
+//      issues ZERO reads.
+//   2. BACKS OFF geometrically while data is unchanged (POLL_MIN → POLL_MAX) and
+//      snaps back to POLL_MIN on any change or right after a local mutation.
+//   3. DEDUPES — never overlaps a fetch for the same subscription (in-flight guard).
+//   4. Serves the last value for a path from an in-memory cache instantly on a new
+//      subscription (stale-while-revalidate), and invokes the callback ONLY when the
+//      payload actually changed — cutting wasted React renders on idle re-delivery.
+// Optimistic-concurrency (mutate() expectedRev → 409) is unaffected; this is read-path
+// only. Policy is documented in docs/reviews/POLLING.md.
+const POLL_MIN = 3500
+const POLL_MAX = 30_000
+const BACKOFF = 1.6
+
+interface Poller { tick: () => void; stop: () => void; reset: () => void }
+const pollers = new Set<Poller>()
+const snapshotCache = new Map<string, string>() // path -> last JSON (change detection)
+const dataCache = new Map<string, unknown>()     // path -> last value (instant SWR paint)
+let tabHidden = typeof document !== 'undefined' && document.hidden
+
+/** Called after every local write so active views reflect the change immediately
+ *  (reset to the fast interval + an instant fetch) rather than waiting out a backoff. */
+function pokeAll() { for (const p of pollers) { p.reset(); p.tick() } }
+
+if (typeof document !== 'undefined') {
+  const resume = () => { if (document.hidden) return; tabHidden = false; for (const p of pollers) { p.reset(); p.tick() } }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { tabHidden = true; for (const p of pollers) p.stop() }
+    else resume()
+  })
+  window.addEventListener('focus', resume)
+}
 
 export const adapter: BackendAdapter = {
   auth: {
@@ -114,38 +150,69 @@ export const adapter: BackendAdapter = {
       const path = pathOrQuery
       const doc = isDoc(path)
       let stopped = false
+      let inFlight = false
+      let deliveredOnce = false
+      let interval = POLL_MIN
+      let timer: ReturnType<typeof setTimeout> | null = null
+
+      const deliver = (data: T | T[]) => { if (!stopped) cb(data) }
+      const clear = () => { if (timer) { clearTimeout(timer); timer = null } }
+      const schedule = (ms: number) => { if (stopped || tabHidden) return; clear(); timer = setTimeout(() => void tick(), ms) }
+
       const tick = async () => {
+        if (stopped || inFlight) return   // dedupe: never overlap a fetch
+        inFlight = true
         try {
-          if (doc) { const d = await adapter.db.get<T>(path); if (!stopped) cb(d as T) }
-          else { const d = await adapter.db.list<T>(path); if (!stopped) cb(d as T[]) }
+          const data = (doc ? await adapter.db.get<T>(path) : await adapter.db.list<T>(path)) as T | T[]
+          if (stopped) return
+          const json = JSON.stringify(data ?? null)
+          const changed = snapshotCache.get(path) !== json
+          snapshotCache.set(path, json)
+          dataCache.set(path, data)
+          if (changed || !deliveredOnce) { deliveredOnce = true; deliver(data) }
+          interval = changed ? POLL_MIN : Math.min(Math.round(interval * BACKOFF), POLL_MAX)
         } catch (err) {
           if (stopped) return
           onError?.(err)
-          cb((doc ? null : []) as T | T[])
+          deliveredOnce = true
+          deliver((doc ? null : []) as T | T[])
+          interval = Math.min(Math.round(interval * BACKOFF), POLL_MAX)
+        } finally {
+          inFlight = false
+          schedule(interval)
         }
       }
-      void tick()
-      const timer = setInterval(() => void tick(), POLL_MS)
-      return () => { stopped = true; clearInterval(timer) }
+
+      const poller: Poller = { tick: () => void tick(), stop: clear, reset: () => { interval = POLL_MIN } }
+      pollers.add(poller)
+      // Instant stale-while-revalidate paint from the last value seen for this path.
+      if (dataCache.has(path)) queueMicrotask(() => deliver(dataCache.get(path) as T | T[]))
+      void tick()   // fresh initial fetch (even if loaded hidden — first paint stays truthful)
+
+      return () => { stopped = true; clear(); pollers.delete(poller) }
     },
 
     async mutate(m: MutationPayload): Promise<void> {
       // Server derives the truthful actor from the JWT and commits the atomic
       // entity + audit + version + searchIndex envelope in one Cosmos transactional batch.
       await api('/db/mutate', { method: 'POST', body: JSON.stringify({ payload: m }) })
+      pokeAll()   // reflect the write in every open view without waiting out a backoff
     },
 
     async mutateBatch(ms: MutationPayload[]): Promise<void> {
       if (ms.length === 0) return
       await api('/db/mutateBatch', { method: 'POST', body: JSON.stringify({ payloads: ms }) })
+      pokeAll()
     },
 
     async vote(path: string, _uid: string): Promise<void> {
       await api('/db/vote', { method: 'POST', body: JSON.stringify({ path }) })
+      pokeAll()
     },
 
     async setNewsPins(uid: string, pinnedHashes: string[]): Promise<void> {
       await api('/db/setNewsPins', { method: 'POST', body: JSON.stringify({ uid, pinnedHashes }) })
+      pokeAll()
     },
 
     // Optimistic concurrency lives in mutate() (expectedRev → 409 → MutationConflictError).
@@ -205,16 +272,19 @@ export const adapter: BackendAdapter = {
   presence: {
     join(pid: string): Unsubscribe {
       if (!currentUser) return () => {}
-      const beat = () => { void api('/db/presence/join', { method: 'POST', body: JSON.stringify({ pid }) }).catch(() => {}) }
+      const beat = () => { if (typeof document !== 'undefined' && document.hidden) return; void api('/db/presence/join', { method: 'POST', body: JSON.stringify({ pid }) }).catch(() => {}) }
       beat()
       const timer = setInterval(beat, 30_000)
       return () => clearInterval(timer)
     },
     watch(pid: string, cb: (viewerUids: string[]) => void): Unsubscribe {
       let stopped = false
-      const tick = () => api<{ viewers: string[] }>('/db/presence/watch', { method: 'POST', body: JSON.stringify({ pid }) })
-        .then(({ viewers }) => { if (!stopped) cb(viewers) })
-        .catch(() => { if (!stopped) cb([]) })
+      const tick = () => {
+        if (typeof document !== 'undefined' && document.hidden) return   // skip while backgrounded
+        api<{ viewers: string[] }>('/db/presence/watch', { method: 'POST', body: JSON.stringify({ pid }) })
+          .then(({ viewers }) => { if (!stopped) cb(viewers) })
+          .catch(() => { if (!stopped) cb([]) })
+      }
       void tick()
       const timer = setInterval(() => void tick(), 15_000)
       return () => { stopped = true; clearInterval(timer) }

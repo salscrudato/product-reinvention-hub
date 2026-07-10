@@ -73,7 +73,7 @@ try {
 app.use(express.static(PUBLIC, {
   index: false,
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache')
+    if (filePath.endsWith('index.html') || filePath.endsWith('version.json')) res.setHeader('Cache-Control', 'no-cache')
     else if (filePath.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
   },
 }))

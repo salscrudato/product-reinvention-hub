@@ -62,6 +62,9 @@ steps:
   - script: pnpm --filter app build
     displayName: 'Build Vite SPA -> app/dist'
 
+  - script: node scripts/check-bundle-budget.mjs
+    displayName: 'Gate: bundle-size budget (a first-load regression fails the build)'
+
   - script: |
       set -e
       npm ci --omit=dev --prefix server || npm install --omit=dev --prefix server
