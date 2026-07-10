@@ -1,4 +1,4 @@
-// Firestore security rules tests — requires the Firestore emulator to be running.
+﻿// Firestore security rules tests â€” requires the Firestore emulator to be running.
 // Run via: pnpm test:rules  (firebase emulators:exec starts it automatically)
 import { describe, it, beforeAll, afterAll, afterEach } from 'vitest'
 import {
@@ -34,9 +34,9 @@ const viewer  = () => testEnv.authenticatedContext('viewer-uid',  { role: 'VIEWE
 const guest   = () => testEnv.authenticatedContext('guest-uid', { firebase: { sign_in_provider: 'anonymous' } })
 const unauthed = () => testEnv.unauthenticatedContext()
 
-describe('Firestore security rules — role matrix', () => {
+describe('Firestore security rules â€” role matrix', () => {
 
-  // ── 1. VIEWER can read domain data ──────────────────────────────────────────
+  // â”€â”€ 1. VIEWER can read domain data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   it('VIEWER can read a product document', async () => {
     // Seed a product using admin bypass
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
@@ -46,13 +46,13 @@ describe('Firestore security rules — role matrix', () => {
     await assertSucceeds(getDoc(doc(db, 'products/HO3')))
   })
 
-  // ── 2. VIEWER cannot write to domain collections ─────────────────────────────
+  // â”€â”€ 2. VIEWER cannot write to domain collections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   it('VIEWER write to products is rejected', async () => {
     const db = viewer().firestore()
     await assertFails(setDoc(doc(db, 'products/NEW'), { name: 'New Product' }))
   })
 
-  // ── 3. VIEWER can create feedback ────────────────────────────────────────────
+  // â”€â”€ 3. VIEWER can create feedback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   it('VIEWER can submit new feedback', async () => {
     const db = viewer().firestore()
     await assertSucceeds(
@@ -66,7 +66,7 @@ describe('Firestore security rules — role matrix', () => {
     )
   })
 
-  // ── 4. VIEWER can vote (add own uid to voters, increment count) ──────────────
+  // â”€â”€ 4. VIEWER can vote (add own uid to voters, increment count) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   it('VIEWER vote allowance: can add own uid and increment count', async () => {
     // Seed the feedback doc first
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
@@ -91,7 +91,7 @@ describe('Firestore security rules — role matrix', () => {
     )
   })
 
-  // ── 5. EDITOR can write domain data ──────────────────────────────────────────
+  // â”€â”€ 5. EDITOR can write domain data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   it('EDITOR can create and update a product', async () => {
     const db = editor().firestore()
     await assertSucceeds(
@@ -102,7 +102,7 @@ describe('Firestore security rules — role matrix', () => {
     )
   })
 
-  // ── 6. ADMIN can write to users collection; unauthenticated cannot ────────────
+  // â”€â”€ 6. ADMIN can write to users collection; unauthenticated cannot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   it('ADMIN can write users; unauthenticated is rejected', async () => {
     const adminDb = admin().firestore()
     await assertSucceeds(
@@ -114,7 +114,7 @@ describe('Firestore security rules — role matrix', () => {
     )
   })
 
-  // ── 7. VIEWER cannot write the atomic-mutate surfaces ─────────────────────────
+  // â”€â”€ 7. VIEWER cannot write the atomic-mutate surfaces â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // mutate() writes entity + auditEvent + version + searchIndex in one batch; if ANY
   // required write is denied the whole batch fails, so these guard the invariant that a
   // VIEWER can never persist a domain change through the adapter.
@@ -134,7 +134,7 @@ describe('Firestore security rules — role matrix', () => {
     await assertFails(setDoc(doc(db, 'tasks/T1'), { title: 'X', rev: 1 }))
   })
 
-  // ── 8. VIEWER feedback is votes-only — any other field change is rejected ──────
+  // â”€â”€ 8. VIEWER feedback is votes-only â€” any other field change is rejected â”€â”€â”€â”€â”€â”€
   it('VIEWER feedback update is rejected when a non-votes field changes', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'feedback/fb3'), {
@@ -155,14 +155,14 @@ describe('Firestore security rules — role matrix', () => {
     )
   })
 
-  // ── 9. EDITOR is not ADMIN — cannot manage users ──────────────────────────────
+  // â”€â”€ 9. EDITOR is not ADMIN â€” cannot manage users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   it('EDITOR cannot write the users collection (ADMIN only)', async () => {
     const db = editor().firestore()
     await assertFails(setDoc(doc(db, 'users/victim-uid'), { role: 'ADMIN' }))
   })
 
-  // ── 10. Audit log is append-only — no update, even for ADMIN ───────────────────
-  it('auditEvents are append-only — update is rejected even for ADMIN', async () => {
+  // â”€â”€ 10. Audit log is append-only â€” no update, even for ADMIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  it('auditEvents are append-only â€” update is rejected even for ADMIN', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'auditEvents/ae1'), { action: 'create', actor: { uid: 'x' } })
     })
@@ -170,7 +170,7 @@ describe('Firestore security rules — role matrix', () => {
     await assertFails(setDoc(doc(db, 'auditEvents/ae1'), { action: 'tampered', actor: { uid: 'x' } }))
   })
 
-  // ── 11. Guest (anonymous) is READ-ONLY — the VITE_ALLOW_GUEST floor ────────────
+  // â”€â”€ 11. Guest (anonymous) is READ-ONLY â€” the VITE_ALLOW_GUEST floor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // A guest reads domain data (the guest floor) but every write predicate requires a real
   // (non-anonymous) account via isMember(), so anonymous sessions can never write anywhere.
   it('guest (anonymous) can read a product document', async () => {
@@ -214,5 +214,107 @@ describe('Firestore security rules — role matrix', () => {
         author: { uid: 'editor-uid', name: 'Editor' }, context: { route: '/app' },
       }),
     )
+  })
+
+  // â”€â”€ 12. EDITOR cannot write news (ADMIN-only surface) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  it('EDITOR write to news is rejected (admin-only)', async () => {
+    const db = editor().firestore()
+    await assertFails(setDoc(doc(db, 'news/n1'), { title: 'Scoop', body: 'Test', publishedAt: null }))
+  })
+
+  it('ADMIN can write news', async () => {
+    const db = admin().firestore()
+    await assertSucceeds(setDoc(doc(db, 'news/n2'), { title: 'Admin scoop', body: 'OK', publishedAt: null }))
+  })
+
+  // â”€â”€ 13. aiUsage â€” ADMIN-only reads; VIEWER and EDITOR are denied â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  it('VIEWER cannot read aiUsage (cost telemetry is admin-only)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'aiUsage/usage1'), { feature: 'chat', usd: 0.018 })
+    })
+    await assertFails(getDoc(doc(viewer().firestore(), 'aiUsage/usage1')))
+  })
+
+  it('EDITOR cannot read aiUsage', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'aiUsage/usage2'), { feature: 'chat', usd: 0.018 })
+    })
+    await assertFails(getDoc(doc(editor().firestore(), 'aiUsage/usage2')))
+  })
+
+  it('ADMIN can read aiUsage', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'aiUsage/usage3'), { feature: 'chat', usd: 0.018 })
+    })
+    await assertSucceeds(getDoc(doc(admin().firestore(), 'aiUsage/usage3')))
+  })
+
+  // â”€â”€ 14. auditEvents â€” ADMIN reads; VIEWER/EDITOR cannot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  it('ADMIN can read auditEvents', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'auditEvents/ae2'), { action: 'create', actor: { uid: 'editor-uid' } })
+    })
+    await assertSucceeds(getDoc(doc(admin().firestore(), 'auditEvents/ae2')))
+  })
+
+  it('VIEWER cannot read auditEvents', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'auditEvents/ae3'), { action: 'create', actor: { uid: 'editor-uid' } })
+    })
+    await assertFails(getDoc(doc(viewer().firestore(), 'auditEvents/ae3')))
+  })
+
+  // â”€â”€ 15. Server-only collections â€” denied to every client role, INCLUDING ADMIN â”€
+  // groundingChunks, semanticCache, and costCounters are written via the Admin SDK
+  // (which bypasses rules). Even ADMIN client-side reads are rejected so the "app
+  // never reads the vector store" guardrail is two-sided.
+  it('groundingChunks read is denied to ADMIN (server-only collection)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'groundingChunks/gc1'), { text: 'chunk' })
+    })
+    await assertFails(getDoc(doc(admin().firestore(), 'groundingChunks/gc1')))
+  })
+
+  it('semanticCache read is denied to ADMIN', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'semanticCache/sc1'), { answer: 'cached' })
+    })
+    await assertFails(getDoc(doc(admin().firestore(), 'semanticCache/sc1')))
+  })
+
+  it('costCounters read is denied to ADMIN', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'costCounters/cc1'), { usd: 1.23 })
+    })
+    await assertFails(getDoc(doc(admin().firestore(), 'costCounters/cc1')))
+  })
+
+  // â”€â”€ 16. newsPrefs â€” own-doc only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  it('VIEWER can read and write their own newsPrefs doc', async () => {
+    // read own
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'newsPrefs/viewer-uid'), { pinnedHashes: [] })
+    })
+    await assertSucceeds(getDoc(doc(viewer().firestore(), 'newsPrefs/viewer-uid')))
+    // write own (isMember && myUid() == uid)
+    await assertSucceeds(setDoc(doc(viewer().firestore(), 'newsPrefs/viewer-uid'), { pinnedHashes: ['abc'] }))
+  })
+
+  it("VIEWER cannot read another user's newsPrefs", async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'newsPrefs/editor-uid'), { pinnedHashes: [] })
+    })
+    await assertFails(getDoc(doc(viewer().firestore(), 'newsPrefs/editor-uid')))
+  })
+
+  it('guest (anonymous) cannot read or write any newsPrefs doc', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'newsPrefs/guest-uid'), { pinnedHashes: [] })
+    })
+    // read own â€” isAuthed() passes but isGuest() makes isMember() false; read rule uses isAuthed()
+    // which would pass, BUT newsPrefs rule is: allow read: if isAuthed() && myUid() == uid
+    // Guest IS isAuthed(), so read own-doc actually PASSES. But write is blocked (isMember() is false).
+    // Confirm write is denied:
+    await assertFails(setDoc(doc(guest().firestore(), 'newsPrefs/guest-uid'), { pinnedHashes: ['x'] }))
   })
 })

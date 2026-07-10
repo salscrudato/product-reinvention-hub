@@ -66,6 +66,12 @@ describe('retrieval quality — expected anchor in top-k', () => {
     const hits = lexicalRetrieve('', CORPUS, { topK: 5 })
     expect(hits.length).toBeLessThanOrEqual(5)
   })
+
+  it('returns [] immediately for an empty corpus (no chunks at all)', () => {
+    // The short-circuit at pool.length === 0 must fire — no crash, no BM25 division-by-zero.
+    expect(lexicalRetrieve('dwelling coverage', [], { topK: 5 })).toEqual([])
+    expect(lexicalRetrieve('', [], { topK: 10 })).toEqual([])
+  })
 })
 
 describe('dense-vector math', () => {

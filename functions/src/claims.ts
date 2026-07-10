@@ -177,7 +177,8 @@ export const FORM_SANDBOX_NOTE =
 // (the form is silent — nothing to cite). Mirror of app/src/lib/claims/determination.ts.
 const SUBSTANTIVE_VERDICTS = new Set(['COVERED', 'NOT_COVERED', 'PARTIAL'])
 
-function determinationIsCited(d: Record<string, unknown>): boolean {
+// Exported for unit-testing the citation guard without a live model call.
+export function determinationIsCited(d: Record<string, unknown>): boolean {
   const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
   const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
   const explicit  = arr(d.citations).some(c => str(c).length > 0)

@@ -213,7 +213,8 @@ async function runSection(
 // The cheap-first escalation CHECK for a section, reusing the shared extraction sanitizers
 // as the verifier. `rawCount` is what the fast model proposed; `keptCount` is what survived
 // the sanitizer (uncited items + form numbers absent from the source are dropped).
-function sectionNeedsEscalation(key: string, rawCount: number, keptCount: number): boolean {
+// Exported so the gate can assert the escalation logic deterministically.
+export function sectionNeedsEscalation(key: string, rawCount: number, keptCount: number): boolean {
   // Fabrication signal: the fast pass proposed items but the sanitizer dropped them ALL —
   // an ungrounded/hallucinated-citation pattern. Escalate for a cleaner strong pass.
   if (rawCount > 0 && keptCount === 0) return true
@@ -225,7 +226,7 @@ function sectionNeedsEscalation(key: string, rawCount: number, keptCount: number
 
 // Count what the model proposed for a section BEFORE the sanitizer runs (the tool field
 // name differs for rating). Used only to detect the "proposed items, all dropped" pattern.
-function proposedCount(key: string, input: Record<string, unknown>): number {
+export function proposedCount(key: string, input: Record<string, unknown>): number {
   const field = key === 'rating' ? 'hints' : key
   const arr = input[field]
   return Array.isArray(arr) ? arr.length : 0

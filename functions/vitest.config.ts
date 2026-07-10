@@ -5,6 +5,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // AI_FAKE=1 activates the fake Anthropic client in fake.test.ts so the E2E
+    // agent-loop tests run in the normal gate without hitting the live Anthropic API.
+    env: { AI_FAKE: '1' },
   },
   // Resolve @pf/shared from source, mirroring the tsup build alias (tsup.config.ts). functions
   // deliberately has no workspace dependency on @pf/shared, so without this alias any test that

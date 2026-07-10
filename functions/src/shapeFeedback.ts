@@ -95,7 +95,7 @@ const SURFACE_FILES: Array<[RegExp, string[]]> = [
 ]
 
 /** Real source files for the surface the feedback was left on, or [] when unknown. */
-function candidateFiles(route?: string, routeLabel?: string): string[] {
+export function candidateFiles(route?: string, routeLabel?: string): string[] {
   const hay = `${route ?? ''} ${routeLabel ?? ''}`.toLowerCase()
   for (const [re, files] of SURFACE_FILES) if (re.test(hay)) return files
   return []
@@ -232,7 +232,8 @@ async function fetchAttachmentBlocks(attachments: Attachment[]): Promise<Anthrop
 
 // ─── Sanitizer — enforce the output contract server-side (the forced tool guarantees a call,
 //     not perfect fields). Also the ONE place that echoes the caller refId and grounds files. ─
-function sanitizeStory(raw: Record<string, unknown>, input: ShapeFeedbackInput, candidates: string[]): ShapedStory {
+// Exported for unit-testing the likelyFiles allowlist enforcement.
+export function sanitizeStory(raw: Record<string, unknown>, input: ShapeFeedbackInput, candidates: string[]): ShapedStory {
   // Map any number onto the 1|2|3 scale: ≤1 → 1, ≥3 → 3, everything else (incl. NaN) → 2.
   const scale = (v: unknown): 1 | 2 | 3 => { const n = Math.round(Number(v)); return n <= 1 ? 1 : n >= 3 ? 3 : 2 }
 
