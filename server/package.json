@@ -1,0 +1,13 @@
+{
+  "name": "prodhub-azure-host",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Azure App Service host for Product Hub — serves the Vite SPA + GET /api/health. Zero runtime dependencies.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,21 +1,101 @@
-# Node.js
-# Build a general Node.js project with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+# Product Hub — Azure DevOps CI/CD (monorepo / Vite SPA on Azure App Service).
+#
+# Push to main auto-deploys: build the Vite SPA, assemble a zero-dependency
+# Node host (server/server.js + app/dist -> public/), zip it, and deploy to the
+# Linux App Service app-prodhub-dev via AzureWebApp@1.
+#
+# Deploy keys are REUSED VERBATIM from the previous (CRA) pipeline so the
+# existing service-connection rights keep working:
+#   service connection : producthub-azure
+#   app service        : app-prodhub-dev   (rg-prodhub-dev)
+#   runtime            : NODE|20-lts        startup: node server.js
+#
+# Gate step is the deploy gate: a broken rating CANARY (shared vitest) fails the
+# build and NO deploy happens. Lint + the full test/e2e suite are intentionally
+# skipped here for build speed (see docs/DEPLOY_AZURE.md); the canary is not.
 
 trigger:
-- main
+  batch: true
+  branches:
+    include:
+      - main
+
+pr: none
 
 pool:
   vmImage: ubuntu-latest
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
+variables:
+  # Reused from the old pipeline. Most producthub-build vars described the OLD
+  # CRA app (REACT_APP_*/Cosmos) and are irrelevant to the Vite build, which
+  # needs no build-time secrets (Firebase web config is public/in-bundle). The
+  # group is linked only to keep the name stable for future build-time vars.
+  - group: producthub-build
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+  - name: NODE_VERSION
+    value: '20.x'
+  - name: AZURE_SERVICE_CONNECTION
+    value: 'producthub-azure'
+  - name: RESOURCE_GROUP
+    value: 'rg-prodhub-dev'
+  - name: APP_SERVICE_NAME
+    value: 'app-prodhub-dev'
+
+steps:
+  - task: NodeTool@0
+    displayName: 'Use Node $(NODE_VERSION)'
+    inputs:
+      versionSpec: $(NODE_VERSION)
+
+  - script: |
+      corepack enable
+      corepack prepare pnpm@9 --activate
+      pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
+    displayName: 'Install (pnpm)'
+
+  - script: pnpm -r typecheck
+    displayName: 'Gate: typecheck (all workspaces)'
+
+  - script: pnpm --filter @pf/shared test
+    displayName: 'Gate: rating CANARIES (HO-3 $1,528 / PA $1,002 / GL $2,635) — a red canary blocks deploy'
+
+  - script: pnpm --filter app build
+    displayName: 'Build Vite SPA -> app/dist'
+
+  - script: |
+      set -e
+      rm -rf "$(Build.BinariesDirectory)"/*
+      mkdir -p "$(Build.BinariesDirectory)/public"
+      cp server/server.js  "$(Build.BinariesDirectory)/server.js"
+      cp server/package.json "$(Build.BinariesDirectory)/package.json"
+      cp -r app/dist/. "$(Build.BinariesDirectory)/public/"
+      echo "=== artifact tree (top) ==="
+      ls -la "$(Build.BinariesDirectory)"
+      test -f "$(Build.BinariesDirectory)/public/index.html"
+    displayName: 'Assemble deploy artifact (server.js + public/)'
+
+  - task: ArchiveFiles@2
+    displayName: 'Zip deploy artifact'
+    inputs:
+      rootFolderOrFile: '$(Build.BinariesDirectory)'
+      includeRootFolder: false
+      archiveType: zip
+      archiveFile: '$(Build.ArtifactStagingDirectory)/prodhub-$(Build.BuildId).zip'
+      replaceExistingArchive: true
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish zip as pipeline artifact'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: drop
+
+  - task: AzureWebApp@1
+    displayName: 'Deploy to $(APP_SERVICE_NAME)'
+    inputs:
+      azureSubscription: $(AZURE_SERVICE_CONNECTION)
+      appType: webAppLinux
+      appName: $(APP_SERVICE_NAME)
+      resourceGroupName: $(RESOURCE_GROUP)
+      package: '$(Build.ArtifactStagingDirectory)/prodhub-$(Build.BuildId).zip'
+      runtimeStack: 'NODE|20-lts'
+      startUpCommand: 'node server.js'
