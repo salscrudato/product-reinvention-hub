@@ -478,3 +478,73 @@ s10 MIN_FLOOR $420 (Rule 205), round 0 = $1,281
 grounding + governance bar as the workbook importer. Gate: typecheck ✓, lint ✓, 697 unit tests ✓
 (576 shared+app, 121 functions), build ✓. `test:rules`/`integration`/`e2e` remain blocked by the
 pre-existing port-8080 emulator conflict (V5 / BASELINE), unrelated to this work.
+
+---
+
+## V17 — Duck Creek export reconciled to the real reference + hardened (2026-07-10)
+
+**FINDING:** The real Duck Creek reference (`samples/duckcreek/DuckCreekXML.xml`, and its
+byte-identical twin `PolicyXML.xml`, `md5 06f63274…`) was supplied and committed read-only. It is
+an `OnlineData.loadPolicyRs` **instance** (AIG PCG Naples-FL coastal-wind PersonalHome quote), not
+a manuscript definition. The PDM→Duck Creek exporter was reconciled against it element by element,
+the mappable gaps closed, validation made fail-closed, and byte-stable golden snapshots frozen for
+all three seeded lines.
+
+**EVIDENCE:**
+- **Reconciliation** — `docs/reviews/DUCKCREEK_RECONCILIATION.md`: element/attribute × in-ref ×
+  in-export × source-of-truth × action, grouped by region (policy header, line/risk, coverage
+  entries, limits/deductibles, StatCode, subjectivities, indicators, territory mapping). Every row
+  is MAP NOW (with source), OUT OF SCOPE (runtime, one-line reason), or NEEDS DATA.
+- **Gaps closed** (`shared/src/duckcreek/{mapping,serialize}.ts`):
+  - `<LineOfBusiness>` from `PdmLine.compactName` (child of `<product>`).
+  - Coverage `<Indicator t="endorsement" ismandatory>` on endorsement-like coverages
+    (OPTIONAL / sub-coverages); `ismandatory` from `requirement`. Base bureau coverages A–F carry
+    none, matching the sample.
+  - `<RiskManuscriptTableManuScriptID>` — `composeTableManuscriptIdForScope()` →
+    `Carrier_LOB_Market_Tables_<state|country>_v_v_v_v`, one per peril-eligible state (PH → FL GA
+    NC SC TX, incl. the sample's FL) else one national entry. Deterministic.
+  - Coverage `t` convention (`CoverageA…F`), `Caption`, typed `limit`/`deductible` children were
+    already correct — confirmed against the reference.
+  - `lobTokens` gained an explicit `GL: 'GL'` (was falling back).
+- **Out of scope (runtime)** — Premium quintet **emitted as zeros** (sample always includes it);
+  TermFactor / PremiumAfterWaiver / risk scores / ISO stat codes / Verisk `dtsToTerritoryMapping` /
+  subjectivities / account-party-session blocks **omitted**. Ledger + emit-vs-omit rationale in the
+  reconciliation doc.
+- **GL PDM builder** — `shared/src/pdm/source.ts` gained `GENERAL_LIABILITY_BUNDLE` +
+  `buildGeneralLiabilityPdm()` (GL was seeded since V15 but had no PDM builder). The PDM builder is
+  line-agnostic, so the GL bundle serializes + validates with no builder changes.
+- **Fail-closed validation** (`shared/src/duckcreek/validate.ts`) — new `requiredFieldsPresent`,
+  `enumsValid`, `numericFormatsValid` dimensions: required elements (root manuScriptID,
+  LineOfBusiness, per-state RiskManuscriptTableManuScriptID, coverage Caption, form FormNumber),
+  enum membership (requirement / rating op / sourceType / ruleType / valueType / booleans), numeric
+  format (premium quintet, numeric eligible values, minimumPremium, const, roundTo), and a
+  parse-back well-formedness re-parse. Any violation flips `ok=false`.
+- **UI** — `DuckCreekExportModal` now renders a validation-dimension strip and (pre-existing) the
+  field-level issue list; download stays disabled unless `report.ok` — silently-invalid XML is
+  never emitted.
+- **Golden snapshots** — `shared/src/duckcreek/golden.test.ts` + `__golden__/{personalHome,
+  personalAuto,generalLiability}.duckcreek.xml`: each line serialized twice byte-identically and
+  compared to the committed golden (regenerate with `UPDATE_GOLDEN=1`). The Prompt-6 filing fixture
+  is out of scope (an import-time artifact, not a seeded standing bundle) — stated in both files.
+- **Audit continuity** — `functions/src/exportDuckCreek.test.ts` asserts a `manuScriptID`-bearing
+  `export-duckcreek` audit event on every export, including a REPEAT export of the same product
+  (append-only; never deduped), and NO write when the guard rejects.
+
+**HOSTILE SELF-REVIEW:**
+- *Traceable?* Every emitted element maps to a reference element (reconciliation doc) or is a
+  clearly-flagged honest extension (`refId`, `validValues`, `Section`, the definitional
+  rating/rules sections the instance lacks). Every unmapped reference field is listed OUT OF SCOPE
+  or NEEDS DATA with a reason.
+- *Byte-stable across two runs?* Yes — golden.test.ts asserts two independent builds are identical
+  and equal the committed golden; re-run in a fresh process reconfirmed. No clocks / no RNG;
+  effectiveDate is opt-in; all ordering is fixed (coverages by order, tables by refId, steps by
+  order, table scopes sorted).
+- *Fail closed?* Yes — faithful PH/PA/GL pass all dimensions (asserted); tampering (non-numeric
+  premium, out-of-enum op, missing LineOfBusiness, dropped refId, broken id prefix, missing
+  namespace, malformed XML) each flips `ok=false` and the modal blocks download.
+- *Canaries?* HO-3 $1,528 / PA $1,002 / GL $2,635 untouched — no rating code changed.
+
+**CONSEQUENCE:** The Duck Creek export is reconciled to the real reference, fail-closed, and
+byte-stable for all three seeded lines. Gate: typecheck ✓, lint ✓, 737 unit tests ✓ (612
+shared+app, 125 functions), build ✓. `test:rules`/`integration`/`e2e` remain blocked by the
+pre-existing port-8080 emulator conflict (V5 / BASELINE), unrelated to this work.

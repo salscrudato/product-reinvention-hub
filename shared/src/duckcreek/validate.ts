@@ -31,17 +31,36 @@ export interface ValidationIssue {
 }
 
 export interface ValidationReport {
-  ok:                boolean
-  wellFormed:        boolean
-  namespaceDeclared: boolean
-  idPrefixesValid:   boolean
-  crossRefsValid:    boolean   // every options.cid points at a real coverage id
-  roundTripOk:       boolean
-  counts:            SectionCount[]
-  missingRefIds:     RefMismatch[]   // in the PDM but absent from the XML (dropped)
-  extraRefIds:       RefMismatch[]   // in the XML but not in the PDM (invented)
-  duplicateIds:      string[]        // GUID collisions
-  issues:            ValidationIssue[]
+  ok:                  boolean
+  wellFormed:          boolean
+  namespaceDeclared:   boolean
+  idPrefixesValid:     boolean
+  crossRefsValid:      boolean   // every options.cid points at a real coverage id
+  roundTripOk:         boolean
+  requiredFieldsPresent: boolean // mandatory elements/attributes per the mapping are present
+  enumsValid:          boolean   // coded attributes carry values from their allowed set
+  numericFormatsValid: boolean   // premiums, limits and factors parse as numbers
+  counts:              SectionCount[]
+  missingRefIds:       RefMismatch[]   // in the PDM but absent from the XML (dropped)
+  extraRefIds:         RefMismatch[]   // in the XML but not in the PDM (invented)
+  duplicateIds:        string[]        // GUID collisions
+  issues:              ValidationIssue[]
+}
+
+// ─── Allowed value sets (mirror the PDM union types) ──────────────────────────
+const ENUM_REQUIREMENT  = new Set(['MANDATORY', 'OPTIONAL'])
+const ENUM_RATING_OP    = new Set(['SET', 'MUL', 'ADD', 'MIN_FLOOR'])
+const ENUM_SOURCE_TYPE  = new Set(['RT', 'LD', 'INPUT', 'CONST', 'SPP'])
+const ENUM_RULE_TYPE    = new Set(['ELIGIBILITY', 'COVERAGE', 'RATING', 'FORM_ATTACH'])
+const ENUM_VALUE_TYPE   = new Set(['FLAT', 'PERCENT', 'SPLIT', 'CSL', 'SCHEDULED', 'WAITING_PERIOD', 'FLAG'])
+const ENUM_BOOL         = new Set(['0', '1'])
+// Value types whose emitted <value> text must be a finite number (SPLIT is "a/b"; FLAG is empty).
+const NUMERIC_VALUE_TYPES = new Set(['FLAT', 'PERCENT', 'CSL', 'WAITING_PERIOD'])
+
+/** A finite number in plain (non-exponential-required) decimal form. */
+function isNumeric(s: string | undefined): boolean {
+  if (s === undefined || s.trim() === '') return false
+  return Number.isFinite(Number(s))
 }
 
 // The element that anchors each id-bearing node type, for the prefix-letter audit.
@@ -55,6 +74,7 @@ const ID_BEARING: Array<{ type: DcNodeType; elementKey: keyof DuckCreekMapping['
   { type: 'option',        elementKey: 'options' },
   { type: 'statCode',      elementKey: 'statCode' },
   { type: 'exposure',      elementKey: 'exposure' },
+  { type: 'indicator',     elementKey: 'indicator' },
   { type: 'form',          elementKey: 'form' },
   { type: 'ratingProgram', elementKey: 'program' },
   { type: 'ratingStep',    elementKey: 'step' },
@@ -107,7 +127,9 @@ export function validateDuckCreek(
   } catch (err) {
     return {
       ok: false, wellFormed: false, namespaceDeclared: false, idPrefixesValid: false,
-      crossRefsValid: false, roundTripOk: false, counts: [], missingRefIds: [], extraRefIds: [],
+      crossRefsValid: false, roundTripOk: false,
+      requiredFieldsPresent: false, enumsValid: false, numericFormatsValid: false,
+      counts: [], missingRefIds: [], extraRefIds: [],
       duplicateIds: [],
       issues: [{ severity: 'error', code: 'not-well-formed', message: String((err as Error).message) }],
     }
@@ -198,8 +220,119 @@ export function validateDuckCreek(
   for (const m of missingRefIds) issues.push({ severity: 'error', code: 'dropped-node', message: `${m.section}: refId "${m.refId}" was dropped (in PDM, not in XML).` })
   for (const x of extraRefIds) issues.push({ severity: 'error', code: 'extra-node', message: `${x.section}: refId "${x.refId}" is in the XML but not the PDM.` })
 
+  // (d) FAIL-CLOSED field validation — required presence, enum membership, numeric format.
+  //     Every violation is a field-level error the ExportMenu surfaces; a single one flips
+  //     ok=false so the modal never lets silently-invalid XML download.
+  const req = (cond: boolean, code: string, message: string): void => {
+    if (!cond) issues.push({ severity: 'error', code, message })
+  }
+
+  // (d1) required top-level identity
+  const msPattern = /^[A-Za-z]+(_[A-Za-z]+)*_[A-Z]{2}_\d+_\d+_\d+_\d+$/
+  const rootMs = attr(root, A.manuScriptID)
+  req(rootMs !== undefined && msPattern.test(rootMs), 'missing-manuscriptid',
+    `Root <${E.manuscript}> must carry a well-formed ${A.manuScriptID}.`)
+  req(findAll(root, E.lineOfBusiness).some(n => (n.text ?? '').trim() !== ''), 'missing-lob',
+    `Expected a non-empty <${E.lineOfBusiness}> (line of business).`)
+  const riskTableIds = findAll(root, E.riskTableManuScriptId)
+  req(riskTableIds.length > 0, 'missing-risk-tables',
+    `Expected at least one <${E.riskTableManuScriptId}> (state-scoped tables manuscript).`)
+  for (const rt of riskTableIds) {
+    req(msPattern.test((rt.text ?? '').trim()), 'bad-risk-table-id',
+      `<${E.riskTableManuScriptId}> "${(rt.text ?? '').trim()}" is not a well-formed manuScriptID.`)
+  }
+
+  // (d2) coverages — caption present, requirement enum, boolean indicators well-formed
+  for (const cov of findAll(root, E.coverage)) {
+    const ref = attr(cov, A.refId) ?? attr(cov, A.id) ?? '?'
+    const caption = cov.children.find(c => c.name === E.caption)
+    req(!!caption && (caption.text ?? '').trim() !== '', 'missing-caption',
+      `Coverage "${ref}" is missing a non-empty <${E.caption}>.`)
+    const reqVal = attr(cov, A.req)
+    if (reqVal !== undefined) {
+      req(ENUM_REQUIREMENT.has(reqVal), 'enum-requirement',
+        `Coverage "${ref}" has ${A.req}="${reqVal}" (not MANDATORY|OPTIONAL).`)
+    }
+    for (const b of [A.ind, A.premiumGenerating]) {
+      const v = attr(cov, b)
+      if (v !== undefined) req(ENUM_BOOL.has(v), 'enum-bool', `Coverage "${ref}" ${b}="${v}" must be 0 or 1.`)
+    }
+  }
+
+  // (d3) endorsement indicators — ismandatory boolean
+  for (const ind of findAll(root, E.indicator)) {
+    const v = attr(ind, A.endorsementMandatory)
+    if (v !== undefined) req(ENUM_BOOL.has(v), 'enum-bool', `<${E.indicator}> ${A.endorsementMandatory}="${v}" must be 0 or 1.`)
+  }
+
+  // (d4) eligible values — valueType enum + numeric where the type is a scalar number
+  for (const v of findAll(root, E.value)) {
+    const vt = attr(v, A.valueType)
+    if (vt !== undefined) {
+      req(ENUM_VALUE_TYPE.has(vt), 'enum-valuetype', `<${E.value}> ${A.valueType}="${vt}" is not a known value type.`)
+      if (NUMERIC_VALUE_TYPES.has(vt)) {
+        req(isNumeric(v.text), 'nonnumeric-value',
+          `<${E.value}> of type ${vt} must be numeric (got "${v.text ?? ''}").`)
+      }
+    }
+  }
+
+  // (d5) rating steps — op + sourceType enums, numeric const/roundTo when present
+  for (const step of findAll(root, E.step)) {
+    const ref = attr(step, A.refId) ?? '?'
+    const op = attr(step, A.op)
+    req(op !== undefined && ENUM_RATING_OP.has(op), 'enum-op', `Rating step "${ref}" op="${op ?? ''}" is not SET|MUL|ADD|MIN_FLOOR.`)
+    const st = attr(step, A.sourceType)
+    req(st !== undefined && ENUM_SOURCE_TYPE.has(st), 'enum-sourcetype', `Rating step "${ref}" ${A.sourceType}="${st ?? ''}" is not RT|LD|INPUT|CONST|SPP.`)
+    const cv = attr(step, A.constValue)
+    if (cv !== undefined) req(isNumeric(cv), 'nonnumeric-const', `Rating step "${ref}" ${A.constValue}="${cv}" must be numeric.`)
+    const rt2 = attr(step, A.roundTo)
+    if (rt2 !== undefined) req(isNumeric(rt2), 'nonnumeric-roundto', `Rating step "${ref}" ${A.roundTo}="${rt2}" must be numeric.`)
+  }
+
+  // (d6) rating programs — minimumPremium numeric
+  for (const prog of findAll(root, E.program)) {
+    const mp = attr(prog, A.minimumPremium)
+    if (mp !== undefined) req(isNumeric(mp), 'nonnumeric-minpremium', `Program "${attr(prog, A.refId) ?? '?'}" ${A.minimumPremium}="${mp}" must be numeric.`)
+  }
+
+  // (d7) rules — ruleType enum
+  for (const rule of findAll(root, E.rule)) {
+    const rtv = attr(rule, A.ruleType)
+    req(rtv !== undefined && ENUM_RULE_TYPE.has(rtv), 'enum-ruletype', `Rule "${attr(rule, A.refId) ?? '?'}" ${A.ruleType}="${rtv ?? ''}" is not a known rule type.`)
+  }
+
+  // (d8) forms — non-empty form number
+  for (const form of findAll(root, E.form)) {
+    const fn = form.children.find(c => c.name === E.formNumber)
+    req(!!fn && (fn.text ?? '').trim() !== '', 'missing-formnumber',
+      `Form "${attr(form, A.refId) ?? '?'}" is missing a non-empty <${E.formNumber}>.`)
+  }
+
+  // (d9) premium quintet — every emitted premium child must be numeric
+  for (const cov of findAll(root, E.coverage)) {
+    for (const child of cov.children) {
+      if (mapping.premiumChildren.includes(child.name)) {
+        req(isNumeric(child.text), 'nonnumeric-premium',
+          `Coverage "${attr(cov, A.refId) ?? '?'}" <${child.name}> must be numeric (got "${child.text ?? ''}").`)
+      }
+    }
+  }
+
+  // Bucket the field-validation issues by category so each dimension reports independently.
+  const codeCat = (code: string): 'required' | 'enum' | 'numeric' | 'other' =>
+    code.startsWith('missing-') || code === 'bad-risk-table-id' ? 'required'
+    : code.startsWith('enum-') ? 'enum'
+    : code.startsWith('nonnumeric-') ? 'numeric'
+    : 'other'
+  const codes = issues.map(i => i.code)
+  const requiredFieldsPresent = !codes.some(c => codeCat(c) === 'required')
+  const enumsValid            = !codes.some(c => codeCat(c) === 'enum')
+  const numericFormatsValid   = !codes.some(c => codeCat(c) === 'numeric')
+
   const ok =
     namespaceDeclared && idPrefixesValid && crossRefsValid && roundTripOk &&
+    requiredFieldsPresent && enumsValid && numericFormatsValid &&
     duplicateIds.length === 0 &&
     !issues.some(i => i.severity === 'error')
 
@@ -210,6 +343,9 @@ export function validateDuckCreek(
     idPrefixesValid,
     crossRefsValid,
     roundTripOk,
+    requiredFieldsPresent,
+    enumsValid,
+    numericFormatsValid,
     counts,
     missingRefIds,
     extraRefIds,
@@ -223,5 +359,5 @@ export function summarizeReport(report: ValidationReport): string {
   const total = report.counts.reduce((n, c) => n + c.emitted, 0)
   const status = report.ok ? 'PASS' : 'FAIL'
   const sect = report.counts.map(c => `${c.section}=${c.emitted}/${c.expected}`).join(' ')
-  return `[${status}] wellFormed=${report.wellFormed} ns=${report.namespaceDeclared} ids=${report.idPrefixesValid} cids=${report.crossRefsValid} roundTrip=${report.roundTripOk} nodes=${total} · ${sect}`
+  return `[${status}] wellFormed=${report.wellFormed} ns=${report.namespaceDeclared} ids=${report.idPrefixesValid} cids=${report.crossRefsValid} roundTrip=${report.roundTripOk} required=${report.requiredFieldsPresent} enums=${report.enumsValid} numeric=${report.numericFormatsValid} nodes=${total} · ${sect}`
 }

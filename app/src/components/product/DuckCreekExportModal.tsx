@@ -182,6 +182,37 @@ export function DuckCreekExportModal({ data, onClose }: Props) {
               </div>
             </div>
 
+            {/* Fail-closed validation dimensions — each must pass before download is allowed. */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-faint mb-2">Validation checks</p>
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  ['Well-formed',     report.wellFormed],
+                  ['Namespace',       report.namespaceDeclared],
+                  ['ID conventions',  report.idPrefixesValid],
+                  ['Cross-refs',      report.crossRefsValid],
+                  ['Round-trip',      report.roundTripOk],
+                  ['Required fields', report.requiredFieldsPresent],
+                  ['Enums',           report.enumsValid],
+                  ['Numeric formats', report.numericFormatsValid],
+                ] as const).map(([label, pass]) => (
+                  <span
+                    key={label}
+                    className="inline-flex items-center gap-1 rounded-[8px] px-2 py-1 text-[11px] font-medium"
+                    style={{
+                      background: `color-mix(in srgb, ${pass ? 'var(--color-good)' : 'var(--color-danger)'} 12%, transparent)`,
+                      color: pass ? 'var(--color-good)' : 'var(--color-danger)',
+                    }}
+                  >
+                    {pass
+                      ? <IconCheck       size={12} aria-hidden="true" />
+                      : <IconAlertCircle size={12} aria-hidden="true" />}
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
             {/* Per-section round-trip counts */}
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-faint mb-2">Round-trip check</p>

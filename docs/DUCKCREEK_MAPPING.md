@@ -27,14 +27,18 @@ Vitest).
 
 ## ⚠️ The instance-vs-manuscript-definition caveat (read this first)
 
-The golden reference we studied (`DuckCreekXML.xml`) is an **instance** document — a
-serialized `OnlineData.loadPolicyRs` quote (one Florida homeowners risk, its selected
-limits, its computed premium). It is **not** a Duck Creek *manuscript definition*.
+The golden reference we studied (`samples/duckcreek/DuckCreekXML.xml`, and its byte-identical
+twin `PolicyXML.xml`) is an **instance** document — a serialized `OnlineData.loadPolicyRs` quote
+(one Florida homeowners risk, its selected limits, its computed premium). It is **not** a Duck
+Creek *manuscript definition*.
 
-> **Not committed.** That reference file is a real exported quote containing
-> instance-level PII (names, addresses, dates of birth, license numbers). Per the
-> "no giant XML snapshots" guardrail *and* basic data hygiene it is **kept out of the
-> repo**; the vocabulary it taught us is captured entirely in `mapping.ts` and this doc.
+> **Committed read-only reference.** Both files are supplied under `samples/duckcreek/` as
+> read-only vocabulary references. They are *instance* (quote) documents; the sample's values
+> read as synthetic test data ("Florida" / "Wind test", DOB 1999-09-19). A full element-by-element
+> walk of the reference against our export — every field mapped, out-of-scope, or needs-data —
+> lives in [docs/reviews/DUCKCREEK_RECONCILIATION.md](reviews/DUCKCREEK_RECONCILIATION.md). Our
+> committed golden snapshots (`shared/src/duckcreek/__golden__/`) are of *our* export, not this
+> reference, and contain no instance data.
 
 The true manuscript-**definition** schema (the authoring artifact that declares a product's
 coverages, valid-value lists, rating worksheets and inference rules) is **proprietary to
@@ -77,8 +81,11 @@ Observed in `DuckCreekXML.xml` and reproduced by the serializer:
 | Canonical (PDM) | Duck Creek element | Notes |
 |---|---|---|
 | product | `product` (+ `policyAdmin` footer) | `t` = compact line name (`PersonalHome`); carries `refId`. |
+| line-of-business | `LineOfBusiness` | compact line name from the LOB registry (`PdmLine.compactName`). |
 | line | `line` / `Type` | `description`/`Type` = compact line name; wraps a single `risk`. |
 | coverage | `coverage` (`id`, `t`, `ind`, `refId`) | `t` = PascalCase key (`CoverageA`); `ind` = mandatory flag. |
+| endorsement indicator | `Indicator` (`t="endorsement"`, `ismandatory`) | emitted on endorsement-like coverages (OPTIONAL / sub-coverages); `ismandatory` from `requirement`. |
+| risk table manuscript | `RiskManuscriptTableManuScriptID` | `Carrier_LOB_Market_Tables_<state\|country>_v_v_v_v`; one per peril-eligible state, else national. |
 | sub-coverage | nested `coverage` | nested by `parentRefId` under its parent coverage. |
 | limit | `limit` typed field (`t`, `id`, `default`, `structure`, `basis`) | value list as `validValues`; see extensions. |
 | deductible | `deductible` typed field | same shape as `limit`. |
@@ -119,9 +126,12 @@ Observed in `DuckCreekXML.xml` and reproduced by the serializer:
   vocabulary plus the flagged extensions.
 - We do **not** reproduce ISO statistical codes, territory/credit rating internals, or the
   exact worksheet element schema — none of which are recoverable from an instance sample.
-- The Personal Auto LOB token (`PA`) is a **placeholder**: the sample only covers
-  Homeowners (`HO`). Swap it in `mapping.ts::manuscript.lobTokens` for the carrier's real
-  auto token.
+- The Personal Auto (`PA`) and General Liability (`GL`) LOB tokens are **placeholders**: the
+  sample only covers Homeowners (`HO`). Swap them in `mapping.ts::manuscript.lobTokens` for the
+  carrier's real auto / GL tokens.
+- The state-scoped `RiskManuscriptTableManuScriptID` market (`Admitted`) and version come from
+  `mapping.ts`; the sample's `Non_Admitted` / build `_5` reflect that one surplus-lines risk and
+  are per-carrier configuration, not derivable from the definition.
 
 ## id conventions (deterministic, diffable)
 
@@ -139,9 +149,9 @@ import {
   buildPersonalHomePdm, serializePdmToDuckCreek, validateDuckCreek, summarizeReport,
 } from '@pf/shared'
 
-const pdm    = buildPersonalHomePdm()                 // or buildPersonalAutoPdm()
+const pdm    = buildPersonalHomePdm()                 // or buildPersonalAutoPdm() / buildGeneralLiabilityPdm()
 const xml    = serializePdmToDuckCreek(pdm)            // deterministic
-const report = validateDuckCreek(pdm, xml)            // well-formed + structural + round-trip
+const report = validateDuckCreek(pdm, xml)            // well-formed + structural + round-trip + fail-closed
 console.log(summarizeReport(report))                  // [PASS] … coverages=10/10 …
 ```
 
@@ -165,8 +175,20 @@ serializePdmToDuckCreek(pdm, { mapping })
 - `roundTripOk` + `counts` — parsing the XML back recovers the **same** coverage / limit /
   deductible / option / form / rating-program / step / table / rule set and refIds as the
   source PDM. `missingRefIds` lists anything dropped; `extraRefIds` anything invented.
+- `requiredFieldsPresent` — mandatory elements/attributes per the mapping are present and
+  well-formed (root `manuScriptID`, `LineOfBusiness`, per-state `RiskManuscriptTableManuScriptID`,
+  every coverage `Caption`, every form `FormNumber`).
+- `enumsValid` — coded attributes carry allowed values (`requirement`, rating `op` / `sourceType`,
+  `ruleType`, eligible-value `valueType`, boolean indicators).
+- `numericFormatsValid` — the premium quintet, numeric eligible values, `minimumPremium`, `const`
+  and `roundTo` all parse as finite numbers.
 
-Tests: `shared/src/pdm/build.test.ts`, `shared/src/duckcreek/{guid,xml,serialize,validate}.test.ts`.
-They assert structure + counts (not giant XML snapshots) and cover projection completeness,
-serializer determinism, refId/form-number preservation, and a clean validation report for
-both Personal Home and Personal Auto.
+These three are **fail-closed**: any violation is a field-level error that flips `ok=false`, and the
+`DuckCreekExportModal` disables download unless `ok` — so silently-invalid XML is never emitted.
+
+Tests: `shared/src/pdm/build.test.ts`, `shared/src/duckcreek/{guid,xml,serialize,validate,golden}.test.ts`,
+`functions/src/exportDuckCreek.test.ts` (audit continuity). They cover projection completeness,
+serializer determinism, refId/form-number preservation, fail-closed validation (faithful passes,
+tampering fails), and byte-stable golden snapshots for **Personal Home, Personal Auto and General
+Liability**. The element-by-element reference reconciliation is
+[docs/reviews/DUCKCREEK_RECONCILIATION.md](reviews/DUCKCREEK_RECONCILIATION.md).

@@ -15,6 +15,7 @@
 export type DcNodeType =
   | 'manuscript' | 'product' | 'line' | 'risk'
   | 'coverage' | 'limit' | 'deductible' | 'option' | 'statCode' | 'exposure' | 'peril'
+  | 'indicator'
   | 'form' | 'edition'
   | 'ratingProgram' | 'ratingStep' | 'factorTable' | 'tableDimension'
   | 'rule' | 'validValue' | 'dynamicField' | 'tableRow'
@@ -105,6 +106,9 @@ export interface DcElements {
   communicationsManuScriptID: string
   useDctForms:               string
   useDctFormsAndMessages:    string
+  lineOfBusiness:            string   // <LineOfBusiness>PersonalHome</LineOfBusiness> (from LOB)
+  indicator:                 string   // coverage-level <Indicator t="endorsement" ismandatory=…>
+  riskTableManuScriptId:     string   // <RiskManuscriptTableManuScriptID> — state-scoped tables
 }
 
 export interface DcAttrs {
@@ -165,6 +169,7 @@ export interface DcAttrs {
   dynamic:       string
   minimumPremium: string
   description:   string
+  endorsementMandatory: string   // "ismandatory" on the coverage endorsement <Indicator>
 }
 
 export interface DuckCreekMapping {
@@ -179,6 +184,10 @@ export interface DuckCreekMapping {
   boolFalse:       string     // "0"
   /** The `t` term-key on the risk-level policy-form exposure (sample: PolicyForm=HO). */
   policyFormExposureKey: string
+  /** The `t` value on the coverage endorsement <Indicator> (sample: t="endorsement"). */
+  endorsementIndicatorType: string
+  /** Layer token used by the state-scoped RiskManuscriptTableManuScriptID (sample: "Tables"). */
+  tablesLayerToken: string
 }
 
 // ─── The default mapping (mirrors the golden sample's vocabulary) ─────────────
@@ -196,7 +205,7 @@ export const DEFAULT_DUCKCREEK_MAPPING: DuckCreekMapping = {
     engineVersion: '2.0.0',
     cultureCode:   'en-US',
     currencyCode:  'USD',
-    lobTokens:     { PH: 'HO', PA: 'PA' },
+    lobTokens:     { PH: 'HO', PA: 'PA', GL: 'GL' },
     layers: {
       viewModel:      { market: 'Admitted', layer: 'ViewModel' },
       forms:          { market: 'Admitted', layer: 'Forms' },
@@ -218,6 +227,7 @@ export const DEFAULT_DUCKCREEK_MAPPING: DuckCreekMapping = {
     statCode:       'S',
     exposure:       'e',
     peril:          'p',
+    indicator:      'I',
     form:           'f',
     edition:        'e',
     ratingProgram:  'p',
@@ -288,6 +298,9 @@ export const DEFAULT_DUCKCREEK_MAPPING: DuckCreekMapping = {
     communicationsManuScriptID: 'CommunicationsManuScriptID',
     useDctForms:                'UseDCTForms',
     useDctFormsAndMessages:     'UseDCTFormsAndMessages',
+    lineOfBusiness:             'LineOfBusiness',
+    indicator:                  'Indicator',
+    riskTableManuScriptId:      'RiskManuscriptTableManuScriptID',
   },
   attrs: {
     id:            'id',
@@ -347,12 +360,15 @@ export const DEFAULT_DUCKCREEK_MAPPING: DuckCreekMapping = {
     dynamic:       'dynamic',
     minimumPremium: 'minimumPremium',
     description:   'description',
+    endorsementMandatory: 'ismandatory',
   },
   premiumChildren: ['Premium', 'change', 'offset', 'onset', 'written'],
   premiumZero:     '0',
   boolTrue:        '1',
   boolFalse:       '0',
   policyFormExposureKey: 'PolicyForm',
+  endorsementIndicatorType: 'endorsement',
+  tablesLayerToken:         'Tables',
 }
 
 // ─── manuScriptID composition (the Carrier_LOB_Market_Layer_Country_v_v_v_v pattern) ──
@@ -380,4 +396,20 @@ export function composeManuscriptVersionId(
   const lob = m.lobTokens[lineCode] ?? lineCode
   const { market, layer: layerToken } = m.layers[layer]
   return [m.carrier, lob, market, layerToken, m.country].join('_')
+}
+
+/** The STATE-scoped table manuScriptID that anchors a risk's rating tables. Mirrors the
+ *  reference's `<RiskManuscriptTableManuScriptID>` (sample: `PCG_HO_Non_Admitted_Tables_FL_1_0_0_5`),
+ *  which differs from the country-scoped layer IDs by carrying a jurisdiction token instead of
+ *  the country. `scope` is a two-letter state where the line's peril varies by state, else the
+ *  country token (a uniform-peril line files one national tables manuscript). Uses the tables
+ *  layer's market and the mapping version — deterministic; two runs are byte-identical. */
+export function composeTableManuscriptIdForScope(
+  mapping: DuckCreekMapping, lineCode: string, scope: string,
+): string {
+  const m = mapping.manuscript
+  const lob = m.lobTokens[lineCode] ?? lineCode
+  const { market } = m.layers.tables
+  const { major, minor, build, rev } = m.version
+  return [m.carrier, lob, market, mapping.tablesLayerToken, scope, major, minor, build, rev].join('_')
 }

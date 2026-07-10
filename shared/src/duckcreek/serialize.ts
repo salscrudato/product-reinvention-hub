@@ -20,6 +20,7 @@ import { el, leaf, empty, writeXml, type XmlNode, type XmlAttr } from './xml'
 import { deriveId } from './guid'
 import {
   DEFAULT_DUCKCREEK_MAPPING, composeManuscriptId, composeManuscriptVersionId,
+  composeTableManuscriptIdForScope,
   type DuckCreekMapping, type DcNodeType,
 } from './mapping'
 
@@ -136,6 +137,19 @@ export function buildManuscriptTree(product: PdmProduct, mapping: DuckCreekMappi
       leaf(E.section, cov.section),
       empty(E.statCode, [[A.id, id('statCode', `${cov.refId}:stat`)]]),
     ]
+    // Endorsement indicator — the sample carries <Indicator t="endorsement" ismandatory=…>
+    // ONLY on endorsement coverages. Our endorsement-like coverages are the electable ones
+    // (OPTIONAL) and the additional / sub-coverages (parented); the mandatory bureau base
+    // coverages A–F get none, matching the sample. `ismandatory` is derived from the
+    // coverage requirement — the "mandatory endorsement indicator from requirement" mapping.
+    const isEndorsement = cov.requirement === 'OPTIONAL' || cov.parentRefId !== null
+    if (isEndorsement) {
+      children.push(empty(E.indicator, [
+        [A.id, id('indicator', `${cov.refId}:endorsement`)],
+        [A.t, mapping.endorsementIndicatorType],
+        [A.endorsementMandatory, bool(cov.requirement === 'MANDATORY')],
+      ]))
+    }
     for (const fn of cov.formNumbers) children.push(leaf(E.formNumber, fn))
     children.push(statesNode(cov.applicability))
     for (const term of cov.terms) {
@@ -268,12 +282,22 @@ export function buildManuscriptTree(product: PdmProduct, mapping: DuckCreekMappi
   }
 
   // ── assemble the tree ──────────────────────────────────────────────────────
+  // State-scoped table manuscript IDs — one per jurisdiction where the line's peril varies
+  // by state (the sample's <RiskManuscriptTableManuScriptID> carries a state token, e.g. FL),
+  // else a single national entry (uniform-peril lines file one tables manuscript). Sorted for
+  // determinism. Derived from the line + version + market via composeTableManuscriptIdForScope.
+  const perilStates = product.line.perilModel.eligibleStates
+  const tableScopes = perilStates.length ? [...perilStates].sort() : [mapping.manuscript.country]
+  const riskTableIds = tableScopes.map(scope =>
+    leaf(E.riskTableManuScriptId, composeTableManuscriptIdForScope(mapping, lineCode, scope)))
+
   const riskNode = el(E.risk, [[A.id, id('risk', `${product.refId}:risk`)]], [
     leaf(E.exposure, mapping.manuscript.lobTokens[lineCode] ?? lineCode, [
       [A.id, id('exposure', `${product.refId}:policyform`)],
       [A.t, mapping.policyFormExposureKey],
     ]),
     ...product.coverages.map(coverageNode),
+    ...riskTableIds,
   ])
 
   const lineNode = el(E.line, [
@@ -291,6 +315,8 @@ export function buildManuscriptTree(product: PdmProduct, mapping: DuckCreekMappi
     leaf(E.description, product.description),
     leaf(E.marketSegment, product.marketSegment),
     leaf(E.type, product.line.compactName),
+    // LineOfBusiness — the compact line name from the LOB registry (sample: PersonalHome).
+    leaf(E.lineOfBusiness, product.line.compactName),
     statesNode(product.applicability),
     lineNode,
   ])

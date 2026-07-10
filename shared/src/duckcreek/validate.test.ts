@@ -2,14 +2,16 @@
 // consistency + round-trip, with per-section counts) and CATCH tampering (malformed XML,
 // dropped/renamed nodes, missing namespace). No giant snapshots — assert the report.
 import { describe, it, expect } from 'vitest'
-import { buildPersonalHomePdm, buildPersonalAutoPdm } from '../pdm/source'
+import { buildPersonalHomePdm, buildPersonalAutoPdm, buildGeneralLiabilityPdm } from '../pdm/source'
 import { type PdmProduct } from '../pdm/types'
 import { serializePdmToDuckCreek } from './serialize'
 import { validateDuckCreek, summarizeReport } from './validate'
+import { parseXml } from './xml'
 
 const PRODUCTS: Array<[string, () => PdmProduct]> = [
-  ['Personal Home', buildPersonalHomePdm],
-  ['Personal Auto', buildPersonalAutoPdm],
+  ['Personal Home',     buildPersonalHomePdm],
+  ['Personal Auto',     buildPersonalAutoPdm],
+  ['General Liability', buildGeneralLiabilityPdm],
 ]
 
 describe.each(PRODUCTS)('validation report — %s', (_name, build) => {
@@ -24,6 +26,18 @@ describe.each(PRODUCTS)('validation report — %s', (_name, build) => {
     expect(report.idPrefixesValid).toBe(true)
     expect(report.crossRefsValid).toBe(true)
     expect(report.roundTripOk).toBe(true)
+  })
+
+  it('passes the fail-closed field checks (required / enum / numeric)', () => {
+    expect(report.requiredFieldsPresent).toBe(true)
+    expect(report.enumsValid).toBe(true)
+    expect(report.numericFormatsValid).toBe(true)
+  })
+
+  it('re-parses (parse-back well-formedness) — the emitted XML is valid to the strict parser', () => {
+    expect(() => parseXml(xml)).not.toThrow()
+    const root = parseXml(xml)
+    expect(root.name).toBe('manuscript')
   })
 
   it('reports no dropped, extra or duplicate nodes', () => {
@@ -75,5 +89,32 @@ describe('validator catches tampering', () => {
     const report = validateDuckCreek(pdm, tampered)
     expect(report.idPrefixesValid).toBe(false)
     expect(report.ok).toBe(false)
+  })
+
+  it('FAIL-CLOSED: flags a non-numeric premium value (numericFormatsValid=false)', () => {
+    const tampered = good.replace('<Premium>0</Premium>', '<Premium>free</Premium>')
+    expect(tampered).not.toBe(good)
+    const report = validateDuckCreek(pdm, tampered)
+    expect(report.numericFormatsValid).toBe(false)
+    expect(report.ok).toBe(false)
+    expect(report.issues.some(i => i.code === 'nonnumeric-premium')).toBe(true)
+  })
+
+  it('FAIL-CLOSED: flags a rating step with an out-of-enum op (enumsValid=false)', () => {
+    const tampered = good.replace('op="SET"', 'op="MULTIPLY"')
+    expect(tampered).not.toBe(good)
+    const report = validateDuckCreek(pdm, tampered)
+    expect(report.enumsValid).toBe(false)
+    expect(report.ok).toBe(false)
+    expect(report.issues.some(i => i.code === 'enum-op')).toBe(true)
+  })
+
+  it('FAIL-CLOSED: flags a missing <LineOfBusiness> (requiredFieldsPresent=false)', () => {
+    const tampered = good.replace(/<LineOfBusiness>[^<]*<\/LineOfBusiness>/, '')
+    expect(tampered).not.toBe(good)
+    const report = validateDuckCreek(pdm, tampered)
+    expect(report.requiredFieldsPresent).toBe(false)
+    expect(report.ok).toBe(false)
+    expect(report.issues.some(i => i.code === 'missing-lob')).toBe(true)
   })
 })

@@ -3,15 +3,16 @@
 // the mapping (element names are DATA, not hard-coded). No giant snapshots — structure +
 // counts only.
 import { describe, it, expect } from 'vitest'
-import { buildPersonalHomePdm, buildPersonalAutoPdm } from '../pdm/source'
+import { buildPersonalHomePdm, buildPersonalAutoPdm, buildGeneralLiabilityPdm } from '../pdm/source'
 import { flattenCoverages, allTerms, type PdmProduct } from '../pdm/types'
 import { serializePdmToDuckCreek } from './serialize'
 import { parseXml, findAll, attr } from './xml'
 import { DEFAULT_DUCKCREEK_MAPPING, composeManuscriptId } from './mapping'
 
 const PRODUCTS: Array<[string, () => PdmProduct]> = [
-  ['Personal Home', buildPersonalHomePdm],
-  ['Personal Auto', buildPersonalAutoPdm],
+  ['Personal Home',     buildPersonalHomePdm],
+  ['Personal Auto',     buildPersonalAutoPdm],
+  ['General Liability', buildGeneralLiabilityPdm],
 ]
 
 describe.each(PRODUCTS)('serializer — %s', (_name, build) => {
@@ -66,6 +67,46 @@ describe.each(PRODUCTS)('serializer — %s', (_name, build) => {
       expect(xml).toContain(`refId="${f.formNumber}"`)
       expect(xml).toContain(`<${E.formNumber}>${f.formNumber}</${E.formNumber}>`)
     }
+  })
+
+  it('emits <LineOfBusiness> from the LOB registry (compact line name)', () => {
+    const root = parseXml(xml)
+    const E = DEFAULT_DUCKCREEK_MAPPING.elements
+    const lob = findAll(root, E.lineOfBusiness)
+    expect(lob.length).toBe(1)
+    expect(lob[0]!.text).toBe(pdm.line.compactName)
+  })
+
+  it('emits a <RiskManuscriptTableManuScriptID> for every peril-eligible state (else one national)', () => {
+    const root = parseXml(xml)
+    const E = DEFAULT_DUCKCREEK_MAPPING.elements
+    const ids = findAll(root, E.riskTableManuScriptId).map(n => n.text!)
+    const expectedScopes = pdm.line.perilModel.eligibleStates.length
+      ? [...pdm.line.perilModel.eligibleStates].sort()
+      : [DEFAULT_DUCKCREEK_MAPPING.manuscript.country]
+    expect(ids.length).toBe(expectedScopes.length)
+    for (const scope of expectedScopes) {
+      // scope token appears between "_Tables_" and the version suffix
+      expect(ids.some(id => id.includes(`_Tables_${scope}_`))).toBe(true)
+    }
+  })
+
+  it('emits the endorsement <Indicator> only on endorsement-like coverages (OPTIONAL / sub-coverages)', () => {
+    const root = parseXml(xml)
+    const E = DEFAULT_DUCKCREEK_MAPPING.elements
+    const A = DEFAULT_DUCKCREEK_MAPPING.attrs
+    const covs = flattenCoverages(pdm.coverages)
+    const endorsementCount = covs.filter(c => c.requirement === 'OPTIONAL' || c.parentRefId !== null).length
+    const indicators = findAll(root, E.indicator)
+    expect(indicators.length).toBe(endorsementCount)
+    // ismandatory is a boolean derived from requirement
+    for (const ind of indicators) {
+      expect(['0', '1']).toContain(attr(ind, A.endorsementMandatory))
+      expect(attr(ind, A.t)).toBe(DEFAULT_DUCKCREEK_MAPPING.endorsementIndicatorType)
+    }
+    // base mandatory top-level coverages carry no endorsement indicator
+    const baseMandatory = covs.filter(c => c.requirement === 'MANDATORY' && c.parentRefId === null)
+    expect(baseMandatory.length).toBeGreaterThan(0)
   })
 })
 
