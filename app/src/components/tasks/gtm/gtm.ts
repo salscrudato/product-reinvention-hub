@@ -4,7 +4,7 @@
 // mutate() payload builders for seeding + completing tasks. Kept out of the components
 // so the board, dialogs and runway all agree on one vocabulary.
 import type {
-  Task, Project, TaskColumn, TypeOfWork, ScheduledTask, GtmBoardColumn,
+  Task, Project, TaskColumn, TypeOfWork, Disposition, ScheduledTask, GtmBoardColumn,
 } from '@pf/shared'
 import type { MutationPayload } from '../../../lib/backend/types'
 
@@ -44,6 +44,27 @@ export const workTypeBadge = (t?: string): { label: string; color: BadgeColor } 
 }
 export const WORK_TYPES: TypeOfWork[] =
   ['Differentiating', 'Analytical', 'Transactional', 'Regulatory / Compliance']
+
+// ─── 4E disposition chips + tint ───────────────────────────────────────────────
+// Only the three "automate" dispositions ever ride onto a board task (Exclude work is dropped
+// by the converter). Each maps onto an existing brand token — no new hex: Embrace = brand
+// accent (the platform embraces this work), Elevate = good/green, Enhance = info/blue. `token`
+// tints the card's left stripe + the chip dot; `soft` is the chip background.
+export type BoardDisposition = Exclude<Disposition, 'Exclude'>
+export const DISPOSITIONS: BoardDisposition[] = ['Embrace', 'Elevate', 'Enhance']
+export const DISPOSITION_META: Record<BoardDisposition, { token: string; soft: string }> = {
+  Embrace: { token: 'var(--color-accent)', soft: 'var(--color-accent-soft)' },
+  Elevate: { token: 'var(--color-good)',   soft: 'var(--color-good-soft)' },
+  Enhance: { token: 'var(--color-info)',   soft: 'var(--color-info-soft)' },
+}
+/** The tint tokens for a task's disposition, or null when it carries none (ad-hoc / legacy). */
+export function dispositionMeta(d?: string): { label: BoardDisposition; token: string; soft: string } | null {
+  if (d && d in DISPOSITION_META) {
+    const m = DISPOSITION_META[d as BoardDisposition]
+    return { label: d as BoardDisposition, token: m.token, soft: m.soft }
+  }
+  return null
+}
 
 // ─── Phases (runway ramp) ────────────────────────────────────────────────────────
 export interface PhaseMeta { name: string; short: string; cssVar: string; light: boolean }
@@ -136,6 +157,8 @@ export function taskDataFromScheduled(s: ScheduledTask, project: ProjectDoc): Re
     slaDays:     s.slaDays,
     ownerRole:   s.owner,
     typeOfWork:  s.typeOfWork || null,
+    valueOfWork: s.valueOfWork || null,
+    disposition: s.disposition || null,
     ongoing:     s.ongoing,
     startDate:   s.startDate,
     dueAt:       s.dueDate,          // null for ongoing governance

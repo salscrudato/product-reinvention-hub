@@ -15,7 +15,9 @@ import { BaseFormsLibrary, type BaseForm } from '../components/claims/BaseFormsL
 import { DeterminationCard, type Determination } from '../components/claims/DeterminationCard'
 import { shouldRenderDetermination } from '../lib/claims/determination'
 import { assistantBubbleContent, EMPTY_TURN_FALLBACK } from '../lib/claims/bubble'
-import { isFormAnalyzable } from '../lib/claims/baseForm'
+import { isFormAnalyzable, isUnverified } from '../lib/claims/baseForm'
+import { buildGapFeedbackPrefill } from '../lib/claims/gapFeedback'
+import { useFeedbackLaunch } from '../context/useFeedbackLaunch'
 import { RefChip } from '../components/ui'
 import { IconCheck, IconSpinner, IconShield, IconInfo, IconWarning } from '../components/ui/icons'
 
@@ -110,7 +112,10 @@ function NoticeBanner({ level, message }: { level: 'info' | 'warn'; message: str
 // The assistant turn's visible body. A single pure decision (assistantBubbleContent) guarantees
 // it is NEVER empty: a determination card, streamed text, a notice advisory, a thinking spinner
 // while streaming, or a plain-language fallback — so every terminal SSE path shows something.
-function AssistantContent({ m, streamingThisTurn }: { m: ChatMessage; streamingThisTurn: boolean }) {
+function AssistantContent({ m, streamingThisTurn, onCreateFeedback, linked }: {
+  m: ChatMessage; streamingThisTurn: boolean
+  onCreateFeedback?: () => void; linked?: boolean
+}) {
   const content = assistantBubbleContent(
     { text: m.text, hasDetermination: !!m.determination, notice: m.notice ?? null },
     streamingThisTurn,
@@ -118,7 +123,9 @@ function AssistantContent({ m, streamingThisTurn }: { m: ChatMessage; streamingT
   return (
     <>
       {m.notice && <NoticeBanner level={m.notice.level} message={m.notice.message} />}
-      {content === 'determination' && m.determination && <DeterminationCard d={m.determination} />}
+      {content === 'determination' && m.determination && (
+        <DeterminationCard d={m.determination} onCreateFeedback={onCreateFeedback} linked={linked} />
+      )}
       {content === 'text' && (
         <div className="text-sm text-text">
           <Markdown text={m.text} />
@@ -147,6 +154,9 @@ export default function Claims() {
   const [messages, setMessages]   = useState<ChatMessage[]>([])
   const [input, setInput]         = useState('')
   const [streaming, setStreaming] = useState(false)
+  // Message indices whose coverage gap has been turned into a linked feedback item.
+  const [linkedMsgs, setLinkedMsgs] = useState<Set<number>>(new Set())
+  const launch = useFeedbackLaunch()
 
   const scrollRef     = useRef<HTMLDivElement>(null)
   const abortRef      = useRef<AbortController | null>(null)
@@ -180,7 +190,7 @@ export default function Claims() {
 
   // A new selection starts a fresh conversation (a different policy) — abort any stream
   // still running against the previous form so its tokens can't bleed into the new thread.
-  useEffect(() => { abortRef.current?.abort(); setMessages([]); setInput('') }, [selectedId])
+  useEffect(() => { abortRef.current?.abort(); setMessages([]); setInput(''); setLinkedMsgs(new Set()) }, [selectedId])
 
   // Abort any in-flight analysis on unmount so it doesn't keep consuming tokens/network.
   useEffect(() => () => abortRef.current?.abort(), [])
@@ -338,6 +348,15 @@ export default function Claims() {
                     {selectedForm.lob}
                   </span>
                 )}
+                {isUnverified(selectedForm) && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-[5px] shrink-0"
+                    style={{ background: 'var(--color-warn-soft)', color: 'var(--color-warn)' }}
+                    title="This form number couldn’t be matched to the catalogue. Analysis uses the attached document, which is the authority."
+                  >
+                    <IconWarning size={9} aria-hidden="true" /> Unverified
+                  </span>
+                )}
               </div>
               <span className="text-[11px] text-faint">Grounded in this form + its product data</span>
             </div>
@@ -352,7 +371,19 @@ export default function Claims() {
             <Starters scenarios={composerReady ? lineProfile.scenarios : []} onPick={ask} />
           ) : (
             <div className="flex flex-col gap-5 py-4">
-              {messages.map((m, i) => (
+              {messages.map((m, i) => {
+                // A coverage-gap determination (NOT_ADDRESSED / PARTIAL) offers "Create product
+                // feedback", prefilled from the gap; the preceding user turn is the scenario.
+                const det = m.determination
+                const hasGap = !!det && (det.verdict === 'NOT_ADDRESSED' || det.verdict === 'PARTIAL') && !!det.coverageGap?.note?.trim()
+                const scenario = messages[i - 1]?.role === 'user' ? messages[i - 1]!.text : undefined
+                const onCreateFeedback = hasGap && launch
+                  ? () => launch.openFeedback({
+                      ...buildGapFeedbackPrefill(det!, { scenario, baseFormNumber: selectedForm?.formNumber }),
+                      onSubmitted: () => setLinkedMsgs(prev => new Set(prev).add(i)),
+                    })
+                  : undefined
+                return (
                 <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                   {m.role === 'user' ? (
                     <div className="max-w-[85%] rounded-[14px] px-4 py-2.5 text-sm text-white" style={{ background: 'var(--gradient-accent)' }}>
@@ -382,11 +413,12 @@ export default function Claims() {
                           ))}
                         </div>
                       )}
-                      <AssistantContent m={m} streamingThisTurn={streaming && i === messages.length - 1} />
+                      <AssistantContent m={m} streamingThisTurn={streaming && i === messages.length - 1}
+                        onCreateFeedback={onCreateFeedback} linked={linkedMsgs.has(i)} />
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@
 // The generic insurance product-manufacture process (L1 → L2 phase → L3 group → L4 task)
 // plus the backward scheduler that lands the last pre-launch task exactly on the deadline.
 // Consumed by both app/ (the Tasks board) and the seed/scheduler unit tests.
-import type { TypeOfWork } from '../types'
+import type { TypeOfWork, ValueOfWork, Disposition } from '../types'
 
 // The four board columns, in the process's own label form. These map 1:1 onto the
 // app's canonical `TaskColumn` enum via GTM_COLUMN_TO_TASK below (the board renders the
@@ -28,6 +28,8 @@ export interface GtmTemplateTask {
   ongoing:     boolean         // governance tasks with no fixed due date
   owner:       string          // owning role (short form), e.g. "Product Mgr."
   typeOfWork:  TypeOfWork | '' // '' = the un-typed stage-gate approval task
+  valueOfWork: ValueOfWork | ''// Process Value Explorer "Value of Work" ('' when the row is blank)
+  disposition: Disposition | ''// 4E disposition; never 'Exclude' (dropped) — '' only for the un-disposed gate
 }
 
 // ─── Phase + column metadata (from the template's meta block) ──────────────────

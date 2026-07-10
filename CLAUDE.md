@@ -70,3 +70,4 @@ production CORS helper (`pnpm cors:set` / `cors:get`), which operates on `gs://p
 - [docs/adr/0003-enhancement-baseline.md](docs/adr/0003-enhancement-baseline.md) — enhancement baseline
 - [docs/adr/0004-guest-read-floor.md](docs/adr/0004-guest-read-floor.md) — guest (anonymous) read-only floor + `VITE_ALLOW_GUEST`
 - [docs/adr/0005-filing-importer.md](docs/adr/0005-filing-importer.md) — filing importer (second ingestion mechanism) + evaluator credit-cap extension
+- [docs/adr/0006-process-value-explorer.md](docs/adr/0006-process-value-explorer.md) — deterministic Process Value Explorer → GTM process converter (4E drop, fixture + generator)

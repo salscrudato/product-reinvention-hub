@@ -4,7 +4,7 @@
 // work-type colour chip. Completing a task moves it out of its column into Completed.
 import { Badge } from '../../ui'
 import { IconCheck } from '../../ui/icons'
-import { fmtShort, workTypeBadge, columnLabel, isOverdue, type TaskDoc } from './gtm'
+import { fmtShort, workTypeBadge, columnLabel, isOverdue, dispositionMeta, type TaskDoc } from './gtm'
 
 function initials(name?: string): string {
   if (!name) return '·'
@@ -44,6 +44,7 @@ export function TaskCard({ task, canEdit, todayIso, onToggle, onOpen }: {
 }) {
   const overdue = isOverdue(task, todayIso)
   const wt = workTypeBadge(task.typeOfWork)
+  const disp = dispositionMeta(task.disposition)
   const lineage = task.origin === 'adhoc'
     ? null
     : [task.phaseL2, task.groupL3].filter(Boolean).join(' / ')
@@ -51,7 +52,12 @@ export function TaskCard({ task, canEdit, todayIso, onToggle, onOpen }: {
   return (
     <div
       className="group bg-surface rounded-[11px] p-3 flex gap-2.5 rise-in transition-shadow hover:shadow-[var(--shadow-card-hover)] focus-within:shadow-[var(--shadow-card-hover)]"
-      style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+      style={{
+        border: '1px solid var(--color-border)',
+        // 4E tint: a subtle left stripe in the disposition's token (Embrace/Elevate/Enhance).
+        borderLeft: disp ? `3px solid ${disp.token}` : '1px solid var(--color-border)',
+        boxShadow: 'var(--shadow-card)',
+      }}
     >
       {/* Complete/reopen — EDITOR+ only. Sibling of the open button (never nested). */}
       {canEdit
@@ -84,7 +90,17 @@ export function TaskCard({ task, canEdit, todayIso, onToggle, onOpen }: {
               <CalendarGlyph />{fmtShort(task.dueAt)}
             </span>
           ) : null}
-          <Badge label={wt.label} color={wt.color} className="ml-auto text-[10px]" />
+          <span className="ml-auto flex items-center gap-1.5">
+            {disp && (
+              <span title={`4E disposition: ${disp.label}`}
+                className="inline-flex items-center gap-1 text-[10px] font-semibold rounded-[5px] px-1.5 py-0.5"
+                style={{ background: disp.soft, color: disp.token }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: disp.token }} aria-hidden="true" />
+                {disp.label}
+              </span>
+            )}
+            <Badge label={wt.label} color={wt.color} className="text-[10px]" />
+          </span>
         </div>
       </button>
     </div>

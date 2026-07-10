@@ -28,15 +28,42 @@ const OP_META: Record<RatingStep['op'], { label: string; color: 'purple' | 'good
   SET: { label: 'set', color: 'blue' }, MIN_FLOOR: { label: '≥', color: 'warn' },
 }
 
-function sourceSummary(s: RatingStep): string {
-  if (s.source.type === 'CONST') return `constant ${s.source.value ?? ''}`
-  if (s.source.type === 'INPUT') return `input · ${s.source.ref ?? '—'}`
-  return `${s.source.type} · ${s.source.ref ?? '—'}${s.source.keys?.length ? ` [${s.source.keys.join(', ')}]` : ''}`
+// The source of a step's factor as a compact token: a table ref (RT/LD/SPP), an input
+// name, or a constant value. Rendered as a navigable chip in the card (an RT grid table
+// opens the grid editor) — see SourceToken.
+function sourceLabel(s: RatingStep): string {
+  if (s.source.type === 'CONST') return `const ${s.source.value ?? ''}`
+  if (s.source.type === 'INPUT') return s.source.ref ?? 'input'
+  return s.source.ref ?? '—'
+}
+
+// The step's factor, prefixed with its operator glyph so the trace reads as arithmetic:
+// "= 700", "× 1.05", "+ 24", "≥ 500". Trimmed to ≤4 decimals (no float dust).
+function fmtFactor(op: RatingStep['op'], f: number): string {
+  const n = Number.isInteger(f) ? String(f) : String(Number(f.toFixed(4)))
+  return op === 'SET' ? `= ${n}` : op === 'MUL' ? `× ${n}` : op === 'ADD' ? `+ ${n}` : `≥ ${n}`
 }
 
 function fmtTotal(t: TraceEntry | undefined): string {
   if (!t) return '—'
   return `$${t.runningTotal.toLocaleString(undefined, { minimumFractionDigits: t.rounded ? 0 : 2, maximumFractionDigits: 2 })}`
+}
+
+// The navigable source-ref chip. A grid-editable RT table renders as a purple, clickable
+// chip that opens the grid editor (the "navigable refId chip"); every other source (LD,
+// INPUT, CONST, or a non-grid RT table) is a neutral, static token.
+function SourceToken({ step, gridEditable, onOpen }: { step: RatingStep; gridEditable: boolean; onOpen: () => void }) {
+  const label = sourceLabel(step)
+  const base = 'inline-flex items-center gap-1 h-5 px-1.5 rounded-[6px] font-mono text-[11px] leading-none max-w-[220px]'
+  if (gridEditable) {
+    return (
+      <button type="button" onClick={onOpen} title={`Open ${label} — edit this rate table`}
+        className={`${base} bg-accent-soft text-accent hover:bg-accent-soft/70 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent`}>
+        <IconTable size={11} aria-hidden="true" /><span className="truncate">{label}</span>
+      </button>
+    )
+  }
+  return <span className={`${base} bg-raised text-dim`} title={label}><span className="truncate">{label}</span></span>
 }
 
 // ─── One sortable step card ─────────────────────────────────────────────────────
@@ -62,12 +89,22 @@ function StepCard({ step, index, total, changed, canEdit, gridEditable, covCount
         </button>
       )}
       <span className="shrink-0 w-6 h-6 rounded-full bg-accent-soft text-accent text-[11px] font-bold flex items-center justify-center tnum">{index + 1}</span>
-      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div className="flex items-center gap-2 min-w-0">
           <Badge label={op.label} color={op.color} />
           <span className="text-sm font-medium text-text truncate">{step.label}</span>
         </div>
-        <span className="text-[11px] text-faint font-mono truncate">{sourceSummary(step)}</span>
+        {/* Source ref (navigable chip) · factor · rounding — the worked step, read as arithmetic */}
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+          <SourceToken step={step} gridEditable={gridEditable} onOpen={onTable} />
+          {total && <span className="font-mono text-[11px] text-dim tnum">{fmtFactor(step.op, total.factorOrAmount)}</span>}
+          {total?.rounded && step.roundTo !== undefined && (
+            <span className="inline-flex items-center h-5 px-1.5 rounded-[6px] bg-raised text-faint font-mono text-[10px] leading-none"
+              title={`Running total rounded to ${step.roundTo} decimal place${step.roundTo === 1 ? '' : 's'}`}>
+              round {step.roundTo}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Live running total */}
@@ -79,12 +116,6 @@ function StepCard({ step, index, total, changed, canEdit, gridEditable, covCount
           <button onClick={onCoverages} title={`${covCount} coverage${covCount === 1 ? '' : 's'} priced by this step`}
             className="inline-flex items-center gap-1 h-6 px-1.5 rounded-[6px] text-[11px] text-dim hover:text-accent hover:bg-accent-soft transition-colors">
             <IconCoverage size={12} aria-hidden="true" />{covCount}
-          </button>
-        )}
-        {gridEditable && (
-          <button onClick={onTable} title="Edit rate table (grid)" aria-label={`Edit ${step.label} table`}
-            className="w-7 h-7 rounded-[6px] flex items-center justify-center text-faint hover:text-accent hover:bg-accent-soft transition-colors">
-            <IconTable size={14} aria-hidden="true" />
           </button>
         )}
         {canEdit && (

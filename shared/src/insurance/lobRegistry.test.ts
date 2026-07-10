@@ -105,10 +105,14 @@ describe('segmentation (registry-driven)', () => {
   const PH = { lob: { refId: 'PH.LOB.001' } }
   const PA = { lob: { refId: 'PA.LOB.001' } }
 
+  const GL = { lob: { refId: 'GL.LOB.001' } }
+
   it('derives axes and their values from the registry, not hard-coded lists', () => {
     const axes = deriveSegmentAxes()
-    expect(axes.map(a => a.id)).toEqual(['vertical', 'family', 'marketSegment'])
+    expect(axes.map(a => a.id)).toEqual(['personalOrCommercial', 'vertical', 'family', 'marketSegment'])
     const byId = Object.fromEntries(axes.map(a => [a.id, a.values]))
+    // PH+PA are Personal; GL is Commercial (two-value grouping, sorted)
+    expect(byId['personalOrCommercial']).toEqual(['Commercial', 'Personal'])
     // PH+PA are Personal Lines; GL adds Commercial Lines
     expect(byId['vertical']).toEqual(['Commercial Lines', 'Personal Lines'])
     // PH is Property, PA is Automobile, GL is Casualty (sorted alphabetically)
@@ -118,8 +122,10 @@ describe('segmentation (registry-driven)', () => {
   })
 
   it('resolves a product\'s segment tags through its line of business', () => {
-    expect(productSegments(PH)).toEqual({ vertical: 'Personal Lines', family: 'Property', marketSegments: ['Personal Lines'] })
-    expect(productSegments(PA)).toEqual({ vertical: 'Personal Lines', family: 'Automobile', marketSegments: ['Personal Lines'] })
+    expect(productSegments(PH)).toEqual({ personalOrCommercial: 'Personal', vertical: 'Personal Lines', family: 'Property', marketSegments: ['Personal Lines'] })
+    expect(productSegments(PA)).toEqual({ personalOrCommercial: 'Personal', vertical: 'Personal Lines', family: 'Automobile', marketSegments: ['Personal Lines'] })
+    // marketSegments is the line's own (unsorted) band list; the facet axis sorts, productSegments does not.
+    expect(productSegments(GL)).toEqual({ personalOrCommercial: 'Commercial', vertical: 'Commercial Lines', family: 'Casualty', marketSegments: ['Commercial Lines', 'Small Commercial', 'Middle Market'] })
   })
 
   it('matches products against a selection; unset axes are wildcards', () => {
@@ -129,11 +135,17 @@ describe('segmentation (registry-driven)', () => {
     expect(matchesSegments(PA, { family: 'Automobile' })).toBe(true)
     expect(matchesSegments(PA, { family: 'Property' })).toBe(false)
     expect(matchesSegments(PH, { family: 'Property' })).toBe(true)
+    // Personal/Commercial grouping
+    expect(matchesSegments(PH, { personalOrCommercial: 'Personal' })).toBe(true)
+    expect(matchesSegments(PH, { personalOrCommercial: 'Commercial' })).toBe(false)
+    expect(matchesSegments(GL, { personalOrCommercial: 'Commercial' })).toBe(true)
     // market-segment axis works for both lines
     expect(matchesSegments(PA, { marketSegment: 'Personal Lines' })).toBe(true)
     expect(matchesSegments(PH, { marketSegment: 'Personal Lines' })).toBe(true)
+    expect(matchesSegments(GL, { marketSegment: 'Middle Market' })).toBe(true)
+    expect(matchesSegments(PH, { marketSegment: 'Middle Market' })).toBe(false)
     // combined selection must satisfy every set axis
-    expect(matchesSegments(PA, { vertical: 'Personal Lines', family: 'Automobile', marketSegment: 'Personal Lines' })).toBe(true)
+    expect(matchesSegments(PA, { personalOrCommercial: 'Personal', vertical: 'Personal Lines', family: 'Automobile', marketSegment: 'Personal Lines' })).toBe(true)
     expect(matchesSegments(PH, { vertical: 'Personal Lines', family: 'Automobile' })).toBe(false)
   })
 })

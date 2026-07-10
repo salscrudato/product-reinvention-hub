@@ -344,6 +344,16 @@ export type TaskColumn = 'IDEATION' | 'BUILD_FILE' | 'TEST_APPROVE' | 'LAUNCH_MO
 export type TypeOfWork =
   | 'Differentiating' | 'Analytical' | 'Transactional' | 'Regulatory / Compliance'
 
+/** Process Value Explorer "Value of Work" — the value a task's work delivers: it Enables
+ *  downstream work, Directly Contributes to the product, or is Neutral. Additive metadata. */
+export type ValueOfWork = 'Enables' | 'Directly Contributes' | 'Neutral'
+
+/** Process Value Explorer 4E disposition ("ERP Future Platform Applicability") — whether the
+ *  platform should Embrace, Elevate, Enhance, or Exclude the work. Exclude-disposed process
+ *  rows never become tasks (the converter drops them), so a board task's disposition is only
+ *  ever Embrace / Elevate / Enhance; the field is optional so ad-hoc and legacy tasks omit it. */
+export type Disposition = 'Embrace' | 'Elevate' | 'Enhance' | 'Exclude'
+
 /** How a board task got here: 'seeded' from the process template, or an 'adhoc' one-off. */
 export type TaskOrigin  = 'seeded' | 'adhoc'
 export type ProjectStatus = 'planning' | 'active' | 'launched' | 'archived'
@@ -391,6 +401,8 @@ export interface Task extends GovernanceBlock {
   slaDays?:      number           // business-day SLA the backward schedule used
   ownerRole?:    string           // owning role (e.g. "Product Mgr.") — a role, not a person
   typeOfWork?:   TypeOfWork       // work-type colour chip
+  valueOfWork?:  ValueOfWork      // Process Value Explorer "Value of Work" (additive; board chip/filter)
+  disposition?:  Disposition      // Process Value Explorer 4E disposition (additive; board chip/filter/tint)
   startDate?:    string | null    // ISO — back-scheduled start (drives the runway geometry)
   ongoing?:      boolean          // governance task with no fixed due date
   // Board completion is `done` (+ `completedAt`); `status`/`lifecycle` stay the governance
@@ -409,7 +421,9 @@ export interface Feedback {
   detail:         string
   // `label` is the human surface name (e.g. "Personal Home · Coverages"); `entityPath`
   // + `refId` pin the exact coverage/form/rule the user was viewing when they submitted.
-  context:        { route: string; label?: string; entityPath?: string; refId?: string }
+  // `baseFormNumber` + `matchedProductId` are additive, set by the Claims coverage-gap →
+  // feedback flow (the base form analysed + the product its cited clauses point at).
+  context:        { route: string; label?: string; entityPath?: string; refId?: string; baseFormNumber?: string; matchedProductId?: string }
   votes:          { count: number; voters: string[] }
   status:         FeedbackStatus
   impact:         1 | 2 | 3

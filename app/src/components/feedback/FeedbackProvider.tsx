@@ -14,7 +14,7 @@
 // (the exact coverage/form/rule + its refId, or the product+tab, else the route label) and
 // attaches it — persisted on the record and rendered as a monospace chip. Dedup: if shaping
 // finds a near-duplicate, the story offers a one-tap "add your vote instead".
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -22,6 +22,7 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { useUser } from '../../context/useUser'
 import { useCapture } from '../../context/useCapture'
+import { FeedbackLaunchCtx, type FeedbackPrefill } from '../../context/FeedbackLaunchContext'
 import { Button } from '../ui'
 import { IconChat, IconLink, IconCamera, IconClose, IconSparkle, IconSpinner, IconArrowUp, IconInfo, IconFile, IconCopy, IconCheck, IconChevronDown, IconChevronUp, IconKey, IconTrash } from '../ui/icons'
 import { priorityScore, type FeedbackType, type Feedback } from '@pf/shared'
@@ -149,10 +150,18 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const isMaintainer = MAINTAINER_EMAIL !== '' && (user?.email ?? '').toLowerCase() === MAINTAINER_EMAIL
 
-  // What the user is viewing — the exact entity (from CaptureContext) or the route label.
-  const capLabel      = viewed?.label ?? describeRoute(location.pathname)
-  const capEntityPath = viewed?.entityPath
-  const capRefId      = viewed?.refId
+  // A programmatic prefill (Claims coverage-gap → "Create product feedback"). When set, its
+  // context overrides the auto-detected view context for this capture.
+  const [prefill, setPrefill] = useState<FeedbackPrefill | null>(null)
+
+  // What the user is viewing — the prefill's context wins, then the exact entity (CaptureContext),
+  // then the route label.
+  const capLabel      = prefill?.context?.label      ?? viewed?.label ?? describeRoute(location.pathname)
+  const capRoute      = prefill?.context?.route      ?? location.pathname
+  const capEntityPath = prefill?.context?.entityPath ?? viewed?.entityPath
+  const capRefId      = prefill?.context?.refId      ?? viewed?.refId
+  const capBaseFormNumber   = prefill?.context?.baseFormNumber
+  const capMatchedProductId = prefill?.context?.matchedProductId
 
   const [open, setOpen]   = useState(false)
   const [phase, setPhase] = useState<Phase>('capture')
@@ -460,9 +469,21 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     setScreenshot(null); setAnnotations([]); setActiveTool('pen'); setCropSel(null); setTextInput(null)
     setDraft(null); setNearMatch(null); setErrorMsg(null)
     setShotUrl(null); setAttachments([]); setShowPrompt(false); setCopied(false)
+    setPrefill(null)
     idRef.current = null
   }
   function close() { setOpen(false); reset() }
+
+  // Open the drawer prefilled (e.g. from a Claims coverage gap) and run the normal flow.
+  const openFeedback = useCallback((p: FeedbackPrefill) => {
+    reset()
+    setPrefill(p)
+    setNote(p.note)
+    setPhase('capture')
+    setOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const launchValue = useMemo(() => ({ openFeedback }), [openFeedback])
 
   const canSend = (!!note.trim() || !!screenshot || attachments.length > 0) && !busy && !uploadingAttach
 
@@ -488,13 +509,15 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         rawTitle,
         rawDetail:     noteText || undefined,
         routeLabel:    capLabel,
-        route:         location.pathname,
+        route:         capRoute,
         entityPath:    capEntityPath,
         refId:         capRefId,
         screenshotUrl: uploadedUrl,
         ...(attachments.length ? { attachments } : {}),
       })
-      setDraft(out.story)
+      // A prefill can force the story type (a coverage gap is always an IDEA), overriding the
+      // AI's classification while keeping the shaped narrative it wrote.
+      setDraft(prefill?.type ? { ...out.story, type: prefill.type } : out.story)
       setNearMatch(out.nearMatch ?? null)
       setPhase('preview')
     } catch (err) {
@@ -544,10 +567,12 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           detail: draft.summary.trim(),
           ...(draft.userStory?.trim() ? { userStory: draft.userStory.trim() } : {}),
           context: {
-            route: location.pathname,
+            route: capRoute,
             label: capLabel,
             ...(capEntityPath ? { entityPath: capEntityPath } : {}),
             ...(capRefId ? { refId: capRefId } : {}),
+            ...(capBaseFormNumber ? { baseFormNumber: capBaseFormNumber } : {}),
+            ...(capMatchedProductId ? { matchedProductId: capMatchedProductId } : {}),
           },
           votes: { count: 0, voters: [] },
           status: 'NEW',
@@ -565,6 +590,8 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         entityType: 'feedback',
         actor,
       })
+      // Notify a programmatic opener (e.g. Claims) so it can render a "Linked feedback" chip.
+      prefill?.onSubmitted?.(id)
       toast.success('Feedback sent — thank you')
       close()
     } catch {
@@ -968,7 +995,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   }[phase]
 
   return (
-    <>
+    <FeedbackLaunchCtx value={launchValue}>
       {children}
 
       {/* Floating capture button */}
@@ -1051,6 +1078,6 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         </>,
         document.body,
       )}
-    </>
+    </FeedbackLaunchCtx>
   )
 }

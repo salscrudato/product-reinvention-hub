@@ -6,11 +6,11 @@
 // conversation; VIEWER never sees the upload control. No firebase/* imports here.
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { resolveClaimsLineProfile } from '@pf/shared'
+import { resolveClaimsLineProfile, normalizeFormNumber } from '@pf/shared'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
-import { statusAfterIdentify, type BaseFormStatus } from '../../lib/claims/baseForm'
-import { RefChip, Skeleton, EmptyState } from '../ui'
+import { statusAfterIdentify, isUnverified, type BaseFormStatus } from '../../lib/claims/baseForm'
+import { RefChip, Skeleton, EmptyState, Dialog, Button } from '../ui'
 import { IconUpload, IconFile, IconSpinner, IconCheck, IconTrash, IconShield, IconWarning } from '../ui/icons'
 
 export interface BaseForm {
@@ -24,6 +24,9 @@ export interface BaseForm {
   url:            string
   mediaType:      string
   status:         BaseFormStatus   // PROCESSING | READY | NEEDS_REVIEW (unidentified — held from analysis)
+  // The server read a form number the forms catalogue could not confirm. The form is still
+  // READY + analyzable (the attached document is the authority); the UI flags it "Unverified".
+  verified?:      boolean
   uploadedBy:     string
   uploadedByName: string
   createdAt?:     unknown
@@ -74,6 +77,10 @@ function isSupported(f: File): boolean {
 export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit, actor }: Props) {
   const [busy, setBusy]         = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  // Duplicate-upload guard: set when a freshly-identified, verified form matches an existing
+  // form's number + edition. The PM chooses "Use existing" (discard the upload, select the
+  // existing) or "Upload anyway" (keep the new copy).
+  const [dup, setDup] = useState<{ newId: string; existing: BaseForm } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function upload(file: File) {
@@ -109,14 +116,27 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
           : { formText: new TextDecoder().decode(buf), fileName: file.name }
         const meta = await adapter.fns.call<typeof payload, { title: string; formNumber: string; edition: string; lob: string; verified?: boolean }>('identifyBaseForm', payload)
         // Honest identification: only a form we could actually identify (a printed form number
-        // OR a recognised line) becomes READY. Neither → NEEDS_REVIEW. verified:false means the
-        // server read a formNumber but it did not resolve in the forms catalogue after two passes
-        // (haiku + Sonnet) — also NEEDS_REVIEW so an unverified number never grounds analysis.
+        // OR a recognised line) becomes READY; neither → NEEDS_REVIEW. verified:false means the
+        // server read a formNumber the forms catalogue couldn't confirm — the form is still READY
+        // (the attached document is the authority) but carries verified:false for the "Unverified"
+        // chip, so analysis is never silently disabled by a catalogue miss.
         await adapter.db.mutate({
           op: 'update', path: `baseForms/${id}`,
           data: { title: meta.title || file.name, formNumber: meta.formNumber || '', edition: meta.edition || '', lob: meta.lob || '', status: statusAfterIdentify(meta), ...(meta.verified === false ? { verified: false } : {}) },
           entityType: 'baseForm', actor,
         })
+
+        // Duplicate-upload guard: a verified, printed form number that already exists in the
+        // library (same number + edition) offers Use existing / Upload anyway. Skip when the
+        // number is unverified (nothing reliable to dedupe on).
+        const num = normalizeFormNumber(meta.formNumber || '')
+        if (meta.verified !== false && num) {
+          const existing = forms.find(f =>
+            f.id !== id &&
+            normalizeFormNumber(f.formNumber || '') === num &&
+            (f.edition || '').trim() === (meta.edition || '').trim())
+          if (existing) setDup({ newId: id, existing })
+        }
       } catch {
         // Identify failed entirely — we know neither the form number nor the line. Hold it for
         // review rather than marking it READY: an unidentified form must not be analyzable.
@@ -140,6 +160,19 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
       if (selectedId === form.id) onSelect('')
       toast.success('Base form removed')
     } catch { toast.error('Could not remove the form') }
+  }
+
+  // Duplicate guard — "Use existing": discard the just-uploaded copy and select the one already
+  // in the library. "Upload anyway" simply keeps the new copy (dismiss the prompt).
+  async function switchToExisting() {
+    if (!dup || !actor) return
+    const { newId, existing } = dup
+    setDup(null)
+    try {
+      await adapter.db.mutate({ op: 'delete', path: `baseForms/${newId}`, entityType: 'baseForm', actor })
+      onSelect(existing.id)
+      toast.success('Using the form already in your library')
+    } catch { toast.error('Could not switch to the existing form') }
   }
 
   return (
@@ -223,6 +256,15 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
                         </span>
                       )}
                       {f.edition && <span className="text-[10px] text-faint tnum">ed. {f.edition}</span>}
+                      {f.status === 'READY' && isUnverified(f) && (
+                        <span
+                          className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-[5px]"
+                          style={{ background: 'var(--color-warn-soft)', color: 'var(--color-warn)' }}
+                          title="This form number couldn’t be matched to the catalogue. Analysis still runs against the attached document, which is the authority."
+                        >
+                          <IconWarning size={9} aria-hidden="true" /> Unverified
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 text-[10px] text-faint">
                       {f.status === 'PROCESSING' ? (
@@ -257,6 +299,23 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
         <p className="flex items-center gap-1.5 text-[11px] text-faint pt-3 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
           <IconShield size={12} aria-hidden="true" /> Viewer — analysis only. Editors upload forms.
         </p>
+      )}
+
+      {/* Duplicate-upload guard */}
+      {dup && (
+        <Dialog open onClose={() => setDup(null)} title="This form is already in your library" width="max-w-md">
+          <p className="text-sm text-dim -mt-1">
+            <span className="font-medium text-text">{dup.existing.title}</span>
+            {dup.existing.formNumber ? <> (<span className="font-mono text-[12px]">{dup.existing.formNumber}</span>{dup.existing.edition ? ` ed. ${dup.existing.edition}` : ''})</> : null}
+            {' '}is already here. Use the existing form, or upload this copy anyway?
+          </p>
+          <div className="flex items-center justify-end gap-2 mt-6">
+            <Button variant="ghost" size="sm" onClick={() => setDup(null)}>Upload anyway</Button>
+            <Button variant="primary" size="sm" onClick={() => void switchToExisting()}>
+              <IconCheck size={14} aria-hidden="true" />Use existing
+            </Button>
+          </div>
+        </Dialog>
       )}
     </div>
   )

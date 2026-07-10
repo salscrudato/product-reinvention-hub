@@ -59,6 +59,31 @@ test('GTM tracker: create project → seed → complete → restore', async ({ p
   await expect(page.getByRole('button', { name: 'Reopen task' })).toHaveCount(0, { timeout: 10_000 })
 })
 
+// Pricing centerpiece — the on-screen worked example prices to each line's canary. Open each
+// seeded product's Pricing tab, click "Worked example" (fills the LOB kit example), and read
+// the rendered premium: it must equal that line's regression lock. One step per registered
+// line — the browser-level companion to shared/src/rating/workedExample.canary.test.ts.
+const PRICING_CANARIES = [
+  { pid: 'PH.PROD.001', line: 'Personal Home',     premium: '$1,528' },
+  { pid: 'PA.PROD.001', line: 'Personal Auto',     premium: '$1,002' },
+  { pid: 'GL.PROD.001', line: 'General Liability',  premium: '$2,635' },
+]
+for (const { pid, line, premium } of PRICING_CANARIES) {
+  test(`Pricing: ${line} worked example prices to ${premium}`, async ({ page }) => {
+    await page.goto('/')
+    await page.getByPlaceholder('first name').fill('sal')
+    await page.getByPlaceholder('last name').fill('scrudato')
+    await page.locator('button[type="submit"]').click()
+    await expect(page).toHaveURL(/\/app(\/|$)/, { timeout: 20_000 })
+
+    // Product doc ids are the product refIds (seed.ts) — navigate straight to Pricing.
+    await page.goto(`/app/products/${pid}/pricing`)
+    await page.getByRole('button', { name: /worked example/i }).click()
+    // Premium is spring-animated; toHaveText waits for it to settle on the canary.
+    await expect(page.getByTestId('calculated-premium')).toHaveText(premium, { timeout: 15_000 })
+  })
+}
+
 // A read-only session (no editor role) must not see the create/seed controls — the UI half of
 // the two-sided role enforcement (firestore.rules is the server half).
 test('GTM tracker: a read-only session sees no create/seed controls', async ({ page }) => {

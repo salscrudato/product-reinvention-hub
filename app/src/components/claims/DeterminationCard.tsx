@@ -6,7 +6,7 @@
 // no hard hex (inline SVG is rendered in the browser, so it uses vars too).
 import type { ReactNode } from 'react'
 import { RefChip } from '../ui'
-import { IconWarning, IconInfo } from '../ui/icons'
+import { IconWarning, IconInfo, IconChat, IconCheck } from '../ui/icons'
 import type { Verdict, Determination } from '../../lib/claims/determination'
 
 // The determination shape + verdict live in the platform-free claims lib (it is unit-
@@ -108,7 +108,13 @@ function ValueRow({ label, value, source, note, first }: { label: string; value:
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-export function DeterminationCard({ d }: { d: Determination }) {
+export function DeterminationCard({ d, onCreateFeedback, linked }: {
+  d: Determination
+  /** Offered on a coverage-gap card — opens the feedback capture prefilled from this gap. */
+  onCreateFeedback?: () => void
+  /** True once feedback has been created for this gap — swaps the action for a "Linked" chip. */
+  linked?: boolean
+}) {
   const v = VERDICT[d.verdict] ?? VERDICT.PARTIAL
   const wash = `color-mix(in srgb, ${v.token} 8%, var(--color-surface))`
   // Defensive: the structured payload comes from the model — default the arrays so a
@@ -259,6 +265,23 @@ export function DeterminationCard({ d }: { d: Determination }) {
             {gap.sources && gap.sources.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                 {gap.sources.map((s, i) => <RefChip key={i} id={s} />)}
+              </div>
+            )}
+            {/* Gap → product feedback: capture the gap as a product-improvement idea, or show
+                the linked chip once it's been created. */}
+            {(onCreateFeedback || linked) && (
+              <div className="pt-1.5">
+                {linked ? (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-[6px] px-2 py-1 bg-accent-soft text-accent">
+                    <IconCheck size={12} aria-hidden="true" /> Linked feedback
+                  </span>
+                ) : (
+                  <button type="button" onClick={onCreateFeedback}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-[7px] px-2.5 py-1 text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                    style={{ background: 'var(--color-warn)' }}>
+                    <IconChat size={12} aria-hidden="true" /> Create product feedback
+                  </button>
+                )}
               </div>
             )}
           </div>

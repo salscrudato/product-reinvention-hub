@@ -7,7 +7,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { IconRefresh, IconClose, IconPricing } from '../../components/ui/icons'
 import { evaluate, resolveLob, resolveRatingKit, deriveGridInputSpec } from '@pf/shared'
-import type { RatingInputs, RatingInputMap, RatingStep, RTTable, LDTable, RatingProgram, Coverage } from '@pf/shared'
+import type { RatingInputs, RatingInputMap, RatingStep, RTTable, LDTable, RatingProgram, Coverage, EvaluatorResult } from '@pf/shared'
 import { linkCoverageToPricing } from '../../lib/insurance/pricingLinks'
 import { useProductCtx } from '../../context/useProductCtx'
 import type { WithId } from '../../context/ProductContext'
@@ -79,6 +79,18 @@ function prefersReducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 }
 
+/** Debounce a rapidly-changing value so an expensive downstream recompute (here the full
+ *  rating evaluation) runs at most once per quiet window — not on every keystroke or pasted
+ *  grid cell. Settles ~90ms after the last change; the premium spring smooths the rest. */
+function useDebounced<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delayMs)
+    return () => clearTimeout(id)
+  }, [value, delayMs])
+  return debounced
+}
+
 /** Animate a number toward `target` with a lightly under-damped spring (settles ~280ms).
  *  Chases a moving target so rapid input changes retarget rather than restart. Snaps under
  *  reduced motion. */
@@ -124,7 +136,7 @@ function PremiumCard({ premium, minimum }: { premium: number | null; minimum?: n
       <div className="flex items-center gap-1.5 text-white/80 text-[11px] font-semibold uppercase tracking-[.08em]">
         <IconPricing size={13} aria-hidden="true" /> Calculated premium
       </div>
-      <div className="text-3xl font-bold tabular-nums mt-1.5">{premium == null ? '—' : `$${shown.toLocaleString()}`}</div>
+      <div className="text-3xl font-bold tabular-nums mt-1.5" data-testid="calculated-premium">{premium == null ? '—' : `$${shown.toLocaleString()}`}</div>
       {minimum != null && <div className="text-white/70 text-[11px] mt-1 tnum">Minimum premium ${minimum.toLocaleString()}</div>}
     </div>
   )
@@ -170,12 +182,39 @@ export default function ProductPricing() {
   useEffect(() => { setInputs({ ...(gridWorksheet?.workedExample ?? kit.workedExample) }) }, [lob.prefix, kit, gridWorksheet])
   const upd = (patch: RatingInputMap) => setInputs(prev => ({ ...prev, ...patch }))
 
-  const result = useMemo(() => {
-    if (!ratingProgram || !Object.keys(rtTables).length || !Object.keys(ldTables).length) return null
+  // One deterministic path to a premium: memoized getters (rebuilt only when the kit or the
+  // loaded tables change), a debounced input snapshot (a burst of edits recomputes once), and
+  // a precise inline error when a step points at a rate table that isn't loaded.
+  const rtGetter = useMemo(() => kit.makeRtGetter(rtTables), [kit, rtTables])
+  const ldGetter = useMemo(() => kit.makeLdGetter(ldTables), [kit, ldTables])
+  const debouncedInputs = useDebounced(inputs, 90)
+  const tablesReady = Object.keys(rtTables).length > 0 && Object.keys(ldTables).length > 0
+
+  // Table refs a step needs that aren't loaded (a step points at a deleted/renamed table).
+  // RT/SPP resolve in rtTables; LD in ldTables. Distinct, in first-seen order.
+  const missingRefs = useMemo(() => {
+    if (!ratingProgram) return [] as string[]
+    const miss: string[] = []
+    for (const s of ratingProgram.steps) {
+      const ref = s.source.ref
+      if (!ref) continue
+      if ((s.source.type === 'RT' || s.source.type === 'SPP') && !rtTables[ref]) miss.push(ref)
+      else if (s.source.type === 'LD' && !ldTables[ref]) miss.push(ref)
+    }
+    return [...new Set(miss)]
+  }, [ratingProgram, rtTables, ldTables])
+
+  const evaluation = useMemo<{ result: EvaluatorResult | null; error: string | null }>(() => {
+    if (!ratingProgram || !tablesReady) return { result: null, error: null }
+    if (missingRefs.length > 0)
+      return { result: null, error: `Missing rate table${missingRefs.length === 1 ? '' : 's'}: ${missingRefs.join(', ')}` }
     try {
-      return evaluate(ratingProgram, inputs, kit.makeRtGetter(rtTables), kit.makeLdGetter(ldTables))
-    } catch { return null }
-  }, [ratingProgram, rtTables, ldTables, inputs, kit])
+      return { result: evaluate(ratingProgram, debouncedInputs, rtGetter, ldGetter), error: null }
+    } catch (err) {
+      return { result: null, error: err instanceof Error ? err.message : 'Could not evaluate these inputs.' }
+    }
+  }, [ratingProgram, tablesReady, missingRefs, debouncedInputs, rtGetter, ldGetter])
+  const result = evaluation.result
 
   // Detect which step factors moved since the last change → transient highlight.
   const [changedStepIds, setChangedStepIds] = useState<Set<string>>(new Set())
@@ -201,8 +240,6 @@ export default function ProductPricing() {
   const candidateDimensions = useMemo(() => Object.entries(inputs)
     .filter(([, v]) => typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')
     .map(([k]) => ({ key: k, label: humanize(k) })), [inputs])
-
-  const tablesReady = Object.keys(rtTables).length > 0 && Object.keys(ldTables).length > 0
 
   if (loading) return <div className="grid grid-cols-1 lg:grid-cols-2 gap-5"><Skeleton className="h-[500px]" /><Skeleton className="h-[500px]" /></div>
 
@@ -234,8 +271,10 @@ export default function ProductPricing() {
           <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-semibold text-text">Scenario inputs</span>
-              <Button variant="ghost" size="sm" onClick={() => setInputs({ ...(gridWorksheet?.workedExample ?? kit.workedExample) })}>
-                <IconRefresh size={13} />Reset
+              <Button variant="ghost" size="sm"
+                title="Load the worked example — prices to this line’s reference premium"
+                onClick={() => setInputs({ ...(gridWorksheet?.workedExample ?? kit.workedExample) })}>
+                <IconRefresh size={13} />Worked example
               </Button>
             </div>
             {isHO ? (
@@ -247,8 +286,8 @@ export default function ProductPricing() {
               <GenericRatingPanel spec={gridWorksheet?.inputSpec ?? kit.inputSpec} inputs={inputs} ldTables={ldTables} onChange={upd} />
             )}
             {ratingProgram && !result && (
-              <p className="text-[12px] text-faint pt-3 mt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
-                {tablesReady ? 'Couldn’t evaluate these inputs — adjust and retry.' : 'Loading rating tables…'}
+              <p className={`text-[12px] pt-3 mt-3 ${evaluation.error ? 'text-warn' : 'text-faint'}`} style={{ borderTop: '1px solid var(--color-border)' }}>
+                {!tablesReady ? 'Loading rating tables…' : (evaluation.error ?? 'Couldn’t evaluate these inputs — adjust and retry.')}
               </p>
             )}
           </div>

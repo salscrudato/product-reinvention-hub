@@ -51,6 +51,27 @@ export const CANNED_DETERMINATION: Record<string, unknown> = {
   citations:  ['PH.COV.001', 'HO 00 03'],
 }
 
+// ─── Canned COVERAGE-GAP determination ────────────────────────────────────────
+// A NOT_ADDRESSED verdict carrying a coverageGap — the product-QA signal the Claims loop turns
+// into a "Create product feedback" idea. NOT_ADDRESSED is the honest "form is silent" answer, so
+// it needs no coverage citation to render; the gap still points at a real seeded refId
+// (PH.COV.001) so the captured feedback is grounded (verified in fake.test.ts).
+export const CANNED_GAP_DETERMINATION: Record<string, unknown> = {
+  verdict:    'NOT_ADDRESSED',
+  summary:    'The policy is silent on a power-surge loss to smart-home devices.',
+  formNumber: 'HO 00 03',
+  coverages:  [],
+  exclusions: [],
+  limits:     [],
+  reasoning:  ['The form names no grant addressing electronic-surge damage to connected devices [PH.COV.001].'],
+  openItems:  [],
+  coverageGap: {
+    note:    'No coverage grant addresses a power-surge loss to smart-home devices; consider a scheduled endorsement.',
+    sources: ['PH.COV.001'],
+  },
+  citations:  [],
+}
+
 // ─── Fake stream builder ──────────────────────────────────────────────────────
 // Implements the MessageStream surface that runChatAgent / streamTurn uses:
 //   .on('error' | 'text', handler) — chainable
@@ -111,6 +132,35 @@ export function createFakeClaimsClient(): Anthropic {
             content: [{
               type: 'tool_use', id: 'fake_tu_001',
               name: 'emit_determination', input: CANNED_DETERMINATION,
+            }],
+            stop_reason: 'tool_use',
+            usage: FAKE_USAGE,
+          })
+        }
+        return makeFakeStream(['Determination recorded.'], {
+          content: [{ type: 'text', text: 'Determination recorded.' }],
+          stop_reason: 'end_turn',
+          usage: FAKE_USAGE,
+        })
+      },
+    },
+  } as unknown as Anthropic
+}
+
+// ─── createFakeGapClaimsClient ─────────────────────────────────────────────────
+// Same two-turn shape as createFakeClaimsClient, but the tool_use emits the NOT_ADDRESSED
+// coverage-gap determination — driving the gap → product-feedback loop end to end in the gate.
+export function createFakeGapClaimsClient(): Anthropic {
+  let callCount = 0
+  return {
+    messages: {
+      stream(_params: unknown, _opts?: unknown) {
+        callCount++
+        if (callCount === 1) {
+          return makeFakeStream([], {
+            content: [{
+              type: 'tool_use', id: 'fake_tu_gap',
+              name: 'emit_determination', input: CANNED_GAP_DETERMINATION,
             }],
             stop_reason: 'tool_use',
             usage: FAKE_USAGE,

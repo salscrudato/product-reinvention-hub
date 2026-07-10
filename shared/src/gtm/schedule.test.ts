@@ -17,7 +17,7 @@ const isWeekend = (iso: string) => dow(iso) === 0 || dow(iso) === 6
 const mk = (o: number, phaseOrder: number, sla: number, ongoing = false): GtmTemplateTask => ({
   globalOrder: o, phaseL2: 'P', groupL3: 'G', taskL4: `T${o}`,
   boardColumn: 'IDEATION & DESIGN', phaseOrder, slaDays: sla, ongoing,
-  owner: 'Product Mgr.', typeOfWork: 'Analytical',
+  owner: 'Product Mgr.', typeOfWork: 'Analytical', valueOfWork: 'Enables', disposition: 'Embrace',
 })
 
 describe('business-day helpers', () => {
@@ -115,26 +115,28 @@ describe('scheduleFromDeadline — post-launch governance', () => {
     expect(tasks[0]!.dueDate).toBeNull()
   })
 
-  it('full template: the ONE ongoing governance task has a null due date', () => {
+  it('full template: ongoing governance tasks are post-launch with null due dates', () => {
     const { tasks } = scheduleFromDeadline(GTM_PROCESS_TEMPLATE, deadline, { today: '2026-01-01' })
     const ongoing = tasks.filter(t => t.ongoing)
-    expect(ongoing).toHaveLength(1)
-    expect(ongoing[0]!.dueDate).toBeNull()
+    // The process asset marks every governance (phaseOrder 5) task "ongoing"; none is pre-launch.
+    expect(ongoing.length).toBeGreaterThan(0)
+    expect(ongoing.every(t => t.phaseOrder === 5)).toBe(true)
+    expect(ongoing.every(t => t.dueDate === null)).toBe(true)
   })
 })
 
 describe('scheduleFromDeadline — compression + critical path', () => {
-  it('critical path equals Σ pre-launch slaDays (=100 for the full template)', () => {
+  it('critical path equals Σ pre-launch slaDays (=90 for the full template, post-4E-screen)', () => {
     const { criticalPathDays } = scheduleFromDeadline(GTM_PROCESS_TEMPLATE, '2026-12-31', { today: '2026-01-01' })
-    expect(criticalPathDays).toBe(100)
+    expect(criticalPathDays).toBe(90)
   })
 
   it('warns "compressed" when the deadline is too soon — and still computes a schedule', () => {
     const { warnings, tasks } = scheduleFromDeadline(GTM_PROCESS_TEMPLATE, '2026-01-15', { today: '2026-01-01' })
     expect(warnings).toHaveLength(1)
     expect(warnings[0]!.code).toBe('compressed')
-    expect(warnings[0]!.neededDays).toBe(100)
-    expect(warnings[0]!.availableDays).toBeLessThan(100)
+    expect(warnings[0]!.neededDays).toBe(90)
+    expect(warnings[0]!.availableDays).toBeLessThan(warnings[0]!.neededDays)
     // Not corrupted: the last pre-launch task still lands on the deadline (starts fall in the past).
     const pre = tasks.filter(t => t.phaseOrder <= 4)
     const last = pre.reduce((a, b) => (a.globalOrder > b.globalOrder ? a : b))

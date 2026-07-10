@@ -23,8 +23,8 @@
 // Run: pnpm --filter functions test  (AI_FAKE=1 set in vitest.config.ts)
 import { describe, it, expect } from 'vitest'
 import {
-  CANNED_CHAT_TOKENS, CANNED_DETERMINATION,
-  createFakeChatClient, createFakeClaimsClient,
+  CANNED_CHAT_TOKENS, CANNED_DETERMINATION, CANNED_GAP_DETERMINATION,
+  createFakeChatClient, createFakeClaimsClient, createFakeGapClaimsClient,
 } from './fake/index'
 import { determinationIsCited } from './claims'
 import {
@@ -202,6 +202,44 @@ describe('E2E fake — claims: DeterminationCard JSON event + citation guards pa
     const { formNumbers } = buildSeededCatalogue()
     const fn = normalizeFormNumber(CANNED_DETERMINATION['formNumber'] as string)
     expect(formNumbers.has(fn)).toBe(true)
+  })
+})
+
+// ─── 2b. Coverage-gap determination → product feedback ────────────────────────
+
+describe('E2E fake — claims coverage gap: NOT_ADDRESSED determination carries a grounded gap', () => {
+  it('emits a NOT_ADDRESSED determination with a coverageGap the UI turns into feedback', async () => {
+    const res = makeFakeRes()
+    const client = createFakeGapClaimsClient() as unknown as FakeClient
+
+    let captured: Record<string, unknown> | null = null
+    await runFakeAgentLoop(client, [{ role: 'user', content: 'A power surge fried my smart thermostat.' }], res, {
+      maxTurns: 4,
+      runTool: async (name, input) => {
+        if (name === 'emit_determination') {
+          captured = input
+          sendEvent(res, { t: 'json', key: 'determination', value: input })
+          return { content: JSON.stringify({ recorded: true }), summary: 'gap recorded' }
+        }
+        return { content: '{}', summary: 'ok' }
+      },
+    })
+
+    const jsonEvent = res.frames.find(e => e.t === 'json' && e['key'] === 'determination')
+    expect(jsonEvent, 'json:determination event must be emitted').toBeDefined()
+    expect(captured!['verdict']).toBe('NOT_ADDRESSED')
+    const gap = captured!['coverageGap'] as { note: string; sources?: string[] } | undefined
+    expect(gap?.note, 'the determination must carry a coverage gap note').toBeTruthy()
+    // The "Create product feedback" affordance renders off exactly this gap.
+    expect((gap!.sources ?? []).length).toBeGreaterThan(0)
+  })
+
+  it('the gap is grounded — its sources are real seeded refIds (no invented citation)', () => {
+    // NOT_ADDRESSED is exempt from the substantive-verdict citation guard, but the gap still
+    // points at a seeded refId so the captured product-feedback idea is grounded.
+    const { refIds } = buildSeededCatalogue()
+    const gap = CANNED_GAP_DETERMINATION['coverageGap'] as { sources?: string[] }
+    expect((gap.sources ?? []).every(s => refIds.has(s)), `ungrounded gap sources: ${(gap.sources ?? []).join(', ')}`).toBe(true)
   })
 })
 

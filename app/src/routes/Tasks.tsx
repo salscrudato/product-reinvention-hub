@@ -20,8 +20,9 @@ import {
 import { businessDaysBetween } from '@pf/shared'
 import type { Product, TypeOfWork } from '@pf/shared'
 import {
-  GTM_COLUMNS, GTM_PHASES, WORK_TYPES, byDueThenOrder, isOverdue, startOfTodayMs,
-  todayISO, fmtShort, toMillis, doneFields, type TaskDoc, type ProjectDoc,
+  GTM_COLUMNS, GTM_PHASES, WORK_TYPES, DISPOSITIONS, DISPOSITION_META, byDueThenOrder,
+  isOverdue, startOfTodayMs, todayISO, fmtShort, toMillis, doneFields,
+  type BoardDisposition, type TaskDoc, type ProjectDoc,
 } from '../components/tasks/gtm/gtm'
 import { LaunchRunway } from '../components/tasks/gtm/LaunchRunway'
 import { TaskCard, CompletedRow } from '../components/tasks/gtm/TaskCard'
@@ -59,6 +60,7 @@ export default function Tasks() {
   const [overdue, setOverdue] = useState(false)
   const [typeFilter, setType] = useState<'' | TypeOfWork>('')
   const [phaseFilter, setPhase] = useState('')
+  const [dispFilter, setDisp] = useState<'' | BoardDisposition>('')
 
   useEffect(() => {
     const u1 = adapter.db.subscribe<ProjectDoc>('projects', d => { if (Array.isArray(d)) setProjects(d) })
@@ -82,7 +84,7 @@ export default function Tasks() {
     setCurrentId(id)
     if (typeof localStorage !== 'undefined') localStorage.setItem(STORE_KEY, id)
     if (params.get('project')) { params.delete('project'); setParams(params, { replace: true }) }
-    setMine(false); setOverdue(false); setType(''); setPhase('')
+    setMine(false); setOverdue(false); setType(''); setPhase(''); setDisp('')
   }
 
   // After creating a project, select it and immediately offer to seed its board.
@@ -108,8 +110,9 @@ export default function Tasks() {
     if (overdue && !isOverdue(t, today)) return false
     if (typeFilter && t.typeOfWork !== typeFilter) return false
     if (phaseFilter && t.phaseL2 !== phaseFilter) return false
+    if (dispFilter && t.disposition !== dispFilter) return false
     return true
-  }), [active, mine, overdue, typeFilter, phaseFilter, user?.uid, today])
+  }), [active, mine, overdue, typeFilter, phaseFilter, dispFilter, user?.uid, today])
 
   const byColumn = useMemo(() => {
     const map = Object.fromEntries(GTM_COLUMNS.map(c => [c.id, [] as TaskDoc[]]))
@@ -145,7 +148,7 @@ export default function Tasks() {
     }
   }
 
-  const activeFilters = [mine, overdue, !!typeFilter, !!phaseFilter].filter(Boolean).length
+  const activeFilters = [mine, overdue, !!typeFilter, !!phaseFilter, !!dispFilter].filter(Boolean).length
 
   // ── Loading ──
   if (projects === null || tasks === null) {
@@ -292,8 +295,26 @@ export default function Tasks() {
               <option value="">All phases</option>
               {GTM_PHASES.map(p => <option key={p.name} value={p.name}>{p.short}</option>)}
             </select>
+            {/* 4E disposition chips — toggle a single disposition; token-tinted when active. */}
+            <span className="mx-0.5 w-px h-4 shrink-0" style={{ background: 'var(--color-border)' }} aria-hidden="true" />
+            {DISPOSITIONS.map(d => {
+              const on = dispFilter === d
+              const meta = DISPOSITION_META[d]
+              return (
+                <button key={d} aria-pressed={on} onClick={() => setDisp(prev => prev === d ? '' : d)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] text-xs font-medium transition-colors"
+                  style={{
+                    background: on ? meta.soft : 'var(--color-surface)',
+                    color: on ? meta.token : 'var(--color-dim)',
+                    border: `1px solid ${on ? meta.token : 'var(--color-border)'}`,
+                  }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: meta.token }} aria-hidden="true" />
+                  {d}
+                </button>
+              )
+            })}
             {activeFilters > 0 && (
-              <button onClick={() => { setMine(false); setOverdue(false); setType(''); setPhase('') }}
+              <button onClick={() => { setMine(false); setOverdue(false); setType(''); setPhase(''); setDisp('') }}
                 className="h-7 px-2.5 rounded-[8px] text-xs text-dim hover:text-danger transition-colors"
                 style={{ border: '1px solid var(--color-border)' }}>
                 Clear {activeFilters}

@@ -133,6 +133,18 @@ function GridEditor({ step, table, model0, candidateDimensions, seedInputs, pid,
       case 'Enter':      e.preventDefault(); focusCell(r + 1, c); break
       case 'ArrowLeft':  if (el.selectionStart === 0) { e.preventDefault(); focusCell(r, c - 1) } break
       case 'ArrowRight': if (el.selectionStart === el.value.length) { e.preventDefault(); focusCell(r, c + 1) } break
+      case 'Tab': {
+        // Spreadsheet Tab: walk cells left→right, wrapping across row ends; Shift+Tab walks
+        // back. At the grid's first/last cell we let the browser move focus OUT (to the
+        // dialog's Cancel/Save) rather than trapping keyboard users inside the grid.
+        const flat = r * nCols + c
+        const next = flat + (e.shiftKey ? -1 : 1)
+        if (next >= 0 && next < nRows * nCols) {
+          e.preventDefault()
+          focusCell(Math.floor(next / nCols), next % nCols)
+        }
+        break
+      }
     }
   }
   function onCellPaste(e: React.ClipboardEvent<HTMLInputElement>, r: number, c: number) {
@@ -409,7 +421,7 @@ function GridEditor({ step, table, model0, candidateDimensions, seedInputs, pid,
 
       {/* Hint + footer */}
       <p className="text-[11px] text-faint mt-2 flex items-center gap-1.5">
-        <IconInfo size={12} />Arrow keys / Enter to move · type to edit · paste TSV to fill a range
+        <IconInfo size={12} />Arrow keys, Tab or Enter to move · type to edit · paste TSV to fill a range
       </p>
       <div className="flex items-center justify-between gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--color-border)' }}>
         <span className="text-xs text-faint">{canEdit ? 'Saves through mutate() — audit + version recorded' : 'Read-only — your role can\'t edit rating tables'}</span>

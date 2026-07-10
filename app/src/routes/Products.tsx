@@ -1,11 +1,12 @@
 // Products list — the PUBLISHED portfolio only (lifecycle LAUNCHED). Drafts live in
 // the Builder workbench and reach this surface solely through an explicit promotion,
 // so a draft can never leak into the portfolio here. Two views: Cards (the portfolio
-// grid) and Hierarchy (the product-framework tree), defaulting to Hierarchy. A single
-// smart, realtime search filters by name + the metadata a PM actually filters on (line
-// of business, market segment, vertical, coverage family, state, id). Segmentation is
-// driven by the interactive PortfolioFootprint strip — clicking a segment filters the
-// grid — so it extends automatically as lines are registered in the LOB registry.
+// grid) and Hierarchy (the product-framework tree), defaulting to Hierarchy. A smart,
+// realtime search filters by name + the metadata a PM actually types (line of business,
+// market segment, vertical, coverage family, state, id), and two registry-driven facet
+// rows — Personal/Commercial and Market segment — narrow the grid by segment. Both facet
+// value sets come from deriveSegmentAxes(), so registering a new line in the LOB registry
+// extends the facets automatically; nothing here is hard-coded.
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Fuse from 'fuse.js'
@@ -23,6 +24,7 @@ import { exportPortfolioExcel, type ProductExport } from '../lib/export/excel'
 import {
   deriveSegmentAxes, matchesSegments,
   type Product, type Coverage, type Rule, type Form, type LDTable, type RTTable, type RatingProgram,
+  type SegmentSelection, type SegmentAxisId,
 } from '@pf/shared'
 import type { WithId } from '../context/ProductContext'
 
@@ -60,6 +62,7 @@ export default function Products() {
   const [products, setProducts] = useState<WithId<Product>[]>([])
   const [loading,  setLoading]  = useState(true)
   const [query,    setQuery]    = useState('')
+  const [seg,      setSeg]      = useState<SegmentSelection>({})
   const [exporting, setExporting] = useState(false)
   const [view, setView] = useState<ProductView>(readView)
   const [deleteFor, setDeleteFor] = useState<WithId<Product> | null>(null)
@@ -105,15 +108,20 @@ export default function Products() {
   // Published portfolio only (LAUNCHED); drafts are authored + promoted in the Builder.
   const launched = useMemo(() => products.filter(p => p.lifecycle === 'LAUNCHED'), [products])
 
-  // Registry-driven facet axes — used only to enrich the searchable text now (no filter UI).
+  // Registry-driven facet axes — drive both the search haystack and the facet-chip rows.
   const axes = useMemo(() => deriveSegmentAxes(), [])
+  const facetValues = (id: SegmentAxisId) => axes.find(a => a.id === id)?.values ?? []
+  const activeSeg = Object.values(seg).filter(Boolean).length
+  const toggleSeg = (id: SegmentAxisId, v: string) =>
+    setSeg(prev => ({ ...prev, [id]: prev[id] === v ? undefined : v }))
 
-  // Realtime, metadata-rich search — the single filter on this page.
-  const searchable = useMemo(() => launched.map(p => ({ p, text: searchTextFor(p, axes) })), [launched, axes])
+  // Segment facets narrow the portfolio first; search then runs over the narrowed set.
+  const segFiltered = useMemo(() => launched.filter(p => matchesSegments(p, seg)), [launched, seg])
+  const searchable = useMemo(() => segFiltered.map(p => ({ p, text: searchTextFor(p, axes) })), [segFiltered, axes])
   const fuse = useMemo(() => new Fuse(searchable, { keys: ['text'], threshold: 0.4, ignoreLocation: true }), [searchable])
   const visible = useMemo(
-    () => (query.trim() ? fuse.search(query).map(r => r.item.p) : launched),
-    [query, fuse, launched],
+    () => (query.trim() ? fuse.search(query).map(r => r.item.p) : segFiltered),
+    [query, fuse, segFiltered],
   )
 
   // Portfolio at-a-glance KPIs for the hero stat line.
@@ -177,6 +185,39 @@ export default function Products() {
         <ViewSwitch view={view} onChange={setViewPersist} />
       </div>
 
+      {/* Registry-driven segment facets — Personal/Commercial + Market segment. Rendered only
+          when a facet actually has something to narrow (>1 value across the portfolio). */}
+      {!loading && launched.length > 0 && (facetValues('personalOrCommercial').length > 1 || facetValues('marketSegment').length > 1) && (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Segment filters">
+          {facetValues('personalOrCommercial').length > 1 && (
+            <>
+              <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-faint">Type</span>
+              {facetValues('personalOrCommercial').map(v => (
+                <FacetChip key={v} active={seg.personalOrCommercial === v} onClick={() => toggleSeg('personalOrCommercial', v)}>{v}</FacetChip>
+              ))}
+            </>
+          )}
+          {facetValues('personalOrCommercial').length > 1 && facetValues('marketSegment').length > 1 && (
+            <span className="w-px h-4 mx-0.5 shrink-0" style={{ background: 'var(--color-border)' }} aria-hidden="true" />
+          )}
+          {facetValues('marketSegment').length > 1 && (
+            <>
+              <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-faint">Segment</span>
+              {facetValues('marketSegment').map(v => (
+                <FacetChip key={v} active={seg.marketSegment === v} onClick={() => toggleSeg('marketSegment', v)}>{v}</FacetChip>
+              ))}
+            </>
+          )}
+          {activeSeg > 0 && (
+            <button onClick={() => setSeg({})}
+              className="h-7 px-2.5 rounded-[8px] text-xs text-dim hover:text-danger transition-colors"
+              style={{ border: '1px solid var(--color-border)' }}>
+              Clear {activeSeg}
+            </button>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1,2,3].map(i => (
@@ -192,8 +233,9 @@ export default function Products() {
             action={canEdit ? <Button variant="primary" size="sm" onClick={() => navigate('/app/builder')}><IconPlus size={14} />Go to Builder</Button> : undefined}
           />
         ) : (
-          <EmptyState icon={<IconProduct size={32} />} title={query ? `No results for "${query}"` : 'No published products'}
-            description="Adjust your search to see published products." />
+          <EmptyState icon={<IconProduct size={32} />}
+            title={query ? `No results for "${query}"` : (activeSeg > 0 ? 'No products match these filters' : 'No published products')}
+            description={query || activeSeg > 0 ? 'Adjust your search or segment filters to see published products.' : 'Adjust your search to see published products.'} />
         )
       ) : view === 'cards' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -218,6 +260,18 @@ export default function Products() {
         />
       )}
     </div>
+  )
+}
+
+// A single segment-facet toggle chip. Mirrors the Tasks board FilterChip treatment so the
+// two filtering surfaces read as one system (accent-soft when active, subtle otherwise).
+function FacetChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} aria-pressed={active}
+      className={`px-2.5 py-1 rounded-[8px] text-xs font-medium transition-colors ${active ? 'bg-accent-soft text-accent' : 'bg-surface text-dim hover:text-text'}`}
+      style={{ border: `1px solid ${active ? 'var(--color-accent-line)' : 'var(--color-border)'}` }}>
+      {children}
+    </button>
   )
 }
 

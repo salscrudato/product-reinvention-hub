@@ -257,8 +257,9 @@ export function isPerilState(lob: LobDefinition, state: string): boolean {
 // Every facet's *values* are derived from LOB_REGISTRY below — nothing is hard-coded
 // in the UI — so registering a new line automatically extends every axis.
 
-/** The identifier of a segmentation axis. */
-export type SegmentAxisId = 'vertical' | 'family' | 'marketSegment'
+/** The identifier of a segmentation axis. `personalOrCommercial` is the two-value
+ *  Personal-vs-Commercial grouping (a coarser split than `vertical`'s "…Lines" labels). */
+export type SegmentAxisId = 'personalOrCommercial' | 'vertical' | 'family' | 'marketSegment'
 
 /** One selectable facet axis: an id, a human label, and the distinct values that
  *  currently exist across the registry (sorted, de-duplicated). */
@@ -274,6 +275,7 @@ export type SegmentSelection = Partial<Record<SegmentAxisId, string>>
 /** The segment tags a single line carries on each axis. `marketSegments` is a set
  *  because a line can serve several bands (e.g. Small Commercial + Middle Market). */
 export interface LineSegments {
+  personalOrCommercial: 'Personal' | 'Commercial'
   vertical:       MarketVertical
   family:         CoverageFamily
   marketSegments: readonly string[]
@@ -290,7 +292,8 @@ function distinctAcrossRegistry(pick: (lob: LobDefinition) => readonly string[])
  *  registered lines actually declare — add a line and the axes grow automatically. */
 export function deriveSegmentAxes(): SegmentAxis[] {
   return [
-    { id: 'vertical',      label: 'Vertical',       values: distinctAcrossRegistry(l => [l.vertical]) },
+    { id: 'personalOrCommercial', label: 'Personal / Commercial', values: distinctAcrossRegistry(l => [l.personalOrCommercial]) },
+    { id: 'vertical',      label: 'Vertical',        values: distinctAcrossRegistry(l => [l.vertical]) },
     { id: 'family',        label: 'Coverage family', values: distinctAcrossRegistry(l => [l.family]) },
     { id: 'marketSegment', label: 'Market segment',  values: distinctAcrossRegistry(l => l.marketSegments) },
   ]
@@ -299,7 +302,10 @@ export function deriveSegmentAxes(): SegmentAxis[] {
 /** The segment tags a product carries, resolved through its line-of-business. */
 export function productSegments(product?: { lob?: { refId?: string | null } | null } | null): LineSegments {
   const lob = resolveLob(product)
-  return { vertical: lob.vertical, family: lob.family, marketSegments: lob.marketSegments }
+  return {
+    personalOrCommercial: lob.personalOrCommercial,
+    vertical: lob.vertical, family: lob.family, marketSegments: lob.marketSegments,
+  }
 }
 
 /** Whether a product satisfies a segmentation selection. Unset axes are wildcards;
@@ -309,6 +315,7 @@ export function matchesSegments(
   selection: SegmentSelection,
 ): boolean {
   const seg = productSegments(product)
+  if (selection.personalOrCommercial && seg.personalOrCommercial !== selection.personalOrCommercial) return false
   if (selection.vertical && seg.vertical !== selection.vertical) return false
   if (selection.family && seg.family !== selection.family) return false
   if (selection.marketSegment && !seg.marketSegments.includes(selection.marketSegment)) return false

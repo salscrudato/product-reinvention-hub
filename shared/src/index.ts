@@ -31,9 +31,11 @@ export * from './retrieval/retrieve'
 export * from './seed/personalHome'
 export * from './seed/personalAuto'
 export * from './seed/generalLiability'
-// GTM launch tracker — process template + backward scheduler (pure, deterministic).
+// GTM launch tracker — process template + backward scheduler (pure, deterministic) + the
+// Process Value Explorer → template converter that generates the process seed.
 export * from './gtm/types'
 export * from './gtm/schedule'
+export * from './gtm/processExplorer'
 export * from './seed/gtmProcess'
 // Product Data Model (neutral, lossless) + deterministic Duck Creek export.
 export * from './pdm/types'
