@@ -10,6 +10,7 @@
 // (PH.COV.001, PH.LD.003, HO 00 03) so the citation guard functions pass without
 // a model call, exactly as they would on a well-grounded live answer.
 import type Anthropic from '@anthropic-ai/sdk'
+import { NJ_LEMONADE_EXTRACTION } from '@pf/shared'
 
 // ─── Canned chat response ─────────────────────────────────────────────────────
 // Tokens include a [PH.COV.001] citation so the chat citation guard passes and the
@@ -120,6 +121,61 @@ export function createFakeClaimsClient(): Anthropic {
           stop_reason: 'end_turn',
           usage: FAKE_USAGE,
         })
+      },
+    },
+  } as unknown as Anthropic
+}
+
+// ─── createFakeFilingClient ────────────────────────────────────────────────────────
+// A non-streaming (messages.create) forced-tool double for the filing importer's pipeline.
+// It dispatches on the requested tool: classify returns a role read from the filename in the
+// prompt (proving CLASSIFY works off structural intent, not call order); the extract tools
+// return the reference filing's canned inputs (from @pf/shared NJ_LEMONADE_EXTRACTION), in the
+// SAME shape the live tools would — so the sanitizers + deterministic parser + reconcile run
+// exactly as in production, no live Anthropic call. Built from samples/filings/nj-lemonade-ho/.
+function firstUserText(params: { messages?: { role: string; content: unknown }[] }): string {
+  const msg = (params.messages ?? []).find(m => m.role === 'user')
+  const content = msg?.content
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) return content.map(b => (b && typeof b === 'object' && 'text' in b ? String((b as { text: unknown }).text) : '')).join(' ')
+  return ''
+}
+
+function fakeToolMessage(name: string, input: Record<string, unknown>) {
+  return { content: [{ type: 'tool_use', id: `fake_${name}`, name, input }], stop_reason: 'tool_use', usage: FAKE_USAGE }
+}
+
+export function createFakeFilingClient(): Anthropic {
+  const ex = NJ_LEMONADE_EXTRACTION
+  return {
+    messages: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async create(params: any) {
+        const tool = params?.tool_choice?.name as string | undefined
+        switch (tool) {
+          case 'classify_filing_document': {
+            const text = firstUserText(params).toLowerCase()
+            const role = /rate order/.test(text) ? 'rateOrder'
+              : /manual/.test(text) ? 'manual'
+              : /lem |policy|homeowners/.test(text) ? 'policyForm' : 'other'
+            const cue = ex.classifications.find(c => c.role === role)?.cue ?? 'Structural cue.'
+            return fakeToolMessage('classify_filing_document', { role, cue, confidence: 0.97 })
+          }
+          case 'propose_rate_order':
+            return fakeToolMessage('propose_rate_order', { variables: ex.rateOrder.variables, maxCreditRuleRef: ex.rateOrder.maxCreditRuleRef, minPremiumRuleRef: ex.rateOrder.minPremiumRuleRef })
+          case 'propose_manual_rules':
+            return fakeToolMessage('propose_manual_rules', { rules: ex.manual.rules })
+          case 'propose_coverages':
+            return fakeToolMessage('propose_coverages', { coverages: ex.policyForm.coverages.items })
+          case 'propose_forms':
+            return fakeToolMessage('propose_forms', { forms: ex.policyForm.forms.items })
+          case 'propose_rules':
+            return fakeToolMessage('propose_rules', { rules: ex.policyForm.rules.items })
+          case 'propose_rating':
+            return fakeToolMessage('propose_rating', { hints: ex.policyForm.rating.items })
+          default:
+            return { content: [{ type: 'text', text: 'No tool.' }], stop_reason: 'end_turn', usage: FAKE_USAGE }
+        }
       },
     },
   } as unknown as Anthropic

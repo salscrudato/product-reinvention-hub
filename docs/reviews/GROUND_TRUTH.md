@@ -397,3 +397,84 @@ s7 MIN_FLOOR CONST 500 round 0     → max(2,635, 500)            = $2,635
 
 **CONSEQUENCE:** GL is at parity with PH and PA. Portfolio digest, grounding index, DynamicRatingForm,
 Simulate panel, LOB segmentation filters, and refId counters all include GL.
+
+---
+
+## V16 — Filing importer (second ingestion mechanism) + evaluator credit-cap (2026-07-10)
+
+**FINDING:** The platform now has a SECOND ingestion mechanism alongside the ISO-workbook
+importer: a **filing importer** that turns a real carrier rate filing (a set of PDFs) into a
+reviewable, governed product. The reference set is the NJ Lemonade Homeowners filing, committed at
+`samples/filings/nj-lemonade-ho/` (RATE ORDER OF CALCULATIONS, HOMEOWNERS MANUAL ed. Dec 2023,
+policy form LEM 03 05 23). See `docs/adr/0005-filing-importer.md`.
+
+**EVIDENCE:**
+- Pure domain `shared/src/insurance/filing/`:
+  - `types.ts` — `FilingDocRole`, rate-order/manual/policy-form proposal shapes, `FilingImportPlan`
+    (wraps the workbook importer's `ImportPlan` + a review bundle + `unresolved` + `counts`).
+  - `registry.ts` — `classifyRuleNumber` (ISO numbering plan: 92→CREDIT_CAP, 205→MIN_PREMIUM,
+    406→DEDUCTIBLE, 1–2 base loss cost, 3xx scheduled property, 4xx protective device, 5xx/6xx
+    endorsement schedules) + `FILING_CONCEPTS` + `matchConcept` (normalized-name + alias join,
+    credit flags).
+  - `tableParser.ts` — DETERMINISTIC `parseFactorTable` (pairs / triples / matrix) + `sampleCells`
+    / `cellValueAppearsInText`. The model discovers the schema + quotes the verbatim region; code
+    parses the rows and COUNTS what it can't (never invents). A ragged/misaligned row is skipped.
+  - `sanitize.ts` — citation-mandatory guards for classify/rate-order/manual (mirror
+    `insurance/extraction.ts`); a manual table carries only a SCHEMA + region, never model rows.
+  - `reconcile.ts` — pure `reconcileFiling()`: joins the three extractions, emits the ImportPlan +
+    review, maps rate-order variables onto engine ops (SET base loss cost, MUL factors, ADD flats,
+    MIN_FLOOR from the min-premium rule, `creditFloor` from the max-credit rule). Unresolvable
+    variables become UNRESOLVED with reason + citation. Conservation: `proposed === accepted + unresolved`.
+  - `njLemonadeFiling.ts` — the reference extraction, grounded in the three PDFs (base loss costs,
+    LCM 1.727, zip→territory→LCMF triples, tier relativities, Rule 406 matrix, Rule 92 = 50%/40%,
+    Rule 205 = $420/$300/$60, Coverage A–F). Single source of truth for the golden test + AI_FAKE.
+- Server pipeline `functions/src/filingImport.ts` (exported in `index.ts`): SSE, EDITOR/ADMIN,
+  `sseCostGate('filingImport', …)`, `recordCascade`. CLASSIFY (cheap forced tool per doc) →
+  EXTRACT (rate-order + manual forced tools with cheap-first→escalate; policyForm reuses
+  `runFourSectionExtraction`, factored out of `extract.ts`) → RECONCILE (pure). `filingImport`
+  cost key = $0.085 in `costGuard.ts`.
+- AI_FAKE: `createFakeFilingClient()` (`functions/src/fake/index.ts`) — non-streaming forced-tool
+  double dispatching on tool name; drives the pipeline in `functions/src/filingImport.test.ts`.
+- Review UI: `app/src/components/product/FilingImportModal.tsx` (+ Builder "Import a filing" card,
+  `app/src/lib/import/filingImportClient.ts`). UNRESOLVED first; per-section accept; persists via
+  the existing `importPlan()` with `filingLineage()` (kind IMPORT, sources = the filing docs).
+- **Evaluator extension** (`shared/src/rating/evaluator.ts`): optional `RatingProgram.creditFloor`
+  + `RatingStep.isCredit`. Floors the cumulative credit product (Rule 92 archetype) with ONE
+  corrective trace step after the last credit. NO change to any program that doesn't set them.
+- **Pricing** (`shared/src/rating/gridInputs.ts` + `app/.../ProductPricing.tsx`):
+  `deriveGridInputSpec()` builds a data-driven worksheet from a program's grid tables so an
+  imported product prices in the UI; returns null (untouched) for the seeded PH/PA/GL lines.
+
+**Imported product CANARY — $1,281** (`shared/src/insurance/filing/reconcile.test.ts`), priced
+through the shared `evaluate()` with a manual-default worked example (territory 30 / zip 07004 /
+tier 5 / Coverage A ≥ $300k, $2,500 deductible / PP replacement cost):
+```
+s1 SET  baseLossCost[30]        = 456.93
+s2 MUL  LCM (Rule 1)            × 1.727 → 789.12
+s3 MUL  LCMF[07004] (Rule 2)    × 1.606 → 1,267.32
+s4 MUL  Tier[5] (Rule 13)       × 1.022 → 1,295.20
+s5 MUL  Deductible[$300k+,2500] × 0.83  → 1,075.02   (Rule 406)
+s6 MUL  Loss settlement (14)    × 1.35  → 1,451.28
+s7 MUL  Renovation credit (26)  × 0.91  → 1,320.66   ┐ credits 0.8827 ≥ 0.50 floor (Rule 92)
+s8 MUL  Loyalty credit (24)     × 0.97  → 1,281.04   │ → no cap correction
+s9 MUL  Gated community (23)    × 1.000 → 1,281.04   ┘
+s10 MIN_FLOOR $420 (Rule 205), round 0 = $1,281
+```
+
+**HOSTILE SELF-REVIEW:**
+- *Can the model invent a factor/row?* No structured rows cross the wire — the manual tool returns
+  a SCHEMA + verbatim region; `parseFactorTable` produces the rows; a fabricated value not in the
+  region fails `cellValueAppearsInText` (tested). Base-loss-cost table is resolved by CONCEPT, not
+  kind, so an LCMF table (also base-loss-cost kind) can't be mistaken for it.
+- *Does anything persist without review?* No — the server writes nothing; persistence is the app's
+  `importPlan()` after per-section accept. UNRESOLVED items are never persisted.
+- *Is every unresolved item visible?* Yes — rendered first, with reason + citation; the golden test
+  asserts `proposed === accepted + unresolved` and that Protection-Construction / Key Factor (real
+  rate-order variables the manual states no table for) surface as UNRESOLVED.
+- *Did the evaluator extension change any existing program?* No — HO-3 $1,528 / PA $1,002 / GL
+  $2,635 re-asserted byte-identical in `evaluator.creditFloor.test.ts` (no `__credit_cap__` entry).
+
+**CONSEQUENCE:** Carriers' actual filed documents are now a first-class ingestion path, at the same
+grounding + governance bar as the workbook importer. Gate: typecheck ✓, lint ✓, 697 unit tests ✓
+(576 shared+app, 121 functions), build ✓. `test:rules`/`integration`/`e2e` remain blocked by the
+pre-existing port-8080 emulator conflict (V5 / BASELINE), unrelated to this work.

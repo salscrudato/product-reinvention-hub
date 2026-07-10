@@ -18,7 +18,7 @@ import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, A
 import { extractPdfText } from './pdfText'
 import {
   cleanCoverages, cleanForms, cleanRules, cleanRating,
-  type ExtractionSection,
+  type ExtractionSection, type ExtractionResult,
 } from '@pf/shared'
 import { emptyUsage, addUsage, recordCascade, recordUsage } from './telemetry'
 import type { UsageAccum } from './telemetry'
@@ -232,6 +232,78 @@ export function proposedCount(key: string, input: Record<string, unknown>): numb
   return Array.isArray(arr) ? arr.length : 0
 }
 
+// ─── The four-section extraction, as a reusable unit ─────────────────────────────
+// One implementation drives BOTH the standalone base-form extractor (extractCoverages) AND the
+// filing importer's policyForm stage (functions/src/filingImport.ts) — a policy form IS a base
+// coverage form, so it runs the SAME four forced tools + sanitizers + cheap-first cascade rather
+// than a parallel implementation. Callbacks let the caller stream tool start/end + per-section
+// json as each section completes.
+interface SectionDef {
+  key: string; label: string; tool: Anthropic.Tool; instruction: string; maxTokens: number
+  clean: (input: Record<string, unknown>, text: string | null) => ExtractionSection<unknown>
+}
+function sectionDefs(product: string): SectionDef[] {
+  return [
+    { key: 'coverages', label: 'coverage', tool: PROPOSE_COVERAGES, maxTokens: 3000,
+      instruction: `Product: ${product}. Identify every coverage this base form defines, then call propose_coverages.`,
+      clean: cleanCoverages },
+    { key: 'forms', label: 'form', tool: PROPOSE_FORMS, maxTokens: 2000,
+      instruction: `Product: ${product}. List the forms this document is or references by number, then call propose_forms.`,
+      clean: cleanForms },
+    { key: 'rules', label: 'rule', tool: PROPOSE_RULES, maxTokens: 2000,
+      instruction: `Product: ${product}. Identify the PRODUCT and FORMS rules the document supports, then call propose_rules.`,
+      clean: cleanRules },
+    { key: 'rating', label: 'rating hint', tool: PROPOSE_RATING, maxTokens: 1500,
+      instruction: `Product: ${product}. Identify any rating information the document states, then call propose_rating.`,
+      clean: cleanRating },
+  ]
+}
+
+export interface FourSectionOpts {
+  client:       Anthropic
+  docBlock:     Anthropic.ContentBlockParam
+  verifyText:   string | null
+  productName:  string
+  degraded:     boolean
+  cheapUsage:   UsageAccum
+  strongUsage:  UsageAccum
+  onTool?:      (key: string, phase: 'start' | 'end', summary?: string) => void
+  onSection?:   (key: string, section: ExtractionSection<unknown>) => void
+}
+
+/** Run all four forced-tool sections with the cheap-first + per-section escalation cascade and
+ *  assemble an ExtractionResult. Escalation is suppressed when `degraded` (a soft budget cap).
+ *  Returns the result plus whether any section escalated (for cascade telemetry). */
+export async function runFourSectionExtraction(opts: FourSectionOpts): Promise<{ result: ExtractionResult; escalated: boolean }> {
+  const { client, docBlock, verifyText, productName, degraded, cheapUsage, strongUsage } = opts
+  const sections = sectionDefs(productName)
+  const out: Record<string, ExtractionSection<unknown>> = {}
+  let escalated = false
+  for (const s of sections) {
+    opts.onTool?.(s.key, 'start')
+    const cheapInput = await runSection(client, MODEL_FAST, docBlock, s.instruction, s.tool.name, s.maxTokens, cheapUsage)
+    let section = s.clean(cheapInput, verifyText)
+    if (!degraded && sectionNeedsEscalation(s.key, proposedCount(s.key, cheapInput), section.items.length)) {
+      escalated = true
+      const strongInput = await runSection(client, MODEL, docBlock, s.instruction, s.tool.name, s.maxTokens, strongUsage)
+      section = s.clean(strongInput, verifyText)
+    }
+    const n = section.items.length
+    opts.onTool?.(s.key, 'end', `${n} ${s.label}${n === 1 ? '' : 's'}`)
+    opts.onSection?.(s.key, section)
+    out[s.key] = section
+  }
+  return {
+    result: {
+      coverages: out.coverages as ExtractionResult['coverages'],
+      forms:     out.forms as ExtractionResult['forms'],
+      rules:     out.rules as ExtractionResult['rules'],
+      rating:    out.rating as ExtractionResult['rating'],
+    },
+    escalated,
+  }
+}
+
 export const extractCoverages = onRequest(
   { secrets: [ANTHROPIC_API_KEY], cors: true, timeoutSeconds: 240, memory: '512MiB' },
   async (req, res) => {
@@ -291,43 +363,14 @@ export const extractCoverages = onRequest(
       const product = body.productName ?? 'this product'
       const client = anthropic()
 
-      // Each section: a forced tool, its instruction, its sanitizer, its token budget.
-      // Sanitizers (shared/) enforce the citation + form-number guarantees uniformly.
-      const sections: Array<{
-        key: string; label: string; tool: Anthropic.Tool; instruction: string; maxTokens: number
-        clean: (input: Record<string, unknown>, text: string | null) => ExtractionSection<unknown>
-      }> = [
-        { key: 'coverages', label: 'coverage', tool: PROPOSE_COVERAGES, maxTokens: 3000,
-          instruction: `Product: ${product}. Identify every coverage this base form defines, then call propose_coverages.`,
-          clean: cleanCoverages },
-        { key: 'forms', label: 'form', tool: PROPOSE_FORMS, maxTokens: 2000,
-          instruction: `Product: ${product}. List the forms this document is or references by number, then call propose_forms.`,
-          clean: cleanForms },
-        { key: 'rules', label: 'rule', tool: PROPOSE_RULES, maxTokens: 2000,
-          instruction: `Product: ${product}. Identify the PRODUCT and FORMS rules the document supports, then call propose_rules.`,
-          clean: cleanRules },
-        { key: 'rating', label: 'rating hint', tool: PROPOSE_RATING, maxTokens: 1500,
-          instruction: `Product: ${product}. Identify any rating information the document states, then call propose_rating.`,
-          clean: cleanRating },
-      ]
-
-      for (const s of sections) {
-        send(res, { t: 'tool', name: s.key, phase: 'start' })
-        // Fast first pass, then run the sanitizer as the check.
-        const cheapInput = await runSection(client, MODEL_FAST, docBlock, s.instruction, s.tool.name, s.maxTokens, cheapUsage)
-        let section = s.clean(cheapInput, verifyText)
-        // Escalate ONLY this section, ONLY on a failed check — keeps sonnet spend to the
-        // sections the fast model actually got wrong. Under a soft budget cap (degraded), stay
-        // cheap-only and never escalate (the proposals are human-reviewed before Save).
-        if (!degraded && sectionNeedsEscalation(s.key, proposedCount(s.key, cheapInput), section.items.length)) {
-          escalated = true
-          const strongInput = await runSection(client, MODEL, docBlock, s.instruction, s.tool.name, s.maxTokens, strongUsage)
-          section = s.clean(strongInput, verifyText)
-        }
-        const n = section.items.length
-        send(res, { t: 'tool', name: s.key, phase: 'end', summary: `${n} ${s.label}${n === 1 ? '' : 's'}` })
-        send(res, { t: 'json', key: s.key, value: section })
-      }
+      // The four forced-tool sections run through the shared cascade (also used by the filing
+      // importer's policyForm stage). Callbacks stream tool start/end + each section's json.
+      const { escalated: didEscalate } = await runFourSectionExtraction({
+        client, docBlock, verifyText, productName: product, degraded, cheapUsage, strongUsage,
+        onTool:    (name, phase, summary) => send(res, { t: 'tool', name, phase, ...(summary ? { summary } : {}) }),
+        onSection: (key, section) => send(res, { t: 'json', key, value: section }),
+      })
+      escalated = didEscalate
 
       send(res, { t: 'done' })
     } catch (err) {

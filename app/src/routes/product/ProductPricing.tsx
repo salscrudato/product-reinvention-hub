@@ -6,7 +6,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { IconRefresh, IconClose, IconPricing } from '../../components/ui/icons'
-import { evaluate, resolveLob, resolveRatingKit } from '@pf/shared'
+import { evaluate, resolveLob, resolveRatingKit, deriveGridInputSpec } from '@pf/shared'
 import type { RatingInputs, RatingInputMap, RatingStep, RTTable, LDTable, RatingProgram, Coverage } from '@pf/shared'
 import { linkCoverageToPricing } from '../../lib/insurance/pricingLinks'
 import { useProductCtx } from '../../context/useProductCtx'
@@ -154,14 +154,20 @@ export default function ProductPricing() {
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'User' }
   const lob  = useMemo(() => resolveLob(product), [product])
   const kit  = useMemo(() => resolveRatingKit(lob.prefix), [lob.prefix])
-  const isHO = lob.prefix === 'PH'
+  // An imported / grid-table product (e.g. from the filing importer) reads GRID tables the
+  // bespoke line panel can't drive. Derive a data-driven worksheet + a guaranteed-resolvable
+  // worked example from the program's own table dimensions; null for the seeded PH/PA/GL lines
+  // (their tables carry no `dimensions`), which keep their bespoke panels untouched.
+  const gridWorksheet = useMemo(() => deriveGridInputSpec(ratingProgram, rtTables), [ratingProgram, rtTables])
+  const useGrid = gridWorksheet !== null
+  const isHO = lob.prefix === 'PH' && !useGrid
   const coastal = useMemo(() => new Set<string>(lob.peril.eligibleStates), [lob])
-  const [inputs, setInputs]       = useState<RatingInputMap>(() => ({ ...kit.workedExample }))
+  const [inputs, setInputs]       = useState<RatingInputMap>(() => ({ ...(gridWorksheet?.workedExample ?? kit.workedExample) }))
   const [riskState, setRiskState] = useState('OH')
   const [editing, setEditing]     = useState<EditableStep | null>(null)
   const [stepDialog, setStepDialog] = useState<{ step: RatingStep | null } | null>(null)
 
-  useEffect(() => { setInputs({ ...kit.workedExample }) }, [lob.prefix, kit])
+  useEffect(() => { setInputs({ ...(gridWorksheet?.workedExample ?? kit.workedExample) }) }, [lob.prefix, kit, gridWorksheet])
   const upd = (patch: RatingInputMap) => setInputs(prev => ({ ...prev, ...patch }))
 
   const result = useMemo(() => {
@@ -228,7 +234,7 @@ export default function ProductPricing() {
           <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-semibold text-text">Scenario inputs</span>
-              <Button variant="ghost" size="sm" onClick={() => setInputs({ ...kit.workedExample })}>
+              <Button variant="ghost" size="sm" onClick={() => setInputs({ ...(gridWorksheet?.workedExample ?? kit.workedExample) })}>
                 <IconRefresh size={13} />Reset
               </Button>
             </div>
@@ -238,7 +244,7 @@ export default function ProductPricing() {
                 riskState={riskState} setRiskState={setRiskState}
                 coastal={coastal} ldTables={ldTables} />
             ) : (
-              <GenericRatingPanel spec={kit.inputSpec} inputs={inputs} ldTables={ldTables} onChange={upd} />
+              <GenericRatingPanel spec={gridWorksheet?.inputSpec ?? kit.inputSpec} inputs={inputs} ldTables={ldTables} onChange={upd} />
             )}
             {ratingProgram && !result && (
               <p className="text-[12px] text-faint pt-3 mt-3" style={{ borderTop: '1px solid var(--color-border)' }}>

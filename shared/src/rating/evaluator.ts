@@ -1,5 +1,18 @@
 // Pure rating engine: executes a RatingProgram step-by-step and returns a full trace.
 // No platform imports; injected table getters keep this testable without Firestore.
+//
+// MAXIMUM-CREDIT CAP EXTENSION (additive, opt-in). A real rate filing usually carries a
+// "maximum credits" rule (e.g. Lemonade NJ HO Rule 92: "a maximum total credit of 50%")
+// that caps the CUMULATIVE product of a named set of credit factors — something a chain of
+// independent MUL steps cannot express on its own. Rather than add a bespoke op, the engine
+// honours two OPTIONAL fields: `RatingStep.isCredit` flags a step as a credit, and
+// `RatingProgram.creditFloor` sets the floor for the product of those flagged steps. When
+// (and only when) a program sets `creditFloor`, the evaluator multiplies once by a corrective
+// factor right after the last credit step so the cumulative credit product never dips below
+// the floor, emitting a distinct, auditable trace entry for the adjustment. Programs that set
+// neither field — every legacy/seeded program — run byte-identically, so the $1,528 (HO-3),
+// $1,002 (Personal Auto) and $2,635 (GL) canaries are untouched. Introduced by the filing
+// importer (docs/reviews/GROUND_TRUTH.md V16); unit-tested in evaluator.creditFloor.test.ts.
 import type { RatingProgram, RatingInputMap, EvaluatorResult, TraceEntry } from '../types'
 
 /** Look up a value from an RT table given a set of resolved input keys. */
@@ -28,9 +41,20 @@ export function evaluate(
   let running = 0
   const trace: TraceEntry[] = []
 
-  for (const step of sortedSteps) {
+  // Maximum-credit cap bookkeeping (no-op unless `creditFloor` is set). We track the running
+  // product of executed credit factors and the index of the LAST credit step actually run, so
+  // the single corrective adjustment lands immediately after credits are complete — before any
+  // downstream flat premium or MIN_FLOOR. `capApplied` guards against double-application.
+  const capEnabled = typeof program.creditFloor === 'number' && program.creditFloor > 0
+  const lastCreditIdx = capEnabled
+    ? sortedSteps.reduce((last, s, i) => (s.op === 'MUL' && isCreditStep(s, inputs) ? i : last), -1)
+    : -1
+  let creditProduct = 1
+  let capApplied = false
+
+  sortedSteps.forEach((step, idx) => {
     // Gate: skip if condition input is falsy
-    if (step.condition !== undefined && !inputs[step.condition]) continue
+    if (step.condition !== undefined && !inputs[step.condition]) return
 
     const { factor, sourceRef } = resolveSource(step, inputs, rtGetter, ldGetter)
 
@@ -56,9 +80,40 @@ export function evaluate(
       rounded:        didRound,
       runningTotal:   running,
     })
-  }
+
+    // Accumulate the credit product; once the last credit step has run, apply the cap.
+    if (capEnabled && step.op === 'MUL' && isCreditStep(step, inputs)) creditProduct *= factor
+    if (capEnabled && !capApplied && idx === lastCreditIdx) {
+      capApplied = true
+      const floor = program.creditFloor!
+      // Only correct when credits actually pierced the floor. `creditProduct > 0` guards the
+      // degenerate zero-factor case (a 0 credit would make the ratio non-finite).
+      if (creditProduct > 0 && creditProduct < floor) {
+        const adjust = floor / creditProduct
+        running *= adjust
+        trace.push({
+          stepId:         '__credit_cap__',
+          label:          `Maximum credit cap (floor ${floor})`,
+          op:             'MUL',
+          sourceRef:      `CREDIT_CAP(floor=${floor}, credits=${round(creditProduct, 4)})`,
+          factorOrAmount: adjust,
+          rounded:        false,
+          runningTotal:   running,
+        })
+      }
+    }
+  })
 
   return { finalPremium: running, trace }
+}
+
+/** Would this step contribute to the maximum-credit product on this run? A credit step is one
+ *  explicitly flagged `isCredit` whose gate (if any) is satisfied — the caller has already
+ *  filtered gated-out steps, so this only re-checks the flag + op at accumulation time. */
+function isCreditStep(step: RatingProgram['steps'][number], inputs: RatingInputMap): boolean {
+  if (!step.isCredit) return false
+  if (step.condition !== undefined && !inputs[step.condition]) return false
+  return true
 }
 
 function resolveSource(

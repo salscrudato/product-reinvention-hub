@@ -203,6 +203,12 @@ export interface RatingStep {
   }
   condition?: string  // name of a boolean RatingInputs field; step skips when falsy
   roundTo?:   number  // decimal places to round running total after this step
+  // Marks this step as a CREDIT for the program-level maximum-credit cap (e.g. a filing's
+  // "Rule 92 Maximum Credits"). Additive + optional: only meaningful when the owning program
+  // sets `creditFloor`. Absent on every legacy/seeded program, so their behaviour is unchanged.
+  // A credit is a multiplicative factor ≤ 1.0 (loyalty/bundle/renovation/…); flagging it lets
+  // the evaluator floor the CUMULATIVE product of credits without touching non-credit steps.
+  isCredit?:  boolean
 }
 
 export interface RatingProgram extends GovernanceBlock, StateScope {
@@ -210,6 +216,12 @@ export interface RatingProgram extends GovernanceBlock, StateScope {
   name:           string
   minimumPremium: number
   steps:          RatingStep[]
+  // Optional maximum-credit cap: the cumulative product of every `isCredit` step is floored
+  // at this value (e.g. 0.50 = "max total credit 50%", a filing's Rule 92). The evaluator
+  // applies one corrective adjustment after the last credit step so the cumulative credit
+  // never dips below the floor. Absent on every legacy/seeded program → no behavioural change
+  // and every existing canary ($1,528 / $1,002 / $2,635) is untouched. See rating/evaluator.ts.
+  creditFloor?:   number
 }
 
 // ─── Tables ──────────────────────────────────────────────────────────────────

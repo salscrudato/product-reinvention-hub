@@ -69,3 +69,4 @@ production CORS helper (`pnpm cors:set` / `cors:get`), which operates on `gs://p
 - [docs/adr/0002-agent-workflow.md](docs/adr/0002-agent-workflow.md) — agent workflow, gate, commit cadence
 - [docs/adr/0003-enhancement-baseline.md](docs/adr/0003-enhancement-baseline.md) — enhancement baseline
 - [docs/adr/0004-guest-read-floor.md](docs/adr/0004-guest-read-floor.md) — guest (anonymous) read-only floor + `VITE_ALLOW_GUEST`
+- [docs/adr/0005-filing-importer.md](docs/adr/0005-filing-importer.md) — filing importer (second ingestion mechanism) + evaluator credit-cap extension

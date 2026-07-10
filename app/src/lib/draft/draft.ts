@@ -31,6 +31,17 @@ export function importLineage(files: string[], productRefId: string | null, by: 
   }
 }
 
+/** Provenance for a product imported from a real carrier rate FILING (a set of PDFs). Names the
+ *  filing documents as `file` sources — the same grounding discipline the workbook import uses. */
+export function filingLineage(files: string[], baseFormNumber: string, state: string, by: Actor): Lineage {
+  return {
+    kind: 'IMPORT',
+    summary: `Imported from a ${state} rate filing${baseFormNumber ? ` (${baseFormNumber})` : ''} — ${files.length} document${files.length === 1 ? '' : 's'}`,
+    sources: files.map(f => ({ type: 'file', ref: f })),
+    by, at: now(),
+  }
+}
+
 export function cloneLineage(source: { id: string; refId: string | null; name: string }, by: Actor): Lineage {
   return {
     kind: 'CLONE',

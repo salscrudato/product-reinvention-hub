@@ -27,6 +27,9 @@ const POLICY_DOC    = 'config/costPolicy'   // optional ops override, read serve
 const EST_COST_USD: Record<string, number> = {
   chat: 0.018, analyzeClaim: 0.021, extractCoverages: 0.031, scaffoldProduct: 0.020,
   draftRule: 0.014, summarizeProduct: 0.002, describeForm: 0.001, identifyBaseForm: 0.001,
+  // Filing importer: multi-document (classify ×N) + three extract stages (rate order, manual,
+  // policy-form four-section) → the priciest single feature; sized above extractCoverages.
+  filingImport: 0.085,
 }
 export function estCostFor(feature: string): number {
   return EST_COST_USD[feature] ?? 0.02
