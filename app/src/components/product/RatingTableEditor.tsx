@@ -13,6 +13,7 @@ import {
   type RatingStep, type RTTable, type RatingInputMap, type GridDimension,
 } from '@pf/shared'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { Dialog, Button, RefChip } from '../ui'
@@ -275,9 +276,11 @@ function GridEditor({ step, table, model0, candidateDimensions, seedInputs, pid,
       toast.success(`${table.name} saved`)
       onClose()
     } catch (err) {
-      toast.error(err instanceof MutationConflictError
-        ? 'Conflict — this table changed elsewhere. Please reopen.'
-        : err instanceof Error ? err.message : 'Save failed')
+      if (err instanceof MutationConflictError) {
+        conflictToast({ discard: onClose })
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
+      }
     } finally { setSaving(false) }
   }
 

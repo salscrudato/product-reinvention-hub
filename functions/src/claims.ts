@@ -12,6 +12,7 @@
 // secret handling live in runtime.ts.
 import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getApps, initializeApp } from 'firebase-admin/app'
+import { getFirestore } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, ANTHROPIC_API_KEY, VOYAGE_API_KEY, voyageKey, CACHE_1H } from './runtime'
@@ -21,6 +22,7 @@ import { runChatAgent, assistantText, sseCostGate } from './ai'
 import { TOOLS, runTool, loadKnownCitations } from './tools'
 import type { ToolOutput } from './tools'
 import { emptyUsage, addUsage, recordUsage, recordCascade } from './telemetry'
+import { log } from './logger'
 import { resolveClaimsLineProfile, findUnverifiedDeterminationCitations, normalizeFormNumber } from '@pf/shared'
 import type { ChunkMetadata } from '@pf/shared'
 import { retrieve } from './retrieval/index'
@@ -232,6 +234,7 @@ export const analyzeClaim = onRequest(
     let denied = false
     const body       = (req.body ?? {}) as ClaimBody
     const sessionKey = body.sessionId?.trim() || caller.uid
+    log({ severity: 'INFO', feature: 'analyzeClaim', event: 'start', sessionKey })
     try {
       const incoming = (body.messages ?? []).filter(m => m.content?.trim())
       if (incoming.length === 0) { send(res, { t: 'error', message: 'No message provided.' }); return }
@@ -418,6 +421,16 @@ export const analyzeClaim = onRequest(
   },
 )
 
+// ─── identifyBaseForm helpers ───────────────────────────────────────────────────
+
+/** E: return true when `number` resolves to a real form document in the catalogue.
+ *  Same where('number', '==', num) pattern used in rules.ts and scaffoldProduct.ts. */
+async function formNumberInCatalogue(number: string): Promise<boolean> {
+  if (!number.trim()) return false
+  const snap = await getFirestore().collection('forms').where('number', '==', number).limit(1).get()
+  return !snap.empty
+}
+
 // ─── identifyBaseForm — one-shot metadata read for the library card ─────────────
 
 interface IdentifyBody {
@@ -499,15 +512,40 @@ export const identifyBaseForm = onCall<IdentifyBody>(
       tCheap = Date.now()
       let out = readIdentity(cheapMsg)
 
-      // CHECK — escalate only on a failed check: a confident read yields EITHER a printed
-      // form number OR a recognized line (HO/GL). If the fast pass produced neither, the
-      // header was hard to read — escalate to the reasoning model for an accurate identity.
+      // Existing CHECK — escalate when the fast pass produced neither a form number nor a
+      // recognised line: the header was too ambiguous for haiku to read confidently.
       if (!out.formNumber && !out.lob) {
         escalated = true
         const strongMsg = await run(MODEL)
         addUsage(strongUsage, strongMsg.usage)
         out = readIdentity(strongMsg)
       }
+
+      // E: forms-catalogue verification — confirm the identified formNumber resolves to a
+      // real document in the `forms` collection. A plausible-looking but unverified number
+      // (mis-read or hallucinated) is caught here:
+      //   • haiku mis-read → escalate once to Sonnet for a second read.
+      //   • Sonnet still unverified (or returns no number) → return verified:false so the
+      //     UI marks the form NEEDS_REVIEW rather than READY, holding it for editor resolution.
+      // A lob-only identification (no formNumber) skips this check — the form is grounded
+      // on line recognition, not a specific catalogue entry.
+      if (out.formNumber) {
+        if (!await formNumberInCatalogue(out.formNumber)) {
+          if (!escalated) {
+            // First unverified read: escalate once to Sonnet.
+            escalated = true
+            const strongMsg = await run(MODEL)
+            addUsage(strongUsage, strongMsg.usage)
+            out = readIdentity(strongMsg)
+          }
+          // Whether we just escalated or had already done so, check the current formNumber.
+          // If it still doesn't resolve (or Sonnet dropped the number), flag as unverified.
+          if (!out.formNumber || !await formNumberInCatalogue(out.formNumber)) {
+            return { ...out, verified: false as const }
+          }
+        }
+      }
+
       return out
     } catch (err) {
       ok = false

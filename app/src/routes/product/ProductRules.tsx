@@ -11,6 +11,7 @@ import { useProductCtx } from '../../context/useProductCtx'
 import type { WithId } from '../../context/ProductContext'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { Badge, Skeleton, EmptyState } from '../../components/ui'
 import { Button } from '../../components/ui/Button'
 import { IconPlus, IconClose, IconCheckCircle } from '../../components/ui/icons'
@@ -414,7 +415,11 @@ export default function ProductRules() {
       }
       setComposerOpen(false); setEditing(null)
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not save rule.')
+      if (err instanceof MutationConflictError) {
+        conflictToast({ discard: () => { setComposerOpen(false); setEditing(null) } })
+      } else {
+        toast.error('Could not save rule.')
+      }
     }
   }
 

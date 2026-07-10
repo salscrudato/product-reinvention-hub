@@ -9,6 +9,21 @@
 // nothing that isn't in this input, and the non-invention + cite-everything rules travel in the
 // digest preamble. Best-effort: any failure yields the stale or empty digest, never an error to
 // the caller — chat then falls back to pure tool grounding.
+//
+// Cache alignment (G): The Anthropic prompt cache holds the STABLE system prefix for 1 hour.
+// If the digest rebuilds every 5 minutes and produces a semantically-identical string, any
+// byte-level difference invalidates the cached prefix and doubles input tokens for the next
+// several requests. The fix: rebuild on the short TTL but ONLY replace the served string when
+// its SHA-256 content hash changes. Concurrent instances that see the same epoch skip the swap,
+// so an unchanged catalogue costs only one cheap Firestore read per chat turn. Mutations
+// propagate promptly because invalidate.ts bumps meta/digestEpoch on every entity write —
+// the next getPortfolioDigest() call sees the new epoch and rebuilds immediately even within
+// the TTL.
+//
+// Scale note: at 50+ products, the full-collection buildDigestInput() read becomes expensive.
+// Move the build to a scheduled Cloud Function (every 10 minutes) that writes the digest to
+// Firestore, and have getPortfolioDigest() read that stored doc instead. Do not build this now.
+import { createHash } from 'node:crypto'
 import { getFirestore } from 'firebase-admin/firestore'
 import {
   assemblePortfolioDigest, evaluate, resolveRatingKit, resolveLobByRefId, DEFAULT_LOB,
@@ -76,24 +91,57 @@ async function buildDigestInput(): Promise<PortfolioDigestInput> {
   return { products }
 }
 
-// ─── In-memory cache (short TTL, per-instance) ───────────────────────────────────
-// Deterministic + stable assembler output means the cached string is byte-identical across the
-// TTL, so the chat system prefix stays cache-warm between requests; it only changes when the
-// catalogue does (next rebuild). Built lazily on the first request after a cold start, then
-// reused; concurrent rebuilds are coalesced onto one in-flight promise.
+// ─── In-memory cache (short TTL + content-hash swap + epoch-aware, per-instance) ─────────────
+// The cache is rebuilt when EITHER the TTL expires OR the mutation epoch has advanced since the
+// last build. On rebuild, the assembled text's SHA-256 prefix (16 hex chars) is compared to the
+// last cached hash; the SERVED string is only swapped if the content actually changed. This
+// keeps the Anthropic stable-prefix prompt-cache warm for the full 1-hour window even as the
+// 5-minute TTL keeps firing on unchanged catalogue data — no doubled input-token cost.
+
 const TTL_MS = 5 * 60_000
-let cached: { text: string; builtAt: number } | null = null
-let inflight: Promise<string> | null = null
+
+interface DigestCache {
+  text:    string   // the string currently served to chat
+  hash:    string   // SHA-256 prefix of text (first 16 hex chars) — change detector
+  builtAt: number   // ms since epoch at last successful build
+  epoch:   number   // meta/digestEpoch.v at last build — detects mutations within TTL
+}
+let cached:   DigestCache | null = null
+let inflight: Promise<string>  | null = null
+
+/** Read the mutation epoch from Firestore (cheap single-doc get). Falls back to 0 on error. */
+async function readDigestEpoch(): Promise<number> {
+  try {
+    const snap = await getFirestore().doc('meta/digestEpoch').get()
+    return (snap.data() as { v?: number } | undefined)?.v ?? 0
+  } catch { return 0 }
+}
+
+/** SHA-256 content fingerprint — first 16 hex chars (64-bit collision resistance is ample). */
+function hashText(text: string): string {
+  return createHash('sha256').update(text).digest('hex').slice(0, 16)
+}
 
 /** The cached portfolio digest string (possibly ''). Never throws — a build failure serves the
- *  last good digest, or '' if none was ever built, and chat degrades to pure tool grounding. */
+ *  last good digest (or '' if none was ever built) and chat degrades to pure tool grounding. */
 export async function getPortfolioDigest(): Promise<string> {
-  if (cached && Date.now() - cached.builtAt < TTL_MS) return cached.text
+  const epoch = await readDigestEpoch()
+  const stale = !cached
+    || Date.now() - cached.builtAt >= TTL_MS
+    || epoch !== cached.epoch      // a mutation bumped the epoch — rebuild immediately
+
+  if (!stale) return cached!.text
   if (inflight) return inflight
+
   inflight = (async () => {
     try {
-      const text = assemblePortfolioDigest(await buildDigestInput())
-      cached = { text, builtAt: Date.now() }
+      const newText = assemblePortfolioDigest(await buildDigestInput())
+      const newHash = hashText(newText)
+      // Content-hash swap: only replace the served string when the catalogue actually changed.
+      // Serving an identical string keeps the Anthropic prompt-cache warm for the full 1-hour
+      // window; replacing it resets the clock and costs input tokens for the next ~5 requests.
+      const text = (cached && newHash === cached.hash) ? cached.text : newText
+      cached = { text, hash: newHash, builtAt: Date.now(), epoch }
       return text
     } catch (e) {
       console.warn('[digest] build failed; serving stale/empty:', e)
@@ -105,7 +153,8 @@ export async function getPortfolioDigest(): Promise<string> {
   return inflight
 }
 
-/** Drop the cache so the next getPortfolioDigest() rebuilds (used by tests). */
+/** Drop the cache so the next getPortfolioDigest() rebuilds (used by tests and the
+ *  on-demand flush endpoint). Resets epoch so any live epoch will look "new". */
 export function resetPortfolioDigestCache(): void {
   cached = null
   inflight = null

@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../../lib/backend'
+import { conflictToast } from '../../../lib/conflict'
 import { Dialog, Input, Button } from '../../ui'
 import { GTM_COLUMNS, WORK_TYPES, futureISO, type ProjectDoc } from './gtm'
 import type { TaskColumn, TypeOfWork } from '@pf/shared'
@@ -46,7 +47,11 @@ export function AdhocTaskDialog({ project, actor, onClose }: Props) {
       toast.success('Task added')
       onClose()
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not add task')
+      if (err instanceof MutationConflictError) {
+        conflictToast({ discard: onClose })
+      } else {
+        toast.error('Could not add task')
+      }
       setBusy(false)
     }
   }

@@ -16,6 +16,7 @@ import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { useCapture } from '../../context/useCapture'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { Button, Skeleton, EmptyState, ViewToggle, Dialog, type ViewMode } from '../../components/ui'
 import { IconPlus, IconSearch, IconCoverage, IconFilter, IconClose, IconEndorsement, IconChevronDown } from '../../components/ui/icons'
 import { useEntityFilters } from '../../features/search/useEntityFilters'
@@ -163,11 +164,17 @@ export default function ProductCoverages() {
     if (!deletePending) return
     setDeleting(true)
     try {
+      // Delete is last-write-wins: a concurrent delete is idempotent, so no expectedRev needed.
       await adapter.db.mutate({ op: 'delete', path: `products/${pid}/coverages/${deletePending.id}`, entityType: 'coverage', productId: pid, actor })
       toast.success('Coverage deleted')
       setDeletePending(null)
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — please refresh.' : err instanceof Error ? err.message : 'Delete failed')
+      if (err instanceof MutationConflictError) {
+        // Delete already succeeded server-side or was idempotent; close the dialog.
+        conflictToast({ discard: () => setDeletePending(null) })
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Delete failed')
+      }
     } finally {
       setDeleting(false)
     }

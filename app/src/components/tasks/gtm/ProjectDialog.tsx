@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../../lib/backend'
+import { conflictToast } from '../../../lib/conflict'
 import { Dialog, Input, Button } from '../../ui'
 import { futureISO } from './gtm'
 import type { ProjectStatus } from '@pf/shared'
@@ -48,7 +49,11 @@ export function ProjectDialog({ products, actor, onClose, onCreated }: Props) {
       onClose()
       onCreated(id)
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not create project')
+      if (err instanceof MutationConflictError) {
+        conflictToast({ discard: onClose })
+      } else {
+        toast.error('Could not create project')
+      }
       setBusy(false)
     }
   }

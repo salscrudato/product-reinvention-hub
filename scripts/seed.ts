@@ -496,6 +496,58 @@ async function main(): Promise<void> {
     console.log(`  📰 ${sampleNewsItems.length} sample news items seeded`)
   }
 
+  // ── refId counters (meta/refCounters) ─────────────────────────────────────
+  // Initialise the O(1) counter document so the first client create after a re-seed does
+  // not need a legacy getDocs scan.  The key scheme mirrors firebase.adapter.ts:
+  //   PRJ                      — global project sequence (projects wiped but not re-seeded)
+  //   {LOB}_PROD               — per-LOB product sequence
+  //   {LOB}_{SEG}_{pidKey}     — per-product sub-entity sequence (rules floor = 10)
+  // safeCk(s) replaces dots/hyphens with underscores (Firestore field-name safe).
+  console.log('\n🔢 Writing refId counters…')
+  {
+    const safeCk = (s: string) => s.replace(/[.\-]/g, '_')
+    const refCounters: Record<string, number> = { PRJ: 0 }
+
+    for (const b of bundles) {
+      const pid    = b.product.refId!                // e.g. PH.PROD.001
+      const lob    = pid.split('.')[0]!              // e.g. PH
+      const pidKey = safeCk(pid)                    // e.g. PH_PROD_001
+
+      // Product counter — max sequence among all same-LOB products in this seed run.
+      const prodMax = bundles
+        .filter(bb => bb.product.refId!.startsWith(lob + '.'))
+        .reduce((mx, bb) => {
+          const n = Number(/^[A-Z]+\.PROD\.(\d+)/i.exec(bb.product.refId!)?.[1] ?? 0)
+          return n > mx ? n : mx
+        }, 0)
+      refCounters[`${lob}_PROD`] = prodMax
+
+      // Coverage counter — max top-level COV sequence for this product.
+      refCounters[`${lob}_COV_${pidKey}`] = (b.coverages as { refId: string }[]).reduce((mx, c) => {
+        const n = Number(/^[A-Z]+\.COV\.(\d+)/i.exec(c.refId)?.[1] ?? 0)
+        return n > mx ? n : mx
+      }, 0)
+
+      // Rule counter — floor 10 (001–010 reserved for seeded rules; authored rules start at 011).
+      refCounters[`${lob}_RU_${pidKey}`] = Math.max(10, (b.rules as { refId: string }[]).reduce((mx, r) => {
+        const n = Number(/^[A-Z]+\.RU\.(\d+)/i.exec(r.refId)?.[1] ?? 0)
+        return n > mx ? n : mx
+      }, 0))
+
+      // FormRule counter — same floor convention as rules.
+      refCounters[`${lob}_FORM_RU_${pidKey}`] = Math.max(10, (b.formRules as { refId: string }[]).reduce((mx, r) => {
+        const n = Number(/^[A-Z]+\.FORM\.RU\.(\d+)/i.exec(r.refId)?.[1] ?? 0)
+        return n > mx ? n : mx
+      }, 0))
+
+      // RatingProgram counter — each product has exactly one seeded program.
+      refCounters[`${lob}_RAT_${pidKey}`] = 1
+    }
+
+    await db.doc('meta/refCounters').set(refCounters)
+    console.log(`  ✓ ${Object.keys(refCounters).length} counter keys — ${JSON.stringify(refCounters)}`)
+  }
+
   // ── Seed Report ───────────────────────────────────────────────────────────
   await db.collection('seedReports').add({
     counts, warnings,

@@ -9,6 +9,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { IconBook, IconPlus, IconSearch, IconTrash, IconEdit, IconCoverage, IconRule, IconForm, IconPricing } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
+import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
 import { useLiveCollection } from '../lib/useLiveCollection'
 import { useDictionaryCorpus } from '../lib/useDictionaryCorpus'
@@ -136,7 +137,11 @@ export default function Dictionary() {
       }
       setDraft(null)
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Save failed')
+      if (err instanceof MutationConflictError) {
+        conflictToast({ discard: () => setDraft(null) })
+      } else {
+        toast.error('Save failed')
+      }
     } finally {
       setSaving(false)
     }
@@ -155,7 +160,9 @@ export default function Dictionary() {
       setDraft(null)
       setConfirmDelete(false)
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Delete failed')
+      // Delete is last-write-wins: a concurrent delete is idempotent.
+      if (err instanceof MutationConflictError) conflictToast({})
+      else toast.error('Delete failed')
     } finally {
       setSaving(false)
     }

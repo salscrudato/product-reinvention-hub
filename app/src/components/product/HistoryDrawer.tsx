@@ -13,6 +13,7 @@ import { Badge } from '../ui/Badge'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import type { WithId } from '../../context/ProductContext'
 import type { Version } from '@pf/shared'
 
@@ -146,6 +147,8 @@ export function HistoryDrawer({ onClose }: Props) {
     try {
       // Restore targets the version's OWN entity — not the product doc — so restoring a
       // coverage/rule change writes back to that child entity.
+      // No expectedRev: restore semantics are unconditional ("rewind to this snapshot"),
+      // so an intervening edit is intentionally overwritten — that is the point of restore.
       await adapter.db.mutate({
         op: 'update', path: v.entityPath,
         data: v.snapshot as Record<string, unknown>,
@@ -154,7 +157,7 @@ export function HistoryDrawer({ onClose }: Props) {
       toast.success('Restored to selected version')
       setConfirmRestoreId(null)
     } catch (err) {
-      if (err instanceof MutationConflictError) toast.error('Conflict — refresh and try again.')
+      if (err instanceof MutationConflictError) conflictToast({})
       else toast.error('Restore failed')
     } finally {
       setRestoring(null)

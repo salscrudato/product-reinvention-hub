@@ -16,6 +16,7 @@ import {
   DEFAULT_BUDGET, decideBudget, DEFAULT_BREAKER, CLOSED_BREAKER, isBreakerOpen, nextBreakerState,
 } from '@pf/shared'
 import type { BudgetPolicy, BudgetDecision, SpendSnapshot, BreakerState } from '@pf/shared'
+import { log } from './logger'
 
 const COLLECTION   = 'costCounters'
 const BREAKER_DOC   = 'breaker-anthropic'
@@ -114,6 +115,9 @@ export async function guardSpend(params: { feature: string; sessionKey: string; 
       action = 'degrade'
       reason = 'AI provider temporarily unavailable (circuit breaker open) — serving a reduced/cached response.'
     }
+    // Structured log for alerting — stable event names match OBSERVABILITY.md alert anchors.
+    if (action === 'deny')    log({ severity: 'WARNING', feature, event: 'deny',    sessionKey: params.sessionKey })
+    if (action === 'degrade') log({ severity: 'INFO',    feature, event: 'degrade', sessionKey: params.sessionKey })
     return { action, reason, breakerOpen, decision }
   } catch {
     // Never let a counter read fail a request — fail open to allow.
@@ -155,6 +159,12 @@ export async function bumpSpend(params: {
         ? { consecutiveFailures: (s.data()?.['consecutiveFailures'] as number) ?? 0, openUntil: (s.data()?.['openUntil'] as number) ?? 0 }
         : CLOSED_BREAKER
       const next = nextBreakerState(prev, params.ok, now, DEFAULT_BREAKER)
+      // Log the breaker.open transition (closed → open) with ERROR severity so it surfaces
+      // as an alert. Only fires on the state TRANSITION, not on every call while open.
+      if (!isBreakerOpen(prev, now) && isBreakerOpen(next, now)) {
+        log({ severity: 'ERROR', feature: params.feature, event: 'breaker.open',
+              sessionKey: params.sessionKey })
+      }
       tx.set(ref, { ...next, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
     })
   } catch { /* breaker update is best-effort */ }

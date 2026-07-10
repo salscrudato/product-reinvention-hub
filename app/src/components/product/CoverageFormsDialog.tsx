@@ -7,6 +7,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { Dialog, Button, EmptyState, RefChip } from '../ui'
@@ -92,9 +93,11 @@ export function CoverageFormsDialog({ cov, onClose }: Props) {
       toast.success('Forms saved')
       onClose()
     } catch (err) {
-      toast.error(err instanceof MutationConflictError
-        ? 'Conflict — this coverage changed elsewhere. Please reopen.'
-        : err instanceof Error ? err.message : 'Save failed')
+      if (err instanceof MutationConflictError) {
+        conflictToast({ discard: onClose })
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
+      }
     } finally { setSaving(false) }
   }
 

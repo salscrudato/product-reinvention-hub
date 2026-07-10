@@ -19,6 +19,7 @@ import {
   type IconType,
 } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
+import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
 import { Badge, Button, Card, Drawer, RefChip, Skeleton, EmptyState, Tabs } from '../components/ui'
 import { useLiveCollection } from '../lib/useLiveCollection'
@@ -959,7 +960,8 @@ export default function News() {
       setSaved(instruction.trim())
       toast.success('Tracking preference saved')
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not save preference')
+      if (err instanceof MutationConflictError) conflictToast({})
+      else toast.error('Could not save preference')
     } finally {
       setSaving(false)
     }

@@ -133,6 +133,20 @@ async function bumpDictionaryCorpusVersion(kind: Kind): Promise<void> {
   } catch (e) { console.warn('[invalidate] corpus version bump failed:', e instanceof Error ? e.message : e) }
 }
 
+/** Bump the portfolio-digest epoch so the next getPortfolioDigest() call forces an immediate
+ *  rebuild even if the 5-minute TTL hasn't expired yet — real mutations propagate promptly.
+ *  The digest builder reads this epoch and skips the TTL when it has advanced. Written with
+ *  merge:true so the first write creates the doc; failures are non-fatal (chat falls back to
+ *  the stale digest rather than erroring, per the best-effort contract). */
+async function bumpDigestEpoch(): Promise<void> {
+  try {
+    await getFirestore().doc('meta/digestEpoch').set(
+      { v: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    )
+  } catch (e) { console.warn('[invalidate] digest epoch bump failed:', e instanceof Error ? e.message : e) }
+}
+
 /** Re-embed + upsert (dense when a Voyage key is bound, else a lexical null-vector chunk). */
 async function upsertChunk(chunk: GroundingChunk): Promise<void> {
   const provider = getProvider(voyageKey())
@@ -160,6 +174,7 @@ async function handleWrite(kind: Kind, event: WriteEvent): Promise<void> {
     // A delete is not "a new item added" — the cached summary stays; the client's composition
     // key catches the removal on next Overview visit.
     await bumpDictionaryCorpusVersion(kind)
+    await bumpDigestEpoch()   // G: deleted entity may change the digest
     return
   }
 
@@ -188,6 +203,7 @@ async function handleWrite(kind: Kind, event: WriteEvent): Promise<void> {
   // Only a brand-new item (no `before` snapshot) invalidates the cached product summary.
   await markSummaryStale(kind, params, !before)
   await bumpDictionaryCorpusVersion(kind)
+  await bumpDigestEpoch()   // G: signal that the digest needs rebuilding on the next request
 }
 
 // ─── Triggers — one per grounded collection (Firestore paths can't wildcard a collection) ──

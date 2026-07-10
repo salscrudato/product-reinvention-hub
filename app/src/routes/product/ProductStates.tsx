@@ -5,6 +5,7 @@ import { IconDownload, IconStates } from '../../components/ui/icons'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { Button } from '../../components/ui'
 import { StateTileMap } from '../../components/product/StateTileMap'
 import { resolveLob } from '@pf/shared'
@@ -64,7 +65,7 @@ export default function ProductStates() {
       setDirty(false)
       toast.success('States saved')
     } catch (err) {
-      if (err instanceof MutationConflictError) toast.error('Conflict — refresh and try again.')
+      if (err instanceof MutationConflictError) conflictToast({})
       else toast.error('Save failed')
     }
   }

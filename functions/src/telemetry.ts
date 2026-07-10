@@ -14,6 +14,7 @@
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { MODEL, MODEL_FAST } from './runtime'
 import { bumpSpend } from './costGuard'
+import { log } from './logger'
 
 // ─── Pricing table — single source of truth ───────────────────────────────────
 // Rates: USD per million tokens (Anthropic public pricing).
@@ -132,6 +133,15 @@ export async function recordUsage(params: {
   } catch {
     console.warn('[telemetry] Failed to record AI usage — continuing')
   }
+  // Structured log for the done/error event — gives latency + cost in Cloud Logging.
+  log({
+    severity:   params.ok ? 'INFO' : 'WARNING',
+    feature:    params.feature,
+    event:      params.ok ? 'done' : 'error',
+    sessionKey: params.sessionKey,
+    ms:         params.latencyMs,
+    costUsd:    estimatedUsd,
+  })
   // Keep the rolling cost counters + provider breaker current for EVERY feature, with no
   // per-endpoint wiring. Best-effort; a failure here never surfaces to the user.
   void bumpSpend({

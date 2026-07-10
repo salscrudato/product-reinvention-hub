@@ -19,6 +19,18 @@ describe('statusAfterIdentify', () => {
     expect(statusAfterIdentify({ formNumber: '   ', lob: '  ' })).toBe('NEEDS_REVIEW')
     expect(statusAfterIdentify({})).toBe('NEEDS_REVIEW')
   })
+
+  it('is NEEDS_REVIEW when formNumber was identified but not found in the forms catalogue (E: verified:false)', () => {
+    // Server flags verified:false when the form number the model read does not resolve to a
+    // real form document. The UI must hold this form as NEEDS_REVIEW, not READY — an
+    // unverified number should never ground analysis.
+    expect(statusAfterIdentify({ formNumber: 'XX 99 99', lob: 'HO', verified: false })).toBe('NEEDS_REVIEW')
+    expect(statusAfterIdentify({ formNumber: 'HO 00 03', lob: '',   verified: false })).toBe('NEEDS_REVIEW')
+  })
+
+  it('is READY when verified is absent (backwards-compat: old responses have no verified field)', () => {
+    expect(statusAfterIdentify({ formNumber: 'HO 00 03', lob: '' })).toBe('READY')
+  })
 })
 
 describe('isFormAnalyzable', () => {

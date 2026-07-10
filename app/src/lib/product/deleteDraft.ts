@@ -34,6 +34,7 @@ export async function deleteProduct(
   for (const { coll, entityType } of SUBCOLLECTIONS) {
     const docs = await adapter.db.list<{ id: string }>(`products/${pid}/${coll}`)
     for (const d of docs) {
+      // Delete is last-write-wins: cascade deletes are idempotent, so no expectedRev needed.
       await adapter.db.mutate({ op: 'delete', path: `products/${pid}/${coll}/${d.id}`, entityType, productId: pid, actor })
     }
   }
@@ -43,6 +44,7 @@ export async function deleteProduct(
     where: [{ field: 'productId', op: '==', value: pid }],
   })
   for (const t of tasks) {
+    // Delete is last-write-wins: cascade deletes are idempotent, so no expectedRev needed.
     await adapter.db.mutate({ op: 'delete', path: `tasks/${t.id}`, entityType: 'task', productId: pid, actor })
   }
 
@@ -54,10 +56,12 @@ export async function deleteProduct(
   })
   for (const f of forms) {
     if (!f.id.startsWith(`${pid}__`)) continue
+    // Delete is last-write-wins: cascade deletes are idempotent, so no expectedRev needed.
     await adapter.db.mutate({ op: 'delete', path: `forms/${f.id}`, entityType: 'form', productId: pid, actor })
   }
 
   // 4) Finally the product shell itself.
+  // Delete is last-write-wins: product deletion is the terminal step of a cascade, so no expectedRev needed.
   await adapter.db.mutate({ op: 'delete', path: `products/${pid}`, entityType: 'product', productId: pid, actor })
 }
 

@@ -6,6 +6,7 @@
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { ProductStatusPill } from '../ui'
@@ -33,7 +34,11 @@ export function ProductDetailsCard() {
       })
       toast.success('Product updated')
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Update failed')
+      if (err instanceof MutationConflictError) {
+        conflictToast({})
+      } else {
+        toast.error('Update failed')
+      }
       throw err   // keep the inline editor open so the edit isn't lost
     }
   }

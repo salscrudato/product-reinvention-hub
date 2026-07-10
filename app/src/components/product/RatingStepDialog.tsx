@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { Dialog, Input, Button } from '../ui'
 import type { RatingProgram, RatingStep, RTTable, LDTable } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
@@ -84,7 +85,11 @@ export function RatingStepDialog({ program, pid, step, rtTables, ldTables, input
       toast.success(editing ? 'Step updated' : 'Step added')
       onClose()
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Save failed')
+      if (err instanceof MutationConflictError) {
+        conflictToast({ discard: onClose })
+      } else {
+        toast.error('Save failed')
+      }
       setBusy(false)
     }
   }

@@ -10,6 +10,7 @@ import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { Dialog, Button, Input } from '../ui'
 import { IconCoverage, IconClose } from '../ui/icons'
+import { conflictToast } from '../../lib/conflict'
 import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
@@ -71,9 +72,17 @@ export function CoverageEditDialog({ cov, onClose }: { cov: WithId<Coverage> | n
       }
       onClose()
     } catch (err) {
-      toast.error(err instanceof MutationConflictError
-        ? 'Conflict — this coverage changed elsewhere. Please reopen.'
-        : err instanceof Error ? err.message : 'Save failed')
+      if (err instanceof MutationConflictError && cov) {
+        // "Reload latest": fetch the server version into the form; user can re-apply their edits.
+        const reload = async () => {
+          const fresh = await adapter.db.get<WithId<Coverage>>(`products/${pid}/coverages/${cov.id}`)
+          if (fresh) setD({ name: fresh.name, refId: fresh.refId ?? '', requirement: fresh.requirement ?? 'OPTIONAL', source: fresh.source ?? 'PROPRIETARY', claimsBasis: fresh.claimsBasis ?? '', premiumGenerating: fresh.premiumGenerating ?? false, parentId: fresh.parentId ?? null })
+          toast.info('Reloaded — review and save again.')
+        }
+        conflictToast({ reload, discard: onClose })
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
+      }
     } finally { setSaving(false) }
   }
 

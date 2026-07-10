@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { Dialog, Button, Tooltip, RefChip, Badge } from '../ui'
 import { IconUpload, IconFile, IconSparkle, IconTrash, IconSpinner, IconCoverage, IconForm, IconRule, IconPricing } from '../ui/icons'
 import { resolveLob } from '@pf/shared'
@@ -96,7 +97,8 @@ export function BaseFormExtract({ product, coverages, forms, rules, canEdit, act
       })
       toast.success('Base form uploaded')
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — please refresh.' : 'Upload failed')
+      if (err instanceof MutationConflictError) conflictToast({})
+      else toast.error('Upload failed')
     } finally {
       setBusy(null)
     }

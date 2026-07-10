@@ -6,6 +6,7 @@ import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { useCapture } from '../../context/useCapture'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { Skeleton, ProductStatusPill, Badge, Button } from '../../components/ui'
 import { IconRecent, IconChat, IconBack, IconChevronDown, IconArrowUp, IconEdit, IconCheck, IconClose } from '../../components/ui/icons'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
@@ -74,7 +75,11 @@ function WorkspaceInner() {
       toast.success('Product renamed')
       setEditingName(false)
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Rename failed')
+      if (err instanceof MutationConflictError) {
+        conflictToast({ discard: () => setEditingName(false) })
+      } else {
+        toast.error('Rename failed')
+      }
     }
   }
 

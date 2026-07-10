@@ -129,6 +129,21 @@ export async function authenticate(req: Request): Promise<Caller> {
   }
 }
 
+/**
+ * Derive a truthful audit actor from an onCall request's auth context.
+ * Mirrors authenticate()'s fallback chain: display name → email → uid (never blank).
+ * Call AFTER the auth guard; the caller must already have verified req.auth is non-null.
+ */
+export function callableActor(
+  auth: { uid: string; token: Record<string, unknown> },
+): { uid: string; name: string } {
+  const name =
+    (auth.token['name'] as string | undefined)?.trim() ||
+    (auth.token['email'] as string | undefined)?.trim() ||
+    auth.uid
+  return { uid: auth.uid, name }
+}
+
 // ─── SSE ────────────────────────────────────────────────────────────────────────
 
 // Minimal structural type — satisfied by the Express response onRequest provides,

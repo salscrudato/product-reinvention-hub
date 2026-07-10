@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { Dialog, Button } from '../ui'
 import { IconSpinner, IconArrowUp, IconWarning } from '../ui/icons'
 import { LineageBadge } from './LineageBadge'
@@ -44,9 +45,12 @@ export function PromoteDraftDialog({ product, actor, onClose, onPromoted }: Prop
       onPromoted?.(product.id)
       onClose()
     } catch (err) {
-      toast.error(err instanceof MutationConflictError
-        ? 'This draft changed since you opened it — refresh and try again.'
-        : err instanceof Error ? err.message : 'Promotion failed.')
+      if (err instanceof MutationConflictError) {
+        // No open editor to reload into — closing returns to the live-subscribed product view.
+        conflictToast({ discard: onClose })
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Promotion failed.')
+      }
       setBusy(false)
     }
   }

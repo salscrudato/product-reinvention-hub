@@ -11,8 +11,11 @@ export type BaseFormStatus = 'PROCESSING' | 'READY' | 'NEEDS_REVIEW'
 
 /** The status to set once the identify pass returns. A confident read yields EITHER a printed
  *  form number OR a recognised line; with neither, we cannot ground analysis honestly, so the
- *  form is NEEDS_REVIEW rather than a silent empty-metadata READY. */
-export function statusAfterIdentify(meta: { formNumber?: string | null; lob?: string | null }): 'READY' | 'NEEDS_REVIEW' {
+ *  form is NEEDS_REVIEW rather than a silent empty-metadata READY. When the server flagged the
+ *  identified formNumber as unverified (not found in the forms catalogue), also return
+ *  NEEDS_REVIEW — an unverified number must not silently become an analysable READY form. */
+export function statusAfterIdentify(meta: { formNumber?: string | null; lob?: string | null; verified?: boolean }): 'READY' | 'NEEDS_REVIEW' {
+  if (meta.verified === false) return 'NEEDS_REVIEW'
   const identified = !!(meta.formNumber?.trim() || meta.lob?.trim())
   return identified ? 'READY' : 'NEEDS_REVIEW'
 }

@@ -14,6 +14,7 @@ import { retrieve, embedQueryVector } from './retrieval/index'
 import { buildCiteableDocuments, citationsFromConvo, verifyCitations } from './retrieval/citations'
 import { emptyUsage, addUsage, recordUsage, estimateCost } from './telemetry'
 import type { UsageAccum } from './telemetry'
+import { log } from './logger'
 import { semanticCacheGet, semanticCachePut } from './semanticCache'
 import type { CacheMode } from './semanticCache'
 import { guardSpend, estCostFor } from './costGuard'
@@ -202,6 +203,7 @@ export const chat = onRequest(
     const body       = (req.body ?? {}) as ChatBody
     const productId  = body.productId
     const sessionKey = body.sessionId?.trim() || caller.uid
+    log({ severity: 'INFO', feature: 'chat', event: 'start', sessionKey })
     try {
       const incoming = (body.messages ?? []).filter(m => m.content?.trim())
       if (incoming.length === 0) { send(res, { t: 'error', message: 'No message provided.' }); return }

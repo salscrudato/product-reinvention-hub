@@ -6,7 +6,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
-import { ANTHROPIC_API_KEY, anthropic, MODEL_FAST, requireRole, CACHE_1H } from './runtime'
+import { ANTHROPIC_API_KEY, anthropic, MODEL_FAST, requireRole, callableActor, CACHE_1H } from './runtime'
 import { auditedMerge } from './audited'
 import { emptyUsage, addUsage, recordUsage } from './telemetry'
 import { guardSpend } from './costGuard'
@@ -102,7 +102,7 @@ export const describeForm = onCall<DescribeFormInput>(
         path:       `forms/${formKey}`,
         entityType: 'form',
         patch:      { description },
-        actor:      { uid: req.auth.uid, name: (req.auth.token.name as string | undefined) ?? req.auth.uid },
+        actor:      callableActor(req.auth),   // display name → email → uid; consistent with authenticate()
       })
 
       return { description, cached: false }

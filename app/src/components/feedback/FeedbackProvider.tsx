@@ -19,6 +19,7 @@ import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { useUser } from '../../context/useUser'
 import { useCapture } from '../../context/useCapture'
 import { Button } from '../ui'
@@ -605,7 +606,11 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       toast.success(`Added to "${nearMatch.title}"`)
       close()
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not add your vote')
+      if (err instanceof MutationConflictError) {
+        conflictToast({ discard: close })
+      } else {
+        toast.error('Could not add your vote')
+      }
     } finally {
       setBusy(false)
     }

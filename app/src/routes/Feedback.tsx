@@ -29,6 +29,7 @@ import {
   IconRestore, IconActivity, IconIdea, IconBug, IconHeart, type IconType,
 } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
+import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
 import { Skeleton, Dialog, Button } from '../components/ui'
 import { priorityScore, type Feedback, type FeedbackStatus, type FeedbackType } from '@pf/shared'
@@ -289,7 +290,8 @@ export default function Feedback() {
       })
       toast.success(opts?.success ?? MOVE_TOAST[next])
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not move the card')
+      if (err instanceof MutationConflictError) conflictToast({})
+      else toast.error('Could not move the card')
     }
   }
 
@@ -324,7 +326,9 @@ export default function Feedback() {
       toast.success('Feedback deleted')
     } catch (err) {
       setHiddenIds(prev => { const n = new Set(prev); n.delete(fb.id); return n })
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Delete failed')
+      // Delete is last-write-wins: a concurrent delete is idempotent.
+      if (err instanceof MutationConflictError) conflictToast({})
+      else toast.error('Delete failed')
     }
   }
 

@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../lib/backend'
+import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
 import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
 import {
@@ -139,7 +140,8 @@ export default function Tasks() {
         entityType: 'task', productId: task.productId, actor, expectedRev: task.rev,
       })
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Update failed')
+      if (err instanceof MutationConflictError) conflictToast({})
+      else toast.error('Update failed')
     }
   }
 

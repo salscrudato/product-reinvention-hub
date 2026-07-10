@@ -118,13 +118,17 @@ function UsersTab() {
     setCreating(false); setDraft({ email: '', name: '', password: '', role: 'VIEWER' })
   }
 
-  // Instant typeahead over name + email
+  const USER_DISPLAY_CAP = 100
+  // Instant typeahead over name + email; display is capped at USER_DISPLAY_CAP entries.
   const filtered = useMemo(() => {
     if (!users) return null
-    if (!query.trim()) return users
-    const q = query.toLowerCase()
-    return users.filter(u => u.name?.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    const q = query.toLowerCase().trim()
+    const matched = q
+      ? users.filter(u => u.name?.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+      : users
+    return matched.slice(0, USER_DISPLAY_CAP)
   }, [users, query])
+  const usersOverCap = (users?.length ?? 0) > USER_DISPLAY_CAP && !query.trim()
 
   if (users === null) return <div className="flex flex-col gap-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
 
@@ -173,6 +177,9 @@ function UsersTab() {
         {filtered?.length === 0 && (
           <div className="px-4 py-6 text-center text-sm text-faint">No users match "{query}".</div>
         )}
+        {usersOverCap && (
+          <div className="px-4 py-2 text-center text-xs text-faint">Showing first {USER_DISPLAY_CAP} of {users?.length} users. Use the search box to narrow results.</div>
+        )}
       </div>
 
       <Dialog open={creating} onClose={() => setCreating(false)} title="New user">
@@ -201,6 +208,8 @@ function UsersTab() {
 
 const actionColor: Record<string, 'good' | 'blue' | 'danger' | 'default'> = { create: 'good', update: 'blue', delete: 'danger' }
 
+const AUDIT_PAGE = 200
+
 function AuditTab() {
   const [events, setEvents]     = useState<AuditDoc[] | null>(null)
   const [versions, setVersions] = useState<VersionDoc[]>([])
@@ -209,12 +218,17 @@ function AuditTab() {
   const [action, setAction]     = useState('')
   const [since, setSince]       = useState('')
   const [open, setOpen]         = useState<AuditDoc | null>(null)
+  const [limit, setLimit]       = useState(AUDIT_PAGE)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   useEffect(() => {
-    const u1 = adapter.db.subscribe<AuditDoc>('auditEvents', d => { if (Array.isArray(d)) setEvents(d) })
-    const u2 = adapter.db.subscribe<VersionDoc>('versions', d => { if (Array.isArray(d)) setVersions(d) })
-    return () => { u1(); u2() }
-  }, [])
+    setEvents(null)
+    Promise.all([
+      adapter.db.list<AuditDoc>('auditEvents',  { orderBy: [{ field: 'at', dir: 'desc' }], limit }),
+      adapter.db.list<VersionDoc>('versions', { orderBy: [{ field: 'at', dir: 'desc' }], limit }),
+    ]).then(([evts, vers]) => { setEvents(evts); setVersions(vers); setLoadingMore(false) })
+      .catch(() => { setEvents([]); setVersions([]); setLoadingMore(false) })
+  }, [limit])
 
   const entityTypes = useMemo(() => [...new Set((events ?? []).map(e => e.entityType))].sort(), [events])
 
@@ -267,6 +281,17 @@ function AuditTab() {
               <span className="text-xs text-faint">{fmt(e.at)}</span>
             </button>
           ))}
+        </div>
+      )}
+      {(events?.length ?? 0) >= limit && (
+        <div className="flex justify-center pt-1">
+          <button
+            className="text-xs text-accent hover:underline disabled:opacity-50"
+            disabled={loadingMore}
+            onClick={() => { setLoadingMore(true); setLimit(l => l + AUDIT_PAGE) }}
+          >
+            {loadingMore ? 'Loading…' : `Load more (showing ${limit})`}
+          </button>
         </div>
       )}
 
@@ -377,19 +402,24 @@ function fmtTokens(n: number): string {
   return String(n)
 }
 
+const AI_USAGE_PAGE = 500
+
 function AiCostTab() {
-  const [records, setRecords] = useState<AiUsageDoc[] | null>(null)
-  const [win, setWin]         = useState<Window>('30d')
-  const [loading, setLoading] = useState(true)
+  const [records, setRecords]   = useState<AiUsageDoc[] | null>(null)
+  const [win, setWin]           = useState<Window>('30d')
+  const [loading, setLoading]   = useState(true)
+  const [usageLimit, setUsageLimit] = useState(AI_USAGE_PAGE)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   useEffect(() => {
     setLoading(true)
     // Read-only; server-side ADMIN gate in Firestore rules + Admin component gate above.
-    adapter.db.list<AiUsageDoc>('aiUsage', { orderBy: [{ field: 'at', dir: 'desc' }], limit: 2000 })
-      .then(setRecords)
-      .catch(() => setRecords([]))
+    // Bounded to usageLimit — use "Load more" to see older records.
+    adapter.db.list<AiUsageDoc>('aiUsage', { orderBy: [{ field: 'at', dir: 'desc' }], limit: usageLimit })
+      .then(r => { setRecords(r); setLoadingMore(false) })
+      .catch(() => { setRecords([]); setLoadingMore(false) })
       .finally(() => setLoading(false))
-  }, [])
+  }, [usageLimit])
 
   const filtered = useMemo(() => {
     if (!records) return []
@@ -767,6 +797,18 @@ function AiCostTab() {
           title="No records in this window"
           description="Select a wider time window or wait for AI calls to be made."
         />
+      )}
+
+      {(records?.length ?? 0) >= usageLimit && (
+        <div className="flex justify-center pt-1">
+          <button
+            className="text-xs text-accent hover:underline disabled:opacity-50"
+            disabled={loadingMore}
+            onClick={() => { setLoadingMore(true); setUsageLimit(l => l + AI_USAGE_PAGE) }}
+          >
+            {loadingMore ? 'Loading…' : `Load more (showing ${usageLimit})`}
+          </button>
+        </div>
       )}
     </div>
   )

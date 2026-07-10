@@ -20,8 +20,13 @@ import { firebaseConfig, FUNCTIONS_REGION } from './firebase.config'
 import type { BackendAdapter, AuthUser, Session, Query, MutationPayload } from './types'
 import { MutationConflictError } from './types'
 import { buildMutationWrites } from './envelope'
+import { validateCoverageParent } from './coverageParent'
 import { assertCoverageTermsValid, resolveLob } from '@pf/shared'
 import type { CoverageTerm } from '@pf/shared'
+import {
+  REFID_SEGMENT, PRJ_COUNTER_KEY, productCounterKey,
+  subEntityCounterKey, buildRefId, maxSeqIn,
+} from './refIdAlloc'
 
 // Singleton — safe under React StrictMode and Vite HMR.
 const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig)
@@ -82,77 +87,127 @@ function buildQuery(collRef: ReturnType<typeof collection>, q: Query) {
 // The indexable-type set + the atomic write envelope now live in ./envelope (pure,
 // unit-testable, shared by mutate() and mutateBatch()).
 
-// ─── Server-authoritative refId allocation ────────────────────────────────────
-// refIds (PH.PROD.001, PH.COV.004, PH.RU.011, …) used to be minted ad-hoc across half a
-// dozen components, and several create paths left them null. Allocation is now centralized
-// HERE at the single write seam: on a create that omits a refId, the adapter mints one from
-// the entity's LOB prefix + the next free sequence, so refId-bearing entities are never null
-// and the scheme lives in one place. An EXPLICIT refId (import, clone, hand-authored, seed)
-// always wins — this only fills the gaps. The sibling scan runs as a pre-read before the
-// transaction (Firestore client transactions cannot query), so it is race-tolerant.
-const REFID_SEGMENT: Record<string, string> = {
-  product: 'PROD', coverage: 'COV', rule: 'RU', formRule: 'FORM.RU', ratingProgram: 'RAT',
+// ─── Server-authoritative O(1) refId allocation ───────────────────────────────
+// refIds (PH.PROD.001, PH.COV.004, PH.RU.011, …) are minted from a single counter
+// document (meta/refCounters).  The counter increment lives INSIDE the same Firestore
+// runTransaction that writes the entity, so two simultaneous creates for the same segment
+// can never collide — Firestore retries the loser and it reads the committed counter value.
+// Pure key/format helpers live in ./refIdAlloc (importable by tests without Vite deps).
+//
+// Key scheme (underscores — Firestore treats dots in field names as nested-field paths):
+//   PRJ                    — global project counter
+//   {LOB}_PROD             — per-LOB product counter        e.g. PH_PROD
+//   {LOB}_{SEG}_{pid}      — per-product sub-entity counter e.g. PH_COV_PH_PROD_001
+//
+// First allocation for a missing key: legacy getDocs scan seeds the counter at the current
+// max, persists it atomically (conditional set — harmless if two callers race), then the
+// main transaction proceeds O(1).  Once seeded, the legacy scan never runs again for that key.
+//
+// Scale note: at 50+ products, move the counter doc to a sharded sub-collection or
+// migrate the build to a scheduled function; the seam is isolated to ensureCounterSeeded.
+
+const COUNTER_DOC = 'meta/refCounters'
+
+/** All information the transaction needs to allocate a refId atomically. */
+interface CounterAlloc {
+  counterKey: string
+  buildRefId: (seq: number) => string
+  /** Legacy getDocs scan — returns the current max sequence, run once to seed a missing key. */
+  seedFrom:   () => Promise<number>
 }
 
-const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-/** Next sequence for refIds sharing `<prefix>.<segment>.` — max existing suffix + 1 (or floor). */
-function nextRefIdSeq(existing: (string | null | undefined)[], prefix: string, segment: string, floor = 0): number {
-  const re = new RegExp(`^${escapeRe(prefix)}\\.${escapeRe(segment)}\\.(\\d+)`, 'i')
-  const max = existing.reduce((m, r) => {
-    const n = Number(re.exec(r ?? '')?.[1] ?? 0)
-    return Number.isFinite(n) && n > m ? n : m
-  }, floor)
-  return max + 1
+/** Resolve the LOB prefix for a sub-entity: O(1) product getDoc when productId is available,
+ *  sibling scan otherwise (preserves pre-migration behaviour for callers that omit productId). */
+async function subEntityLob(m: MutationPayload): Promise<string> {
+  if (m.productId) {
+    const psnap = await getDoc(doc(db, `products/${m.productId}`))
+    return resolveLob(psnap.data() as { lob?: { refId?: string | null } } | undefined).prefix
+  }
+  // Fallback: derive LOB from an existing sibling's refId prefix.
+  const collPath = m.path.split('/').filter(Boolean).slice(0, -1).join('/')
+  const snap = await getDocs(collection(db, collPath))
+  const prefix = snap.docs
+    .map(d => (d.data() as { refId?: string | null }).refId)
+    .find(r => typeof r === 'string' && r.includes('.'))
+    ?.split('.')[0]
+  return prefix ?? resolveLob(null).prefix
 }
 
-async function refIdsIn(collectionPath: string): Promise<(string | null | undefined)[]> {
-  const snap = await getDocs(collection(db, collectionPath))
-  return snap.docs.map(d => (d.data() as { refId?: string | null }).refId)
-}
-
-/** Mint a refId for a create that lacks one; undefined when not applicable (explicit refId,
- *  non-create, or a type that carries no refId). */
-async function allocateRefId(m: MutationPayload): Promise<string | undefined> {
+/** Build a CounterAlloc for a create mutation that needs a refId minted.
+ *  Returns undefined when no refId is needed (non-create, explicit refId, or unknown type). */
+async function prepareCounterAlloc(m: MutationPayload): Promise<CounterAlloc | undefined> {
   if (m.op !== 'create') return undefined
   const current = m.data?.['refId'] as string | null | undefined
   if (current && String(current).trim()) return undefined   // explicit refId wins
 
-  // Projects carry a neutral, line-agnostic PRJ.NNN chip (no LOB prefix). Next = max + 1.
+  // ── Projects ──
   if (m.entityType === 'project') {
-    const existing = await refIdsIn('projects')
-    const max = existing.reduce((mx, r) => {
-      const n = Number(/^PRJ\.(\d+)/i.exec(r ?? '')?.[1] ?? 0)
-      return Number.isFinite(n) && n > mx ? n : mx
-    }, 0)
-    return `PRJ.${String(max + 1).padStart(3, '0')}`
+    return {
+      counterKey: PRJ_COUNTER_KEY,
+      buildRefId: (seq) => `PRJ.${String(seq).padStart(3, '0')}`,
+      seedFrom: async () => {
+        const snap = await getDocs(collection(db, 'projects'))
+        return snap.docs.reduce((mx, d) => {
+          const n = Number(/^PRJ\.(\d+)/i.exec((d.data() as { refId?: string }).refId ?? '')?.[1] ?? 0)
+          return Number.isFinite(n) && n > mx ? n : mx
+        }, 0)
+      },
+    }
   }
 
   const segment = REFID_SEGMENT[m.entityType]
   if (!segment) return undefined
 
-  const pad = (n: number) => m.entityType === 'ratingProgram' ? String(n) : String(n).padStart(3, '0')
+  const nopad = m.entityType === 'ratingProgram'
 
+  // ── Products ──
   if (m.entityType === 'product') {
     const prefix = resolveLob({ lob: m.data?.['lob'] as { refId?: string | null } | undefined }).prefix
-    const seq = nextRefIdSeq(await refIdsIn('products'), prefix, segment)
-    return `${prefix}.${segment}.${pad(seq)}`
+    const key = productCounterKey(prefix)
+    return {
+      counterKey: key,
+      buildRefId: (seq) => buildRefId(prefix, segment, seq, nopad),
+      seedFrom: async () => {
+        const snap = await getDocs(collection(db, 'products'))
+        const existing = snap.docs.map(d => (d.data() as { refId?: string | null }).refId)
+        return maxSeqIn(existing, prefix, segment)
+      },
+    }
   }
 
-  // Sub-entities: siblings live in the collection that contains m.path (drop the doc id).
+  // ── Sub-entities (coverage, rule, formRule, ratingProgram) ──
+  const prefix = await subEntityLob(m)
   const parts = m.path.split('/').filter(Boolean)
-  const collectionPath = parts.slice(0, -1).join('/')
-  const siblings = await refIdsIn(collectionPath)
-  // Resolve the LOB prefix from an existing sibling, else the parent product's LOB.
-  let prefix = siblings.find(r => typeof r === 'string' && r.includes('.'))?.split('.')[0]
-  if (!prefix && m.productId) {
-    const psnap = await getDoc(doc(db, `products/${m.productId}`))
-    prefix = resolveLob(psnap.data() as { lob?: { refId?: string | null } } | undefined).prefix
-  }
-  if (!prefix) prefix = resolveLob(null).prefix   // default line
-  // Authored rules historically start at 011 (001–010 reserved for seeded rules).
+  const collPath = parts.slice(0, -1).join('/')
+  const pid = m.productId ?? parts[1] ?? 'unknown'
+  const key = subEntityCounterKey(prefix, segment, pid)
+  // Authored rules/formRules start at 011 — 001–010 are reserved for seeded entries.
   const floor = m.entityType === 'rule' || m.entityType === 'formRule' ? 10 : 0
-  return `${prefix}.${segment}.${pad(nextRefIdSeq(siblings, prefix, segment, floor))}`
+  return {
+    counterKey: key,
+    buildRefId: (seq) => buildRefId(prefix, segment, seq, nopad),
+    seedFrom: async () => {
+      const snap = await getDocs(collection(db, collPath))
+      const existing = snap.docs.map(d => (d.data() as { refId?: string | null }).refId)
+      return maxSeqIn(existing, prefix, segment, floor)
+    },
+  }
+}
+
+/** Ensure the counter key exists in meta/refCounters; seeds from a legacy scan on first use.
+ *  The final write is guarded by a short transaction so a concurrent seeder can never
+ *  overwrite a counter that another transaction already incremented. */
+async function ensureCounterSeeded(alloc: CounterAlloc): Promise<void> {
+  const metaRef = doc(db, COUNTER_DOC)
+  const snap = await getDoc(metaRef)
+  if (((snap.data() ?? {}) as Record<string, number>)[alloc.counterKey] !== undefined) return
+  const seedValue = await alloc.seedFrom()
+  console.info(`[refCounters] seeding "${alloc.counterKey}" at ${seedValue} (legacy scan)`)
+  await runTransaction(db, async (tx) => {
+    const current = ((await tx.get(metaRef)).data() ?? {}) as Record<string, number>
+    if (current[alloc.counterKey] !== undefined) return   // raced — skip overwrite
+    tx.set(metaRef, { [alloc.counterKey]: seedValue }, { merge: true })
+  })
 }
 
 // ─── Atomic write envelope (shared by mutate + mutateBatch) ───────────────────
@@ -361,50 +416,94 @@ export const adapter: BackendAdapter = {
       // slip between the rev check and the commit and be silently overwritten — the loser gets a
       // MutationConflictError → a friendly "please refresh" toast. (A writeBatch only makes the
       // writes atomic; it does NOT revalidate a value read beforehand, which is the whole point.)
-      // The batched executor is pure and idempotent, so a transaction retry is safe.
       // AWS-SWAP: becomes a DynamoDB TransactWriteItems with a rev ConditionExpression.
-      // Server-authoritative refId: fill an omitted one for refId-bearing creates so nothing
-      // persists null (see allocateRefId). Explicit refIds pass through untouched. The scan
-      // is a pre-read (client transactions can't query); the write itself stays transactional.
-      const mintedRefId = await allocateRefId(m)
-      const data: Record<string, unknown> | undefined = mintedRefId
-        ? { ...(m.data ?? {}), refId: mintedRefId }
-        : m.data
+      //
+      // O(1) refId: prepareCounterAlloc resolves the counter key (and the LOB if needed).
+      // ensureCounterSeeded seeds meta/refCounters once from a legacy scan if the key is absent.
+      // The actual counter increment — and refId minting — happens INSIDE runTransaction so two
+      // simultaneous creates in the same segment always get distinct sequence numbers.
+      const alloc = await prepareCounterAlloc(m)
+      if (alloc) await ensureCounterSeeded(alloc)
+
+      // C: reject orphan sub-coverages — a non-null parentId must resolve to a real coverage
+      // refId in the same product. Pre-read outside the transaction (client transactions can't
+      // query); same pattern as the counter seed. Throws before runTransaction on mismatch.
+      if (m.entityType === 'coverage' && m.op !== 'delete') {
+        const parentId = (m.data ?? {})['parentId'] as string | null | undefined
+        if (parentId) {
+          if (!m.productId) throw new Error('Coverage write with parentId requires productId')
+          const covSnap = await getDocs(collection(db, `products/${m.productId}/coverages`))
+          const existingRefs = covSnap.docs
+            .map(d => (d.data() as { refId?: string }).refId)
+            .filter((r): r is string => Boolean(r))
+          validateCoverageParent(parentId, existingRefs)
+        }
+      }
 
       const entityRef = doc(db, m.path)
+      const metaRef   = doc(db, COUNTER_DOC)
       await runTransaction(db, async (tx) => {
-        const now = serverTimestamp()
-        // Read current INSIDE the transaction — for the rev check + the field diff. Because the
-        // read is transactional, the rev we validate is the rev we commit against.
+        // READ phase — Firestore requires all reads before any write.
         const current  = m.op !== 'create' ? await tx.get(entityRef) : null
+        const metaSnap = alloc ? await tx.get(metaRef) : null
         const prevData = (current?.data() ?? {}) as Record<string, unknown>
+        const counters = ((metaSnap?.data() ?? {}) as Record<string, number>)
 
+        // COMPUTE — mint the refId from the current counter value + 1.
+        let mintedRefId: string | undefined
+        let newSeq: number | undefined
+        if (alloc) {
+          newSeq = (counters[alloc.counterKey] ?? 0) + 1
+          mintedRefId = alloc.buildRefId(newSeq)
+        }
+        const data: Record<string, unknown> | undefined = mintedRefId
+          ? { ...(m.data ?? {}), refId: mintedRefId }
+          : m.data
+
+        // WRITE phase.
         if (m.expectedRev !== undefined && current && prevData['rev'] !== m.expectedRev) {
           throw new MutationConflictError()
         }
         assertCoverageWrite(m, data, prevData)     // aborts the whole transaction on a bad matrix
-        applyEnvelope(tx, m, data, prevData, now)  // entity + audit + version(diff) + searchIndex
+        if (alloc && newSeq !== undefined) {
+          tx.set(metaRef, { [alloc.counterKey]: newSeq }, { merge: true })
+        }
+        applyEnvelope(tx, m, data, prevData, serverTimestamp())   // entity + audit + version + searchIndex
       })
     },
 
     async mutateBatch(ms: MutationPayload[]): Promise<void> {
       if (devBypass?.active) throw new Error('Dev admin bypass — changes are not saved (no backend).')
       if (ms.length === 0) return
-      // Mint refIds for creates that need one (pre-read; client transactions can't query).
-      const prepared = await Promise.all(ms.map(async (m) => {
-        const minted = await allocateRefId(m)
-        return { m, data: minted ? { ...(m.data ?? {}), refId: minted } : m.data }
-      }))
+
+      // Resolve counter allocation info for every create that needs a refId.
+      // Explicit refIds and non-creates return undefined (no counter needed).
+      const withAllocs = await Promise.all(ms.map(async (m) => ({
+        m,
+        alloc: await prepareCounterAlloc(m),
+      })))
+
+      // Seed any missing counter keys (deduped — multiple creates for the same key are fine).
+      const uniqueAllocs = new Map<string, CounterAlloc>()
+      for (const { alloc } of withAllocs) {
+        if (alloc && !uniqueAllocs.has(alloc.counterKey)) uniqueAllocs.set(alloc.counterKey, alloc)
+      }
+      await Promise.all([...uniqueAllocs.values()].map(ensureCounterSeeded))
 
       // Chunk by write budget: each entity performs up to 4 writes (entity + audit + version
-      // + searchIndex). Firestore caps a transaction at 500 writes; stay well under so a
-      // re-seed (clear + re-create 75 tasks) still commits in a few atomic, audited chunks.
-      const MAX_PER_CHUNK = Math.floor(450 / 4)   // ≈112 entities per transaction
-      for (let i = 0; i < prepared.length; i += MAX_PER_CHUNK) {
-        const chunk = prepared.slice(i, i + MAX_PER_CHUNK)
+      // + searchIndex) plus one shared counter doc write per chunk. Firestore caps a
+      // transaction at 500 writes; stay well under for large re-seeds.
+      const MAX_PER_CHUNK = Math.floor(449 / 4)   // ≈112 entities per transaction (1 spare for counter)
+      const metaRef = doc(db, COUNTER_DOC)
+      for (let i = 0; i < withAllocs.length; i += MAX_PER_CHUNK) {
+        const chunk = withAllocs.slice(i, i + MAX_PER_CHUNK)
         await runTransaction(db, async (tx) => {
-          // READ phase — Firestore requires all reads before any write. Read the pre-image of
-          // every non-create payload (for the rev check, the field diff, and the delete snapshot).
+          // READ phase — Firestore requires all reads before any write.
+          const chunkHasAlloc = chunk.some(x => x.alloc)
+          const metaSnap = chunkHasAlloc ? await tx.get(metaRef) : null
+          const counters  = ((metaSnap?.data() ?? {}) as Record<string, number>)
+          const running   = { ...counters }   // in-memory values; updated per allocation
+
           const prev = new Map<string, Record<string, unknown>>()
           for (const { m } of chunk) {
             if (m.op !== 'create') {
@@ -412,9 +511,29 @@ export const adapter: BackendAdapter = {
               prev.set(m.path, (snap.data() ?? {}) as Record<string, unknown>)
             }
           }
+
+          // COMPUTE — mint refIds for all creates in this chunk using the shared running counters.
+          const resolved = chunk.map(({ m, alloc }) => {
+            let mintedRefId: string | undefined
+            if (alloc) {
+              const seq = (running[alloc.counterKey] ?? 0) + 1
+              running[alloc.counterKey] = seq
+              mintedRefId = alloc.buildRefId(seq)
+            }
+            return { m, data: mintedRefId ? { ...(m.data ?? {}), refId: mintedRefId } : m.data }
+          })
+
           // WRITE phase — one full envelope per payload, all under a single serverTimestamp.
           const now = serverTimestamp()
-          for (const { m, data } of chunk) {
+
+          // Write updated counter values in a single merge set (one Firestore write).
+          const updates: Record<string, number> = {}
+          for (const key of Object.keys(running)) {
+            if (running[key] !== (counters[key] ?? 0)) updates[key] = running[key]!
+          }
+          if (Object.keys(updates).length > 0) tx.set(metaRef, updates, { merge: true })
+
+          for (const { m, data } of resolved) {
             const prevData = prev.get(m.path) ?? {}
             if (m.expectedRev !== undefined && m.op !== 'create' && prevData['rev'] !== m.expectedRev) {
               throw new MutationConflictError()

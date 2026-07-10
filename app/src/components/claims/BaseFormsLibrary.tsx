@@ -8,6 +8,7 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { resolveClaimsLineProfile } from '@pf/shared'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { statusAfterIdentify, type BaseFormStatus } from '../../lib/claims/baseForm'
 import { RefChip, Skeleton, EmptyState } from '../ui'
 import { IconUpload, IconFile, IconSpinner, IconCheck, IconTrash, IconShield, IconWarning } from '../ui/icons'
@@ -106,12 +107,14 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
         const payload = isPdf
           ? { formBase64: toBase64(buf), mediaType, fileName: file.name }
           : { formText: new TextDecoder().decode(buf), fileName: file.name }
-        const meta = await adapter.fns.call<typeof payload, { title: string; formNumber: string; edition: string; lob: string }>('identifyBaseForm', payload)
+        const meta = await adapter.fns.call<typeof payload, { title: string; formNumber: string; edition: string; lob: string; verified?: boolean }>('identifyBaseForm', payload)
         // Honest identification: only a form we could actually identify (a printed form number
-        // OR a recognised line) becomes READY. Neither → NEEDS_REVIEW, not a silent empty READY.
+        // OR a recognised line) becomes READY. Neither → NEEDS_REVIEW. verified:false means the
+        // server read a formNumber but it did not resolve in the forms catalogue after two passes
+        // (haiku + Sonnet) — also NEEDS_REVIEW so an unverified number never grounds analysis.
         await adapter.db.mutate({
           op: 'update', path: `baseForms/${id}`,
-          data: { title: meta.title || file.name, formNumber: meta.formNumber || '', edition: meta.edition || '', lob: meta.lob || '', status: statusAfterIdentify(meta) },
+          data: { title: meta.title || file.name, formNumber: meta.formNumber || '', edition: meta.edition || '', lob: meta.lob || '', status: statusAfterIdentify(meta), ...(meta.verified === false ? { verified: false } : {}) },
           entityType: 'baseForm', actor,
         })
       } catch {
@@ -120,10 +123,11 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
         await adapter.db.mutate({ op: 'update', path: `baseForms/${id}`, data: { status: 'NEEDS_REVIEW' }, entityType: 'baseForm', actor })
       }
     } catch (err) {
-      const msg = err instanceof MutationConflictError ? 'Conflict — please refresh.'
-        : err instanceof Error && /bypass/i.test(err.message) ? err.message
-        : 'Upload failed'
-      toast.error(msg)
+      if (err instanceof MutationConflictError) {
+        conflictToast({})
+      } else {
+        toast.error(err instanceof Error && /bypass/i.test(err.message) ? err.message : 'Upload failed')
+      }
     } finally {
       setBusy(false)
     }

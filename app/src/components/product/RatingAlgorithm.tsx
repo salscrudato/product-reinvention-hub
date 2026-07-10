@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { adapter, MutationConflictError } from '../../lib/backend'
+import { conflictToast } from '../../lib/conflict'
 import { Badge, Button, Dialog, RefChip } from '../ui'
 import { IconPlus, IconEdit, IconTrash, IconTable, IconCoverage, IconDrag, IconPricing } from '../ui/icons'
 import { deriveGridModel } from '@pf/shared'
@@ -153,7 +154,8 @@ export function RatingAlgorithm({ program, pid, trace, changedStepIds, rtTables,
         data: { steps: nextSteps }, entityType: 'ratingProgram', productId: pid, actor, expectedRev: program.rev,
       })
     } catch (err) {
-      toast.error(err instanceof MutationConflictError ? 'Conflict — refresh and try again.' : 'Could not save the change')
+      if (err instanceof MutationConflictError) conflictToast({})
+      else toast.error('Could not save the change')
     }
   }
 
