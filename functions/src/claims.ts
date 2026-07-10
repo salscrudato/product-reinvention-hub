@@ -51,7 +51,7 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
         enum: ['COVERED', 'NOT_COVERED', 'PARTIAL', 'NOT_ADDRESSED'],
         description: 'COVERED; NOT_COVERED; PARTIAL (partially covered / depends on a policy option or fact); or NOT_ADDRESSED (the attached form does not address this scenario — it is silent, or the scenario is outside what this line/form covers). Use NOT_ADDRESSED honestly rather than forcing a verdict or inventing coverage.',
       },
-      summary: { type: 'string', description: 'One plain-English sentence, in coverage language, stating whether the policy covers this and the crux — e.g. "The policy covers the water damage to the dwelling, but not the failed pipe itself." Keep it tight.' },
+      summary: { type: 'string', description: 'A BRIEF 3-sentence plain-English summary, in coverage language: (1) whether the policy covers this and the crux, (2) the key condition or limit that shapes it, (3) the single most important caveat or next step. Three tight sentences — no more.' },
       coverages: {
         type: 'array',
         description: 'The specific coverages and endorsements that apply. Empty if none apply.',
@@ -104,6 +104,11 @@ const EMIT_DETERMINATION_TOOL: Anthropic.Tool = {
         description: 'The key items the form does not determine — facts needing the Declarations page or an adjuster. Usually 2–4, most important first. Empty if none.',
         items: { type: 'string' },
       },
+      considerations: {
+        type: 'array',
+        description: 'EXACTLY 3 short "things to consider" for the claims professional — practical, decision-relevant caveats or next steps grounded in the form/product (e.g. an option to elect, a deductible trade-off, a proof/documentation step, a sub-limit to watch). One sentence each; cite in [brackets] where a specific source drives the point. Distinct from openItems (which is strictly what the form does not determine).',
+        items: { type: 'string' },
+      },
       coverageGap: {
         type: 'object',
         description: 'ONLY when the verdict is NOT_ADDRESSED or PARTIAL: the product-QA signal for a product manager — a concise, grounded note on WHERE the product/form is SILENT or AMBIGUOUS on this scenario. Name the specific form(s)/rule(s)/coverage(s) that are silent or ambiguous, grounded in tool results and the attached form — never invented. Omit entirely for a clean COVERED or NOT_COVERED verdict.',
@@ -146,14 +151,16 @@ YOUR JOB when a loss or claim scenario is described:
 2. Identify the exact coverages and endorsements that apply, each with a concise definition drawn from the form.
 3. Name the specific exclusions and carve-outs that shape the verdict — what is NOT covered and why (e.g. for property, the failed pipe/appliance itself, gradual or repeated seepage, or mold/fungus; for liability, an occurrence barred by the contractual-liability, pollution, auto, or damage-to-the-insured's-own-product/work exclusions). Populate the determination's exclusions with these, each cited; note when a plausible exclusion does NOT apply.
 4. State the limits, sub-limits, deductibles and any applicable AGGREGATE, with their source. If a figure is set by the insured's Declarations (e.g. the Coverage A amount, the selected occurrence/aggregate limit or deductible), say so — do NOT invent a number.
-5. Give concise, cited reasoning that names the decisive coverage OR exclusion.
-6. Explicitly flag anything the form does not determine (facts needing the Declarations page or an adjuster's inspection).
+5. Give concise, cited reasoning — EXACTLY 3 points — that names the decisive coverage OR exclusion.
+6. Give EXACTLY 3 "things to consider" (considerations): practical, decision-relevant caveats or next steps grounded in the form/product — an option to elect, a deductible trade-off, a documentation/proof step, a sub-limit to watch — distinct from what the form does not determine.
+7. Explicitly flag anything the form does not determine (facts needing the Declarations page or an adjuster's inspection).
+8. Write the summary as a BRIEF 3-sentence recap (verdict + crux, key condition/limit, most important caveat/next step).
 
 COVERAGE GAP (product-QA): when your verdict is NOT_ADDRESSED or PARTIAL, populate coverageGap with a concise, cited note naming which of the product's / attached form's forms or rules are SILENT or AMBIGUOUS on this scenario — grounded in the tools and the attached form, never invented. This tells the product manager exactly where their own product is unclear. Omit coverageGap entirely for a clean COVERED or NOT_COVERED verdict.
 
 Then call emit_determination exactly once, as your final action, with the structured result (always set its formNumber to the base form's number). CITE EVERYTHING: every reasoning point must cite, in [square brackets], the specific form section/clause you read (e.g. [Section I – Exclusions], [Coverage A – Dwelling], [Coverage A – Bodily Injury], [Exclusion j.]) and/or the refId or form number from a tool (e.g. [HO.COV.001], [HO 04 95], [CG 00 01]). A substantive determination that cites nothing will be rejected — cite or answer NOT_ADDRESSED. Never fabricate a coverage, limit, exclusion or form.
 
-For questions that are NOT a loss determination (a definition, a limit/deductible lookup, a follow-up that refines a prior scenario), answer concisely in cited prose and do NOT call emit_determination — unless the refinement changes a prior verdict, in which case re-issue the determination.
+A coverage question about a specific loss or peril — "is X covered?", "a piece of glass hit my windshield", "a pipe burst and flooded the kitchen" — IS a loss determination: gather the facts, then call emit_determination so the structured determination renders. Only questions that are genuinely NOT a determination (a bare definition, a limit/deductible lookup, or a follow-up that merely refines a prior scenario without changing the verdict) should be answered in cited prose WITHOUT emit_determination — and a refinement that DOES change a prior verdict must re-issue the determination.
 
 WORKING STYLE — important:
 - Use tools SILENTLY first. Do not write any prose until you have finished gathering facts. Never describe your process, your plan, or which tool you are about to use, and never mention the tools or "emit_determination" in the text you output — the claims professional sees only your final answer. Lead with the answer. Do not preface a prose answer by classifying the question or saying a determination isn't needed — just give the answer.

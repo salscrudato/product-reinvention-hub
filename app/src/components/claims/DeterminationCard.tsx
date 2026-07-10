@@ -1,12 +1,17 @@
 // DeterminationCard — the centerpiece of the Claims coverage copilot. A grounded coverage
-// determination, read like a verdict: a custom verdict emblem (green = covered, red = not) and
-// a one-line "this policy covers this / it doesn't" headline, then clean, subtly-divided
-// sections — the coverage(s) that apply, 3 cited reasons why, the limits that apply, and the
-// deductibles that apply. All colour comes from design tokens (verdict tints via color-mix);
-// no hard hex (inline SVG is rendered in the browser, so it uses vars too).
-import type { ReactNode } from 'react'
+// determination, read like a verdict, in one clean structured card:
+//   • a custom verdict emblem + plain-language headline (Covered / Not covered / Partial),
+//   • a brief 3-sentence summary,
+//   • Why — 3 cited reasons supporting the verdict,
+//   • Things to consider — 3 practical, grounded caveats/next steps,
+//   • Document citations — a short-title ACCORDION (click a coverage/exclusion to read the clause),
+//   • the limits + deductibles that apply,
+//   • Data citations — the internal refIds/forms the analysis traces to (the provenance trace).
+// All colour comes from design tokens (verdict tints via color-mix); no hard hex. Every citation
+// is a real, catalog-resolved source (the server downgrades any it can't verify).
+import { useId, type ReactNode } from 'react'
 import { RefChip } from '../ui'
-import { IconWarning, IconInfo, IconChat, IconCheck } from '../ui/icons'
+import { IconWarning, IconInfo, IconChat, IconCheck, IconChevronRight } from '../ui/icons'
 import type { Verdict, Determination } from '../../lib/claims/determination'
 
 // The determination shape + verdict live in the platform-free claims lib (it is unit-
@@ -25,9 +30,6 @@ const VERDICT: Record<Verdict, { label: string; headline: string; token: string 
 }
 
 // ─── Verdict emblem — a simple, elegant custom SVG (green check / red cross / …) ────
-// The mark is drawn with rounded strokes in the verdict token; two faint rings + a soft disc
-// and a drop-shadow glow give it depth. Purely decorative (aria-hidden); the headline carries
-// the meaning for assistive tech.
 function VerdictMark({ verdict, token }: { verdict: Verdict; token: string }) {
   const stroke = { stroke: token, strokeWidth: 3.4, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' }
   if (verdict === 'COVERED')     return <path d="M23 34 L30 41 L44 23" {...stroke} />
@@ -43,7 +45,7 @@ function VerdictEmblem({ verdict, token }: { verdict: Verdict; token: string }) 
       style={{ filter: `drop-shadow(0 4px 16px color-mix(in srgb, ${token} 32%, transparent))` }}
       aria-hidden="true"
     >
-      <svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="60" height="60" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="33" cy="33" r="31" stroke={token} strokeOpacity="0.14" strokeWidth="1.5" />
         <circle cx="33" cy="33" r="24" strokeWidth="1.5" stroke={token} strokeOpacity="0.4"
           fill={`color-mix(in srgb, ${token} 13%, var(--color-surface))`} />
@@ -81,16 +83,29 @@ export function CitedText({ text }: { text: string }) {
 
 // ─── Section primitives ─────────────────────────────────────────────────────────
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2.5">
-      <h4 className="text-[11px] font-semibold uppercase tracking-[.07em] text-faint">{title}</h4>
+      <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.07em] text-faint">
+        {title}
+        {count != null && <span className="tabular-nums text-faint/80 font-normal normal-case tracking-normal">· {count}</span>}
+      </h4>
       {children}
     </section>
   )
 }
 
-/** A value row — used by both Limits and Deductibles for a consistent, tabular read. */
+/** A bulleted, cited point (Why / Things to consider). `dot` sets the marker colour. */
+function Point({ text, dot }: { text: string; dot: string }) {
+  return (
+    <li className="flex gap-2 text-[13px] text-dim leading-relaxed">
+      <span className="mt-[7px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: dot }} aria-hidden="true" />
+      <span className="min-w-0"><CitedText text={text} /></span>
+    </li>
+  )
+}
+
+/** A value row — used by Limits + Deductibles for a consistent, tabular read. */
 function ValueRow({ label, value, source, note, first }: { label: string; value: string; source?: string; note?: string; first: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-2" style={{ borderTop: first ? 'none' : '1px solid var(--color-border)' }}>
@@ -103,6 +118,47 @@ function ValueRow({ label, value, source, note, first }: { label: string; value:
         {source && <RefChip id={source} />}
       </div>
     </div>
+  )
+}
+
+// ─── Document citation — a short-title accordion; click to read the clause ─────────
+function DocCitation({ title, dotToken, formNumber, refId, body }: {
+  title: string; dotToken?: string; formNumber?: string; refId?: string; body?: string
+}) {
+  const bodyId = useId()
+  return (
+    <details className="group rounded-[10px] bg-raised" style={{ border: '1px solid var(--color-border)' }}>
+      <summary
+        className="flex items-center gap-2 px-3 py-2 cursor-pointer list-none select-none rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden"
+        aria-controls={bodyId}
+      >
+        {dotToken && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: dotToken }} aria-hidden="true" />}
+        <span className="font-semibold text-[13px] text-text min-w-0 truncate">{title}</span>
+        {formNumber && <RefChip id={formNumber} tone="accent" />}
+        <IconChevronRight size={14} aria-hidden="true"
+          className="ml-auto shrink-0 text-faint transition-transform duration-200 group-open:rotate-90" />
+      </summary>
+      <div id={bodyId} className="px-3 pb-2.5 pt-0 flex flex-col gap-1.5" style={{ borderTop: '1px solid var(--color-border)' }}>
+        {body && <p className="text-[13px] text-dim leading-relaxed pt-2"><CitedText text={body} /></p>}
+        {(refId || formNumber) && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {refId && <DataChip id={refId} />}
+            {formNumber && <RefChip id={formNumber} />}
+          </div>
+        )}
+      </div>
+    </details>
+  )
+}
+
+// ─── Data citation chip — shows ANY token, incl. internal dotted refIds (PA.COV.004.002)
+// that RefChip deliberately hides. This section IS the data-provenance trace, so the internal
+// refIds are exactly what the reader wants to see. ─────────────────────────────────────────
+function DataChip({ id }: { id: string }) {
+  return (
+    <span className="inline-flex items-center rounded-[6px] px-1.5 py-0.5 font-mono text-[11px] font-medium leading-none tracking-[-.01em] bg-raised text-dim" style={{ border: '1px solid var(--color-border)' }}>
+      {id}
+    </span>
   )
 }
 
@@ -121,89 +177,80 @@ export function DeterminationCard({ d, onCreateFeedback, linked }: {
   // partial determination renders cleanly instead of crashing the message.
   const coverages  = d.coverages ?? []
   const exclusions = d.exclusions ?? []
-  const reasoning  = d.reasoning ?? []
+  const reasoning  = (d.reasoning ?? []).slice(0, 3)
   const openItems  = d.openItems ?? []
+  // "Things to consider": prefer the dedicated field; fall back to openItems for older/cached
+  // determinations. Capped at 3.
+  const considerations = (d.considerations && d.considerations.length ? d.considerations : openItems).slice(0, 3)
+  // Only show the separate "Not determined by the form" callout when considerations came from a
+  // distinct source (so openItems isn't shown twice).
+  const showOpenItemsCallout = !!(d.considerations && d.considerations.length) && openItems.length > 0
   const gap        = d.coverageGap
-  const covered    = d.verdict === 'COVERED' || d.verdict === 'PARTIAL'
 
-  // Split the flat limits array into the two sections the card presents separately.
   const isDeductible = (label: string) => /deduct/i.test(label)
   const allLimits    = d.limits ?? []
   const limits       = allLimits.filter(l => !isDeductible(l.label))
   const deductibles  = allLimits.filter(l => isDeductible(l.label))
 
-  // Build the divided body from only the sections that have content, in reading order.
+  // Data-citation trace: every internal refId / form / section the determination points at,
+  // deduped in reading order. Powers the "Data citations" provenance section.
+  const dataCitations = Array.from(new Set([
+    ...coverages.flatMap(c => [c.refId, c.formNumber]),
+    ...exclusions.flatMap(e => [e.refId, e.formNumber]),
+    ...allLimits.map(l => l.source),
+    ...(gap?.sources ?? []),
+    ...(d.citations ?? []),
+  ].map(s => (s ?? '').trim()).filter(Boolean)))
+
   const sections: ReactNode[] = []
-
-  if (coverages.length > 0) {
-    sections.push(
-      <Section key="cov" title={covered ? 'Covered under' : 'Coverages named'}>
-        <ul className="flex flex-col gap-2.5">
-          {coverages.map((c, i) => (
-            <li key={i} className="flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-semibold text-[13px] text-text">{c.name}</span>
-                {c.refId && <RefChip id={c.refId} tone="accent" />}
-                {c.formNumber && <RefChip id={c.formNumber} tone="accent" />}
-              </div>
-              <p className="text-[13px] text-dim leading-relaxed">{c.definition}</p>
-            </li>
-          ))}
-        </ul>
-      </Section>,
-    )
-  }
-
-  if (exclusions.length > 0) {
-    sections.push(
-      <Section key="exc" title="What’s not covered">
-        <ul className="flex flex-col gap-2.5">
-          {exclusions.map((e, i) => (
-            <li key={i} className="flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-danger)' }} aria-hidden="true" />
-                <span className="font-semibold text-[13px] text-text">{e.name}</span>
-                {e.refId && <RefChip id={e.refId} />}
-                {e.formNumber && <RefChip id={e.formNumber} />}
-              </div>
-              {e.note && <p className="text-[13px] text-dim leading-relaxed"><CitedText text={e.note} /></p>}
-            </li>
-          ))}
-        </ul>
-      </Section>,
-    )
-  }
 
   if (reasoning.length > 0) {
     sections.push(
-      <Section key="why" title="Why">
-        <ul className="flex flex-col gap-2">
-          {reasoning.map((r, i) => (
-            <li key={i} className="flex gap-2 text-[13px] text-dim leading-relaxed">
-              <span className="mt-[7px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: v.token }} aria-hidden="true" />
-              <span className="min-w-0"><CitedText text={r} /></span>
-            </li>
-          ))}
-        </ul>
+      <Section key="why" title={`Why it’s ${v.label.toLowerCase()}`} count={reasoning.length}>
+        <ul className="flex flex-col gap-2">{reasoning.map((r, i) => <Point key={i} text={r} dot={v.token} />)}</ul>
       </Section>,
     )
   }
 
-  if (limits.length > 0) {
+  if (considerations.length > 0) {
     sections.push(
-      <Section key="lim" title="Limits that apply">
-        <div className="flex flex-col">
-          {limits.map((l, i) => <ValueRow key={i} first={i === 0} label={l.label} value={l.value} source={l.source} note={l.note} />)}
+      <Section key="consider" title="Things to consider" count={considerations.length}>
+        <ul className="flex flex-col gap-2">{considerations.map((c, i) => <Point key={i} text={c} dot="var(--color-info)" />)}</ul>
+      </Section>,
+    )
+  }
+
+  if (coverages.length > 0 || exclusions.length > 0) {
+    sections.push(
+      <Section key="doc" title="Document citations" count={coverages.length + exclusions.length}>
+        <div className="flex flex-col gap-1.5">
+          {coverages.map((c, i) => (
+            <DocCitation key={`c${i}`} title={c.name} dotToken={v.token} formNumber={c.formNumber} refId={c.refId} body={c.definition} />
+          ))}
+          {exclusions.map((e, i) => (
+            <DocCitation key={`e${i}`} title={e.name} dotToken="var(--color-danger)" formNumber={e.formNumber} refId={e.refId} body={e.note} />
+          ))}
         </div>
       </Section>,
     )
   }
 
-  if (deductibles.length > 0) {
+  if (limits.length > 0 || deductibles.length > 0) {
     sections.push(
-      <Section key="ded" title="Deductibles that apply">
+      <Section key="lim" title="Limits & deductibles">
         <div className="flex flex-col">
-          {deductibles.map((l, i) => <ValueRow key={i} first={i === 0} label={l.label} value={l.value} source={l.source} note={l.note} />)}
+          {limits.map((l, i) => <ValueRow key={`l${i}`} first={i === 0} label={l.label} value={l.value} source={l.source} note={l.note} />)}
+          {deductibles.map((l, i) => <ValueRow key={`d${i}`} first={i === 0 && limits.length === 0} label={l.label} value={l.value} source={l.source} note={l.note} />)}
+        </div>
+      </Section>,
+    )
+  }
+
+  if (dataCitations.length > 0) {
+    sections.push(
+      <Section key="data" title="Data citations" count={dataCitations.length}>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {dataCitations.map((id, i) => <DataChip key={i} id={id} />)}
         </div>
       </Section>,
     )
@@ -218,16 +265,16 @@ export function DeterminationCard({ d, onCreateFeedback, linked }: {
       {/* Slim verdict accent bar */}
       <div style={{ height: 3, background: v.token }} aria-hidden="true" />
 
-      {/* Hero — emblem + plain-language verdict headline + one-line summary */}
+      {/* Hero — emblem + plain-language verdict headline + brief 3-sentence summary */}
       <div className="flex flex-col items-center text-center gap-3 px-5 pt-6 pb-5"
         style={{ background: wash, borderBottom: `1px solid color-mix(in srgb, ${v.token} 16%, transparent)` }}>
         <VerdictEmblem verdict={d.verdict} token={v.token} />
-        <div className="flex flex-col gap-1 items-center">
+        <div className="flex flex-col gap-1.5 items-center">
           <span className="inline-flex items-center h-6 px-2.5 rounded-full text-white text-[11px] font-semibold tracking-[.02em]" style={{ background: v.token }}>
             {v.label}
           </span>
           <h3 className="text-[17px] font-bold text-text tracking-tight leading-snug">{v.headline}</h3>
-          {d.summary && <p className="text-[13px] text-dim max-w-md leading-relaxed">{d.summary}</p>}
+          {d.summary && <p className="text-[13px] text-dim max-w-lg leading-relaxed">{d.summary}</p>}
         </div>
       </div>
 
@@ -242,8 +289,8 @@ export function DeterminationCard({ d, onCreateFeedback, linked }: {
         </div>
       )}
 
-      {/* What the form doesn't determine (subtle) */}
-      {openItems.length > 0 && (
+      {/* What the form doesn't determine (only when distinct from the considerations above) */}
+      {showOpenItemsCallout && (
         <div className="mx-5 mb-4 flex gap-2.5 rounded-[12px] p-3" style={{ background: 'var(--color-raised)', border: '1px solid var(--color-border)' }}>
           <IconWarning size={15} className="text-warn shrink-0 mt-0.5" aria-hidden="true" />
           <div className="flex flex-col gap-1 min-w-0">
@@ -267,8 +314,6 @@ export function DeterminationCard({ d, onCreateFeedback, linked }: {
                 {gap.sources.map((s, i) => <RefChip key={i} id={s} />)}
               </div>
             )}
-            {/* Gap → product feedback: capture the gap as a product-improvement idea, or show
-                the linked chip once it's been created. */}
             {(onCreateFeedback || linked) && (
               <div className="pt-1.5">
                 {linked ? (

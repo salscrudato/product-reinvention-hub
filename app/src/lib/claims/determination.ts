@@ -21,6 +21,10 @@ export interface Determination {
   exclusions?: DeterminationExclusion[]
   limits:      DeterminationLimit[]
   reasoning:   string[]
+  // "Things to consider" — practical, decision-relevant caveats/next steps (aim for 3), distinct
+  // from openItems (what the form does not determine). Optional + additive: older/cached
+  // determinations without it fall back to openItems in the card.
+  considerations?: string[]
   openItems?:  string[]
   citations?:  string[]
   formNumber?: string
