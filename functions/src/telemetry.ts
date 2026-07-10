@@ -29,13 +29,13 @@ const PRICING: Record<string, {
   cacheReadPerMTok:  number  // 0.1 × input
   cacheWritePerMTok: number  // 2.0 × input (1h TTL)
 }> = {
-  'claude-sonnet-5': {
+  [MODEL]: {
     inputPerMTok:       3.00,
     outputPerMTok:     15.00,
     cacheReadPerMTok:   0.30,
     cacheWritePerMTok:  6.00,
   },
-  'claude-haiku-4-5': {
+  [MODEL_FAST]: {
     inputPerMTok:       0.80,
     outputPerMTok:      4.00,
     cacheReadPerMTok:   0.08,
@@ -73,7 +73,7 @@ export function addUsage(accum: UsageAccum, u: {
 
 /** Compute estimated USD cost from a usage snapshot and a model id. */
 export function estimateCost(model: string, u: UsageAccum): number {
-  const p = PRICING[model] ?? PRICING['claude-sonnet-5']!
+  const p = PRICING[model] ?? PRICING[MODEL]!
   const M = 1_000_000
   return (
     (u.input_tokens                / M) * p.inputPerMTok      +

@@ -20,7 +20,8 @@
     "lint": "pnpm -r lint",
     "build": "pnpm --filter app build",
     "deploy": "pnpm build && firebase deploy",
-    "eval": "tsx functions/eval/runner.ts"
+    "eval": "tsx functions/eval/runner.ts",
+    "capture:screens": "node scripts/capture-screens.mjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",
