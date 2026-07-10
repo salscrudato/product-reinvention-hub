@@ -17,7 +17,7 @@ import {
 } from '../components/ui/icons'
 import { NewProductModal } from '../components/product/NewProductModal'
 import { ImportWorkbookModal } from '../components/product/ImportWorkbookModal'
-import { FilingImportModal } from '../components/product/FilingImportModal'
+import { UnifiedImportModal } from '../import/UnifiedImportModal'
 import { CloneProductModal } from '../components/product/CloneProductModal'
 import { ScaffoldProductModal } from '../components/product/ScaffoldProductModal'
 import { PromoteDraftDialog } from '../components/product/PromoteDraftDialog'
@@ -26,7 +26,7 @@ import { LineageBadge } from '../components/product/LineageBadge'
 import type { Product } from '@pf/shared'
 import type { WithId } from '../context/ProductContext'
 
-type Modal = 'new' | 'import' | 'filing' | 'clone' | 'scaffold' | null
+type Modal = 'new' | 'import' | 'unified' | 'clone' | 'scaffold' | null
 
 export default function Builder() {
   const navigate = useNavigate()
@@ -71,8 +71,8 @@ export default function Builder() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <StartCard featured Icon={IconSparkle} title="Scaffold with AI"
             desc="Describe it — grounded in your real portfolio, never invented." onClick={() => setModal('scaffold')} />
-          <StartCard Icon={IconFile} title="Import a filing"
-            desc="Upload a carrier's rate filing PDFs — rate order, manual, policy form." onClick={() => setModal('filing')} />
+          <StartCard Icon={IconFile} title="Unified import"
+            desc="Any format — ISO workbook, filing PDFs, SERFF, ERC, or unknown." onClick={() => setModal('unified')} />
           <StartCard Icon={IconUpload} title="Import workbook"
             desc="Upload the ISO framework/forms/rating/rules workbooks." onClick={() => setModal('import')} />
           <StartCard Icon={IconCopy} title="Clone a product"
@@ -111,7 +111,7 @@ export default function Builder() {
 
       {modal === 'new'      && <NewProductModal onClose={() => setModal(null)} onCreated={openDraft} />}
       {modal === 'import'   && <ImportWorkbookModal onClose={() => setModal(null)} onImported={openDraft} />}
-      {modal === 'filing'   && <FilingImportModal onClose={() => setModal(null)} onImported={openDraft} />}
+      {modal === 'unified'  && <UnifiedImportModal onClose={() => setModal(null)} onImported={openDraft} />}
       {modal === 'clone'    && <CloneProductModal onClose={() => setModal(null)} onCloned={openDraft} />}
       {modal === 'scaffold' && <ScaffoldProductModal onClose={() => setModal(null)} onCreated={openDraft} />}
       {promoteFor && user && (

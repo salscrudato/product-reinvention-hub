@@ -15,6 +15,7 @@ export { interpretSearch } from './interpretSearch'
 export { shapeFeedback } from './shapeFeedback'
 export { exportDuckCreek } from './exportDuckCreek'
 export { reindexGrounding } from './retrieval/indexer'
+export { unifiedImport } from './import'
 // Invalidation triggers (Part B) — re-index chunks + evict stale summaries/cache on entity write.
 export {
   onProductWrite, onCoverageWrite, onRuleWrite, onFormRuleWrite, onRatingProgramWrite,
