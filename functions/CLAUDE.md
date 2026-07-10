@@ -1,8 +1,14 @@
-# functions/ — Cloud Functions (Firebase v2 / Node 20)
+# functions/ — AI plumbing (Firebase Cloud Functions v2, Node 20)
+
+> **Status (post-Azure cutover):** this workspace is **retained as reference and is NOT deployed.**
+> Production AI runs on the Azure host (`server/lib/ai.js`, Foundry Claude), which has so far ported
+> only the `chat` handler — the grounded extraction / claims / import / filing / news handlers here
+> are the reference implementations awaiting a port. The workspace stays in the gate
+> (typecheck · lint · test) so that reference stays honest; no Firebase project is deployed from this repo.
 
 See [../CLAUDE.md](../CLAUDE.md) for the binding invariants that apply across every workspace.
 
-**Build:** `pnpm --filter functions build` (tsup → `lib/`). The emulator picks up the built output.
+**Build:** `pnpm --filter functions build` (tsup → `lib/`).
 
 ## Key files
 

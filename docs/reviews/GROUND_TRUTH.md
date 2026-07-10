@@ -548,3 +548,49 @@ all three seeded lines.
 byte-stable for all three seeded lines. Gate: typecheck ✓, lint ✓, 737 unit tests ✓ (612
 shared+app, 125 functions), build ✓. `test:rules`/`integration`/`e2e` remain blocked by the
 pre-existing port-8080 emulator conflict (V5 / BASELINE), unrelated to this work.
+
+---
+
+## V18 — Azure cutover complete + Firebase teardown (2026-07-10)
+
+**FINDING:** The migration off Firebase/GCloud onto Azure is COMPLETE, and the orphaned
+Firebase-era scaffolding has been removed (branch `sec-remediation-and-cleanse`). The runtime is
+now: React/Vite SPA → same-origin Azure App Service host (`server/`, Express) → Cosmos DB (data),
+JWT auth (tenant-scoped), Azure AI Foundry Claude (AI), Azure Blob (storage). V1–V17 above describe
+the Firebase era and are retained as history; where they name `firebase.adapter.ts`,
+`firestore.rules`, emulators, or `pnpm dev:seed`, read them as superseded by this entry.
+
+**EVIDENCE (runtime is Azure-only):**
+- `app/src/lib/backend/index.ts` — exports the Azure adapter; "The Firebase adapter is retired."
+- `app/src/lib/backend/azure.adapter.ts` — talks ONLY to `/api/*`; reads `VITE_API_BASE`, never
+  `VITE_USE_EMULATORS`. `subscribe()` degrades to polling (there is no Cosmos onSnapshot).
+- `server/server.js` + `server/lib/{auth,data,cosmos,ai,storage,admin}.js` — the live host:
+  `/api/auth` (JWT), `/api/db` (Cosmos), `/api/ai` (Foundry Claude, SSE), `/api/storage` (Blob),
+  `/api/admin` (tenants + users).
+- `server/lib/data.js` — the atomic-mutation invariant now lives here: entity + audit + version +
+  searchIndex commit in ONE Cosmos `items.batch(ops, pk)`; `expectedRev` → 409; `requireRole('EDITOR')`
+  on writes; tenant partition `${tenantId}|${base}`.
+- `azure-pipelines.yml` — push to `main` builds the SPA + assembles `server/` + deploys to App
+  Service. Nothing Firebase is built or deployed.
+- `scripts/migrate-to-cosmos.ts` — the Cosmos seeder (Azure replacement for the deleted `seed.ts`).
+
+**REMOVED (proven-dead; per-file evidence in `docs/reviews/CLEANUP_REPORT.md`):** Firebase
+hosting/emulator/rules config (`firebase.json`, `.firebaserc`, `firestore.rules`,
+`firestore.indexes.json`, `storage.rules`, `storage.cors.json`); emulator/seed/e2e/capture scripts
+(`scripts/seed.ts`, `wait-and-seed.mjs`, `guard-backend.mjs`, `e2e-serve.mjs`, `capture-screens.mjs`,
+`docs/handoff/take-screenshots.mjs`); the Firestore-rules + emulator integration suites
+(`tests/rules.test.ts`, `tests/integration/*`, `vitest.rules.config.ts`, `vitest.integration.config.ts`,
+`playwright.config.ts`, `e2e/*`); the Firestore-only client helpers extracted from the retired
+adapter (`app/src/lib/backend/{envelope,refIdAlloc,coverageParent}.ts` + tests); app files superseded
+by the unified importer (`FilingImportModal.tsx`, `filingImportClient.ts`, `BaseFormExtract.tsx`) and
+the unused `app/src/lib/svg/ratingFlow.tsx`; the dead `signInAsDevAdmin` adapter member; and the
+`firebase` / `firebase-admin` / `@firebase/rules-unit-testing` / `@playwright/test` /
+`@axe-core/playwright` / `concurrently` / `pdf-lib` dev dependencies. `functions/` is RETAINED (a gated
+reference; its AI handlers are not yet ported to `server/lib/ai.js`).
+
+**CANARIES:** unchanged — HO-3 $1,528 · PA $1,002 · GL $2,635 · imported $1,281 (no rating code
+was touched). NB: the GL canary is **$2,635** (see V15), not $2,789.
+
+**CONSEQUENCE:** No Firebase-era runtime or scaffolding remains. The role-enforcement invariant
+that V5 tested via `firestore.rules` is now enforced server-side in `server/lib` (and must be
+maintained there); that layer has no automated test suite yet — a flagged follow-up gap.

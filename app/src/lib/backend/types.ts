@@ -1,6 +1,7 @@
 // BackendAdapter contract — the only interface app code may depend on.
-// AWS-SWAP: all platform concerns live behind this seam; swap the implementation,
-// not the callers.
+// Platform-agnostic seam: the app depends only on this contract; swap the
+// implementation, not the callers. The active implementation is the Azure host
+// adapter (azure.adapter.ts) — JWT auth, Cosmos data, and Foundry AI over /api/*.
 import type { Unsubscribe } from '@pf/shared'
 
 export type Tier = 'VIEWER' | 'ANALYST' | 'EDITOR' | 'ADMIN'
@@ -54,18 +55,12 @@ export interface BackendAdapter {
     /** Fires immediately with current user, then on every change. */
     onUser(cb: (user: AuthUser | null) => void): Unsubscribe
     changePassword(next: string): Promise<void>
-    /** Dev-only admin bypass — a fake ADMIN session with NO backend auth, for working
-     *  against the emulators. OPTIONAL and present ONLY in dev builds: the Firebase adapter
-     *  spreads it in behind an `import.meta.env.DEV` guard, so esbuild strips it (and its
-     *  name) from the production bundle. In production the property is absent — calling it
-     *  throws. Because there is no real token, security rules reject every read/write. */
-    signInAsDevAdmin?(): void
   }
   db: {
     get<T>(path: string): Promise<T | null>
     list<T>(path: string, q?: Query): Promise<T[]>
     /** Subscribe to a document or collection query. Returns unsubscribe fn. On a listener
-     *  error (e.g. permission-denied / offline) the data callback still degrades to `[]`/`null`
+     *  error (e.g. a failed poll / offline) the data callback still degrades to `[]`/`null`
      *  so consumers resolve their loading state; pass `onError` to ALSO surface a recoverable
      *  error state instead of a silent empty (see the subscribe-error gap in ELEVATION_MATRIX). */
     subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void, onError?: (err: unknown) => void): Unsubscribe
@@ -77,11 +72,11 @@ export interface BackendAdapter {
      *  and fully audited — never a raw write. No-op on an empty list. */
     mutateBatch(ms: MutationPayload[]): Promise<void>
     /** Narrow, un-audited vote: arrayUnion the uid into votes.voters and +1 votes.count.
-     *  Matches the VIEWER vote-only path in firestore.rules (only `votes` may change). */
+     *  Server-enforced narrow write — only `votes` may change; any authenticated role may vote. */
     vote(path: string, uid: string): Promise<void>
     /** Narrow, un-audited owner write to the caller's own `newsPrefs/{uid}` document.
      *  News is per-user content, not a governed entity, so pins persist WITHOUT the
-     *  mutate() audit/version envelope (and match the owner-only newsPrefs rule). MERGES,
+     *  mutate() audit/version envelope (server-enforced: the uid must equal the caller). MERGES,
      *  so a pin update never clobbers the instruction the editor writes to the same doc. */
     setNewsPins(uid: string, pinnedHashes: string[]): Promise<void>
     /** Rev-checked transaction wrapper for optimistic concurrency. */
@@ -92,7 +87,7 @@ export interface BackendAdapter {
     getUrl(path: string): Promise<string>
   }
   fns: {
-    /** Invoke a Firebase callable function. */
+    /** Invoke a server AI endpoint (POST /api/ai/<name>). */
     call<TIn, TOut>(name: string, data: TIn): Promise<TOut>
     /** Stream an SSE endpoint; calls onChunk for each text/event-stream line. Pass an
      *  AbortSignal to cancel the stream (unmount / conversation switch); an aborted

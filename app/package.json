@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node ../scripts/guard-backend.mjs development && vite",
-    "dev:emulator": "vite --mode emulator --port 5178 --strictPort",
+    "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
@@ -18,7 +17,6 @@
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@pf/shared": "workspace:*",
     "exceljs": "^4.4.0",
-    "firebase": "^11.9.0",
     "fuse.js": "^7.1.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

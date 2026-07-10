@@ -1,14 +1,20 @@
 # Product Reinvention Hub
 
-pnpm monorepo: `app/` (React/Vite) · `functions/` (Cloud Functions / AI) · `shared/` (types, rating, seed).
-Firebase backend (Firestore + Functions + Storage). See workspace guides below before touching any workspace.
+pnpm monorepo: `app/` (React/Vite) · `shared/` (types, rating, seed) · `server/` (Azure App
+Service host: Express + Cosmos + Foundry AI + Blob) · `functions/` (AI plumbing — retained as
+reference, not deployed; see [functions/CLAUDE.md](functions/CLAUDE.md)).
+Azure backend: the app talks to a same-origin `/api/*` host — JWT auth, Cosmos data, Foundry
+Claude AI, Blob storage. See workspace guides below before touching any workspace.
 
 ## Quick start
 
 ```sh
-pnpm dev:seed          # emulators + seed + Vite — one command, full local stack
-pnpm seed              # re-seed only (emulators must already be running)
+pnpm dev     # Vite dev server for the app (talks to the /api host; set VITE_API_BASE to point at one)
 ```
+
+The backend is the Azure App Service host in `server/` (Express + Cosmos + Foundry AI + Blob) —
+run it locally per [docs/DEPLOY_AZURE.md](docs/DEPLOY_AZURE.md). Seed Cosmos with the canonical
+PH/PA/GL dataset via `scripts/migrate-to-cosmos.ts` (see its header for the exact env + command).
 
 ## Gate — must stay green
 
@@ -32,10 +38,10 @@ Break any of these and the PR is blocked.
 
 | Invariant | Rule |
 |---|---|
-| **Adapter seam** | All app reads/writes go through `adapter` (`app/src/lib/backend/`). Never import Firebase SDK directly in components. |
-| **Atomic mutations** | Every entity write uses `adapter.db.mutate()`. It batches entity + auditEvent + version + searchIndex atomically. No bare Firestore writes. |
-| **Role enforcement** | `VIEWER` is read-only. Enforced in Firestore security rules **and** in every Function — both sides, always. |
-| **AI server-side** | All Anthropic calls live in `functions/`. The browser never calls the Anthropic API. |
+| **Adapter seam** | All app reads/writes go through `adapter` (`app/src/lib/backend/`). Never import a platform SDK (Cosmos/Firebase/etc.) directly in components. |
+| **Atomic mutations** | Every entity write uses `adapter.db.mutate()`. The `/api` host batches entity + auditEvent + version + searchIndex atomically in one Cosmos transactional batch (`server/lib/data.js`). No bare data-store writes. |
+| **Role enforcement** | `VIEWER` is read-only. Enforced server-side in the `/api` host role guards (`server/lib/auth.js` + `data.js`): every write is EDITOR+; always. |
+| **AI server-side** | All AI calls live server-side (the `/api/ai` host, backed by Foundry Claude). The browser never calls the model API. |
 | **AI grounded + cited** | AI responses must cite their source documents. Free invention is a bug. |
 | **refId / form chips** | `refId` and form-number chips are load-bearing display elements. Never strip them. |
 | **HO-3 $1,528 canary** | `shared/src/rating/evaluator.test.ts` must produce exactly $1,528. |
@@ -44,24 +50,21 @@ Break any of these and the PR is blocked.
 
 ## Environment safety
 
-Local dev and seed default to the **emulators**. Two guards stop a session from silently
-touching the live `productreinvention` project (see `docs/reviews/GROUND_TRUTH.md` V12):
+Production runs on Azure App Service (see [docs/DEPLOY_AZURE.md](docs/DEPLOY_AZURE.md) and
+`azure-pipelines.yml`): a push to `main` builds the Vite SPA, assembles the `server/` Express
+host (Cosmos + Foundry AI + Blob), and deploys it. The browser only ever talks to the same-origin
+`/api/*` host — it never holds a data-store or AI credential.
 
-- **Dev app** — `pnpm dev` runs `scripts/guard-backend.mjs` before Vite. It resolves the
-  effective `VITE_USE_EMULATORS` (Vite env-file precedence) and **refuses to start against live
-  Firebase unless `ALLOW_LIVE=1`**, printing the target backend either way. For the full local
-  stack use `pnpm dev:seed` with `VITE_USE_EMULATORS=true` in the gitignored
-  `app/.env.development.local`.
-- **Seed** — `scripts/seed.ts` targets emulators by default; the production path
-  (`--project productreinvention`) is refused unless `ALLOW_LIVE=1`, and still requires the
-  typed `seed-production` confirmation.
-
-**Storage-emulator exception:** when `VITE_USE_EMULATORS=true` the adapter points Auth,
-Firestore, Functions **and Storage** at the emulator (the "B8 footgun fix" in
-`app/src/lib/backend/firebase.adapter.ts`). Storage was historically the one service left on the
-LIVE bucket in emulator mode, so a local upload wrote production objects; it is now emulated
-alongside the rest. The only place a local flow still touches a real bucket by design is the
-production CORS helper (`pnpm cors:set` / `cors:get`), which operates on `gs://productreinvention.*`.
+- **Secrets are server-side only.** Cosmos (`COSMOS_ENDPOINT` / `COSMOS_KEY`), Foundry
+  (`AZURE_FOUNDRY_ENDPOINT` / `AZURE_FOUNDRY_KEY`) and Blob credentials live in App Service
+  configuration and are read from `process.env` in `server/lib/*`. Never embed them in code or the
+  client bundle.
+- **Local dev** points the app at a running host via `VITE_API_BASE` in the gitignored
+  `app/.env.development.local`; with it empty the app calls the same origin it is served from.
+- **Tenant isolation** is enforced server-side: every read/write is scoped to the JWT's
+  `tenantId` (partition key `${tenantId}|${base}` + a `c.tenantId` filter on every query).
+- **Seeding Cosmos** uses `scripts/migrate-to-cosmos.ts` — the canonical PH/PA/GL dataset, the
+  same one the $1,528 / $1,002 / $2,635 rating canaries are built on.
 
 ## ADRs
 
