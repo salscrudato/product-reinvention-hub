@@ -17,6 +17,7 @@ const { requireAuth } = require('./auth')
 const router = express.Router()
 const SVC = (process.env.AZURE_FOUNDRY_ENDPOINT || '').replace(/\/+$/, '')
 const OPENAI = SVC.replace('.services.ai.azure.com', '.openai.azure.com')
+const COG = SVC.replace('.services.ai.azure.com', '.cognitiveservices.azure.com')
 const KEY = process.env.AZURE_FOUNDRY_KEY
 const DEPLOYMENT = process.env.AZURE_FOUNDRY_DEPLOYMENT || 'claude-opus-4-8'
 const API_VERSION = process.env.AZURE_FOUNDRY_API_VERSION || '2024-08-01-preview'
@@ -27,10 +28,11 @@ function candidates(system, messages) {
   const anthropicBody = { model: DEPLOYMENT, max_tokens: 1024, system, messages: messages.map((m) => ({ role: m.role, content: m.content })) }
   const openaiBody = { model: DEPLOYMENT, max_tokens: 1024, messages: [{ role: 'system', content: system }, ...messages.map((m) => ({ role: m.role, content: m.content }))] }
   return [
-    { kind: 'openai', url: `${OPENAI}/openai/v1/chat/completions`, headers: { 'api-key': KEY }, body: openaiBody },
+    { kind: 'anthropic', url: `${COG}/anthropic/v1/messages?api-version=2023-06-01`, headers: { 'api-key': KEY, 'anthropic-version': '2023-06-01' }, body: anthropicBody },
     { kind: 'anthropic', url: `${SVC}/anthropic/v1/messages`, headers: { 'api-key': KEY, 'anthropic-version': '2023-06-01' }, body: anthropicBody },
+    { kind: 'openai', url: `${OPENAI}/openai/v1/chat/completions`, headers: { 'api-key': KEY }, body: openaiBody },
+    { kind: 'openai', url: `${COG}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-10-21`, headers: { 'api-key': KEY }, body: { messages: openaiBody.messages, max_tokens: 1024 } },
     { kind: 'openai', url: `${SVC}/models/chat/completions?api-version=${API_VERSION}`, headers: { 'api-key': KEY }, body: openaiBody },
-    { kind: 'openai', url: `${OPENAI}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`, headers: { 'api-key': KEY }, body: { messages: openaiBody.messages, max_tokens: 1024 } },
   ]
 }
 let cachedUrl = null // the first route that worked this process — tried first next time
@@ -38,20 +40,21 @@ let cachedUrl = null // the first route that worked this process — tried first
 async function callFoundry(system, messages) {
   const cands = candidates(system, messages)
   const order = cachedUrl ? [...cands].filter((c) => c.url === cachedUrl).concat(cands.filter((c) => c.url !== cachedUrl)) : cands
-  let lastErr = 'no route tried'
+  const errs = []
+  const host = (u) => u.replace('https://foundry-prodhub-dev', '').split('?')[0]
   for (const c of order) {
     try {
       const r = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...c.headers }, body: JSON.stringify(c.body), signal: AbortSignal.timeout(120_000) })
-      if (!r.ok) { lastErr = `${c.url.split('?')[0]} -> ${r.status} ${(await r.text()).slice(0, 160)}`; continue }
+      if (!r.ok) { errs.push(`${host(c.url)}=${r.status}:${(await r.text()).replace(/\s+/g, ' ').slice(0, 90)}`); continue }
       const j = await r.json()
       const text = c.kind === 'anthropic'
         ? (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('')
         : (j.choices?.[0]?.message?.content || '')
       if (text) { cachedUrl = c.url; return text }
-      lastErr = `${c.url.split('?')[0]} -> 200 but empty content`
-    } catch (e) { lastErr = `${c.url.split('?')[0]} -> ${String(e.message || e).slice(0, 120)}` }
+      errs.push(`${host(c.url)}=200-empty`)
+    } catch (e) { errs.push(`${host(c.url)}=ERR:${String(e.message || e).slice(0, 60)}`) }
   }
-  throw new Error(lastErr)
+  throw new Error(errs.join(' || '))
 }
 
 function sse(res) {
