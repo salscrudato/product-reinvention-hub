@@ -1,61 +1,29 @@
 'use strict'
 // ai.js — /api/ai/* : AI on the Azure host, backed by Azure AI Foundry (Claude).
 //
-// `chat` is a real grounded, cited answer: it retrieves context from Cosmos
-// (groundingChunks), instructs claude-opus-4-8 to cite the [refId]/[form] tags
-// present in that context, calls the Foundry deployment, and streams the answer
-// back in the app's SSE StreamEvent shape.
+// `chat` streams a real grounded, cited answer from the Foundry claude-opus-4-8
+// deployment. Foundry serves Claude on the ANTHROPIC-NATIVE surface:
+//   POST {resource}.services.ai.azure.com/anthropic/v1/messages
+//   headers: x-api-key: <key>, anthropic-version: 2023-06-01   (NO api-version query)
+// (per Microsoft Learn "Deploy and use Claude models in Microsoft Foundry").
+// So we speak the Anthropic Messages API directly and parse its SSE stream.
 //
-// Foundry exposes Claude over more than one route depending on how the resource
-// is provisioned, so the handler tries the known routes in order and uses the
-// first that answers (result cached per process). Honest 503 if unconfigured;
-// honest {t:'error'} if every route fails — never a fabricated answer.
+// Grounding: lexical context from Cosmos groundingChunks; the model is told to
+// cite the [refId]/[form] tags present in that context. Honest 503 if unset;
+// honest {t:'error'} (never a fabricated answer) on failure.
 
 const express = require('express')
 const { requireAuth } = require('./auth')
 
 const router = express.Router()
 const SVC = (process.env.AZURE_FOUNDRY_ENDPOINT || '').replace(/\/+$/, '')
-const OPENAI = SVC.replace('.services.ai.azure.com', '.openai.azure.com')
-const COG = SVC.replace('.services.ai.azure.com', '.cognitiveservices.azure.com')
 const KEY = process.env.AZURE_FOUNDRY_KEY
 const DEPLOYMENT = process.env.AZURE_FOUNDRY_DEPLOYMENT || 'claude-opus-4-8'
-const API_VERSION = process.env.AZURE_FOUNDRY_API_VERSION || '2024-08-01-preview'
+const ANTHROPIC_VERSION = process.env.AZURE_FOUNDRY_ANTHROPIC_VERSION || '2023-06-01'
 const configured = Boolean(SVC && KEY)
+const MESSAGES_URL = `${SVC}/anthropic/v1/messages`
 
-// Candidate routes, tried in order. `kind` selects request/response shape.
-function candidates(system, messages) {
-  const anthropicBody = { model: DEPLOYMENT, max_tokens: 1024, system, messages: messages.map((m) => ({ role: m.role, content: m.content })) }
-  const openaiBody = { model: DEPLOYMENT, max_tokens: 1024, messages: [{ role: 'system', content: system }, ...messages.map((m) => ({ role: m.role, content: m.content }))] }
-  return [
-    { kind: 'anthropic', url: `${COG}/anthropic/v1/messages?api-version=2023-06-01`, headers: { 'api-key': KEY, 'anthropic-version': '2023-06-01' }, body: anthropicBody },
-    { kind: 'anthropic', url: `${SVC}/anthropic/v1/messages`, headers: { 'api-key': KEY, 'anthropic-version': '2023-06-01' }, body: anthropicBody },
-    { kind: 'openai', url: `${OPENAI}/openai/v1/chat/completions`, headers: { 'api-key': KEY }, body: openaiBody },
-    { kind: 'openai', url: `${COG}/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-10-21`, headers: { 'api-key': KEY }, body: { messages: openaiBody.messages, max_tokens: 1024 } },
-    { kind: 'openai', url: `${SVC}/models/chat/completions?api-version=${API_VERSION}`, headers: { 'api-key': KEY }, body: openaiBody },
-  ]
-}
-let cachedUrl = null // the first route that worked this process — tried first next time
-
-async function callFoundry(system, messages) {
-  const cands = candidates(system, messages)
-  const order = cachedUrl ? [...cands].filter((c) => c.url === cachedUrl).concat(cands.filter((c) => c.url !== cachedUrl)) : cands
-  const errs = []
-  const host = (u) => u.replace('https://foundry-prodhub-dev', '').split('?')[0]
-  for (const c of order) {
-    try {
-      const r = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...c.headers }, body: JSON.stringify(c.body), signal: AbortSignal.timeout(120_000) })
-      if (!r.ok) { errs.push(`${host(c.url)}=${r.status}:${(await r.text()).replace(/\s+/g, ' ').slice(0, 90)}`); continue }
-      const j = await r.json()
-      const text = c.kind === 'anthropic'
-        ? (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('')
-        : (j.choices?.[0]?.message?.content || '')
-      if (text) { cachedUrl = c.url; return text }
-      errs.push(`${host(c.url)}=200-empty`)
-    } catch (e) { errs.push(`${host(c.url)}=ERR:${String(e.message || e).slice(0, 60)}`) }
-  }
-  throw new Error(errs.join(' || '))
-}
+console.log(`[prodhub-host] AI configured=${configured} url=${MESSAGES_URL} deployment=${DEPLOYMENT}`)
 
 function sse(res) {
   res.setHeader('Content-Type', 'text/event-stream')
@@ -92,19 +60,51 @@ router.post('/:name', requireAuth, async (req, res) => {
   if (name !== 'chat') return res.status(501).json({ error: 'ai_handler_not_ported', name })
 
   const body = req.body || {}
-  const msgs = Array.isArray(body.messages) ? body.messages : []
+  const msgs = (Array.isArray(body.messages) ? body.messages : [])
+    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && m.content)
+    .map((m) => ({ role: m.role, content: String(m.content) }))
   const lastUser = [...msgs].reverse().find((m) => m.role === 'user')?.content || ''
   sse(res)
   try {
     const ctx = await grounding(lastUser, body.productId)
     const system = `${SYSTEM}\n\nCONTEXT:\n${ctx.length ? ctx.join('\n\n---\n\n') : '(no matching context found)'}`
-    const text = await callFoundry(system, msgs)
-    // Emit in sentence-ish chunks so the UI renders progressively.
-    for (const part of text.match(/[^.!?]+[.!?]*\s*/g) || [text]) emit(res, { t: 'token', v: part })
+    const upstream = await fetch(MESSAGES_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': KEY, 'anthropic-version': ANTHROPIC_VERSION },
+      body: JSON.stringify({ model: DEPLOYMENT, max_tokens: 1024, system, stream: true, messages: msgs.length ? msgs : [{ role: 'user', content: 'Hello' }] }),
+      signal: AbortSignal.timeout(120_000),
+    })
+    if (!upstream.ok || !upstream.body) {
+      const detail = (await upstream.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
+      emit(res, { t: 'error', message: `Foundry ${upstream.status}: ${detail}` })
+      emit(res, { t: 'done' }); return res.end()
+    }
+    // Anthropic Messages SSE: data lines carry {type:'content_block_delta', delta:{type:'text_delta', text}}.
+    const reader = upstream.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const lines = buf.split('\n')
+      buf = lines.pop() ?? ''
+      for (const line of lines) {
+        const s = line.trim()
+        if (!s.startsWith('data:')) continue
+        const payload = s.slice(5).trim()
+        if (!payload || payload === '[DONE]') continue
+        try {
+          const j = JSON.parse(payload)
+          if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta' && j.delta.text) emit(res, { t: 'token', v: j.delta.text })
+          else if (j.type === 'error') emit(res, { t: 'error', message: j.error?.message || 'stream error' })
+        } catch { /* keep-alive / partial */ }
+      }
+    }
     emit(res, { t: 'done' })
     res.end()
   } catch (err) {
-    emit(res, { t: 'error', message: `AI error: ${String(err.message || err).slice(0, 260)}` })
+    emit(res, { t: 'error', message: `AI error: ${String(err.message || err).slice(0, 220)}` })
     emit(res, { t: 'done' })
     res.end()
   }
