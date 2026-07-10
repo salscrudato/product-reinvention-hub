@@ -7,6 +7,13 @@
 // resolves through here rather than hard-coding line-specific logic. Both Personal
 // Home and Personal Auto are fully described (each has a seed reference product).
 // Pure TypeScript — zero platform imports.
+//
+// lineIntelligence: the optional LineArchetype that extends each LobDefinition with
+// the full Line Intelligence vocabulary (exposure bases, trigger types, limit structures,
+// rating-stage archetypes, document fingerprints, translation recipe). Populated by
+// lines/registry.ts after module initialisation — no circular import because this file
+// only imports the LineArchetype TYPE from lines/types.ts, not any values.
+import type { LineArchetype } from '../lines/types'
 
 // Personal vs Commercial market vertical; Property vs Casualty vs Automobile family.
 export type MarketVertical = 'Personal Lines' | 'Commercial Lines'
@@ -68,6 +75,10 @@ export interface LobDefinition {
   // the segmentation UI derives its facets from the registry rather than hard-coding
   // them. Adding a line automatically extends the Market-segment facet.
   marketSegments:       readonly string[]
+  // Extended Line Intelligence vocabulary — populated by lines/registry.ts after
+  // module initialisation. Optional so LOB_REGISTRY entries are valid before the
+  // augmentation runs and so unregistered virtual families need no LobDefinition.
+  lineIntelligence?:    LineArchetype
 }
 
 // ─── Personal Home (fully described — the seed reference line) ────────────────

@@ -37,6 +37,8 @@ export * from './gtm/types'
 export * from './gtm/schedule'
 export * from './gtm/processExplorer'
 export * from './seed/gtmProcess'
+// Line Intelligence Registry — pure data archetypes for all P&C families.
+export * from './lines'
 // Product Data Model (neutral, lossless) + deterministic Duck Creek export.
 export * from './pdm/types'
 export * from './pdm/build'
