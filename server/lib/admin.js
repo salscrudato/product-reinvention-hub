@@ -13,6 +13,9 @@ const router = express.Router()
 router.use(requireRole('ADMIN'))
 
 const slug = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
+// Usernames preserve dots/underscores (e.g. sal.scrudato) so the login identifier
+// matches what's stored — only lowercase + strip disallowed chars.
+const userId = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '')
 
 // ─── tenants ─────────────────────────────────────────────────────────────────
 router.get('/tenants', async (_req, res) => {
@@ -41,7 +44,7 @@ router.get('/users', async (_req, res) => {
 })
 router.post('/users', async (req, res) => {
   const { username, password, role, tenants, email, name } = req.body || {}
-  const u = slug(username)
+  const u = userId(username)
   if (!u) return res.status(400).json({ error: 'username_required' })
   if (RANK[role] === undefined) return res.status(400).json({ error: 'invalid_role', valid: Object.keys(RANK) })
   if (tenants !== '*' && !Array.isArray(tenants)) return res.status(400).json({ error: 'tenants_must_be_array_or_star' })
@@ -58,7 +61,7 @@ router.post('/users', async (req, res) => {
   res.json({ ok: true, user: safe })
 })
 router.delete('/users/:username', async (req, res) => {
-  try { await docs.item(`user:${slug(req.params.username)}`, '__system__').delete() } catch { /* idempotent */ }
+  try { await docs.item(`user:${userId(req.params.username)}`, '__system__').delete() } catch { /* idempotent */ }
   res.json({ ok: true })
 })
 
