@@ -8,6 +8,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
+import type { TenantInfo } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Logo } from '../components/ui'
 import { Input } from '../components/ui/Input'
@@ -192,21 +193,32 @@ function HeroSignIn() {
   const navigate = useNavigate()
   const [email,    setEmail]    = useState('')
   const [pass,     setPass]     = useState('')
+  const [tenant,   setTenant]   = useState('')
+  const [tenants,  setTenants]  = useState<TenantInfo[]>([])
   const [showPass, setShowPass] = useState(false)
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
+
+  // Populate the tenant (company) dropdown. Public list — ids + names only.
+  useEffect(() => {
+    adapter.auth.listTenants().then(setTenants).catch(() => setTenants([]))
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await adapter.auth.signIn(email.trim(), pass)
+      await adapter.auth.signIn(email.trim(), pass, tenant || undefined)
       navigate('/app', { replace: true })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sign-in failed'
-      if (msg.includes('invalid-credential') || msg.includes('wrong-password') || msg.includes('user-not-found')) {
+      if (msg.includes('unauthenticated') || msg.includes('401') || msg.includes('invalid-credential')) {
         setError('Invalid username or password.')
+      } else if (msg.includes('400')) {
+        setError('Select your company to sign in.')
+      } else if (msg.includes('403')) {
+        setError("You don't have access to that company.")
       } else if (msg.includes('too-many-requests')) {
         setError('Too many attempts — try again in a moment.')
       } else {
@@ -223,6 +235,20 @@ function HeroSignIn() {
         label="Username" type="text" value={email} onChange={e => setEmail(e.target.value)}
         placeholder="first name" autoComplete="username" required disabled={loading}
       />
+
+      {tenants.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-text" htmlFor="signin-tenant">Company</label>
+          <select
+            id="signin-tenant" value={tenant} onChange={e => setTenant(e.target.value)} disabled={loading}
+            className="h-11 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            style={{ borderColor: 'var(--color-border-strong)' }}
+          >
+            <option value="">Select company…</option>
+            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+      )}
 
       {/* Password with show/hide toggle */}
       <div className="relative">

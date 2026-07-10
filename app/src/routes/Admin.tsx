@@ -3,12 +3,13 @@
 // report, AI cost telemetry, and local app settings.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { IconShield, IconPlus, IconUserX, IconUserCheck, IconSearch, IconFileClock, IconClose, IconWarning } from '../components/ui/icons'
+import { IconShield, IconPlus, IconUserX, IconSearch, IconFileClock, IconWarning } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
+import type { ManagedUser, TenantInfo, Tier } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
 import { DEFAULT_BUDGET } from '@pf/shared'
-import type { User, AuditEvent, Version, SeedReport, Role } from '@pf/shared'
+import type { AuditEvent, Version, SeedReport } from '@pf/shared'
 
 // Headline cost-program result (projected — mirrors docs/review/COST_REPORT.md). No live
 // Anthropic key exists in this environment, so these are structural projections from the
@@ -36,7 +37,6 @@ interface AiUsageDoc {
   at:               unknown
 }
 
-type UserDoc      = User & { id: string }
 type AuditDoc     = AuditEvent & { id: string }
 type VersionDoc   = Version & { id: string }
 type SeedReportDoc = SeedReport & { id: string }
@@ -71,6 +71,7 @@ export default function Admin() {
       </div>
       <Tabs
         tabs={[
+          { id: 'tenants',  label: 'Tenants'      },
           { id: 'users',    label: 'Users'       },
           { id: 'audit',    label: 'Audit Log'    },
           { id: 'seed',     label: 'Seed Report'  },
@@ -79,6 +80,7 @@ export default function Admin() {
         ]}
         active={tab} onChange={setTab}
       />
+      {tab === 'tenants'  && <TenantsTab />}
       {tab === 'users'    && <UsersTab />}
       {tab === 'audit'    && <AuditTab />}
       {tab === 'seed'     && <SeedTab />}
@@ -90,113 +92,127 @@ export default function Admin() {
 
 // ─── Users ──────────────────────────────────────────────────────────────────
 
-const ROLES: Role[] = ['ADMIN', 'EDITOR', 'VIEWER']
-const roleColor: Record<Role, 'purple' | 'blue' | 'default'> = { ADMIN: 'purple', EDITOR: 'blue', VIEWER: 'default' }
+const TIERS: Tier[] = ['VIEWER', 'ANALYST', 'EDITOR', 'ADMIN']
+const tierColor: Record<Tier, 'purple' | 'blue' | 'good' | 'default'> = { ADMIN: 'purple', EDITOR: 'blue', ANALYST: 'good', VIEWER: 'default' }
+const TIER_HELP = 'VIEWER = read · ANALYST = read + AI · EDITOR = edit + AI · ADMIN = full (tenants + users)'
 
-function UsersTab() {
-  const [users,    setUsers]    = useState<UserDoc[] | null>(null)
+// ─── Tenants ──────────────────────────────────────────────────────────────
+function TenantsTab() {
+  const [tenants, setTenants] = useState<TenantInfo[] | null>(null)
   const [creating, setCreating] = useState(false)
-  const [query,    setQuery]    = useState('')
-  const [draft, setDraft] = useState({ email: '', name: '', password: '', role: 'VIEWER' as Role })
+  const [draft, setDraft] = useState({ name: '', id: '' })
   const [busy, setBusy] = useState(false)
+  const load = () => adapter.tenancy.listTenants().then(setTenants).catch(() => setTenants([]))
+  useEffect(() => { load() }, [])
 
-  useEffect(() => {
-    const unsub = adapter.db.subscribe<UserDoc>('users', d => { if (Array.isArray(d)) setUsers(d) })
-    return unsub
-  }, [])
-
-  async function call(data: Record<string, unknown>, ok: string) {
+  async function create() {
+    if (!draft.name) { toast.error('Company name required'); return }
     setBusy(true)
-    try { await adapter.fns.call('setUserRole', data); toast.success(ok) }
-    catch (err) { toast.error(err instanceof Error ? err.message : 'Action failed') }
-    finally { setBusy(false) }
+    try { await adapter.tenancy.createTenant(draft.id || draft.name, draft.name); toast.success('Tenant created'); setCreating(false); setDraft({ name: '', id: '' }); load() }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') } finally { setBusy(false) }
+  }
+  async function remove(id: string) {
+    if (!window.confirm(`Remove tenant "${id}"? Its data stays partitioned but becomes inaccessible.`)) return
+    try { await adapter.tenancy.deleteTenant(id); toast.success('Tenant removed'); load() } catch { toast.error('Failed') }
   }
 
-  async function createUser() {
-    if (!draft.email || !draft.password) { toast.error('Email and password required'); return }
-    await call({ action: 'create', ...draft }, 'User created')
-    setCreating(false); setDraft({ email: '', name: '', password: '', role: 'VIEWER' })
-  }
-
-  const USER_DISPLAY_CAP = 100
-  // Instant typeahead over name + email; display is capped at USER_DISPLAY_CAP entries.
-  const filtered = useMemo(() => {
-    if (!users) return null
-    const q = query.toLowerCase().trim()
-    const matched = q
-      ? users.filter(u => u.name?.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
-      : users
-    return matched.slice(0, USER_DISPLAY_CAP)
-  }, [users, query])
-  const usersOverCap = (users?.length ?? 0) > USER_DISPLAY_CAP && !query.trim()
-
-  if (users === null) return <div className="flex flex-col gap-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
-
+  if (tenants === null) return <Skeleton className="h-24" />
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <IconSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" aria-hidden="true" />
-          <input
-            className="w-full h-8 pl-8 pr-3 rounded-[8px] bg-surface border border-border-strong text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
-            placeholder="Search users…"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            aria-label="Search users"
-          />
-          {query && (
-            <button onClick={() => setQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-faint hover:text-dim" aria-label="Clear search">
-              <IconClose size={12} />
-            </button>
-          )}
-        </div>
-        <Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New user</Button>
-      </div>
-      <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-        {(filtered ?? []).map(u => (
-          <div key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
-            <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'var(--gradient-accent)' }}>
-              {(u.name || u.email).slice(0, 2).toUpperCase()}
-            </span>
-            <div className="flex-1 min-w-[160px]">
-              <div className="text-sm font-medium text-text">{u.name || '—'}</div>
-              <div className="text-xs text-faint font-mono">{u.email}</div>
+      <div className="flex items-center"><Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New tenant</Button></div>
+      {tenants.length === 0 ? (
+        <EmptyState icon={<IconShield size={26} />} title="No tenants yet" description="Create a tenant to load a company's isolated data. Each tenant is a securely separated database." />
+      ) : (
+        <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+          {tenants.map(t => (
+            <div key={t.id} className="flex items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <div className="flex-1"><div className="text-sm font-medium text-text">{t.name}</div><div className="text-xs text-faint font-mono">{t.id}</div></div>
+              <Button variant="ghost" size="sm" onClick={() => remove(t.id)}><IconUserX size={13} /> Remove</Button>
             </div>
-            {!u.active && <Badge label="deactivated" color="danger" />}
-            <select value={u.role} disabled={busy} aria-label={`Role for ${u.email}`}
-              onChange={e => call({ action: 'setRole', uid: u.id, role: e.target.value }, 'Role updated')}
-              className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-text focus:outline-none" style={{ borderColor: 'var(--color-border)' }}>
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            <Badge label={u.role} color={roleColor[u.role]} />
-            {u.active
-              ? <Button variant="ghost" size="sm" disabled={busy} onClick={() => call({ action: 'deactivate', uid: u.id }, 'User deactivated')}><IconUserX size={13} /> Deactivate</Button>
-              : <Button variant="ghost" size="sm" disabled={busy} onClick={() => call({ action: 'reactivate', uid: u.id }, 'User reactivated')}><IconUserCheck size={13} /> Reactivate</Button>}
+          ))}
+        </div>
+      )}
+      <Dialog open={creating} onClose={() => setCreating(false)} title="New tenant">
+        <div className="flex flex-col gap-4">
+          <Input label="Company name" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Acme Insurance" autoFocus />
+          <Input label="Tenant id (optional)" value={draft.id} onChange={e => setDraft({ ...draft, id: e.target.value })} placeholder="auto-derived from name if blank" />
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" size="sm" onClick={() => setCreating(false)} disabled={busy}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={create} disabled={busy || !draft.name}>{busy ? 'Creating…' : 'Create tenant'}</Button>
           </div>
-        ))}
-        {filtered?.length === 0 && (
-          <div className="px-4 py-6 text-center text-sm text-faint">No users match "{query}".</div>
-        )}
-        {usersOverCap && (
-          <div className="px-4 py-2 text-center text-xs text-faint">Showing first {USER_DISPLAY_CAP} of {users?.length} users. Use the search box to narrow results.</div>
-        )}
-      </div>
+        </div>
+      </Dialog>
+    </div>
+  )
+}
 
+// ─── Users ──────────────────────────────────────────────────────────────────
+function UsersTab() {
+  const [users, setUsers] = useState<ManagedUser[] | null>(null)
+  const [tenants, setTenants] = useState<TenantInfo[]>([])
+  const [creating, setCreating] = useState(false)
+  const [draft, setDraft] = useState<{ username: string; password: string; role: Tier; tenant: string }>({ username: '', password: '', role: 'VIEWER', tenant: '' })
+  const [busy, setBusy] = useState(false)
+  const load = () => adapter.tenancy.listUsers().then(setUsers).catch(() => setUsers([]))
+  useEffect(() => { load(); adapter.tenancy.listTenants().then(setTenants).catch(() => {}) }, [])
+
+  async function create() {
+    if (!draft.username || !draft.password) { toast.error('Username and password required'); return }
+    setBusy(true)
+    try {
+      await adapter.tenancy.createUser({ username: draft.username, password: draft.password, role: draft.role, tenants: draft.tenant ? [draft.tenant] : [] })
+      toast.success('User created'); setCreating(false); setDraft({ username: '', password: '', role: 'VIEWER', tenant: '' }); load()
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') } finally { setBusy(false) }
+  }
+  async function remove(u: string) {
+    if (!window.confirm(`Delete user "${u}"?`)) return
+    try { await adapter.tenancy.deleteUser(u); toast.success('User deleted'); load() } catch { toast.error('Failed') }
+  }
+
+  if (users === null) return <Skeleton className="h-24" />
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center"><Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New user</Button></div>
+      {users.length === 0 ? (
+        <EmptyState icon={<IconShield size={26} />} title="No gated users yet" description="Bootstrap admins (admin, sal.scrudato) are always available. Create tenant-gated users here — each with a username, password, role and company." />
+      ) : (
+        <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+          {users.map(u => (
+            <div key={u.username} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'var(--gradient-accent)' }}>{u.username.slice(0, 2).toUpperCase()}</span>
+              <div className="flex-1 min-w-[140px]">
+                <div className="text-sm font-medium text-text">{u.username}</div>
+                <div className="text-xs text-faint font-mono">{u.tenants === '*' ? 'all tenants' : ((u.tenants || []).join(', ') || '— no tenant —')}</div>
+              </div>
+              <Badge label={u.role} color={tierColor[u.role]} />
+              <Button variant="ghost" size="sm" onClick={() => remove(u.username)}><IconUserX size={13} /> Delete</Button>
+            </div>
+          ))}
+        </div>
+      )}
       <Dialog open={creating} onClose={() => setCreating(false)} title="New user">
         <div className="flex flex-col gap-4">
-          <Input label="Email" type="email" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })} placeholder="person@company.com" autoFocus />
-          <Input label="Name" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Full name" />
-          <Input label="Temporary password" type="text" value={draft.password} onChange={e => setDraft({ ...draft, password: e.target.value })} placeholder="min 6 characters" />
+          <Input label="Username" value={draft.username} onChange={e => setDraft({ ...draft, username: e.target.value })} placeholder="jane.doe" autoFocus />
+          <Input label="Password" type="text" value={draft.password} onChange={e => setDraft({ ...draft, password: e.target.value })} placeholder="set a password" />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-text" htmlFor="new-role">Role</label>
-            <select id="new-role" value={draft.role} onChange={e => setDraft({ ...draft, role: e.target.value as Role })}
+            <select id="new-role" value={draft.role} onChange={e => setDraft({ ...draft, role: e.target.value as Tier })}
               className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none" style={{ borderColor: 'var(--color-border-strong)' }}>
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              {TIERS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <p className="text-xs text-faint">{TIER_HELP}</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-text" htmlFor="new-tenant">Company (tenant)</label>
+            <select id="new-tenant" value={draft.tenant} onChange={e => setDraft({ ...draft, tenant: e.target.value })}
+              className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none" style={{ borderColor: 'var(--color-border-strong)' }}>
+              <option value="">— select company —</option>
+              {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" size="sm" onClick={() => setCreating(false)} disabled={busy}>Cancel</Button>
-            <Button variant="primary" size="sm" onClick={createUser} disabled={busy || !draft.email || !draft.password}>{busy ? 'Creating…' : 'Create user'}</Button>
+            <Button variant="primary" size="sm" onClick={create} disabled={busy || !draft.username || !draft.password}>{busy ? 'Creating…' : 'Create user'}</Button>
           </div>
         </div>
       </Dialog>

@@ -13,7 +13,7 @@
 // honest {t:'error'} (never a fabricated answer) on failure.
 
 const express = require('express')
-const { requireAuth } = require('./auth')
+const { requireRole, requireTenant } = require('./auth')
 
 const router = express.Router()
 const SVC = (process.env.AZURE_FOUNDRY_ENDPOINT || '').replace(/\/+$/, '')
@@ -39,13 +39,12 @@ const SYSTEM = [
   'Every substantive claim MUST cite its source using the bracketed reference tags that appear in the context, e.g. [PH.PROD.001] or a form-number tag. Do not fabricate reference tags.',
 ].join(' ')
 
-async function grounding(query, productId) {
+async function grounding(query, productId, tenantId) {
   try {
     const { docs } = require('./cosmos')
-    const sql = productId
-      ? "SELECT c.data FROM c WHERE c.kind='entity' AND c.coll='groundingChunks' AND c.data.productId=@pid"
-      : "SELECT c.data FROM c WHERE c.kind='entity' AND c.coll='groundingChunks'"
-    const params = productId ? [{ name: '@pid', value: productId }] : []
+    const params = [{ name: '@tid', value: tenantId }]
+    let sql = "SELECT c.data FROM c WHERE c.kind='entity' AND c.coll='groundingChunks' AND c.tenantId=@tid"
+    if (productId) { sql += ' AND c.data.productId=@pid'; params.push({ name: '@pid', value: productId }) }
     const { resources } = await docs.items.query({ query: sql, parameters: params }, { maxItemCount: 500 }).fetchAll()
     const terms = String(query || '').toLowerCase().split(/\W+/).filter((t) => t.length > 2)
     return resources
@@ -54,7 +53,7 @@ async function grounding(query, productId) {
   } catch (e) { console.warn('[ai] grounding failed:', e.message); return [] }
 }
 
-router.post('/:name', requireAuth, async (req, res) => {
+router.post('/:name', requireRole('ANALYST'), requireTenant, async (req, res) => {
   const name = req.params.name
   if (!configured) return res.status(503).json({ error: 'ai_not_configured', name })
   if (name !== 'chat') return res.status(501).json({ error: 'ai_handler_not_ported', name })
@@ -66,7 +65,7 @@ router.post('/:name', requireAuth, async (req, res) => {
   const lastUser = [...msgs].reverse().find((m) => m.role === 'user')?.content || ''
   sse(res)
   try {
-    const ctx = await grounding(lastUser, body.productId)
+    const ctx = await grounding(lastUser, body.productId, req.user.tenantId)
     const system = `${SYSTEM}\n\nCONTEXT:\n${ctx.length ? ctx.join('\n\n---\n\n') : '(no matching context found)'}`
     const upstream = await fetch(MESSAGES_URL, {
       method: 'POST',

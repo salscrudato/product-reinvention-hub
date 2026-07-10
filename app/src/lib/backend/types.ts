@@ -3,12 +3,19 @@
 // not the callers.
 import type { Unsubscribe } from '@pf/shared'
 
+export type Tier = 'VIEWER' | 'ANALYST' | 'EDITOR' | 'ADMIN'
+
 export interface AuthUser {
   uid: string
   email: string | null
   name: string | null
-  role: 'VIEWER' | 'EDITOR' | 'ADMIN' | null
+  role: Tier | null
+  /** The tenant this session is scoped to (null for a tenant-less admin session). */
+  tenantId?: string | null
 }
+
+export interface TenantInfo { id: string; name: string; createdAt?: string; createdBy?: string }
+export interface ManagedUser { username: string; role: Tier; tenants: string[] | '*'; email?: string; name?: string }
 
 export interface Session {
   user: AuthUser
@@ -40,7 +47,9 @@ export class MutationConflictError extends Error {
 
 export interface BackendAdapter {
   auth: {
-    signIn(email: string, password: string): Promise<Session>
+    signIn(email: string, password: string, tenant?: string): Promise<Session>
+    /** Tenants offered on the login screen (ids + names only; safe pre-auth). */
+    listTenants(): Promise<TenantInfo[]>
     signOut(): Promise<void>
     /** Fires immediately with current user, then on every change. */
     onUser(cb: (user: AuthUser | null) => void): Unsubscribe
@@ -95,5 +104,14 @@ export interface BackendAdapter {
     join(pid: string): Unsubscribe
     /** Watch presence for a product; returns unsubscribe fn. */
     watch(pid: string, cb: (viewerUids: string[]) => void): Unsubscribe
+  }
+  /** Platform administration (ADMIN only, server-enforced): tenants + gated users. */
+  tenancy: {
+    listTenants(): Promise<TenantInfo[]>
+    createTenant(id: string, name: string): Promise<void>
+    deleteTenant(id: string): Promise<void>
+    listUsers(): Promise<ManagedUser[]>
+    createUser(u: ManagedUser & { password?: string }): Promise<void>
+    deleteUser(username: string): Promise<void>
   }
 }

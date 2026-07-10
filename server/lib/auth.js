@@ -1,126 +1,142 @@
 'use strict'
-// auth.js — fast username/password → JWT auth for the Azure host.
+// auth.js — username/password + TENANT → JWT auth with a 4-tier role model.
 //
-// Replaces Firebase Auth. Hardcoded users (dev-grade, sandbox) with the same
-// VIEWER/EDITOR/ADMIN role matrix the app already enforces. HS256 JWTs are
-// signed/verified here with node:crypto — no external dependency, no GCloud.
+// Roles (rank): VIEWER < ANALYST < EDITOR < ADMIN
+//   VIEWER  — read only
+//   ANALYST — read + AI (chat/claims)
+//   EDITOR  — read + write + AI
+//   ADMIN   — everything, incl. creating/managing tenants, users and roles
 //
-// Change users or the signing secret in ONE place: the USERS map below and the
-// AUTH_JWT_SECRET app setting. Passwords are intentionally simple for the
-// sandbox; rotate before any real use.
+// Tenancy: every session is bound to a tenantId (carried in the JWT). The data
+// layer scopes ALL reads/writes to that tenant, so companies are isolated.
+// Bootstrap admins (admin / sal.scrudato) can access ALL tenants and may sign in
+// tenant-less to bootstrap the platform. Additional users live in Cosmos
+// (kind:'user', pk:'__system__'), managed by admins via /api/admin/users.
 
 const crypto = require('crypto')
 
 const SECRET = process.env.AUTH_JWT_SECRET || 'dev-insecure-secret-change-me'
-const TTL_SECONDS = 12 * 60 * 60 // 12h
+const TTL_SECONDS = 12 * 60 * 60
 
-// username → { password, role, name, email }. Also matchable by email.
-const USERS = {
-  admin: { password: 'admin', role: 'ADMIN', name: 'Admin', email: 'admin@prodhub.local' },
-  'sal.scrudato': { password: 'sal.scrudato', role: 'ADMIN', name: 'Sal Scrudato', email: 'salvatore.scrudato@accenture.com' },
-  'rebecca.freeman': { password: 'rebecca.freeman', role: 'EDITOR', name: 'Rebecca Freeman', email: 'rebecca.freeman@accenture.com' },
-  viewer: { password: 'viewer', role: 'VIEWER', name: 'Viewer', email: 'viewer@prodhub.local' },
+const RANK = { VIEWER: 0, ANALYST: 1, EDITOR: 2, ADMIN: 3 }
+
+// Bootstrap users — always present so the platform is never locked out. `tenants: '*'`
+// means all-tenants (and may sign in tenant-less to manage). Passwords are dev-grade.
+const BOOTSTRAP = {
+  admin: { password: 'admin', role: 'ADMIN', name: 'Admin', email: 'admin@prodhub.local', tenants: '*' },
+  'sal.scrudato': { password: 'sal.scrudato', role: 'ADMIN', name: 'Sal Scrudato', email: 'salvatore.scrudato@accenture.com', tenants: '*' },
 }
-// In-process password overrides (changePassword). Non-persistent by design.
-const overrides = new Map()
+const overrides = new Map() // in-process password overrides (changePassword)
 
-const RANK = { VIEWER: 0, EDITOR: 1, ADMIN: 2 }
-
-// ─── base64url + HS256 JWT (hand-rolled) ────────────────────────────────────
+// ─── base64url HS256 JWT ─────────────────────────────────────────────────────
 const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-const b64urlJson = (obj) => b64url(JSON.stringify(obj))
-function fromB64url(s) { return Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64') }
+const fromB64url = (s) => Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
 
 function sign(payload) {
   const now = Math.floor(Date.now() / 1000)
-  const body = { ...payload, iat: now, exp: now + TTL_SECONDS }
-  const head = b64urlJson({ alg: 'HS256', typ: 'JWT' })
-  const data = `${head}.${b64urlJson(body)}`
-  const sig = b64url(crypto.createHmac('sha256', SECRET).update(data).digest())
-  return `${data}.${sig}`
+  const head = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const data = `${head}.${b64url(JSON.stringify({ ...payload, iat: now, exp: now + TTL_SECONDS }))}`
+  return `${data}.${b64url(crypto.createHmac('sha256', SECRET).update(data).digest())}`
 }
-
 function verify(token) {
-  const parts = String(token || '').split('.')
-  if (parts.length !== 3) return null
-  const [head, body, sig] = parts
-  const expected = b64url(crypto.createHmac('sha256', SECRET).update(`${head}.${body}`).digest())
-  const a = Buffer.from(sig), b = Buffer.from(expected)
+  const p = String(token || '').split('.')
+  if (p.length !== 3) return null
+  const expected = b64url(crypto.createHmac('sha256', SECRET).update(`${p[0]}.${p[1]}`).digest())
+  const a = Buffer.from(p[2]), b = Buffer.from(expected)
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null
-  let payload
-  try { payload = JSON.parse(fromB64url(body).toString('utf8')) } catch { return null }
+  let payload; try { payload = JSON.parse(fromB64url(p[1]).toString('utf8')) } catch { return null }
   if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) return null
   return payload
 }
 
-// ─── user lookup ────────────────────────────────────────────────────────────
-function findUser(identifier) {
+// ─── user + tenant lookups (Cosmos overlay on bootstrap) ─────────────────────
+function systemContainer() {
+  try { return require('./cosmos').docs } catch { return null }
+}
+async function findUser(identifier) {
   const id = String(identifier || '').trim().toLowerCase()
-  if (USERS[id]) return { username: id, ...USERS[id] }
-  for (const [username, u] of Object.entries(USERS)) {
-    if (u.email.toLowerCase() === id) return { username, ...u }
+  // Cosmos users first (admin-created), then bootstrap.
+  const docs = systemContainer()
+  if (docs) {
+    try {
+      const { resources } = await docs.items.query({
+        query: "SELECT c.data FROM c WHERE c.pk='__system__' AND c.kind='user' AND (c.data.username=@id OR LOWER(c.data.email)=@id)",
+        parameters: [{ name: '@id', value: id }],
+      }).fetchAll()
+      if (resources[0]) return { source: 'cosmos', ...resources[0].data }
+    } catch { /* fall through to bootstrap */ }
   }
+  if (BOOTSTRAP[id]) return { source: 'bootstrap', username: id, ...BOOTSTRAP[id] }
+  for (const [u, v] of Object.entries(BOOTSTRAP)) if (v.email.toLowerCase() === id) return { source: 'bootstrap', username: u, ...v }
   return null
 }
-function currentPassword(username) {
-  return overrides.has(username) ? overrides.get(username) : USERS[username]?.password
+async function listTenants() {
+  const docs = systemContainer()
+  if (!docs) return []
+  try {
+    const { resources } = await docs.items.query({ query: "SELECT c.data FROM c WHERE c.pk='__system__' AND c.kind='tenant'" }).fetchAll()
+    return resources.map((r) => ({ id: r.data.tenantId, name: r.data.name })).sort((a, b) => a.name.localeCompare(b.name))
+  } catch { return [] }
 }
+
+function allowedTenant(user, tenant) {
+  if (user.tenants === '*') return true
+  if (!tenant) return false
+  return Array.isArray(user.tenants) && user.tenants.includes(tenant)
+}
+const currentPassword = (u) => (overrides.has(u.username) ? overrides.get(u.username) : u.password)
+const toAuthUser = (u, tenantId) => ({ uid: u.username, email: u.email || null, name: u.name || u.username, role: u.role, tenantId: tenantId || null })
 
 // ─── express handlers + middleware ──────────────────────────────────────────
-function login(req, res) {
-  const { email, username, password } = req.body || {}
-  const u = findUser(email || username)
-  if (!u || currentPassword(u.username) !== String(password ?? '')) {
-    return res.status(401).json({ error: 'invalid_credentials' })
-  }
-  const token = sign({ sub: u.username, name: u.name, email: u.email, role: u.role })
-  return res.json({ user: toAuthUser(u), token })
+async function login(req, res) {
+  const { email, username, password, tenant } = req.body || {}
+  const u = await findUser(email || username)
+  if (!u || currentPassword(u) !== String(password ?? '')) return res.status(401).json({ error: 'invalid_credentials' })
+  // Non-admins must select a tenant they belong to. Admins may sign in tenant-less to manage.
+  const tid = tenant || null
+  if (tid && !allowedTenant(u, tid)) return res.status(403).json({ error: 'tenant_forbidden' })
+  if (!tid && u.role !== 'ADMIN') return res.status(400).json({ error: 'tenant_required' })
+  const token = sign({ sub: u.username, name: u.name || u.username, email: u.email || null, role: u.role, tenantId: tid })
+  return res.json({ user: toAuthUser(u, tid), token })
 }
 
-function me(req, res) {
-  return res.json({ user: req.user })
-}
+function me(req, res) { return res.json({ user: req.user }) }
 
-function changePassword(req, res) {
+async function changePassword(req, res) {
   const next = String((req.body || {}).password ?? '')
   if (next.length < 3) return res.status(400).json({ error: 'password_too_short' })
   overrides.set(req.user.uid, next)
   return res.json({ ok: true })
 }
 
-function toAuthUser(u) {
-  return { uid: u.username, email: u.email, name: u.name, role: u.role }
-}
+// Public tenant list for the login dropdown (ids + names only — no data).
+async function publicTenants(_req, res) { res.json({ tenants: await listTenants() }) }
 
-// Attach req.user if a valid Bearer token is present; else req.user = null.
 function attachUser(req, _res, next) {
   const h = req.headers.authorization || ''
   const token = h.startsWith('Bearer ') ? h.slice(7) : null
-  const payload = token ? verify(token) : null
-  req.user = payload ? { uid: payload.sub, name: payload.name, email: payload.email, role: payload.role } : null
+  const p = token ? verify(token) : null
+  req.user = p ? { uid: p.sub, name: p.name, email: p.email, role: p.role, tenantId: p.tenantId || null } : null
   next()
 }
-
-// Require a verified caller (any role).
-function requireAuth(req, res, next) {
-  if (!req.user) return res.status(401).json({ error: 'unauthenticated' })
-  next()
-}
-
-// Require role >= min (VIEWER < EDITOR < ADMIN). Mirrors the Firestore-rule matrix.
+function requireAuth(req, res, next) { if (!req.user) return res.status(401).json({ error: 'unauthenticated' }); next() }
 function requireRole(min) {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'unauthenticated' })
-    if (RANK[req.user.role] === undefined || RANK[req.user.role] < RANK[min]) {
-      return res.status(403).json({ error: 'forbidden', need: min, have: req.user.role })
-    }
+    if ((RANK[req.user.role] ?? -1) < RANK[min]) return res.status(403).json({ error: 'forbidden', need: min, have: req.user.role })
     next()
   }
 }
+// A tenant-scoped operation needs a tenant bound to the session.
+function requireTenant(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'unauthenticated' })
+  if (!req.user.tenantId) return res.status(409).json({ error: 'no_tenant_selected' })
+  next()
+}
 
 module.exports = {
-  RANK, USERS,
-  sign, verify, findUser,
-  login, me, changePassword,
-  attachUser, requireAuth, requireRole,
+  RANK, BOOTSTRAP, listTenants, findUser,
+  sign, verify,
+  login, me, changePassword, publicTenants,
+  attachUser, requireAuth, requireRole, requireTenant,
 }

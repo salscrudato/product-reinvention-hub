@@ -18,7 +18,8 @@ apikeys.md
 tmp_key.md
 tmp_acn_secrets.md
 # Any scratch/secret markdown dropped at the repo root (never commit these)
-tmp_*.md
+tmp*.md
+tmp.md
 
 # Firebase
 .firebase/

@@ -11,7 +11,7 @@
 // collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
-import type { AuthUser, BackendAdapter, MutationPayload, Query, Session } from './types'
+import type { AuthUser, BackendAdapter, ManagedUser, MutationPayload, Query, Session, TenantInfo } from './types'
 import { MutationConflictError } from './types'
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -61,13 +61,18 @@ const isDoc = (path: string) => path.split('/').filter(Boolean).length % 2 === 0
 
 export const adapter: BackendAdapter = {
   auth: {
-    async signIn(email: string, password: string): Promise<Session> {
+    async signIn(email: string, password: string, tenant?: string): Promise<Session> {
       const { user, token: tok } = await api<{ user: AuthUser; token: string }>('/auth/login', {
-        method: 'POST', body: JSON.stringify({ email, username: email, password }),
+        method: 'POST', body: JSON.stringify({ email, username: email, password, tenant }),
       })
       setToken(tok)
       setUser(user)
       return { user, token: tok }
+    },
+
+    async listTenants(): Promise<TenantInfo[]> {
+      const { tenants } = await api<{ tenants: TenantInfo[] }>('/auth/tenants')
+      return tenants
     },
 
     async signOut(): Promise<void> {
@@ -213,6 +218,29 @@ export const adapter: BackendAdapter = {
       void tick()
       const timer = setInterval(() => void tick(), 15_000)
       return () => { stopped = true; clearInterval(timer) }
+    },
+  },
+
+  tenancy: {
+    async listTenants(): Promise<TenantInfo[]> {
+      const { tenants } = await api<{ tenants: TenantInfo[] }>('/admin/tenants')
+      return tenants
+    },
+    async createTenant(id: string, name: string): Promise<void> {
+      await api('/admin/tenants', { method: 'POST', body: JSON.stringify({ id, name }) })
+    },
+    async deleteTenant(id: string): Promise<void> {
+      await api(`/admin/tenants/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    },
+    async listUsers(): Promise<ManagedUser[]> {
+      const { users } = await api<{ users: ManagedUser[] }>('/admin/users')
+      return users
+    },
+    async createUser(u: ManagedUser & { password?: string }): Promise<void> {
+      await api('/admin/users', { method: 'POST', body: JSON.stringify(u) })
+    },
+    async deleteUser(username: string): Promise<void> {
+      await api(`/admin/users/${encodeURIComponent(username)}`, { method: 'DELETE' })
     },
   },
 }

@@ -32,9 +32,18 @@ app.get('/api/health', (_req, res) => {
 
 // ─── auth ─────────────────────────────────────────────────────────────────
 app.post('/api/auth/login', auth.login)
+app.get('/api/auth/tenants', auth.publicTenants) // login-page dropdown (ids + names only)
 app.get('/api/auth/me', auth.requireAuth, auth.me)
 app.post('/api/auth/logout', (_req, res) => res.json({ ok: true })) // token is client-held; nothing server-side to revoke
 app.post('/api/auth/change-password', auth.requireAuth, auth.changePassword)
+
+// ─── tenant + user administration (ADMIN) ───────────────────────────────────
+try {
+  app.use('/api/admin', require('./lib/admin'))
+  console.log('[prodhub-host] /api/admin mounted (tenants + users)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/admin NOT mounted:', err.message)
+}
 
 // ─── data (Cosmos) — mounted if the module loads ────────────────────────────
 try {
