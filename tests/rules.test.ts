@@ -30,6 +30,8 @@ afterEach(async () => { await testEnv.clearFirestore() })
 const admin   = () => testEnv.authenticatedContext('admin-uid',   { role: 'ADMIN' })
 const editor  = () => testEnv.authenticatedContext('editor-uid',  { role: 'EDITOR' })
 const viewer  = () => testEnv.authenticatedContext('viewer-uid',  { role: 'VIEWER' })
+// A guest = anonymous sign-in provider, NO role claim (the auto-connected VITE_ALLOW_GUEST session).
+const guest   = () => testEnv.authenticatedContext('guest-uid', { firebase: { sign_in_provider: 'anonymous' } })
 const unauthed = () => testEnv.unauthenticatedContext()
 
 describe('Firestore security rules — role matrix', () => {
@@ -166,5 +168,51 @@ describe('Firestore security rules — role matrix', () => {
     })
     const db = admin().firestore()
     await assertFails(setDoc(doc(db, 'auditEvents/ae1'), { action: 'tampered', actor: { uid: 'x' } }))
+  })
+
+  // ── 11. Guest (anonymous) is READ-ONLY — the VITE_ALLOW_GUEST floor ────────────
+  // A guest reads domain data (the guest floor) but every write predicate requires a real
+  // (non-anonymous) account via isMember(), so anonymous sessions can never write anywhere.
+  it('guest (anonymous) can read a product document', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'products/HO3'), { name: 'HO-3', rev: 1 })
+    })
+    await assertSucceeds(getDoc(doc(guest().firestore(), 'products/HO3')))
+  })
+
+  it('guest (anonymous) cannot submit feedback (write denied)', async () => {
+    const db = guest().firestore()
+    await assertFails(
+      setDoc(doc(db, 'feedback/gf1'), {
+        type: 'IDEA', title: 'Guest', status: 'NEW',
+        votes: { count: 0, voters: [] }, impact: 1, effort: 1, priorityScore: 0,
+        author: { uid: 'guest-uid', name: 'Guest' }, context: { route: '/app' },
+      }),
+    )
+  })
+
+  it('guest (anonymous) cannot forge an auditEvent or write presence/newsPrefs', async () => {
+    const db = guest().firestore()
+    await assertFails(setDoc(doc(db, 'auditEvents/gf2'), { action: 'create', actor: { uid: 'guest-uid' } }))
+    await assertFails(setDoc(doc(db, 'presence/HO3/viewers/guest-uid'), { uid: 'guest-uid', at: null }))
+    await assertFails(setDoc(doc(db, 'newsPrefs/guest-uid'), { pinnedHashes: [] }))
+  })
+
+  it('guest (anonymous) cannot vote on feedback', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'feedback/gf3'), {
+        type: 'IDEA', title: 'Voteable', status: 'NEW',
+        votes: { count: 0, voters: [] }, impact: 1, effort: 1, priorityScore: 0,
+        author: { uid: 'editor-uid', name: 'Editor' }, context: { route: '/app' },
+      })
+    })
+    const db = guest().firestore()
+    await assertFails(
+      setDoc(doc(db, 'feedback/gf3'), {
+        type: 'IDEA', title: 'Voteable', status: 'NEW',
+        votes: { count: 1, voters: ['guest-uid'] }, impact: 1, effort: 1, priorityScore: 0,
+        author: { uid: 'editor-uid', name: 'Editor' }, context: { route: '/app' },
+      }),
+    )
   })
 })

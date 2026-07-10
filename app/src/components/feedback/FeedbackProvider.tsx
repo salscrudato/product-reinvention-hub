@@ -5,9 +5,10 @@
 // callable, which reads the wording + annotated screenshot + attachments and returns a polished,
 // ship-ready user story. The user reviews the story, then submits it via adapter.db.mutate().
 //
-// Maintainer power tool: for the maintainer only (sal@productreinvention.app), the story exposes
-// a "More details" panel with an AI-written, copy-paste, deploy-ready Claude Code implementation
-// brief. Everyone else sees only the polished story.
+// Maintainer power tool: for the maintainer only (identified by VITE_MAINTAINER_EMAIL), the story
+// exposes a "More details" panel with an AI-written, copy-paste, deploy-ready Claude Code
+// implementation brief. Everyone else sees only the polished story. The knob is OPTIONAL — unset
+// (the default) means no one is treated as maintainer and the panel is never shown.
 //
 // Entity context is automatic: the drawer reads what the user is viewing from CaptureContext
 // (the exact coverage/form/rule + its refId, or the product+tab, else the route label) and
@@ -24,8 +25,9 @@ import { Button } from '../ui'
 import { IconChat, IconLink, IconCamera, IconClose, IconSparkle, IconSpinner, IconArrowUp, IconInfo, IconFile, IconCopy, IconCheck, IconChevronDown, IconChevronUp, IconKey, IconTrash } from '../ui/icons'
 import { priorityScore, type FeedbackType, type Feedback } from '@pf/shared'
 
-// The maintainer who may see the implementation brief (username / password: scrudato).
-const MAINTAINER_EMAIL = 'sal@productreinvention.app'
+// The maintainer who may see the implementation brief — sourced from a build-time env var so no
+// identity is hard-coded into the client bundle. Empty (unset) disables the maintainer panel.
+const MAINTAINER_EMAIL = (import.meta.env.VITE_MAINTAINER_EMAIL ?? '').trim().toLowerCase()
 
 type Tool  = 'pen' | 'highlight' | 'crop' | 'text'
 type Point = { x: number; y: number }
@@ -144,7 +146,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const { viewed } = useCapture()
   const location = useLocation()
   const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
-  const isMaintainer = (user?.email ?? '').toLowerCase() === MAINTAINER_EMAIL
+  const isMaintainer = MAINTAINER_EMAIL !== '' && (user?.email ?? '').toLowerCase() === MAINTAINER_EMAIL
 
   // What the user is viewing — the exact entity (from CaptureContext) or the route label.
   const capLabel      = viewed?.label ?? describeRoute(location.pathname)

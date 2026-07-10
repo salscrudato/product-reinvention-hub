@@ -14,17 +14,27 @@ service cloud.firestore {
     function canEdit()   { return isEditor() || isAdmin(); }
     function myUid()     { return request.auth.uid; }
 
-    // ── Audit events — create-only from authenticated users ───────────────────
+    // A guest is an anonymous (no-credential) session — authed, but on the anonymous sign-in
+    // provider and carrying no role claim. The app auto-connects one when VITE_ALLOW_GUEST is
+    // true (the default). Guests are READ-ONLY: every write predicate below requires a real
+    // (non-anonymous) account via isMember(), so anonymous sessions can never write anywhere.
+    // See docs/adr/0004-guest-read-floor.md.
+    function isGuest()   { return isAuthed() && request.auth.token.firebase.sign_in_provider == 'anonymous'; }
+    function isMember()  { return isAuthed() && !isGuest(); }
+
+    // ── Audit events — create-only from real (non-guest) users ────────────────
+    //    Written as part of the atomic mutate() envelope; guests never mutate, so a guest
+    //    can neither ride the envelope nor forge a bare auditEvent.
     match /auditEvents/{id} {
-      allow create: if isAuthed();
+      allow create: if isMember();
       allow read:   if isAdmin();
       allow update, delete: if false;
     }
 
-    // ── Versions — create-only; readable by any authed user (powers the History
-    //    drawer + restore for EDITORs, and the product workspace context). ───────
+    // ── Versions — create-only from real (non-guest) users; readable by any authed user
+    //    (powers the History drawer + restore for EDITORs, and the product workspace). ────
     match /versions/{id} {
-      allow create: if isAuthed();
+      allow create: if isMember();
       allow read:   if isAuthed();
       allow update, delete: if false;
     }
@@ -62,10 +72,10 @@ service cloud.firestore {
     // ── Feedback — special: VIEWER may submit + vote; EDITOR/ADMIN manage ────
     match /feedback/{id} {
       allow read:   if isAuthed();
-      // VIEWER may create feedback
-      allow create: if isAuthed();
-      // VIEWER may cast exactly one vote (arrayUnion own uid to voters)
-      allow update: if isAuthed() &&
+      // VIEWER may create feedback; guests (anonymous) may not.
+      allow create: if isMember();
+      // VIEWER may cast exactly one vote (arrayUnion own uid to voters); guests may not.
+      allow update: if isMember() &&
         (canEdit() ||
           // Vote-only path: only votes.count and votes.voters change
           (request.resource.data.diff(resource.data).affectedKeys()
@@ -77,17 +87,17 @@ service cloud.firestore {
       allow delete: if canEdit();
     }
 
-    // ── Comments — any auth user may create; VIEWER cannot edit others ────────
+    // ── Comments — any real (non-guest) user may create; VIEWER cannot edit others ──
     match /comments/{id} {
       allow read:   if isAuthed();
-      allow create: if isAuthed();
+      allow create: if isMember();
       allow update, delete: if canEdit();
     }
 
     // ── News + prefs — read all; write prefs own; news via Functions ──────────
     match /news/{id}              { allow read: if isAuthed(); allow write: if isAdmin(); }
     match /newsPrefs/{uid}        { allow read: if isAuthed() && myUid() == uid;
-                                    allow write: if isAuthed() && myUid() == uid; }
+                                    allow write: if isMember() && myUid() == uid; }
 
     // ── Base forms — Claims Analysis library. Any authed role reads (VIEWER may run
     //    a read-only analysis); EDITOR/ADMIN upload (create/update/delete). Not domain
@@ -113,7 +123,7 @@ service cloud.firestore {
     // ── Presence heartbeats ───────────────────────────────────────────────────
     match /presence/{pid}/viewers/{uid} {
       allow read:  if isAuthed();
-      allow write: if isAuthed() && myUid() == uid;
+      allow write: if isMember() && myUid() == uid;
     }
 
     // ── Task templates — ADMIN edits SLA config; all authed read (NewProductModal fallback) ──

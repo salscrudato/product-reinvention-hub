@@ -42,7 +42,30 @@ Break any of these and the PR is blocked.
 | **Design tokens** | No hard-coded hex outside `app/src/index.css`. Use `var(--color-*)` in browser-rendered code. SVG files exported to disk are the only exception. |
 | **Model IDs** | `claude-sonnet-5` (reasoning) and `claude-haiku-4-5` (bulk/simple), defined once in `functions/src/runtime.ts`. Never `claude-fable-5`. |
 
+## Environment safety
+
+Local dev and seed default to the **emulators**. Two guards stop a session from silently
+touching the live `productreinvention` project (see `docs/reviews/GROUND_TRUTH.md` V12):
+
+- **Dev app** — `pnpm dev` runs `scripts/guard-backend.mjs` before Vite. It resolves the
+  effective `VITE_USE_EMULATORS` (Vite env-file precedence) and **refuses to start against live
+  Firebase unless `ALLOW_LIVE=1`**, printing the target backend either way. For the full local
+  stack use `pnpm dev:seed` with `VITE_USE_EMULATORS=true` in the gitignored
+  `app/.env.development.local`.
+- **Seed** — `scripts/seed.ts` targets emulators by default; the production path
+  (`--project productreinvention`) is refused unless `ALLOW_LIVE=1`, and still requires the
+  typed `seed-production` confirmation.
+
+**Storage-emulator exception:** when `VITE_USE_EMULATORS=true` the adapter points Auth,
+Firestore, Functions **and Storage** at the emulator (the "B8 footgun fix" in
+`app/src/lib/backend/firebase.adapter.ts`). Storage was historically the one service left on the
+LIVE bucket in emulator mode, so a local upload wrote production objects; it is now emulated
+alongside the rest. The only place a local flow still touches a real bucket by design is the
+production CORS helper (`pnpm cors:set` / `cors:get`), which operates on `gs://productreinvention.*`.
+
 ## ADRs
 
 - [docs/adr/0001-model-ids.md](docs/adr/0001-model-ids.md) — model selection + Sonnet 5 sampling constraints
 - [docs/adr/0002-agent-workflow.md](docs/adr/0002-agent-workflow.md) — agent workflow, gate, commit cadence
+- [docs/adr/0003-enhancement-baseline.md](docs/adr/0003-enhancement-baseline.md) — enhancement baseline
+- [docs/adr/0004-guest-read-floor.md](docs/adr/0004-guest-read-floor.md) — guest (anonymous) read-only floor + `VITE_ALLOW_GUEST`

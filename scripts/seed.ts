@@ -102,6 +102,16 @@ async function main(): Promise<void> {
     process.env['FIREBASE_STORAGE_EMULATOR_HOST'] = '127.0.0.1:9199'
     console.log('🔌 Targeting EMULATORS (Firestore :8080, Auth :9099, Storage :9199)')
   } else {
+    // Env-safety guard: a live seed writes PRODUCTION data. Refuse unless ALLOW_LIVE=1, THEN
+    // still require the typed confirmation below (two independent factors). See CLAUDE.md.
+    if (process.env['ALLOW_LIVE'] !== '1') {
+      console.error(
+        '⛔ Refusing to seed the LIVE "productreinvention" project.\n' +
+        '   `--project productreinvention` targets PRODUCTION. Re-run with ALLOW_LIVE=1 to\n' +
+        '   confirm you intend to write live data (a typed confirmation is still required).',
+      )
+      process.exit(1)
+    }
     const ok = await promptConfirm(
       '⚠️  Seeding PRODUCTION "productreinvention". Type "seed-production" to confirm: ',
       'seed-production',

@@ -193,23 +193,50 @@ function assertCoverageWrite(m: MutationPayload, data: Record<string, unknown> |
   }
 }
 
-// ─── TEMPORARY dev-only admin bypass (no Firebase auth) ───────────────────────
-// A fake ADMIN session held entirely client-side. Dev builds only; because there is
-// no real ID token, Firestore rules reject every read/write (the workspace loads
-// empty). Persisted in sessionStorage so a reload keeps it.
-// Bare-username sign-in maps "name" → "name@USERNAME_DOMAIN" (the address the seeded
-// accounts are provisioned under), so users can log in with just "sal" / "rebecca".
+// Bare-username sign-in maps "name" → "name@USERNAME_DOMAIN" (the synthetic address the
+// seeded accounts are provisioned under), so users can log in with just "sal" / "rebecca".
 const USERNAME_DOMAIN = 'productreinvention.app'
-const DEV_BYPASS_KEY = 'pf.devAdminBypass'
-const DEV_ADMIN: AuthUser = { uid: 'dev-admin', email: 'dev-admin@local', name: 'Dev Admin (bypass)', role: 'ADMIN' }
-// Seeded demo-admin account (HO3_SEED_USERS: sal@productreinvention.app / scrudato).
-// Used by signInAsAdmin() for a real sign-in that carries a genuine token + ADMIN claim.
-const DEMO_ADMIN_EMAIL    = 'sal@productreinvention.app'
-const DEMO_ADMIN_PASSWORD = 'scrudato'
-let bypassActive = import.meta.env.DEV && typeof sessionStorage !== 'undefined' && sessionStorage.getItem(DEV_BYPASS_KEY) === '1'
-const bypassListeners = new Set<(u: AuthUser | null) => void>()
+
+// VITE_ALLOW_GUEST (public flag, default true): when 'false', the adapter does NOT auto-
+// connect an anonymous read-only session, so the app requires a real credentialed sign-in
+// (the Landing page offers sign-in only). The default preserves today's anonymous-browse
+// behavior. See docs/adr/0004-guest-read-floor.md.
+const ALLOW_GUEST = import.meta.env.VITE_ALLOW_GUEST !== 'false'
 // One-shot guard so we don't loop endlessly if anonymous sign-in fails or is disabled.
 let triedAnonSignIn = false
+
+// ─── Dev-only admin bypass — the ENTIRE feature lives behind ONE static guard ─────────────
+// A fake ADMIN session held entirely client-side, for working against the emulators without
+// provisioning an account. There is no real ID token, so Firestore rules reject every read/
+// write (the workspace loads empty); the flag persists in sessionStorage so a reload keeps it.
+// `import.meta.env.DEV` is replaced with a literal `false` in a production build, so esbuild
+// dead-code-eliminates this whole block — and the conditionally-spread `signInAsDevAdmin`
+// method below — so neither the method name nor the sessionStorage key survives into app/dist
+// (verified by grepping dist). In production `devBypass` is `null` and the method is absent, so
+// an accidental call throws (TypeError) rather than granting any bypass.
+const devBypass = import.meta.env.DEV
+  ? (() => {
+      const KEY = 'pf.devAdminBypass'
+      const admin: AuthUser = { uid: 'dev-admin', email: 'dev-admin@local', name: 'Dev Admin (bypass)', role: 'ADMIN' }
+      const listeners = new Set<(u: AuthUser | null) => void>()
+      let active = typeof sessionStorage !== 'undefined' && sessionStorage.getItem(KEY) === '1'
+      return {
+        admin,
+        listeners,
+        get active() { return active },
+        engage() {
+          active = true
+          if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(KEY, '1')
+          for (const cb of listeners) cb(admin)
+        },
+        clear() {
+          active = false
+          if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(KEY)
+          for (const cb of listeners) cb(null)
+        },
+      }
+    })()
+  : null
 
 export const adapter: BackendAdapter = {
   auth: {
@@ -226,24 +253,20 @@ export const adapter: BackendAdapter = {
 
     async signOut(): Promise<void> {
       // Clear the dev bypass first so onUser listeners fall back to the real Firebase state.
-      if (bypassActive) {
-        bypassActive = false
-        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(DEV_BYPASS_KEY)
-        for (const cb of bypassListeners) cb(null)
-        return
-      }
+      if (devBypass?.active) { devBypass.clear(); return }
       await fbSignOut(auth)
     },
 
 	    onUser(cb) {
-	      bypassListeners.add(cb)
+	      devBypass?.listeners.add(cb)
 	      const unsubFb = onAuthStateChanged(auth, async (fbUser) => {
-	        if (bypassActive) return   // dev bypass owns the session; ignore Firebase state
+	        if (devBypass?.active) return   // dev bypass owns the session; ignore Firebase state
 	        if (!fbUser) {
 	          // Auto-connect anonymous users so live endpoints that require a token (AI, reads)
 	          // work without a manual sign-in. This respects security rules: anonymous users
 	          // still have no role claim, so they cannot write where EDITOR/ADMIN is required.
-	          if (!triedAnonSignIn) {
+	          // Gated by VITE_ALLOW_GUEST (default true): false skips the guest floor entirely.
+          if (ALLOW_GUEST && !triedAnonSignIn) {
 	            triedAnonSignIn = true
 	            try {
 	              await signInAnonymously(auth)
@@ -267,31 +290,16 @@ export const adapter: BackendAdapter = {
 	          cb(null)
 	        }
 	      })
-	      if (bypassActive) cb(DEV_ADMIN)   // emit the fake session immediately on subscribe
-	      return () => { bypassListeners.delete(cb); unsubFb() }
+	      if (devBypass?.active) cb(devBypass.admin)   // emit the fake session immediately on subscribe
+	      return () => { devBypass?.listeners.delete(cb); unsubFb() }
 	    },
 
-    // No-credentials admin: a REAL sign-in as the seeded demo admin. Unlike the dev
-    // bypass below, this returns a genuine session (token + ADMIN claim), so data loads
-    // and writes persist. Clears any active dev bypass first so the real session owns onUser.
-    async signInAsAdmin(): Promise<Session> {
-      if (bypassActive) {
-        bypassActive = false
-        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(DEV_BYPASS_KEY)
-      }
-      const cred  = await signInWithEmailAndPassword(auth, DEMO_ADMIN_EMAIL, DEMO_ADMIN_PASSWORD)
-      const user  = await toAuthUser(cred.user)
-      const token = await cred.user.getIdToken()
-      return { user, token }
-    },
-
-    // REMOVE-BEFORE-PROD: dev-only admin bypass. No-op outside dev builds (import.meta.env.DEV guard).
-    signInAsDevAdmin() {
-      if (!import.meta.env.DEV) return
-      bypassActive = true
-      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(DEV_BYPASS_KEY, '1')
-      for (const cb of bypassListeners) cb(DEV_ADMIN)
-    },
+    // Dev-only admin bypass — spread in ONLY for dev builds. `import.meta.env.DEV` is a static
+    // `false` in production, so esbuild drops this property entirely: the name `signInAsDevAdmin`
+    // never reaches app/dist and a production caller invoking it throws (the method is absent).
+    ...(import.meta.env.DEV
+      ? { signInAsDevAdmin() { devBypass?.engage() } }
+      : {}),
 
     async changePassword(next) {
       const user = auth.currentUser
@@ -302,13 +310,13 @@ export const adapter: BackendAdapter = {
 
   db: {
     async get<T>(path: string): Promise<T | null> {
-      if (bypassActive) return null   // dev bypass: no backend
+      if (devBypass?.active) return null   // dev bypass: no backend
       const snap = await getDoc(doc(db, path))
       return snapToData<T>(snap)
     },
 
     async list<T>(path: string, q?: Query): Promise<T[]> {
-      if (bypassActive) return []     // dev bypass: no backend
+      if (devBypass?.active) return []     // dev bypass: no backend
       const collRef = collection(db, path)
       const snap = await getDocs(q ? buildQuery(collRef, q) : collRef)
       return snap.docs.map((d) => snapToData<T>(d)).filter(Boolean) as T[]
@@ -321,7 +329,7 @@ export const adapter: BackendAdapter = {
       const parts = pathOrQuery.split('/').filter(Boolean)
       // Dev bypass: resolve consumers with empty data and make NO Firestore call, so
       // the app doesn't flood the console trying to reach a backend that isn't there.
-      if (bypassActive) {
+      if (devBypass?.active) {
         queueMicrotask(() => cb((parts.length % 2 === 0 ? null : []) as T | T[]))
         return () => {}
       }
@@ -345,7 +353,7 @@ export const adapter: BackendAdapter = {
 
     async mutate(m: MutationPayload): Promise<void> {
       // Dev bypass: no backend to write to. Fail clearly so callers show a friendly toast.
-      if (bypassActive) throw new Error('Dev admin bypass — changes are not saved (no backend).')
+      if (devBypass?.active) throw new Error('Dev admin bypass — changes are not saved (no backend).')
       // ONE atomic transaction: entity + auditEvent + version (with field diffs) + searchIndex
       // + rev bump. A transaction — not a bare writeBatch — is required for correct optimistic
       // concurrency: the rev is read and re-checked INSIDE the transaction, and Firestore aborts
@@ -380,7 +388,7 @@ export const adapter: BackendAdapter = {
     },
 
     async mutateBatch(ms: MutationPayload[]): Promise<void> {
-      if (bypassActive) throw new Error('Dev admin bypass — changes are not saved (no backend).')
+      if (devBypass?.active) throw new Error('Dev admin bypass — changes are not saved (no backend).')
       if (ms.length === 0) return
       // Mint refIds for creates that need one (pre-read; client transactions can't query).
       const prepared = await Promise.all(ms.map(async (m) => {
@@ -419,7 +427,7 @@ export const adapter: BackendAdapter = {
     },
 
     async vote(path: string, uid: string): Promise<void> {
-      if (bypassActive) throw new Error('Dev admin bypass — voting is not saved (no backend).')
+      if (devBypass?.active) throw new Error('Dev admin bypass — voting is not saved (no backend).')
       // Narrow, un-audited write matching the VIEWER vote-only rule: only `votes`
       // changes (arrayUnion the uid, +1 count). AWS-SWAP: DynamoDB UpdateItem ADD.
       await updateDoc(doc(db, path), {
@@ -429,7 +437,7 @@ export const adapter: BackendAdapter = {
     },
 
     async setNewsPins(uid: string, pinnedHashes: string[]): Promise<void> {
-      if (bypassActive) throw new Error('Dev admin bypass — pins are not saved (no backend).')
+      if (devBypass?.active) throw new Error('Dev admin bypass — pins are not saved (no backend).')
       // Owner-scoped merge write to newsPrefs/{uid} (matches the owner-only rule). Merges
       // so the `instruction` the editor writes to the same doc is preserved; no audit/
       // version envelope — pins are personal UI state, not governed content.
@@ -457,12 +465,12 @@ export const adapter: BackendAdapter = {
     async upload(path, file) {
       // Dev bypass: no real auth token, so Storage rules reject the write — fail with a
       // clear message rather than a raw 403 (mirrors db.mutate's guard).
-      if (bypassActive) throw new Error('Dev admin bypass — uploads are not saved (no backend). Sign in with a real account.')
+      if (devBypass?.active) throw new Error('Dev admin bypass — uploads are not saved (no backend). Sign in with a real account.')
       const snap = await uploadBytes(ref(storage, path), file)
       return getDownloadURL(snap.ref)
     },
     async getUrl(path) {
-      if (bypassActive) throw new Error('Dev admin bypass — no backend.')
+      if (devBypass?.active) throw new Error('Dev admin bypass — no backend.')
       return getDownloadURL(ref(storage, path))
     },
   },
@@ -531,7 +539,7 @@ export const adapter: BackendAdapter = {
     },
 
     watch(pid, cb) {
-      if (bypassActive) { queueMicrotask(() => cb([])); return () => {} }
+      if (devBypass?.active) { queueMicrotask(() => cb([])); return () => {} }
       return onSnapshot(collection(db, `presence/${pid}/viewers`), (snap) => {
         cb(snap.docs.map((d) => d.id))
       })

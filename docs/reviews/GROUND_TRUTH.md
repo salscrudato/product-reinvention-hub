@@ -301,3 +301,41 @@ absent for GL).
 **CONSEQUENCE:** Simulate panel is production-ready for PH and PA. GL rules simulation is not
 supported (no GL rules engine). The panel uses the same shared engine as the test suite,
 ensuring test-and-UI parity.
+
+---
+
+## REMEDIATED — Security half (session 2026-07-09)
+
+Evidence-backed fixes landed this session (companion detail in the commit + `docs/adr/0004`):
+
+- **SEC-01 — hardcoded demo admin removed.** `DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD`, and
+  `signInAsAdmin()` deleted from `app/src/lib/backend/firebase.adapter.ts`; `signInAsAdmin`
+  removed from the `BackendAdapter` interface and the AWS placeholder. No runtime call sites
+  existed (e2e signs in through the Landing form; `capture-screens.mjs` already used
+  `CAPTURE_USER` / `CAPTURE_PASS`). The same credential strings in `FeedbackProvider.tsx` were
+  sourced from `VITE_MAINTAINER_EMAIL` (default off) so nothing identifies a real account in the
+  bundle. Verified: production build → `grep dist` for the email and password returns nothing.
+- **SEC-02 — dev bypass structurally gated.** The entire dev-admin bypass (state, sessionStorage
+  key, `signInAsDevAdmin`) lives behind a single `import.meta.env.DEV` guard and is spread onto
+  the adapter only in dev; production omits it. Verified: `grep dist` for `signInAsDevAdmin` and
+  `pf.devAdminBypass` returns nothing.
+- **SEC-03 — guest read-only floor.** `VITE_ALLOW_GUEST` (default true) added; `firestore.rules`
+  tightened so anonymous sessions can read but never write (`isGuest()`/`isMember()`). See
+  `docs/adr/0004-guest-read-floor.md`.
+- **SEC-04 — `hello` health function.** Now requires an authed caller, binds
+  `[ANTHROPIC_API_KEY, VOYAGE_API_KEY]`, and returns `{ ok, voyage }` (secret PRESENCE only,
+  never the values; no model call).
+- **SEC-05 — env-drift guards.** `scripts/guard-backend.mjs` refuses a live-Firebase `pnpm dev`
+  unless `ALLOW_LIVE=1`; `scripts/seed.ts` refuses `--project productreinvention` unless
+  `ALLOW_LIVE=1` (plus the existing typed confirmation). Both print the target backend.
+
+## HUMAN ACTIONS — required (not doable from the repo)
+
+1. **Rotate the exposed demo-admin password** on the live `productreinvention` Firebase project.
+   The password (`scrudato`, account `sal@productreinvention.app`) was compiled into the client
+   bundle and must be treated as public. Set a new password for that account (and any other
+   account provisioned with it) in Firebase Auth. The local emulator seed is unaffected.
+2. **Restrict access to the live backend** — enable **Firebase App Check** (attestation on
+   Firestore / Functions / Storage) and/or tighten **Authorized domains** in Firebase Auth so a
+   leaked config + anonymous sign-in cannot drive the live project from an arbitrary origin.
+   Confirm production Cloud Functions only allow the intended web origins (CORS).

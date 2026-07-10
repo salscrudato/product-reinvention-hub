@@ -21,7 +21,8 @@
     "build": "pnpm --filter app build",
     "deploy": "pnpm build && firebase deploy",
     "eval": "tsx functions/eval/runner.ts",
-    "capture:screens": "node scripts/capture-screens.mjs"
+    "capture:screens": "node scripts/capture-screens.mjs",
+    "hygiene": "pnpm dlx knip && pnpm dlx depcheck ./app && pnpm dlx depcheck ./functions && pnpm dlx depcheck ./shared"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",
@@ -32,7 +33,6 @@
     "jsdom": "^25.0.1",
     "pdf-lib": "^1.17.1",
     "tsx": "^4.19.2",
-    "typescript": "~6.0.2",
     "vitest": "^3.1.4"
   }
 }

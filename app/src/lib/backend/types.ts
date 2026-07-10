@@ -45,16 +45,12 @@ export interface BackendAdapter {
     /** Fires immediately with current user, then on every change. */
     onUser(cb: (user: AuthUser | null) => void): Unsubscribe
     changePassword(next: string): Promise<void>
-    /** No-credentials admin entry point: a REAL Firebase sign-in as the seeded demo
-     *  admin (real ID token + ADMIN claim), so the workspace loads and every edit
-     *  persists — full functionality without the user typing anything. Works in any
-     *  environment where the demo admin account exists. */
-    signInAsAdmin(): Promise<Session>
-    /** TEMPORARY dev-only admin bypass — sets a fake ADMIN session with NO backend auth.
-     *  Dev builds only (`import.meta.env.DEV`); a no-op otherwise. Because there is no real
-     *  auth token, backend reads/writes are rejected by security rules (data won't load).
-     *  Remove before production. */
-    signInAsDevAdmin(): void
+    /** Dev-only admin bypass — a fake ADMIN session with NO backend auth, for working
+     *  against the emulators. OPTIONAL and present ONLY in dev builds: the Firebase adapter
+     *  spreads it in behind an `import.meta.env.DEV` guard, so esbuild strips it (and its
+     *  name) from the production bundle. In production the property is absent — calling it
+     *  throws. Because there is no real token, security rules reject every read/write. */
+    signInAsDevAdmin?(): void
   }
   db: {
     get<T>(path: string): Promise<T | null>
