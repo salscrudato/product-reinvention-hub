@@ -362,7 +362,7 @@ function GridEditor({ step, table, model0, candidateDimensions, seedInputs, pid,
           <span className="text-[11px] text-faint mr-1">{pageDim.label || pageDim.key}:</span>
           {pageDim.values.map((v, i) => (
             <button key={v} onClick={() => setPage(i)} aria-pressed={i === activePage}
-              className={`px-2.5 h-7 rounded-[7px] text-xs font-medium font-mono transition-colors ${i === activePage ? 'bg-accent text-white' : 'bg-raised text-dim hover:text-text'}`}>
+              className={`px-2.5 h-7 rounded-[7px] text-xs font-medium font-mono transition-colors ${i === activePage ? 'bg-accent text-on-accent' : 'bg-raised text-dim hover:text-text'}`}>
               {v}
             </button>
           ))}

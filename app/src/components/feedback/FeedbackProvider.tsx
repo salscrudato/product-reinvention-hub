@@ -660,7 +660,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     if (w < 2 || h < 2) return null
     return (
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute" style={{ left: minX, top: minY, width: w, height: h, outline: '2px solid white', boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
+        <div className="absolute" style={{ left: minX, top: minY, width: w, height: h, outline: '2px solid white', boxShadow: '0 0 0 9999px var(--color-scrim-strong)' }} />
       </div>
     )
   })()
@@ -963,7 +963,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
             onBlur={commitTextLabel}
             placeholder="Type a note, Enter to place"
             className="absolute z-10 h-7 px-2 rounded-[6px] text-[12px] text-white bg-black/85 placeholder:text-white/50 focus:outline-none"
-            style={{ left: Math.min(textInput.cssX, 260), top: textInput.cssY, minWidth: 160, border: '1px solid rgba(255,255,255,.3)' }}
+            style={{ left: Math.min(textInput.cssX, 260), top: textInput.cssY, minWidth: 160, border: '1px solid var(--color-on-media)' }}
           />
         )}
       </div>
@@ -1017,7 +1017,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
 
           <div role="dialog" aria-modal="true" aria-label="Send feedback"
             className="fixed top-0 right-0 bottom-0 z-50 w-[580px] max-w-[95vw] flex flex-col bg-surface slide-in-right"
-            style={{ borderLeft: '1px solid var(--color-border)', boxShadow: '-8px 0 48px rgba(0,0,0,.12)' }}>
+            style={{ borderLeft: '1px solid var(--color-border)', boxShadow: 'var(--shadow-overlay)' }}>
             {/* Header */}
             <div className="shrink-0 flex items-start justify-between px-7 pt-6 pb-5" style={{ borderBottom: '1px solid var(--color-border)' }}>
               <div className="flex flex-col gap-0.5">

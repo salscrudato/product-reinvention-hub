@@ -677,8 +677,15 @@ export default function ProductRules() {
 
       {orderedCats.length === 0 && (
         <EmptyState
-          title={covRef ? `No rules governing ${covFilter?.name}` : filters.hasActiveFilters ? 'No rules match these filters' : 'No rules'}
-          description={covRef || filters.hasActiveFilters ? undefined : 'Rules will appear here once the product is seeded.'} compact />
+          title={covRef ? `No rules governing ${covFilter?.name}` : filters.hasActiveFilters ? 'No rules match these filters' : 'No rules yet'}
+          description={
+            covRef || filters.hasActiveFilters ? undefined
+              : canEdit ? 'Draft the first rule with AI, or write one manually — every reference is verified against this product.'
+              : 'Rules will appear here once the product is seeded or an editor drafts one.'}
+          action={canEdit && !covRef && !filters.hasActiveFilters
+            ? <Button variant="primary" size="sm" onClick={() => openComposer()}><IconPlus size={14} />Draft rule</Button>
+            : undefined}
+          compact />
       )}
         </div>
       </div>

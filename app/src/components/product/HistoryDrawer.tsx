@@ -182,7 +182,7 @@ export function HistoryDrawer({ onClose }: Props) {
                 const label = f === 'all' ? 'All' : (ENTITY_META[f]?.label ?? f)
                 return (
                   <button key={f} onClick={() => setFilter(f)} aria-pressed={active}
-                    className={`px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-colors ${active ? 'bg-accent text-white' : 'bg-raised text-dim hover:text-text'}`}>
+                    className={`px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-colors ${active ? 'bg-accent text-on-accent' : 'bg-raised text-dim hover:text-text'}`}>
                     {label}
                   </button>
                 )

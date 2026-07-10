@@ -265,7 +265,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
           {kindTerms.map(t => (
             <div key={t.id} className="flex items-center gap-0.5">
               <button onClick={() => setActiveId(t.id)}
-                className={`px-2.5 py-1 rounded-[7px] text-xs font-medium transition-colors ${t.id === activeId ? 'bg-accent text-white' : 'bg-raised text-dim hover:text-text'}`}>
+                className={`px-2.5 py-1 rounded-[7px] text-xs font-medium transition-colors ${t.id === activeId ? 'bg-accent text-on-accent' : 'bg-raised text-dim hover:text-text'}`}>
                 {t.label}
               </button>
               {canEdit && kindTerms.length > 1 && t.id === activeId && (
@@ -445,7 +445,7 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
                               style={selected ? { border: '1px solid var(--color-accent-line)' } : undefined}>
                               <Icon size={17} />
                             </span>
-                            <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${selected ? 'bg-accent text-white' : ''}`}
+                            <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${selected ? 'bg-accent text-on-accent' : ''}`}
                               style={{ border: selected ? 'none' : '1.5px solid var(--color-border-strong)' }}>
                               {selected && <IconCheck size={10} strokeWidth={3} />}
                             </span>
@@ -606,7 +606,7 @@ function RangeBuilder({ pct, canEdit, existing, initial, onGenerate }: {
         <div className="inline-flex items-center gap-0.5 p-0.5 rounded-[9px] bg-surface" style={{ border: '1px solid var(--color-border)' }} role="group" aria-label="Range density">
           {DENSITIES.map(d => (
             <button key={d.id} type="button" onClick={() => setDensity(d.id)} aria-pressed={density === d.id}
-              className={`px-2 py-1 rounded-[7px] text-[11px] font-medium transition-colors ${density === d.id ? 'bg-accent text-white' : 'text-dim hover:text-text'}`}>
+              className={`px-2 py-1 rounded-[7px] text-[11px] font-medium transition-colors ${density === d.id ? 'bg-accent text-on-accent' : 'text-dim hover:text-text'}`}>
               {d.label}
             </button>
           ))}
@@ -743,7 +743,7 @@ function OptionRow({ o, mode, scopeStates, peril, canEdit, hasError, onChange, o
         {/* Default — an unmistakable single-choice control (exactly one is default) */}
         <button disabled={!canEdit} onClick={onDefault} aria-pressed={o.isDefault}
           title={o.isDefault ? 'This is the default — pre-selected for the PM' : 'Make this the default'}
-          className={`h-8 px-2.5 rounded-[7px] flex items-center gap-1 shrink-0 text-[11px] font-semibold transition-colors ${o.isDefault ? 'bg-accent text-white' : 'text-faint hover:text-accent hover:bg-accent-soft'}`}
+          className={`h-8 px-2.5 rounded-[7px] flex items-center gap-1 shrink-0 text-[11px] font-semibold transition-colors ${o.isDefault ? 'bg-accent text-on-accent' : 'text-faint hover:text-accent hover:bg-accent-soft'}`}
           style={o.isDefault ? undefined : { border: '1px solid var(--color-border-strong)' }}>
           <IconStar size={13} className={o.isDefault ? 'fill-current' : ''} />
           Default

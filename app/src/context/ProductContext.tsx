@@ -22,6 +22,11 @@ export interface ProductContextValue {
   versions:        WithId<Version>[]        // all versions for this product
   comments:        WithId<Comment>[]
   loading:         boolean
+  // True when the load-bearing product-document subscription errored (permission / offline) —
+  // distinct from "product not found" (a null doc). Lets the workspace show a recoverable
+  // error instead of hanging on the skeleton forever. `retry` re-subscribes.
+  error:           boolean
+  retry:           () => void
 }
 
 const Ctx = createContext<ProductContextValue | null>(null)
@@ -38,19 +43,23 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
   const [versions,      setVersions]      = useState<WithId<Version>[]>([])
   const [comments,      setComments]      = useState<WithId<Comment>[]>([])
   const [loaded,        setLoaded]        = useState(0)   // count resolved subscriptions
+  const [error,         setError]         = useState(false)
+  const [reloadKey,     setReloadKey]     = useState(0)
 
   const TOTAL_SUBS = 10
 
   function inc() { setLoaded(n => Math.min(n + 1, TOTAL_SUBS)) }
 
   useEffect(() => {
-    setLoaded(0)
+    setLoaded(0); setError(false)
     const unsubs = [
-      // Product document
+      // Product document — the load-bearing subscription. A listener ERROR here (permission /
+      // offline) flags `error` so the workspace shows a recoverable state instead of hanging
+      // on the skeleton (a null doc, by contrast, is "not found" → the workspace redirects).
       adapter.db.subscribe<WithId<Product>>(`products/${pid}`, (d) => {
         if (!Array.isArray(d)) setProduct(d)
         inc()
-      }),
+      }, () => { setError(true); inc() }),
       // Sub-collections
       adapter.db.subscribe<WithId<Coverage>>(`products/${pid}/coverages`, (d) => {
         if (Array.isArray(d)) { setCoverages(d.sort((a,b) => (a.order??0)-(b.order??0))); inc() }
@@ -108,13 +117,15 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
       }),
     ]
     return () => { unsubs.forEach(u => u()); setLoaded(0) }
-  }, [pid])
+  }, [pid, reloadKey])
 
   return (
     <Ctx value={{
       pid, product, coverages, rules, formRules, ratingProgram,
       forms, ldTables, rtTables, versions, comments,
       loading: loaded < TOTAL_SUBS,
+      error,
+      retry: () => { setLoaded(0); setError(false); setReloadKey(k => k + 1) },
     }}>
       {children}
     </Ctx>

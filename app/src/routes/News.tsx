@@ -339,7 +339,7 @@ function HeroCard({
                 <span aria-hidden="true">·</span>
                 <span
                   className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                  style={{ background: 'rgba(255,255,255,.20)', color: 'white' }}
+                  style={{ background: 'var(--color-on-media)', color: 'white' }}
                   title={`Portfolio relevance: ${tier} (score ${item.rel.score})`}
                 >
                   <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full" style={{ background: 'white' }} />

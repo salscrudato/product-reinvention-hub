@@ -12,8 +12,9 @@ import type { FilingImportPlan, FilingReviewSectionKey, ImportPlan } from '@pf/s
 import { useUser } from '../../context/useUser'
 import { Dialog } from '../ui/Dialog'
 import { Button } from '../ui/Button'
+import { NoticeBanner } from '../ui/NoticeBanner'
 import {
-  IconUpload, IconFile, IconCheckCircle, IconWarning, IconInfo, IconSpinner,
+  IconUpload, IconFile, IconCheckCircle, IconWarning, IconSpinner,
   IconCoverage, IconRule, IconPricing, IconTable, IconArrowRight, IconClose,
 } from '../ui/icons'
 import { readFilingFiles, runFilingImport, type FilingStageEvent } from '../../lib/import/filingImportClient'
@@ -207,8 +208,9 @@ function SelectPane({ dragOver, setDrag, onDrop, onBrowse, inputRef, onFiles }: 
 function StreamingPane({ fileNames, stages }: { fileNames: string[]; stages: FilingStageEvent[] }) {
   // Collapse tool start/end into a live checklist of stages.
   const rows = stages.filter(s => s.kind === 'tool')
+  const notices = stages.filter(s => s.kind === 'notice' && s.notice)
   return (
-    <div className="flex flex-col gap-4 py-2">
+    <div className="flex flex-col gap-4 py-2" role="status" aria-live="polite" aria-label="Import progress">
       <div className="flex items-center gap-2 text-sm text-text">
         <IconSpinner size={16} className="animate-spin text-accent" aria-hidden="true" />
         Reading {fileNames.length} document{fileNames.length !== 1 ? 's' : ''} — classify · extract · reconcile…
@@ -223,10 +225,12 @@ function StreamingPane({ fileNames, stages }: { fileNames: string[]; stages: Fil
             {s.summary && <span className="text-faint truncate">· {s.summary}</span>}
           </div>
         ))}
-        {stages.filter(s => s.kind === 'notice' && s.message).map((s, i) => (
-          <div key={`n${i}`} className="flex items-center gap-2 text-xs text-warn"><IconInfo size={13} />{s.message}</div>
-        ))}
       </div>
+      {/* Honest AI status — now level-aware (was always styled as a warning; info degrade/cache
+          notices were mis-coloured because the level was dropped before reaching the client). */}
+      {notices.map((s, i) => (
+        <NoticeBanner key={`n${i}`} notice={s.notice!} />
+      ))}
     </div>
   )
 }

@@ -18,15 +18,16 @@ import { assistantBubbleContent, EMPTY_TURN_FALLBACK } from '../lib/claims/bubbl
 import { isFormAnalyzable, isUnverified } from '../lib/claims/baseForm'
 import { buildGapFeedbackPrefill } from '../lib/claims/gapFeedback'
 import { useFeedbackLaunch } from '../context/useFeedbackLaunch'
-import { RefChip } from '../components/ui'
-import { IconCheck, IconSpinner, IconShield, IconInfo, IconWarning } from '../components/ui/icons'
+import { RefChip, NoticeBanner } from '../components/ui'
+import type { NoticeEvent, NoticeKind } from '../lib/ai/notices'
+import { IconCheck, IconSpinner, IconShield, IconWarning } from '../components/ui/icons'
 
 // ─── Stream protocol (mirror of functions/src/runtime.ts StreamEvent) ───────────
 type StreamEvent =
   | { t: 'token'; v: string }
   | { t: 'tool';  name: string; phase: 'start' | 'end'; summary?: string }
   | { t: 'json';  key: string; value: unknown }
-  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[] }
+  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[]; kind?: NoticeKind }
   | { t: 'error'; message: string }
   | { t: 'done' }
 
@@ -39,7 +40,7 @@ interface ChatMessage {
   // A non-fatal advisory from a `notice` event (budget cap, breaker, unverified citation,
   // degrade). Kept separate from text so a token flush can't wipe it — and so a turn that
   // produces ONLY a notice still renders something visible instead of a blank bubble.
-  notice?: { level: 'info' | 'warn'; message: string }
+  notice?: NoticeEvent
   historyText?: string   // what we send back as history (card turns serialise their determination)
 }
 
@@ -87,28 +88,6 @@ function determinationToText(d: Determination): string {
   ].filter(Boolean).join('\n')
 }
 
-// A non-fatal advisory surfaced from a `notice` SSE event — budget cap / breaker / degrade /
-// unverified citation. Tokenised per level; never a blank or hard-coded hex.
-function NoticeBanner({ level, message }: { level: 'info' | 'warn'; message: string }) {
-  const warn = level === 'warn'
-  return (
-    <div
-      role="status"
-      className="flex items-start gap-2 rounded-[10px] px-3 py-2 text-[12.5px] leading-snug"
-      style={{
-        background: warn ? 'var(--color-warn-soft)' : 'var(--color-raised)',
-        border: `1px solid ${warn ? 'var(--color-warn-line)' : 'var(--color-border)'}`,
-        color: warn ? 'var(--color-warn)' : 'var(--color-dim)',
-      }}
-    >
-      {warn
-        ? <IconWarning size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
-        : <IconInfo size={14} className="shrink-0 mt-0.5" aria-hidden="true" />}
-      <span>{message}</span>
-    </div>
-  )
-}
-
 // The assistant turn's visible body. A single pure decision (assistantBubbleContent) guarantees
 // it is NEVER empty: a determination card, streamed text, a notice advisory, a thinking spinner
 // while streaming, or a plain-language fallback — so every terminal SSE path shows something.
@@ -122,7 +101,7 @@ function AssistantContent({ m, streamingThisTurn, onCreateFeedback, linked }: {
   )
   return (
     <>
-      {m.notice && <NoticeBanner level={m.notice.level} message={m.notice.message} />}
+      {m.notice && <NoticeBanner notice={m.notice} />}
       {content === 'determination' && m.determination && (
         <DeterminationCard d={m.determination} onCreateFeedback={onCreateFeedback} linked={linked} />
       )}
@@ -296,7 +275,7 @@ export default function Claims() {
           case 'notice':
             // Budget/breaker/degrade/unverified-citation advisory. Stored in its own field so a
             // later token flush can't wipe it and a notice-only turn is never a blank bubble.
-            patchAssistant(m => ({ ...m, notice: { level: ev.level, message: ev.message } })); break
+            patchAssistant(m => ({ ...m, notice: { level: ev.level, message: ev.message, kind: ev.kind, refs: ev.refs } })); break
           case 'error':
             patchAssistant(m => ({ ...m, text: m.text + `\n\n⚠️ ${ev.message}` })); break
           case 'done': break
@@ -398,11 +377,11 @@ export default function Claims() {
                               className="inline-flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full text-[10.5px] font-medium transition-colors"
                               style={{
                                 background: t.done ? 'var(--color-good-soft)' : 'var(--color-accent-soft)',
-                                border: `1px solid ${t.done ? 'rgba(4,120,87,.18)' : 'var(--color-accent-line)'}`,
+                                border: `1px solid ${t.done ? 'var(--color-good-line)' : 'var(--color-accent-line)'}`,
                                 color: t.done ? 'var(--color-good)' : 'var(--color-accent)',
                               }}>
                               <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                                style={{ background: t.done ? 'rgba(4,120,87,.15)' : 'var(--color-accent-line)' }}>
+                                style={{ background: t.done ? 'var(--color-good-soft)' : 'var(--color-accent-line)' }}>
                                 {t.done
                                   ? <IconCheck size={9} aria-hidden="true" />
                                   : <IconSpinner size={9} className="animate-spin" aria-hidden="true" />}

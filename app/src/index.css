@@ -21,12 +21,18 @@
 
   /* Accent — Accenture-inspired violet. `accent` reads AA (6.1:1) on white for
      text/icons/borders; `bright` is the signature stop (glows + gradient start);
-     `strong` is the deep end / pressed state. */
+     `strong` is the deep end / pressed state. In dark mode (see `[data-theme=dark]`
+     below) `accent` shifts LIGHT (#C29BFF) so it stays AA as text on a dark surface —
+     which means white can no longer sit on a solid `bg-accent`. That is what
+     `--color-on-accent` is for: the ink that rides a *solid* accent fill (white in
+     light, near-black violet in dark). The vivid `--gradient-accent` button/badge fill
+     keeps white ink in BOTH themes (it stays a saturated violet, AA-legible either way). */
   --color-accent:        #8B1FE0;
   --color-accent-bright: #A100FF;
   --color-accent-strong: #7A00E6;
   --color-accent-soft:   rgba(139,31,224,.08);
   --color-accent-line:   rgba(139,31,224,.22);
+  --color-on-accent:     #FFFFFF;
 
   /* Success green — darkened from #059669 (3.4–3.8:1, below WCAG AA on every
      surface) to clear AA as *body text*, not just as icons/dots: it now reads
@@ -64,6 +70,10 @@
      Badge backgrounds (.10) and interactive wash (.08/.14) aligned to AA-safe
      foreground tokens. danger-* uses the darkened #B91C1C base. */
   --color-good-soft:    rgba(4,120,87,.10);
+  /* good-line — the border that pairs with good-soft on a "done / satisfied" chip
+     (claims checklist, home cockpit). A token so the green tint adapts per theme
+     instead of a hard-coded rgba in the component. */
+  --color-good-line:    rgba(4,120,87,.18);
   --color-danger-badge: rgba(185,28,28,.10);
   --color-danger-hover: rgba(185,28,28,.08);
   --color-danger-press: rgba(185,28,28,.14);
@@ -99,8 +109,34 @@
   --gradient-accent:       linear-gradient(135deg, #A100FF 0%, #7A00E6 100%);
   --gradient-accent-vivid: linear-gradient(120deg, #A100FF 0%, #8B1FE0 48%, #6D28D9 100%);
   --gradient-accent-soft:  linear-gradient(135deg, rgba(161,0,255,.12) 0%, rgba(122,0,230,.09) 100%);
+  /* gradient-accent-TEXT — the gradient the `.gradient-text` utility clips to type. It is
+     kept SEPARATE from `--gradient-accent` (the button/badge fill) because a clipped-text
+     gradient needs contrast against the *page*, whereas a fill needs white ink to read on
+     *it*. In light mode both happen to be the deep violet; in dark mode the text gradient
+     lightens (see below) so hero headings stay legible while fills stay vivid. */
+  --gradient-accent-text:  linear-gradient(135deg, #A100FF 0%, #7A00E6 100%);
   --glow-accent:  rgba(139,31,224,.30);
   --glow-accent-strong: rgba(139,31,224,.45);
+
+  /* ── Motion durations — the interactive-transition band (200–400ms) ──────────
+     Standard spring-band durations so hover/press/state transitions and the theme
+     flip share one rhythm. All neutralised by the reduced-motion guard at the foot. */
+  --dur-1: 200ms;   /* quick state change (hover, press) */
+  --dur-2: 280ms;   /* default interactive transition + theme flip */
+  --dur-3: 380ms;   /* larger reveals */
+
+  /* ── Media scrims — the ONE place a fixed dark/light wash is correct in both themes:
+     over a photograph / raster (news hero, feedback screenshot thumbnails). Tokenised so
+     no rgba literal lives in a component; deliberately NOT overridden per theme (a photo is
+     a photo). ── */
+  --color-scrim:        rgba(0,0,0,.40);
+  --color-scrim-strong: rgba(0,0,0,.45);
+  --color-on-media:     rgba(255,255,255,.20);
+  --shadow-onbar-text:  0 1px 2px rgba(0,0,0,.22);   /* label legibility on a colored bar */
+
+  /* Browser-chrome colour (address/status bar via <meta name=theme-color>). Read at runtime by
+     lib/theme.ts so no hex lives in the TS — light keeps the brand violet, dark uses the page. */
+  --chrome-color: #8B1FE0;
 
   /* ── Aurora background fills (Landing, MustChangePassword) ─────────────────
      Three elliptical glows staggered in size; values are the brand violet
@@ -178,6 +214,118 @@
   --color-code-meta:   rgba(255,255,255,.30);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   DARK THEME — a complete re-cast of every semantic token.
+   ──────────────────────────────────────────────────────────────────────────────
+   The app is LIGHT by default. `data-theme="dark"` is set on <html> by the no-FOUC
+   script in index.html (first run resolves `prefers-color-scheme`, thereafter the
+   persisted `pf.theme`). Components consume ONLY `var(--color-*)`, so overriding the
+   variable *values* here re-themes the whole app with zero component edits.
+
+   This selector is UNLAYERED (Tailwind's `@theme` emits into `@layer theme`), so it
+   beats the light defaults in the cascade regardless of specificity/order.
+
+   Every text token below was validated ≥ WCAG AA on every dark surface
+   (page/surface/raised/hover) — see the session's contrast validator. The accent
+   goes LIGHT for legible `text-accent`; solid `bg-accent` therefore carries
+   `--color-on-accent` (near-black violet) ink, while the vivid `--gradient-accent`
+   fill keeps white ink. ══════════════════════════════════════════════════════════ */
+html[data-theme="dark"] {
+  /* Surfaces — near-black with a hair of cool violet; four legible elevation steps. */
+  --color-page:          #0B0B10;
+  --color-surface:       #15151C;
+  --color-raised:        #1E1E27;
+  --color-hover:         #2A2A35;
+  --color-border:        rgba(255,255,255,.10);
+  --color-border-strong: rgba(255,255,255,.16);
+
+  /* Ink — three tiers, all AA (text 16:1, dim 8:1, faint 5.8:1 on surface). */
+  --color-text:  #F2F2F6;
+  --color-dim:   #ADAEBE;
+  --color-faint: #90919F;
+
+  /* Accent — LIGHT violet so `text-accent` / borders / icons read AA on dark
+     (8.1:1 on surface). Bright + strong stay saturated for glows/gradients.
+     on-accent is the near-black violet ink for a solid `bg-accent` fill (8.5:1). */
+  --color-accent:        #C29BFF;
+  --color-accent-bright: #B770FF;
+  --color-accent-strong: #8A45F0;
+  --color-accent-soft:   rgba(194,155,255,.14);
+  --color-accent-line:   rgba(194,155,255,.30);
+  --color-on-accent:     #16082B;
+
+  /* Status — the 400-level tints (AA as body text on dark: good 9.4, warn 10.9,
+     danger 6.6, info 7.2 on surface). */
+  --color-good:   #34D399;
+  --color-warn:   #FBBF24;
+  --color-danger: #F87171;
+  --color-info:   #60A5FA;
+
+  /* State-scope map — a mid-dark out-of-scope tile (distinct from surface) + amber peril. */
+  --color-tile-oos: #2E2E38;
+  --color-peril:    #FBBF24;
+
+  /* Elevation — neutral dark shadows (violet glow reads as noise on black). */
+  --shadow-card:       0 1px 2px rgba(0,0,0,.40), 0 12px 30px rgba(0,0,0,.50);
+  --shadow-card-hover: 0 2px 4px rgba(0,0,0,.50), 0 20px 48px rgba(0,0,0,.60);
+
+  /* Semantic soft tints — rebased on the 400-level foregrounds so they read on dark. */
+  --color-good-soft:    rgba(52,211,153,.14);
+  --color-good-line:    rgba(52,211,153,.30);
+  --color-danger-badge: rgba(248,113,113,.18);
+  --color-danger-hover: rgba(248,113,113,.12);
+  --color-danger-press: rgba(248,113,113,.22);
+  --color-danger-line:  rgba(248,113,113,.32);
+  --color-warn-badge:   rgba(251,191,36,.18);
+  --color-info-soft:    rgba(96,165,250,.16);
+  --color-danger-soft:  rgba(248,113,113,.12);
+  --color-warn-soft:    rgba(251,191,36,.12);
+  --color-warn-line:    rgba(251,191,36,.32);
+
+  /* UI micro-tints — flip to light-on-dark alphas so they're visible on black. */
+  --color-chip:   rgba(255,255,255,.07);
+  --color-stripe: rgba(255,255,255,.022);
+  --color-ghost:  rgba(255,255,255,.035);
+
+  /* Text gradient lightens (fills keep --gradient-accent); glow/hero wash intensify. */
+  --gradient-accent-text: linear-gradient(135deg, #C29BFF 0%, #A100FF 100%);
+  --gradient-accent-soft: linear-gradient(135deg, rgba(194,155,255,.14) 0%, rgba(138,69,240,.10) 100%);
+  --gradient-hero:        linear-gradient(135deg, rgba(194,155,255,.10) 0%, rgba(138,69,240,.08) 100%);
+  --glow-accent:          rgba(161,0,255,.45);
+  --glow-accent-strong:   rgba(161,0,255,.60);
+
+  /* Overlays + panels — deeper scrims, dark glass. */
+  --color-overlay:       rgba(0,0,0,.65);
+  --color-overlay-light: rgba(0,0,0,.55);
+  --shadow-overlay:      0 24px 64px rgba(0,0,0,.60);
+  --shadow-dropdown:     0 8px 24px rgba(0,0,0,.50);
+  --shadow-chip:         0 1px 2px rgba(0,0,0,.40);
+  --glass-panel:         rgba(21,21,28,.72);
+  --glass-border:        rgba(255,255,255,.09);
+  --fill-glass:          rgba(30,30,39,.92);
+
+  /* Hover borders. */
+  --color-border-hover:        rgba(255,255,255,.24);
+  --color-border-hover-strong: rgba(255,255,255,.26);
+
+  /* Fenced-code well — a touch darker than page so it still reads as sunken. */
+  --color-code-bg: #0A0A11;
+
+  /* Browser chrome follows the dark page. */
+  --chrome-color: #0B0B10;
+}
+
+/* Native form controls + the browser UI (scrollbars, spinners) follow the theme. */
+html[data-theme="dark"] { color-scheme: dark; }
+html:not([data-theme="dark"]) { color-scheme: light; }
+
+/* Theme flip — a brief, band-standard cross-fade of colours (added by the theme hook
+   for one frame, then removed). Neutralised under reduced-motion by the guard below. */
+.theme-transition, .theme-transition *, .theme-transition *::before, .theme-transition *::after {
+  transition: background-color var(--dur-2) ease, border-color var(--dur-2) ease,
+              color var(--dur-2) ease, fill var(--dur-2) ease, box-shadow var(--dur-2) ease !important;
+}
+
 /* ─── Base reset ─────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -231,7 +379,7 @@ h1, h2 { text-wrap: balance; }
 
 /* ─── Gradient text utility ──────────────────────────────────────────────── */
 @utility gradient-text {
-  background: var(--gradient-accent);
+  background: var(--gradient-accent-text);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -446,6 +594,11 @@ h1, h2 { text-wrap: balance; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  /* The theme-flip cross-fade has higher specificity than the `*` guard above, so it
+     must be neutralised explicitly — a reduced-motion user gets an instant theme swap. */
+  .theme-transition, .theme-transition *, .theme-transition *::before, .theme-transition *::after {
+    transition: none !important;
   }
   .hero-mark, .hero-mark__orbit, .hero-flow { animation: none !important; }
   .aurora-a, .aurora-b, .aurora-c { animation: none !important; opacity: .35 !important; }

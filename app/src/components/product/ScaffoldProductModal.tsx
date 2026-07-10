@@ -11,7 +11,8 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { adapter } from '../../lib/backend'
 import { useUser } from '../../context/useUser'
-import { Dialog, Button, Badge, RefChip } from '../ui'
+import { Dialog, Button, Badge, RefChip, NoticeBanner } from '../ui'
+import { type NoticeEvent, type NoticeKind } from '../../lib/ai/notices'
 import {
   IconSparkle, IconSpinner, IconCoverage, IconForm, IconRule, IconArrowRight, IconWarning, IconCheckSquare,
 } from '../ui/icons'
@@ -47,6 +48,7 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
   const [name, setName]           = useState('')
   const [checked, setChecked]     = useState<Set<string>>(new Set())
   const [error, setError]         = useState('')
+  const [notice, setNotice]       = useState<NoticeEvent | null>(null)
   const [progress, setProgress]   = useState<{ done: number; total: number; label: string } | null>(null)
   // Lifecycle-task selection (indices into DEFAULT_TASK_TEMPLATES); all pre-selected.
   const [taskChecked, setTaskChecked] = useState<Set<number>>(new Set())
@@ -66,19 +68,31 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
   async function run() {
     const instr = instruction.trim()
     if (!instr) return
-    setPhase('streaming'); setStatus('Reading the portfolio…'); setError('')
+    setPhase('streaming'); setStatus('Reading the portfolio…'); setError(''); setNotice(null)
     try {
       let got: ScaffoldPlan | null = null
       let streamErr = ''
+      let sawNotice: NoticeEvent | null = null
       await adapter.fns.stream('scaffoldProduct', { instruction: instr }, chunk => {
-        let ev: { t: string; key?: string; value?: unknown; message?: string; name?: string; phase?: string; summary?: string }
+        let ev: { t: string; key?: string; value?: unknown; message?: string; name?: string; phase?: string; summary?: string; level?: 'info' | 'warn'; kind?: NoticeKind; refs?: string[] }
         try { ev = JSON.parse(chunk) } catch { return }
         if (ev.t === 'tool' && ev.phase === 'start') setStatus(ev.name === 'emit_product_scaffold' ? 'Composing the scaffold…' : 'Reading the portfolio…')
         if (ev.t === 'json' && ev.key === 'scaffold') got = ev.value as ScaffoldPlan
+        if (ev.t === 'notice') sawNotice = { level: ev.level ?? 'info', message: ev.message ?? '', kind: ev.kind, refs: ev.refs }
         if (ev.t === 'error') streamErr = ev.message ?? 'Scaffold failed'
       })
       if (streamErr) throw new Error(streamErr)
-      if (!got || !(got as ScaffoldPlan).product) throw new Error('The assistant could not ground a product for that request — try naming a line (e.g. Homeowners or Personal Auto).')
+      // Honest AI status: a budget deny / breaker ends the stream with NO scaffold. Previously
+      // this became the misleading "could not ground a product" error. Now the banner explains
+      // it (what happened, when budget resets, that Regenerate retries) and the input is the retry.
+      if (!got || !(got as ScaffoldPlan).product) {
+        const blocking = sawNotice as NoticeEvent | null
+        if (blocking && (blocking.kind === 'deny' || blocking.kind === 'breaker')) {
+          setNotice(blocking); setPhase('input'); return
+        }
+        throw new Error('The assistant could not ground a product for that request — try naming a line (e.g. Homeowners or Personal Auto).')
+      }
+      if (sawNotice) setNotice(sawNotice)   // a degrade/unverified advisory alongside a real scaffold
 
       const p = got as ScaffoldPlan
       setPlan(p)
@@ -237,6 +251,7 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
         <p className="text-sm text-danger">You need editor access to scaffold products.</p>
       ) : phase === 'input' ? (
         <div className="flex flex-col gap-4">
+          {notice && <NoticeBanner notice={notice} />}
           <p className="text-sm text-dim">
             Describe the product. The assistant reads your <span className="font-medium text-text">real portfolio</span> and
             proposes a starting structure modelled on it — every coverage, form and rule cited to what it&apos;s based on.
@@ -265,7 +280,7 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
           </div>
         </div>
       ) : phase === 'streaming' ? (
-        <div className="flex flex-col items-center gap-3 py-12">
+        <div className="flex flex-col items-center gap-3 py-12" role="status" aria-live="polite">
           <IconSpinner size={26} className="animate-spin text-accent" aria-hidden="true" />
           <p className="text-sm text-dim">{status}</p>
           <p className="text-xs text-faint">Grounding every proposal in real portfolio data…</p>

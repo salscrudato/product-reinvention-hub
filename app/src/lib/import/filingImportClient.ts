@@ -5,6 +5,7 @@
 // bundle is persisted separately through the adapter (see FilingImportModal → importPlan()).
 import { adapter } from '../backend'
 import type { FilingImportPlan } from '@pf/shared'
+import type { NoticeEvent, NoticeKind } from '../ai/notices'
 
 /** A staged progress event the modal renders as it streams. */
 export interface FilingStageEvent {
@@ -13,6 +14,8 @@ export interface FilingStageEvent {
   phase?:  'start' | 'end'
   summary?: string
   message?: string
+  /** Present for `kind:'notice'` — carries the honest-status level + kind (was dropped before). */
+  notice?: NoticeEvent
 }
 
 export interface FilingImportInput { name: string; base64: string; mediaType: string }
@@ -48,10 +51,10 @@ export async function runFilingImport(
     'filingImport',
     { documents, productName: opts.productName, filingState: opts.filingState },
     (chunk) => {
-      let ev: { t: string; name?: string; phase?: 'start' | 'end'; summary?: string; key?: string; value?: unknown; message?: string; level?: string }
+      let ev: { t: string; name?: string; phase?: 'start' | 'end'; summary?: string; key?: string; value?: unknown; message?: string; level?: 'info' | 'warn'; kind?: NoticeKind; refs?: string[] }
       try { ev = JSON.parse(chunk) } catch { return }
       if (ev.t === 'tool') opts.onStage?.({ kind: 'tool', name: ev.name, phase: ev.phase, summary: ev.summary })
-      else if (ev.t === 'notice') opts.onStage?.({ kind: 'notice', message: ev.message })
+      else if (ev.t === 'notice') opts.onStage?.({ kind: 'notice', message: ev.message, notice: { level: ev.level ?? 'info', message: ev.message ?? '', kind: ev.kind, refs: ev.refs } })
       else if (ev.t === 'json' && ev.key === 'bundle') bundle = ev.value as FilingImportPlan
       else if (ev.t === 'error') streamErr = ev.message ?? 'Filing import failed'
     },

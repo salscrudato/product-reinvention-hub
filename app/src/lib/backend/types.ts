@@ -55,8 +55,11 @@ export interface BackendAdapter {
   db: {
     get<T>(path: string): Promise<T | null>
     list<T>(path: string, q?: Query): Promise<T[]>
-    /** Subscribe to a document or collection query. Returns unsubscribe fn. */
-    subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void): Unsubscribe
+    /** Subscribe to a document or collection query. Returns unsubscribe fn. On a listener
+     *  error (e.g. permission-denied / offline) the data callback still degrades to `[]`/`null`
+     *  so consumers resolve their loading state; pass `onError` to ALSO surface a recoverable
+     *  error state instead of a silent empty (see the subscribe-error gap in ELEVATION_MATRIX). */
+    subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void, onError?: (err: unknown) => void): Unsubscribe
     /** Atomic entity + audit + version + searchIndex write. */
     mutate(m: MutationPayload): Promise<void>
     /** Batched mutate: each payload gets the SAME full envelope (entity + audit + version

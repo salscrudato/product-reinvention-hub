@@ -174,6 +174,8 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
 
 export default function ProductForms() {
   const { pid, forms, coverages, loading } = useProductCtx()
+  const { user } = useUser()
+  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -213,7 +215,18 @@ export default function ProductForms() {
     return () => setFocus(null)
   }, [current, setFocus])
 
-  if (loading) return <Skeleton className="h-64 rounded-[14px]" />
+  // Shaped master-detail skeleton (search + facet rail + list + detail), not one flat block —
+  // so the loading state previews the real layout.
+  if (loading) return (
+    <div className="flex flex-col gap-4" aria-hidden="true">
+      <Skeleton className="h-9 w-full max-w-lg" />
+      <div className="grid lg:grid-cols-[200px_300px_1fr] gap-4 items-start">
+        <div className="flex flex-col gap-2">{[1,2,3,4].map(i => <Skeleton key={i} className="h-6 w-full" />)}</div>
+        <div className="flex flex-col gap-1.5">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-20 w-full rounded-[11px]" />)}</div>
+        <Skeleton className="h-[60vh] rounded-[14px]" />
+      </div>
+    </div>
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -227,7 +240,11 @@ export default function ProductForms() {
       )}
 
       {forms.length === 0 ? (
-        <EmptyState icon={<IconForm size={32} />} title="No forms" description="Forms appear here once the product is seeded or extracted from a base form." compact />
+        <EmptyState icon={<IconForm size={32} />} title="No forms yet"
+          description={canEdit
+            ? 'Forms arrive with a seeded product, or when you import a workbook / scaffold from a base form in the Builder — every form number is verified.'
+            : 'Forms appear here once the product is seeded or an editor extracts them from a base form.'}
+          compact />
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-3">

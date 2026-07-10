@@ -23,25 +23,39 @@ interface TableProps<T> {
 export function Table<T>({ columns, rows, rowKey, sortKey, sortDir, onSort, empty }: TableProps<T>) {
   return (
     <div className="overflow-auto rounded-[14px] bg-surface" style={{ border: '1px solid var(--color-border)' }}>
-      <table className="w-full text-sm border-collapse">
+      {/* tabular-nums on the whole table: any numeric cell (premiums, counts, dates) aligns in
+          columns without each consumer opting in; letters are unaffected. */}
+      <table className="w-full text-sm border-collapse tabular-nums">
         <thead>
           <tr className="sticky top-0 z-10 bg-raised" style={{ borderBottom: '1px solid var(--color-border)' }}>
-            {columns.map(col => (
-              <th
-                key={col.key}
-                className={`text-left px-4 py-3 text-xs font-medium text-dim uppercase tracking-wide ${col.width ?? ''} ${col.sortable ? 'cursor-pointer hover:text-text select-none' : ''}`}
-                onClick={() => col.sortable && onSort?.(col.key)}
-              >
-                <span className="flex items-center gap-1">
-                  {col.header}
-                  {col.sortable && (
-                    sortKey === col.key
-                      ? sortDir === 'asc' ? <IconChevronUp size={12} aria-hidden="true" /> : <IconChevronDown size={12} aria-hidden="true" />
-                      : <IconSort size={12} className="opacity-40" aria-hidden="true" />
+            {columns.map(col => {
+              const sorted = sortKey === col.key
+              return (
+                <th
+                  key={col.key}
+                  scope="col"
+                  aria-sort={col.sortable ? (sorted ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
+                  className={`text-left px-4 py-3 text-xs font-medium text-dim uppercase tracking-wide ${col.width ?? ''}`}
+                >
+                  {col.sortable ? (
+                    // A real button so header sort is keyboard-operable (Enter/Space) with a
+                    // visible focus ring — not a click-only div.
+                    <button
+                      type="button"
+                      onClick={() => onSort?.(col.key)}
+                      className="flex items-center gap-1 uppercase tracking-wide hover:text-text select-none rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    >
+                      {col.header}
+                      {sorted
+                        ? sortDir === 'asc' ? <IconChevronUp size={12} aria-hidden="true" /> : <IconChevronDown size={12} aria-hidden="true" />
+                        : <IconSort size={12} className="opacity-40" aria-hidden="true" />}
+                    </button>
+                  ) : (
+                    <span className="flex items-center gap-1">{col.header}</span>
                   )}
-                </span>
-              </th>
-            ))}
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody>

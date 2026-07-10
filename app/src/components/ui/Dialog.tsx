@@ -1,5 +1,9 @@
 // Dialog — accessible modal with backdrop blur and spring entrance.
-import { useEffect, type ReactNode } from 'react'
+// Accessible dialog: labelled by its title, closes on Escape / backdrop click, moves
+// focus into the panel on open, TRAPS Tab/Shift+Tab within it, and restores focus to
+// the previously focused element on close. (Same focus model as Drawer — fixed once
+// here so every *Dialog / *Modal built on this primitive inherits it.)
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { IconClose } from './icons'
 
@@ -11,7 +15,13 @@ interface DialogProps {
   width?:     string
 }
 
+// Selector for the elements Tab can reach inside the panel.
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export function Dialog({ open, onClose, title, children, width = 'max-w-lg' }: DialogProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  const titleId  = useId()
+
   // Escape key
   useEffect(() => {
     if (!open) return
@@ -24,6 +34,33 @@ export function Dialog({ open, onClose, title, children, width = 'max-w-lg' }: D
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  // Focus management + trap. Runs once per open; restores focus on close/unmount.
+  useEffect(() => {
+    if (!open) return
+    const panel = panelRef.current
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const visibleFocusables = () =>
+      Array.from(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []).filter(el => el.offsetParent !== null)
+
+    // Move focus into the panel (first control, else the panel itself).
+    ;(visibleFocusables()[0] ?? panel)?.focus()
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      const items = visibleFocusables()
+      if (items.length === 0) { e.preventDefault(); panel?.focus(); return }
+      const first = items[0], last = items[items.length - 1]
+      const active = document.activeElement
+      if (e.shiftKey && (active === first || active === panel)) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus() }
+    }
+    panel?.addEventListener('keydown', onKeyDown)
+    return () => {
+      panel?.removeEventListener('keydown', onKeyDown)
+      previouslyFocused?.focus?.()   // restore focus to the trigger on close
+    }
   }, [open])
 
   if (!open) return null
@@ -39,16 +76,18 @@ export function Dialog({ open, onClose, title, children, width = 'max-w-lg' }: D
       />
       {/* Panel — spring entrance; neutralised under prefers-reduced-motion via index.css */}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? 'dialog-title' : undefined}
-        className={`relative w-full ${width} bg-surface rounded-[16px] p-6 shadow-2xl rise-in`}
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
+        className={`relative w-full ${width} bg-surface rounded-[16px] p-6 shadow-2xl rise-in outline-none`}
         style={{ border: '1px solid var(--color-border)' }}
       >
         {title && (
           <div className="flex items-center justify-between mb-4">
-            <h2 id="dialog-title" className="text-base font-semibold text-text">{title}</h2>
-            <button onClick={onClose} className="text-faint hover:text-text rounded-[6px] p-1 transition-colors" aria-label="Close">
+            <h2 id={titleId} className="text-base font-semibold text-text">{title}</h2>
+            <button onClick={onClose} className="text-faint hover:text-text rounded-[6px] p-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Close">
               <IconClose size={16} aria-hidden="true" />
             </button>
           </div>

@@ -365,7 +365,7 @@ export const analyzeClaim = onRequest(
             const downgraded = { ...input, verdict: 'NOT_ADDRESSED', openItems, unverifiedCitations: unresolved }
             send(res, { t: 'json', key: 'determination', value: downgraded })
             determinationEmitted = true
-            send(res, { t: 'notice', level: 'warn', message: `A cited reference (${unresolved.join(', ')}) couldn't be verified against the catalog — the determination was downgraded to "not addressed".` })
+            send(res, { t: 'notice', level: 'warn', kind: 'unverified', message: `A cited reference (${unresolved.join(', ')}) couldn't be verified against the catalog — the determination was downgraded to "not addressed".` })
             return Promise.resolve({ content: JSON.stringify({ recorded: true, downgraded: true }), summary: 'downgraded — unverified citation' })
           }
           send(res, { t: 'json', key: 'determination', value: input })
@@ -408,7 +408,7 @@ export const analyzeClaim = onRequest(
       // out-of-set citation index (`invalid`) is an anomaly worth surfacing.
       const cv = verifyCitations(citationsFromConvo(convo), citationIndex)
       if (cv.invalid > 0) {
-        send(res, { t: 'notice', level: 'warn', message: `${cv.invalid} citation${cv.invalid === 1 ? '' : 's'} referenced a source outside the grounded set — treat as unconfirmed.` })
+        send(res, { t: 'notice', level: 'warn', kind: 'unverified', message: `${cv.invalid} citation${cv.invalid === 1 ? '' : 's'} referenced a source outside the grounded set — treat as unconfirmed.` })
       }
       send(res, { t: 'done' })
     } catch (err) {

@@ -410,6 +410,16 @@ function AiCostTab() {
   const [loading, setLoading]   = useState(true)
   const [usageLimit, setUsageLimit] = useState(AI_USAGE_PAGE)
   const [loadingMore, setLoadingMore] = useState(false)
+  // Live provider circuit-breaker state (ADMIN-readable per firestore.rules; read-only).
+  // Absent doc = never tripped = closed.
+  const [breaker, setBreaker] = useState<{ consecutiveFailures?: number; openUntil?: number } | null>(null)
+  useEffect(() => {
+    const unsub = adapter.db.subscribe<{ consecutiveFailures?: number; openUntil?: number }>(
+      'costCounters/breaker-anthropic',
+      d => setBreaker(Array.isArray(d) ? null : (d ?? null)),
+    )
+    return unsub
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -527,6 +537,7 @@ function AiCostTab() {
   const ceilingUsd = DEFAULT_BUDGET.globalDailyUsd
   const ceilingBreached = todaySpendUsd >= ceilingUsd
   const ceilingPct = ceilingUsd > 0 ? Math.min(100, (todaySpendUsd / ceilingUsd) * 100) : 0
+  const breakerOpen = !!breaker?.openUntil && breaker.openUntil > Date.now()
 
   // Configurable cost alarm (localStorage; advisory). A rising escalation rate is the tell
   // for a drifting verifier; the spend cap catches runaway blended cost in the window.
@@ -729,6 +740,24 @@ function AiCostTab() {
           <div className="h-2 rounded-full overflow-hidden bg-raised" role="progressbar" aria-valuenow={Math.round(ceilingPct)} aria-valuemin={0} aria-valuemax={100}>
             <div className="h-full rounded-full" style={{ width: `${ceilingPct}%`, background: ceilingBreached ? 'var(--color-danger)' : 'var(--gradient-accent)' }} />
           </div>
+          {/* Live provider circuit-breaker — read straight from costCounters/breaker-anthropic. */}
+          <div className="flex items-center justify-between text-sm mt-4 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+            <span className="text-dim">Provider circuit breaker</span>
+            {breakerOpen ? (
+              <span className="inline-flex items-center gap-1.5 font-medium tabular-nums" style={{ color: 'var(--color-danger)' }}>
+                <span className="w-2 h-2 rounded-full" style={{ background: 'var(--color-danger)' }} aria-hidden="true" />
+                Open — retries {new Date(breaker!.openUntil!).toLocaleTimeString()}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 font-medium" style={{ color: 'var(--color-good)' }}>
+                <span className="w-2 h-2 rounded-full" style={{ background: 'var(--color-good)' }} aria-hidden="true" />
+                Closed
+              </span>
+            )}
+          </div>
+          {!breakerOpen && (breaker?.consecutiveFailures ?? 0) > 0 && (
+            <p className="text-[11px] text-faint mt-1 tabular-nums">{breaker!.consecutiveFailures} recent provider error{breaker!.consecutiveFailures === 1 ? '' : 's'} — trips open at 4.</p>
+          )}
           <div className="grid grid-cols-2 gap-3 text-sm mt-4">
             {[
               { label: 'Degraded calls', value: ensemble.degraded.toLocaleString(), color: 'var(--color-warn)' },

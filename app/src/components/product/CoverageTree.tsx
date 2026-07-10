@@ -35,7 +35,7 @@ function TreeCard({ cov, depth, canEdit, onTile, onEdit, onDelete }: {
           ? '1.5px solid var(--color-border-strong)'
           : '1px solid var(--color-border)',
         boxShadow: isRoot
-          ? '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.03)'
+          ? 'var(--shadow-chip)'
           : 'none',
       }}
     >

@@ -15,7 +15,7 @@ import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { usePortfolioInventory } from '../lib/usePortfolioInventory'
 import { Button, Skeleton, EmptyState } from '../components/ui'
-import { IconPlus, IconDownload, IconProduct, IconSearch, IconCards, IconLayers } from '../components/ui/icons'
+import { IconPlus, IconDownload, IconProduct, IconSearch, IconCards, IconLayers, IconRefresh } from '../components/ui/icons'
 import { ProductCard } from '../components/product/ProductCard'
 import { DeleteProductDialog } from '../components/product/DeleteProductDialog'
 import { PageHero } from '../components/ui/PageHero'
@@ -61,6 +61,8 @@ export default function Products() {
 
   const [products, setProducts] = useState<WithId<Product>[]>([])
   const [loading,  setLoading]  = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [query,    setQuery]    = useState('')
   const [seg,      setSeg]      = useState<SegmentSelection>({})
   const [exporting, setExporting] = useState(false)
@@ -99,11 +101,12 @@ export default function Products() {
   }
 
   useEffect(() => {
+    setLoadError(false)
     const unsub = adapter.db.subscribe<WithId<Product>>('products', (data) => {
-      if (Array.isArray(data)) { setProducts(data); setLoading(false) }
-    })
+      if (Array.isArray(data)) { setProducts(data); setLoading(false); setLoadError(false) }
+    }, () => { setLoadError(true); setLoading(false) })
     return unsub
-  }, [])
+  }, [reloadKey])
 
   // Published portfolio only (LAUNCHED); drafts are authored + promoted in the Builder.
   const launched = useMemo(() => products.filter(p => p.lifecycle === 'LAUNCHED'), [products])
@@ -226,11 +229,16 @@ export default function Products() {
             </div>
           ))}
         </div>
+      ) : loadError ? (
+        <EmptyState icon={<IconProduct size={32} />} title="Couldn't load products"
+          description="Check your connection or permissions and try again."
+          action={<Button variant="primary" size="sm" onClick={() => { setLoading(true); setReloadKey(k => k + 1) }}><IconRefresh size={14} />Retry</Button>}
+        />
       ) : visible.length === 0 ? (
         launched.length === 0 && !query ? (
           <EmptyState icon={<IconProduct size={32} />} title="No published products yet"
-            description={canEdit ? 'Author products in the Builder, then promote them here.' : 'Products appear here once a draft is promoted.'}
-            action={canEdit ? <Button variant="primary" size="sm" onClick={() => navigate('/app/builder')}><IconPlus size={14} />Go to Builder</Button> : undefined}
+            description={canEdit ? 'Author a product in the Builder, then promote it here.' : 'Products appear here once a draft is promoted.'}
+            action={canEdit ? <Button variant="primary" size="sm" onClick={() => navigate('/app/builder')}><IconPlus size={14} />Create a product</Button> : undefined}
           />
         ) : (
           <EmptyState icon={<IconProduct size={32} />}

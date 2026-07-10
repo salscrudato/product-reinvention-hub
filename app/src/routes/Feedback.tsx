@@ -394,7 +394,7 @@ export default function Feedback() {
             return (
               <button key={val || 'all'} type="button" aria-pressed={on} onClick={() => setTypeFilter(val)}
                 className={`px-2.5 h-7 rounded-[7px] text-[12px] font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${on ? 'bg-surface text-accent' : 'text-dim hover:text-text'}`}
-                style={on ? { boxShadow: '0 1px 2px rgba(0,0,0,.08)' } : undefined}>
+                style={on ? { boxShadow: 'var(--shadow-chip)' } : undefined}>
                 {label}
               </button>
             )
@@ -640,10 +640,10 @@ function Card({ fb, lane, canEdit, isAdmin, uid, maxHeat, onVote, onMove, onDele
           className="group/thumb relative w-full rounded-[8px] overflow-hidden cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
           style={{ border: '1px solid var(--color-border)' }}>
           <img src={fb.screenshotUrl} alt="Feedback screenshot" className="w-full h-24 object-cover object-top" />
-          <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.35)' }}>
+          <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity" style={{ background: 'var(--color-scrim)' }}>
             <IconExpand size={18} className="text-white drop-shadow" aria-hidden="true" />
           </span>
-          <span className="absolute bottom-0 inset-x-0 px-2 py-1 flex items-center gap-1 text-[10px] text-white/70" style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.4))' }}>
+          <span className="absolute bottom-0 inset-x-0 px-2 py-1 flex items-center gap-1 text-[10px] text-white/70" style={{ background: 'linear-gradient(transparent, var(--color-scrim))' }}>
             <IconCamera size={10} aria-hidden="true" /> Screenshot
           </span>
         </button>

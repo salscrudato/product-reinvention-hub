@@ -128,7 +128,7 @@ export default function ProductStates() {
               aria-label={`${st} — ${on ? 'in scope' : 'out of scope'}${coastal ? `, ${lob.peril.label}` : ''}`}
               onClick={() => canEdit && toggleState(st)}
               className={`inline-flex items-center gap-1 px-2 py-1 rounded-[6px] text-xs font-mono font-medium border transition-colors
-                ${on ? 'bg-accent text-white border-accent' : 'bg-surface text-dim border-border-strong hover:border-accent hover:text-accent'}
+                ${on ? 'bg-accent text-on-accent border-accent' : 'bg-surface text-dim border-border-strong hover:border-accent hover:text-accent'}
                 ${!canEdit ? 'cursor-default' : 'cursor-pointer'}`}
             >
               {st}

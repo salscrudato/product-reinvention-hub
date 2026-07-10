@@ -152,17 +152,17 @@ export interface CostGate { proceed: boolean; degraded: boolean; blocked: 'deny'
 export async function sseCostGate(res: SseResponse, feature: string, sessionKey: string): Promise<CostGate> {
   const guard = await guardSpend({ feature, sessionKey, estCostUsd: estCostFor(feature) })
   if (guard.action === 'deny') {
-    send(res, { t: 'notice', level: 'warn', message: 'AI is temporarily limited — the daily budget ceiling has been reached. Please try again later.' })
+    send(res, { t: 'notice', level: 'warn', kind: 'deny', message: 'AI is temporarily limited — the daily budget ceiling has been reached. Please try again later.' })
     send(res, { t: 'done' })
     return { proceed: false, degraded: false, blocked: 'deny' }
   }
   if (guard.breakerOpen) {
-    send(res, { t: 'notice', level: 'warn', message: 'The AI service is temporarily unavailable. Please try again shortly.' })
+    send(res, { t: 'notice', level: 'warn', kind: 'breaker', message: 'The AI service is temporarily unavailable. Please try again shortly.' })
     send(res, { t: 'done' })
     return { proceed: false, degraded: false, blocked: 'breaker' }
   }
   if (guard.action === 'degrade') {
-    send(res, { t: 'notice', level: 'info', message: guard.reason })
+    send(res, { t: 'notice', level: 'info', kind: 'degrade', message: guard.reason })
     return { proceed: true, degraded: true, blocked: null }
   }
   return { proceed: true, degraded: false, blocked: null }
@@ -244,7 +244,7 @@ export const chat = onRequest(
           const r = await semanticCacheGet({ client: anthropic(), query, queryVector, productId, known, mode: cacheMode })
           if (r.hit) {
             send(res, { t: 'token', v: r.hit.answer })
-            send(res, { t: 'notice', level: 'info', message: 'Answered from a cached response for a near-identical question. Use Regenerate for a fresh answer.' })
+            send(res, { t: 'notice', level: 'info', kind: 'cached', message: 'Answered from a cached response for a near-identical question. Use Regenerate for a fresh answer.' })
             send(res, { t: 'done' })
             // A hit spent only the tiny verifier (+ one embed) — record that, and the Sonnet
             // spend it AVOIDED as savedUsd. No provider answer call, so the breaker is untouched.
@@ -264,7 +264,7 @@ export const chat = onRequest(
       if (guard.action === 'deny') {
         // Hard global ceiling — no model call. Clear, honest message; ADMIN alarm in the tab.
         denied = true; providerCalled = false; recordUsageAccum = emptyUsage()
-        send(res, { t: 'notice', level: 'warn', message: 'AI is temporarily limited — the daily budget ceiling has been reached. Please try again later.' })
+        send(res, { t: 'notice', level: 'warn', kind: 'deny', message: 'AI is temporarily limited — the daily budget ceiling has been reached. Please try again later.' })
         send(res, { t: 'done' })
         return
       }
@@ -272,7 +272,7 @@ export const chat = onRequest(
         // Provider unhealthy (breaker open) and no cache hit — don't hammer it. Degrade to a
         // clear message rather than burning the timeout on a call likely to fail.
         degraded = true; providerCalled = false; recordUsageAccum = emptyUsage()
-        send(res, { t: 'notice', level: 'warn', message: 'The AI service is temporarily unavailable. Please try again shortly.' })
+        send(res, { t: 'notice', level: 'warn', kind: 'breaker', message: 'The AI service is temporarily unavailable. Please try again shortly.' })
         send(res, { t: 'done' })
         return
       }
@@ -281,7 +281,7 @@ export const chat = onRequest(
         // fewer tool turns and skip the citation augmentation. Grounding stays enforced by
         // the tools + the post-answer verification.
         degraded = true
-        send(res, { t: 'notice', level: 'info', message: guard.reason })
+        send(res, { t: 'notice', level: 'info', kind: 'degrade', message: guard.reason })
       }
 
       const focus = productId
@@ -324,7 +324,7 @@ export const chat = onRequest(
         if (unverified.length) {
           const one = unverified.length === 1
           send(res, {
-            t: 'notice', level: 'warn', refs: unverified,
+            t: 'notice', level: 'warn', kind: 'unverified', refs: unverified,
             message: `${unverified.length} cited ${one ? 'reference' : 'references'} couldn't be verified against the catalog (${unverified.join(', ')}). Treat ${one ? 'it' : 'them'} as unconfirmed.`,
           })
         }
@@ -334,7 +334,7 @@ export const chat = onRequest(
         if (citationIndex.length) {
           const v = verifyCitations(citationsFromConvo(convo), citationIndex)
           if (v.invalid > 0) {
-            send(res, { t: 'notice', level: 'warn', message: `${v.invalid} citation${v.invalid === 1 ? '' : 's'} referenced a source outside the grounded set — treat as unconfirmed.` })
+            send(res, { t: 'notice', level: 'warn', kind: 'unverified', message: `${v.invalid} citation${v.invalid === 1 ? '' : 's'} referenced a source outside the grounded set — treat as unconfirmed.` })
           }
         }
 

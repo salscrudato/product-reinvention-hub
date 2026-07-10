@@ -7,8 +7,8 @@ import { useUser } from '../../context/useUser'
 import { useCapture } from '../../context/useCapture'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
-import { Skeleton, ProductStatusPill, Badge, Button } from '../../components/ui'
-import { IconRecent, IconChat, IconBack, IconChevronDown, IconArrowUp, IconEdit, IconCheck, IconClose } from '../../components/ui/icons'
+import { Skeleton, ProductStatusPill, Badge, Button, EmptyState } from '../../components/ui'
+import { IconRecent, IconChat, IconBack, IconChevronDown, IconArrowUp, IconEdit, IconCheck, IconClose, IconRefresh, IconProduct } from '../../components/ui/icons'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { HeroGlyph, type HeroGlyphName } from '../../components/ui/heroGlyphs'
 import { GlobalCommandBar } from '../../features/search/GlobalCommandBar'
@@ -28,7 +28,7 @@ const TABS = [
 ]
 
 function WorkspaceInner() {
-  const { pid, product, coverages, rules, formRules, forms, ldTables, rtTables, ratingProgram, loading } = useProductCtx()
+  const { pid, product, coverages, rules, formRules, forms, ldTables, rtTables, ratingProgram, loading, error, retry } = useProductCtx()
   const navigate     = useNavigate()
   const { pathname } = useLocation()
   const { user }     = useUser()
@@ -89,6 +89,23 @@ function WorkspaceInner() {
         <Skeleton className="h-32 rounded-[16px]" /><Skeleton className="h-10 w-64" />
         <Skeleton className="h-64 rounded-[16px]" />
       </div>
+    )
+  }
+
+  // A listener error (permission / offline) on the product doc — recoverable, not a redirect.
+  if (error && !product) {
+    return (
+      <EmptyState
+        icon={<IconProduct size={32} />}
+        title="Couldn't load this product"
+        description="Check your connection or permissions and try again."
+        action={
+          <div className="flex items-center gap-2">
+            <Button variant="primary" size="sm" onClick={retry}><IconRefresh size={14} />Retry</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/app/products')}><IconBack size={14} />Products</Button>
+          </div>
+        }
+      />
     )
   }
 

@@ -66,7 +66,7 @@ export function ProductVitals() {
           className="group relative flex flex-col gap-2 rounded-[14px] bg-surface p-3.5 text-left border border-[color:var(--color-border)] shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-accent-line)] hover:shadow-[var(--shadow-card-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <span className="flex items-center justify-between">
-            <span className="w-8 h-8 rounded-[9px] flex items-center justify-center bg-accent-soft text-accent transition-colors duration-200 group-hover:bg-accent group-hover:text-white">
+            <span className="w-8 h-8 rounded-[9px] flex items-center justify-center bg-accent-soft text-accent transition-colors duration-200 group-hover:bg-accent group-hover:text-on-accent">
               <v.icon size={16} aria-hidden="true" />
             </span>
             <IconChevronRight

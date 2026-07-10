@@ -1,4 +1,6 @@
-// Tooltip — CSS-only hover label; no JS needed for this simple variant.
+// Tooltip — CSS hover/focus label. Reveals on hover AND keyboard focus of the trigger, so it
+// is not pointer-only. Colour is the INVERSE surface (`bg-text` + `text-surface`) so it reads in
+// BOTH themes — the old `text-white` went invisible in dark mode (bg-text is near-white there).
 import type { ReactNode } from 'react'
 
 interface TooltipProps {
@@ -20,8 +22,8 @@ export function Tooltip({ content, children, side = 'top' }: TooltipProps) {
       {children}
       <div
         role="tooltip"
-        className={`absolute z-50 px-2 py-1 text-xs text-white bg-text rounded-[6px]
-          whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100
+        className={`absolute z-50 px-2 py-1 text-xs text-surface bg-text rounded-[6px]
+          whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
           transition-opacity duration-150 ${sideStyles[side]}`}
       >
         {content}

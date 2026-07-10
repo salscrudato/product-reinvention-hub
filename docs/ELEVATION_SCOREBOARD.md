@@ -331,3 +331,46 @@ in commit `61bddd1 "chore: lean the repo to code only"` and now live only in git
    Personal Auto.) The $1,528 HO-3 canary is unchanged and still load-bearing.
 4. **`baseForms` collection** (Claims base-form library) exists in `firestore.rules`
    (line 96) but is not in the archived DATA_MODEL.md.
+
+## Dark-mode + accessibility elevation (2026-07-10)
+
+Eight-workstream pass (A–H) over every surface. Deterministic gate green (typecheck · lint ·
+**760** unit tests · build); emulator-gated suites (rules / integration / e2e — incl. the new
+axe check) remain blocked by the pre-existing port-8080 conflict (V16/V17). Canaries untouched
+(no `shared/rating` change). Companion: [reviews/ELEVATION_MATRIX.md](reviews/ELEVATION_MATRIX.md).
+
+- **A · Dark mode + motion.** Complete `[data-theme="dark"]` token re-cast in `index.css`
+  (surfaces, ink, borders, accent, status, map, shadows, soft tints, overlays, glass, gradients),
+  every text token validated ≥ WCAG AA on all four dark surfaces. Root `data-theme` set pre-paint
+  by a no-FOUC script in `index.html`; a header toggle (`ThemeToggle`) persists `pf.theme` and
+  falls back to `prefers-color-scheme`; sonner `Toaster` + `<meta theme-color>` follow the theme.
+  Interactive transitions share a 200–400 ms band (`--dur-*`); the theme flip cross-fades; the
+  existing global `prefers-reduced-motion` guard (incl. the pricing trace) was extended to
+  neutralise it. New `--color-on-accent` ink lets a solid `bg-accent` fill stay AA in dark
+  (light-violet accent + near-black ink) while the vivid gradient fills keep white ink.
+- **B · Identity.** Accent already the Accenture violet (`#A100FF → #7A00E6`); AA re-validated for
+  accent-on-surface + ink-on-accent in **both** themes (contrast validator).
+- **C · Traceability type.** `Table` cells + `Tabs` count pill now tabular-nums; `RefChip` mono
+  unchanged; **zero** `lucide-react` (dependency + imports).
+- **D · States.** Rules empty gains an inline role-aware **Draft rule**; Forms gets a shaped
+  master-detail skeleton + role-aware empty; Products empty action reads **Create a product**;
+  `adapter.subscribe` gained `onError` — Products + the product workspace now surface a
+  recoverable "Couldn't load … / Retry" instead of a silent empty / infinite skeleton.
+- **E · Keyboard + Back.** Verified: ⌘K palette, ⌘. capture, product-workspace Back bar,
+  Explorer + StateTileMap arrow-nav/Enter, and pointer-free column moves via each board's
+  explicit ← / → controls (more discoverable than a dnd KeyboardSensor).
+- **F · A11y.** `Dialog` gained the full focus model (trap + move-in + return + `useId` title +
+  focus-ring) matching `Drawer`; `Table` sortable headers are real buttons with `aria-sort` +
+  `scope`; `Tooltip` fixed (was invisible in dark) + focus-reveal; `aria-live` status regions added
+  to the RuleBuilder / Scaffold / Filing SSE surfaces; **`e2e/axe.spec.ts`** runs axe-core over 5
+  routes × both themes asserting zero serious/critical WCAG 2 A/AA violations.
+- **G · Honest AI status.** A machine-readable `kind` on the `notice` SSE frame drives one shared
+  `NoticeBanner` + drift-proof client copy (`lib/ai/notices.ts`) across Home / Claims / rule
+  composer / scaffold / filing import (the last three previously **dropped** notices). Deny is a
+  first-class, recoverable state (explains the daily budget + UTC reset + Regenerate); cache hits
+  show a quiet **Cached** badge beside Regenerate; the Admin AI-Cost tab shows **live** breaker
+  state (closed / open + retry time, ADMIN-read of `costCounters/breaker-anthropic`) beside the
+  spend-vs-ceiling meter.
+- **H · Evidence.** `scripts/capture-screens.mjs` re-run into `docs/review/screens-after/` —
+  **52 PNGs** (26 surfaces × light + dark) incl. the filing-import surface + a consolidated PDF;
+  before/after index at `docs/review/screens-after/INDEX.md`.

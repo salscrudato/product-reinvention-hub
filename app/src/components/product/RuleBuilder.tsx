@@ -11,7 +11,8 @@
 //    edits and saves. The draft is handed up to be persisted via mutate().
 import { useMemo, useState } from 'react'
 import { IconArrowRight, IconPlus, IconClose, IconSparkle, IconWand, IconSpinner, IconCheck, IconEdit, IconWarning, IconAlertCircle, IconCheckCircle } from '../ui/icons'
-import { Badge, Button, RefChip } from '../ui'
+import { Badge, Button, RefChip, NoticeBanner } from '../ui'
+import { isCacheNotice, type NoticeEvent, type NoticeKind } from '../../lib/ai/notices'
 import { adapter } from '../../lib/backend'
 import type { Rule, RuleCategory } from '@pf/shared'
 import type { RuleLike, RuleSim } from './ruleSim'
@@ -128,6 +129,7 @@ type StreamEvent =
   | { t: 'token'; v: string }
   | { t: 'tool';  name: string; phase: 'start' | 'end'; summary?: string }
   | { t: 'json';  key: string; value: unknown }
+  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[]; kind?: NoticeKind }
   | { t: 'error'; message: string }
   | { t: 'done' }
 
@@ -202,6 +204,7 @@ export function RuleComposer({ productId, lobPrefix, coverages, forms, existingR
   const [warnings, setWarnings]       = useState<string[]>([])
   const [citations, setCitations]     = useState<string[]>([])
   const [error, setError]             = useState<string | null>(null)
+  const [notice, setNotice]           = useState<NoticeEvent | null>(null)
   const [saving, setSaving]           = useState(false)
 
   // Editable draft fields — seeded from the existing rule in edit mode, and overwritten
@@ -234,9 +237,10 @@ export function RuleComposer({ productId, lobPrefix, coverages, forms, existingR
   async function draft() {
     const text = instruction.trim()
     if (!text || streaming) return
-    setStreaming(true); setError(null); setTools([]); setRationale([]); setWarnings([]); setCitations([])
+    setStreaming(true); setError(null); setNotice(null); setTools([]); setRationale([]); setWarnings([]); setCitations([])
     let gotDraft = false
     let sawError = false
+    let sawBlockingNotice = false   // deny/breaker end the stream with no draft — the banner explains it
     const payload = {
       instruction: text, productId, lobPrefix,
       ...(existingRule ? { existingRule: { refId: existingRule.refId, category: existingRule.category, subCategory: existingRule.subCategory, condition: existingRule.condition, outcome: existingRule.outcome, coverageRefIds: existingRule.coverageRefIds, formNumbers: existingRule.formNumbers, ldTableRef: existingRule.ldTableRef } } : {}),
@@ -258,14 +262,21 @@ export function RuleComposer({ productId, lobPrefix, coverages, forms, existingR
           case 'json':
             if (ev.key === 'rule_draft') { gotDraft = true; applyDraft(ev.value as RuleDraft) }
             break
+          case 'notice':
+            // Honest AI status: a budget deny / breaker / degrade / unverified advisory. Was
+            // previously dropped, so a deny surfaced only as the misleading "didn't return a
+            // draft" error. Now the banner explains it and Regenerate is the recovery.
+            setNotice({ level: ev.level, message: ev.message, kind: ev.kind, refs: ev.refs })
+            if (ev.kind === 'deny' || ev.kind === 'breaker') sawBlockingNotice = true
+            break
           case 'error': sawError = true; setError(ev.message); break
           case 'token': case 'done': break
         }
       })
       // The server now forces a final draft when the model doesn't commit to one, so a
       // missing draft here means the stream ended abnormally. Don't clobber a specific
-      // server error message with the generic fallback.
-      if (!gotDraft && !sawError) setError('The assistant didn’t return a draft. Try rephrasing, or write it manually below.')
+      // server error message — or an honest budget/breaker notice — with the generic fallback.
+      if (!gotDraft && !sawError && !sawBlockingNotice) setError('The assistant didn’t return a draft. Try rephrasing, or write it manually below.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Draft failed.')
     } finally {
@@ -319,7 +330,7 @@ export function RuleComposer({ productId, lobPrefix, coverages, forms, existingR
           <span className="text-[11px] text-faint">Reads the product server-side · every reference verified · ⌘↵</span>
         </div>
         {tools.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5" role="status" aria-live="polite" aria-label="Drafting progress">
             {tools.map((t, i) => (
               <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-raised text-[11px] text-dim">
                 {t.done ? <IconCheck size={10} className="text-good" aria-hidden="true" /> : <IconSpinner size={10} className="animate-spin text-accent" aria-hidden="true" />}
@@ -328,7 +339,8 @@ export function RuleComposer({ productId, lobPrefix, coverages, forms, existingR
             ))}
           </div>
         )}
-        {error && <p className="text-[12px] text-danger">{error}</p>}
+        {notice && !isCacheNotice(notice) && <NoticeBanner notice={notice} />}
+        {error && <p className="text-[12px] text-danger" role="alert">{error}</p>}
       </div>
 
       {/* Editable, cited draft */}

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { IconSearch, IconSignOut, IconChevronDown, IconHome, IconKey } from '../ui/icons'
+import { ThemeToggle } from './ThemeToggle'
 import { useUser } from '../../context/useUser'
 import { adapter } from '../../lib/backend'
 import type { Product } from '@pf/shared'
@@ -103,6 +104,9 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
           {isMac ? '⌘K' : 'Ctrl+K'}
         </kbd>
       </button>
+
+      {/* Theme toggle — light ⇄ dark, persisted */}
+      <ThemeToggle />
 
       {/* Presence slot (wired in Prompt 4) */}
       <div className="hidden lg:flex items-center gap-1" id="presence-slot" />

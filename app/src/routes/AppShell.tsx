@@ -9,12 +9,14 @@ import { Topbar } from '../components/shell/Topbar'
 import { CommandPalette } from '../components/palette/CommandPalette'
 import { FeedbackProvider } from '../components/feedback/FeedbackProvider'
 import { CaptureProvider } from '../context/CaptureContext'
+import { useTheme } from '../lib/theme'
 import { Skeleton } from '../components/ui'
 
 export default function AppShell() {
   const { user, profile, loading } = useUser()
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const [theme] = useTheme()
   const [collapsed,    setCollapsed]    = useState(false)
   const [paletteOpen, setPaletteOpen]   = useState(false)
   // Top-level route segment drives the page-in key so transitions fire on section changes
@@ -76,7 +78,7 @@ export default function AppShell() {
         </div>
 
         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
-        <Toaster richColors position="bottom-right" />
+        <Toaster richColors position="bottom-right" theme={theme} />
       </div>
     </FeedbackProvider>
     </CaptureProvider>

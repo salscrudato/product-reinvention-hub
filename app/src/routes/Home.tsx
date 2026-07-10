@@ -8,7 +8,9 @@
 // so a VIEWER sees exactly what everyone else does (no edit affordances to hide).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { IconSparkle, IconCheck, IconSpinner, IconWarning } from '../components/ui/icons'
+import { IconCheck, IconSpinner, IconRecent } from '../components/ui/icons'
+import { NoticeBanner, Tooltip } from '../components/ui'
+import { isCacheNotice, type NoticeEvent, type NoticeKind } from '../lib/ai/notices'
 import { adapter } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
 import { Markdown } from '../components/chat/Markdown'
@@ -24,12 +26,12 @@ type StreamEvent =
   | { t: 'token'; v: string }
   | { t: 'tool';  name: string; phase: 'start' | 'end'; summary?: string }
   | { t: 'json';  key: string; value: unknown }
-  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[] }
+  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[]; kind?: NoticeKind }
   | { t: 'error'; message: string }
   | { t: 'done' }
 
 interface ToolChip { name: string; done: boolean; summary?: string }
-interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[]; notice?: string; noticeLevel?: 'info' | 'warn' }
+interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[]; notice?: NoticeEvent }
 
 // ─── Cockpit ────────────────────────────────────────────────────────────────────
 
@@ -148,7 +150,7 @@ export default function Home() {
             // Non-fatal advisory: an unverified citation (warn), a cache hit or a cost-saver
             // degradation (info). Surface it so a chip is never read as confirmed and the
             // user knows when an answer came from cache (and can Regenerate for a fresh one).
-            patchAssistant(m => ({ ...m, notice: ev.message, noticeLevel: ev.level })); break
+            patchAssistant(m => ({ ...m, notice: { level: ev.level, message: ev.message, kind: ev.kind, refs: ev.refs } })); break
           case 'error':
             patchAssistant(m => ({ ...m, text: m.text + `\n\n⚠️ ${ev.message}` })); break
           case 'done': break
@@ -219,11 +221,11 @@ export default function Home() {
                             <span key={ti} className="inline-flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full text-[10.5px] font-medium transition-colors"
                               style={{
                                 background: t.done ? 'var(--color-good-soft)' : 'var(--color-accent-soft)',
-                                border: `1px solid ${t.done ? 'rgba(4,120,87,.18)' : 'var(--color-accent-line)'}`,
+                                border: `1px solid ${t.done ? 'var(--color-good-line)' : 'var(--color-accent-line)'}`,
                                 color: t.done ? 'var(--color-good)' : 'var(--color-accent)',
                               }}>
                               <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                                style={{ background: t.done ? 'rgba(4,120,87,.15)' : 'var(--color-accent-line)' }}>
+                                style={{ background: t.done ? 'var(--color-good-soft)' : 'var(--color-accent-line)' }}>
                                 {t.done
                                   ? <IconCheck size={9} aria-hidden="true" />
                                   : <IconSpinner size={9} className="animate-spin" aria-hidden="true" />}
@@ -241,20 +243,29 @@ export default function Home() {
                       {m.role === 'assistant'
                         ? <div className="text-sm text-text"><Markdown text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span aria-hidden="true" className="inline-block text-accent animate-pulse ml-0.5 select-none opacity-70" style={{ lineHeight: 1 }}>▍</span>}</div>
                         : m.text}
-                      {m.role === 'assistant' && m.notice && (
-                        <div className={`flex items-start gap-1.5 text-[12px] ${m.noticeLevel === 'info' ? 'text-dim' : 'text-warn'}`} role="note">
-                          {m.noticeLevel === 'info'
-                            ? <IconSparkle size={13} className="shrink-0 mt-0.5 text-accent" aria-hidden="true" />
-                            : <IconWarning size={13} className="shrink-0 mt-0.5" aria-hidden="true" />}
-                          <span>{m.notice}</span>
-                        </div>
+                      {/* Degrade / deny / breaker / unverified → the shared honest-status banner.
+                          A cache HIT is NOT a banner — it's the quiet badge in the footer row below. */}
+                      {m.role === 'assistant' && m.notice && !isCacheNotice(m.notice) && (
+                        <NoticeBanner notice={m.notice} />
                       )}
-                      {m.role === 'assistant' && i === messages.length - 1 && !streaming && m.text.trim() && (
-                        <button
-                          onClick={regenerate}
-                          title="Regenerate a fresh answer (bypass the cached response)"
-                          className="self-start inline-flex items-center gap-1 text-[11px] text-faint hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[6px] px-1"
-                        >↻ Regenerate</button>
+                      {/* Footer: a quiet Cached badge (with tooltip) beside Regenerate. Regenerate is
+                          offered whenever the turn produced text OR a notice — so a DENY is a
+                          first-class, recoverable state, not a vanished toast. */}
+                      {m.role === 'assistant' && i === messages.length - 1 && !streaming && (m.text.trim() || m.notice) && (
+                        <div className="flex items-center gap-2 self-start">
+                          {isCacheNotice(m.notice) && (
+                            <Tooltip content="Reused a near-identical cached answer to save budget. Regenerate for a fresh, full-depth one.">
+                              <span className="inline-flex items-center gap-1 text-[10.5px] font-medium px-1.5 py-0.5 rounded-full bg-raised text-faint" style={{ border: '1px solid var(--color-border)' }}>
+                                <IconRecent size={10} aria-hidden="true" /> Cached
+                              </span>
+                            </Tooltip>
+                          )}
+                          <button
+                            onClick={regenerate}
+                            title="Regenerate a fresh answer (bypass the cached response)"
+                            className="inline-flex items-center gap-1 text-[11px] text-faint hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[6px] px-1"
+                          >↻ Regenerate</button>
+                        </div>
                       )}
                     </div>
                   </div>

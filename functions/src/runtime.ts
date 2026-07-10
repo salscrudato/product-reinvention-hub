@@ -160,7 +160,12 @@ export type StreamEvent =
   | { t: 'token'; v: string }                                   // assistant text delta
   | { t: 'tool';  name: string; phase: 'start' | 'end'; summary?: string }
   | { t: 'json';  key: string; value: unknown }                 // structured payload (drafts, determinations)
-  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[] }  // non-fatal advisory (e.g. unverified citations)
+  // Non-fatal advisory. `kind` is a MACHINE-READABLE discriminator so the client renders
+  // its OWN canonical copy (see app/src/lib/ai/notices.ts) instead of trusting free text —
+  // this is how the honest-status wording is kept from drifting across surfaces. `message`
+  // remains as a server-authored fallback for older clients / kinds without canonical copy.
+  | { t: 'notice'; level: 'info' | 'warn'; message: string; refs?: string[];
+      kind?: 'degrade' | 'deny' | 'breaker' | 'cached' | 'unverified' }
   | { t: 'error'; message: string }
   | { t: 'done' }
 

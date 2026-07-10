@@ -1,10 +1,11 @@
 /**
  * Comprehensive screenshot + PDF capture for Product Reinvention Hub.
- * Covers all 20 UI surfaces + key product workspace tabs (HO-3 and PA).
- * Outputs individual PNGs to docs/review/screens/ and a single consolidated
- * docs/review/screens/ALL_SCREENS.pdf.
+ * Covers all 20 UI surfaces + key product workspace tabs (HO-3 and PA) + the filing-import
+ * surface, in BOTH themes (light + dark — the theme toggle added this session).
+ * Outputs individual PNGs to docs/review/screens-after/ (suffixed -light / -dark) and a single
+ * consolidated docs/review/screens-after/ALL_SCREENS.pdf.
  *
- * Pre-requisite: pnpm dev:seed must be running (emulators + app on port 5173).
+ * Pre-requisite: the seeded emulator stack + app on port 5173 (pnpm dev:seed).
  *
  * Credentials (in priority order):
  *   1. CAPTURE_USER / CAPTURE_PASS environment variables
@@ -25,223 +26,163 @@ const __dir    = dirname(fileURLToPath(import.meta.url));
 const ROOT     = resolve(__dir, '..');
 const BASE_URL = 'http://127.0.0.1:5173';
 const FS_API   = 'http://127.0.0.1:8080/v1/projects/productreinvention/databases/(default)/documents';
-const SHOTS    = join(ROOT, 'docs', 'review', 'screens');
+const SHOTS    = join(ROOT, 'docs', 'review', 'screens-after');
 const VP       = { width: 1440, height: 900 };
 const TIMEOUT  = 30_000;
+const THEMES   = ['light', 'dark'];
 
-// Credentials — prefer env vars; fall back to the seeded EDITOR account.
-// Update the fallback values to match the EDITOR entry in scripts/seed.ts / shared/src/seed/.
-const CAPTURE_USER = process.env.CAPTURE_USER ?? 'editor@productreinvention.app';
-const CAPTURE_PASS = process.env.CAPTURE_PASS ?? 'editor';
+// Credentials — the landing sign-in is a first-name / last-name form (the adapter maps it to
+// a seeded account); mirrors e2e/smoke.spec.ts. Defaults to the seeded ADMIN (sal scrudato).
+const CAPTURE_FIRST = process.env.CAPTURE_FIRST ?? 'sal';
+const CAPTURE_LAST  = process.env.CAPTURE_LAST ?? 'scrudato';
 
 if (!existsSync(SHOTS)) mkdirSync(SHOTS, { recursive: true });
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-let shotLog = []; // [{file, label}]
+const shotLog = []; // [{file, label, theme}]
 
-async function shot(page, file, label) {
-  await page.waitForTimeout(1000);
+async function shot(page, file, label, theme) {
+  await page.waitForTimeout(900);
   await page.screenshot({ path: join(SHOTS, file) });
-  shotLog.push({ file, label });
+  shotLog.push({ file, label, theme });
   console.log(`  ✓  ${label} → ${file}`);
 }
 
 async function go(page, path) {
   await page.goto(`${BASE_URL}${path}`, { waitUntil: 'load', timeout: TIMEOUT });
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1800);
 }
 
 async function fsGet(path) {
-  const r = await fetch(`${FS_API}/${path}?pageSize=20`, {
-    headers: { Authorization: 'Bearer owner' }
-  });
+  const r = await fetch(`${FS_API}/${path}?pageSize=20`, { headers: { Authorization: 'Bearer owner' } });
   return r.json();
+}
+
+// ── One full pass in a given theme ───────────────────────────────────────────────
+
+async function capturePass(browser, theme) {
+  console.log(`\n╔══ THEME: ${theme.toUpperCase()} ═══════════════════════════════════════`);
+  const ctx = await browser.newContext({ viewport: VP, colorScheme: theme });
+  // Pin the app theme BEFORE first paint (the no-FOUC script in index.html reads pf.theme).
+  await ctx.addInitScript((t) => { try { localStorage.setItem('pf.theme', t) } catch { /* ignore */ } }, theme);
+  const page = await ctx.newPage();
+  page.setDefaultTimeout(TIMEOUT);
+  const sfx = (name) => `${name}-${theme}.png`;
+  const S = (name, label) => shot(page, sfx(name), label, theme);
+
+  // S01 — Landing (unauthenticated anonymous session)
+  await page.goto(BASE_URL, { waitUntil: 'load', timeout: TIMEOUT });
+  await page.waitForTimeout(1800);
+  await S('s01-landing', 'S01 · Landing');
+
+  // Sign in — first-name / last-name landing form (see e2e/smoke.spec.ts).
+  await page.getByPlaceholder('first name').fill(CAPTURE_FIRST);
+  await page.getByPlaceholder('last name').fill(CAPTURE_LAST);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL('**/app**', { timeout: TIMEOUT });
+  await page.waitForTimeout(2500);
+  console.log(`  ✓  Signed in as ${CAPTURE_FIRST} ${CAPTURE_LAST}`);
+
+  await go(page, '/app');
+  await S('s04-home', 'S04 · Home — portfolio chat + priority rail');
+
+  const fsResp = await fsGet('products');
+  const pids = (fsResp.documents ?? []).map(d => d.name?.split('/').pop()).filter(Boolean);
+  pids.sort((a, b) => (a.startsWith('PH') ? -1 : a.startsWith('PA') ? 1 : 0) - (b.startsWith('PH') ? -1 : b.startsWith('PA') ? 1 : 0));
+  const [pid1, pid2] = pids;
+
+  await go(page, '/app/products');
+  await S('s05-products', 'S05 · Products — published portfolio grid');
+
+  for (const [pid, label] of [[pid1, 'HO-3'], [pid2, 'PA']].filter(([p]) => p)) {
+    const prefix = label === 'HO-3' ? 'ho3' : 'pa';
+    const base   = `/app/products/${pid}`;
+    await go(page, `${base}/overview`);   await S(`s07-${prefix}-overview`,  `S07 · ${label} Overview`);
+    await go(page, `${base}/coverages`);  await S(`s08-${prefix}-coverages`, `S08 · ${label} Coverages`);
+    await go(page, `${base}/forms`);      await S(`s09-${prefix}-forms`,     `S09 · ${label} Forms`);
+    await go(page, `${base}/pricing`);    await S(`s10-${prefix}-pricing`,   `S10 · ${label} Pricing`);
+    await go(page, `${base}/states`);     await S(`s11-${prefix}-states`,    `S11 · ${label} States`);
+    await go(page, `${base}/rules`);      await S(`s12-${prefix}-rules`,     `S12 · ${label} Rules`);
+  }
+
+  await go(page, '/app/builder');
+  await S('s13-builder', 'S13 · Builder — draft product workbench');
+
+  // Filing-import surface (workstream H): open the "Import a filing" card from the Builder.
+  try {
+    const card = page.locator('button:has-text("filing"), [role="button"]:has-text("filing")').first();
+    if (await card.isVisible().catch(() => false)) {
+      await card.click();
+      await page.waitForTimeout(1200);
+      await S('s13b-filing-import', 'S13b · Filing import — reviewable-filing ingestion');
+      await page.keyboard.press('Escape').catch(() => {});
+    } else {
+      console.log('  ·  filing-import card not found — skipped');
+    }
+  } catch (e) { console.log('  ·  filing-import capture skipped:', e.message); }
+
+  await go(page, '/app/explorer');
+  await S('s14-explorer', 'S14 · Explorer — global entity search (empty)');
+  const input = page.locator('input').first();
+  if (await input.isVisible().catch(() => false)) {
+    await input.fill('coverage');
+    await page.waitForTimeout(1600);
+    await S('s14b-explorer-results', 'S14b · Explorer — results for "coverage"');
+  }
+
+  await go(page, '/app/tasks');      await S('s15-tasks',      'S15 · Tasks — GTM launch board');
+  await go(page, '/app/news');       await S('s16-news',       'S16 · News — market feed');
+  await go(page, '/app/claims');     await S('s17-claims',     'S17 · Claims — coverage copilot');
+  await go(page, '/app/dictionary'); await S('s18-dictionary', 'S18 · Dictionary');
+  await go(page, '/app/feedback');   await S('s19-feedback',   'S19 · Feedback — board');
+  await go(page, '/app/admin');      await S('s20-admin-users','S20 · Admin — users');
+  const costTab = page.locator('[role="tab"]:has-text("Cost"), button:has-text("Cost")').first();
+  if (await costTab.isVisible().catch(() => false)) {
+    await costTab.click();
+    await page.waitForTimeout(800);
+    await S('s20b-admin-cost', 'S20b · Admin — AI cost + breaker');
+  }
+
+  await ctx.close();
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 const browser = await chromium.launch({ headless: true });
-const ctx     = await browser.newContext({ viewport: VP });
-const page    = await ctx.newPage();
-page.setDefaultTimeout(TIMEOUT);
-
 try {
-  // S01 — Landing (unauthenticated anonymous session)
-  console.log('\n── S01  Landing ──');
-  await page.goto(BASE_URL, { waitUntil: 'load', timeout: TIMEOUT });
-  await page.waitForTimeout(2000);
-  await shot(page, 's01-landing.png', 'S01 · Landing — sign-in + insight graph');
+  for (const theme of THEMES) await capturePass(browser, theme);
 
-  // Sign in
-  console.log('\n── Sign in ──');
-  await page.waitForSelector('#signin-username', { timeout: TIMEOUT });
-  await page.fill('#signin-username', CAPTURE_USER);
-  await page.fill('input[type="password"]', CAPTURE_PASS);
-  await page.keyboard.press('Enter');
-  await page.waitForURL('**/app**', { timeout: TIMEOUT });
-  await page.waitForTimeout(3000);
-  console.log(`  ✓  Signed in as ${CAPTURE_USER}`);
-
-  // S04 — Home
-  console.log('\n── S04  Home ──');
-  await go(page, '/app');
-  await shot(page, 's04-home.png', 'S04 · Home — portfolio chat + priority rail');
-
-  // Discover product IDs from emulator (auth required)
-  const fsResp = await fsGet('products');
-  const docs = fsResp.documents ?? [];
-  const pids = docs.map(d => d.name?.split('/').pop()).filter(Boolean);
-  console.log(`\n  Product IDs: ${pids.join(', ')}`);
-
-  // Sort so HO-3 (PH) is first, PA second
-  pids.sort((a, b) => (a.startsWith('PH') ? -1 : a.startsWith('PA') ? 1 : 0) - (b.startsWith('PH') ? -1 : b.startsWith('PA') ? 1 : 0));
-  const [pid1, pid2] = pids;
-
-  // S05 — Products
-  console.log('\n── S05  Products ──');
-  await go(page, '/app/products');
-  await page.waitForTimeout(1500);
-  await shot(page, 's05-products.png', 'S05 · Products — published portfolio grid');
-
-  // Product workspace for each product
-  for (const [pid, label] of [[pid1, 'HO-3'], [pid2, 'PA']].filter(([p]) => p)) {
-    const prefix = label === 'HO-3' ? 'ho3' : 'pa';
-    const base   = `/app/products/${pid}`;
-    console.log(`\n── Product workspace: ${label} (${pid}) ──`);
-
-    await go(page, `${base}/overview`);
-    await shot(page, `s07-${prefix}-overview.png`, `S07 · ${label} Overview — AI summary + lineage`);
-
-    await go(page, `${base}/coverages`);
-    await shot(page, `s08-${prefix}-coverages.png`, `S08 · ${label} Coverages — card view with terms`);
-
-    await go(page, `${base}/forms`);
-    await shot(page, `s09-${prefix}-forms.png`, `S09 · ${label} Forms — library tab`);
-
-    await go(page, `${base}/pricing`);
-    await shot(page, `s10-${prefix}-pricing.png`, `S10 · ${label} Pricing — interactive rating worksheet`);
-
-    await go(page, `${base}/states`);
-    await shot(page, `s11-${prefix}-states.png`, `S11 · ${label} States — US footprint tile map`);
-
-    await go(page, `${base}/rules`);
-    await shot(page, `s12-${prefix}-rules.png`, `S12 · ${label} Rules — rules table`);
-  }
-
-  // S13 — Builder
-  console.log('\n── S13  Builder ──');
-  await go(page, '/app/builder');
-  await shot(page, 's13-builder.png', 'S13 · Builder — draft product workbench');
-
-  // S14 — Explorer (empty + results)
-  console.log('\n── S14  Explorer ──');
-  await go(page, '/app/explorer');
-  await shot(page, 's14-explorer.png', 'S14 · Explorer — global entity search (empty)');
-  const input = page.locator('input').first();
-  if (await input.isVisible().catch(() => false)) {
-    await input.fill('coverage');
-    await page.waitForTimeout(1800);
-    await shot(page, 's14b-explorer-results.png', 'S14b · Explorer — search results for "coverage"');
-  }
-
-  // S15 — GTM Board
-  console.log('\n── S15  Tasks / GTM Board ──');
-  await go(page, '/app/tasks');
-  await shot(page, 's15-tasks.png', 'S15 · Tasks — GTM launch Kanban board');
-
-  // S16 — News
-  console.log('\n── S16  News ──');
-  await go(page, '/app/news');
-  await shot(page, 's16-news.png', 'S16 · News — market news feed');
-
-  // S17 — Claims
-  console.log('\n── S17  Claims ──');
-  await go(page, '/app/claims');
-  await shot(page, 's17-claims.png', 'S17 · Claims — coverage copilot (base forms library + chat)');
-
-  // S18 — Dictionary
-  console.log('\n── S18  Dictionary ──');
-  await go(page, '/app/dictionary');
-  await shot(page, 's18-dictionary.png', 'S18 · Dictionary — data dictionary browser');
-
-  // S19 — Feedback
-  console.log('\n── S19  Feedback ──');
-  await go(page, '/app/feedback');
-  await shot(page, 's19-feedback.png', 'S19 · Feedback — Kanban board (Inbox/In Progress/Done)');
-
-  // S20 — Admin
-  console.log('\n── S20  Admin ──');
-  await go(page, '/app/admin');
-  await shot(page, 's20-admin-users.png', 'S20 · Admin — user management');
-  // Try AI Cost tab
-  const costTab = page.locator('[role="tab"]:has-text("Cost"), button:has-text("Cost"), a:has-text("Cost")').first();
-  if (await costTab.isVisible().catch(() => false)) {
-    await costTab.click();
-    await page.waitForTimeout(800);
-    await shot(page, 's20b-admin-cost.png', 'S20b · Admin — AI cost telemetry tab');
-  }
-
-  // ── Generate consolidated PDF ──────────────────────────────────────────────
+  // Consolidated PDF (both themes, in capture order).
   console.log('\n── Generating PDF ──');
-
   const pngs = shotLog.filter(s => existsSync(join(SHOTS, s.file)));
   const imgHtml = pngs.map(({ file, label }) => {
-    const data = readFileSync(join(SHOTS, file));
-    const b64  = data.toString('base64');
-    return `
-    <div class="page">
-      <div class="label">${label}</div>
-      <img src="data:image/png;base64,${b64}" alt="${label}" />
-    </div>`;
+    const b64 = readFileSync(join(SHOTS, file)).toString('base64');
+    return `<div class="page"><div class="label">${label}</div><img src="data:image/png;base64,${b64}" alt="${label}" /></div>`;
   }).join('\n');
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: system-ui, sans-serif; background: #0f0f14; color: #e2e8f0; }
-  .cover { display: flex; flex-direction: column; align-items: center; justify-content: center;
-           min-height: 100vh; gap: 24px; padding: 48px; background: linear-gradient(135deg, #0f0f14 0%, #1a1a2e 100%); }
-  .cover h1 { font-size: 2.5rem; font-weight: 700; text-align: center;
-              background: linear-gradient(135deg, #818cf8, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .cover p { font-size: 1rem; color: #94a3b8; text-align: center; max-width: 600px; line-height: 1.6; }
-  .cover .meta { font-size: 0.8rem; color: #64748b; }
-  .page { page-break-before: always; padding: 0; }
-  .label { padding: 8px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
-           background: #1e293b; color: #94a3b8; border-bottom: 1px solid #334155; }
-  .page img { width: 100%; display: block; }
-</style>
-</head>
-<body>
-  <div class="cover">
-    <h1>Product Reinvention Hub</h1>
-    <p>Complete UI surface screenshot capture — ${pngs.length} screens across the full application, from Landing to Admin.</p>
-    <p class="meta">Compiled ${new Date().toISOString().split('T')[0]} · docs/review/screens/</p>
-  </div>
-  ${imgHtml}
-</body>
-</html>`;
-
-  const pdfPage = await ctx.newPage();
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,sans-serif;background:#0f0f14;color:#e2e8f0}
+    .cover{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:24px;padding:48px;background:linear-gradient(135deg,#0f0f14 0%,#1a1a2e 100%)}
+    .cover h1{font-size:2.5rem;font-weight:700;text-align:center;background:linear-gradient(135deg,#a100ff,#7a00e6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .cover p{font-size:1rem;color:#94a3b8;text-align:center;max-width:640px;line-height:1.6}
+    .page{page-break-before:always}
+    .label{padding:8px 16px;font-size:11px;font-weight:600;letter-spacing:.05em;background:#1e293b;color:#94a3b8;border-bottom:1px solid #334155}
+    .page img{width:100%;display:block}
+  </style></head><body>
+    <div class="cover"><h1>Product Reinvention Hub</h1>
+      <p>UI surface capture — ${pngs.length} screens across the full application in BOTH themes (light + dark).</p>
+      <p class="meta">Compiled ${new Date().toISOString().split('T')[0]} · docs/review/screens-after/</p>
+    </div>${imgHtml}</body></html>`;
+  const ctx2 = await browser.newContext({ viewport: VP });
+  const pdfPage = await ctx2.newPage();
   await pdfPage.setContent(html, { waitUntil: 'load' });
-  const pdfPath = join(SHOTS, 'ALL_SCREENS.pdf');
-  await pdfPage.pdf({
-    path: pdfPath,
-    format: 'A3',
-    landscape: true,
-    printBackground: true,
-    margin: { top: '0', bottom: '0', left: '0', right: '0' },
-  });
-  await pdfPage.close();
+  await pdfPage.pdf({ path: join(SHOTS, 'ALL_SCREENS.pdf'), format: 'A3', landscape: true, printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
+  await ctx2.close();
   console.log(`  ✓  PDF → ALL_SCREENS.pdf  (${pngs.length} pages)`);
 
-  console.log(`\n✅  Done! ${pngs.length} screenshots + 1 PDF`);
-  console.log(`📁  ${SHOTS}`);
+  console.log(`\n✅  Done! ${pngs.length} screenshots (${THEMES.join(' + ')}) + 1 PDF`);
   readdirSync(SHOTS).forEach(f => console.log(`     ${f}`));
-
 } catch (err) {
   console.error('\n❌  Failed:', err.message, err.stack);
   process.exit(1);

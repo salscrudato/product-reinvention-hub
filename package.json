@@ -25,6 +25,7 @@
     "hygiene": "pnpm dlx knip && pnpm dlx depcheck ./app && pnpm dlx depcheck ./functions && pnpm dlx depcheck ./shared"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@firebase/rules-unit-testing": "^5.0.1",
     "@playwright/test": "^1.61.1",
     "concurrently": "^9.1.2",

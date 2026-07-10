@@ -156,11 +156,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // ── AI cost counters + provider circuit-breaker (Part C) — server-side ONLY.
-    //    Rolling per-day / per-session spend + breaker state, written via the Admin SDK by
-    //    the cost guard; the Admin AI Cost tab derives its figures from aiUsage, not these. ──
+    // ── AI cost counters + provider circuit-breaker (Part C) — server-side ONLY, with ONE
+    //    ADMIN-readable exception. Rolling per-day / per-session spend counters stay private
+    //    (written via the Admin SDK by the cost guard). The single provider breaker doc is
+    //    ADMIN-readable so the AI Cost tab can show honest LIVE breaker state (closed / open +
+    //    retry time) — the only place open/openUntil is recorded. Read-only; never client-writable.
     match /costCounters/{id} {
-      allow read, write: if false;
+      allow read:  if isAdmin() && id == 'breaker-anthropic';
+      allow write: if false;
     }
 
     // ── Deny everything not explicitly matched ────────────────────────────────

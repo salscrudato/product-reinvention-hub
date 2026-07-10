@@ -100,7 +100,7 @@ export function PeekPanel({ node }: { node: PeekNode | null }) {
 
         <button
           onClick={() => navigate(`/app/products/${p.id}/overview`)}
-          className="mt-auto inline-flex items-center justify-center gap-1.5 h-9 rounded-[9px] bg-accent-soft text-accent text-sm font-medium hover:bg-accent hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="mt-auto inline-flex items-center justify-center gap-1.5 h-9 rounded-[9px] bg-accent-soft text-accent text-sm font-medium hover:bg-accent hover:text-on-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           Open product <IconArrowRight size={15} />
         </button>
@@ -197,7 +197,7 @@ export function PeekPanel({ node }: { node: PeekNode | null }) {
 
       <button
         onClick={openCoverage}
-        className="mt-auto inline-flex items-center justify-center gap-1.5 h-9 rounded-[9px] bg-accent-soft text-accent text-sm font-medium hover:bg-accent hover:text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="mt-auto inline-flex items-center justify-center gap-1.5 h-9 rounded-[9px] bg-accent-soft text-accent text-sm font-medium hover:bg-accent hover:text-on-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         Open in coverages <IconArrowRight size={15} />
       </button>

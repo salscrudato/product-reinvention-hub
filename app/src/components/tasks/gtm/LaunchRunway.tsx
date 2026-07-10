@@ -99,7 +99,7 @@ export function LaunchRunway({ seeded, deadlineMs, todayMs }: Props) {
               <span
                 className={`text-[11px] font-semibold whitespace-nowrap px-2 truncate ${
                   ph.light ? 'text-[color:var(--color-gtm-phase-ink)]' : 'text-white'}`}
-                style={{ textShadow: ph.light ? 'none' : '0 1px 2px rgba(0,0,0,.22)' }}
+                style={{ textShadow: ph.light ? 'none' : 'var(--shadow-onbar-text)' }}
               >
                 {ph.short}{width > 12 ? ` · ${days}d` : ''}
               </span>

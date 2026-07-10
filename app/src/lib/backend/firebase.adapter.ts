@@ -377,7 +377,7 @@ export const adapter: BackendAdapter = {
       return snap.docs.map((d) => snapToData<T>(d)).filter(Boolean) as T[]
     },
 
-    subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void) {
+    subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void, onError?: (err: unknown) => void) {
       if (typeof pathOrQuery !== 'string') {
         throw new Error('subscribe() with a Query object requires a string path')
       }
@@ -388,10 +388,12 @@ export const adapter: BackendAdapter = {
         queueMicrotask(() => cb((parts.length % 2 === 0 ? null : []) as T | T[]))
         return () => {}
       }
-      // On a listener error (e.g. permission-denied) surface it and degrade to an
-      // empty result rather than hanging every consumer waiting on the callback.
+      // On a listener error (e.g. permission-denied) log + degrade to an empty result rather
+      // than hanging every consumer, AND forward to the optional onError so a surface can show
+      // a recoverable error state instead of a silent empty.
       const onErr = (err: unknown) => {
         console.warn(`[subscribe] ${pathOrQuery} listener error:`, (err as { code?: string })?.code ?? err)
+        onError?.(err)
       }
       if (parts.length % 2 === 0) {
         // Document — on error (e.g. permission-denied), degrade to null so consumers

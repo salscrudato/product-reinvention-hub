@@ -110,7 +110,7 @@ export function MillerColumn({
                 onDoubleClick={() => onActivate(item.id)}
                 className={`group w-full text-left rounded-[9px] px-2.5 py-2 flex items-center gap-2 transition-colors outline-none
                   focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent
-                  ${selected && focused ? 'bg-accent text-white'
+                  ${selected && focused ? 'bg-accent text-on-accent'
                     : selected ? 'bg-accent-soft text-accent'
                     : 'text-text hover:bg-raised'}`}
               >
@@ -119,7 +119,7 @@ export function MillerColumn({
                     <Highlight text={item.title} query={query} />
                   </span>
                   {item.meta && (
-                    <span className={`text-[11px] truncate ${selected && focused ? 'text-white/85' : 'text-faint'}`}>
+                    <span className={`text-[11px] truncate ${selected && focused ? 'text-on-accent/85' : 'text-faint'}`}>
                       {item.meta}
                     </span>
                   )}
@@ -127,7 +127,7 @@ export function MillerColumn({
                 {item.hasChildren && (
                   <IconChevronRight
                     size={15}
-                    className={`shrink-0 ${selected && focused ? 'text-white/80' : 'text-faint group-hover:text-dim'}`}
+                    className={`shrink-0 ${selected && focused ? 'text-on-accent/80' : 'text-faint group-hover:text-dim'}`}
                     aria-hidden="true"
                   />
                 )}
