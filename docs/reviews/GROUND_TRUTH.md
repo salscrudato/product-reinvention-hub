@@ -7,27 +7,25 @@ Companion: `docs/reviews/BASELINE.md` (gate state on the same date).
 
 ## V1 — Seeded lines and canaries
 
-**FINDING:** Two LOBs are registered and seeded: **PH** (Personal Home, HO-3) and **PA**
-(Personal Auto, PAP). **GL is not registered** in LOB_REGISTRY; a CG 00 01 PDF form is seeded
-to Storage for claims use, but GL has no LobDefinition, no rating kit, and no seed data.
+**FINDING (initial 2026-07-09):** Two LOBs were registered and seeded: PH and PA. GL was absent.
+**CLOSED by V15 (2026-07-10):** GL is now registered in LOB_REGISTRY and fully seeded at parity.
 
-**EVIDENCE:**
-- `shared/src/insurance/lobRegistry.ts` — `LOB_REGISTRY` has exactly two entries:
+**EVIDENCE (current state):**
+- `shared/src/insurance/lobRegistry.ts` — `LOB_REGISTRY` now has three entries:
   - `PH.LOB.001` — prefix `PH`, label "Personal Home", lineCategory PROPERTY, family Property,
     perilModel COASTAL_WIND_HAIL (FL GA NC SC TX), supportsRulesSimulation true
   - `PA.LOB.001` — prefix `PA`, label "Personal Auto", lineCategory CASUALTY, family Automobile,
     perilModel TERRITORY, supportsRulesSimulation true
-- `shared/src/seed/personalHome.ts` — full HO-3 product seed (PH.RAT.1 rating program)
-- `shared/src/seed/personalAuto.ts` — full PAP seed (PA.RAT.1 rating program)
-- `scripts/seed.ts:1168` — `baseForms/CG-00-01` written for GL claims use only
-- Rating canaries (both confirmed PASS in baseline gate):
-  - HO-3: `shared/src/rating/evaluator.test.ts:16` — `expect(result.finalPremium).toBe(1528)`
-  - PA:   `shared/src/rating/personalAuto.evaluator.test.ts:18` — `expect(result.finalPremium).toBe(1002)`
-  - rtGrid canary: `shared/src/rating/rtGrid.test.ts:57` — also asserts 1528
+  - `GL.LOB.001` — prefix `GL`, label "General Liability", lineCategory CASUALTY, family Casualty,
+    Commercial Lines / Small Commercial / Middle Market, supportsRulesSimulation true
+- Rating canaries (all confirmed in V15 gate run):
+  - HO-3: `shared/src/rating/evaluator.test.ts:16` — `expect(result.finalPremium).toBe(1528)` ✓
+  - PA:   `shared/src/rating/personalAuto.evaluator.test.ts:18` — `expect(result.finalPremium).toBe(1002)` ✓
+  - GL:   `shared/src/rating/generalLiability.evaluator.test.ts` — `expect(result.finalPremium).toBe(2635)` ✓
+  - rtGrid canary: `shared/src/rating/rtGrid.test.ts:57` — also asserts 1528 (unchanged) ✓
 
-**CONSEQUENCE:** GL is a claims-only surface driven by the uploaded CG 00 01 base form; it
-cannot be rated and does not appear in LOB segmentation filters. Rating kit coverage: HO-3
-and PA only. Steers Prompt 5 — no GL rating work needed.
+**CONSEQUENCE:** All three lines are rated and fully seeded. GL adds a third entry to LOB
+segmentation filters (Commercial Lines / Casualty / Small Commercial). See V15 for the GL canary.
 
 ---
 
@@ -298,9 +296,8 @@ absent for GL).
 - `shared/src/insurance/lobRegistry.ts` — `supportsRulesSimulation: true` on both PH and PA
 - `shared/src/rules/engine.test.ts:30` — `PA_LOB.supportsRulesSimulation is true`
 
-**CONSEQUENCE:** Simulate panel is production-ready for PH and PA. GL rules simulation is not
-supported (no GL rules engine). The panel uses the same shared engine as the test suite,
-ensuring test-and-UI parity.
+**CONSEQUENCE:** Simulate panel is production-ready for PH, PA, and GL (see V15). The panel
+uses the same shared engine as the test suite, ensuring test-and-UI parity.
 
 ---
 
@@ -339,3 +336,64 @@ Evidence-backed fixes landed this session (companion detail in the commit + `doc
    Firestore / Functions / Storage) and/or tighten **Authorized domains** in Firebase Auth so a
    leaked config + anonymous sign-in cannot drive the live project from an arbitrary origin.
    Confirm production Cloud Functions only allow the intended web origins (CORS).
+
+---
+
+## V15 — General Liability at parity (2026-07-10)
+
+**FINDING:** Commercial General Liability (CGL, CG 00 01 occurrence form) is now registered and
+seeded at full parity with PH and PA. Three rating canaries are locked.
+
+**EVIDENCE:**
+- `shared/src/insurance/lobRegistry.ts` — `GL_LOB` added; `LOB_REGISTRY` now has three entries.
+  prefix `GL`, lineCategory CASUALTY, family Casualty, commercial vertical, supportsRulesSimulation true.
+- `shared/src/seed/generalLiability.ts` — full GL seed:
+  - `GL_LD_TABLES` (GL.LD.001–004): per-occurrence limit, general aggregate, PCO aggregate, deductible
+  - `GL_RT_TABLES` (GL.RT.001–005): class base rate, increased-limits factor, deductible credit, PCO rate, exp mod
+  - `GL_RATING_PROGRAM` (GL.RAT.1, 7 steps): SET class rate → MUL exposure → MUL ILF → MUL ded credit → ADD PCO (conditional) → MUL exp mod → MIN_FLOOR $500
+  - `GL_COVERAGES` (GL.COV.001–003 + sub-coverages GL.COV.001.001, GL.COV.001.002): Coverage A (BI/PD + P&O + PCO), B (Pers/Adv Injury), C (Med Pay)
+  - `GL_FORMS` (8 forms): CG 00 01, CG DS 01, CG 20 10, CG 20 33, CG 03 00, CG 21 06, CG 21 67, CG 21 70
+  - `GL_RULES` (GL.RU.001–007): occurrence trigger, aggregate options, PCO dependency, exposure basis, deductibles, minimum premium, aggregate consistency
+  - `GL_FORM_RULES` (GL.FORM.RU.001–003): PCO → CG 20 33, deductible → CG 03 00, AI → CG 20 10
+  - `GL_DICTIONARY` (GL.DEF.001–006): occurrence, each-occurrence limit, general aggregate, PCO aggregate, exposure basis, claims-made trigger
+  - `makeGLRtGetter` — bespoke lookup for GL.RT.001–005; GL.RT.004 returns pcoRate × pcoExposureThousands (the full PCO premium)
+  - `makeGLLdGetter = makeLdGetter` — generic LD getter shared by all lines
+  - `GL_RATING_INPUT_SPEC` — 7 fields driving DynamicRatingForm for GL
+  - `GL_WORKED_EXAMPLE` — class 41677, exposureThousands 500, occLimit 1M, occDeductible 0, pcoElected true, pcoExposureThousands 200, expMod '1.00'
+- `shared/src/rating/generalLiability.evaluator.test.ts` — GL canary (9 assertions):
+  - `expect(result.finalPremium).toBe(2635)` — the regression lock
+  - Per-step trace assertions: s1=2.5, s2×500=1250, s3×1.82=2275, s4×1.00=2275, s5+360=2635, s6×1.00=2635, s7 floor unchanged
+- `shared/src/rating/kits.ts` — `GL` kit added (makeGLRtGetter, makeGLLdGetter, GL_WORKED_EXAMPLE, GL_RATING_INPUT_SPEC)
+- `shared/src/rules/engine.ts` — `evaluateRulesGL()` added; dispatches on `lob === 'GL'`; covers:
+  - GL.RU.007: occLimit > genAggregate → hard violation
+  - GL.RU.003: pcoElected + pcoAggregate < occLimit → hard violation
+  - GL.LD.001–004 option constraints
+  - form attachment: CG 20 33 (PCO), CG 03 00 (deductible > 0), CG 20 10 (additional insured)
+- `shared/src/types.ts` — `GLSelectionContext` added; `RulesEngineInput` extended with `lob: 'GL'` variant
+- `scripts/seed.ts` — GL bundle added (GL.PROD.001 through all subcollections); GL canary verified at $2,635 (fatal on mismatch); GL news item seeded
+- `app/src/routes/product/ProductRules.tsx` — `GLSimulatePanel` added; `glSel` state; `result` useMemo dispatches on `lob.prefix === 'GL'`
+- `docs/reviews/GROUND_TRUTH.md` V1 updated to close the GL gap
+
+**GL $2,635 canary derivation** (class 41677, payroll basis):
+```
+s1 SET  GL.RT.001[41677]           = 2.50                       → 2.50
+s2 MUL  INPUT exposureThousands    = 500                        → 2.50 × 500   = 1,250.00
+s3 MUL  GL.RT.002[occLimit=1M]     = 1.82                       → 1,250 × 1.82 = 2,275.00
+s4 MUL  GL.RT.003[occDed=0]        = 1.00                       → 2,275 × 1.00 = 2,275.00
+s5 ADD  GL.RT.004[41677,pco=200]   = 200 × 1.80 = 360           → 2,275 + 360  = 2,635.00
+s6 MUL  GL.RT.005[expMod='1.00']   = 1.00                       → 2,635 × 1.00 = 2,635.00
+s7 MIN_FLOOR CONST 500 round 0     → max(2,635, 500)            = $2,635
+```
+
+**HOSTILE SELF-REVIEW:**
+- No GL coverage, form number, rule, or factor was invented; all derive from the ISO CGL programme
+  structure and the workbook fixture definitions in `samples/iso/20-ISO-*-GL.xlsx` (referenced in
+  the seed file header). The illustrative rates are marked as such in every RT table comment.
+- HO-3 $1,528 canary is unchanged — evaluator.ts was not modified.
+- PA $1,002 canary is unchanged — personalAuto seed and evaluator were not modified.
+- GL knowledge does NOT appear in core prompts (`functions/src/ai.ts`, `functions/src/claims.ts`).
+  GL context enters through the line-profile registry (`shared/src/claims/lineProfiles.ts`, already
+  present before this session) and through seeded data (groundingChunks, coverages, rules).
+
+**CONSEQUENCE:** GL is at parity with PH and PA. Portfolio digest, grounding index, DynamicRatingForm,
+Simulate panel, LOB segmentation filters, and refId counters all include GL.

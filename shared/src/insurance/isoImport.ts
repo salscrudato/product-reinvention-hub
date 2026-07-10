@@ -368,7 +368,7 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
   for (const cov of coverages) {
     const pid = cov.data['parentId'] as string | null
     if (pid && !byRefId.has(pid)) {
-      ctx.warn(`Coverage ${cov.refId}: parent "${pid}" not found — imported as top-level.`)
+      ctx.warn(`Sheet "${grid.sheet}" coverage ${cov.refId} (col "PRODUCT FRAMEWORK ID"): parent "${pid}" not found — imported as top-level.`)
       cov.data['parentId'] = null
     }
   }
@@ -477,12 +477,12 @@ function parseForms(grid: IsoGrid, dynByForm: Record<string, DynamicField[]>, pr
         if (scope.allStates) { d['allStates'] = true; d['states'] = [] }
         else d['states'] = uni(d['states'], scope.states)
       }
-      ctx.warnOnce(`dupform:${key}`, `Form ${number} appears on multiple rows — applicability merged.`)
+      ctx.warnOnce(`dupform:${key}`, `Sheet "${grid.sheet}" row ${r + 1} col "FORM NUMBER": form ${number} appears on multiple rows — applicability merged.`)
       continue
     }
 
     const cat = mapFormCategory(at(cells, 'category'))
-    if (!cat.exact) ctx.warnOnce(`formcat:${norm(at(cells, 'category'))}`, `Form category "${clean(at(cells, 'category'))}" mapped to ENDORSEMENT.`)
+    if (!cat.exact) ctx.warnOnce(`formcat:${norm(at(cells, 'category'))}`, `Sheet "${grid.sheet}" row ${r + 1} col "FORM CATEGORY": value "${clean(at(cells, 'category'))}" not recognised — mapped to ENDORSEMENT, verify intent.`)
 
     byKey.set(key, {
       docId: key, refId: null, label: `${number} — ${clean(at(cells, 'name'))}`,
@@ -552,7 +552,7 @@ function parseRules(grid: IsoGrid, ctx: Ctx): PlannedEntity[] {
     const existing = byId.get(id)
     if (existing) {
       existing.data['formNumbers'] = [...new Set([...(existing.data['formNumbers'] as string[]), ...forms])]
-      ctx.warnOnce(`duprule:${id}`, `Rule ${id} appears on multiple rows — form numbers merged.`)
+      ctx.warnOnce(`duprule:${id}`, `Sheet "${grid.sheet}" row ${r + 1} col "RULE ID": rule ${id} appears on multiple rows — form numbers merged.`)
       continue
     }
     byId.set(id, {
@@ -608,7 +608,7 @@ function parseFormRules(grid: IsoGrid, ctx: Ctx): PlannedEntity[] {
     const existing = byId.get(id)
     if (existing) {
       existing.data['formNumbers'] = [...new Set([...(existing.data['formNumbers'] as string[]), ...forms])]
-      ctx.warnOnce(`dupformrule:${id}`, `Form rule ${id} appears on multiple rows — form numbers merged.`)
+      ctx.warnOnce(`dupformrule:${id}`, `Sheet "${grid.sheet}" row ${r + 1} col "FORM RULE ID": form rule ${id} appears on multiple rows — form numbers merged.`)
       continue
     }
     byId.set(id, {
@@ -667,7 +667,7 @@ function parseLdTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
     if (valueCol < 0) { valueCol = 3; commentCol = 4; headerR = r } // template default columns
 
     const entry = tables.get(refId) ?? { name, rows: [] as { label: string; value: number; constraintNote?: string }[], defaultValue: undefined }
-    if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `LD table ${refId} appears more than once — rows merged.`)
+    if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} col 0 (LD marker): table ${refId} appears more than once — rows merged.`)
     if (!entry.name) entry.name = name
 
     for (let dr = headerR + 1; dr < rows.length; dr++) {
@@ -723,7 +723,7 @@ function parseRtTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
     headerRow.forEach((c, i) => { const nm = clean(c); if (nm) { colIdx.push(i); columns.push(nm) } })
 
     const entry = tables.get(refId) ?? { name: pendingName, columns, rows: [] as Record<string, unknown>[], colIdx }
-    if (tables.has(refId)) ctx.warnOnce(`duprt:${refId}`, `RT table ${refId} appears more than once — rows merged.`)
+    if (tables.has(refId)) ctx.warnOnce(`duprt:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} col "RATE TABLE ID": table ${refId} appears more than once — rows merged.`)
     if (!entry.name) entry.name = pendingName
 
     for (let dr = headerR + 1; dr < rows.length; dr++) {

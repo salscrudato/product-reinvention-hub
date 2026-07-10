@@ -28,6 +28,7 @@ export * from './retrieval/chunk'
 export * from './retrieval/retrieve'
 export * from './seed/personalHome'
 export * from './seed/personalAuto'
+export * from './seed/generalLiability'
 // GTM launch tracker — process template + backward scheduler (pure, deterministic).
 export * from './gtm/types'
 export * from './gtm/schedule'

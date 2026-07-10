@@ -596,6 +596,19 @@ export interface PASelectionContext {
   namedNonOwner?:       boolean         // when true → PP 03 01
 }
 
+/** Submission context the General Liability rules engine reads. Maps directly to
+ *  GL rules and LD tables so every engine branch is traceable to its rule refId. */
+export interface GLSelectionContext {
+  riskState:            string   // 2-letter state code (for state-specific endorsements)
+  classCode:            string   // ISO GL class code (e.g. '41677')
+  occLimit:             number   // per-occurrence limit (GL.LD.001) [GL.RU.007 checks ≤ genAgg]
+  genAggregate:         number   // General Aggregate (GL.LD.002)
+  occDeductible:        number   // BI/PD per-occurrence deductible (GL.LD.004)
+  pcoElected:           boolean  // Products-Completed-Operations elected [GL.RU.003]
+  pcoAggregate?:        number   // PCO Aggregate (GL.LD.003); required when pcoElected [GL.RU.003]
+  additionalInsuredReq: boolean  // additional insured required by contract [GL.FORM.RU.003]
+}
+
 export interface SelectionContext {
   riskState:          string   // 2-letter state code
   covELimit:          number

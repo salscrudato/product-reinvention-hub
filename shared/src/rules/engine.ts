@@ -1,8 +1,9 @@
 // Rules engine: evaluates product rules for any registered LOB, dispatching by
-// line so a single public function covers both Personal Home and Personal Auto.
+// line so a single public function covers Personal Home, Personal Auto, and GL.
 // Pure function; no Firestore imports — all domain data is injected as constants.
 import type {
-  LDTable, SelectionContext, PASelectionContext, RulesResult, TermOption, RuleViolation,
+  LDTable, SelectionContext, PASelectionContext, GLSelectionContext,
+  RulesResult, TermOption, RuleViolation,
 } from '../types'
 import { PH_LOB } from '../insurance/lobRegistry'
 
@@ -23,6 +24,7 @@ const PA_UM_MANDATORY = new Set<string>([
 export type RulesEngineInput =
   | { ldTables: Record<string, LDTable>; lob?: 'PH'; selection: SelectionContext }
   | { ldTables: Record<string, LDTable>; lob: 'PA'; selection: PASelectionContext }
+  | { ldTables: Record<string, LDTable>; lob: 'GL'; selection: GLSelectionContext }
 
 /**
  * Evaluate all product rules for the line identified by `lob` (default PH).
@@ -32,6 +34,7 @@ export type RulesEngineInput =
  */
 export function evaluateRules(input: RulesEngineInput): RulesResult {
   if (input.lob === 'PA') return evaluateRulesPA(input.ldTables, input.selection)
+  if (input.lob === 'GL') return evaluateRulesGL(input.ldTables, input.selection)
   return evaluateRulesPH(input.ldTables, input.selection)
 }
 
@@ -275,6 +278,81 @@ function evaluateRulesPA(ldTables: Record<string, LDTable>, sel: PASelectionCont
     formsThatAttach,
     violations,
     evaluatedRuleRefIds: ['PA.RU.001', 'PA.RU.006', 'PA.RU.007', 'PA.RU.008', 'PA.RU.009'],
+  }
+}
+
+// ── General Liability evaluator ────────────────────────────────────────────────
+
+function evaluateRulesGL(ldTables: Record<string, LDTable>, sel: GLSelectionContext): RulesResult {
+  const violations: RuleViolation[] = []
+
+  // ── Available options per LD table ──────────────────────────────────────────
+
+  // GL.LD.001 — Per-occurrence limit; no cross-term constraint at the option level
+  const occLimitOptions = buildOptions(ldTables['GL.LD.001'], () => null)
+
+  // GL.LD.002 — General Aggregate; must be ≥ per-occurrence limit [GL.RU.007]
+  const genAggOptions = buildOptions(ldTables['GL.LD.002'], (row) => {
+    if (row.value < sel.occLimit) {
+      return `General Aggregate ($${row.value.toLocaleString()}) must be ≥ per-occurrence limit ($${sel.occLimit.toLocaleString()})`
+    }
+    return null
+  })
+
+  // GL.LD.003 — PCO Aggregate; must be ≥ per-occurrence limit when elected [GL.RU.003]
+  const pcoAggOptions = buildOptions(ldTables['GL.LD.003'], (row) => {
+    if (sel.pcoElected && row.value < sel.occLimit) {
+      return `PCO Aggregate ($${row.value.toLocaleString()}) must be ≥ per-occurrence limit ($${sel.occLimit.toLocaleString()}) when Products-Completed-Operations is elected`
+    }
+    return null
+  })
+
+  // GL.LD.004 — BI/PD deductible; no cross-term constraint
+  const dedOptions = buildOptions(ldTables['GL.LD.004'], () => null)
+
+  // ── Hard violations ─────────────────────────────────────────────────────────
+
+  // [GL.RU.007] Aggregate consistency — per-occurrence limit must not exceed General Aggregate
+  if (sel.occLimit > sel.genAggregate) {
+    violations.push({
+      ruleRefId: 'GL.RU.007',
+      message:   `Per-occurrence limit ($${sel.occLimit.toLocaleString()}) may not exceed the General Aggregate ($${sel.genAggregate.toLocaleString()})`,
+      severity:  'error',
+    })
+  }
+
+  // [GL.RU.003] PCO dependency — PCO aggregate must be ≥ per-occurrence limit when elected
+  if (sel.pcoElected && sel.pcoAggregate !== undefined && sel.pcoAggregate < sel.occLimit) {
+    violations.push({
+      ruleRefId: 'GL.RU.003',
+      message:   `Products-Completed-Operations Aggregate ($${sel.pcoAggregate.toLocaleString()}) must be ≥ per-occurrence limit ($${sel.occLimit.toLocaleString()}) when PCO is elected`,
+      severity:  'error',
+    })
+  }
+
+  // ── Forms that attach ───────────────────────────────────────────────────────
+
+  const formsThatAttach: string[] = ['CG 00 01', 'CG DS 01']
+
+  // [GL.FORM.RU.001] PCO additional insured endorsement
+  if (sel.pcoElected) formsThatAttach.push('CG 20 33')
+  // [GL.FORM.RU.002] BI/PD deductible endorsement
+  if (sel.occDeductible > 0) formsThatAttach.push('CG 03 00')
+  // [GL.FORM.RU.003] Additional insured — ongoing operations
+  if (sel.additionalInsuredReq) formsThatAttach.push('CG 20 10')
+
+  return {
+    availableOptions: {
+      'GL.LD.001': occLimitOptions,
+      'GL.LD.002': genAggOptions,
+      'GL.LD.003': pcoAggOptions,
+      'GL.LD.004': dedOptions,
+    },
+    formsThatAttach,
+    violations,
+    // [GL.RU.007] aggregate consistency and [GL.RU.003] PCO dependency are directly
+    // evaluated here; LD-table option constraints surface via availableOptions.
+    evaluatedRuleRefIds: ['GL.RU.003', 'GL.RU.007'],
   }
 }
 

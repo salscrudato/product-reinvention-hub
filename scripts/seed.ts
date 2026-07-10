@@ -19,6 +19,12 @@ import {
   PA_DICTIONARY, PA_WORKED_EXAMPLE,
   makePARtGetter, makePALdGetter,
 } from '../shared/src/seed/personalAuto'
+import {
+  GL_PRODUCT, GL_COVERAGES, GL_LD_TABLES, GL_RT_TABLES,
+  GL_RATING_PROGRAM, GL_FORMS, GL_RULES, GL_FORM_RULES,
+  GL_DICTIONARY, GL_WORKED_EXAMPLE,
+  makeGLRtGetter, makeGLLdGetter,
+} from '../shared/src/seed/generalLiability'
 import { evaluate } from '../shared/src/rating/evaluator'
 import { claimsLineCodeFromFormNumber } from '../shared/src/claims/lineProfiles'
 import { buildBundleChunks, dedupeChunks } from '../shared/src/retrieval/chunk'
@@ -149,6 +155,13 @@ async function main(): Promise<void> {
       ldTables: PA_LD_TABLES as Record<string, Doc>, rtTables: PA_RT_TABLES as Record<string, Doc>,
       ratingProgram: PA_RATING_PROGRAM as unknown as Doc & { refId: string },
       forms: PA_FORMS, rules: PA_RULES, formRules: PA_FORM_RULES, dictionary: PA_DICTIONARY,
+    },
+    {
+      productKeywords: ['general', 'liability', 'cgl', 'commercial', 'cg0001', 'occurrence'],
+      product: GL_PRODUCT, coverages: GL_COVERAGES,
+      ldTables: GL_LD_TABLES as Record<string, Doc>, rtTables: GL_RT_TABLES as Record<string, Doc>,
+      ratingProgram: GL_RATING_PROGRAM as unknown as Doc & { refId: string },
+      forms: GL_FORMS, rules: GL_RULES, formRules: GL_FORM_RULES, dictionary: GL_DICTIONARY,
     },
   ]
 
@@ -398,6 +411,14 @@ async function main(): Promise<void> {
     console.error(`  ✗ PA got $${pa.finalPremium} — expected $1,002!`)
   } else console.log('  ✓ Personal Auto $1,002 confirmed')
 
+  const gl = evaluate(GL_RATING_PROGRAM, GL_WORKED_EXAMPLE, makeGLRtGetter(GL_RT_TABLES), makeGLLdGetter(GL_LD_TABLES))
+  workedExamplePremiums[GL_PRODUCT.refId!] = gl.finalPremium
+  if (gl.finalPremium !== 2635) {
+    const msg = `CRITICAL: General Liability worked example = ${gl.finalPremium}, expected $2,635`
+    warnings.push(msg); canaryFailures.push(msg)
+    console.error(`  ✗ GL got $${gl.finalPremium} — expected $2,635!`)
+  } else console.log('  ✓ General Liability $2,635 confirmed')
+
   // ── Storage: upload seed PDF forms + baseForms Firestore docs ─────────────
   if (!targetProd) {
     const baseFormCount = await seedStorageForms(db)
@@ -464,6 +485,20 @@ async function main(): Promise<void> {
         imageUrl: 'https://picsum.photos/seed/pp0001-rental/1200/675',
         tags:    ['auto', 'forms', 'rental', 'iso', 'part-d'],
         relatedProductIds: ['PA.PROD.001'],
+      },
+      {
+        url:     'https://sample-data.local/news/iso-cgl-aggregate-limits-2026',
+        source:  'Sample Data — Product Reinvention Hub',
+        title:   '[SAMPLE] ISO CGL Advisory: General Aggregate and PCO Aggregate Limit Alignment',
+        summary: 'ISO has issued guidance reminding carriers that the per-occurrence limit in CG 00 01 may never exceed the General Aggregate, and that the Products-Completed-Operations Aggregate resets independently each policy period.',
+        bullets: [
+          'ISO advisory reiterates that under CG 00 01, the per-occurrence limit must be ≤ the General Aggregate at all times; a submission violating this constraint is ineligible for the occurrence form.',
+          'The Products-Completed-Operations (PCO) Aggregate is a separate budget from the General Aggregate and resets each policy anniversary — carriers should confirm their declarations clearly distinguish the two aggregates and that PCO endorsement stacks (CG 20 33) are attached when PCO is elected.',
+          'Small-commercial underwriters should audit any account where the per-occurrence limit equals the General Aggregate without a separate PCO aggregate, as the implied "any-one-occurrence can exhaust the aggregate" structure may misrepresent the CGL program to the insured.',
+        ],
+        imageUrl: 'https://picsum.photos/seed/cgl-aggregate/1200/675',
+        tags:    ['general-liability', 'cgl', 'iso', 'aggregate', 'limits'],
+        relatedProductIds: ['GL.PROD.001'],
       },
       {
         url:     'https://sample-data.local/news/insurtech-telematics-pricing-2026',

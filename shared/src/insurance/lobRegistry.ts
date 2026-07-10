@@ -149,11 +149,60 @@ export const PA_LOB: LobDefinition = {
   marketSegments:       ['Personal Lines'],
 }
 
+// ─── Commercial General Liability (ISO CGL, CG 00 01 occurrence form) ─────────
+
+// ISO CGL groups coverage into three insuring agreements:
+// Coverage A (BI/PD), Coverage B (Personal & Advertising Injury), Coverage C (Med Pay).
+const GL_SECTIONS: LobSection[] = [
+  { label: 'Coverage A — Bodily Injury & Property Damage Liability',
+    shortName: 'Coverage A',
+    match: (n) => /bodily.injury|property.damage|BI.?PD|Coverage A/i.test(n) },
+  { label: 'Coverage B — Personal & Advertising Injury Liability',
+    shortName: 'Coverage B',
+    match: (n) => /personal.*advertis|advertis.*injur|Coverage B/i.test(n) },
+  { label: 'Coverage C — Medical Payments',
+    shortName: 'Coverage C',
+    match: () => true },  // catch-all for Coverage C and unclassified
+]
+
+const GL_PERIL: PerilRule = {
+  // Commercial casualty — no coastal peril deductible. Rate variation is by class
+  // code and exposure base, not by territory in the base occurrence form.
+  kind: 'NONE', eligibleStates: [], label: 'None',
+}
+
+export const GL_LOB: LobDefinition = {
+  refId:    'GL.LOB.001',
+  prefix:   'GL',
+  name:     'General Liability',
+  vertical: 'Commercial Lines',
+  family:   'Casualty',
+  sections: GL_SECTIONS,
+  peril:    GL_PERIL,
+  footprintStates: [
+    'AL', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'ID', 'IL',
+    'IN', 'IA', 'KS', 'KY', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT',
+    'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA',
+    'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+  ],
+  // canonical additive fields
+  code:                 'GL',
+  displayName:          'General Liability',
+  refIdPrefix:          'GL',
+  lineCategory:         'CASUALTY',
+  personalOrCommercial: 'Commercial',
+  sectionTaxonomy:      GL_SECTIONS,
+  perilModel:           GL_PERIL,
+  supportsRulesSimulation: true,
+  marketSegments:       ['Commercial Lines', 'Small Commercial', 'Middle Market'],
+}
+
 // ─── Registry + resolution ─────────────────────────────────────────────────────
 
 export const LOB_REGISTRY: Record<string, LobDefinition> = {
   [PH_LOB.refId]: PH_LOB,
   [PA_LOB.refId]: PA_LOB,
+  [GL_LOB.refId]: GL_LOB,
 }
 
 // Personal Home is the seed reference line and the safe default when a product's LOB

@@ -8,6 +8,7 @@ import type { RTTable, LDTable, RatingInputMap, RatingInputField } from '../type
 import type { RtGetter, LdGetter } from './evaluator'
 import { makePHRtGetter, makePHLdGetter, PH_WORKED_EXAMPLE } from '../seed/personalHome'
 import { makePARtGetter, makePALdGetter, PA_WORKED_EXAMPLE, PA_RATING_INPUT_SPEC } from '../seed/personalAuto'
+import { makeGLRtGetter, makeGLLdGetter, GL_WORKED_EXAMPLE, GL_RATING_INPUT_SPEC } from '../seed/generalLiability'
 
 /** Everything a pricing surface needs to evaluate one line's rating program. */
 export interface RatingKit {
@@ -18,7 +19,7 @@ export interface RatingKit {
   inputSpec?:    RatingInputField[]
 }
 
-// Keyed by LOB refId prefix (PH, PA, …) — the same prefix the LOB registry resolves.
+// Keyed by LOB refId prefix (PH, PA, GL, …) — the same prefix the LOB registry resolves.
 const KITS: Record<string, RatingKit> = {
   PH: {
     makeRtGetter:  makePHRtGetter,
@@ -30,6 +31,12 @@ const KITS: Record<string, RatingKit> = {
     makeLdGetter:  makePALdGetter,
     workedExample: { ...PA_WORKED_EXAMPLE },
     inputSpec:     PA_RATING_INPUT_SPEC,
+  },
+  GL: {
+    makeRtGetter:  makeGLRtGetter,
+    makeLdGetter:  makeGLLdGetter,
+    workedExample: { ...GL_WORKED_EXAMPLE },
+    inputSpec:     GL_RATING_INPUT_SPEC,
   },
 }
 

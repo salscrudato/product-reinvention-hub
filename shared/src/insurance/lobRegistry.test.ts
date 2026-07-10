@@ -109,12 +109,12 @@ describe('segmentation (registry-driven)', () => {
     const axes = deriveSegmentAxes()
     expect(axes.map(a => a.id)).toEqual(['vertical', 'family', 'marketSegment'])
     const byId = Object.fromEntries(axes.map(a => [a.id, a.values]))
-    // Both lines are Personal Lines
-    expect(byId['vertical']).toEqual(['Personal Lines'])
-    // PH is Property, PA is Automobile (sorted alphabetically)
-    expect(byId['family']).toEqual(['Automobile', 'Property'])
-    // Both lines serve Personal Lines market segment
-    expect(byId['marketSegment']).toEqual(['Personal Lines'])
+    // PH+PA are Personal Lines; GL adds Commercial Lines
+    expect(byId['vertical']).toEqual(['Commercial Lines', 'Personal Lines'])
+    // PH is Property, PA is Automobile, GL is Casualty (sorted alphabetically)
+    expect(byId['family']).toEqual(['Automobile', 'Casualty', 'Property'])
+    // GL adds Commercial Lines, Middle Market, Small Commercial
+    expect(byId['marketSegment']).toEqual(['Commercial Lines', 'Middle Market', 'Personal Lines', 'Small Commercial'])
   })
 
   it('resolves a product\'s segment tags through its line of business', () => {

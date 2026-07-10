@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { evaluateRules, resolveLob } from '@pf/shared'
-import type { RuleCategory, SelectionContext, PASelectionContext, PaVehicleUse, RulesResult, HoOccupancy } from '@pf/shared'
+import type { RuleCategory, SelectionContext, PASelectionContext, GLSelectionContext, PaVehicleUse, RulesResult, HoOccupancy } from '@pf/shared'
 import { useProductCtx } from '../../context/useProductCtx'
 import type { WithId } from '../../context/ProductContext'
 import { useUser } from '../../context/useUser'
@@ -195,6 +195,96 @@ function PHSimulatePanel({ sel, onChange, result, coastal, states }: {
   )
 }
 
+// ── General Liability Simulate panel ─────────────────────────────────────────
+
+const DEFAULT_GL_SEL: GLSelectionContext = {
+  riskState:            'IL',
+  classCode:            '41677',
+  occLimit:             1000000,
+  genAggregate:         2000000,
+  occDeductible:        0,
+  pcoElected:           false,
+  pcoAggregate:         2000000,
+  additionalInsuredReq: false,
+}
+
+const GL_OCC_LIMITS  = [{ label: '$100,000', value: 100000 }, { label: '$300,000', value: 300000 }, { label: '$500,000', value: 500000 }, { label: '$1,000,000', value: 1000000 }]
+const GL_GEN_AGGS    = [{ label: '$200,000', value: 200000 }, { label: '$600,000', value: 600000 }, { label: '$1,000,000', value: 1000000 }, { label: '$2,000,000', value: 2000000 }]
+const GL_PCO_AGGS    = GL_GEN_AGGS
+const GL_DEDS        = [{ label: '$0 (none)', value: 0 }, { label: '$500', value: 500 }, { label: '$1,000', value: 1000 }, { label: '$2,500', value: 2500 }]
+const GL_CLASS_CODES = [
+  { label: '41677 — Contractors, Residential Remodeling', value: '41677' },
+  { label: '11011 — Restaurants', value: '11011' },
+  { label: '45191 — Retail Stores — NEC', value: '45191' },
+  { label: '61110 — Office — Clerical', value: '61110' },
+  { label: '16811 — Building Operations — NEC', value: '16811' },
+]
+
+function GLSimulatePanel({ sel, onChange, result, states }: {
+  sel: GLSelectionContext
+  onChange: (p: Partial<GLSelectionContext>) => void
+  result: RulesResult | null
+  states: readonly string[]
+}) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="flex flex-col gap-2.5">
+        <p className="text-sm font-semibold text-text">Sample submission</p>
+
+        <Row label="Risk state">
+          <select className={selectCls} value={sel.riskState} onChange={e => onChange({ riskState: e.target.value })}>
+            {states.map(s => <option key={s}>{s}</option>)}
+          </select>
+        </Row>
+
+        <Row label="Class code">
+          <select className={selectCls} value={sel.classCode} onChange={e => onChange({ classCode: e.target.value })}>
+            {GL_CLASS_CODES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Row>
+
+        <Row label="Per-occurrence limit">
+          <select className={selectCls} value={sel.occLimit} onChange={e => onChange({ occLimit: Number(e.target.value) })}>
+            {GL_OCC_LIMITS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Row>
+
+        <Row label="General aggregate">
+          <select className={selectCls} value={sel.genAggregate} onChange={e => onChange({ genAggregate: Number(e.target.value) })}>
+            {GL_GEN_AGGS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Row>
+
+        <Row label="BI/PD deductible">
+          <select className={selectCls} value={sel.occDeductible} onChange={e => onChange({ occDeductible: Number(e.target.value) })}>
+            {GL_DEDS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Row>
+
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="gl-pco" checked={sel.pcoElected} onChange={e => onChange({ pcoElected: e.target.checked })} className="accent-accent" />
+          <label htmlFor="gl-pco" className="text-xs text-dim">Products-Completed-Operations (CG 20 33)</label>
+        </div>
+
+        {sel.pcoElected && (
+          <Row label="PCO aggregate">
+            <select className={selectCls} value={sel.pcoAggregate ?? 2000000} onChange={e => onChange({ pcoAggregate: Number(e.target.value) })}>
+              {GL_PCO_AGGS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Row>
+        )}
+
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="gl-ai" checked={sel.additionalInsuredReq} onChange={e => onChange({ additionalInsuredReq: e.target.checked })} className="accent-accent" />
+          <label htmlFor="gl-ai" className="text-xs text-dim">Additional insured required by contract (CG 20 10)</label>
+        </div>
+      </div>
+
+      <EngineResultPanel result={result} />
+    </div>
+  )
+}
+
 // ── Personal Auto Simulate panel ──────────────────────────────────────────────
 
 const DEFAULT_PA_SEL: PASelectionContext = {
@@ -334,14 +424,17 @@ export default function ProductRules() {
   const [sel,   setSel]   = useState<SelectionContext>(DEFAULT_SEL)
   // PA selection state (kept separate; only one is active at a time based on lob)
   const [paSel, setPaSel] = useState<PASelectionContext>(DEFAULT_PA_SEL)
+  // GL selection state
+  const [glSel, setGlSel] = useState<GLSelectionContext>(DEFAULT_GL_SEL)
   const [composerOpen, setComposerOpen] = useState(false)
   const [editing, setEditing] = useState<WithId<Rule> | null>(null)
 
   const result = useMemo<RulesResult | null>(() => {
     if (!canSimulate || !Object.keys(ldTables).length) return null
     if (lob.prefix === 'PA') return evaluateRules({ ldTables, lob: 'PA', selection: paSel })
+    if (lob.prefix === 'GL') return evaluateRules({ ldTables, lob: 'GL', selection: glSel })
     return evaluateRules({ ldTables, selection: sel })
-  }, [canSimulate, ldTables, sel, paSel, lob.prefix])
+  }, [canSimulate, ldTables, sel, paSel, glSel, lob.prefix])
 
   const simActive = simOpen && canSimulate && !!result
   const simFor = (r: RuleLike) => (simActive ? simulateRule(r, result!) : undefined)
@@ -501,6 +594,8 @@ export default function ProductRules() {
           <p className="text-xs text-faint mb-4">Every card below shows its own live outcome from this same engine run.</p>
           {lob.prefix === 'PA'
             ? <PASimulatePanel sel={paSel} onChange={p => setPaSel(prev => ({ ...prev, ...p }))} result={result} states={lob.footprintStates} />
+            : lob.prefix === 'GL'
+            ? <GLSimulatePanel sel={glSel} onChange={p => setGlSel(prev => ({ ...prev, ...p }))} result={result} states={lob.footprintStates} />
             : <PHSimulatePanel sel={sel} onChange={p => setSel(prev => ({ ...prev, ...p }))} result={result} coastal={coastal} states={lob.footprintStates} />
           }
         </div>
