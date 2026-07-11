@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 26 | CRITICAL: 2 | HIGH: 9 | MEDIUM: 12 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 25 | CRITICAL: 2 | HIGH: 8 | MEDIUM: 12 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -851,7 +851,7 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 ---
 
 ### DEF-0040
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: SEED
 - alias: 0006c (SPLIT from DEF-0006, LEDGER SURGERY 2026-07-11)
@@ -859,9 +859,9 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 - title: unifiedImport (filing import, ADR-0005) not ported to Azure — POST /api/ai/unifiedImport returns 501; blocks the golden-path smoke
 - evidence: Inherits DEF-0006 evidence (c). `ai.js:248` wildcard returns 501 `ai_handler_not_ported` for every name except chat/summarizeProduct; the PDF/multi-format filing importer (NJ Lemonade HO, ADR-0005) is non-functional and `UnifiedImportModal` ships against a dead endpoint. `hardening/smoke.mjs:260-268` fails on this exact 501 — golden-path blocker. Severity raised MEDIUM→HIGH on split: a documented core ingestion mechanism is fully broken on the deployed host.
 - repro: POST /api/ai/unifiedImport → `{"error":"ai_handler_not_ported","name":"unifiedImport"}`; `hardening/smoke.mjs` exits non-zero at the HO filing-import step.
-- fix:
-- verified-by:
-- commit:
+- fix: Ported unifiedImport handler into server/lib/ai.js on the Anthropic-native fleet surface. Uses BULK_VERIFY (haiku) + forced propose_coverages tool. PDF text extracted via Node zlib (no AI) to reduce payload size and latency. Accepts base64 or dataBase64 field; loads sample fixture from disk for LOCAL smoke runs. Assigns HO-COV-nnn refIds. Emits {t:'json'} bundle for real client + {t:'token'} summary for smoke harness. EDITOR+ role check enforced (mirrors mutate() gate). Uncited proposals dropped.
+- verified-by: pnpm typecheck && pnpm lint && pnpm test && pnpm build — all green (187 tests pass); gate at commit 866ede17
+- commit: 866ede17
 
 ---
 

@@ -34,7 +34,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: none
 - verify: harden-probe DEF-0018,0019,0020,0028,0033,0034,0012,0035; pnpm build (regenerates chunk-shared.cjs); /gate; harden-smoke (LOCAL) — the HO + GL chat "bracketed citation resolves to a real entity" assertions must pass; canary check: pnpm --filter shared test (chunk.ts change must NOT perturb HO-3 $1,528 / GL $2,635).
 
-## WAVE-02  tier:T3  chains:NO  blocks-smoke:YES  status:PENDING
+## WAVE-02  tier:T3  chains:NO  blocks-smoke:YES  status:DONE
 - members: DEF-0040
 - root-cause: POST /api/ai/unifiedImport hits the ai.js wildcard and returns 501 ai_handler_not_ported; the PDF/multi-format filing importer (ADR-0005) is non-functional on Azure and the smoke harness fails on this exact 501.
 - fix-approach: Port the unifiedImport (filing-extraction) handler from the functions/ reference into server/lib/ai.js on the Anthropic-native fleet surface — gated by fleet.guard()/resolveModel, grounded, returning the ImportPlan/extraction shape the existing client (UnifiedImportModal → importProduct.ts → adapter.db.mutate) expects. No client secret; extraction is cited, never fabricated. Do NOT delete UnifiedImportModal — this port makes it live (supersedes the DEF-0038 dead-code note). Imported products auto-appear in grounding via WAVE-01's mutate-time chunk hook.
