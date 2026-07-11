@@ -98,7 +98,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: none
 - verify: harden-probe DEF-0002; /gate (Feedback.tsx compiles).
 
-## WAVE-10  tier:T1  chains:YES  blocks-smoke:NO  status:PENDING
+## WAVE-10  tier:T1  chains:YES  blocks-smoke:NO  status:DONE
 - members: DEF-0022, DEF-0023
 - root-cause: GL is a seeded portfolio line but two client surfaces still assume HO+PA only — News.tsx LOB_KEYWORDS/BASE_NEWS_INSTRUCTION has no GL entry (GL articles score zero relevance) and duckcreek.test.ts's matrix covers only PH+PA with an HO/PA-biased lob-token assertion (the GL export path is entirely untested).
 - fix-approach: (1) News.tsx — add a GL LOB_KEYWORDS entry (CGL, commercial general liability, occurrence form, CG 00 01, …) and include GL in BASE_NEWS_INSTRUCTION emphasis (DEF-0022). (2) duckcreek.test.ts — add GL_DATA to the describe.each matrix and fix the lob-token derivation so 'General Liability' → 'GL' (not the 'Home'/'PA' fallback), exercising GL XML/validation/round-trip/manuScriptID (DEF-0023).

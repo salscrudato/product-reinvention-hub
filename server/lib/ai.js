@@ -569,8 +569,39 @@ async function chat(req, res) {
   }
 }
 
+// exportDuckCreek — records a client-side Duck Creek manuscript download in the audit trail.
+// Not an AI call: no fleet/model needed. Writes an append-only audit event to Cosmos.
+async function exportDuckCreek(req, res) {
+  const { productId, productRefId, manuScriptID } = req.body ?? {}
+  if (typeof productId !== 'string' || !productId)
+    return res.status(400).json({ error: 'productId is required' })
+  if (typeof manuScriptID !== 'string' || !manuScriptID)
+    return res.status(400).json({ error: 'manuScriptID is required' })
+  const { docs } = require('./cosmos')
+  const tid   = req.tenant
+  const actor = { uid: req.user?.uid ?? 'unknown', name: req.user?.name ?? req.user?.email ?? 'User' }
+  await docs.items.create({
+    id:       require('crypto').randomUUID(),
+    pk:       `${tid}|__duckcreek_audit__`,
+    kind:     'duckcreek_export_audit',
+    tenantId: tid,
+    data: {
+      actor,
+      action:     'export-duckcreek',
+      entityType: 'product',
+      entityPath: `products/${productId}`,
+      productId,
+      ...(typeof productRefId === 'string' && productRefId ? { productRefId } : {}),
+      manuScriptID,
+      at: new Date().toISOString(),
+    },
+  })
+  return res.json({ ok: true })
+}
+
 router.post('/:name', requireRole('ANALYST'), requireTenant, async (req, res) => {
   const name = req.params.name
+  if (name === 'exportDuckCreek') return exportDuckCreek(req, res)
   if (!fleet.isConfigured()) return res.status(503).json({ error: 'ai_not_configured', name })
   if (name === 'chat') return chat(req, res)
   if (name === 'summarizeProduct') return summarizeProduct(req, res)

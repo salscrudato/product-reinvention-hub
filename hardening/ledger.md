@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 8 | CRITICAL: 1 | HIGH: 2 | MEDIUM: 4 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 5 | CRITICAL: 1 | HIGH: 1 | MEDIUM: 2 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -366,30 +366,30 @@ never served" — describes the original Firebase semanticCache+verifier stack; 
 ---
 
 ### DEF-0022
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: MULTILINE
 - surface: app/src/routes/News.tsx:57-65
 - title: News relevance scorer has no GL keyword expansion; BASE_NEWS_INSTRUCTION hardcodes HO+PA emphasis, omitting GL
 - evidence: `grep -n 'LOB_KEYWORDS\|BASE_NEWS_INSTRUCTION' app/src/routes/News.tsx` — line 57-60: `LOB_KEYWORDS = { HO: ['homeowners','ho-3','dwelling',...], PA: ['personal auto','automobile',...] }` — no `GL` key. Line 65: `BASE_NEWS_INSTRUCTION` ends "with emphasis on Homeowners (HO) and Personal Auto (PA)." Line 100: `const extras = LOB_KEYWORDS[lobPrefix] ?? []` — for a GL product `lobPrefix='GL'`, `LOB_KEYWORDS['GL']` is `undefined`, `extras=[]`. PH gets 8 expansion terms (+3 relevance per match); PA gets 7; GL gets 0. Industry abbreviations 'CGL', 'occurrence form', 'commercial general liability', 'CG 00 01' are absent.
 - repro: Navigate to the News tab with a portfolio containing only the GL seed product (GL.PROD.001). Any article about CGL rate filings or ISO CGL updates that uses 'CGL' without spelling out 'general liability' in full scores zero LOB-relevance for the GL product; an equivalent PH article using 'homeowners' would score +3.
-- fix:
-- verified-by:
-- commit:
+- fix: LOB_KEYWORDS['GL'] added with 8 CGL-specific expansion terms (commercial general liability, cgl, occurrence form, cg 00 01, general liability, premises liability, products liability, completed operations). BASE_NEWS_INSTRUCTION updated to include "Commercial General Liability (GL)" in the emphasis list.
+- verified-by: static probe 2026-07-11 (WAVE-10) — LOB_KEYWORDS.GL entry confirmed; BASE_NEWS_INSTRUCTION includes GL emphasis; repro (GL articles score 0) no longer reproduces; gate green (689+187 tests).
+- commit: e2690e57
 
 ---
 
 ### DEF-0023
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: MULTILINE
 - surface: app/src/lib/export/duckcreek.test.ts:37-40,68
 - title: Duck Creek export test matrix covers only PH and PA; GL export path entirely untested; lob-token assertion is HO/PA-biased
 - evidence: `grep -n 'describe.each\|_name.includes\|GL_DATA' app/src/lib/export/duckcreek.test.ts` — lines 37-40: `describe.each([['Personal Home (HO-3)', PH_DATA], ['Personal Auto (PAP)', PA_DATA]])` — no GL_DATA entry. Line 68: `const lob = _name.includes('Home') ? 'HO' : 'PA'` — if GL were added to the matrix, 'General Liability' → `lob='PA'`, silently asserting the wrong lobToken. The GL Duck Creek path (`lobTokens: { ..., GL: "GL" }` per serff-shared.cjs) is never exercised: GL XML generation, GL validation report, GL cross-ref integrity, GL round-trip, and GL manuScriptID prefix are all invisible to CI.
 - repro: Any regression introduced in the GL XML serialisation path (wrong namespace, missing refId, broken CovA/CovB/CovC coverage-part mapping) passes the full test suite without detection.
-- fix:
-- verified-by:
-- commit:
+- fix: GENERAL_LIABILITY_BUNDLE imported from @pf/shared; GL_DATA constructed via bundleToData; describe.each matrix extended to 3 entries (PH, PA, GL); lob-token assertion fixed to three-way: includes('Home')→'HO', includes('General Liability')→'GL', else→'PA'. 25 tests pass (7 PH + 7 PA + 7 GL + 4 other).
+- verified-by: static probe 2026-07-11 (WAVE-10) — `npx vitest run src/lib/export/duckcreek.test.ts` 25/25 passed; GL XML/validation/round-trip/manuScriptID assertions green; lob-token 'GL' assertion confirmed; gate green (689+187 tests).
+- commit: 53a0bdc6
 
 ---
 
