@@ -148,19 +148,35 @@ export interface UploadDoc {
   sheetNames?: string[]              // XLSX only: sheet names extracted by the client
 }
 
+// ─── Ensemble disagreement (inter-model heatmap) ──────────────────────────────
+
+// One entry per field where the two primary extractors (opus-4-8 and gpt-5.1)
+// disagreed. The adjudicator (haiku-4-5) resolves the field and is recorded here.
+// Confidence is calibrated from agreement rather than self-reported by any model.
+export interface FieldDisagreement {
+  fieldPath:      string    // dot-path into the bundle, e.g. 'coverages[0].limit'
+  fieldLabel:     string    // human label for the review UI
+  opusValue:      string    // what opus-4-8 extracted (serialised)
+  gptValue:       string    // what gpt-5.1 extracted (serialised)
+  adjudicatedValue: string  // what haiku-4-5 chose (serialised)
+  calibratedConfidence: number  // 0–1 (0 = complete disagreement, 1 = agreement)
+}
+
 // ─── Unified proposal bundle ───────────────────────────────────────────────────
 
 // Extends FilingImportPlan (which already wraps ImportPlan + review sections +
 // unresolved items + conservation-law counts). The unified bundle adds:
-//   • fingerprint        — how the upload was classified
-//   • extractionPlan     — which extractor each document was routed to
-//   • sampledVerifications — AI-sampled table checks (verdict only, never rows)
-//   • splitProducts      — proposed product-level splits from translationRecipe
-//   • formatCard?        — present only when detectedFormat === 'UNKNOWN'
+//   • fingerprint           — how the upload was classified
+//   • extractionPlan        — which extractor each document was routed to
+//   • sampledVerifications  — AI-sampled table checks (verdict only, never rows)
+//   • splitProducts         — proposed product-level splits from translationRecipe
+//   • formatCard?           — present only when detectedFormat === 'UNKNOWN'
+//   • ensembleDisagreements — per-field where opus-4-8 and gpt-5.1 diverged
 export interface UnifiedProposalBundle extends FilingImportPlan {
-  fingerprint:           FormatFingerprint
-  extractionPlan:        ExtractionPlan
-  sampledVerifications:  SampledVerification[]
-  splitProducts:         SplitProductProposal[]
-  formatCard?:           FormatCard
+  fingerprint:              FormatFingerprint
+  extractionPlan:           ExtractionPlan
+  sampledVerifications:     SampledVerification[]
+  splitProducts:            SplitProductProposal[]
+  formatCard?:              FormatCard
+  ensembleDisagreements?:   FieldDisagreement[]
 }

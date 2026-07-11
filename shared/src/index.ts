@@ -41,6 +41,8 @@ export * from './seed/gtmProcess'
 export * from './lines'
 // Unified ingestion service types — FormatFingerprint, ExtractionPlan, UnifiedProposalBundle, etc.
 export * from './import'
+// Multi-model fleet constants — ModelRole, FleetDeployment, DEPLOY_*, resolveDeployment.
+export * from './ai/fleet'
 // Product Data Model (neutral, lossless) + deterministic Duck Creek export.
 export * from './pdm/types'
 export * from './pdm/build'

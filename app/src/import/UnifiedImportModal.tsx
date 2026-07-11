@@ -18,6 +18,7 @@ import type {
   UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan,
   FormatCard, FormatFingerprint, SplitProductProposal, SampledVerification,
 } from '@pf/shared'
+import { DisagreementHeatmap } from './DisagreementHeatmap'
 import { useUser } from '../context/useUser'
 import { Dialog } from '../components/ui/Dialog'
 import { Button } from '../components/ui/Button'
@@ -287,7 +288,7 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
   onCancel:       () => void
   onImport:       () => void
 }) {
-  const { review, unresolved, counts, fingerprint, splitProducts, sampledVerifications, formatCard } = bundle
+  const { review, unresolved, counts, fingerprint, splitProducts, sampledVerifications, formatCard, ensembleDisagreements } = bundle
   const acceptedCount = useMemo(() => SECTION_META.filter(s => accepted.has(s.key)).length, [accepted])
 
   return (
@@ -358,6 +359,11 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
         {/* ── Sampled table verifications ────────────────────────────────── */}
         {sampledVerifications.length > 0 && (
           <SampledVerificationsSection verifications={sampledVerifications} />
+        )}
+
+        {/* ── Ensemble disagreement heatmap (inter-model divergence) ─────── */}
+        {ensembleDisagreements && ensembleDisagreements.length > 0 && (
+          <DisagreementHeatmap disagreements={ensembleDisagreements} />
         )}
 
         {/* ── Per-section accept/reject ──────────────────────────────────── */}
