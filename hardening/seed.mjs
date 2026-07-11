@@ -12,8 +12,9 @@
  *
  * Env (required on the server — set before starting node server/server.js):
  *   COSMOS_ENDPOINT, COSMOS_KEY, AUTH_JWT_SECRET
- * Env (optional here):
+ * Env (optional here — never read by this script; checked only for local runs):
  *   BASE_URL           — server base URL (default http://localhost:3000)
+ *                        Set to https://app-prodhub-dev.azurewebsites.net for the live host.
  *   PF_TEST_TENANT     — target tenant id (default 'hardening-test')
  *
  * GROUNDING CAVEAT: DEF-0034 (mutate() never wrote groundingChunks) is FIXED
@@ -39,15 +40,22 @@ if (PROD_GUARD.includes(TEST_TENANT.toLowerCase())) {
   process.exit(1)
 }
 
-// ─── Precondition: required server-side env vars ──────────────────────────────
-const REQUIRED_ENV = ['COSMOS_ENDPOINT', 'COSMOS_KEY', 'AUTH_JWT_SECRET']
-const missingEnv = REQUIRED_ENV.filter(k => !process.env[k])
-if (missingEnv.length > 0) {
-  console.error('\nPRECONDITION FAIL — required environment variables not set:')
-  missingEnv.forEach(k => console.error(`  MISSING: ${k}`))
-  console.error('\nThese are read by the server (server/lib/*.js); set them before starting')
-  console.error('node server/server.js. See docs/DEPLOY_AZURE.md for the full list.')
-  process.exit(1)
+// ─── Precondition: server-side env vars (local runs only) ────────────────────
+// When BASE_URL points at a remote host (e.g. app-prodhub-dev.azurewebsites.net),
+// COSMOS_ENDPOINT / COSMOS_KEY / AUTH_JWT_SECRET live in App Service configuration
+// and are NOT available locally — skip the check. Only enforce it for localhost,
+// where the operator starts the server themselves.
+const IS_LOCAL = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1')
+if (IS_LOCAL) {
+  const REQUIRED_ENV = ['COSMOS_ENDPOINT', 'COSMOS_KEY', 'AUTH_JWT_SECRET']
+  const missingEnv = REQUIRED_ENV.filter(k => !process.env[k])
+  if (missingEnv.length > 0) {
+    console.error('\nPRECONDITION FAIL — required environment variables not set:')
+    missingEnv.forEach(k => console.error(`  MISSING: ${k}`))
+    console.error('\nThese are read by the server (server/lib/*.js); set them before starting')
+    console.error('node server/server.js. See docs/DEPLOY_AZURE.md for the full list.')
+    process.exit(1)
+  }
 }
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
