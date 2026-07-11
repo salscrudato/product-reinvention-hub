@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 9 | CRITICAL: 1 | HIGH: 4 | MEDIUM: 3 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 2
+SUMMARY: OPEN: 14 | CRITICAL: 1 | HIGH: 6 | MEDIUM: 6 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 3
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -175,4 +175,89 @@ Role enforcement is server-side and correct for: /mutate (EDITOR+), /mutateBatch
 /setNewsPins (DEF-0009, MEDIUM), /presence/join (DEF-0010, LOW). No UI-only gates found for
 write paths — all relevant write gates are also enforced server-side; canEdit UI checks are
 defense-in-depth only.
+-->
+- note(MUTATION probe 2026-07-11 on DEF-0008): bare-write vector confirmed — `data.js:120` `docs.item(idFor('ent', path), pkFor(tid, path)).replace(ent)` is a raw Cosmos replace: no audit event, no version document, no searchIndex update, no rev increment. Two violations in one endpoint (role + envelope bypass).
+- note(MUTATION probe 2026-07-11 on DEF-0009): bare-write vector confirmed — `data.js:129` `docs.items.upsert({ kind: 'entity', ... })` is a raw Cosmos upsert with no atomic envelope; same dual violation as DEF-0008.
+
+---
+
+### DEF-0012
+- status: OPEN
+- severity: HIGH
+- probe: MUTATION
+- surface: server/lib/ai.js:104-122
+- title: `persistSummary()` writes a `kind:'entity'` document via bare upsert with `rev` hardcoded to `1`, bypassing the mutate() atomic envelope entirely
+- evidence: `grep -n 'upsert\|rev.*1\|kind.*entity' server/lib/ai.js` — lines 107-118: `docs.items.upsert({ id: 'ent:productSummaries~...', kind: 'entity', rev: 1, ... })` called directly from `summarizeProduct`. No audit event, no version record, no searchIndex write. `rev` is always `1` regardless of call count; successive calls silently overwrite the document and reset rev, meaning a future `mutate()` on this path would start at `curRev=1` with no version history for the baseline. The function is swallowed in a try/catch with a non-fatal warning, so persistence failures are invisible to the caller.
+- repro: Call `POST /api/ai/summarizeProduct` with a valid ANALYST JWT twice for the same product. Query Cosmos `docs` container for `id='ent:productSummaries~<productId>'`: entity exists with `rev:1`. Query for any document with `kind='audit'` or `kind='version'` in partition `${tenantId}|productSummaries` — zero results. Call a third time; rev is still 1 with no version trail.
+
+---
+
+### DEF-0013
+- status: OPEN
+- severity: HIGH
+- probe: MUTATION
+- surface: server/lib/data.js:95-111
+- title: `mutateBatch` within-partition chunk overflow produces multiple non-atomic Cosmos batch calls; first chunk commits silently if subsequent chunks fail
+- evidence: `grep -n 'BATCH_OPS\|chunk.length\|docs.items.batch' server/lib/data.js` — line 19: `BATCH_OPS = 96`; each entity envelope produces 4 ops (entity + audit + version + searchIndex); threshold is 24 entities per partition before the first chunk flush. Lines 102-104: `if (chunk.length + ops.length > BATCH_OPS) { await docs.items.batch(chunk, pk); chunk = [] }` — each chunk is an independent Cosmos transactional batch call; if the Nth chunk succeeds but the (N+1)th fails, the first N×24 entities are permanently committed with no rollback. Outer `catch` returns `{ error: 'batch_failed' }` without identifying which payloads succeeded. `SeedProcessDialog.tsx:48` calls `adapter.db.mutateBatch(buildSeedPayloads(...))` which can produce 65 task payloads all mapping to partition `${tenantId}|tasks` (260 ops → 3 separate batch calls).
+- repro: `POST /api/db/mutateBatch` with 25 payloads whose paths all map to the same partition (e.g., `tasks/t1` through `tasks/t25`). Induce a Cosmos failure on the second batch call (rate-limit or network partition). First 24 entities commit; entity 25 does not. Server returns 500; Cosmos state is partial with no way for the client to distinguish which payloads persisted.
+
+---
+
+### DEF-0014
+- status: OPEN
+- severity: MEDIUM
+- probe: MUTATION
+- surface: server/lib/serff.js:233-256
+- title: SERFF bundle-generate handler injects an orphan `kind:'audit'` record into the product partition outside any atomic batch, fire-and-forget
+- evidence: `grep -n 'items.create\|kind.*audit' server/lib/serff.js` — lines 238-253: `_docs.items.create({ id: 'aud:serff:...', pk: pkFor(tenantId, cloneProductId), kind: 'audit', op: 'serff-bundle-generate', ... })`. The code comment says "fire-and-forget; atomic via data.js conventions" but this is NOT using data.js conventions — it is a direct Cosmos create outside any transactional batch. If the create fails (wrapped in non-fatal try/catch), the SERFF operation succeeds with no audit record. The audit document that IS written has no corresponding `kind:'version'` record and no `kind:'searchIndex'` update, creating an orphaned entry in the product partition that violates the implied 1:1 audit-to-entity-write pairing.
+- repro: `POST /api/serff/v1/bundle` with valid EDITOR JWT and two valid product refs. On success, query Cosmos for `kind='audit'` in partition `${tenantId}|${productBase}` with `op='serff-bundle-generate'`: the audit record exists. Query for a sibling `kind='version'` document with the same `entityPath` — none exists.
+
+---
+
+### DEF-0015
+- status: OPEN
+- severity: MEDIUM
+- probe: MUTATION
+- surface: server/lib/data.js:75
+- title: Version records store the full new entity snapshot, not a field diff — the `Version(field diff)` requirement of the mutation invariant is unimplemented
+- evidence: `grep -n 'kind.*version\|entityData\|current' server/lib/data.js` — line 65: `const current = await readEntity(tid, path)` (previous state is fetched and available); line 69: `const entityData = { ...data, rev, updatedAt, updatedBy }` (full new state); line 75: `{ kind: 'version', data: op === 'delete' ? null : entityData, ... }` — `current.data` is never compared against `data` to produce a diff, `changed`, or `before` field. History viewers must fetch two consecutive version records and compute a diff externally. `HistoryDrawer.tsx:5` (comment) states the history is "atomically written" but does not claim field-level diff.
+- repro: Call `mutate({ op:'update', path:'products/P1', data:{ name:'New Name' }, ... })` with a product that had `{ name:'Old Name' }`. Query Cosmos for `kind='version'` at `entityPath='products/P1'`: the version document body is `{ name:'New Name', rev:2, ... }` — full new state with no `before`, `diff`, or `changed` field.
+
+---
+
+### DEF-0016
+- status: OPEN
+- severity: MEDIUM
+- probe: MUTATION
+- surface: server/lib/data.js:67
+- title: `expectedRev` optimistic-concurrency guard is silently bypassed when the target entity does not exist — any `expectedRev` value is accepted on a create against a non-existent path
+- evidence: `grep -n 'expectedRev\|current &&' server/lib/data.js` — line 67: `if (payload.expectedRev !== undefined && current && curRev !== payload.expectedRev) { throw conflict }`. The conjunction `&& current` means: when `readEntity()` returns null (path absent or previously deleted), the check is entirely skipped regardless of the provided `expectedRev`. A caller providing `expectedRev: 99` for a create against an absent path receives HTTP 200 with `rev: 1` — the compare-and-swap guarantee is voided. Scenario: two concurrent writers both read entity at rev=5; writer A deletes it; writer B sends an update with `expectedRev: 5` — instead of a 409, writer B's operation silently re-creates the entity as rev=1.
+- repro: Delete entity at `products/P1` (confirms `current=null`). Then `POST /api/db/mutate` with `{ op:'create', path:'products/P1', expectedRev:99, data:{...}, entityType:'product', ... }` — returns `{ ok:true, rev:1 }`. The `expectedRev:99` is silently ignored.
+
+---
+
+### DEF-0017
+- status: FALSE-POSITIVE
+- severity: N/A
+- probe: MUTATION
+- surface: server/lib/admin.js, server/lib/duckcreek.js, server/lib/data.js (presence routes)
+- title: FP — admin.js `__system__` writes, duckcreek `kind:'duckcreek_audit'` writes, and presence container writes are intentional non-entity writes outside the mutation invariant's scope
+- evidence: `grep -n 'kind.*tenant\|kind.*user\|kind.*duckcreek_audit' server/lib/admin.js server/lib/duckcreek.js` — (a) `admin.js:30,59`: `kind:'tenant'` and `kind:'user'` in the `__system__` partition — ADMIN-role only, system management data, no product entity envelope required. (b) `duckcreek.js:123`: `kind:'duckcreek_audit'` in a dedicated `${tenantId}|__duckcreek_api__` partition, documented in-code as "audit is append-only"; not a `kind:'entity'` write. (c) `data.js:136`: `presence.items.upsert(...)` targets a separate `presence` Cosmos container (not `docs`), writes ephemeral session heartbeats with no entity kind — outside the `docs` entity lifecycle entirely.
+- repro: N/A — all three write classes produce no `kind:'entity'` documents and are not in scope of the "every entity write uses mutate()" invariant.
+
+<!-- MUTATION probe summary 2026-07-11:
+Write-path audit complete across server/ and app/src/. All app-layer components correctly route
+through adapter.db.mutate() or adapter.db.mutateBatch() — confirmed by grep over app/src (no direct
+Cosmos SDK imports in browser code; adapter is the sole write path). The envelope() function
+(data.js:60-79) is structurally sound for the nominal mutate() path: all 4 ops (entity + audit +
+version + searchIndex) share the same pk and commit in one Cosmos transactional batch.
+Defects found: two server-side routes (/vote DEF-0008, /setNewsPins DEF-0009) bypass the envelope
+with bare Cosmos writes and allow VIEWER access (already logged by ROLE probe; bare-write note
+added above); persistSummary() in ai.js writes a kind:'entity' doc with rev hardcoded to 1
+(DEF-0012 HIGH); mutateBatch() within-partition chunk overflow is non-atomic above 24-entity
+threshold (DEF-0013 HIGH); serff.js injects orphan audit records outside the batch (DEF-0014
+MEDIUM); version records store full snapshots not field diffs (DEF-0015 MEDIUM); expectedRev is
+silently bypassed when entity is absent (DEF-0016 MEDIUM). DEF-0017 clears admin/__system__,
+duckcreek, and presence writes as intentional non-entity writes.
+parentId validation (DEF-0003) confirmed still unimplemented — no note added (existing DEF).
 -->
