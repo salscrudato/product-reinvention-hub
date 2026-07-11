@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 11 | CRITICAL: 1 | HIGH: 3 | MEDIUM: 5 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 8 | CRITICAL: 1 | HIGH: 2 | MEDIUM: 4 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -22,16 +22,16 @@ SUMMARY: OPEN: 11 | CRITICAL: 1 | HIGH: 3 | MEDIUM: 5 | LOW: 2 | WONTFIX: 0 | FA
 ---
 
 ### DEF-0002
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: SEED
 - surface: shared/src/ai/fleet.ts, server/lib/fleet.js, CLAUDE.md (invariant table)
 - title: Deployed AI fleet uses claude-opus-4-8 for reasoning; CLAUDE.md governance binds to claude-sonnet-5 in a non-deployed workspace
 - evidence: `shared/src/ai/fleet.ts` GROUNDED_CITED deployment = `claude-opus-4-8`; BULK_VERIFY = `claude-haiku-4-5`. `functions/src/runtime.ts:45-46` MODEL = `claude-sonnet-5`, MODEL_FAST = `claude-haiku-4-5` — but `functions/` is retained as reference only, NOT deployed (returns 501 for all handlers except chat/summarizeProduct). CLAUDE.md invariant table reads: "Model IDs — `claude-sonnet-5` (reasoning) and `claude-haiku-4-5` (bulk/simple), defined once in `functions/src/runtime.ts`. Never `claude-fable-5`." This binding points at the non-deployed workspace. `grep -r 'claude-' shared/src/ai/fleet.ts functions/src/runtime.ts`
 - repro: `grep -r 'deploymentName\|MODEL\b' shared/src/ai/fleet.ts server/lib/fleet.js functions/src/runtime.ts` — confirms opus-4-8 in deployed path vs sonnet-5 in reference-only path.
-- fix:
-- verified-by:
-- commit:
+- fix: (1) CLAUDE.md binding-invariant "Model IDs" row updated to `claude-opus-4-8` (reasoning/GROUNDED_CITED) and `claude-haiku-4-5` (bulk/BULK_VERIFY), canonical source `shared/src/ai/fleet.ts`. (2) Feedback.tsx:141 stale invariant table row replaced with `claude-opus-4-8` / `shared/src/ai/fleet.ts` — resolves the in-file contradiction with line 158. (3) ADR-0001 amended — scope updated to `shared/src/ai/fleet.ts` + `server/lib/fleet.js`; decision table updated to deployed fleet (opus-4-8/haiku-4-5/gpt-5.1); original functions/ decision preserved as historical context.
+- verified-by: static probe 2026-07-11 (WAVE-09) — CLAUDE.md binding-invariant row confirmed claude-opus-4-8; Feedback.tsx:141 contradiction resolved (both lines now say claude-opus-4-8); ADR-0001 amended with deployed fleet; gate green (689+187 tests pass).
+- commit: b44f6f8e
 - note(CONFIG probe 2026-07-11 on DEF-0002): (a) `app/src/routes/Feedback.tsx:141` embeds the stale CLAUDE.md invariant table verbatim — "Model IDs: `claude-sonnet-5` (reasoning) … defined once in `functions/src/runtime.ts`. Never `claude-fable-5`." The very next use of that table is `Feedback.tsx:158` (same `buildCardPrompt()` function), which generates a Claude Code prompt reading: `'Set /model to claude-opus-4-8. Never select claude-fable-5.'` — a correct directive matching the deployed fleet, but directly contradicting the stale invariant text four lines above it. Two contradictory model directives in the same file. (b) ADR-0001 scope field says "`functions/` (server-side AI only)". The actual deployed model routing lives in `shared/src/ai/fleet.ts` + `server/lib/fleet.js`, not in the `functions/` workspace; the ADR's "defined once" claim points at the wrong canonical location. `grep -n 'claude-\|/model' app/src/routes/Feedback.tsx` confirms both instances.
 
 ---

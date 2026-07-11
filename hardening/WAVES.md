@@ -90,7 +90,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: none
 - verify: harden-probe DEF-0038,0037,0042; /gate (Admin.tsx still compiles; docs/config-only otherwise).
 
-## WAVE-09  tier:T0  chains:YES  blocks-smoke:NO  status:PENDING
+## WAVE-09  tier:T0  chains:YES  blocks-smoke:NO  status:DONE
 - members: DEF-0002
 - root-cause: The CLAUDE.md binding-invariant table (and ADR-0001 and Feedback.tsx:141) bind model IDs to claude-sonnet-5 "defined once in functions/src/runtime.ts" — the reference-only, non-deployed workspace — while the deployed fleet (shared/src/ai/fleet.ts → server/lib/fleet.js) uses claude-opus-4-8 / claude-haiku-4-5; Feedback.tsx even emits the stale table (line 141) four lines above the correct "Set /model to claude-opus-4-8" directive (line 158).
 - fix-approach: Re-point the CLAUDE.md invariant, docs/adr/0001-model-ids.md, and Feedback.tsx:141 to the deployed source of truth (shared/src/ai/fleet.ts: claude-opus-4-8 reasoning / claude-haiku-4-5 bulk), resolving the in-file contradiction. Docs/comment only — fleet.ts/fleet.js are already correct; no code-path change; never claude-fable-5.
