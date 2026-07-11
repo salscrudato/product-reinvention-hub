@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 14 | CRITICAL: 1 | HIGH: 6 | MEDIUM: 6 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 3
+SUMMARY: OPEN: 17 | CRITICAL: 2 | HIGH: 7 | MEDIUM: 7 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 3
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -87,6 +87,7 @@ SUMMARY: OPEN: 14 | CRITICAL: 1 | HIGH: 6 | MEDIUM: 6 | LOW: 1 | WONTFIX: 0 | FA
 - verified-by:
 - commit:
 - note(SEAM probe 2026-07-11): `app/.env.development.local` also contains stale Firebase comments and `VITE_USE_EMULATORS=false` — confirmed dead (variable not read by any source file; `grep -r VITE_USE_EMULATORS app/ shared/` returns zero hits). Covered by this DEF's stale-artifacts scope; not a new seam violation.
+- note(CITE probe 2026-07-11): `app/src/routes/Admin.tsx:746` UI copy reads "Repeat grounded questions served from cache behind a conservative similarity threshold + a cheap verifier; a stale-cited answer is never served." This describes the Firebase `semanticCache.ts` + verifier workflow, not the Azure port. The Azure `chat()` handler (server/lib/ai.js) has no semantic cache and no verifier; the statement is factually incorrect for the deployed system. Covered by this DEF's stale-artifacts scope.
 
 ---
 
@@ -260,4 +261,68 @@ MEDIUM); version records store full snapshots not field diffs (DEF-0015 MEDIUM);
 silently bypassed when entity is absent (DEF-0016 MEDIUM). DEF-0017 clears admin/__system__,
 duckcreek, and presence writes as intentional non-entity writes.
 parentId validation (DEF-0003) confirmed still unimplemented — no note added (existing DEF).
+-->
+
+---
+
+### DEF-0018
+- status: OPEN
+- severity: CRITICAL
+- probe: CITE
+- surface: server/lib/ai.js:193-234, app/src/components/chat/Markdown.tsx:74-78, app/src/lib/ai/notices.ts
+- title: Portfolio chat stream has no server-side citation validation — fabricated [refId] chips render as authoritative
+- evidence: (1) `grep -n 'notice\|unverified\|emit.*notice' server/lib/ai.js` → zero results; `chat()` emits only `{t:'token'}`, `{t:'error'}`, `{t:'done'}` — never `{t:'notice', kind:'unverified'}`. (2) Client is fully wired: `notices.ts:13` defines `NoticeKind='unverified'`; `Home.tsx:149-153` and `TaskBriefing.tsx:19` both handle `{t:'notice'}` — dead client infrastructure the server never triggers for portfolio chat. (3) `Markdown.tsx:27` — regex `cite: /^\[([^\]]+)\]/` renders ANY `[X]` in model output as a styled clickable `CitationChip` with zero existence validation; `openCitation()` (Home.tsx:91-100) silently falls back to `/app/explorer` for unknown refIds, so a fabricated chip looks identical to a real one. (4) Adversarial-input proof: `grep -ri 'cyber\|earthquake\|nuclear' shared/src/seed/` → zero results. Question "What is the cyber liability sub-limit under the GL product?" yields `grounding()` returning `[]`; system becomes `CONTEXT:\n(no matching context found)`. Server fires the LLM with NO early-return or rate-limiting-of-fabrication guard; response streams token-by-token with no post-processing. A model output containing `[GL.COV.999]` reaches the client unchanged and renders as an authoritative chip. (5) The claims copilot equivalent (functions/src/claims.ts) does have server-side citation resolution, `unverifiedCitations` field, and client-side `shouldRenderDetermination()` guard. Portfolio chat has none. CLAUDE.md binding invariant: "AI grounded + cited: AI responses must cite their source documents. Free invention is a bug."
+- repro: `POST /api/ai/chat` with `{ messages:[{role:'user',content:'What is the cyber liability endorsement sub-limit under the GL product?'}] }` — grounding returns empty (no "cyber" in corpus). Model streams — if it invents a `[GL.COV.999]` citation, the response arrives unchanged, the chip renders, clicking it goes to explorer. No server-side validation fires.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0019
+- status: OPEN
+- severity: HIGH
+- probe: CITE
+- surface: shared/src/retrieval/chunk.ts:77-106, 155-174
+- title: Rule, formRule, LD-table, and RT-table grounding chunks lack the [refId] bracket format the system prompt requires for citation
+- evidence: `chunkRule()` (chunk.ts:79): `` `Rule ${refId} (${r.category}...)` `` — bare refId, no brackets. `chunkFormRule()` (chunk.ts:95): `` `Form-attachment rule ${refId}` `` — bare. `chunkLdTable()` (chunk.ts:157): `` `Limit/Deductible table ${refId} — ${t.name}` `` — bare. `chunkRtTable()` (chunk.ts:165): `` `Rate table ${refId} — ${t.name}` `` — bare. Contrast: `chunkProduct()` (chunk.ts:47) and `chunkCoverage()` (chunk.ts:63) embed `[${refId}]` in brackets; `chunkRatingProgram()` (chunk.ts:145) also brackets. System prompt (ai.js:36): "cite its source using the bracketed reference tags that appear in the context." For rules, formRules, LD tables and RT tables no bracketed reference tag appears in chunk text. The model either (a) omits the citation — missing citation (HIGH) — or (b) invents the bracket wrapper around a bare ID it saw — technically fabricates a tag, which "Do not fabricate reference tags" (ai.js:37) forbids. Either outcome violates the citation invariant. Run: `grep -n '^\`Rule\|^\`Form-attachment\|^\`Limit\|^\`Rate' shared/src/retrieval/chunk.ts` (after substituting template literal patterns) to confirm all four lack brackets.
+- repro: Ask the portfolio chat "What is the minimum premium threshold for the HO-3 rating program?" Grounding returns `chunkRule` entries for minimum-premium rules (e.g., text contains `Rule PH.RU.009 ...` without brackets). The model cannot satisfy "cite with a bracketed reference tag that appears in the context" for these chunks because the bracketed form is absent.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0020
+- status: OPEN
+- severity: MEDIUM
+- probe: CITE
+- surface: server/lib/ai.js:94-102, 154-155 (groundSummary, summarizeProduct)
+- title: summarizeProduct groundSummary filter only validates coverageHighlights names; headline, overview, highlights values, and considerations pass through unvalidated
+- evidence: `groundSummary()` (ai.js:94-102): computes `known` from `coverages[].name`, filters `coverageHighlights` array to name-matched entries, returns `{ ...raw, coverageHighlights: grounded }`. The `...raw` spread passes `raw.headline`, `raw.overview`, `raw.highlights` (array of `{label,value}` tiles), and `raw.considerations` through unchanged. No code checks these fields against the product metadata. Examples of undetectable invention: `highlights[].value` = "States: 50" when product footprint is 15 states; `headline` = "Built on HO 00 03 with earthquake endorsement" when no earthquake coverage exists; `considerations[]` = invented regulatory requirement. SUMMARY_TOOL schema (ai.js:59-82) and SUMMARY_SYSTEM prompt (ai.js:84-88) instruct the model to use only the metadata, but no server-side code validates the prose output against the input JSON. `grep -n 'highlights\|headline\|overview\|considerations' server/lib/ai.js` confirms these fields are never checked.
+- repro: `POST /api/ai/summarizeProduct` with a product body whose `footprint` is 15 states. Inspect response — if `highlights` contains `{label:'States',value:'50'}`, it passes through `groundSummary` unchanged because `groundSummary` only touches `coverageHighlights`.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+<!-- CITE probe summary 2026-07-11:
+All AI calls confirmed server-side only: /api/ai/* (ANALYST+); zero client SDK imports in
+app/ or shared/ (grep -r "@anthropic\|@azure/openai" app/src/ shared/src/ → empty).
+Grounding mechanism confirmed: Cosmos groundingChunks, keyword-scored keyword query, top-8 slice.
+Three real defects found:
+  DEF-0018 CRITICAL: no server-side citation validation in portfolio chat — fabrication path open;
+    fabricated [refId] chips render identically to real ones via Markdown.tsx CitationChip.
+  DEF-0019 HIGH: rule/formRule/LD-table/RT-table chunks lack [refId] bracket format — citation
+    instruction unsatisfiable from context for these four entity types.
+  DEF-0020 MEDIUM: summarizeProduct groundSummary validates coverageHighlights only; other
+    prose fields (headline/overview/highlights.value/considerations) are unvalidated.
+Adversarial test executed: grep confirmed "cyber"/"earthquake"/"nuclear" absent from all seed
+files → grounding returns [] for cyber coverage query → model fires with (no matching context
+found) → no code intercepts between model output and client SSE stream.
+Claims copilot (functions/src/claims.ts) has the full citation-resolution + shouldRenderDetermination()
+stack but is NOT ported to Azure (returns 501 on /api/ai/:name for any name except chat/summarizeProduct).
+DEF-0006 note added: Admin.tsx:746 UI copy references "cheap verifier" and "stale-cited answer
+never served" — describes the original Firebase semanticCache+verifier stack; absent in Azure port.
 -->
