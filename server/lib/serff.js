@@ -19,7 +19,6 @@
 // using a grid of representative scenarios derived from each line's worked example.
 
 const express = require('express')
-const crypto  = require('crypto')
 const { requireAuth, requireRole, requireTenant } = require('./auth')
 const fleet = require('./fleet')   // model routing (single source) + cost guard
 
@@ -232,29 +231,18 @@ router.post('/bundle', requireAuth, requireRole('EDITOR'), requireTenant, async 
   // Reviewer lens
   const reviewerResult = serff.checkTexasBundle(bundle)
 
-  // Write audit event (fire-and-forget; atomic via data.js conventions)
+  // Write bundle record atomically via mutation envelope (entity+audit+version+searchIndex) (DEF-0014)
   try {
-    const { docs: _docs } = require('./cosmos')
-    const pk  = pkFor(tenantId, cloneProductId)
-    const now = new Date().toISOString()
-    await _docs.items.create({
-      id:        `aud:serff:${crypto.randomUUID()}`,
-      pk,
-      tenantId,
-      kind:      'audit',
-      entityPath: `products/${cloneProductId}`,
+    const dataRouter = require('./data')
+    const actor = { uid: req.user.uid, name: req.user.name ?? req.user.email }
+    await dataRouter.mutateInternal(tenantId, {
+      op: 'create',
+      path: `products/${cloneProductId}/serffBundles/${resolvedFilingId}`,
       entityType: 'serffBundle',
-      op:         'serff-bundle-generate',
-      actor:      { uid: req.user.uid, name: req.user.name ?? req.user.email },
-      filingId:   resolvedFilingId,
-      state,
-      parentProductId,
-      cloneProductId,
-      reviewerPassed: reviewerResult.passed,
-      at:         now,
-    })
+      data: { filingId: resolvedFilingId, state, parentProductId, cloneProductId, reviewerPassed: reviewerResult.passed },
+    }, actor)
   } catch (e) {
-    console.warn('[serff-api] audit write failed (non-fatal):', e.message)
+    console.warn('[serff-api] bundle record write failed (non-fatal):', e.message)
   }
 
   res.json({ bundle, reviewerResult })
