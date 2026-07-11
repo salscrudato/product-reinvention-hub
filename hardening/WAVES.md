@@ -50,7 +50,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: WAVE-01
 - verify: harden-probe DEF-0003,0015,0016,0013; verify-invariant (mutation envelope); /gate; harden-smoke — GL expectedRev increment + stale-409 + audit-trail (rev/updatedAt) assertions must still pass (existing-entity expectedRev path unchanged; smoke reads entity data, not version diffs).
 
-## WAVE-04  tier:T2  chains:NO  blocks-smoke:NO  status:PENDING
+## WAVE-04  tier:T2  chains:NO  blocks-smoke:NO  status:DONE
 - members: DEF-0008, DEF-0009, DEF-0010
 - root-cause: Three POST routes are guarded by requireAuth instead of requireRole('EDITOR'), letting VIEWER write; two (/vote, /setNewsPins) also bypass the atomic envelope with bare Cosmos .replace()/.upsert() (no audit/version/searchIndex).
 - fix-approach: Change /vote, /setNewsPins and /presence/join guards to requireRole('EDITOR'). Route /vote and /setNewsPins writes through the atomic envelope (mutate) so audit+version+searchIndex are emitted instead of a bare Cosmos write. /presence/join stays a presence-container heartbeat but at EDITOR+ (VIEWER keeps read-only /presence/watch — invariant purity over VIEWER presence-write). Update the app/src/lib/backend/types.ts:74-76 doc comment that currently claims "any authenticated role may vote."

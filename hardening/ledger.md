@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 21 | CRITICAL: 2 | HIGH: 6 | MEDIUM: 10 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 18 | CRITICAL: 2 | HIGH: 5 | MEDIUM: 9 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -120,44 +120,44 @@ endpoint URLs, AI SDK imports. Every vector returned clean.
 ---
 
 ### DEF-0008
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: ROLE
 - surface: server/lib/data.js:113-121
 - title: POST /api/db/vote guarded by requireAuth only — VIEWER can mutate entity vote data, bypassing EDITOR+ gate and atomic envelope
 - evidence: `data.js:113` — `router.post('/vote', requireAuth, requireTenant, ...)`. The handler reads an entity, increments `votes.count`, pushes to `votes.voters`, then calls `docs.item(...).replace(ent)` — a raw Cosmos document replace. CLAUDE.md binding invariant: "VIEWER is read-only. every write is EDITOR+; always." data.js module comment (line 11): "Role matrix: reads = any authed (VIEWER+); writes = EDITOR+". `app/src/lib/backend/types.ts:74-76` documents: "any authenticated role may vote" — confirming a deliberate design choice that directly contradicts the binding invariant. Secondary violation: `docs.item(...).replace(ent)` bypasses the atomic mutate envelope (no audit event, no version document emitted). Confirmed via `grep -n 'requireAuth\|requireRole' server/lib/data.js` — only the vote route uses requireAuth for a write path.
 - repro: Obtain a VIEWER JWT via `curl -X POST /api/auth/login -d '{"username":"<viewer>","password":"<pw>","tenant":"<tid>"}' | jq .token`. Then `curl -X POST /api/db/vote -H 'Authorization: Bearer <VIEWER_JWT>' -H 'Content-Type: application/json' -d '{"path":"feedback/some-id"}'` — returns HTTP 200 with updated vote count. No 403 returned.
-- fix:
-- verified-by:
-- commit:
+- fix: Guard changed from requireAuth to requireRole('EDITOR') (data.js:186). Bare docs.item().replace() replaced by mutateInternal() call (data.js:193) — vote write now goes through the atomic envelope (entity+audit+version+searchIndex). types.ts:74-76 doc comment updated to state EDITOR+ and atomic envelope, removing the "any authenticated role may vote" claim that contradicted the binding invariant.
+- verified-by: static probe 2026-07-11 — data.js:186 requireRole('EDITOR') confirmed; data.js:193 mutateInternal() confirmed; types.ts:74-76 updated; repro no longer reproduces; gate green (689+187 tests pass).
+- commit: 5fb505d0
 
 ---
 
 ### DEF-0009
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: ROLE
 - surface: server/lib/data.js:124-131
 - title: POST /api/db/setNewsPins guarded by requireAuth only — VIEWER can upsert personal news-preference records in Cosmos
 - evidence: `data.js:124` — `router.post('/setNewsPins', requireAuth, requireTenant, ...)`. Handler calls `docs.items.upsert(...)` to write a `newsPrefs` entity — a Cosmos write not gated at EDITOR+. CLAUDE.md binding invariant: "every write is EDITOR+; always." A UID ownership check (`if (uid !== req.user.uid) return 403`) limits blast radius to the caller's own preferences, but does not exempt the route from the binding invariant. Also bypasses the atomic mutate envelope (direct upsert, no audit event). `grep -n 'setNewsPins' server/lib/data.js app/src/lib/backend/azure.adapter.ts`
 - repro: Obtain a VIEWER JWT. `curl -X POST /api/db/setNewsPins -H 'Authorization: Bearer <VIEWER_JWT>' -H 'Content-Type: application/json' -d '{"uid":"<viewer-uid>","pinnedHashes":["abc123"]}'` — returns HTTP 200, preference upserted.
-- fix:
-- verified-by:
-- commit:
+- fix: Guard changed from requireAuth to requireRole('EDITOR') (data.js:197). Bare docs.items.upsert() replaced by mutateInternal() call (data.js:202) — setNewsPins write now goes through the atomic envelope (entity+audit+version+searchIndex). UID ownership check preserved (server-enforced: uid must equal caller).
+- verified-by: static probe 2026-07-11 — data.js:197 requireRole('EDITOR') confirmed; data.js:202 mutateInternal() confirmed; repro no longer reproduces; gate green (689+187 tests pass).
+- commit: 9e4aa6b1
 
 ---
 
 ### DEF-0010
-- status: OPEN
+- status: FIXED
 - severity: LOW
 - probe: ROLE
 - surface: server/lib/data.js:133-137
 - title: POST /api/db/presence/join guarded by requireAuth only — VIEWER can write presence heartbeats (separate presence container)
 - evidence: `data.js:133` — `router.post('/presence/join', requireAuth, requireTenant, ...)`. Handler calls `presence.items.upsert(...)` on the `presence` container — a Cosmos write with no EDITOR+ gate. CLAUDE.md binding invariant: "every write is EDITOR+; always." Presence heartbeats are operationally benign (ephemeral awareness signals, separate from the docs container) but the invariant admits no exception. `grep -n 'presence' server/lib/data.js`
 - repro: Obtain a VIEWER JWT. `curl -X POST /api/db/presence/join -H 'Authorization: Bearer <VIEWER_JWT>' -H 'Content-Type: application/json' -d '{"pid":"products/P1"}'` — returns HTTP 200, presence upserted.
-- fix:
-- verified-by:
-- commit:
+- fix: Guard changed from requireAuth to requireRole('EDITOR') (data.js:206). Presence container write (presence.items.upsert) retained as intentional non-entity write (per DEF-0017 FP rationale: separate container, ephemeral heartbeat); role gate is the required fix. /presence/watch stays requireAuth (read-only; VIEWER+ is correct for reads).
+- verified-by: static probe 2026-07-11 — data.js:206 requireRole('EDITOR') confirmed; /presence/watch remains requireAuth; repro no longer reproduces; gate green (689+187 tests pass).
+- commit: e642f9a0
 
 ---
 
