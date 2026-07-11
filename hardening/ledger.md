@@ -500,7 +500,7 @@ All existing canary tests pass on Node 24 per full gate run 2026-07-11 (59+17 te
 - repro: (1) Import a product with filing tables via importProduct (or use any seed product that has ldTables). (2) Invoke the DeleteProductDialog / deleteDraftProduct flow for that product. (3) After deletion, `POST /api/db/list` with `{ path: 'ldTables' }` — the product's ldTable entities (e.g., PH.LD.001 through PH.LD.006) remain in Cosmos and are returned in the response. The portfolio's rate-table and L&D-table views show orphaned entries with no owning product. The orphaned tables also continue to match any `list('ldTables')` call used by ProductContext or SERFF snapshot assembly.
 - fix: Two-part fix: (1) importProduct.ts — ldTable/rtTable entities now include `productId` in their stored data (tagged like forms use `productRefIds`); seed tables have no productId and are unaffected. (2) deleteDraft.ts — new cascade step 4 lists ldTables/rtTables filtered by `data.productId === pid` via `adapter.db.list()` where clause and deletes each via `adapter.db.mutate()` — consistent with the existing forms cascade and atomic mutate invariant. Seed tables (PH.LD.001, GL.RT.001, etc.) are untouched; only the specific product's own imported tables are removed.
 - verified-by: static probe 2026-07-11 (WAVE-11) — importProduct.ts:96-98 tags ldTable/rtTable data with productId; deleteDraft.ts step 4 lists by productId filter and deletes via mutate(); repro (ldTables remain after product deletion) no longer reproduces for imported tables; seed tables confirmed not tagged (no productId in their Cosmos data); gate green (typecheck + 187 + 168 tests + build).
-- commit: (see WAVE-11 commit)
+- commit: b58cba71
 
 ---
 
