@@ -54,7 +54,7 @@ it is a plain Node.js directory assembled separately by the pipeline.
 **Local dev:**
 1. Start the Express host: `node server/server.js` (requires env vars from App Service config —
    `COSMOS_ENDPOINT`, `COSMOS_KEY`, `AZURE_FOUNDRY_ENDPOINT`, `AZURE_FOUNDRY_KEY`,
-   `AZURE_STORAGE_CONNECTION_STRING`, `AUTH_JWT_SECRET`).
+   `AZURE_BLOB_CONNECTION`, `AUTH_JWT_SECRET`).
 2. Start the Vite SPA: `VITE_API_BASE=http://localhost:3000 pnpm --filter app dev`.
 
 There is no longer an emulator stack — the `emulators`, `dev:all`, `dev:seed`, `spinup`, and

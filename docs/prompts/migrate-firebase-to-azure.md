@@ -163,7 +163,7 @@ Collections to mirror (from `functions/src/audited.ts` and the Firebase adapter)
 Read the existing `server/lib/storage.js` stub.  Complete it so it:
 
 - Connects to Azure Blob Storage using `@azure/storage-blob` with
-  `process.env.AZURE_STORAGE_CONNECTION_STRING`.
+  `process.env.AZURE_BLOB_CONNECTION`.
 - Exposes `POST /api/storage/upload` (multipart) — returns `{ storagePath }`.
 - Exposes `GET /api/storage/download/:path(*)` — streams the blob.
 - Exposes `DELETE /api/storage/:path(*)` — deletes a blob.
@@ -290,7 +290,7 @@ After the migration, local dev needs:
 - `functions/.env.local` (currently holds the live `ANTHROPIC_API_KEY`) → move to
   `server/.env.local` (or root `.env.local`) with the new variable names:
   `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `COSMOS_ENDPOINT`, `COSMOS_KEY`,
-  `AZURE_STORAGE_CONNECTION_STRING`.
+  `AZURE_BLOB_CONNECTION`.
 
 ---
 
