@@ -87,6 +87,7 @@ async function loadSnapshot(tenantId, productId) {
   return {
     refId: productData.refId ?? productId,
     name:  productData.name  ?? productId,
+    lob:   productData.lob   ?? null,
     coverages,
     forms,
     rtTables,
@@ -187,8 +188,9 @@ router.post('/bundle', requireAuth, requireRole('EDITOR'), requireTenant, async 
   // Diff
   const changeset = serff.diffProducts(parentSnap, cloneSnap)
 
-  // Rate kit — resolve by LOB prefix (e.g. 'PH', 'PA', 'GL')
-  const lobPrefix = cloneSnap.ratingProgram?.refId?.split('.')[0] ?? 'PH'
+  // Rate kit — LOB prefix from product.lob.prefix (authoritative) or ratingProgram refId (DEF-0021)
+  const lobPrefix = cloneSnap.lob?.prefix || cloneSnap.ratingProgram?.refId?.split('.').filter(Boolean)[0] || null
+  if (!lobPrefix) return res.status(400).json({ error: 'unsupported_lob', cloneProductId })
   const kit = serff.resolveRatingKit(lobPrefix)
   const parentRtGetter = kit.makeRtGetter(parentSnap.rtTables)
   const parentLdGetter = kit.makeLdGetter(parentSnap.ldTables)
