@@ -59,12 +59,12 @@ router.post('/list', requireAuth, requireTenant, async (req, res) => {
     const p = `@w${i}`; params.push({ name: p, value: w.value })
     where += w.op === 'array-contains' ? ` AND ARRAY_CONTAINS(c.data.${w.field}, ${p})` : ` AND c.data.${w.field} ${opMap[w.op] || '='} ${p}`
   })
-  // Select c.path alongside c.data so we can inject the natural id into each record.
-  let sql = `SELECT c.data, c.path FROM c WHERE ${where}`
-  ;(query?.orderBy || []).forEach((o, i) => { sql += `${i === 0 ? ' ORDER BY' : ','} c.data.${o.field} ${(o.dir || 'asc').toUpperCase()}` })
   const limit = Math.min(query?.limit || MAX_LIST, MAX_LIST)
+  // SELECT TOP caps Cosmos server-side so fetchAll() never loads more than limit rows into heap.
+  let sql = `SELECT TOP ${limit} c.data, c.path FROM c WHERE ${where}`
+  ;(query?.orderBy || []).forEach((o, i) => { sql += `${i === 0 ? ' ORDER BY' : ','} c.data.${o.field} ${(o.dir || 'asc').toUpperCase()}` })
   const { resources } = await docs.items.query({ query: sql, parameters: params }, { maxItemCount: limit }).fetchAll()
-  res.json({ data: resources.slice(0, limit).map((r) => ({ id: segs(r.path).at(-1), ...r.data })) })
+  res.json({ data: resources.map((r) => ({ id: segs(r.path).at(-1), ...r.data })) })
 })
 
 // ─── grounding-chunk hook ────────────────────────────────────────────────────
