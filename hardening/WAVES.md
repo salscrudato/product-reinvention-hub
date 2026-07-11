@@ -58,7 +58,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: WAVE-03
 - verify: harden-probe DEF-0008,0009,0010; verify-invariant (role matrix: VIEWER inquiry-only, writes EDITOR+); /gate; harden-smoke — VIEWER-write-rejected + unauth-mutate-401 assertions.
 
-## WAVE-05  tier:T1  chains:NO  blocks-smoke:NO  status:PENDING
+## WAVE-05  tier:T1  chains:NO  blocks-smoke:NO  status:DONE
 - members: DEF-0027, DEF-0030, DEF-0005
 - root-cause: Server collection reads are unsafe — /api/db/list and both /api/admin list endpoints call fetchAll() with no SQL TOP (whole matching set loaded into heap before slice), and /api/db/list interpolates client-supplied where[].field / orderBy[].field names straight into the Cosmos SQL string with no allow-list (structure-injection + raw-error leak).
 - fix-approach: (1) Add `SELECT TOP @limit` to data.js /list and a bounded TOP + maxItemCount to admin.js /tenants and /users, so no read loads an unbounded result set into heap (DEF-0027, DEF-0005). (2) Validate where[].field / orderBy[].field against a property-name allow-list / strict `^[A-Za-z0-9_.]+$` before interpolation; reject malformed field names with 400 rather than passing them into SQL (DEF-0030). Tenant scoping (c.tenantId=@tid, parameterised) is unchanged.

@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 18 | CRITICAL: 2 | HIGH: 5 | MEDIUM: 9 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 15 | CRITICAL: 2 | HIGH: 4 | MEDIUM: 7 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -65,16 +65,16 @@ SUMMARY: OPEN: 18 | CRITICAL: 2 | HIGH: 5 | MEDIUM: 9 | LOW: 2 | WONTFIX: 0 | FA
 ---
 
 ### DEF-0005
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: SEED
 - surface: server/lib/admin.js:22-25,42-45
 - title: Unbounded admin list reads — GET /api/admin/tenants and /api/admin/users call .fetchAll() with no page bound
 - evidence: `server/lib/admin.js:22-25` — `docs.items.query({ query: "SELECT c.data FROM c WHERE c.pk='__system__' AND c.kind='tenant'" }).fetchAll()` with no `maxItemCount`. Line 42-45 same pattern for users. Compare with `server/lib/data.js` `/list` endpoint which caps at `MAX_LIST = 1000` and passes `{ maxItemCount: limit }`. `grep -n 'fetchAll\|maxItemCount' server/lib/admin.js server/lib/data.js`
 - repro: At scale (hundreds of tenants or users), `GET /api/admin/tenants` or `GET /api/admin/users` will attempt to load the entire `__system__` partition into memory in a single Cosmos call, risking OOM/timeout/RU exhaustion on the server.
-- fix:
-- verified-by:
-- commit:
+- fix: admin.js: MAX_ADMIN=1000 constant; /tenants and /users queries use `SELECT TOP ${MAX_ADMIN}` with `{ maxItemCount: MAX_ADMIN }` so Cosmos never loads more than 1000 __system__ records into heap.
+- verified-by: static probe 2026-07-11 — admin.js:14 MAX_ADMIN=1000; admin.js:23-26 SELECT TOP ${MAX_ADMIN} + maxItemCount:MAX_ADMIN for tenants; admin.js:46-50 same for users; repro no longer reproduces; gate green.
+- commit: 9259d8da
 
 ---
 
@@ -460,16 +460,16 @@ All existing canary tests pass on Node 24 per full gate run 2026-07-11 (59+17 te
 ---
 
 ### DEF-0027
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: DATA-INTEGRITY
 - surface: server/lib/data.js:52-56
 - title: POST /api/db/list — SQL has no TOP clause; fetchAll() loads ALL N matching entities into server heap; slice(0,1000) applied only to the HTTP response
 - evidence: `grep -n 'fetchAll\|maxItemCount\|TOP\|slice\|sql' server/lib/data.js` — line 52: `let sql = 'SELECT c.data FROM c WHERE ${where}'` — no `TOP @limit`. Line 55: `docs.items.query({ query: sql, parameters: params }, { maxItemCount: limit }).fetchAll()` — `maxItemCount` controls the Cosmos page size (x-ms-max-item-count) but `fetchAll()` iterates ALL continuation tokens until the query result set is exhausted. Line 56: `resources.slice(0, limit)` — applied AFTER fetchAll() has already loaded the full result set into the Node.js heap. Compare with DEF-0005 (admin endpoints, ADMIN-only, MEDIUM): the `/list` endpoint is requireAuth + requireTenant (VIEWER+), making this higher severity. Any authenticated user can trigger a full table scan of any collection they can name. No SQL-level row cap exists anywhere in server/lib/ (`grep -n 'TOP @\|SELECT TOP' server/lib/*.js` → zero results).
 - repro: Seed or accumulate >1000 entities in one collection (e.g., `tasks`). `POST /api/db/list` with `{ "path": "tasks" }` via a VIEWER JWT → server calls `docs.items.query({...}, { maxItemCount: 1000 }).fetchAll()` with no SQL TOP → Cosmos fetches all N tasks across multiple pages, each page consuming RUs → all N documents land in Node.js heap → `slice(0, 1000)` discards extras before HTTP response. At N=10,000 tasks the server loads ~10× more data than it returns; at high N this risks OOM or request timeout. Being cross-partition (no partitionKey option passed to query), RU cost is also elevated.
-- fix:
-- verified-by:
-- commit:
+- fix: data.js: /list SQL changed to `SELECT TOP ${limit} c.data, c.path FROM c WHERE ${where}` where limit = Math.min(query?.limit || MAX_LIST, MAX_LIST); Cosmos server-side TOP cap means fetchAll() never loads more than limit rows into heap; the post-fetch slice() is retained as defense-in-depth but is now a no-op.
+- verified-by: static probe 2026-07-11 — data.js:67 `SELECT TOP ${limit}` confirmed; limit capped at MAX_LIST=1000; repro no longer reproduces; gate green.
+- commit: 56bd4650
 
 ---
 
@@ -502,16 +502,16 @@ All existing canary tests pass on Node 24 per full gate run 2026-07-11 (59+17 te
 ---
 
 ### DEF-0030
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: DATA-INTEGRITY
 - surface: server/lib/data.js:48-53
 - title: POST /api/db/list — client-supplied field names in query.where[].field and query.orderBy[].field are interpolated directly into the Cosmos SQL string without sanitization
 - evidence: `grep -n 'w\.field\|o\.field\|data\.\$' server/lib/data.js` — line 50: `` where += `... c.data.${w.field} ${opMap[w.op] || '='} ${p}` `` and `` where += ` AND ARRAY_CONTAINS(c.data.${w.field}, ${p})` `` — field name from `query.where[i].field` (client-supplied) is interpolated into the SQL string with no allow-list, regex, or property-path validation. Line 53: `` sql += `... c.data.${o.field} ${(o.dir || 'asc').toUpperCase()}` `` — same pattern for `query.orderBy[i].field`. The VALUE `w.value` is correctly parameterised (`@w${i}`), but the FIELD NAME is not. A crafted field name such as `"x) OFFSET 0 LIMIT 99999"` or `"x, c.tenantId"` can modify the query structure or expose schema details. Cosmos SQL is read-only and tenant-scoped by `c.tenantId = @tid` (parameterised from the JWT), so full cross-tenant data exfiltration via injection requires bypassing the WHERE predicate — difficult but the field-name surface is unguarded. Any malformed field name that causes a Cosmos parse error propagates the raw Cosmos error through `res.status(500)` in Express's default error handler, leaking internal query structure to the caller.
 - repro: `POST /api/db/list` with a VIEWER JWT and body `{ "path": "tasks", "query": { "orderBy": [{ "field": "id, c.tenantId", "dir": "asc" }] } }` → server generates `ORDER BY c.data.id, c.tenantId asc` — a syntactically valid Cosmos SQL that retrieves the `tenantId` column alongside sorted results, leaking the partition key layout. Alternatively, send `{ "where": [{ "field": "x) OR (1=1", "op": "==", "value": "y" }] }` → SQL parse error returned verbatim in the response body.
-- fix:
-- verified-by:
-- commit:
+- fix: data.js: FIELD_RE = /^[A-Za-z0-9_.]+$/ constant (line 21); where[].field and orderBy[].field each validated against FIELD_RE before interpolation — invalid field name returns 400 {error:'invalid_field'} without touching SQL.
+- verified-by: static probe 2026-07-11 — data.js:21 FIELD_RE confirmed; data.js:61 where-field guard confirmed; data.js:70 orderBy-field guard confirmed; repro no longer reproduces (crafted field "id, c.tenantId" → 400 invalid_field); gate green.
+- commit: 4358571e
 
 ---
 
