@@ -224,6 +224,7 @@ async function chat(req, res) {
     const reader = upstream.body.getReader()
     const decoder = new TextDecoder()
     let buf = ''
+    let fullText = ''  // accumulated for post-stream citation validation
     let inputTokens = 0
     let outputTokens = 0
     for (;;) {
@@ -239,14 +240,27 @@ async function chat(req, res) {
         if (!payload || payload === '[DONE]') continue
         try {
           const j = JSON.parse(payload)
-          if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta' && j.delta.text) emit(res, { t: 'token', v: j.delta.text })
-          else if (j.type === 'message_start') { inputTokens = j.message?.usage?.input_tokens || 0; outputTokens = j.message?.usage?.output_tokens || 0 }
+          if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta' && j.delta.text) {
+            fullText += j.delta.text
+            emit(res, { t: 'token', v: j.delta.text })
+          } else if (j.type === 'message_start') { inputTokens = j.message?.usage?.input_tokens || 0; outputTokens = j.message?.usage?.output_tokens || 0 }
           else if (j.type === 'message_delta' && j.usage?.output_tokens != null) outputTokens = j.usage.output_tokens
           else if (j.type === 'error') emit(res, { t: 'error', message: j.error?.message || 'stream error' })
         } catch { /* keep-alive / partial */ }
       }
     }
     fleet.record(deployment, inputTokens, outputTokens)
+    // Citation validation: extract [refId] patterns the model cited and diff against
+    // the bracketed anchors present in the grounding context. Any cited ref absent from
+    // context is flagged as potentially fabricated so the client can badge the answer.
+    const cited = [...new Set([...fullText.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]))]
+    if (cited.length > 0) {
+      const inCtx = new Set(ctx.flatMap((c) => [...c.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1])))
+      const unverified = cited.filter((r) => !inCtx.has(r))
+      if (unverified.length > 0) {
+        emit(res, { t: 'notice', kind: 'unverified', level: 'warn', message: `Unverified citation(s): ${unverified.join(', ')} — not found in retrieved context.`, refs: unverified })
+      }
+    }
     emit(res, { t: 'done' })
     res.end()
   } catch (err) {
