@@ -7,7 +7,7 @@
 //   5. refIds and form numbers are preserved through the full pipeline.
 import { describe, it, expect } from 'vitest'
 import {
-  PERSONAL_HOME_BUNDLE, PERSONAL_AUTO_BUNDLE,
+  PERSONAL_HOME_BUNDLE, PERSONAL_AUTO_BUNDLE, GENERAL_LIABILITY_BUNDLE,
   buildPdm, serializePdmToDuckCreek, validateDuckCreek,
 } from '@pf/shared'
 import { buildDuckCreekExport } from './duckcreek'
@@ -31,12 +31,14 @@ function bundleToData(bundle: typeof PERSONAL_HOME_BUNDLE, id: string): DuckCree
 
 const PH_DATA = bundleToData(PERSONAL_HOME_BUNDLE, 'ph-id')
 const PA_DATA = bundleToData(PERSONAL_AUTO_BUNDLE, 'pa-id')
+const GL_DATA = bundleToData(GENERAL_LIABILITY_BUNDLE, 'gl-id')
 
 // ─── 1. Both products build, serialize, and validate cleanly ────────────────
 
 describe.each([
-  ['Personal Home (HO-3)', PH_DATA],
-  ['Personal Auto (PAP)',  PA_DATA],
+  ['Personal Home (HO-3)',       PH_DATA],
+  ['Personal Auto (PAP)',        PA_DATA],
+  ['General Liability (CGL)',    GL_DATA],
 ] as const)('Duck Creek export — %s', (_name, data) => {
   it('builds without throwing', () => {
     expect(() => buildDuckCreekExport(data)).not.toThrow()
@@ -65,7 +67,7 @@ describe.each([
   it('emits a manuScriptID with the correct carrier/line prefix', () => {
     const { manuScriptID } = buildDuckCreekExport(data)
     expect(manuScriptID).toMatch(/^PCG_/)
-    const lob = _name.includes('Home') ? 'HO' : 'PA'
+    const lob = _name.includes('Home') ? 'HO' : _name.includes('General Liability') ? 'GL' : 'PA'
     expect(manuScriptID).toContain(`_${lob}_`)
   })
 
