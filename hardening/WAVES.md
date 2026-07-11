@@ -66,7 +66,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: WAVE-04
 - verify: harden-probe DEF-0027,0030,0005; /gate; harden-smoke — list-backed reads still return; a crafted field name is rejected 400.
 
-## WAVE-06  tier:T2  chains:YES  blocks-smoke:NO  status:PENDING
+## WAVE-06  tier:T2  chains:YES  blocks-smoke:NO  status:DONE
 - members: DEF-0014, DEF-0021
 - root-cause: server/lib/serff.js has two correctness gaps — the bundle-generate audit is a bare fire-and-forget items.create outside any batch (orphan audit, no version/searchIndex), and the LOB prefix `?? 'PH'` fallback never fires on the empty-refId synthetic ratingProgram, so a GL product with no ratingProgram is silently rated with PH kit tables (resolveRatingKit('') → KITS['PH']).
 - fix-approach: (1) DEF-0014 — route the SERFF audit through the atomic envelope conventions (pair with its version+searchIndex siblings in one Cosmos batch, or drop the standalone create); no orphan audit. (2) DEF-0021 — loadSnapshot() carries product.lob; derive lobPrefix from the product LOB (not just ratingProgram.refId); treat empty/unknown prefix as a hard 400 unsupported_lob rather than defaulting to PH; optionally harden resolveRatingKit in the shared serff source to throw on unknown prefix instead of returning KITS['PH']. Rate exhibit stays computed by the real evaluate() engine — no canary path touched.

@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 15 | CRITICAL: 2 | HIGH: 4 | MEDIUM: 7 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 13 | CRITICAL: 2 | HIGH: 3 | MEDIUM: 6 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -217,13 +217,16 @@ defense-in-depth only.
 ---
 
 ### DEF-0014
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: MUTATION
 - surface: server/lib/serff.js:233-256
 - title: SERFF bundle-generate handler injects an orphan `kind:'audit'` record into the product partition outside any atomic batch, fire-and-forget
 - evidence: `grep -n 'items.create\|kind.*audit' server/lib/serff.js` — lines 238-253: `_docs.items.create({ id: 'aud:serff:...', pk: pkFor(tenantId, cloneProductId), kind: 'audit', op: 'serff-bundle-generate', ... })`. The code comment says "fire-and-forget; atomic via data.js conventions" but this is NOT using data.js conventions — it is a direct Cosmos create outside any transactional batch. If the create fails (wrapped in non-fatal try/catch), the SERFF operation succeeds with no audit record. The audit document that IS written has no corresponding `kind:'version'` record and no `kind:'searchIndex'` update, creating an orphaned entry in the product partition that violates the implied 1:1 audit-to-entity-write pairing.
 - repro: `POST /api/serff/v1/bundle` with valid EDITOR JWT and two valid product refs. On success, query Cosmos for `kind='audit'` in partition `${tenantId}|${productBase}` with `op='serff-bundle-generate'`: the audit record exists. Query for a sibling `kind='version'` document with the same `entityPath` — none exists.
+- fix: Replaced fire-and-forget docs.items.create() with dataRouter.mutateInternal() call writing a serffBundle entity at products/<cloneProductId>/serffBundles/<filingId> — entity+audit+version+searchIndex committed atomically in one Cosmos transactional batch on the same pk as the product. Removed unused crypto require.
+- verified-by: static probe 2026-07-11 — dataRouter.mutateInternal() call confirmed at serff.js:236-243; no bare items.create() or items.upsert() remains in serff.js; gate green (528+187 tests pass).
+- commit: 018191b8
 
 ---
 
@@ -349,16 +352,16 @@ never served" — describes the original Firebase semanticCache+verifier stack; 
 ---
 
 ### DEF-0021
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: MULTILINE
 - surface: server/lib/serff.js:191, server/lib/serff-shared.cjs:5435
 - title: SERFF bundle endpoint hard-codes `?? 'PH'` LOB fallback; GL product with missing ratingProgram silently gets Personal Home rating tables
 - evidence: `grep -n 'lobPrefix\|ratRows\|ratingProgram' server/lib/serff.js` — line 191: `const lobPrefix = cloneSnap.ratingProgram?.refId?.split('.')[0] ?? 'PH'`. Line 85: `loadSnapshot()` returns synthetic `{ refId: '', ... }` when Cosmos ratingPrograms subcollection is empty. `''.split('.')[0]` = `''`; `'' ?? 'PH'` does NOT fire (empty string is not null/undefined), so `lobPrefix = ''`. `grep -n 'KITS\["PH"\]' server/lib/serff-shared.cjs` → line 5435: `resolveRatingKit('')` → `KITS['']` undefined → `resolveLineArchetypeByPrefix('')` undefined → `return KITS["PH"]`. `loadSnapshot()` lines 87-95 returns only `{ refId, name, coverages, forms, rtTables, ldTables, ratingProgram }` — `product.lob` is absent; no LOB-aware fallback path exists.
 - repro: `POST /api/serff/bundle` with a GL product whose ratingPrograms subcollection is absent or empty in Cosmos (any GL product not seeded via `migrate-to-cosmos.ts`, or whose ratingPrograms were deleted). `loadSnapshot()` returns `ratingProgram = { refId: '' }`. `resolveRatingKit('')` silently returns PH kit. Rate exhibit is computed with PH territory/construction factor tables instead of GL class-code/exposure-volume tables — numerically wrong with no error returned.
-- fix:
-- verified-by:
-- commit:
+- fix: loadSnapshot() now returns product.lob from productData. lobPrefix derived from cloneSnap.lob.prefix (authoritative) with ratingProgram refId split as fallback; empty/null lobPrefix returns 400 unsupported_lob instead of silently falling through to PH kit. No change to kits.ts or serff-shared.cjs needed.
+- verified-by: static probe 2026-07-11 — lob field in loadSnapshot return at serff.js:89; lobPrefix derivation + 400 guard at serff.js:190-192; repro (empty ratingProgram refId) now returns 400 instead of silently using PH kit; gate green (528+187 tests pass).
+- commit: 825febf6
 
 ---
 
