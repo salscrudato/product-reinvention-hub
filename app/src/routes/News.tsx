@@ -57,12 +57,13 @@ const STATE_NAMES: Record<string, string> = {
 const LOB_KEYWORDS: Record<string, string[]> = {
   HO: ['homeowners', 'homeowner', 'ho-3', 'ho3', 'dwelling', 'renters', 'property insurance', 'home insurance'],
   PA: ['personal auto', 'auto insurance', 'automobile', 'private passenger auto', 'car insurance', 'pp 00 01', 'motor'],
+  GL: ['commercial general liability', 'cgl', 'occurrence form', 'cg 00 01', 'general liability', 'premises liability', 'products liability', 'completed operations'],
 }
 
 // The shared baseline every user starts from — what the agent should always pull. A
 // user's own edit refines it, but everyone begins from the same instruction.
 const BASE_NEWS_INSTRUCTION =
-  'Track U.S. P&C insurance market developments: rate filings and approvals, competitor product and endorsement launches, regulatory and legislative changes, catastrophe and reinsurance trends, and distribution / insurtech moves — with emphasis on Homeowners (HO) and Personal Auto (PA).'
+  'Track U.S. P&C insurance market developments: rate filings and approvals, competitor product and endorsement launches, regulatory and legislative changes, catastrophe and reinsurance trends, and distribution / insurtech moves — with emphasis on Homeowners (HO), Personal Auto (PA), and Commercial General Liability (GL).'
 
 // Natural-language article filter: keep items containing every significant word in the
 // phrase (case-insensitive, stop-words dropped). Empty phrase → keep everything.
