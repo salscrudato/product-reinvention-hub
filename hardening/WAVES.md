@@ -42,7 +42,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: WAVE-01
 - verify: harden-probe DEF-0040; /gate; harden-smoke (LOCAL) — the full HO Lemonade filing-import → mutate → chat-citation golden path; the 501 assertion flips to pass.
 
-## WAVE-03  tier:T2  chains:NO  blocks-smoke:NO  status:PENDING
+## WAVE-03  tier:T2  chains:NO  blocks-smoke:NO  status:DONE
 - members: DEF-0003, DEF-0015, DEF-0016, DEF-0013
 - root-cause: The data.js write path has four correctness gaps — envelope() never validates parentId (dangling/cross-product refs persist), version records store the full new snapshot instead of a field diff, expectedRev is bypassed when the target is absent (CAS voided on re-create after delete), and mutateBatch silently splits an over-BATCH_OPS within-partition op set into multiple non-atomic Cosmos batch calls (partial commit on failure).
 - fix-approach: (1) DEF-0016 — drop the `&& current` short-circuit at data.js:67 so expectedRev is enforced even when the entity is absent (create with a non-zero expectedRev against an absent path → 409). (2) DEF-0015 — the version op stores a computed field diff (before/changed) from current.data vs new data, satisfying the "Version = field diff" invariant. (3) DEF-0003 — envelope validates any parentId in `data` resolves to an existing same-tenant (and, for coverages, same-product) entity; reject 4xx otherwise (server-side only; no types.ts change needed). (4) DEF-0013 — guard mutateBatch so a within-partition op set exceeding BATCH_OPS is rejected up-front, or the failure response identifies committed vs uncommitted payloads — never silently commit chunk N while chunk N+1 fails.

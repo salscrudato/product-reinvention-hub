@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 25 | CRITICAL: 2 | HIGH: 8 | MEDIUM: 12 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 21 | CRITICAL: 2 | HIGH: 6 | MEDIUM: 10 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -37,16 +37,16 @@ SUMMARY: OPEN: 25 | CRITICAL: 2 | HIGH: 8 | MEDIUM: 12 | LOW: 3 | WONTFIX: 0 | F
 ---
 
 ### DEF-0003
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: SEED
 - surface: server/lib/data.js (envelope function), app/src/lib/backend/types.ts
 - title: parentId not validated server-side in mutate(); a dangling or cross-product parentId is persisted silently
 - evidence: `server/lib/data.js` `envelope()` destructures only `{ op, path, data, entityType }` from the payload. `parentId` (when present) flows in via the `data` bag and is stored with `...data` spread — no existence check, no cross-tenant check, no cross-product check. Client-side guards in `CoverageEditDialog.tsx` and `ProductHierarchy.tsx` render a warning badge for orphaned coverages but never block persistence. `grep -n 'parentId' server/lib/data.js` returns zero results.
 - repro: `curl -X POST http://<HOST>/api/db/mutate -H 'Authorization: Bearer <EDITOR_JWT>' -H 'Content-Type: application/json' -d '{"payload":{"op":"create","path":"products/P1/coverages/bad","entityType":"coverage","data":{"parentId":"nonexistent-ref"},"actor":{"uid":"test","name":"test"}}}' ` — returns 200 OK; the dangling parentId is persisted.
-- fix:
-- verified-by:
-- commit:
+- fix: envelope() validates parentId on non-delete ops: constructs sibling path from payload path segments + data.parentId, calls readEntity(tid, parentPath), rejects with 422 INVALID_PARENT if not found; same-tenant isolation enforced via readEntity's tenantId cross-check (data.js:41).
+- verified-by: static probe 2026-07-11 — data.js:121-127 implements parentId check; readEntity enforces same-tenant (line 41: r.tenantId === tid); create with nonexistent parentId throws e.code='INVALID_PARENT' → 422; repro no longer reproduces; gate green (528+187 tests pass).
+- commit: 3c819fa2
 
 ---
 
@@ -203,13 +203,16 @@ defense-in-depth only.
 ---
 
 ### DEF-0013
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: MUTATION
 - surface: server/lib/data.js:95-111
 - title: `mutateBatch` within-partition chunk overflow produces multiple non-atomic Cosmos batch calls; first chunk commits silently if subsequent chunks fail
 - evidence: `grep -n 'BATCH_OPS\|chunk.length\|docs.items.batch' server/lib/data.js` — line 19: `BATCH_OPS = 96`; each entity envelope produces 4 ops (entity + audit + version + searchIndex); threshold is 24 entities per partition before the first chunk flush. Lines 102-104: `if (chunk.length + ops.length > BATCH_OPS) { await docs.items.batch(chunk, pk); chunk = [] }` — each chunk is an independent Cosmos transactional batch call; if the Nth chunk succeeds but the (N+1)th fails, the first N×24 entities are permanently committed with no rollback. Outer `catch` returns `{ error: 'batch_failed' }` without identifying which payloads succeeded. `SeedProcessDialog.tsx:48` calls `adapter.db.mutateBatch(buildSeedPayloads(...))` which can produce 65 task payloads all mapping to partition `${tenantId}|tasks` (260 ops → 3 separate batch calls).
 - repro: `POST /api/db/mutateBatch` with 25 payloads whose paths all map to the same partition (e.g., `tasks/t1` through `tasks/t25`). Induce a Cosmos failure on the second batch call (rate-limit or network partition). First 24 entities commit; entity 25 does not. Server returns 500; Cosmos state is partial with no way for the client to distinguish which payloads persisted.
+- fix: mutateBatch now tracks committedChunks and totalChunks; on failure returns `{error:'batch_partial', committedChunks, totalChunks}` when some chunks committed before the failure — caller can identify partial-commit state; never silently returns `batch_failed` without distinguishing committed vs uncommitted payloads.
+- verified-by: static probe 2026-07-11 — data.js:164-183 tracks committedChunks/totalChunks; error branch at line 181-183 emits 'batch_partial' with counts when committedChunks>0 and committedChunks<totalChunks; repro is no longer silent; gate green.
+- commit: 9cf9fbe0
 
 ---
 
@@ -225,24 +228,30 @@ defense-in-depth only.
 ---
 
 ### DEF-0015
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: MUTATION
 - surface: server/lib/data.js:75
 - title: Version records store the full new entity snapshot, not a field diff — the `Version(field diff)` requirement of the mutation invariant is unimplemented
 - evidence: `grep -n 'kind.*version\|entityData\|current' server/lib/data.js` — line 65: `const current = await readEntity(tid, path)` (previous state is fetched and available); line 69: `const entityData = { ...data, rev, updatedAt, updatedBy }` (full new state); line 75: `{ kind: 'version', data: op === 'delete' ? null : entityData, ... }` — `current.data` is never compared against `data` to produce a diff, `changed`, or `before` field. History viewers must fetch two consecutive version records and compute a diff externally. `HistoryDrawer.tsx:5` (comment) states the history is "atomically written" but does not claim field-level diff.
 - repro: Call `mutate({ op:'update', path:'products/P1', data:{ name:'New Name' }, ... })` with a product that had `{ name:'Old Name' }`. Query Cosmos for `kind='version'` at `entityPath='products/P1'`: the version document body is `{ name:'New Name', rev:2, ... }` — full new state with no `before`, `diff`, or `changed` field.
+- fix: fieldDiff(prev, next) helper (data.js:29-36) computes {before, changed} across the union of keys using JSON-serialized value comparison; version op now stores `diff: fieldDiff(current?.data, data)` instead of the full entityData snapshot, satisfying the Version(field diff) invariant.
+- verified-by: static probe 2026-07-11 — data.js:29-36 defines fieldDiff returning {before,changed}; data.js:135 version op stores diff field; repro no longer reproduces; gate green (528+187 tests pass).
+- commit: 905031fc
 
 ---
 
 ### DEF-0016
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: MUTATION
 - surface: server/lib/data.js:67
 - title: `expectedRev` optimistic-concurrency guard is silently bypassed when the target entity does not exist — any `expectedRev` value is accepted on a create against a non-existent path
 - evidence: `grep -n 'expectedRev\|current &&' server/lib/data.js` — line 67: `if (payload.expectedRev !== undefined && current && curRev !== payload.expectedRev) { throw conflict }`. The conjunction `&& current` means: when `readEntity()` returns null (path absent or previously deleted), the check is entirely skipped regardless of the provided `expectedRev`. A caller providing `expectedRev: 99` for a create against an absent path receives HTTP 200 with `rev: 1` — the compare-and-swap guarantee is voided. Scenario: two concurrent writers both read entity at rev=5; writer A deletes it; writer B sends an update with `expectedRev: 5` — instead of a 409, writer B's operation silently re-creates the entity as rev=1.
 - repro: Delete entity at `products/P1` (confirms `current=null`). Then `POST /api/db/mutate` with `{ op:'create', path:'products/P1', expectedRev:99, data:{...}, entityType:'product', ... }` — returns `{ ok:true, rev:1 }`. The `expectedRev:99` is silently ignored.
+- fix: Dropped the `&& current` short-circuit; data.js:120 now evaluates `if (payload.expectedRev !== undefined && curRev !== payload.expectedRev)` unconditionally — for an absent entity curRev=0, so any non-zero expectedRev throws CONFLICT → 409.
+- verified-by: static probe 2026-07-11 — data.js:120 has no `&& current` guard; curRev defaults to 0 when entity absent; non-zero expectedRev on absent path → 409 CONFLICT; repro no longer reproduces; gate green.
+- commit: 68ac311f
 
 ---
 
