@@ -109,7 +109,7 @@ function envelope(tid, payload, actor) {
   return async () => {
     const current = await readEntity(tid, path)
     const curRev = current?.rev ?? 0
-    if (payload.expectedRev !== undefined && current && curRev !== payload.expectedRev) { const e = new Error('conflict'); e.code = 'CONFLICT'; throw e }
+    if (payload.expectedRev !== undefined && curRev !== payload.expectedRev) { const e = new Error('conflict'); e.code = 'CONFLICT'; throw e }
     const rev = curRev + 1
     const entityData = { ...data, rev, updatedAt: now, updatedBy: actor }
     const common = { pk, tenantId: tid }
