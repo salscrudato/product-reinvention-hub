@@ -110,6 +110,13 @@ function envelope(tid, payload, actor) {
     const current = await readEntity(tid, path)
     const curRev = current?.rev ?? 0
     if (payload.expectedRev !== undefined && curRev !== payload.expectedRev) { const e = new Error('conflict'); e.code = 'CONFLICT'; throw e }
+    // parentId validation: must resolve to an existing same-tenant entity (DEF-0003)
+    if (data.parentId && op !== 'delete') {
+      const s = segs(path)
+      const parentPath = [...s.slice(0, -1), String(data.parentId)].join('/')
+      const parent = await readEntity(tid, parentPath)
+      if (!parent) { const e = new Error('invalid_parent'); e.code = 'INVALID_PARENT'; throw e }
+    }
     const rev = curRev + 1
     const entityData = { ...data, rev, updatedAt: now, updatedBy: actor }
     const common = { pk, tenantId: tid }
@@ -138,6 +145,7 @@ router.post('/mutate', requireRole('EDITOR'), requireTenant, async (req, res) =>
     res.json({ ok: true, rev })
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
+    if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
     res.status(500).json({ error: 'mutate_failed', detail: String(e.message || e) })
   }
 })
@@ -156,6 +164,7 @@ router.post('/mutateBatch', requireRole('EDITOR'), requireTenant, async (req, re
     res.json({ ok: true, count: payloads.length })
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
+    if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
     res.status(500).json({ error: 'batch_failed', detail: String(e.message || e) })
   }
 })
