@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 17 | CRITICAL: 2 | HIGH: 7 | MEDIUM: 7 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 3
+SUMMARY: OPEN: 20 | CRITICAL: 2 | HIGH: 8 | MEDIUM: 9 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 4
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -325,4 +325,71 @@ Claims copilot (functions/src/claims.ts) has the full citation-resolution + shou
 stack but is NOT ported to Azure (returns 501 on /api/ai/:name for any name except chat/summarizeProduct).
 DEF-0006 note added: Admin.tsx:746 UI copy references "cheap verifier" and "stale-cited answer
 never served" — describes the original Firebase semanticCache+verifier stack; absent in Azure port.
+-->
+
+---
+
+### DEF-0021
+- status: OPEN
+- severity: HIGH
+- probe: MULTILINE
+- surface: server/lib/serff.js:191, server/lib/serff-shared.cjs:5435
+- title: SERFF bundle endpoint hard-codes `?? 'PH'` LOB fallback; GL product with missing ratingProgram silently gets Personal Home rating tables
+- evidence: `grep -n 'lobPrefix\|ratRows\|ratingProgram' server/lib/serff.js` — line 191: `const lobPrefix = cloneSnap.ratingProgram?.refId?.split('.')[0] ?? 'PH'`. Line 85: `loadSnapshot()` returns synthetic `{ refId: '', ... }` when Cosmos ratingPrograms subcollection is empty. `''.split('.')[0]` = `''`; `'' ?? 'PH'` does NOT fire (empty string is not null/undefined), so `lobPrefix = ''`. `grep -n 'KITS\["PH"\]' server/lib/serff-shared.cjs` → line 5435: `resolveRatingKit('')` → `KITS['']` undefined → `resolveLineArchetypeByPrefix('')` undefined → `return KITS["PH"]`. `loadSnapshot()` lines 87-95 returns only `{ refId, name, coverages, forms, rtTables, ldTables, ratingProgram }` — `product.lob` is absent; no LOB-aware fallback path exists.
+- repro: `POST /api/serff/bundle` with a GL product whose ratingPrograms subcollection is absent or empty in Cosmos (any GL product not seeded via `migrate-to-cosmos.ts`, or whose ratingPrograms were deleted). `loadSnapshot()` returns `ratingProgram = { refId: '' }`. `resolveRatingKit('')` silently returns PH kit. Rate exhibit is computed with PH territory/construction factor tables instead of GL class-code/exposure-volume tables — numerically wrong with no error returned.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0022
+- status: OPEN
+- severity: MEDIUM
+- probe: MULTILINE
+- surface: app/src/routes/News.tsx:57-65
+- title: News relevance scorer has no GL keyword expansion; BASE_NEWS_INSTRUCTION hardcodes HO+PA emphasis, omitting GL
+- evidence: `grep -n 'LOB_KEYWORDS\|BASE_NEWS_INSTRUCTION' app/src/routes/News.tsx` — line 57-60: `LOB_KEYWORDS = { HO: ['homeowners','ho-3','dwelling',...], PA: ['personal auto','automobile',...] }` — no `GL` key. Line 65: `BASE_NEWS_INSTRUCTION` ends "with emphasis on Homeowners (HO) and Personal Auto (PA)." Line 100: `const extras = LOB_KEYWORDS[lobPrefix] ?? []` — for a GL product `lobPrefix='GL'`, `LOB_KEYWORDS['GL']` is `undefined`, `extras=[]`. PH gets 8 expansion terms (+3 relevance per match); PA gets 7; GL gets 0. Industry abbreviations 'CGL', 'occurrence form', 'commercial general liability', 'CG 00 01' are absent.
+- repro: Navigate to the News tab with a portfolio containing only the GL seed product (GL.PROD.001). Any article about CGL rate filings or ISO CGL updates that uses 'CGL' without spelling out 'general liability' in full scores zero LOB-relevance for the GL product; an equivalent PH article using 'homeowners' would score +3.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0023
+- status: OPEN
+- severity: MEDIUM
+- probe: MULTILINE
+- surface: app/src/lib/export/duckcreek.test.ts:37-40,68
+- title: Duck Creek export test matrix covers only PH and PA; GL export path entirely untested; lob-token assertion is HO/PA-biased
+- evidence: `grep -n 'describe.each\|_name.includes\|GL_DATA' app/src/lib/export/duckcreek.test.ts` — lines 37-40: `describe.each([['Personal Home (HO-3)', PH_DATA], ['Personal Auto (PAP)', PA_DATA]])` — no GL_DATA entry. Line 68: `const lob = _name.includes('Home') ? 'HO' : 'PA'` — if GL were added to the matrix, 'General Liability' → `lob='PA'`, silently asserting the wrong lobToken. The GL Duck Creek path (`lobTokens: { ..., GL: "GL" }` per serff-shared.cjs) is never exercised: GL XML generation, GL validation report, GL cross-ref integrity, GL round-trip, and GL manuScriptID prefix are all invisible to CI.
+- repro: Any regression introduced in the GL XML serialisation path (wrong namespace, missing refId, broken CovA/CovB/CovC coverage-part mapping) passes the full test suite without detection.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0024
+- status: FALSE-POSITIVE
+- severity: N/A
+- probe: MULTILINE
+- surface: shared/src/insurance/lobRegistry.ts:221, app/src/routes/product/ProductPricing.tsx:175
+- title: FP — DEFAULT_LOB=PH_LOB and isHO branch are documented-intentional, not silent HO hard-coding
+- evidence: `grep -n 'DEFAULT_LOB\|resolveLob' shared/src/insurance/lobRegistry.ts` — lines 219-221 comment: "Personal Home is the seed reference line and the safe default when a product's LOB is missing or unrecognised" — explicitly documented. `resolveLob()` JSDoc: "then falls back to Personal Home (the reference line)". `ProductPricing.tsx:175` `const isHO = lob.prefix === 'PH' && !useGrid` is correct registry-driven routing; GL routes to GenericRatingPanel. `grep` confirmed: `StateTileMap.tsx`, `GenericRatingPanel.tsx`, `groupBySection()`, `isPerilState()`, `evaluateRulesGL()` — all line-agnostic. Registry provably drives refId prefix, section taxonomy, and peril/coastal rules: `grep -n 'groupBySection\|isPerilState\|lob\.sections\|peril\.eligibleStates' shared/src/insurance/lobRegistry.ts`.
+- repro: N/A — not a defect. DEFAULT_LOB fallback is a known design choice; isHO routing is correct registry-driven dispatch.
+
+---
+
+<!-- MULTILINE probe summary 2026-07-11:
+Registry provably drives refId prefix (resolveLob/lobByPrefix), section taxonomy
+(groupBySection reads lob.sections), and peril/coastal rules (isPerilState reads
+lob.peril.eligibleStates; evaluateRulesPH PH_COASTAL consts are PH-evaluator-only).
+GenericRatingPanel, StateTileMap, ProductRules GL-branch, and termConstraints PH-guard
+all confirmed line-agnostic or correctly branched. Three real HO-only hard-codings found:
+(1) SERFF lobPrefix ?? 'PH' / resolveRatingKit('') → PH kit when ratingProgram missing [DEF-0021, HIGH];
+(2) News.tsx LOB_KEYWORDS has no GL entry, BASE_NEWS_INSTRUCTION names only HO+PA [DEF-0022, MEDIUM];
+(3) duckcreek.test.ts matrix covers only PH+PA, GL export path untested, lob assertion biased [DEF-0023, MEDIUM].
+DEF-0024 clears DEFAULT_LOB=PH_LOB and isHO routing as intentional/documented.
 -->
