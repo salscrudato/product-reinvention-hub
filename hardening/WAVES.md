@@ -74,7 +74,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: none
 - verify: harden-probe DEF-0014,0021; a GL /api/serff/bundle resolves the GL kit (not PH); pnpm build (regenerates serff-shared.cjs if the shared source changed); /gate.
 
-## WAVE-07  tier:T1  chains:YES  blocks-smoke:NO  status:PENDING
+## WAVE-07  tier:T1  chains:YES  blocks-smoke:NO  status:DONE
 - members: DEF-0041, DEF-0039
 - root-cause: server/lib/auth.js has three security/durability gaps — AUTH_JWT_SECRET silently defaults to a public literal, the trivial-password BOOTSTRAP admins are unconditionally active, and changePassword stores overrides in an in-process Map that resets on restart and never reaches Cosmos.
 - fix-approach: (1) DEF-0041 — require AUTH_JWT_SECRET (no insecure default; fail-closed when unset). Gate BOOTSTRAP behind an explicit env opt-in (default OFF in production, ON for LOCAL/smoke) with passwords sourced from env, not hardcoded — PRESERVING a documented local/smoke bootstrap path so hardening/smoke.mjs still authenticates as admin/admin. (2) DEF-0039 — persist changePassword to the Cosmos __system__ user store (upsert kind:'user') so a change survives restart.

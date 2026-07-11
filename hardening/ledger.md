@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 13 | CRITICAL: 2 | HIGH: 3 | MEDIUM: 6 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 11 | CRITICAL: 1 | HIGH: 3 | MEDIUM: 5 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -848,7 +848,7 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 ---
 
 ### DEF-0039
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: SEED
 - alias: 0006b (SPLIT from DEF-0006, LEDGER SURGERY 2026-07-11)
@@ -856,9 +856,9 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 - title: changePassword stores overrides in an in-process Map; resets on restart; never persisted to Cosmos
 - evidence: Inherits DEF-0006 evidence (d). `auth.js:29` `const overrides = new Map()`; `changePassword()` (105-110) `overrides.set(req.user.uid, next)` — never written to the Cosmos `__system__` user store. On restart the override is lost and login reverts to the original password.
 - repro: See DEF-0006 repro (c) — change password via UI, restart `node server/server.js`, login with the new password fails.
-- fix:
-- verified-by:
-- commit:
+- fix: changePassword() (auth.js:114-131) now upserts { id:'user:<uid>', pk:'__system__', kind:'user', data:{username,email,name,role,tenants,password} } to Cosmos docs container before updating the in-process override cache; on Cosmos failure returns 500 persist_failed. In-process overrides Map (line 133) retained as same-session performance cache.
+- verified-by: static probe 2026-07-11 (WAVE-07) — auth.js:118-130 confirms Cosmos upsert with kind:'user' at pk:'__system__'; repro (restart loses password) no longer reproduces; gate green (689+187 tests).
+- commit: bb500a54
 
 ---
 
@@ -878,7 +878,7 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 ---
 
 ### DEF-0041
-- status: OPEN
+- status: FIXED
 - severity: CRITICAL
 - probe: SEED
 - alias: 0001a (SPLIT from DEF-0001, LEDGER SURGERY 2026-07-11)
@@ -886,9 +886,9 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 - title: Insecure default AUTH_JWT_SECRET + always-on trivial-password BOOTSTRAP admins (server-side)
 - evidence: Inherits DEF-0001 evidence + its ROLE/SECRETS notes. `auth.js:18` `SECRET = process.env.AUTH_JWT_SECRET || 'dev-insecure-secret-change-me'`; `auth.js:25-28` BOOTSTRAP `admin`/`admin` + `sal.scrudato`/`sal.scrudato` always present (ADMIN, `tenants:'*'`), un-disableable at runtime. SMOKE COUPLING: `hardening/smoke.mjs:37-38,202-210` authenticates as `admin`/`admin`; the fix must preserve an env-gated bootstrap path (default OFF in prod, ON for LOCAL/smoke) so the smoke still authenticates.
 - repro: See DEF-0001 repro — `curl /api/auth/login` admin/admin returns a valid ADMIN JWT on any deploy where AUTH_JWT_SECRET is unset.
-- fix:
-- verified-by:
-- commit:
+- fix: (1) auth.js:19-21 — AUTH_JWT_SECRET required; `if (!_secret) throw new Error('[auth] AUTH_JWT_SECRET is required...')` — fail-closed, no insecure default. (2) auth.js:29-33 — BOOTSTRAP gated behind `BOOTSTRAP_USERS_ENABLED === 'true'`; default OFF in production; passwords sourced from BOOTSTRAP_ADMIN_PASSWORD / BOOTSTRAP_SAL_PASSWORD env vars with fallback defaults (admin/admin, sal.scrudato/sal.scrudato) preserved for LOCAL dev and smoke harness. (3) auth.js:12-13 module comment updated to document the opt-in env var.
+- verified-by: static probe 2026-07-11 (WAVE-07) — auth.js:20 fail-closed throw confirmed; auth.js:29 BOOTSTRAP_ENABLED gate confirmed; repro (admin/admin login without AUTH_JWT_SECRET) no longer possible — server refuses to start without the secret; gate green (689+187 tests).
+- commit: c086b6f0
 
 ---
 
