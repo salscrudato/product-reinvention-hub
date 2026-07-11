@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 6 | CRITICAL: 1 | HIGH: 3 | MEDIUM: 2 | LOW: 0 | WONTFIX: 0 | FALSE-POSITIVE: 0
+SUMMARY: OPEN: 6 | CRITICAL: 1 | HIGH: 3 | MEDIUM: 2 | LOW: 0 | WONTFIX: 0 | FALSE-POSITIVE: 1
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -85,3 +85,26 @@ SUMMARY: OPEN: 6 | CRITICAL: 1 | HIGH: 3 | MEDIUM: 2 | LOW: 0 | WONTFIX: 0 | FAL
 - fix:
 - verified-by:
 - commit:
+- note(SEAM probe 2026-07-11): `app/.env.development.local` also contains stale Firebase comments and `VITE_USE_EMULATORS=false` — confirmed dead (variable not read by any source file; `grep -r VITE_USE_EMULATORS app/ shared/` returns zero hits). Covered by this DEF's stale-artifacts scope; not a new seam violation.
+
+---
+
+### DEF-0007
+- status: FALSE-POSITIVE
+- severity: N/A
+- probe: SEAM
+- surface: app/.env.development.local, app/src/ (comment-only Firebase references)
+- title: FP — stale Firebase comments in gitignored .env.development.local and source comments do not constitute a seam leak
+- evidence: `grep -r "VITE_USE_EMULATORS" app/ shared/` returns zero results. `grep -r "^import.*from.*firebase\|^import.*from.*@firebase" app/src/ shared/src/` returns zero results. The `.env.development.local` sets `VITE_USE_EMULATORS=false` and contains comments about Firebase emulators, but this var is never read. Firebase references in other source files (`UserContext.tsx:2`, `BaseFormsLibrary.tsx:6`, `savedViewsStore.ts:8`, `News.tsx:12`, `Tasks.tsx:9`, etc.) are all comments, not import statements. `app/package.json` has zero Firebase, Azure, Cosmos, Anthropic, or OpenAI SDK dependencies.
+- repro: N/A — not a real defect. `grep -r "^import.*from.*['\"]firebase\|@firebase\|@azure\|CosmosClient\|@anthropic\|openai" app/src/ shared/src/` → empty.
+
+---
+
+<!-- SEAM probe clean-summary 2026-07-11:
+Adapter-seam integrity confirmed clean. All app/ reads/writes go through
+app/src/lib/backend/ (azure.adapter.ts — pure fetch wrapper, no SDK imports).
+shared/ has zero platform SDK deps (package.json: only oxlint/typescript/vitest).
+Investigated: Firebase comments, VITE_USE_EMULATORS, HomeCheck vision path,
+savedViewsStore localStorage, direct SDK constructor calls, hardcoded platform
+endpoint URLs, AI SDK imports. Every vector returned clean.
+-->
