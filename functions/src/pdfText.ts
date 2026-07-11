@@ -11,7 +11,6 @@
 // caller falls back to the citation + never-invent guarantees. That way a PDF we parse
 // poorly never causes a REAL form number to be false-dropped; verification only tightens
 // on documents whose text we actually recovered. Reused by the P11 cost work.
-// AWS-SWAP: pure Node (zlib + Buffer) — ports to Lambda unchanged.
 import { inflateSync, inflateRawSync } from 'zlib'
 
 /** Extract best-effort text from a base64-encoded PDF, or null if it can't be read

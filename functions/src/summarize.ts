@@ -3,7 +3,7 @@
 // it never reads a form PDF. The client passes the already-loaded metadata; the model
 // returns a structured dashboard payload via a forced tool, so the result is deterministic
 // in shape and can only describe what the metadata actually contains. Uses the fast model
-// (haiku) with a timeout. Any signed-in role may summarize (read-only). AWS-SWAP: onCall
+// (haiku) with a timeout. Any signed-in role may summarize (read-only).
 // → Lambda URL; auth + secret handling live in runtime.ts.
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'

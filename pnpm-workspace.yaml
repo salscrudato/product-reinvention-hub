@@ -3,6 +3,5 @@ packages:
   - 'functions'
   - 'shared'
 allowBuilds:
-  '@firebase/util': true
   esbuild: true
   protobufjs: true

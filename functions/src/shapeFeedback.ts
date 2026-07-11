@@ -17,7 +17,6 @@
 // It performs NO writes. It returns only the shaped story plus an optional nearMatch
 // (a read-only near-duplicate signal). Any signed-in user — including VIEWER, who may submit
 // and vote on feedback — may call it. All persistence happens later, client-side, via mutate().
-// AWS-SWAP: onCall → Lambda URL; auth + secret handling live in runtime.ts.
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'

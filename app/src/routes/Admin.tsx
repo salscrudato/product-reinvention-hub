@@ -743,7 +743,7 @@ function AiCostTab() {
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-faint mt-3 leading-snug">Repeat grounded questions served from cache behind a conservative similarity threshold + a cheap verifier; a stale-cited answer is never served.</p>
+          <p className="text-[11px] text-faint mt-3 leading-snug">Questions grounded against the tenant corpus via keyword-ranked retrieval; unverified [refId] citations flagged in the response stream.</p>
         </div>
 
         <div className="bg-surface rounded-[12px] p-4" style={{ border: '1px solid var(--color-border)' }}>

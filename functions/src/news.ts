@@ -5,7 +5,6 @@
 // is injected into the Claude prompt so results are portfolio-relevant;
 // relatedProductIds is populated on each new item by matching its text against
 // the full product catalogue via LOB keywords + state names/codes.
-// AWS-SWAP: EventBridge Scheduler → Lambda; same web search.
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'

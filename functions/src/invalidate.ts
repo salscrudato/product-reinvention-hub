@@ -19,7 +19,6 @@
 //
 // Loop safety: triggers write ONLY to OTHER collections (groundingChunks / semanticCache /
 // productSummaries) — except the single, guarded form-description clear back onto forms/{key}.
-// AWS-SWAP: onDocumentWritten → DynamoDB Streams; the derive/invalidate logic is unchanged.
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import type { Change, DocumentSnapshot, FirestoreEvent } from 'firebase-functions/v2/firestore'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'

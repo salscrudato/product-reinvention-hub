@@ -16,7 +16,7 @@
 //
 // Writes NOTHING itself — the browser persists the (edited) draft through the adapter's
 // atomic mutate(). EDITOR/ADMIN only (mirrors the Firestore rules the eventual
-// mutate() hits — role enforced on BOTH sides). AWS-SWAP: onRequest → Lambda URL.
+// mutate() hits — role enforced on BOTH sides).
 import { onRequest } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'

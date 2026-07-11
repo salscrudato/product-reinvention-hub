@@ -1,5 +1,12 @@
 # 00_START_HERE.md — Handoff Package Index
 
+> **⚠ HISTORICAL DOCUMENT — Firebase era (pre-Azure cutover, ~V18)**
+> This package was compiled before the Azure cutover. The stack described here
+> (Firebase Firestore + Cloud Functions + Auth) is no longer the live backend.
+> The current stack is Azure App Service (Express + Cosmos DB + Foundry AI + Blob
+> Storage) — see `docs/DEPLOY_AZURE.md` and `hardening/BACKEND.md` for the
+> authoritative current picture. Use this package as historical context only.
+
 ## Purpose
 This package was produced by a forensic read-only reverse-engineering pass on the **Product Reinvention Hub** repository. It is the complete information source for Claude Fable to generate an end-to-end production-readiness and enhancement build plan. Fable will not see the codebase directly — this package is the source of truth.
 

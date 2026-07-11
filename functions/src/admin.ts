@@ -1,7 +1,6 @@
 // admin.ts — setUserRole callable (ADMIN only): create users, assign roles via
 // custom claims (mirrored on users/{uid} for display), and (de)activate accounts.
 // Custom claims are authoritative for security rules; the mirror doc is display-only.
-// AWS-SWAP: Cognito AdminCreateUser + group assignment; mirror row in the users table.
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'

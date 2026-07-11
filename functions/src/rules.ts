@@ -11,7 +11,7 @@
 //     the UI (and, on Save, mutate()) can never carry an invented reference.
 //
 // Writes NOTHING itself — the browser persists the (edited) draft through the adapter's
-// atomic mutate(). AWS-SWAP: onRequest → Lambda URL; auth + secret live in runtime.ts.
+// atomic mutate().
 import { onRequest } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'

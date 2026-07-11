@@ -14,7 +14,6 @@
 // Voyage. The verifier is injectable (a live haiku by default; a stub in tests); with no verifier
 // available the gate falls back to near-exact similarity (safe). Collection `semanticCache` is
 // server-only (Admin SDK; denied to all clients in firestore.rules), like `groundingChunks`.
-// AWS-SWAP: `semanticCache` → the same vector store as groundingChunks (OpenSearch/DynamoDB).
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import type Anthropic from '@anthropic-ai/sdk'
 import { MODEL_FAST } from './runtime'

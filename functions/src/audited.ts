@@ -11,7 +11,6 @@
 // deliberate divergence: the searchIndex step MERGES keywords into any existing entry rather
 // than rebuilding it wholesale, so it never clobbers the richer display (title/subtitle/keywords)
 // the seed writes for a document — it only makes the newly-written field searchable.
-// AWS-SWAP: becomes a DynamoDB TransactWriteItems across the four tables.
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 
 // Same indexable set as the client seam (firebase.adapter.ts) + the seed.

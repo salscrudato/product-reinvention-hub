@@ -24,7 +24,6 @@
 // The model can never inject a factor: table rows come from deterministic parsing of the
 // verbatim region; the model only discovers the schema. Nothing persists here — the reviewed
 // bundle is written by the app through adapter.db.mutate() (lineage IMPORT).
-// AWS-SWAP: onRequest → Lambda URL; auth + secret handling live in runtime.ts.
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, ANTHROPIC_API_KEY, CACHE_1H } from './runtime'

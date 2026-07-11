@@ -8,7 +8,7 @@
 //     call that we surface as a `json` event so the UI renders a deterministic card.
 //   • identifyBaseForm — a one-shot callable (EDITOR/ADMIN) that reads a freshly
 //     uploaded form and returns its title / form number / edition for the library card.
-// Writes NOTHING to domain data. AWS-SWAP: onRequest/onCall → Lambda URLs; auth +
+// Writes NOTHING to domain data.
 // secret handling live in runtime.ts.
 import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https'
 import { getApps, initializeApp } from 'firebase-admin/app'

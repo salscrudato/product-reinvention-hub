@@ -10,7 +10,6 @@
 //                   into the breaker. Called from telemetry.recordUsage so EVERY feature keeps
 //                   the counters + breaker current with no per-endpoint wiring.
 //
-// AWS-SWAP: `costCounters` → a DynamoDB counter table with TTL; the pure logic is unchanged.
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import {
   DEFAULT_BUDGET, decideBudget, DEFAULT_BREAKER, CLOSED_BREAKER, isBreakerOpen, nextBreakerState,

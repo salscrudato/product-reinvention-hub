@@ -15,7 +15,6 @@
 // The legacy `filingImport` Cloud Function in ../filingImport.ts is preserved
 // unchanged for backwards compatibility.
 //
-// AWS-SWAP: onRequest → Lambda URL; auth + secret handling live in runtime.ts.
 
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'

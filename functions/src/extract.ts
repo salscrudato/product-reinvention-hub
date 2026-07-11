@@ -11,7 +11,6 @@
 // drop any proposal without a citation and any form number not present in the text.
 // When a section yields nothing the sanitizer emits an explicit note. EDITOR/ADMIN
 // only. Streamed over SSE: a tool start/end per section + one json event per section.
-// AWS-SWAP: onRequest → Lambda URL; auth + secret handling live in runtime.ts.
 import { onRequest } from 'firebase-functions/v2/https'
 import type Anthropic from '@anthropic-ai/sdk'
 import { anthropic, authenticate, AuthError, MODEL, MODEL_FAST, openSse, send, ANTHROPIC_API_KEY, CACHE_1H } from './runtime'
