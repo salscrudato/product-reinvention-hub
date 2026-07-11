@@ -97,16 +97,29 @@ const SUMMARY_SYSTEM =
 
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
 
-// Drop any coverageHighlight whose name doesn't correspond to a real metadata coverage, so an
-// invented coverage never reaches the dashboard (tolerant containment match, ignoring case/punct).
-function groundSummary(raw, coverages) {
-  const known = (coverages || []).map((c) => norm(c && c.name)).filter(Boolean)
-  const highlights = Array.isArray(raw.coverageHighlights) ? raw.coverageHighlights : []
-  const grounded = highlights.filter((h) => {
-    const n = norm(h && h.name)
-    return !!n && known.some((k) => k.includes(n) || n.includes(k))
+// Validate raw summary output against product metadata.
+// Drops invented coverage highlights; corrects a fabricated state-count in
+// highlights tiles; leaves headline/overview as prose (too hard to validate reliably).
+function groundSummary(raw, product) {
+  const coverages = Array.isArray(product?.coverages) ? product.coverages : (Array.isArray(product) ? product : [])
+  const known = coverages.map((c) => norm(c && c.name)).filter(Boolean)
+  const footprintCount = Array.isArray(product?.footprint) ? product.footprint.length : null
+
+  // Drop coverageHighlights that don't match a real coverage name (existing guard).
+  const coverageHighlights = (Array.isArray(raw.coverageHighlights) ? raw.coverageHighlights : [])
+    .filter((h) => { const n = norm(h?.name); return !!n && known.some((k) => k.includes(n) || n.includes(k)) })
+
+  // Correct a highlights tile whose label is state-related but value disagrees with footprint.
+  const highlights = (Array.isArray(raw.highlights) ? raw.highlights : []).map((h) => {
+    if (!h?.label || !h?.value || footprintCount === null) return h
+    if (/states?/i.test(String(h.label))) {
+      const m = /^(\d+)/.exec(String(h.value).trim())
+      if (m && parseInt(m[1]) !== footprintCount) return { ...h, value: `${footprintCount} states` }
+    }
+    return h
   })
-  return { ...raw, coverageHighlights: grounded }
+
+  return { ...raw, coverageHighlights, highlights }
 }
 
 async function persistSummary(tenantId, productId, data, actor) {
@@ -155,7 +168,7 @@ async function summarizeProduct(req, res) {
     fleet.record(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
 
     const tu = Array.isArray(json.content) ? json.content.find((b) => b.type === 'tool_use') : null
-    const summary = groundSummary((tu && tu.input) || {}, p.coverages)
+    const summary = groundSummary((tu && tu.input) || {}, p)
 
     const now = new Date().toISOString()
     const stored = {
