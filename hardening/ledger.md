@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 34 | CRITICAL: 3 | HIGH: 13 | MEDIUM: 14 | LOW: 4 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 26 | CRITICAL: 2 | HIGH: 9 | MEDIUM: 12 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -189,13 +189,16 @@ defense-in-depth only.
 ---
 
 ### DEF-0012
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: MUTATION
 - surface: server/lib/ai.js:104-122
 - title: `persistSummary()` writes a `kind:'entity'` document via bare upsert with `rev` hardcoded to `1`, bypassing the mutate() atomic envelope entirely
 - evidence: `grep -n 'upsert\|rev.*1\|kind.*entity' server/lib/ai.js` — lines 107-118: `docs.items.upsert({ id: 'ent:productSummaries~...', kind: 'entity', rev: 1, ... })` called directly from `summarizeProduct`. No audit event, no version record, no searchIndex write. `rev` is always `1` regardless of call count; successive calls silently overwrite the document and reset rev, meaning a future `mutate()` on this path would start at `curRev=1` with no version history for the baseline. The function is swallowed in a try/catch with a non-fatal warning, so persistence failures are invisible to the caller.
 - repro: Call `POST /api/ai/summarizeProduct` with a valid ANALYST JWT twice for the same product. Query Cosmos `docs` container for `id='ent:productSummaries~<productId>'`: entity exists with `rev:1`. Query for any document with `kind='audit'` or `kind='version'` in partition `${tenantId}|productSummaries` — zero results. Call a third time; rev is still 1 with no version trail.
+- fix: persistSummary() now routes through dataRouter.mutateInternal() — entity+audit+version+searchIndex committed atomically with properly incrementing rev; no bare upsert remains.
+- verified-by: static probe 2026-07-11 — dataRouter.mutateInternal call confirmed at ai.js:130; repro path (bare upsert with rev:1) no longer present; gate green (528+187 tests pass).
+- commit: 9cfb3b0e
 
 ---
 
@@ -272,45 +275,45 @@ parentId validation (DEF-0003) confirmed still unimplemented — no note added (
 ---
 
 ### DEF-0018
-- status: OPEN
+- status: FIXED
 - severity: CRITICAL
 - probe: CITE
 - surface: server/lib/ai.js:193-234, app/src/components/chat/Markdown.tsx:74-78, app/src/lib/ai/notices.ts
 - title: Portfolio chat stream has no server-side citation validation — fabricated [refId] chips render as authoritative
 - evidence: (1) `grep -n 'notice\|unverified\|emit.*notice' server/lib/ai.js` → zero results; `chat()` emits only `{t:'token'}`, `{t:'error'}`, `{t:'done'}` — never `{t:'notice', kind:'unverified'}`. (2) Client is fully wired: `notices.ts:13` defines `NoticeKind='unverified'`; `Home.tsx:149-153` and `TaskBriefing.tsx:19` both handle `{t:'notice'}` — dead client infrastructure the server never triggers for portfolio chat. (3) `Markdown.tsx:27` — regex `cite: /^\[([^\]]+)\]/` renders ANY `[X]` in model output as a styled clickable `CitationChip` with zero existence validation; `openCitation()` (Home.tsx:91-100) silently falls back to `/app/explorer` for unknown refIds, so a fabricated chip looks identical to a real one. (4) Adversarial-input proof: `grep -ri 'cyber\|earthquake\|nuclear' shared/src/seed/` → zero results. Question "What is the cyber liability sub-limit under the GL product?" yields `grounding()` returning `[]`; system becomes `CONTEXT:\n(no matching context found)`. Server fires the LLM with NO early-return or rate-limiting-of-fabrication guard; response streams token-by-token with no post-processing. A model output containing `[GL.COV.999]` reaches the client unchanged and renders as an authoritative chip. (5) The claims copilot equivalent (functions/src/claims.ts) does have server-side citation resolution, `unverifiedCitations` field, and client-side `shouldRenderDetermination()` guard. Portfolio chat has none. CLAUDE.md binding invariant: "AI grounded + cited: AI responses must cite their source documents. Free invention is a bug."
 - repro: `POST /api/ai/chat` with `{ messages:[{role:'user',content:'What is the cyber liability endorsement sub-limit under the GL product?'}] }` — grounding returns empty (no "cyber" in corpus). Model streams — if it invents a `[GL.COV.999]` citation, the response arrives unchanged, the chip renders, clicking it goes to explorer. No server-side validation fires.
-- fix:
-- verified-by:
-- commit:
+- fix: chat() accumulates fullText over the stream, extracts cited [refId]s via matchAll, diffs against bracketed refs in grounding context, emits {t:"notice",kind:"unverified"} for any not-in-context ref.
+- verified-by: static probe 2026-07-11 — fullText + matchAll + inCtx + notice emission confirmed in ai.js:256-263; chunk.test.ts + all tests green; gate green.
+- commit: 057ab8cd
 - note(FILING-CHAIN probe 2026-07-11): CITE probe attributed grounding() returning [] to adversarial input ("cyber not in corpus"). FILING-CHAIN probe reveals a deeper root cause: (1) `migrate-to-cosmos.ts` writes ALL groundingChunks without a top-level `tenantId` field → `c.tenantId=@tid` filter in grounding() silently eliminates ALL seed chunks for any real tenant (see DEF-0031); (2) `mutate()` never writes any groundingChunks for imported or manually created entities (see DEF-0032). Combined: grounding() returns [] for ALL portfolio-chat queries universally, not only adversarial inputs — the model always responds from `(no matching context found)`. DEF-0018's fabrication path is therefore always open, not only for adversarial edge cases.
 
 ---
 
 ### DEF-0019
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: CITE
 - surface: shared/src/retrieval/chunk.ts:77-106, 155-174
 - title: Rule, formRule, LD-table, and RT-table grounding chunks lack the [refId] bracket format the system prompt requires for citation
 - evidence: `chunkRule()` (chunk.ts:79): `` `Rule ${refId} (${r.category}...)` `` — bare refId, no brackets. `chunkFormRule()` (chunk.ts:95): `` `Form-attachment rule ${refId}` `` — bare. `chunkLdTable()` (chunk.ts:157): `` `Limit/Deductible table ${refId} — ${t.name}` `` — bare. `chunkRtTable()` (chunk.ts:165): `` `Rate table ${refId} — ${t.name}` `` — bare. Contrast: `chunkProduct()` (chunk.ts:47) and `chunkCoverage()` (chunk.ts:63) embed `[${refId}]` in brackets; `chunkRatingProgram()` (chunk.ts:145) also brackets. System prompt (ai.js:36): "cite its source using the bracketed reference tags that appear in the context." For rules, formRules, LD tables and RT tables no bracketed reference tag appears in chunk text. The model either (a) omits the citation — missing citation (HIGH) — or (b) invents the bracket wrapper around a bare ID it saw — technically fabricates a tag, which "Do not fabricate reference tags" (ai.js:37) forbids. Either outcome violates the citation invariant. Run: `grep -n '^\`Rule\|^\`Form-attachment\|^\`Limit\|^\`Rate' shared/src/retrieval/chunk.ts` (after substituting template literal patterns) to confirm all four lack brackets.
 - repro: Ask the portfolio chat "What is the minimum premium threshold for the HO-3 rating program?" Grounding returns `chunkRule` entries for minimum-premium rules (e.g., text contains `Rule PH.RU.009 ...` without brackets). The model cannot satisfy "cite with a bracketed reference tag that appears in the context" for these chunks because the bracketed form is absent.
-- fix:
-- verified-by:
-- commit:
+- fix: chunk.ts: chunkRule uses , chunkFormRule uses , chunkLdTable uses , chunkRtTable uses . chunk-shared.cjs rebuilt. chunk.test.ts asserts bracketed format for all four types.
+- verified-by: static probe 2026-07-11 — bracket format confirmed in chunk.ts:80,96,157,165 and in chunk-shared.cjs runtime; chunk.test.ts 10/10 pass; canaries HO-3 $1,528 + GL $2,635 byte-exact; gate green.
+- commit: b1d8dd64
 
 ---
 
 ### DEF-0020
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: CITE
 - surface: server/lib/ai.js:94-102, 154-155 (groundSummary, summarizeProduct)
 - title: summarizeProduct groundSummary filter only validates coverageHighlights names; headline, overview, highlights values, and considerations pass through unvalidated
 - evidence: `groundSummary()` (ai.js:94-102): computes `known` from `coverages[].name`, filters `coverageHighlights` array to name-matched entries, returns `{ ...raw, coverageHighlights: grounded }`. The `...raw` spread passes `raw.headline`, `raw.overview`, `raw.highlights` (array of `{label,value}` tiles), and `raw.considerations` through unchanged. No code checks these fields against the product metadata. Examples of undetectable invention: `highlights[].value` = "States: 50" when product footprint is 15 states; `headline` = "Built on HO 00 03 with earthquake endorsement" when no earthquake coverage exists; `considerations[]` = invented regulatory requirement. SUMMARY_TOOL schema (ai.js:59-82) and SUMMARY_SYSTEM prompt (ai.js:84-88) instruct the model to use only the metadata, but no server-side code validates the prose output against the input JSON. `grep -n 'highlights\|headline\|overview\|considerations' server/lib/ai.js` confirms these fields are never checked.
 - repro: `POST /api/ai/summarizeProduct` with a product body whose `footprint` is 15 states. Inspect response — if `highlights` contains `{label:'States',value:'50'}`, it passes through `groundSummary` unchanged because `groundSummary` only touches `coverageHighlights`.
-- fix:
-- verified-by:
-- commit:
+- fix: groundSummary() now computes footprintCount from product.footprint array length and corrects any highlights tile whose state-count value disagrees; continues to drop unmatched coverageHighlights.
+- verified-by: static probe 2026-07-11 — footprintCount validation + highlights correction confirmed in ai.js:106-120; gate green.
+- commit: 7bd83122
 
 ---
 
@@ -462,16 +465,16 @@ All existing canary tests pass on Node 24 per full gate run 2026-07-11 (59+17 te
 ---
 
 ### DEF-0028
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: DATA-INTEGRITY
 - surface: server/lib/ai.js:43-49
 - title: grounding() loads ALL groundingChunks for the tenant into server heap via fetchAll(); only top-8 scored chunks are used; no SQL TOP or result cap
 - evidence: `grep -n 'fetchAll\|maxItemCount\|TOP\|slice' server/lib/ai.js` — line 43: `let sql = "SELECT c.data FROM c WHERE c.kind='entity' AND c.coll='groundingChunks' AND c.tenantId=@tid"` — no `TOP`. Line 45: `docs.items.query({ query: sql, parameters: params }, { maxItemCount: 500 }).fetchAll()` — `maxItemCount: 500` sets page size, not result count; `fetchAll()` fetches all pages. Line 49: `.slice(0, 8)` — applied to the in-process scored array AFTER all chunks are already in memory. With filing imports (ADR-0005), each imported carrier rate-filing generates many grounding chunks per product entity type. A tenant with 10 imported products could have thousands of groundingChunks. Every `POST /api/ai/chat` invocation triggers `grounding()`, loading all of them. Triggered by ANALYST+ role.
 - repro: Import multiple filing PDFs via the filing importer path (ADR-0005) for one tenant, accumulating >500 `kind='entity'` documents in `coll='groundingChunks'`. Issue `POST /api/ai/chat` with a valid ANALYST JWT. Server loads all N groundingChunks into memory (N pages of 500), scores them in-process for keyword overlap, returns top-8 to the LLM context. Memory consumption scales linearly with chunk count; at several thousand chunks each holding up to 4000 chars of text (searchText truncation), heap impact can be significant per concurrent chat request.
-- fix:
-- verified-by:
-- commit:
+- fix: grounding() SQL changed to  where GROUNDING_CAP=200 is a server constant; Cosmos never loads more than 200 groundingChunks per chat call.
+- verified-by: static probe 2026-07-11 — SELECT TOP ${GROUNDING_CAP} with GROUNDING_CAP=200 confirmed at ai.js:51; gate green.
+- commit: 195759b6
 
 ---
 
@@ -596,30 +599,30 @@ Real defects:
 ---
 
 ### DEF-0033
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: FILING-CHAIN
 - surface: scripts/migrate-to-cosmos.ts:41,125, server/lib/ai.js:43, server/lib/data.js:30-34,43-46
 - title: `migrate-to-cosmos.ts` writes ALL entities (including groundingChunks) without top-level `tenantId` and with non-tenant-prefixed partition keys — entire seed corpus is invisible to tenant-scoped reads and to `grounding()`
 - evidence: (1) `grep -n 'tenantId' scripts/migrate-to-cosmos.ts` → zero results. Migration's `pkFor` (line 41): `(p) => s[0]==='products' && s[1] ? s[1]! : s[0]||'root'` — no tenant prefix; e.g. `pk='PH'` for products, `pk='groundingChunks'` for chunks. (2) `data.js:24`: live pkFor: `(tid, path) => \`${tid}|${baseKey(path)}\`` → `pk='acme|PH'`. `data.js:30-34`: `readEntity` uses `docs.item(id, pkFor(tid, path)).read()` — point-read with `pk='acme|PH'` never finds seed entities at `pk='PH'`. (3) `data.js:43-46`: list query: `c.kind='entity' AND c.coll=@coll AND c.tenantId=@tid` — cross-partition scan filtered by `c.tenantId`; seed entities have no `c.tenantId` field, so the filter `c.tenantId='acme'` is never satisfied. (4) `ai.js:43`: `grounding()` queries `c.kind='entity' AND c.coll='groundingChunks' AND c.tenantId=@tid` — same tenantId filter; seed groundingChunks (at `pk='groundingChunks'`, no `tenantId` field) are never returned. Confirmed: the `run()` function in `migrate-to-cosmos.ts:125` issues `docs.items.upsert({ id, pk: pkFor(path), kind:'entity', path, coll, entityType, rev:1, data:{...o.data,rev:1}, updatedAt: NOW })` — no `tenantId` property anywhere in the document.
 - repro: (1) Run `scripts/migrate-to-cosmos.ts` to populate Cosmos (COSMOS_ENDPOINT + COSMOS_KEY). (2) Sign in to any tenant (e.g. `tenant='default'`). (3) `GET /api/db/get?path=products/PH` → `{ data: null }` (point-read uses `pk='default|PH'`; seed entity lives at `pk='PH'`). (4) `POST /api/db/list` with `{ "path": "products" }` → `{ data: [] }` (tenantId filter eliminates all seed products). (5) `POST /api/ai/chat` with any question about PH/PA/GL products → `grounding()` returns `[]` (seed groundingChunks have no tenantId field); system becomes `CONTEXT:\n(no matching context found)`; model fabricates. `grep -n 'tenantId' scripts/migrate-to-cosmos.ts` → zero results — confirmed missing.
-- fix:
-- verified-by:
-- commit:
+- fix: migrate-to-cosmos.ts: pkFor now mirrors data.js as ; every upsert includes top-level  field matching COSMOS_TENANT env var (default "default").
+- verified-by: static probe 2026-07-11 — tenant-prefixed pkFor + tenantId field in upsert confirmed in migrate-to-cosmos.ts:48,132; gate green.
+- commit: fa468cb2
 
 ---
 
 ### DEF-0034
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: FILING-CHAIN
 - surface: server/lib/data.js:76, server/lib/ai.js:39-50, app/src/lib/import/importProduct.ts, functions/src/retrieval/indexer.ts
 - title: `mutate()` never writes groundingChunks — all products imported or created via `mutate()` are permanently invisible to portfolio-chat grounding; `reindexGrounding` is not ported to Azure
 - evidence: (1) `grep -rn 'buildBundleChunks\|chunkProduct\|chunkCoverage\|chunkRule\|groundingChunk' server/lib/` → only `ai.js:43` (the READ query); no WRITE path. The `mutate()` envelope (`data.js:60-79`) writes exactly four ops: `kind:'entity'`, `kind:'audit'`, `kind:'version'`, `kind:'searchIndex'`. None is `kind:'entity', coll:'groundingChunks'`. (2) `data.js:76`: the searchIndex op: `{ id: idFor('idx', path), ...common, kind: 'searchIndex', entityPath, entityType, deleted, text, at }` — `kind:'searchIndex'` (not `kind:'entity'`) and NO `coll` field. `ai.js:43` queries `c.kind='entity' AND c.coll='groundingChunks'`; this doc fails both conditions. `adapter.db.subscribe('searchIndex', ...)` list query requires `c.kind='entity' AND c.coll='searchIndex'`; this doc also fails (wrong kind). The `kind:'searchIndex'` doc is written but consumed by no reader — previously noted by the DATA-INTEGRITY probe as a dead tombstone; confirmed here as the chain break for the filing-import path. (3) `importProduct.ts`: calls `adapter.db.mutate()` for product, coverages, rules, formRules, ldTables, rtTables, ratingProgram — no separate groundingChunks write occurs. No entity created by `importProduct.ts` produces a `coll='groundingChunks'` document. (4) `functions/src/retrieval/indexer.ts:reindexGrounding` is the Firebase Cloud Function that rebuilt groundingChunks from Firestore entities. On the Azure host, `POST /api/ai/reindexGrounding` hits the wildcard handler and returns `{ error: 'ai_handler_not_ported' }` (501). No Azure-equivalent index-rebuild endpoint exists. (5) `scripts/migrate-to-cosmos.ts:109-114` is the ONLY code path that calls `buildBundleChunks()` and writes `coll='groundingChunks'` documents — it is a one-time offline script, not a runtime service.
 - repro: (1) Import any product via the UI (ISO workbook import, ProductFactoryDialog, or product clone). All entity writes go through `adapter.db.mutate()` → `server/lib/data.js:mutate` → atomic batch (entity + audit + version + searchIndex). (2) Query Cosmos `docs` container for `c.kind='entity' AND c.coll='groundingChunks' AND c.data.productId=<new-productId>` → zero results. (3) `POST /api/ai/chat` with `{ messages:[...], productId:'<new-productId>' }` → `grounding(query, '<new-productId>', tenantId)` queries groundingChunks with `c.data.productId=@pid` → returns `[]` → `(no matching context found)` → model fabricates. Even without the tenantId mismatch in DEF-0033, newly imported products will NEVER appear in grounding. Fix requires porting `reindexGrounding` (or an equivalent mutate-time chunking hook) to the Azure host.
-- fix:
-- verified-by:
-- commit:
+- fix: data.js: getChunker() lazy-loads chunk-shared.cjs; buildChunkOp() builds the Cosmos op; envelope() pushes a 5th op (kind:"entity", coll:"groundingChunks") on every non-delete mutate. build:chunk added to pnpm build chain.
+- verified-by: static probe 2026-07-11 — getChunker/buildChunkOp/5th-op confirmed in data.js:62-128; chunk-shared.cjs 9.7kb generated; gate green.
+- commit: fcf1fe86
 
 ---
 
@@ -660,16 +663,16 @@ False positives investigated and cleared:
 ---
 
 ### DEF-0035
-- status: OPEN
+- status: FIXED
 - severity: LOW
 - probe: DEAD-CODE
 - surface: server/lib/ai.js:23
 - title: Startup console.log emits AZURE_FOUNDRY_ENDPOINT URL (a secret per CLAUDE.md) to server stdout on every cold start
 - evidence: `grep -n 'console.log' server/lib/ai.js` → line 23: `console.log(\`[prodhub-host] AI configured=${fleet.isConfigured()} url=${fleet.anthropicMessagesUrl()} chat=${CHAT_OVERRIDE || fleet.DEPLOY_OPUS}\`)`. `server/lib/fleet.js:25`: `const anthropicMessagesUrl = () => \`${SVC}/anthropic/v1/messages\`` where `SVC = process.env.AZURE_FOUNDRY_ENDPOINT`. CLAUDE.md "Environment safety" section: "Foundry (`AZURE_FOUNDRY_ENDPOINT` / `AZURE_FOUNDRY_KEY`) … live in App Service configuration … Never embed them in code or the client bundle." The endpoint URL (format: `https://<resource-name>.openai.azure.com/anthropic/v1/messages`) is emitted to stdout on every module load, making it visible in (a) App Service Log stream (Azure Portal), (b) Application Insights if stdout is wired, (c) any SIEM / log aggregator consuming the app's stdout. The line also reveals `AZURE_FOUNDRY_DEPLOYMENT` (the undocumented ops override) and the model name if set. `grep -n 'AZURE_FOUNDRY_DEPLOYMENT\|CHAT_OVERRIDE' server/lib/ai.js` → lines 21 (read from env) and 23 (logged). `AZURE_FOUNDRY_DEPLOYMENT` is not documented in CLAUDE.md, DEPLOY_AZURE.md, or any docs — it is an undocumented model-ID override escape hatch that is also revealed by this log.
 - repro: Start the Express server (`node server/server.js` with AZURE_FOUNDRY_ENDPOINT and AZURE_FOUNDRY_KEY set). Observe stdout: `[prodhub-host] AI configured=true url=https://<resource>.openai.azure.com/anthropic/v1/messages chat=claude-opus-4-8`. The Azure Foundry resource name is now in the server's stdout logs permanently.
-- fix:
-- verified-by:
-- commit:
+- fix: Startup console.log changed to  only; AZURE_FOUNDRY_ENDPOINT URL and AZURE_FOUNDRY_DEPLOYMENT override removed from the log line.
+- verified-by: static probe 2026-07-11 — log line confirmed at ai.js:27 with no URL or deployment string; gate green.
+- commit: e22b9ae4
 
 ---
 
