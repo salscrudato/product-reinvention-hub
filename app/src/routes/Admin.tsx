@@ -174,7 +174,7 @@ function UsersTab() {
     <div className="flex flex-col gap-3">
       <div className="flex items-center"><Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New user</Button></div>
       {users.length === 0 ? (
-        <EmptyState icon={<IconShield size={26} />} title="No gated users yet" description="Bootstrap admins (admin, sal.scrudato) are always available. Create tenant-gated users here — each with a username, password, role and company." />
+        <EmptyState icon={<IconShield size={26} />} title="No gated users yet" description="No tenant-gated users yet. Create them here — each with a username, password, role and company." />
       ) : (
         <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
           {users.map(u => (
