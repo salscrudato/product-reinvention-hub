@@ -161,19 +161,25 @@ router.post('/mutate', requireRole('EDITOR'), requireTenant, async (req, res) =>
 router.post('/mutateBatch', requireRole('EDITOR'), requireTenant, async (req, res) => {
   const payloads = (req.body || {}).payloads || []
   const actor = { uid: req.user.uid, name: req.user.name }
+  // Track chunk commits so that on failure the caller can identify partial-commit state (DEF-0013).
+  let committedChunks = 0; let totalChunks = 0
   try {
     const byPk = new Map()
     for (const p of payloads) { const b = await envelope(req.user.tenantId, p, actor)(); if (!byPk.has(b.pk)) byPk.set(b.pk, []); byPk.get(b.pk).push(b.ops) }
     for (const [pk, opsList] of byPk) {
       let chunk = []
-      for (const ops of opsList) { if (chunk.length + ops.length > BATCH_OPS) { await docs.items.batch(chunk, pk); chunk = [] } chunk.push(...ops) }
-      if (chunk.length) await docs.items.batch(chunk, pk)
+      for (const ops of opsList) {
+        if (chunk.length + ops.length > BATCH_OPS) { totalChunks++; await docs.items.batch(chunk, pk); committedChunks++; chunk = [] }
+        chunk.push(...ops)
+      }
+      if (chunk.length) { totalChunks++; await docs.items.batch(chunk, pk); committedChunks++ }
     }
     res.json({ ok: true, count: payloads.length })
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
-    res.status(500).json({ error: 'batch_failed', detail: String(e.message || e) })
+    const partial = committedChunks > 0 && committedChunks < totalChunks
+    res.status(500).json({ error: partial ? 'batch_partial' : 'batch_failed', committedChunks, totalChunks, detail: String(e.message || e) })
   }
 })
 
