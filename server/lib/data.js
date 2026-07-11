@@ -18,6 +18,7 @@ const { requireAuth, requireRole, requireTenant } = require('./auth')
 const router = express.Router()
 const MAX_LIST = 1000
 const BATCH_OPS = 96
+const FIELD_RE = /^[A-Za-z0-9_.]+$/ // property-name allow-list; prevents SQL structure-injection via where/orderBy fields
 
 const segs = (p) => String(p || '').split('/').filter(Boolean)
 const baseKey = (path) => { const s = segs(path); return (s[0] === 'products' && s[1]) ? s[1] : (s[0] || 'root') }
@@ -55,14 +56,20 @@ router.post('/list', requireAuth, requireTenant, async (req, res) => {
   const params = [{ name: '@coll', value: String(path || '') }, { name: '@tid', value: req.user.tenantId }]
   let where = "c.kind = 'entity' AND c.coll = @coll AND c.tenantId = @tid"
   const opMap = { '==': '=', '!=': '!=', '<': '<', '<=': '<=', '>': '>', '>=': '>=' }
-  ;(query?.where || []).forEach((w, i) => {
+  for (let i = 0; i < (query?.where || []).length; i++) {
+    const w = query.where[i]
+    if (!FIELD_RE.test(String(w.field || ''))) return res.status(400).json({ error: 'invalid_field', field: w.field })
     const p = `@w${i}`; params.push({ name: p, value: w.value })
     where += w.op === 'array-contains' ? ` AND ARRAY_CONTAINS(c.data.${w.field}, ${p})` : ` AND c.data.${w.field} ${opMap[w.op] || '='} ${p}`
-  })
+  }
   const limit = Math.min(query?.limit || MAX_LIST, MAX_LIST)
   // SELECT TOP caps Cosmos server-side so fetchAll() never loads more than limit rows into heap.
   let sql = `SELECT TOP ${limit} c.data, c.path FROM c WHERE ${where}`
-  ;(query?.orderBy || []).forEach((o, i) => { sql += `${i === 0 ? ' ORDER BY' : ','} c.data.${o.field} ${(o.dir || 'asc').toUpperCase()}` })
+  for (let i = 0; i < (query?.orderBy || []).length; i++) {
+    const o = query.orderBy[i]
+    if (!FIELD_RE.test(String(o.field || ''))) return res.status(400).json({ error: 'invalid_field', field: o.field })
+    sql += `${i === 0 ? ' ORDER BY' : ','} c.data.${o.field} ${(o.dir || 'asc').toUpperCase()}`
+  }
   const { resources } = await docs.items.query({ query: sql, parameters: params }, { maxItemCount: limit }).fetchAll()
   res.json({ data: resources.map((r) => ({ id: segs(r.path).at(-1), ...r.data })) })
 })
