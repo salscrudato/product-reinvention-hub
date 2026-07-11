@@ -24,7 +24,7 @@ const router = express.Router()
 const CHAT_OVERRIDE  = process.env.AZURE_FOUNDRY_DEPLOYMENT        || ''
 const HAIKU_OVERRIDE = process.env.AZURE_FOUNDRY_HAIKU_DEPLOYMENT  || ''
 
-console.log(`[prodhub-host] AI configured=${fleet.isConfigured()} url=${fleet.anthropicMessagesUrl()} chat=${CHAT_OVERRIDE || fleet.DEPLOY_OPUS}`)
+console.log(`[prodhub-host] AI configured=${fleet.isConfigured()}`)
 
 function sse(res) {
   res.setHeader('Content-Type', 'text/event-stream')
