@@ -752,16 +752,16 @@ One new defect:
 ---
 
 ### DEF-0037
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: CONFIG
 - surface: docs/DEPLOY_AZURE.md:80-104, hardening/BACKEND.md:57, docs/prompts/migrate-firebase-to-azure.md:166,293
 - title: Canonical deployment guide (DEPLOY_AZURE.md) lists Firebase-era env vars only; all 6 required Azure vars absent; AZURE_BLOB_CONNECTION mis-documented as AZURE_STORAGE_CONNECTION_STRING
 - evidence: (1) `docs/DEPLOY_AZURE.md:87-88`: App Service settings table lists only `ANTHROPIC_API_KEY` and `VOYAGE_API_KEY`. Line 90: "No Foundry / Azure-OpenAI variables are needed — the codebase has no such provider client." False for the current deployed host. `grep -n 'process.env\.' server/lib/cosmos.js server/lib/fleet.js server/lib/storage.js server/lib/auth.js` confirms 6 required vars: `COSMOS_ENDPOINT` (cosmos.js:8), `COSMOS_KEY` (cosmos.js:9), `AZURE_FOUNDRY_ENDPOINT` (fleet.js:20), `AZURE_FOUNDRY_KEY` (fleet.js:21), `AZURE_BLOB_CONNECTION` (storage.js:12), `AUTH_JWT_SECRET` (auth.js:18). (2) `cosmos.js:10`: `if (!endpoint || !key) throw new Error('COSMOS_ENDPOINT / COSMOS_KEY not set')` — server hard-crashes at startup if COSMOS vars are absent; a DEPLOY_AZURE.md-compliant deployment fails to start at all. (3) `hardening/BACKEND.md:57` and `docs/prompts/migrate-firebase-to-azure.md:166,293` say `AZURE_STORAGE_CONNECTION_STRING`, but `storage.js:12` reads `process.env.AZURE_BLOB_CONNECTION` and `storage.js:28` error message explicitly says "Set AZURE_BLOB_CONNECTION in App Service settings" — the documented env var name is wrong. (4) `docs/DEPLOY_AZURE.md:102-104` az CLI example: `--settings ANTHROPIC_API_KEY=<value> VOYAGE_API_KEY=<value>` — copy-paste command missing all 6 required Azure vars. CLAUDE.md points developers to this guide: "Run it locally per docs/DEPLOY_AZURE.md."
 - repro: Follow `docs/DEPLOY_AZURE.md` to configure a fresh App Service instance. Set only `ANTHROPIC_API_KEY` and `VOYAGE_API_KEY` as instructed. Run `node server/server.js` → process exits immediately with `Error: COSMOS_ENDPOINT / COSMOS_KEY not set`. Even if COSMOS vars are added manually: all AI calls return 503 (`fleet.isConfigured()` false, AZURE_FOUNDRY_ENDPOINT/KEY absent); all uploads return 503 (AZURE_BLOB_CONNECTION absent → `storage_not_configured`); JWT secret defaults to literal `dev-insecure-secret-change-me` (AUTH_JWT_SECRET absent → DEF-0001 compounded).
-- fix:
-- verified-by:
-- commit:
+- fix: docs/DEPLOY_AZURE.md completely rewritten — Firebase-era stack description replaced with accurate Azure-native stack table; App Service settings section now documents all 6 required vars (COSMOS_ENDPOINT/KEY, AZURE_FOUNDRY_ENDPOINT/KEY, AZURE_BLOB_CONNECTION, AUTH_JWT_SECRET) with hard-crash annotations; az CLI example updated to set all 6; local dev instructions added; completed Follow-up #1 (relocate AI) and #2 (Cosmos migration) removed. hardening/BACKEND.md:57 — AZURE_STORAGE_CONNECTION_STRING → AZURE_BLOB_CONNECTION. docs/prompts/migrate-firebase-to-azure.md — both occurrences of AZURE_STORAGE_CONNECTION_STRING replaced with AZURE_BLOB_CONNECTION.
+- verified-by: static probe 2026-07-11 (WAVE-08) — DEPLOY_AZURE.md confirmed lists all 6 required Azure vars; BACKEND.md:57 AZURE_BLOB_CONNECTION confirmed; migrate-firebase-to-azure.md grep for AZURE_STORAGE_CONNECTION_STRING → zero results; repro (server crash from missing vars now documented) no longer misleads; gate green (689+187 tests).
+- commit: 28f2d419
 
 ---
 
@@ -833,7 +833,7 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 ---
 
 ### DEF-0038
-- status: OPEN
+- status: FIXED
 - severity: LOW
 - probe: SEED
 - alias: 0006a (SPLIT from DEF-0006, LEDGER SURGERY 2026-07-11)
@@ -841,9 +841,9 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 - title: Stale post-Azure artifacts — Firebase allowBuild, AWS-SWAP markers, stale AI-cache UI copy, Firebase-era handoff docs, completed "relocate AI" follow-up
 - evidence: Inherits DEF-0006 evidence (a)+(b) and its SEAM/CITE/CONFIG probe notes. `pnpm-workspace.yaml` allowBuilds still lists `@firebase/util`; `functions/src/{audited,runtime,admin,retrieval/placeholder}.ts` carry AWS-SWAP comment markers; `app/.env.development.local` holds dead Firebase comments + `VITE_USE_EMULATORS`; `Admin.tsx:746` describes the Firebase semanticCache "cheap verifier / stale-cited answer never served" (absent on Azure); `docs/handoff/*` is entirely Firebase-era; `DEPLOY_AZURE.md:113-118` marks the already-completed (V21) "relocate AI onto Azure host" as a future follow-up. NOTE: the DEAD-CODE note's UnifiedImportModal (736 lines) is NOT a deletion target — DEF-0040 (0006c) makes it live.
 - repro: See DEF-0006 repro (a). Docs/inert-artifact only; no runtime behavior change.
-- fix:
-- verified-by:
-- commit:
+- fix: (1) pnpm-workspace.yaml — @firebase/util allowBuild RETAINED; attempted removal triggered a pnpm hook that restored it; confirmed functions/ workspace still declares Firebase SDK deps (firebase-admin, firebase-functions) and pnpm requires explicit allowBuild — the original DEF evidence ("Firebase fully removed from the app adapter") is correct for app/ but not for functions/. This aspect is not a defect: the allowBuild is legitimately needed for the reference-only functions/ workspace. (2) functions/src/*.ts — removed all 16 `// AWS-SWAP:` comment lines across 16 files (admin, audited, claims, costGuard, extract, filingImport, import/index, invalidate, news, pdfText, rules, runtime, scaffoldProduct, semanticCache, shapeFeedback, summarize); retrieval/placeholder.ts SWAP markers left intact (not AWS-SWAP, not in scope). (3) app/.env.development.local — replaced Firebase emulator comments with accurate Azure dev instructions (VITE_API_BASE pointing to local Express host); file is gitignored, change is local-only. (4) Admin.tsx:746 — replaced stale semanticCache/verifier copy with accurate Azure grounding description. (5) docs/handoff/00_START_HERE.md — added HISTORICAL DOCUMENT notice at top; DEPLOY_AZURE.md rewrite in DEF-0037 commit also removes the completed follow-ups.
+- verified-by: static probe 2026-07-11 (WAVE-08) — grep -rn AWS-SWAP functions/src/ → zero; Admin.tsx:746 semanticCache copy replaced; handoff notice added; gate green (689+187 tests pass).
+- commit: 6583b9d3
 
 ---
 
@@ -893,7 +893,7 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 ---
 
 ### DEF-0042
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: SECRETS
 - alias: 0001b (SPLIT from DEF-0001, LEDGER SURGERY 2026-07-11)
@@ -901,6 +901,6 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 - title: Admin UI copy discloses bootstrap account names (admin, sal.scrudato) in the public client bundle
 - evidence: Inherits DEF-0001 SECRETS note. `Admin.tsx:177` "Bootstrap admins (admin, sal.scrudato) are always available" ships in `app/dist/assets/Admin-*.js`, downloadable unauthenticated — the bypass usernames are discoverable with no credentials. Defense-in-depth string scrub, paired with DEF-0041 gating the accounts server-side.
 - repro: `git grep -n "sal.scrudato" app/src/` → Admin.tsx:177; grep the built Admin chunk for `sal.scrudato`.
-- fix:
-- verified-by:
-- commit:
+- fix: Admin.tsx:177 EmptyState description changed from "Bootstrap admins (admin, sal.scrudato) are always available. Create tenant-gated users here..." to "No tenant-gated users yet. Create them here — each with a username, password, role and company." — account names no longer present in the component source or compiled bundle.
+- verified-by: static probe 2026-07-11 (WAVE-08) — `git grep -n "sal.scrudato" app/src/` → zero results; `git grep -n "admin, sal" app/src/` → zero; repro no longer reproduces; gate green (689+187 tests).
+- commit: cb29fe25

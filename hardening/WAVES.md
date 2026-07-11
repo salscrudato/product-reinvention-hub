@@ -82,7 +82,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: none
 - verify: harden-probe DEF-0041,0039; /gate; harden-smoke run with AUTH_JWT_SECRET + bootstrap opt-in set (admin login still works); confirm changePassword survives a `node server/server.js` restart. DEPLOY NOTE (cross-ref DEF-0037 / WAVE-08): App Service must set AUTH_JWT_SECRET + the bootstrap opt-in.
 
-## WAVE-08  tier:T0  chains:YES  blocks-smoke:NO  status:PENDING
+## WAVE-08  tier:T0  chains:YES  blocks-smoke:NO  status:DONE
 - members: DEF-0038, DEF-0037, DEF-0042
 - root-cause: Documentation + inert artifacts drifted after the Firebase→Azure cutover — the canonical deploy guide lists Firebase-era secrets and omits all six required Azure env vars (mis-naming AZURE_BLOB_CONNECTION as AZURE_STORAGE_CONNECTION_STRING), Firebase/AWS-SWAP remnants linger, stale AI-cache/model UI copy remains, and Admin.tsx discloses bootstrap account names in the public bundle.
 - fix-approach: Correct DEPLOY_AZURE.md + hardening/BACKEND.md + migrate-firebase-to-azure.md to the six real Azure vars (COSMOS_ENDPOINT/KEY, AZURE_FOUNDRY_ENDPOINT/KEY, AZURE_BLOB_CONNECTION, AUTH_JWT_SECRET) and the az CLI example (DEF-0037); remove/annotate Firebase-era handoff docs and the completed "relocate AI" follow-up, drop the @firebase/util allowBuild and the AWS-SWAP comment markers, scrub the stale semanticCache/verifier UI copy (DEF-0038); scrub the bootstrap-account-name disclosure string from Admin.tsx:177 (DEF-0042). Docs/comment/config only — no runtime behavior change. functions/ edits are comment-only and don't affect WAVE-02's port reference. Do NOT remove UnifiedImportModal (WAVE-02 makes it live).
