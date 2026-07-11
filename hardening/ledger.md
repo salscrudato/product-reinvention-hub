@@ -1,13 +1,14 @@
-SUMMARY: OPEN: 31 | CRITICAL: 3 | HIGH: 12 | MEDIUM: 13 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 34 | CRITICAL: 3 | HIGH: 13 | MEDIUM: 14 | LOW: 4 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
 ---
 
 ### DEF-0001
-- status: OPEN
+- status: SPLIT
 - severity: CRITICAL
 - probe: SEED
+- note(LEDGER SURGERY 2026-07-11): grab-bag SPLIT (T1 auth code + T0 client string). Superseded by DEF-0041 (0001a — server/lib/auth.js: require AUTH_JWT_SECRET, gate always-on trivial BOOTSTRAP admins) and DEF-0042 (0001b — app/src/routes/Admin.tsx:177 discloses bootstrap account names in the public bundle). Status SPLIT is uncounted by convergence; the two children carry the OPEN counts. Original evidence + ROLE/SECRETS notes below remain the shared evidence base. See hardening/WAVES.md WAVE-07 (auth) + WAVE-08 (docs).
 - surface: server/lib/auth.js:18,25-28
 - title: Hardcoded BOOTSTRAP users with trivial passwords are always active; JWT secret defaults to insecure value
 - evidence: `server/lib/auth.js:18` — `const SECRET = process.env.AUTH_JWT_SECRET || 'dev-insecure-secret-change-me'`. Line 25-28 — `BOOTSTRAP` object always present with `admin`/`admin` and `sal.scrudato`/`sal.scrudato`, both ADMIN-role, both `tenants:'*'`. These bypass Cosmos auth and cannot be disabled at runtime. Note: the originally-documented `signInAsDevAdmin()` adapter method was removed in V18 (Azure cleanup); the equivalent production risk lives in the server auth module. `grep -n 'BOOTSTRAP\|dev-insecure' server/lib/auth.js`
@@ -78,9 +79,10 @@ SUMMARY: OPEN: 31 | CRITICAL: 3 | HIGH: 12 | MEDIUM: 13 | LOW: 3 | WONTFIX: 0 | 
 ---
 
 ### DEF-0006
-- status: OPEN
+- status: SPLIT
 - severity: MEDIUM
 - probe: SEED
+- note(LEDGER SURGERY 2026-07-11): grab-bag SPLIT (mixes a doc/dead-code cleanup, an auth-durability bug, and a feature port across three risk tiers). Superseded by DEF-0038 (0006a — stale docs/artifacts, T0), DEF-0039 (0006b — changePassword not persisted, MEDIUM), DEF-0040 (0006c — unifiedImport not ported / smoke blocker, HIGH). Status SPLIT is uncounted by convergence; the three children carry the OPEN counts. IMPORTANT: the DEAD-CODE note below (UnifiedImportModal 736 lines "dead") is NOT a deletion action — DEF-0040's port makes that client live; deleting it would break the ported feature. See hardening/WAVES.md WAVE-08 (0006a docs), WAVE-07 (0006b auth), WAVE-02 (0006c port).
 - surface: pnpm-workspace.yaml, functions/src/*.ts (AWS-SWAP markers), server/lib/auth.js, server/lib/ai.js
 - title: Stale migration artifacts: Firebase allowBuild, AWS-SWAP markers, unported unifiedImport handler, in-process changePassword
 - evidence: (a) `pnpm-workspace.yaml:allowBuilds` still lists `@firebase/util` — Firebase was fully removed from the app adapter. (b) `functions/src/audited.ts:14`, `runtime.ts:5`, `admin.ts:4`, `retrieval/placeholder.ts:12,16,21,27` — AWS-SWAP comment markers from an abandoned AWS migration. (c) `server/lib/ai.js` wildcard handler returns 501 for `unifiedImport`, `filingImport`, and all other non-ported Cloud Function names — the PDF/multi-format import path (ADR-0005) is broken on Azure. (d) `server/lib/auth.js:29` — `changePassword` stores overrides in an in-process `Map`; resets on server restart; never written to Cosmos. `grep -n 'AWS-SWAP\|firebase' pnpm-workspace.yaml functions/src/audited.ts`
@@ -782,3 +784,108 @@ New defects logged:
 00-CURRENT_CODEBASE.md: does not exist (glob returned empty) — nothing to audit.
 Gate remains green (only hardening/ledger.md modified).
 -->
+
+---
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+LEDGER SURGERY 2026-07-11 (hardening PLANNER — wave batch plan)
+
+DEF headers below use fresh NUMERIC ids (DEF-0038…0042) because convergence.mjs:35
+parses only `### DEF-\d+` — a letter-suffixed `### DEF-0006a` would be uncounted and
+would silently corrupt the SUMMARY line. The a/b/c labels the batch spec asks for are
+preserved as `- alias:` lines and in hardening/WAVES.md. Parents DEF-0001/DEF-0006 are
+set status:SPLIT (an invalid status → uncounted), so exactly the five children carry the
+OPEN counts.
+
+Causal-chain merges recorded here (full rationale in WAVES.md):
+  • WAVE-01 merges the grounding/citation chain DEF-0033/0034/0018/0019/0020 (+ same-file
+    0028 grounding read-cap, 0012 persistSummary envelope, 0035 log scrub). Root cause:
+    grounding() returns [] for EVERY query (seed corpus written without tenantId/tenant-pk;
+    mutate() writes no groundingChunks), so chat's [refId] chips are unvalidated fabrications.
+    Fixing the citation validator (0018) alone would make chat refuse/flag every legitimate
+    answer — the corpus (0033/0034) and the bracket format (0019) MUST land together.
+  • WAVE-13 (secrets) is blocked-on-human: DEF-0036 (rotate the live Foundry key + rewrite git
+    history) and DEF-0031 (history scrub of the ES output file) need out-of-code steps; the wave
+    still does the gitignore/removal in-repo. Exact commands for Sal are in WAVE-13.
+
+FALSE-POSITIVE re-confirmation (re-checked against current source during planning):
+  DEF-0007 (Firebase comments ≠ seam leak), DEF-0011 (devAdminBypass dead), DEF-0017
+  (admin/duckcreek/presence non-entity writes — confirmed against admin.js + data.js:133-143),
+  DEF-0024 (DEFAULT_LOB=PH / isHO routing intentional), DEF-0025 (GL canary $2,635 not $2,789),
+  DEF-0032 (pa- = PA element ids). All remain FALSE-POSITIVE — left closed.
+═══════════════════════════════════════════════════════════════════════════ -->
+
+---
+
+### DEF-0038
+- status: OPEN
+- severity: LOW
+- probe: SEED
+- alias: 0006a (SPLIT from DEF-0006, LEDGER SURGERY 2026-07-11)
+- surface: pnpm-workspace.yaml, functions/src/*.ts (AWS-SWAP markers), app/.env.development.local, app/src/routes/Admin.tsx:746, docs/handoff/*, docs/DEPLOY_AZURE.md:113-118, hardening/BACKEND.md
+- title: Stale post-Azure artifacts — Firebase allowBuild, AWS-SWAP markers, stale AI-cache UI copy, Firebase-era handoff docs, completed "relocate AI" follow-up
+- evidence: Inherits DEF-0006 evidence (a)+(b) and its SEAM/CITE/CONFIG probe notes. `pnpm-workspace.yaml` allowBuilds still lists `@firebase/util`; `functions/src/{audited,runtime,admin,retrieval/placeholder}.ts` carry AWS-SWAP comment markers; `app/.env.development.local` holds dead Firebase comments + `VITE_USE_EMULATORS`; `Admin.tsx:746` describes the Firebase semanticCache "cheap verifier / stale-cited answer never served" (absent on Azure); `docs/handoff/*` is entirely Firebase-era; `DEPLOY_AZURE.md:113-118` marks the already-completed (V21) "relocate AI onto Azure host" as a future follow-up. NOTE: the DEAD-CODE note's UnifiedImportModal (736 lines) is NOT a deletion target — DEF-0040 (0006c) makes it live.
+- repro: See DEF-0006 repro (a). Docs/inert-artifact only; no runtime behavior change.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0039
+- status: OPEN
+- severity: MEDIUM
+- probe: SEED
+- alias: 0006b (SPLIT from DEF-0006, LEDGER SURGERY 2026-07-11)
+- surface: server/lib/auth.js:29,105-110
+- title: changePassword stores overrides in an in-process Map; resets on restart; never persisted to Cosmos
+- evidence: Inherits DEF-0006 evidence (d). `auth.js:29` `const overrides = new Map()`; `changePassword()` (105-110) `overrides.set(req.user.uid, next)` — never written to the Cosmos `__system__` user store. On restart the override is lost and login reverts to the original password.
+- repro: See DEF-0006 repro (c) — change password via UI, restart `node server/server.js`, login with the new password fails.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0040
+- status: OPEN
+- severity: HIGH
+- probe: SEED
+- alias: 0006c (SPLIT from DEF-0006, LEDGER SURGERY 2026-07-11)
+- surface: server/lib/ai.js:243-249, functions/src/ (reference implementation)
+- title: unifiedImport (filing import, ADR-0005) not ported to Azure — POST /api/ai/unifiedImport returns 501; blocks the golden-path smoke
+- evidence: Inherits DEF-0006 evidence (c). `ai.js:248` wildcard returns 501 `ai_handler_not_ported` for every name except chat/summarizeProduct; the PDF/multi-format filing importer (NJ Lemonade HO, ADR-0005) is non-functional and `UnifiedImportModal` ships against a dead endpoint. `hardening/smoke.mjs:260-268` fails on this exact 501 — golden-path blocker. Severity raised MEDIUM→HIGH on split: a documented core ingestion mechanism is fully broken on the deployed host.
+- repro: POST /api/ai/unifiedImport → `{"error":"ai_handler_not_ported","name":"unifiedImport"}`; `hardening/smoke.mjs` exits non-zero at the HO filing-import step.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0041
+- status: OPEN
+- severity: CRITICAL
+- probe: SEED
+- alias: 0001a (SPLIT from DEF-0001, LEDGER SURGERY 2026-07-11)
+- surface: server/lib/auth.js:18,25-28
+- title: Insecure default AUTH_JWT_SECRET + always-on trivial-password BOOTSTRAP admins (server-side)
+- evidence: Inherits DEF-0001 evidence + its ROLE/SECRETS notes. `auth.js:18` `SECRET = process.env.AUTH_JWT_SECRET || 'dev-insecure-secret-change-me'`; `auth.js:25-28` BOOTSTRAP `admin`/`admin` + `sal.scrudato`/`sal.scrudato` always present (ADMIN, `tenants:'*'`), un-disableable at runtime. SMOKE COUPLING: `hardening/smoke.mjs:37-38,202-210` authenticates as `admin`/`admin`; the fix must preserve an env-gated bootstrap path (default OFF in prod, ON for LOCAL/smoke) so the smoke still authenticates.
+- repro: See DEF-0001 repro — `curl /api/auth/login` admin/admin returns a valid ADMIN JWT on any deploy where AUTH_JWT_SECRET is unset.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0042
+- status: OPEN
+- severity: MEDIUM
+- probe: SECRETS
+- alias: 0001b (SPLIT from DEF-0001, LEDGER SURGERY 2026-07-11)
+- surface: app/src/routes/Admin.tsx:177
+- title: Admin UI copy discloses bootstrap account names (admin, sal.scrudato) in the public client bundle
+- evidence: Inherits DEF-0001 SECRETS note. `Admin.tsx:177` "Bootstrap admins (admin, sal.scrudato) are always available" ships in `app/dist/assets/Admin-*.js`, downloadable unauthenticated — the bypass usernames are discoverable with no credentials. Defense-in-depth string scrub, paired with DEF-0041 gating the accounts server-side.
+- repro: `git grep -n "sal.scrudato" app/src/` → Admin.tsx:177; grep the built Admin chunk for `sal.scrudato`.
+- fix:
+- verified-by:
+- commit:
