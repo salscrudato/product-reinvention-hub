@@ -203,7 +203,7 @@ router.post('/setNewsPins', requireRole('EDITOR'), requireTenant, async (req, re
   res.json({ ok: true })
 })
 
-router.post('/presence/join', requireAuth, requireTenant, async (req, res) => {
+router.post('/presence/join', requireRole('EDITOR'), requireTenant, async (req, res) => {
   const { pid } = req.body || {}; const tid = req.user.tenantId
   const { presence } = require('./cosmos')
   await presence.items.upsert({ id: `${tid}:${pid}:${req.user.uid}`, pid: `${tid}:${pid}`, uid: req.user.uid, name: req.user.name, at: Date.now() })
