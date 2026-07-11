@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 20 | CRITICAL: 2 | HIGH: 8 | MEDIUM: 9 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 4
+SUMMARY: OPEN: 21 | CRITICAL: 2 | HIGH: 8 | MEDIUM: 10 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 5
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -392,4 +392,48 @@ all confirmed line-agnostic or correctly branched. Three real HO-only hard-codin
 (2) News.tsx LOB_KEYWORDS has no GL entry, BASE_NEWS_INSTRUCTION names only HO+PA [DEF-0022, MEDIUM];
 (3) duckcreek.test.ts matrix covers only PH+PA, GL export path untested, lob assertion biased [DEF-0023, MEDIUM].
 DEF-0024 clears DEFAULT_LOB=PH_LOB and isHO routing as intentional/documented.
+-->
+
+---
+
+### DEF-0025
+- status: FALSE-POSITIVE
+- severity: N/A
+- probe: RATING-CANARY
+- surface: shared/src/rating/generalLiability.evaluator.test.ts:27, hardening/BACKEND.md:107-110
+- title: FP — probe spec claims GL canary = $2,789; actual code asserts exactly $2,635
+- evidence: Every authoritative source locks GL at $2,635, not $2,789. `generalLiability.evaluator.test.ts:27` — `expect(result.finalPremium).toBe(2635)` (strict equality). `workedExample.canary.test.ts:31` — `GL: { canary: 2635, ... }` iterated with `expect(result.finalPremium).toBe(canary)`. `evaluator.ts:14` comment — "the $1,528 (HO-3), $1,002 (Personal Auto) and $2,635 (GL) canaries are untouched". `generalLiability.ts:8` header — "The $2,635 canary is locked by generalLiability.evaluator.test.ts." `hardening/BACKEND.md:107-110` — already documents the discrepancy: "The harness specification for this session cites GL canary 'expected 2789'. The actual authoritative value, per `shared/src/rating/generalLiability.evaluator.test.ts:27`, is $2,635. GROUND_TRUTH.md line 592 explicitly states: 'the GL canary is $2,635 (see V15), not $2,789.'" Confirm: `grep -n 'toBe(263' shared/src/rating/generalLiability.evaluator.test.ts` → `27:    expect(result.finalPremium).toBe(2635)`. `grep -n '2789\|2,789' shared/ -r` → zero results in any test or seed file.
+- repro: N/A — not a code defect. The probe specification contained a stale canary value ($2,789); the codebase is correct.
+
+---
+
+### DEF-0026
+- status: OPEN
+- severity: MEDIUM
+- probe: RATING-CANARY
+- surface: shared/src/rating/evaluator.creditFloor.test.ts:50
+- title: Credit-cap test uses toBeCloseTo for finalPremium instead of toBe, masking non-integer premium on creditFloor path
+- evidence: `evaluator.creditFloor.test.ts:50` — `expect(r.finalPremium).toBeCloseTo(800, 6)`. The program under test (`makeCreditProgram(0.70)`) ends with `{ id: 's6', op: 'MIN_FLOOR', source: { type: 'CONST', value: 500 }, roundTo: 0 }` (line 28). After a `roundTo: 0` MIN_FLOOR step the running total is always a whole-dollar integer: the `__credit_cap__` adjustment fires after the last credit step (s4, order 4) and BEFORE s5 (flat add) and s6 (MIN_FLOOR + roundTo:0), so the final `running` is `Math.round(≈800) = 800` exactly. Using `.toBeCloseTo(800, 6)` means the test PASSES for any `finalPremium` within ±0.0000005 of 800 — a non-integer like 800.0001 passes silently. Contrast: the no-creditFloor path (line 39) uses `.toBe(748)`; the gated-credits path (line 75) uses `.toBe(910)`; the filing-importer canary (`functions/src/filingImport.test.ts:71`) uses `.toBe(1281)` for a creditFloor=0.5 program with a trailing MIN_FLOOR. All three demonstrate that `.toBe()` is correct and achievable for final premiums from programs with `roundTo: 0` MIN_FLOOR termination. Secondary risk: if a PM-authored or filing-imported program places credit steps AFTER the MIN_FLOOR step in the step ordering (e.g., credit at order 10, MIN_FLOOR at order 5), the credit cap fires after MIN_FLOOR and `finalPremium` is a non-integer float. The weak assertion would not detect this regression. `grep -n 'toBeCloseTo' shared/src/rating/evaluator.creditFloor.test.ts` — line 50 is the sole premium assertion using approximate equality; the cap-mechanism assertion at line 48 (`cap.factorOrAmount`) is correctly approximate (0.70/0.648 is irrational in IEEE 754). `grep -n 'toBeCloseTo.*800\|toBe.*800' shared/src/rating/evaluator.creditFloor.test.ts` confirms the mismatch.
+- repro: In `evaluator.creditFloor.test.ts`, change line 50 from `expect(r.finalPremium).toBeCloseTo(800, 6)` to `expect(r.finalPremium).toBe(800)`. Run `pnpm --filter @pf/shared test evaluator.creditFloor`. If the test PASSES, the assertion is simply too loose (a weakness, not a runtime error). If it FAILS, the credit cap path is leaving a non-integer finalPremium even after `roundTo: 0`, confirming active float drift.
+- fix:
+- verified-by:
+- commit:
+- note(RATING-CANARY probe 2026-07-11 on DEF-0004): The "silent corruption of stored premium" concern is PROVED FALSE for the current architecture. `grep -r 'finalPremium' app/src/ shared/src/ server/ --include="*.ts" --include="*.tsx" --include="*.js"` — every consumer of `finalPremium` either displays it in the UI (ProductPricing.tsx, HomeCheck.tsx, TaskLensPanel.tsx) or uses it for a transient SERFF rate-exhibit computation returned to the browser as HTTP JSON. No `adapter.db.mutate()` or `adapter.db.mutateBatch()` call is ever passed a `finalPremium` value; no rating output is stored to Cosmos. The float-money risk (DEF-0004) is therefore a future-state concern (e.g., if a quote-binding path were added) rather than a live data-corruption path.
+
+---
+
+<!-- RATING-CANARY probe summary 2026-07-11:
+HO-3 $1,528 canary: confirmed byte-exact via `.toBe(1528)` in evaluator.test.ts:16,
+evaluator.creditFloor.test.ts:89, seedIntegrity.test.ts:31, workedExample.canary.test.ts:49,
+rtGrid.test.ts:57, bundle.test.ts:401. Six independent exact assertions. No drift.
+GL canary: code asserts $2,635 exactly (`.toBe(2635)` in generalLiability.evaluator.test.ts:27,
+workedExample.canary.test.ts:49, evaluator.creditFloor.test.ts:99). Probe spec "$2,789" is stale
+— logged as FALSE-POSITIVE DEF-0025.
+Money representation: no integer-cent encoding anywhere; all float dollars (DEF-0004 confirmed).
+Intermediate HO-3 steps use `.toBeCloseTo()` (s5, s8a, s9, s10a, s10b); final s11 uses `.toBe(1528)`.
+Stored premium corruption: FALSE — finalPremium is never written to Cosmos; float-money risk
+is display-only and SERFF exhibit-only in the current architecture.
+Credit cap path: evaluator.creditFloor.test.ts:50 uses toBeCloseTo for final premium even though
+a roundTo:0 MIN_FLOOR terminates the program — logged as DEF-0026 MEDIUM (weak test assertion).
+All existing canary tests pass on Node 24 per full gate run 2026-07-11 (59+17 test files, 685+187 tests).
 -->
