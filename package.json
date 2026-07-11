@@ -13,7 +13,10 @@
     "build:fleet": "pnpm dlx esbuild@0.25.5 shared/src/ai/api-server.ts --bundle --format=cjs --platform=node --target=node20 --outfile=server/lib/fleet-shared.cjs",
     "build": "pnpm build:duckcreek && pnpm build:serff && pnpm build:fleet && pnpm --filter app build",
     "eval": "tsx functions/eval/runner.ts",
-    "hygiene": "pnpm dlx knip && pnpm dlx depcheck ./app && pnpm dlx depcheck ./functions && pnpm dlx depcheck ./shared"
+    "hygiene": "pnpm dlx knip && pnpm dlx depcheck ./app && pnpm dlx depcheck ./functions && pnpm dlx depcheck ./shared",
+    "harden:check": "node hardening/convergence.mjs",
+    "harden:smoke:local": "node hardening/smoke.mjs",
+    "harden:smoke:live": "node hardening/smoke.mjs"
   },
   "devDependencies": {
     "jsdom": "^25.0.1",
