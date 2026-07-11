@@ -110,7 +110,27 @@ function me(req, res) { return res.json({ user: req.user }) }
 async function changePassword(req, res) {
   const next = String((req.body || {}).password ?? '')
   if (next.length < 3) return res.status(400).json({ error: 'password_too_short' })
-  overrides.set(req.user.uid, next)
+  // Persist to Cosmos so the change survives server restart.
+  const docs = systemContainer()
+  if (docs) {
+    try {
+      const u = await findUser(req.user.uid)
+      await docs.items.upsert({
+        id: `user:${req.user.uid}`,
+        pk: '__system__',
+        kind: 'user',
+        data: {
+          username: req.user.uid,
+          email: u?.email || req.user.email || null,
+          name: u?.name || req.user.name || req.user.uid,
+          role: u?.role || req.user.role,
+          tenants: u?.tenants ?? (req.user.tenantId ? [req.user.tenantId] : []),
+          password: next,
+        },
+      })
+    } catch { return res.status(500).json({ error: 'persist_failed' }) }
+  }
+  overrides.set(req.user.uid, next) // same-session cache
   return res.json({ ok: true })
 }
 
