@@ -61,7 +61,13 @@
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
 
   --radius-card: 14px;
+  /* Spring easing + motion duration scale — use these in transition/animation declarations.
+     The global prefers-reduced-motion guard in this file collapses all animation/transition
+     durations to 0.01ms; no per-component guard needed. */
   --ease-spring: cubic-bezier(.22,.61,.36,1);
+  --duration-fast: 150ms;    /* hovers, button press feedback */
+  --duration-base: 220ms;    /* drawers, expands, toasts */
+  --duration-slow: 350ms;    /* page-level slides, hero transitions */
 
   --shadow-card:       0 1px 2px rgba(19,19,26,.04), 0 14px 34px rgba(139,31,224,.06);
   --shadow-card-hover: 0 2px 4px rgba(19,19,26,.06), 0 20px 48px rgba(139,31,224,.13);

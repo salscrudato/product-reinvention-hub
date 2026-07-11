@@ -538,7 +538,22 @@ export default function ProductRules() {
   )
   const formOptions = useMemo(() => forms.map(f => f.number), [forms])
 
-  if (loading) return <Skeleton className="h-64 rounded-[14px]" />
+  if (loading && rules.length === 0) {
+    return (
+      <div className="flex flex-col gap-3">
+        {[1,2,3,4].map(i => (
+          <div key={i} className="bg-surface rounded-[12px] p-4 flex items-start gap-3" style={{ border: '1px solid var(--color-border)' }}>
+            <Skeleton className="w-5 h-5 rounded shrink-0 mt-0.5" />
+            <div className="flex-1 flex flex-col gap-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">

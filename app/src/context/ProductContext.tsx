@@ -1,6 +1,6 @@
 // All realtime data for a product workspace, subscribed once at the shell level.
 // Every tab reads from this context rather than subscribing independently.
-import { createContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { adapter } from '../lib/backend'
 import type {
   Product, Coverage, Rule, FormRule, RatingProgram,
@@ -119,14 +119,18 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
     return () => { unsubs.forEach(u => u()); setLoaded(0) }
   }, [pid, reloadKey])
 
+  const value = useMemo(() => ({
+    pid, product, coverages, rules, formRules, ratingProgram,
+    forms, ldTables, rtTables, versions, comments,
+    loading: loaded < TOTAL_SUBS,
+    error,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    retry: () => { setLoaded(0); setError(false); setReloadKey(k => k + 1) },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [pid, product, coverages, rules, formRules, ratingProgram, forms, ldTables, rtTables, versions, comments, loaded, error])
+
   return (
-    <Ctx value={{
-      pid, product, coverages, rules, formRules, ratingProgram,
-      forms, ldTables, rtTables, versions, comments,
-      loading: loaded < TOTAL_SUBS,
-      error,
-      retry: () => { setLoaded(0); setError(false); setReloadKey(k => k + 1) },
-    }}>
+    <Ctx value={value}>
       {children}
     </Ctx>
   )

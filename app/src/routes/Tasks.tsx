@@ -136,13 +136,19 @@ export default function Tasks() {
 
   async function toggleDone(task: TaskDoc) {
     if (!actor) return
-    if (!task.done) setCompletedOpen(true)
+    const nowDone = !task.done
+    if (nowDone) setCompletedOpen(true)
+    // Optimistic update — flip the task immediately so the board feels instant.
+    // pokeAll() after a successful mutate() will reconcile with the server value.
+    setTasks(prev => prev ? prev.map(t => t.id === task.id ? { ...t, ...doneFields(nowDone) } : t) : prev)
     try {
       await adapter.db.mutate({
-        op: 'update', path: `tasks/${task.id}`, data: doneFields(!task.done),
+        op: 'update', path: `tasks/${task.id}`, data: doneFields(nowDone),
         entityType: 'task', productId: task.productId, actor, expectedRev: task.rev,
       })
     } catch (err) {
+      // Roll back the optimistic flip on failure.
+      setTasks(prev => prev ? prev.map(t => t.id === task.id ? { ...t, done: task.done } : t) : prev)
       if (err instanceof MutationConflictError) conflictToast({})
       else toast.error('Update failed')
     }

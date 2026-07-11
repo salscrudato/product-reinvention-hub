@@ -241,7 +241,24 @@ export default function ProductPricing() {
     .filter(([, v]) => typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')
     .map(([k]) => ({ key: k, label: humanize(k) })), [inputs])
 
-  if (loading) return <div className="grid grid-cols-1 lg:grid-cols-2 gap-5"><Skeleton className="h-[500px]" /><Skeleton className="h-[500px]" /></div>
+  if (loading && !ratingProgram) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-10 w-48" />
+        <div className="flex flex-col gap-3">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="bg-surface rounded-[12px] p-4 flex items-center gap-3" style={{ border: '1px solid var(--color-border)' }}>
+              <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+              <div className="flex-1 flex flex-col gap-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5">

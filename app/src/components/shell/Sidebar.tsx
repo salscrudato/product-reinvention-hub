@@ -3,6 +3,7 @@
 // with a gradient rail. Collapsed → icon-only with tooltips.
 import { NavLink, useLocation } from 'react-router-dom'
 import { Tooltip, Logo } from '../ui'
+import { prefetchRoute } from '../../lib/prefetch'
 import {
   IconHome, IconProduct, IconSparkle, IconExplorer, IconTasks,
   IconNews, IconChart, IconBook, IconChat, IconChevronLeft,
@@ -34,6 +35,19 @@ const SECTIONS = [
 
 interface SidebarProps { collapsed: boolean; onToggle: () => void }
 
+const ROUTE_IMPORTS: Record<string, () => Promise<unknown>> = {
+  '/app':            () => import('../../routes/Home'),
+  '/app/products':   () => import('../../routes/Products'),
+  '/app/builder':    () => import('../../routes/Builder'),
+  '/app/explorer':   () => import('../../routes/Explorer'),
+  '/app/tasks':      () => import('../../routes/Tasks'),
+  '/app/news':       () => import('../../routes/News'),
+  '/app/claims':     () => import('../../routes/Claims'),
+  '/app/dictionary': () => import('../../routes/Dictionary'),
+  '/app/feedback':   () => import('../../routes/Feedback'),
+  '/app/admin':      () => import('../../routes/Admin'),
+}
+
 function Item({ item, collapsed, active }: { item: NavItem; collapsed: boolean; active: boolean }) {
   const Icon = item.icon
   return (
@@ -42,6 +56,7 @@ function Item({ item, collapsed, active }: { item: NavItem; collapsed: boolean; 
         to={item.to}
         end={item.exact}
         aria-current={active ? 'page' : undefined}
+        onMouseEnter={() => { const fn = ROUTE_IMPORTS[item.to]; if (fn) prefetchRoute(item.to, fn) }}
         className={`relative flex items-center gap-3 mx-2 px-2.5 py-2 rounded-[10px] text-sm transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
           ${active ? 'bg-accent-soft text-accent font-medium' : 'text-dim hover:bg-raised hover:text-text'} ${collapsed ? 'justify-center' : ''}`}
       >

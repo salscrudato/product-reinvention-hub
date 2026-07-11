@@ -12,6 +12,7 @@ import { adapter, MutationConflictError } from '../lib/backend'
 import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
 import { useLiveCollection } from '../lib/useLiveCollection'
+import { useDebounce } from '../lib/useDebounce'
 import { useDictionaryCorpus } from '../lib/useDictionaryCorpus'
 import { Badge, Button, Input, Dialog, Skeleton, EmptyState, RefChip, LifecyclePill, ReviewPill } from '../components/ui'
 import { computeDictionaryUsage } from '@pf/shared'
@@ -57,6 +58,7 @@ export default function Dictionary() {
   const { corpus, status: corpusStatus } = useDictionaryCorpus()
 
   const [query, setQuery]     = useState('')
+  const debouncedQuery = useDebounce(query, 200)
   const [typeFilter, setTypeFilter] = useState<DynamicFieldType | ''>('')
   const [draft, setDraft]     = useState<Draft | null>(null)
   const [saving, setSaving]   = useState(false)
@@ -78,12 +80,12 @@ export default function Dictionary() {
   const visible = useMemo(() => {
     let list = entries
     if (typeFilter) list = list.filter(e => e.type === typeFilter)
-    if (query) {
-      const q = query.toLowerCase()
+    if (debouncedQuery) {
+      const q = debouncedQuery.toLowerCase()
       list = list.filter(e => `${e.name} ${e.refId ?? ''} ${e.description} ${(e.tags ?? []).join(' ')} ${(e.aliases ?? []).join(' ')}`.toLowerCase().includes(q))
     }
     return [...list].sort((a, b) => a.name.localeCompare(b.name))
-  }, [entries, query, typeFilter])
+  }, [entries, debouncedQuery, typeFilter])
 
   // Once entries are loaded, scroll the cited term into view and flash it.
   useEffect(() => {

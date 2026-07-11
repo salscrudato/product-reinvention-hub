@@ -6,7 +6,7 @@ import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
-import { Button } from '../../components/ui'
+import { Button, Skeleton } from '../../components/ui'
 import { StateTileMap } from '../../components/product/StateTileMap'
 import { resolveLob } from '@pf/shared'
 
@@ -78,7 +78,22 @@ export default function ProductStates() {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'states-map.svg'; a.click()
   }
 
-  if (loading) return <div className="h-64 bg-raised animate-pulse rounded-[14px]" />
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-56 rounded-[12px]" />
+        <div className="flex flex-col gap-2">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-16 ml-auto" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5">

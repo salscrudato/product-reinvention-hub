@@ -15,6 +15,7 @@
 
 const path = require('path')
 const express = require('express')
+const compression = require('compression')
 const auth = require('./lib/auth')
 
 const app = express()
@@ -22,6 +23,7 @@ const PORT = process.env.PORT || 8080
 const PUBLIC = path.join(__dirname, 'public')
 
 app.disable('x-powered-by')
+app.use(compression())
 app.use(express.json({ limit: '25mb' }))
 app.use(auth.attachUser)
 

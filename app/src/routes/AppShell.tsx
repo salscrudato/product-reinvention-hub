@@ -69,7 +69,7 @@ export default function AppShell() {
             </div>
           )}
 
-          <main className="flex-1 overflow-y-auto p-6">
+          <main className="flex-1 overflow-y-auto p-6" style={{ viewTransitionName: 'main-content' }}>
             {/* key on top-level segment so page-in fires on section switches, not tab changes */}
             <div key={topSegment} className="page-in h-full">
               <Outlet />

@@ -183,11 +183,20 @@ export default function ProductCoverages() {
   const hubProps = (cov: WithId<Coverage>) => ({ cov, canEdit, onTile, onEdit: setEditCov, onDelete })
   const activeFilterCount = filters.activeChips.length
 
-  if (loading) return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-44 rounded-[16px]" />)}
-    </div>
-  )
+  if (loading && coverages.length === 0) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1,2,3,4,5,6].map(i => (
+          <div key={i} className="bg-surface rounded-[14px] p-5 flex flex-col gap-3" style={{ border: '1px solid var(--color-border)' }}>
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-2/3" />
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">

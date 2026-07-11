@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { usePortfolioInventory } from '../lib/usePortfolioInventory'
+import { useDebounce } from '../lib/useDebounce'
 import { Button, Skeleton, EmptyState } from '../components/ui'
 import { IconPlus, IconDownload, IconProduct, IconSearch, IconCards, IconLayers, IconRefresh } from '../components/ui/icons'
 import { ProductCard } from '../components/product/ProductCard'
@@ -64,6 +65,7 @@ export default function Products() {
   const [loadError, setLoadError] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [query,    setQuery]    = useState('')
+  const debouncedQuery = useDebounce(query, 200)
   const [seg,      setSeg]      = useState<SegmentSelection>({})
   const [exporting, setExporting] = useState(false)
   const [view, setView] = useState<ProductView>(readView)
@@ -123,8 +125,8 @@ export default function Products() {
   const searchable = useMemo(() => segFiltered.map(p => ({ p, text: searchTextFor(p, axes) })), [segFiltered, axes])
   const fuse = useMemo(() => new Fuse(searchable, { keys: ['text'], threshold: 0.4, ignoreLocation: true }), [searchable])
   const visible = useMemo(
-    () => (query.trim() ? fuse.search(query).map(r => r.item.p) : segFiltered),
-    [query, fuse, segFiltered],
+    () => (debouncedQuery.trim() ? fuse.search(debouncedQuery).map(r => r.item.p) : segFiltered),
+    [debouncedQuery, fuse, segFiltered],
   )
 
   // Portfolio at-a-glance KPIs for the hero stat line.

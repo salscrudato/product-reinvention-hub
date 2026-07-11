@@ -4,7 +4,7 @@
 // restore any versioned entity to a prior snapshot. Entries are the `versions` written
 // atomically by adapter.db.mutate() (entity + audit + version, one transaction), scoped
 // to this product via productId.
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { IconRestore, IconChevronDown, IconChevronRight, IconSearch } from '../ui/icons'
 import { Drawer } from '../ui/Drawer'
@@ -110,6 +110,10 @@ export function HistoryDrawer({ onClose }: Props) {
   const [confirmRestoreId, setConfirmRestoreId] = useState<string | null>(null)   // A5: inline restore confirm (no native window.confirm)
   const [filter, setFilter] = useState<string>('all')
   const [q, setQ] = useState('')
+  const PAGE = 50
+  const [limit, setLimit] = useState(PAGE)
+  // Reset pagination window when the filter or search query changes.
+  useEffect(() => { setLimit(PAGE) }, [filter, q])
 
   // The whole product's change history (versions are already scoped to this product by
   // productId in ProductContext), newest first.
@@ -197,7 +201,7 @@ export function HistoryDrawer({ onClose }: Props) {
           <p className="text-sm text-faint">No changes match your search.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {shown.map(v => {
+            {shown.slice(0, limit).map(v => {
               const action = inferAction(v)
               const am = ACTION_META[action]
               const em = ENTITY_META[v.entityType] ?? { label: v.entityType, color: 'default' as const }
@@ -262,6 +266,14 @@ export function HistoryDrawer({ onClose }: Props) {
                 </div>
               )
             })}
+            {shown.length > limit && (
+              <button
+                onClick={() => setLimit(l => l + PAGE)}
+                className="w-full py-2 text-sm text-dim hover:text-text transition-colors rounded-[10px] hover:bg-raised focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+              >
+                Load {Math.min(PAGE, shown.length - limit)} more… ({shown.length - limit} remaining)
+              </button>
+            )}
           </div>
         )}
       </div>
