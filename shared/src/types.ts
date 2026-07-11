@@ -314,11 +314,16 @@ export interface Version {
 export interface AuditEvent {
   actor:        { uid: string; name: string }
   action:       'create' | 'update' | 'delete' | 'export-duckcreek'
+              | 'api-duckcreek-generate' | 'api-duckcreek-generate-rejected'
+              | 'api-duckcreek-validate' | 'api-duckcreek-download'
   entityType:   string
   entityPath:   string
   productId?:   string
-  // export-duckcreek only: the manuScriptID that was emitted in the downloaded file.
+  // export-duckcreek + api-duckcreek-* only: the manuScriptID in the generated file.
   manuScriptID?: string
+  // api-duckcreek-* only: bundle identity + schema version.
+  bundleId?:     string
+  schemaVersion?: string
   at:           unknown
 }
 

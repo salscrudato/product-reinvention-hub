@@ -191,3 +191,90 @@ The NJ Lemonade filing-import product is **not** golden-snapshotted: it is an im
 produced by `reconcileFiling()` (`shared/src/insurance/filing/`), not a seeded standing
 `DomainProductBundle`, so there is no PDM to serialize. The three seeded lines (Personal Home,
 Personal Auto, General Liability) are the snapshotted set.
+
+---
+
+## REST API — Duck Creek Author export endpoints (v1)
+
+Three endpoints are mounted at `/api/duckcreek/v1` in `server/server.js` by `server/lib/duckcreek.js`:
+
+| Method | Path | Role required | What it does |
+|---|---|---|---|
+| `POST` | `/api/duckcreek/v1/author/generate` | EDITOR+ | Load product from Cosmos, build PDM, serialize, validate (fail-closed). On pass: store bundle (1-hour TTL, in-memory), emit audit event, return bundleId. On fail: emit rejection audit, return 422 with full report. |
+| `POST` | `/api/duckcreek/v1/author/validate` | EDITOR+ | Same build + validate pass, but no bundle stored. Returns the full `ValidationReport`. |
+| `GET`  | `/api/duckcreek/v1/author/bundle/:id/download` | EDITOR+ | Stream the stored XML as `application/xml`. Emits a download audit event. Returns 404 if the bundle has expired or doesn't exist. |
+
+Every bundle is stamped with:
+- `schemaVersion: "1.0.0"` — the API schema version.
+- `manuScriptID` — derived deterministically from the product's LOB and the mapping version
+  (e.g. `PCG_HO_Admitted_ViewModel_US_1_0_0_0`), consistent with the existing `export-duckcreek`
+  audit events.
+
+**Authentication (layered)**
+1. *Outer — Microsoft Entra ID:* Configure App Service authentication V2 with single-tenant Entra
+   ID, audience `api://<AZURE_ENTRA_CLIENT_ID>`, scope `user_impersonation`. App Service validates
+   the Bearer token and injects `X-MS-CLIENT-PRINCIPAL-ID` before requests reach Express.
+2. *Inner — platform JWT:* `auth.requireAuth + requireRole('EDITOR') + requireTenant` enforces the
+   EDITOR+ role and tenant scoping in-app. VIEWER is explicitly blocked (CLAUDE.md binding invariant).
+
+**Rate limiting** — token-bucket per platform UID (10 tokens/min by default).
+- `DC_RATE_LIMIT_CAP` (default 10): bucket capacity.
+- `DC_RATE_LIMIT_RPS` (default 0.1667): refill rate in tokens/second.
+- Returns HTTP 429 with `Retry-After` on breach.
+- Azure WAF / API Management is the production ceiling; the token-bucket is the in-app guard.
+
+**Audit events** — written to Cosmos (`kind: 'duckcreek_audit'`) for every call.
+Actions: `api-duckcreek-generate`, `api-duckcreek-generate-rejected`, `api-duckcreek-validate`,
+`api-duckcreek-download`. Each includes `actor`, `productRefId`, `bundleId`, `manuScriptID`,
+`schemaVersion`. These are append-only; not keyed by rev, so they never conflict with mutations.
+
+---
+
+## Conventions module — the single file to update when reconciling against a real Author sample
+
+**Q: When a real Duck Creek Author sample arrives and its element names differ from our
+assumptions, how many files must change?**
+
+**A: One source file.** `shared/src/duckcreek/mapping.ts` — specifically the
+`DEFAULT_DUCKCREEK_MAPPING` object literal — is the single conventions module for every literal
+element name, attribute name, id-prefix letter, namespace URI, manuScriptID token, and lobToken
+used by the serializer.
+
+Evidence:
+- `serialize.ts` accesses all names via `mapping.elements.*` and `mapping.attrs.*` — zero literal
+  strings in element-write code.
+- `validate.ts` looks up elements via `E[key]` keyed against the same mapping — zero hard-coded
+  tag names.
+- `server/lib/duckcreek.js` calls `dc.*` functions (from the compiled bundle) — zero Duck Creek
+  vocabulary in server code.
+- Golden snapshot `.xml` files in `shared/src/duckcreek/__golden__/` **will** contain the old
+  element names. After updating `mapping.ts`, regenerate them with:
+  ```
+  UPDATE_GOLDEN=1 pnpm --filter @pf/shared test golden
+  ```
+  This is the only additional step — 1 command, not a code change.
+
+**Reconciliation procedure — step by step:**
+
+1. Obtain a real Duck Creek Author *manuscript-definition* XML sample from the carrier.
+2. Diff each element and attribute name against the corresponding key in
+   `DEFAULT_DUCKCREEK_MAPPING.elements` and `DEFAULT_DUCKCREEK_MAPPING.attrs`.
+3. For each mismatch, update the relevant value in `mapping.ts`. No other source file changes.
+4. For manuScriptID convention changes, update `mapping.manuscript.*` (carrier, version, layers,
+   lobTokens). `composeManuscriptId` + `composeTableManuscriptIdForScope` derive all IDs from that
+   config — no code change.
+5. Run `UPDATE_GOLDEN=1 pnpm --filter @pf/shared test golden` to regenerate the locked snapshots.
+6. Run the full gate: `pnpm typecheck && pnpm lint && pnpm test && pnpm build` — the serializer
+   tests, validate tests, and golden tests will all confirm the new vocabulary.
+7. Update this document's reconciliation table (regions A–H) to reflect which fields are now
+   **MAP NOW** vs. **OUT OF SCOPE** given the real schema evidence.
+
+**Checking for leaks:** If you suspect a literal element name leaked somewhere outside `mapping.ts`,
+run:
+```bash
+# Should return zero hits outside mapping.ts and the golden snapshot files
+grep -r '"manuscript"' shared/src/duckcreek/ --include='*.ts' | grep -v mapping.ts
+grep -r '"coverage"'   shared/src/duckcreek/ --include='*.ts' | grep -v mapping.ts
+grep -r '"FormNumber"' shared/src/duckcreek/ --include='*.ts' | grep -v mapping.ts
+```
+The result for a clean codebase is empty — all element names are DATA in `mapping.ts`.

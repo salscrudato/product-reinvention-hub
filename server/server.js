@@ -71,6 +71,18 @@ try {
   console.warn('[prodhub-host] /api/storage NOT mounted:', err.message)
 }
 
+// ─── Duck Creek Author export REST API v1 ───────────────────────────────────
+// Protected by Entra ID (App Service auth V2, outer) + platform JWT (inner, EDITOR+).
+// POST /api/duckcreek/v1/author/generate  — build + validate, store bundle
+// POST /api/duckcreek/v1/author/validate  — fail-closed validate only
+// GET  /api/duckcreek/v1/author/bundle/:id/download — download stored bundle
+try {
+  app.use('/api/duckcreek/v1', require('./lib/duckcreek'))
+  console.log('[prodhub-host] /api/duckcreek/v1 mounted (Duck Creek Author export API)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/duckcreek/v1 NOT mounted:', err.message)
+}
+
 // ─── static SPA + client-router fallback ────────────────────────────────────
 app.use(express.static(PUBLIC, {
   index: false,

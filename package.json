@@ -8,7 +8,8 @@
     "test:unit": "vitest run && pnpm --filter functions test",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
-    "build": "pnpm --filter app build",
+    "build:duckcreek": "pnpm dlx esbuild@0.25.5 shared/src/duckcreek/api-server.ts --bundle --format=cjs --platform=node --target=node20 --outfile=server/lib/duckcreek-shared.cjs.js",
+    "build": "pnpm build:duckcreek && pnpm --filter app build",
     "eval": "tsx functions/eval/runner.ts",
     "hygiene": "pnpm dlx knip && pnpm dlx depcheck ./app && pnpm dlx depcheck ./functions && pnpm dlx depcheck ./shared"
   },
