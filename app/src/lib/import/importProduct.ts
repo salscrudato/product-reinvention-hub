@@ -91,9 +91,13 @@ export async function importPlan(
     for (const e of entities) {
       tick(e.label)
       try {
-        // Forms are namespaced to the draft and re-linked to it, so an imported draft's
-        // forms never collide with the shared library or another draft.
-        const data = kind === 'form' ? { ...e.data, productRefIds: [productId] } : e.data
+        // Forms: namespaced to the draft and re-linked via productRefIds so they never
+        // collide with the shared library. Tables: tagged with productId (not underProduct)
+        // so the cascade delete in deleteDraft.ts can identify and remove them by owner.
+        const data =
+          kind === 'form'    ? { ...e.data, productRefIds: [productId] } :
+          kind === 'ldTable' || kind === 'rtTable' ? { ...e.data, productId } :
+          e.data
         await adapter.db.mutate({
           op: 'create', path: g.path(e.docId, productId), entityType: g.entityType,
           ...(g.underProduct ? { productId } : {}), actor, data,

@@ -106,7 +106,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: none
 - verify: harden-probe DEF-0022,0023; /gate (the new GL duckcreek case runs green; News compiles).
 
-## WAVE-11  tier:T1  chains:YES  blocks-smoke:NO  status:PENDING
+## WAVE-11  tier:T1  chains:YES  blocks-smoke:NO  status:DONE
 - members: DEF-0029
 - root-cause: deleteProduct()'s SUBCOLLECTIONS cascade omits the global ldTables/rtTables the filing importer creates, so a product's L&D + rate tables persist as orphans in the global collections after deletion.
 - fix-approach: Extend the cascade to remove the product's owned ldTable/rtTable entities (matched by product ownership / refId prefix) through adapter.db.mutate() like the other cascade steps — without touching tables shared by other products.

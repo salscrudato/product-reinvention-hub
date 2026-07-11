@@ -60,7 +60,23 @@ export async function deleteProduct(
     await adapter.db.mutate({ op: 'delete', path: `forms/${f.id}`, entityType: 'form', productId: pid, actor })
   }
 
-  // 4) Finally the product shell itself.
+  // 4) Global tables owned by this product. The filing importer tags ldTable/rtTable
+  //    entities with productId in their data so they can be identified and removed here.
+  //    Seed tables (PH.LD.*, GL.RT.*, etc.) have no productId tag and are never touched.
+  const ldList = await adapter.db.list<{ id: string }>('ldTables', {
+    where: [{ field: 'productId', op: '==', value: pid }],
+  })
+  for (const t of ldList) {
+    await adapter.db.mutate({ op: 'delete', path: `ldTables/${t.id}`, entityType: 'ldTable', productId: pid, actor })
+  }
+  const rtList = await adapter.db.list<{ id: string }>('rtTables', {
+    where: [{ field: 'productId', op: '==', value: pid }],
+  })
+  for (const t of rtList) {
+    await adapter.db.mutate({ op: 'delete', path: `rtTables/${t.id}`, entityType: 'rtTable', productId: pid, actor })
+  }
+
+  // 5) Finally the product shell itself.
   // Delete is last-write-wins: product deletion is the terminal step of a cascade, so no expectedRev needed.
   await adapter.db.mutate({ op: 'delete', path: `products/${pid}`, entityType: 'product', productId: pid, actor })
 }

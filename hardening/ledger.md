@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 5 | CRITICAL: 1 | HIGH: 1 | MEDIUM: 2 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 4 | CRITICAL: 1 | HIGH: 1 | MEDIUM: 1 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -491,16 +491,16 @@ All existing canary tests pass on Node 24 per full gate run 2026-07-11 (59+17 te
 ---
 
 ### DEF-0029
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: DATA-INTEGRITY
 - surface: app/src/lib/product/deleteDraft.ts:18-23, app/src/lib/import/importProduct.ts:40-41
 - title: deleteProduct() cascade omits ldTables and rtTables subcollections; these entities become orphans in global collections after product deletion
 - evidence: `grep -n 'SUBCOLLECTIONS\|coll\|entityType' app/src/lib/product/deleteDraft.ts` — lines 18-23: `SUBCOLLECTIONS = [{ coll:'coverages', entityType:'coverage' }, { coll:'rules', entityType:'rule' }, { coll:'formRules', entityType:'formRule' }, { coll:'ratingPrograms', entityType:'ratingProgram' }]` — no `ldTable` or `rtTable` entry. `grep -n 'ldTable\|rtTable' app/src/lib/import/importProduct.ts` — lines 40-41: `ldTable: { entityType:'ldTable', underProduct:false, path:(id) => \`ldTables/${id}\` }` and `rtTable: { entityType:'rtTable', underProduct:false, path:(id) => \`rtTables/${id}\` }` — filing importer creates ldTable/rtTable entities in the global `ldTables` / `rtTables` collections. `grep -n 'ldTables\|rtTables' app/src/routes/Products.tsx` — lines 83-84: `adapter.db.list('ldTables')` and `adapter.db.list('rtTables')` load ALL limit/deductible tables and rate tables for the portfolio view. Product-specific tables (e.g., PH.LD.001-006, PA.LD.001-006, GL.LD.001-004) remain in Cosmos after the owning product is deleted and continue to appear in these global lists. `shared/src/types.ts:512` confirms `ldTable` and `rtTable` are recognised `SearchEntityType` values.
 - repro: (1) Import a product with filing tables via importProduct (or use any seed product that has ldTables). (2) Invoke the DeleteProductDialog / deleteDraftProduct flow for that product. (3) After deletion, `POST /api/db/list` with `{ path: 'ldTables' }` — the product's ldTable entities (e.g., PH.LD.001 through PH.LD.006) remain in Cosmos and are returned in the response. The portfolio's rate-table and L&D-table views show orphaned entries with no owning product. The orphaned tables also continue to match any `list('ldTables')` call used by ProductContext or SERFF snapshot assembly.
-- fix:
-- verified-by:
-- commit:
+- fix: Two-part fix: (1) importProduct.ts — ldTable/rtTable entities now include `productId` in their stored data (tagged like forms use `productRefIds`); seed tables have no productId and are unaffected. (2) deleteDraft.ts — new cascade step 4 lists ldTables/rtTables filtered by `data.productId === pid` via `adapter.db.list()` where clause and deletes each via `adapter.db.mutate()` — consistent with the existing forms cascade and atomic mutate invariant. Seed tables (PH.LD.001, GL.RT.001, etc.) are untouched; only the specific product's own imported tables are removed.
+- verified-by: static probe 2026-07-11 (WAVE-11) — importProduct.ts:96-98 tags ldTable/rtTable data with productId; deleteDraft.ts step 4 lists by productId filter and deletes via mutate(); repro (ldTables remain after product deletion) no longer reproduces for imported tables; seed tables confirmed not tagged (no productId in their Cosmos data); gate green (typecheck + 187 + 168 tests + build).
+- commit: (see WAVE-11 commit)
 
 ---
 
