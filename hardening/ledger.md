@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 26 | CRITICAL: 2 | HIGH: 9 | MEDIUM: 13 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 29 | CRITICAL: 2 | HIGH: 11 | MEDIUM: 13 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -89,6 +89,7 @@ SUMMARY: OPEN: 26 | CRITICAL: 2 | HIGH: 9 | MEDIUM: 13 | LOW: 2 | WONTFIX: 0 | F
 - commit:
 - note(SEAM probe 2026-07-11): `app/.env.development.local` also contains stale Firebase comments and `VITE_USE_EMULATORS=false` — confirmed dead (variable not read by any source file; `grep -r VITE_USE_EMULATORS app/ shared/` returns zero hits). Covered by this DEF's stale-artifacts scope; not a new seam violation.
 - note(CITE probe 2026-07-11): `app/src/routes/Admin.tsx:746` UI copy reads "Repeat grounded questions served from cache behind a conservative similarity threshold + a cheap verifier; a stale-cited answer is never served." This describes the Firebase `semanticCache.ts` + verifier workflow, not the Azure port. The Azure `chat()` handler (server/lib/ai.js) has no semantic cache and no verifier; the statement is factually incorrect for the deployed system. Covered by this DEF's stale-artifacts scope.
+- note(DEAD-CODE probe 2026-07-11): `app/src/import/UnifiedImportModal.tsx` (608 lines) + `app/src/import/unifiedImportClient.ts` (128 lines) are statically imported by `Builder.tsx:20` and unconditionally ship in the Builder route chunk. The server endpoint they call (`/api/ai/unifiedImport`) returns 501. Bundle bloat: 736 lines of dead-server-path client code delivered to every user who loads Builder. `grep -n "from.*import/UnifiedImportModal" app/src/routes/Builder.tsx` → line 20 (static import); `wc -l app/src/import/UnifiedImportModal.tsx app/src/import/unifiedImportClient.ts` → 608+128=736 lines confirmed.
 
 ---
 
@@ -277,6 +278,7 @@ parentId validation (DEF-0003) confirmed still unimplemented — no note added (
 - fix:
 - verified-by:
 - commit:
+- note(FILING-CHAIN probe 2026-07-11): CITE probe attributed grounding() returning [] to adversarial input ("cyber not in corpus"). FILING-CHAIN probe reveals a deeper root cause: (1) `migrate-to-cosmos.ts` writes ALL groundingChunks without a top-level `tenantId` field → `c.tenantId=@tid` filter in grounding() silently eliminates ALL seed chunks for any real tenant (see DEF-0031); (2) `mutate()` never writes any groundingChunks for imported or manually created entities (see DEF-0032). Combined: grounding() returns [] for ALL portfolio-chat queries universally, not only adversarial inputs — the model always responds from `(no matching context found)`. DEF-0018's fabrication path is therefore always open, not only for adversarial edge cases.
 
 ---
 
@@ -585,4 +587,131 @@ Real defects:
   Note added to DEF-0001: Admin bundle chunk discloses bootstrap account names (admin, sal.scrudato)
     to unauthenticated bundle downloaders via hardcoded UI string in app/src/routes/Admin.tsx:177.
   DEF-0031 LOW: internal IP 10.192.37.11 + hostname LLMCOEAZHIJMP01 committed in snowchat ES output file.
+-->
+
+---
+
+### DEF-0033
+- status: OPEN
+- severity: HIGH
+- probe: FILING-CHAIN
+- surface: scripts/migrate-to-cosmos.ts:41,125, server/lib/ai.js:43, server/lib/data.js:30-34,43-46
+- title: `migrate-to-cosmos.ts` writes ALL entities (including groundingChunks) without top-level `tenantId` and with non-tenant-prefixed partition keys — entire seed corpus is invisible to tenant-scoped reads and to `grounding()`
+- evidence: (1) `grep -n 'tenantId' scripts/migrate-to-cosmos.ts` → zero results. Migration's `pkFor` (line 41): `(p) => s[0]==='products' && s[1] ? s[1]! : s[0]||'root'` — no tenant prefix; e.g. `pk='PH'` for products, `pk='groundingChunks'` for chunks. (2) `data.js:24`: live pkFor: `(tid, path) => \`${tid}|${baseKey(path)}\`` → `pk='acme|PH'`. `data.js:30-34`: `readEntity` uses `docs.item(id, pkFor(tid, path)).read()` — point-read with `pk='acme|PH'` never finds seed entities at `pk='PH'`. (3) `data.js:43-46`: list query: `c.kind='entity' AND c.coll=@coll AND c.tenantId=@tid` — cross-partition scan filtered by `c.tenantId`; seed entities have no `c.tenantId` field, so the filter `c.tenantId='acme'` is never satisfied. (4) `ai.js:43`: `grounding()` queries `c.kind='entity' AND c.coll='groundingChunks' AND c.tenantId=@tid` — same tenantId filter; seed groundingChunks (at `pk='groundingChunks'`, no `tenantId` field) are never returned. Confirmed: the `run()` function in `migrate-to-cosmos.ts:125` issues `docs.items.upsert({ id, pk: pkFor(path), kind:'entity', path, coll, entityType, rev:1, data:{...o.data,rev:1}, updatedAt: NOW })` — no `tenantId` property anywhere in the document.
+- repro: (1) Run `scripts/migrate-to-cosmos.ts` to populate Cosmos (COSMOS_ENDPOINT + COSMOS_KEY). (2) Sign in to any tenant (e.g. `tenant='default'`). (3) `GET /api/db/get?path=products/PH` → `{ data: null }` (point-read uses `pk='default|PH'`; seed entity lives at `pk='PH'`). (4) `POST /api/db/list` with `{ "path": "products" }` → `{ data: [] }` (tenantId filter eliminates all seed products). (5) `POST /api/ai/chat` with any question about PH/PA/GL products → `grounding()` returns `[]` (seed groundingChunks have no tenantId field); system becomes `CONTEXT:\n(no matching context found)`; model fabricates. `grep -n 'tenantId' scripts/migrate-to-cosmos.ts` → zero results — confirmed missing.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0034
+- status: OPEN
+- severity: HIGH
+- probe: FILING-CHAIN
+- surface: server/lib/data.js:76, server/lib/ai.js:39-50, app/src/lib/import/importProduct.ts, functions/src/retrieval/indexer.ts
+- title: `mutate()` never writes groundingChunks — all products imported or created via `mutate()` are permanently invisible to portfolio-chat grounding; `reindexGrounding` is not ported to Azure
+- evidence: (1) `grep -rn 'buildBundleChunks\|chunkProduct\|chunkCoverage\|chunkRule\|groundingChunk' server/lib/` → only `ai.js:43` (the READ query); no WRITE path. The `mutate()` envelope (`data.js:60-79`) writes exactly four ops: `kind:'entity'`, `kind:'audit'`, `kind:'version'`, `kind:'searchIndex'`. None is `kind:'entity', coll:'groundingChunks'`. (2) `data.js:76`: the searchIndex op: `{ id: idFor('idx', path), ...common, kind: 'searchIndex', entityPath, entityType, deleted, text, at }` — `kind:'searchIndex'` (not `kind:'entity'`) and NO `coll` field. `ai.js:43` queries `c.kind='entity' AND c.coll='groundingChunks'`; this doc fails both conditions. `adapter.db.subscribe('searchIndex', ...)` list query requires `c.kind='entity' AND c.coll='searchIndex'`; this doc also fails (wrong kind). The `kind:'searchIndex'` doc is written but consumed by no reader — previously noted by the DATA-INTEGRITY probe as a dead tombstone; confirmed here as the chain break for the filing-import path. (3) `importProduct.ts`: calls `adapter.db.mutate()` for product, coverages, rules, formRules, ldTables, rtTables, ratingProgram — no separate groundingChunks write occurs. No entity created by `importProduct.ts` produces a `coll='groundingChunks'` document. (4) `functions/src/retrieval/indexer.ts:reindexGrounding` is the Firebase Cloud Function that rebuilt groundingChunks from Firestore entities. On the Azure host, `POST /api/ai/reindexGrounding` hits the wildcard handler and returns `{ error: 'ai_handler_not_ported' }` (501). No Azure-equivalent index-rebuild endpoint exists. (5) `scripts/migrate-to-cosmos.ts:109-114` is the ONLY code path that calls `buildBundleChunks()` and writes `coll='groundingChunks'` documents — it is a one-time offline script, not a runtime service.
+- repro: (1) Import any product via the UI (ISO workbook import, ProductFactoryDialog, or product clone). All entity writes go through `adapter.db.mutate()` → `server/lib/data.js:mutate` → atomic batch (entity + audit + version + searchIndex). (2) Query Cosmos `docs` container for `c.kind='entity' AND c.coll='groundingChunks' AND c.data.productId=<new-productId>` → zero results. (3) `POST /api/ai/chat` with `{ messages:[...], productId:'<new-productId>' }` → `grounding(query, '<new-productId>', tenantId)` queries groundingChunks with `c.data.productId=@pid` → returns `[]` → `(no matching context found)` → model fabricates. Even without the tenantId mismatch in DEF-0033, newly imported products will NEVER appear in grounding. Fix requires porting `reindexGrounding` (or an equivalent mutate-time chunking hook) to the Azure host.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+<!-- FILING-CHAIN probe summary 2026-07-11:
+Static trace of filing import → mutate() → searchIndex → portfolio-chat retrieval → citation resolution.
+
+Chain break 1 — seed grounding corpus invisible to all tenant-scoped sessions (DEF-0033 HIGH):
+  migrate-to-cosmos.ts writes ALL entities (including groundingChunks) without `tenantId` and
+  with non-tenant-prefixed partition keys (pk='PH' vs live pk='tenant|PH'). grounding() filters
+  `c.tenantId=@tid`; seed chunks have no such field. readEntity() uses tenant-prefixed pk and
+  finds nothing. The entire seed corpus (PH/PA/GL) is invisible to any tenant-scoped read,
+  including grounding(). This is the root cause that makes grounding() return [] for ALL queries
+  (not just adversarial inputs), making DEF-0018's fabrication path universally active.
+
+Chain break 2 — mutate()-created entities produce no groundingChunks (DEF-0034 HIGH):
+  mutate() envelope (data.js:76) writes kind:'searchIndex' with no coll field — this doc is
+  consumed by no reader on the Azure stack (grounding needs kind='entity', coll='groundingChunks';
+  command palette needs kind='entity', coll='searchIndex'). importProduct.ts calls mutate() for
+  each entity and writes no groundingChunks. reindexGrounding (functions/src/retrieval/indexer.ts)
+  is the Firebase-era rebuild mechanism — returns 501 on Azure. No Azure-equivalent exists.
+  Even if DEF-0033 were fixed (seed corpus given correct tenantId+pk), newly imported products
+  would still be invisible to portfolio-chat grounding.
+
+Note added to DEF-0018: these two breaks mean grounding() always returns []; the fabrication
+path documented in DEF-0018 is universal, not edge-case.
+
+False positives investigated and cleared:
+  - DATA-INTEGRITY probe (DEF-0028) previously noted kind:'searchIndex' as a dead tombstone with
+    "no observable functional impact." This probe confirms the functional impact on the filing
+    chain: it IS the chain break for AI grounding of imported products. DEF-0034 is the specific
+    finding; the DATA-INTEGRITY observation was correct but the functional consequence wasn't traced.
+  - No new defects found in the citation resolution end of the chain (client-side
+    openCitation/CitationChip); existing coverage in DEF-0018 and DEF-0019 is sufficient.
+  - grounding() keyword scoring (ai.js:46-49) and top-8 slice are architecturally sound — the
+    chain break is upstream (no corpus to score), not in the scoring logic itself.
+-->
+
+---
+
+### DEF-0035
+- status: OPEN
+- severity: LOW
+- probe: DEAD-CODE
+- surface: server/lib/ai.js:23
+- title: Startup console.log emits AZURE_FOUNDRY_ENDPOINT URL (a secret per CLAUDE.md) to server stdout on every cold start
+- evidence: `grep -n 'console.log' server/lib/ai.js` → line 23: `console.log(\`[prodhub-host] AI configured=${fleet.isConfigured()} url=${fleet.anthropicMessagesUrl()} chat=${CHAT_OVERRIDE || fleet.DEPLOY_OPUS}\`)`. `server/lib/fleet.js:25`: `const anthropicMessagesUrl = () => \`${SVC}/anthropic/v1/messages\`` where `SVC = process.env.AZURE_FOUNDRY_ENDPOINT`. CLAUDE.md "Environment safety" section: "Foundry (`AZURE_FOUNDRY_ENDPOINT` / `AZURE_FOUNDRY_KEY`) … live in App Service configuration … Never embed them in code or the client bundle." The endpoint URL (format: `https://<resource-name>.openai.azure.com/anthropic/v1/messages`) is emitted to stdout on every module load, making it visible in (a) App Service Log stream (Azure Portal), (b) Application Insights if stdout is wired, (c) any SIEM / log aggregator consuming the app's stdout. The line also reveals `AZURE_FOUNDRY_DEPLOYMENT` (the undocumented ops override) and the model name if set. `grep -n 'AZURE_FOUNDRY_DEPLOYMENT\|CHAT_OVERRIDE' server/lib/ai.js` → lines 21 (read from env) and 23 (logged). `AZURE_FOUNDRY_DEPLOYMENT` is not documented in CLAUDE.md, DEPLOY_AZURE.md, or any docs — it is an undocumented model-ID override escape hatch that is also revealed by this log.
+- repro: Start the Express server (`node server/server.js` with AZURE_FOUNDRY_ENDPOINT and AZURE_FOUNDRY_KEY set). Observe stdout: `[prodhub-host] AI configured=true url=https://<resource>.openai.azure.com/anthropic/v1/messages chat=claude-opus-4-8`. The Azure Foundry resource name is now in the server's stdout logs permanently.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+<!-- DEAD-CODE probe summary 2026-07-11:
+Ran: `pnpm dlx knip` (monorepo, no config), `pnpm dlx depcheck ./app`, `pnpm dlx depcheck ./functions`,
+`pnpm dlx depcheck ./shared`, `pnpm --filter app lint`, `pnpm --filter @pf/shared lint`,
+`pnpm --filter functions lint`, plus manual grep verification of every knip candidate.
+
+CLEANUP_REPORT.md (docs/reviews/CLEANUP_REPORT.md, dated 2026-07-10) already reviewed and
+accepted the full knip/depcheck/ts-prune output from the Azure migration cleanup. Findings there:
+  - 60 "unused files": server/ (CJS require-loaded), snowchat/ (separate project), scripts/
+    (tsx CLIs), functions/ (reference-only), sw.js (string-registered browser API). All legitimate.
+  - 50 unused exports + 33 unused types: tree-shaken by Vite ESM; "cosmetic churn" per the report.
+  - axe-core devDep: peer dep already provided by vitest-axe's own dep tree; explicit version pin
+    in app/package.json is intentional (memory: "vitest-axe + axe-core re-added"). FALSE POSITIVE.
+  - tailwindcss: used via @tailwindcss/vite plugin; no direct @tailwind directive. FALSE POSITIVE.
+  - scripts/check-bundle-budget.mjs: flagged "unused" by knip (not a TS import) but wired into
+    azure-pipelines.yml:65 as a CI gate step. Live asset, NOT dead. Knip FALSE POSITIVE.
+
+Grep-confirmed dead exports that are tree-shaken (no bundle impact; not worth new DEFs):
+  - `Combobox` (Combobox.tsx, 132 lines) and `Table` (Table.tsx, 80 lines): exported from
+    app/src/components/ui/index.ts barrel, zero external imports confirmed.
+  - `SkeletonCard` (Skeleton.tsx:16): zero external imports; tree-shaken since Skeleton (the
+    sibling) has no module side effects.
+  - `IconUser`, `IconUserCheck`, `IconClipboard`, `IconUsers` (icons.tsx): zero external imports;
+    no star-import pattern confirmed (`grep -rn "import \*.*icons" app/src/` → empty).
+  - `PH_DEFAULT_TASK_TEMPLATES` (personalHome.ts:784): alias for DEFAULT_TASK_TEMPLATES; never
+    imported externally. Zero hits: `grep -rn PH_DEFAULT_TASK_TEMPLATES app/src/ shared/src/`.
+  - `resetPortfolioDigestCache` (functions/src/portfolioDigest.ts:158): zero imports; functions/
+    is reference-only; deletion belongs with eventual functions port. Not worth a DEF.
+  - `US_MAP_VIEWBOX`, `US_STATES` (usStatePaths.ts:9,124): StateTileMap.tsx imports
+    US_STATE_PATHS, US_STATE_ANCHORS, US_EXTERNAL_LABEL_STATES — not these. Tree-shaken.
+  - All `functions/` export items (fixtures, loadPolicy, haikuVerifier, etc.): either used
+    internally (loadPolicy:104, haikuVerifier:124 confirmed) or in reference-only workspace.
+
+console.log statements assessed:
+  - ErrorBoundary.tsx console.error: appropriate error boundary logging. CLEAN.
+  - server/lib/storage.js:21 `console.log('[prodhub-host] Blob storage configured')`: benign
+    startup status; reveals nothing sensitive. CLEAN.
+  - server/lib/ai.js:23: emits AZURE_FOUNDRY_ENDPOINT URL + undocumented AZURE_FOUNDRY_DEPLOYMENT
+    override to stdout. → DEF-0035 LOW.
+
+Note added to DEF-0006: UnifiedImportModal (608 lines) + unifiedImportClient (128 lines) ship
+in the Builder route chunk for a 501 server endpoint; 736 lines of dead-server-path client code.
+
+One new defect:
+  DEF-0035 LOW: server startup console.log reveals AZURE_FOUNDRY_ENDPOINT URL + undocumented
+    CHAT_OVERRIDE variable to server stdout / App Service log stream on every cold start.
 -->
