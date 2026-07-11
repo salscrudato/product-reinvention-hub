@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 29 | CRITICAL: 2 | HIGH: 11 | MEDIUM: 13 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 31 | CRITICAL: 3 | HIGH: 12 | MEDIUM: 13 | LOW: 3 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -31,6 +31,7 @@ SUMMARY: OPEN: 29 | CRITICAL: 2 | HIGH: 11 | MEDIUM: 13 | LOW: 3 | WONTFIX: 0 | 
 - fix:
 - verified-by:
 - commit:
+- note(CONFIG probe 2026-07-11 on DEF-0002): (a) `app/src/routes/Feedback.tsx:141` embeds the stale CLAUDE.md invariant table verbatim — "Model IDs: `claude-sonnet-5` (reasoning) … defined once in `functions/src/runtime.ts`. Never `claude-fable-5`." The very next use of that table is `Feedback.tsx:158` (same `buildCardPrompt()` function), which generates a Claude Code prompt reading: `'Set /model to claude-opus-4-8. Never select claude-fable-5.'` — a correct directive matching the deployed fleet, but directly contradicting the stale invariant text four lines above it. Two contradictory model directives in the same file. (b) ADR-0001 scope field says "`functions/` (server-side AI only)". The actual deployed model routing lives in `shared/src/ai/fleet.ts` + `server/lib/fleet.js`, not in the `functions/` workspace; the ADR's "defined once" claim points at the wrong canonical location. `grep -n 'claude-\|/model' app/src/routes/Feedback.tsx` confirms both instances.
 
 ---
 
@@ -90,6 +91,7 @@ SUMMARY: OPEN: 29 | CRITICAL: 2 | HIGH: 11 | MEDIUM: 13 | LOW: 3 | WONTFIX: 0 | 
 - note(SEAM probe 2026-07-11): `app/.env.development.local` also contains stale Firebase comments and `VITE_USE_EMULATORS=false` — confirmed dead (variable not read by any source file; `grep -r VITE_USE_EMULATORS app/ shared/` returns zero hits). Covered by this DEF's stale-artifacts scope; not a new seam violation.
 - note(CITE probe 2026-07-11): `app/src/routes/Admin.tsx:746` UI copy reads "Repeat grounded questions served from cache behind a conservative similarity threshold + a cheap verifier; a stale-cited answer is never served." This describes the Firebase `semanticCache.ts` + verifier workflow, not the Azure port. The Azure `chat()` handler (server/lib/ai.js) has no semantic cache and no verifier; the statement is factually incorrect for the deployed system. Covered by this DEF's stale-artifacts scope.
 - note(DEAD-CODE probe 2026-07-11): `app/src/import/UnifiedImportModal.tsx` (608 lines) + `app/src/import/unifiedImportClient.ts` (128 lines) are statically imported by `Builder.tsx:20` and unconditionally ship in the Builder route chunk. The server endpoint they call (`/api/ai/unifiedImport`) returns 501. Bundle bloat: 736 lines of dead-server-path client code delivered to every user who loads Builder. `grep -n "from.*import/UnifiedImportModal" app/src/routes/Builder.tsx` → line 20 (static import); `wc -l app/src/import/UnifiedImportModal.tsx app/src/import/unifiedImportClient.ts` → 608+128=736 lines confirmed.
+- note(CONFIG probe 2026-07-11): Additional stale migration artifacts confirmed: (a) `docs/handoff/08_ENV_AND_CONFIG.md` is entirely Firebase-era; lists `ANTHROPIC_API_KEY`/`VOYAGE_API_KEY` via `firebase functions:secrets:set`; missing all 6 required Azure env vars; model section claims `claude-sonnet-5`/`claude-haiku-4-5` from `functions/src/runtime.ts` (stale); includes firebase.json, `.firebaserc`, emulator port table (all dead). (b) `docs/handoff/00_START_HERE.md:7`: "Backend: Firebase (Firestore + Cloud Functions v2 + Storage + Auth)" — pre-Azure hand-off package not marked as historical; treats Firebase as the live stack. (c) `docs/DEPLOY_AZURE.md:113-118` marks "Relocate the AI API onto the Azure host" as a future follow-up — this was completed in V21 (`server/lib/ai.js` + `server/lib/fleet.js`); the follow-up is stale dead commentary in the current deployment guide.
 
 ---
 
@@ -714,4 +716,69 @@ in the Builder route chunk for a 501 server endpoint; 736 lines of dead-server-p
 One new defect:
   DEF-0035 LOW: server startup console.log reveals AZURE_FOUNDRY_ENDPOINT URL + undocumented
     CHAT_OVERRIDE variable to server stdout / App Service log stream on every cold start.
+-->
+
+---
+
+### DEF-0036
+- status: OPEN
+- severity: CRITICAL
+- probe: CONFIG
+- surface: tmp.md (git history commit f6c7611e, 2026-07-10)
+- title: Azure Foundry API key committed to git history in tmp.md; permanently retrievable by any repo cloner
+- evidence: `git show f6c7611e -- tmp.md` returns the full `AZURE_FOUNDRY_KEY` value (`C0S1LR7AUnd9CjUR6tdi1083JhVh4QhOZjPYwTyamNgCF1dpMY8BJQQJ99CGACHYHv6XJ3w3AAAAACOGjwNo`) across all four deployment lines (opus 4.8, haiku, GPT-5.1, gpt-5-mini). File added in commit `f6c7611e fix(ai): call Foundry Claude on the Anthropic-native surface` (2026-07-10) and deleted in `866f728f fix(tenancy+storage): drop tmp.md`, but the credential is permanently embedded in the git DAG. `git log --all --oneline -- tmp.md` confirms the two-commit exposure window; `git ls-files tmp.md` returns empty (not tracked now). The untracked, gitignored `model_secrets.md:8` also holds the same key in plaintext and additionally exposes the full Foundry resource endpoint (`https://foundry-prodhub-dev.services.ai.azure.com`). The SECRETS probe (2026-07-11) searched `git grep` for `sk-ant-*`, `AKIA*`, `AIza*`, `-----BEGIN PRIVATE` — the Azure Foundry key format (long alphanumeric Base64-like string with no standard prefix) did not match any pattern and was missed. CLAUDE.md binding invariant: "Secrets are server-side only. Foundry (`AZURE_FOUNDRY_ENDPOINT` / `AZURE_FOUNDRY_KEY`) live in App Service configuration. Never embed them in code or the client bundle."
+- repro: `git show f6c7611e -- tmp.md` — returns the live AZURE_FOUNDRY_KEY in plaintext. Combined with the endpoint in `model_secrets.md` (or reconstructed from `server/lib/fleet.js` comment), any caller can issue `POST https://foundry-prodhub-dev.services.ai.azure.com/anthropic/v1/messages` with `x-api-key: <key>` and consume Foundry quota at the project's expense. Key must be rotated immediately; history must be cleaned with `git filter-repo --path tmp.md --invert-paths` and all stale clones re-seeded.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0037
+- status: OPEN
+- severity: HIGH
+- probe: CONFIG
+- surface: docs/DEPLOY_AZURE.md:80-104, hardening/BACKEND.md:57, docs/prompts/migrate-firebase-to-azure.md:166,293
+- title: Canonical deployment guide (DEPLOY_AZURE.md) lists Firebase-era env vars only; all 6 required Azure vars absent; AZURE_BLOB_CONNECTION mis-documented as AZURE_STORAGE_CONNECTION_STRING
+- evidence: (1) `docs/DEPLOY_AZURE.md:87-88`: App Service settings table lists only `ANTHROPIC_API_KEY` and `VOYAGE_API_KEY`. Line 90: "No Foundry / Azure-OpenAI variables are needed — the codebase has no such provider client." False for the current deployed host. `grep -n 'process.env\.' server/lib/cosmos.js server/lib/fleet.js server/lib/storage.js server/lib/auth.js` confirms 6 required vars: `COSMOS_ENDPOINT` (cosmos.js:8), `COSMOS_KEY` (cosmos.js:9), `AZURE_FOUNDRY_ENDPOINT` (fleet.js:20), `AZURE_FOUNDRY_KEY` (fleet.js:21), `AZURE_BLOB_CONNECTION` (storage.js:12), `AUTH_JWT_SECRET` (auth.js:18). (2) `cosmos.js:10`: `if (!endpoint || !key) throw new Error('COSMOS_ENDPOINT / COSMOS_KEY not set')` — server hard-crashes at startup if COSMOS vars are absent; a DEPLOY_AZURE.md-compliant deployment fails to start at all. (3) `hardening/BACKEND.md:57` and `docs/prompts/migrate-firebase-to-azure.md:166,293` say `AZURE_STORAGE_CONNECTION_STRING`, but `storage.js:12` reads `process.env.AZURE_BLOB_CONNECTION` and `storage.js:28` error message explicitly says "Set AZURE_BLOB_CONNECTION in App Service settings" — the documented env var name is wrong. (4) `docs/DEPLOY_AZURE.md:102-104` az CLI example: `--settings ANTHROPIC_API_KEY=<value> VOYAGE_API_KEY=<value>` — copy-paste command missing all 6 required Azure vars. CLAUDE.md points developers to this guide: "Run it locally per docs/DEPLOY_AZURE.md."
+- repro: Follow `docs/DEPLOY_AZURE.md` to configure a fresh App Service instance. Set only `ANTHROPIC_API_KEY` and `VOYAGE_API_KEY` as instructed. Run `node server/server.js` → process exits immediately with `Error: COSMOS_ENDPOINT / COSMOS_KEY not set`. Even if COSMOS vars are added manually: all AI calls return 503 (`fleet.isConfigured()` false, AZURE_FOUNDRY_ENDPOINT/KEY absent); all uploads return 503 (AZURE_BLOB_CONNECTION absent → `storage_not_configured`); JWT secret defaults to literal `dev-insecure-secret-change-me` (AUTH_JWT_SECRET absent → DEF-0001 compounded).
+- fix:
+- verified-by:
+- commit:
+
+---
+
+<!-- CONFIG probe summary 2026-07-11:
+Slice: Config/model/doc divergence — model strings, env-var wiring, Firebase/Azure/AWS-SWAP artifacts, stale docs.
+
+Model strings confirmed via grep across all source files:
+- Deployed runtime: `claude-opus-4-8` (GROUNDED_CITED), `claude-haiku-4-5` (BULK_VERIFY),
+  `gpt-5.1` (VISION), `gpt-5-mini` (CHEAP_GENERAL) — shared/src/ai/fleet.ts + server/lib/fleet-shared.cjs.
+- Reference-only functions/: `claude-sonnet-5` (MODEL), `claude-haiku-4-5` (MODEL_FAST) — NOT deployed.
+- No `claude-fable-5` anywhere in runtime source — confirmed clean.
+- `claude-sonnet-4-6`: docs/handoff/manifest.json:5 ("compiler" field), docs/handoff/00_START_HERE.md:7
+  ("Compiler:") — pre-Azure hand-off metadata only, not runtime. No new DEF; covered by DEF-0002 notes.
+
+DEF-0002 note added: Feedback.tsx:141 embeds stale invariant claiming claude-sonnet-5;
+Feedback.tsx:158 (same function) generates "Set /model to claude-opus-4-8" — contradictory
+in the same file. ADR-0001 scope points to wrong workspace (functions/ vs shared/+server/).
+
+DEF-0006 note added: docs/handoff/08_ENV_AND_CONFIG.md entirely Firebase-era;
+docs/handoff/00_START_HERE.md says "Backend: Firebase"; docs/DEPLOY_AZURE.md:113-118
+follow-up ("Relocate AI onto Azure host") is stale — already completed in V21.
+
+Env-var wiring confirmed: COSMOS_ENDPOINT, COSMOS_KEY, AZURE_FOUNDRY_ENDPOINT, AZURE_FOUNDRY_KEY,
+AZURE_BLOB_CONNECTION, AUTH_JWT_SECRET — all read from process.env in server/lib/*.js; none in browser.
+Env-var name mismatch: AZURE_BLOB_CONNECTION (actual, storage.js:12) ≠ AZURE_STORAGE_CONNECTION_STRING
+(hardening/BACKEND.md:57, docs/prompts/migrate-firebase-to-azure.md:166,293).
+
+New defects logged:
+  DEF-0036 CRITICAL: Azure Foundry API key permanently in git history (tmp.md, commit f6c7611e);
+    SECRETS probe missed this because Azure Foundry key format lacks the sk-ant-/AKIA prefix patterns.
+  DEF-0037 HIGH: docs/DEPLOY_AZURE.md (canonical guide, referenced by CLAUDE.md) lists Firebase-era
+    secrets only; all 6 required Azure env vars absent; cosmos.js hard-crashes on startup without them;
+    AZURE_BLOB_CONNECTION mis-documented as AZURE_STORAGE_CONNECTION_STRING in BACKEND.md.
+
+00-CURRENT_CODEBASE.md: does not exist (glob returned empty) — nothing to audit.
+Gate remains green (only hardening/ledger.md modified).
 -->
