@@ -1,69 +1,46 @@
 # ADR 0001 — Standardized Anthropic model IDs
 
-- **Status:** Accepted
+- **Status:** Accepted (amended 2026-07-11 — Azure cutover; see Amendment below)
 - **Date:** 2026-07-07
-- **Scope:** `functions/` (server-side AI only — the browser never calls Anthropic)
+- **Scope:** `shared/src/ai/fleet.ts` + `server/lib/fleet.js` (deployed Azure AI path)
 
 ## Context
 
-All AI runs server-side in Cloud Functions (portfolio chat, claims coverage
-analysis, coverage extraction, the market-news scout). The model IDs must be
-generally available (GA), pinned in exactly one place, and safe to swap. The
-code previously pinned Sonnet 4.6 for the reasoning path.
+All AI runs server-side on the Azure host (`server/lib/ai.js`, Foundry Claude). The
+model IDs must be generally available (GA), pinned in exactly one place, and safe to
+swap. The code previously pinned Sonnet 4.6 for the reasoning path.
 
-## Decision
+## Decision (Amended — deployed fleet, post-Azure cutover)
 
-Two GA models, defined once in [`functions/src/runtime.ts`](../../functions/src/runtime.ts)
-and imported everywhere else:
+Models are defined in [`shared/src/ai/fleet.ts`](../../shared/src/ai/fleet.ts) and
+compiled into `server/lib/fleet-shared.cjs` via the `build:fleet` step. `server/lib/fleet.js`
+imports the compiled bridge. The browser never calls any model API.
 
-| Constant     | Model ID            | Role                                   |
-| ------------ | ------------------- | -------------------------------------- |
-| `MODEL`      | `claude-sonnet-5`   | reasoning: chat, claims, extraction    |
-| `MODEL_FAST` | `claude-haiku-4-5`  | bulk/simple: market-news scout         |
+| Deployment constant | Model ID           | Role                                              |
+| ------------------- | ------------------ | ------------------------------------------------- |
+| `GROUNDED_CITED`    | `claude-opus-4-8`  | reasoning: portfolio chat, grounded + cited       |
+| `BULK_VERIFY`       | `claude-haiku-4-5` | bulk/simple: product summaries, news scout        |
+| `VISION`            | `gpt-5.1`          | vision: HomeCheck photo inventory (OpenAI/Foundry)|
+| `CHEAP_GENERAL`     | `gpt-5-mini`       | cost-degrade fallback                             |
 
-Both aliases are current GA (verified against the model catalog). No date
-suffixes — the bare aliases are complete.
+Never `claude-fable-5`.
 
-### Sampling / thinking consequences of Sonnet 5
+### Original decision (functions/ reference — NOT deployed)
 
-`claude-sonnet-5` runs **adaptive thinking by default** and **rejects
-non-default sampling parameters** (`temperature` / `top_p` / `top_k` → HTTP 400).
-Accordingly the reasoning path passes **no** sampling params; determinism and
-grounding come from the tool surface and the system prompt, not from sampling.
-(The prior `temperature` plumbing in `ai.ts`/`claims.ts` was removed with this
-change.) `claude-haiku-4-5` still accepts sampling, so the news scout keeps
-`temperature: 0`.
+`functions/src/runtime.ts` defines `MODEL = 'claude-sonnet-5'` and
+`MODEL_FAST = 'claude-haiku-4-5'`. This workspace is **retained as reference only**
+and is not deployed; all AI handlers except `chat` and `summarizeProduct` returned
+501 before WAVE-01/02 ported them to the Azure host. Do not use `functions/runtime.ts`
+as the governance source for deployed model IDs.
 
-Forced `tool_choice` (extraction, form-identification) coexists with adaptive
-thinking on the first-party Claude API — no `thinking: {type:"disabled"}`
-workaround is needed here (that requirement is Amazon Bedrock–only).
+## Amendment (2026-07-11 — WAVE-09, DEF-0002)
 
-## Why Fable / Mythos are excluded
+CLAUDE.md binding invariant and Feedback.tsx were incorrectly binding to
+`claude-sonnet-5` / `functions/src/runtime.ts`. Both updated to reflect the
+deployed fleet (`claude-opus-4-8` / `shared/src/ai/fleet.ts`).
 
-The premium/gated reasoning models are **not** used:
+## Why Fable is excluded
 
-- `claude-mythos-5` — access-restricted to **Project Glasswing**; participation
-  is the only way to reach it. This deployment has no Glasswing access.
-- **Fable 5** — Anthropic's most capable *widely released* model, but priced
-  well above Opus tier ($10/$50 per MTok).
-
-Neither is the GA cost/latency default this app targets, so both are excluded.
-
-> **Divergence note:** earlier code comments framed "fable" as *the* gated
-> Glasswing swap. Per the current model catalog the Glasswing-gated model is
-> `claude-mythos-5`; Fable 5 is GA-but-premium. This ADR standardizes on
-> the accurate names.
-
-## The one-line swap (if Glasswing access is confirmed)
-
-Change the single constant in `functions/src/runtime.ts`:
-
-```ts
-export const MODEL = 'claude-mythos-5'   // was 'claude-sonnet-5'
-```
-
-No other code changes: `claude-mythos-5` shares Sonnet 5's request surface
-(adaptive thinking always on, sampling params rejected), and the code already
-passes no sampling params. Mythos additionally requires ≥30-day data retention
-and may return `stop_reason: "refusal"` — add refusal handling before reading
-`content` if adopted.
+`claude-fable-5` is Anthropic's most capable widely released model but is priced
+well above Opus tier. The deployed fleet uses `claude-opus-4-8` for the reasoning
+path. Never substitute `claude-fable-5`.

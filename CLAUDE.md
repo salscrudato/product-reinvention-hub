@@ -46,7 +46,7 @@ Break any of these and the PR is blocked.
 | **refId / form chips** | `refId` and form-number chips are load-bearing display elements. Never strip them. |
 | **HO-3 $1,528 canary** | `shared/src/rating/evaluator.test.ts` must produce exactly $1,528. |
 | **Design tokens** | No hard-coded hex outside `app/src/index.css`. Use `var(--color-*)` in browser-rendered code. SVG files exported to disk are the only exception. |
-| **Model IDs** | `claude-sonnet-5` (reasoning) and `claude-haiku-4-5` (bulk/simple), defined once in `functions/src/runtime.ts`. Never `claude-fable-5`. |
+| **Model IDs** | `claude-opus-4-8` (reasoning/GROUNDED_CITED) and `claude-haiku-4-5` (bulk/BULK_VERIFY), defined in `shared/src/ai/fleet.ts` (deployed) and `server/lib/fleet.js`. Never `claude-fable-5`. `functions/src/runtime.ts` is reference-only and NOT deployed. |
 
 ## Environment safety
 
