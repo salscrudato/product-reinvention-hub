@@ -594,3 +594,59 @@ was touched). NB: the GL canary is **$2,635** (see V15), not $2,789.
 **CONSEQUENCE:** No Firebase-era runtime or scaffolding remains. The role-enforcement invariant
 that V5 tested via `firestore.rules` is now enforced server-side in `server/lib` (and must be
 maintained there); that layer has no automated test suite yet — a flagged follow-up gap.
+
+---
+
+## V21 — Desktop-first responsive · safe PWA · fleet-wide model routing (2026-07-11)
+
+**FINDING:** Three fronts landed together, plus fixes for two live errors (service-worker clone
+exceptions and a `summarizeProduct` 501). Canaries untouched: HO-3 **$1,528** · PA **$1,002** · GL
+**$2,635** (re-asserted in the gate run).
+
+**EVIDENCE:**
+- **PWA (safe, anti-stale).** `app/vite.config.ts` derives the build id from the deploy GIT HASH
+  (`BUILD_SOURCEVERSION` → `git rev-parse` → `Date.now()`), stamps it into `dist/sw.js`
+  (`__BUILD_ID__` → `prh-<hash>` cache name) and `dist/version.json`. `app/public/sw.js` rewritten:
+  cache-first hashed `/assets`, network-first HTML navigations, SWR public static + the SINGLE
+  public API path `/api/auth/tenants`; **every other `/api/*` passes straight through** (fail-closed
+  — `/api/db/*`, `/api/serff/*`, `/api/duckcreek/*`, `/api/storage/*`, `/api/homecheck` inventory PII
+  are never cached); `/version.json` never cached (keeps `VersionWatcher` honest). `activate` evicts
+  all non-current caches; `message` handles `SKIP_WAITING` / `CLEAR_ALL_CACHES`. The AZ4 clone bug is
+  fixed (`cachePut` clones synchronously before the body is consumed) and `respondWith` always
+  resolves to a Response (offline fallback). `VersionWatcher` now pulls + activates the new SW on a
+  version change before prompting reload. `azure.adapter.signOut()` clears the SWR maps + all Cache
+  Storage + posts `CLEAR_ALL_CACHES`.
+- **Fleet-wide routing + cost guard.** `shared/src/ai/fleet.ts` is the single source of Foundry
+  deployment names; new `FLEET_PRICING` / `estimateCostUsd` / `degradedRole`. Bundled to
+  `server/lib/fleet-shared.cjs` (`pnpm build:fleet`, mirrors the serff/duckcreek bridges).
+  `server/lib/fleet.js` resolves role→deployment and runs an in-process rolling-window cost guard
+  (allow → soft-degrade at 80% → deny at ceiling). The three prod call sites now route through it
+  with NO hardcoded model strings and per-call spend accounting: `ai.js` chat (GROUNDED_CITED, stream
+  usage captured), `serff.js` memo prose (BULK_VERIFY), `homecheck.js` vision (VISION). `ai.js` also
+  **ports `summarizeProduct`** (BULK_VERIFY, forced-tool, grounded, best-effort persist to Cosmos
+  `productSummaries/{id}`) — fixing the Overview-tab 501. Production has no cascades; the reference
+  ensemble router calibrates confidence from agreement, not self-report (unchanged).
+- **Responsive (desktop density preserved — all changes gated at `sm:`/`max-*`/mobile-only).** Shared
+  `Dialog` restructured to the scrollable-modal pattern (outer container scrolls, panel keeps
+  overflow visible so in-panel dropdowns never clip) — tall modals are usable on mobile; behaviour
+  locked by `Dialog.test.tsx`. `ProductHierarchy` reveals per-coverage actions on touch + tightens
+  indent on mobile; `RatingTableEditor` gains a mobile scroll affordance; `DisagreementHeatmap` `<th>`
+  gains `scope="col"`. GTM board already collapsed columns (`md`/`xl`) — unchanged.
+- **Accessibility.** `vitest-axe` + `axe-core` re-added (dev-only; removed in V18 cleanup);
+  `app/src/a11y.axe.test.tsx` runs axe over DisagreementHeatmap, UnifiedImportModal, DuckCreekExportModal
+  and HomeCheck — which surfaced and fixed a real defect (the import file `<input>` had no label).
+
+**HOSTILE SELF-REVIEW** — *after a push-to-main deploy, can a logged-in underwriter on the installed
+PWA see a stale bundle or stale portfolio data, or does the SW ever cache an authenticated response?*
+- **Stale bundle: no.** Navigations are network-first, so an online reload always fetches fresh HTML
+  + content-hashed assets; the deploy changes the git-hash build id → new `CACHE_NAME` → the new SW's
+  `activate` wipes every prior cache; `VersionWatcher` (5-min poll + on focus, reading no-cache
+  `version.json`) prompts a reload. Verified end-to-end by booting the artifact: `version.json` is
+  served `no-cache`, `sw.js` carries the git hash, assets are `immutable`.
+- **Stale/authenticated data: no.** The only cached `/api` path is `/api/auth/tenants` (public,
+  unauthenticated by server design). Every other `/api/*` passes through uncached; on logout all
+  caches are cleared.
+
+**GATE:** typecheck ✓ · lint ✓ · test ✓ (685 shared+app incl. new fleet/axe/Dialog suites, 187
+functions) · build ✓ (bundle within budget; `sw.js` stamped). No server secret appears in the client
+bundle (only the user's own JWT, by design).

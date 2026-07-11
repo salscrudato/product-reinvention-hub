@@ -66,33 +66,40 @@ export function Dialog({ open, onClose, title, children, width = 'max-w-lg' }: D
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      {/* Backdrop — fixed so it always covers the viewport while a tall panel scrolls behind it.
+          Purely visual; the click-to-close handler lives on the centring wrapper above it. */}
       <div
-        className="absolute inset-0 backdrop-blur-sm"
+        className="fixed inset-0 backdrop-blur-sm"
         style={{ background: 'var(--color-overlay)' }}
-        onClick={onClose}
         aria-hidden="true"
       />
-      {/* Panel — spring entrance; neutralised under prefers-reduced-motion via index.css */}
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? titleId : undefined}
-        tabIndex={-1}
-        className={`relative w-full ${width} bg-surface rounded-[16px] p-6 shadow-2xl rise-in outline-none`}
-        style={{ border: '1px solid var(--color-border)' }}
-      >
-        {title && (
-          <div className="flex items-center justify-between mb-4">
-            <h2 id={titleId} className="text-base font-semibold text-text">{title}</h2>
-            <button onClick={onClose} className="text-faint hover:text-text rounded-[6px] p-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Close">
-              <IconClose size={16} aria-hidden="true" />
-            </button>
-          </div>
-        )}
-        {children}
+      {/* Centering / scroll wrapper: `min-h-full` + `items-center` centres short modals and lets a
+          modal taller than the viewport scroll as a whole (mobile) — so the header/close button is
+          always reachable. The panel itself keeps `overflow: visible`, so an in-panel dropdown or
+          popover is never clipped. A click on this wrapper (outside the panel) closes the dialog. */}
+      <div className="relative flex min-h-full items-center justify-center p-4" onClick={onClose}>
+        {/* Panel — spring entrance; neutralised under prefers-reduced-motion via index.css */}
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={title ? titleId : undefined}
+          tabIndex={-1}
+          onClick={(e) => e.stopPropagation()}
+          className={`relative w-full ${width} bg-surface rounded-[16px] p-4 sm:p-6 shadow-2xl rise-in outline-none`}
+          style={{ border: '1px solid var(--color-border)' }}
+        >
+          {title && (
+            <div className="flex items-center justify-between mb-4">
+              <h2 id={titleId} className="text-base font-semibold text-text">{title}</h2>
+              <button onClick={onClose} className="text-faint hover:text-text rounded-[6px] p-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Close">
+                <IconClose size={16} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          {children}
+        </div>
       </div>
     </div>,
     document.body,

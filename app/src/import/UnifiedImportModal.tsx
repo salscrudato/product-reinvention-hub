@@ -242,7 +242,7 @@ function SelectPane({ dragOver, setDrag, onDrop, onBrowse, inputRef, onFiles }: 
         <span className="text-sm font-medium text-text">Drop documents here, or click to browse</span>
         <span className="text-xs text-faint">.pdf · .xlsx · .zip · .txt · .xml · .csv</span>
       </button>
-      <input ref={inputRef} type="file"
+      <input ref={inputRef} type="file" aria-label="Choose files to import (PDF, Excel, ZIP, XML, CSV or text)"
         accept=".pdf,.xlsx,.xls,.zip,.txt,.xml,.csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip,text/plain,text/xml,text/csv"
         multiple className="sr-only"
         onChange={e => { if (e.target.files) void onFiles(Array.from(e.target.files)) }} />

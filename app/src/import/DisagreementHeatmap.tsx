@@ -65,6 +65,7 @@ export function DisagreementHeatmap({ disagreements }: Props) {
               {(['Field', 'Opus 4.8', 'GPT 5.1', 'Adjudicated', 'Conf'] as const).map(col => (
                 <th
                   key={col}
+                  scope="col"
                   className="px-3 py-2 text-left font-semibold text-dim"
                   style={{ whiteSpace: 'nowrap' }}
                 >

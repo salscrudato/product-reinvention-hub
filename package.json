@@ -10,7 +10,8 @@
     "lint": "pnpm -r lint",
     "build:duckcreek": "pnpm dlx esbuild@0.25.5 shared/src/duckcreek/api-server.ts --bundle --format=cjs --platform=node --target=node20 --outfile=server/lib/duckcreek-shared.cjs.js",
     "build:serff": "pnpm dlx esbuild@0.25.5 shared/src/serff/api-server.ts --bundle --format=cjs --platform=node --target=node20 --outfile=server/lib/serff-shared.cjs",
-    "build": "pnpm build:duckcreek && pnpm build:serff && pnpm --filter app build",
+    "build:fleet": "pnpm dlx esbuild@0.25.5 shared/src/ai/api-server.ts --bundle --format=cjs --platform=node --target=node20 --outfile=server/lib/fleet-shared.cjs",
+    "build": "pnpm build:duckcreek && pnpm build:serff && pnpm build:fleet && pnpm --filter app build",
     "eval": "tsx functions/eval/runner.ts",
     "hygiene": "pnpm dlx knip && pnpm dlx depcheck ./app && pnpm dlx depcheck ./functions && pnpm dlx depcheck ./shared"
   },

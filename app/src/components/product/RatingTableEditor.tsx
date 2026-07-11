@@ -369,8 +369,17 @@ function GridEditor({ step, table, model0, candidateDimensions, seedInputs, pid,
         </div>
       )}
 
+      {/* Horizontal-scroll affordance — only when the grid is wide (has a column dimension) and
+          only on touch/small screens, where the scrollbar isn't obvious. Hidden at sm+ so desktop
+          density is untouched. */}
+      {colDim && (
+        <p className="sm:hidden text-[11px] text-faint mb-1.5 flex items-center gap-1" aria-hidden="true">
+          <IconTable size={12} /> Swipe horizontally to see all columns →
+        </p>
+      )}
+
       {/* Grid */}
-      <div className="overflow-auto rounded-[12px] max-h-[52vh]" style={{ border: '1px solid var(--color-border)' }}>
+      <div className="overflow-auto rounded-[12px] max-h-[52vh] overscroll-x-contain" style={{ border: '1px solid var(--color-border)' }}>
         <table className="border-collapse text-sm" style={{ minWidth: colDim ? 'max-content' : undefined, width: colDim ? undefined : '100%' }}>
           <thead>
             <tr>

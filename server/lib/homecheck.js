@@ -53,10 +53,11 @@ const NWS_POINTS      = 'https://api.weather.gov/points'
 const NWS_ALERTS      = 'https://api.weather.gov/alerts/active'
 const WHP_ENDPOINT    = 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_WildfireHazardPotential_01/ImageServer/identify'
 
-// Foundry AI config (for vision inventory). Secrets never leave server.
-const FOUNDRY_ENDPOINT = (process.env.AZURE_FOUNDRY_ENDPOINT || '').replace(/\/+$/, '')
-const FOUNDRY_KEY      = process.env.AZURE_FOUNDRY_KEY
-const DEPLOY_GPT       = process.env.AZURE_FOUNDRY_GPT_DEPLOYMENT || 'gpt-5.1'
+// Foundry AI config (for vision inventory). Model routing (single source) + cost guard come from
+// ./fleet (a pure-constants module — no cosmos/data/auth, so homecheck's guest isolation holds).
+// Secrets never leave server. An explicit GPT deployment override still wins for ops.
+const fleet = require('./fleet')
+const GPT_OVERRIDE = process.env.AZURE_FOUNDRY_GPT_DEPLOYMENT || ''
 
 // User-Agent required by NWS API (https://www.weather.gov/documentation/services-web-api).
 const NWS_UA = 'ProductHub-HomeCheck/1.0 (homecheck@producthub.local)'
@@ -814,7 +815,7 @@ Return ONLY a valid JSON array of items. Do not include markdown or explanation.
 If no identifiable items are found, return an empty array [].`
 
 async function processPhotoInventory(photos) {
-  if (!FOUNDRY_ENDPOINT || !FOUNDRY_KEY) {
+  if (!fleet.isConfigured()) {
     throw Object.assign(new Error('AI vision not configured (AZURE_FOUNDRY_ENDPOINT/KEY missing)'), { code: 'NOT_CONFIGURED' })
   }
 
@@ -823,6 +824,11 @@ async function processPhotoInventory(photos) {
 
   for (const photo of photos) {
     if (!photo.dataUrl) { processedCount.errors++; continue }
+    // Cost guard: stop dispatching once the budget ceiling is hit (bounded spend); return what
+    // was extracted so far rather than failing the whole session.
+    const g = fleet.guard()
+    if (!g.allow) break
+    const deployment = GPT_OVERRIDE || fleet.resolveModel('VISION', g.degrade)
     try {
       const messages = [{
         role: 'user',
@@ -831,13 +837,14 @@ async function processPhotoInventory(photos) {
           { type: 'image_url', image_url: { url: photo.dataUrl, detail: 'high' } },
         ],
       }]
-      const resp = await timedFetch(`${FOUNDRY_ENDPOINT}/openai/v1/chat/completions`, {
+      const resp = await timedFetch(fleet.openaiChatUrl(), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${FOUNDRY_KEY}` },
-        body:   JSON.stringify({ model: DEPLOY_GPT, messages, max_tokens: 2048 }),
+        headers: fleet.openaiHeaders(),
+        body:   JSON.stringify({ model: deployment, messages, max_tokens: 2048 }),
       }, 30_000)
       if (!resp.ok) { const t = await resp.text().catch(() => ''); console.warn('[homecheck] vision error:', resp.status, t.slice(0, 200)); processedCount.errors++; continue }
       const json  = await resp.json()
+      fleet.record(deployment, json.usage?.prompt_tokens, json.usage?.completion_tokens)
       const raw   = json.choices?.[0]?.message?.content || '[]'
       let items
       try { items = JSON.parse(raw.trim().replace(/^```json\n?/,'').replace(/```$/,'')) }

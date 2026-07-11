@@ -82,6 +82,19 @@ const snapshotCache = new Map<string, string>() // path -> last JSON (change det
 const dataCache = new Map<string, unknown>()     // path -> last value (instant SWR paint)
 let tabHidden = typeof document !== 'undefined' && document.hidden
 
+/** Wipe every client-held cache on logout so a subsequent sign-in on the same tab can never see
+ *  the previous session's data. Clears the in-memory SWR maps (keyed by path, not tenant — the
+ *  real cross-tenant risk) and, defensively, any service-worker Cache Storage (the SW never caches
+ *  authenticated data, but this also drops the cached public tenant list and the app shell). */
+function clearClientCaches(): void {
+  snapshotCache.clear()
+  dataCache.clear()
+  if (typeof caches !== 'undefined') {
+    void caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {})
+  }
+  if (typeof navigator !== 'undefined') navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_ALL_CACHES' })
+}
+
 /** Called after every local write so active views reflect the change immediately
  *  (reset to the fast interval + an instant fetch) rather than waiting out a backoff. */
 function pokeAll() { for (const p of pollers) { p.reset(); p.tick() } }
@@ -115,6 +128,7 @@ export const adapter: BackendAdapter = {
       try { await api('/auth/logout', { method: 'POST' }) } catch { /* best-effort */ }
       setToken(null)
       setUser(null)
+      clearClientCaches()
     },
 
     onUser(cb: (user: AuthUser | null) => void): Unsubscribe {

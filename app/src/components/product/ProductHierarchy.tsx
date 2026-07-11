@@ -129,8 +129,8 @@ function ProductTree({ product, inv }: { product: WithId<Product>; inv: ProductI
 
       {open && (
         <div className="px-4 pb-4">
-          {/* LOB node */}
-          <div className="ml-3 pl-4 border-l" style={{ borderColor: 'var(--color-border)' }}>
+          {/* LOB node — tighter indent on mobile so deep trees keep usable width */}
+          <div className="ml-2 pl-3 sm:ml-3 sm:pl-4 border-l" style={{ borderColor: 'var(--color-border)' }}>
             <div className="flex items-center gap-2 py-1.5 flex-wrap">
               <span className="text-[10px] font-semibold uppercase tracking-[.07em] text-faint">LOB</span>
               <span className="text-sm font-medium text-text">{lob.displayName}</span>
@@ -179,7 +179,7 @@ function CoverageBranch({ node, productId, depth, orphan = false }: {
   const hasChildren = children.length > 0
 
   return (
-    <li className="border-l pl-4 -ml-px" style={{ borderColor: 'var(--color-border)' }}>
+    <li className="border-l pl-3 sm:pl-4 -ml-px" style={{ borderColor: 'var(--color-border)' }}>
       <div className="group flex items-center gap-2 py-1.5">
         {hasChildren ? (
           <button onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label={open ? `Collapse ${coverage.name}` : `Expand ${coverage.name}`}
@@ -205,8 +205,9 @@ function CoverageBranch({ node, productId, depth, orphan = false }: {
           </span>
         )}
 
-        {/* Per-coverage deep links + at-a-glance form count */}
-        <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        {/* Per-coverage deep links + at-a-glance form count. Always visible on touch/small
+            screens (no hover); hover-reveal preserved at sm+ to keep desktop density calm. */}
+        <div className="ml-auto flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <button onClick={() => covLink('forms')} className="text-[11px] px-1.5 py-0.5 rounded-[6px] text-faint hover:text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">Forms</button>
           <button onClick={() => covLink('rules')} className="text-[11px] px-1.5 py-0.5 rounded-[6px] text-faint hover:text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">Rules</button>
         </div>

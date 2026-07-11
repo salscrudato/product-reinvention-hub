@@ -333,7 +333,7 @@ describe('runUnifiedImportPipeline (AI_FAKE, COMPANY_FILING_PDF path)', () => {
       expect('rows' in sv).toBe(false)
       expect(['PASS', 'FAIL', 'PARTIAL']).toContain(sv.verificationResult)
     }
-  })
+  }, 20_000) // dynamic-imports modules + runs the full AI_FAKE pipeline in-body; the 5s default is too tight under load
 })
 
 // ─── Full fixture matrix summary ─────────────────────────────────────────────

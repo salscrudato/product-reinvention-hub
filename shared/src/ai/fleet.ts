@@ -85,3 +85,38 @@ export const DEPLOY_OPUS     = FLEET_REGISTRY.GROUNDED_CITED.deploymentName  // 
 export const DEPLOY_HAIKU    = FLEET_REGISTRY.BULK_VERIFY.deploymentName      // 'claude-haiku-4-5'
 export const DEPLOY_GPT      = FLEET_REGISTRY.VISION.deploymentName           // 'gpt-5.1'
 export const DEPLOY_GPT_MINI = FLEET_REGISTRY.CHEAP_GENERAL.deploymentName   // 'gpt-5-mini'
+
+// ─── Fleet pricing (for cost accounting / spend ceilings) ─────────────────────
+// USD per 1M tokens. Illustrative list-price estimates — the cost GUARD only needs a
+// conservative order-of-magnitude to enforce a spend ceiling, not billing-grade exactness.
+// The Anthropic figures mirror functions/src/telemetry.ts; update all when prices change.
+export interface FleetPricing {
+  readonly inputPerMTok:  number
+  readonly outputPerMTok: number
+}
+
+export const FLEET_PRICING: Readonly<Record<string, FleetPricing>> = {
+  [DEPLOY_OPUS]:     { inputPerMTok: 15.00, outputPerMTok: 75.00 },
+  [DEPLOY_HAIKU]:    { inputPerMTok:  0.80, outputPerMTok:  4.00 },
+  [DEPLOY_GPT]:      { inputPerMTok:  3.00, outputPerMTok: 12.00 },
+  [DEPLOY_GPT_MINI]: { inputPerMTok:  0.30, outputPerMTok:  1.60 },
+} as const
+
+/** Estimate USD cost for a call. Unknown deployment names fall back to the priciest tier
+ *  (fail-safe: an unrecognised model is assumed expensive so the spend ceiling trips sooner). */
+export function estimateCostUsd(deploymentName: string, inputTokens: number, outputTokens: number): number {
+  const p = FLEET_PRICING[deploymentName] ?? FLEET_PRICING[DEPLOY_OPUS]!
+  const M = 1_000_000
+  return (Math.max(0, inputTokens) / M) * p.inputPerMTok + (Math.max(0, outputTokens) / M) * p.outputPerMTok
+}
+
+/** Map a role to the cheaper deployment of the same SDK family — used by the cost guard to
+ *  degrade under budget pressure instead of denying outright. Anthropic reasoning degrades to
+ *  Haiku; OpenAI vision degrades to GPT-mini; the cheap roles have no cheaper tier. */
+export function degradedRole(role: ModelRole): ModelRole {
+  switch (role) {
+    case 'GROUNDED_CITED': return 'BULK_VERIFY'
+    case 'VISION':         return 'CHEAP_GENERAL'
+    default:               return role
+  }
+}
