@@ -9,24 +9,29 @@
 //
 // Tenancy: every session is bound to a tenantId (carried in the JWT). The data
 // layer scopes ALL reads/writes to that tenant, so companies are isolated.
-// Bootstrap admins (admin / sal.scrudato) can access ALL tenants and may sign in
-// tenant-less to bootstrap the platform. Additional users live in Cosmos
-// (kind:'user', pk:'__system__'), managed by admins via /api/admin/users.
+// Bootstrap admins (admin / sal.scrudato) are enabled only when BOOTSTRAP_USERS_ENABLED=true.
+// OFF by default in production; set ON for LOCAL dev and smoke harness runs.
+// Additional users live in Cosmos (kind:'user', pk:'__system__'), managed via /api/admin/users.
 
 const crypto = require('crypto')
 
-const SECRET = process.env.AUTH_JWT_SECRET || 'dev-insecure-secret-change-me'
+// AUTH_JWT_SECRET — fail-closed: no insecure default; server refuses to start without it.
+const _secret = process.env.AUTH_JWT_SECRET
+if (!_secret) throw new Error('[auth] AUTH_JWT_SECRET is required — set it in App Service config (production) or local env (dev/smoke)')
+const SECRET = _secret
 const TTL_SECONDS = 12 * 60 * 60
 
 const RANK = { VIEWER: 0, ANALYST: 1, EDITOR: 2, ADMIN: 3 }
 
-// Bootstrap users — always present so the platform is never locked out. `tenants: '*'`
-// means all-tenants (and may sign in tenant-less to manage). Passwords are dev-grade.
-const BOOTSTRAP = {
-  admin: { password: 'admin', role: 'ADMIN', name: 'Admin', email: 'admin@prodhub.local', tenants: '*' },
-  'sal.scrudato': { password: 'sal.scrudato', role: 'ADMIN', name: 'Sal Scrudato', email: 'salvatore.scrudato@accenture.com', tenants: '*' },
-}
-const overrides = new Map() // in-process password overrides (changePassword)
+// Bootstrap accounts — gated behind BOOTSTRAP_USERS_ENABLED=true (default OFF in production).
+// Enable for LOCAL dev / smoke harness. Passwords sourced from env; defaults preserve
+// hardening/smoke.mjs's admin/admin authentication without additional config.
+const BOOTSTRAP_ENABLED = process.env.BOOTSTRAP_USERS_ENABLED === 'true'
+const BOOTSTRAP = BOOTSTRAP_ENABLED ? {
+  admin: { password: process.env.BOOTSTRAP_ADMIN_PASSWORD || 'admin', role: 'ADMIN', name: 'Admin', email: 'admin@prodhub.local', tenants: '*' },
+  'sal.scrudato': { password: process.env.BOOTSTRAP_SAL_PASSWORD || 'sal.scrudato', role: 'ADMIN', name: 'Sal Scrudato', email: 'salvatore.scrudato@accenture.com', tenants: '*' },
+} : {}
+const overrides = new Map() // in-process password cache for same-session after changePassword
 
 // ─── base64url HS256 JWT ─────────────────────────────────────────────────────
 const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
