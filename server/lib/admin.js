@@ -11,6 +11,7 @@ const { requireRole, RANK } = require('./auth')
 
 const router = express.Router()
 router.use(requireRole('ADMIN'))
+const MAX_ADMIN = 1000 // bound admin list reads; __system__ partition won't approach this in practice
 
 const slug = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
 // Usernames preserve dots/underscores (e.g. sal.scrudato) so the login identifier
@@ -19,7 +20,10 @@ const userId = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9._-]
 
 // ─── tenants ─────────────────────────────────────────────────────────────────
 router.get('/tenants', async (_req, res) => {
-  const { resources } = await docs.items.query({ query: "SELECT c.data FROM c WHERE c.pk='__system__' AND c.kind='tenant'" }).fetchAll()
+  const { resources } = await docs.items.query(
+    { query: `SELECT TOP ${MAX_ADMIN} c.data FROM c WHERE c.pk='__system__' AND c.kind='tenant'` },
+    { maxItemCount: MAX_ADMIN }
+  ).fetchAll()
   res.json({ tenants: resources.map((r) => r.data).sort((a, b) => a.name.localeCompare(b.name)) })
 })
 router.post('/tenants', async (req, res) => {
@@ -39,7 +43,10 @@ router.delete('/tenants/:id', async (req, res) => {
 
 // ─── users ───────────────────────────────────────────────────────────────────
 router.get('/users', async (_req, res) => {
-  const { resources } = await docs.items.query({ query: "SELECT c.data FROM c WHERE c.pk='__system__' AND c.kind='user'" }).fetchAll()
+  const { resources } = await docs.items.query(
+    { query: `SELECT TOP ${MAX_ADMIN} c.data FROM c WHERE c.pk='__system__' AND c.kind='user'` },
+    { maxItemCount: MAX_ADMIN }
+  ).fetchAll()
   res.json({ users: resources.map((r) => { const { password, ...safe } = r.data; return safe }) })
 })
 router.post('/users', async (req, res) => {
