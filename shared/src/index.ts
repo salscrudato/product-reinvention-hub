@@ -43,6 +43,13 @@ export * from './lines'
 export * from './import'
 // Multi-model fleet constants — ModelRole, FleetDeployment, DEPLOY_*, resolveDeployment.
 export * from './ai/fleet'
+// Clone-based change-set diff engine + typed ChangeSet shapes.
+export * from './changeset/types'
+export * from './changeset/diff'
+// State filing-type matrix — Texas fully populated; all states stubbed.
+export * from './registry/stateFilingMatrix'
+// SERFF filing bundle assembler + Texas DOI reviewer lens (pure, deterministic).
+export * from './serff'
 // Product Data Model (neutral, lossless) + deterministic Duck Creek export.
 export * from './pdm/types'
 export * from './pdm/build'

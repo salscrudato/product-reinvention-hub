@@ -83,6 +83,16 @@ try {
   console.warn('[prodhub-host] /api/duckcreek/v1 NOT mounted:', err.message)
 }
 
+// ─── SERFF filing bundle API ────────────────────────────────────────────────
+// POST /api/serff/v1/bundle  — diff + assemble Texas SERFF bundle + DOI reviewer lens
+// GET  /api/serff/v1/states  — state filing matrix (file-and-use / prior-approval / etc.)
+try {
+  app.use('/api/serff/v1', require('./lib/serff'))
+  console.log('[prodhub-host] /api/serff/v1 mounted (SERFF filing bundle API)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/serff/v1 NOT mounted:', err.message)
+}
+
 // ─── static SPA + client-router fallback ────────────────────────────────────
 app.use(express.static(PUBLIC, {
   index: false,
