@@ -183,14 +183,14 @@ router.post('/mutateBatch', requireRole('EDITOR'), requireTenant, async (req, re
   }
 })
 
-router.post('/vote', requireAuth, requireTenant, async (req, res) => {
+router.post('/vote', requireRole('EDITOR'), requireTenant, async (req, res) => {
   const { path } = req.body || {}; const uid = req.user.uid; const tid = req.user.tenantId
   const ent = await readEntity(tid, path)
   if (!ent) return res.status(404).json({ error: 'not_found' })
   const votes = ent.data.votes || { voters: [], count: 0 }
   if (!votes.voters.includes(uid)) { votes.voters = [...votes.voters, uid]; votes.count = (votes.count || 0) + 1 }
-  ent.data.votes = votes
-  await docs.item(idFor('ent', path), pkFor(tid, path)).replace(ent)
+  const actor = { uid, name: req.user.name }
+  await mutateInternal(tid, { op: 'update', path, data: { ...ent.data, votes }, entityType: ent.entityType }, actor)
   res.json({ ok: true, count: votes.count })
 })
 
