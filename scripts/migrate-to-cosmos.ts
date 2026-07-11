@@ -36,9 +36,16 @@ const key = process.env.COSMOS_KEY!
 if (!endpoint || !key) { console.error('COSMOS_ENDPOINT / COSMOS_KEY required'); process.exit(1) }
 const docs = new CosmosClient({ endpoint, key }).database(process.env.COSMOS_DB || 'prodhub').container('docs')
 
+// COSMOS_TENANT controls which tenant partition the seed corpus is written into.
+// Must match the tenantId in the JWT of the tenant that should see this seed data.
+// Default 'default' aligns with the local/smoke bootstrap tenant.
+const tenantId = process.env.COSMOS_TENANT || 'default'
+
 const NOW = new Date().toISOString()
 const segs = (p: string) => p.split('/').filter(Boolean)
-const pkFor = (p: string) => { const s = segs(p); return (s[0] === 'products' && s[1]) ? s[1]! : (s[0] || 'root') }
+const baseKey = (p: string) => { const s = segs(p); return (s[0] === 'products' && s[1]) ? s[1]! : (s[0] || 'root') }
+// pkFor mirrors data.js: ${tenantId}|${baseKey(path)} so tenant-scoped reads find seed docs.
+const pkFor = (p: string) => `${tenantId}|${baseKey(p)}`
 const collOf = (p: string) => segs(p).slice(0, -1).join('/')
 const san = (p: string) => p.replace(/[/\\?#]/g, '~')
 const kw = (t: string) => t.toLowerCase().split(/\W+/).filter((k) => k.length > 2)
@@ -117,12 +124,12 @@ try {
 
 // ── write to Cosmos (upsert, concurrency-limited) ────────────────────────────
 async function run() {
-  console.log(`Migrating ${ops.length} documents into Cosmos (docs container)…`)
+  console.log(`Migrating ${ops.length} documents into Cosmos (docs container, tenant='${tenantId}')…`)
   let done = 0
   const pool = 25
   for (let i = 0; i < ops.length; i += pool) {
     await Promise.all(ops.slice(i, i + pool).map((o) =>
-      docs.items.upsert({ id: `ent:${san(o.path)}`, pk: pkFor(o.path), kind: 'entity', path: o.path, coll: collOf(o.path), entityType: o.entityType, rev: 1, data: { ...o.data, rev: 1 }, updatedAt: NOW })
+      docs.items.upsert({ id: `ent:${san(o.path)}`, pk: pkFor(o.path), tenantId, kind: 'entity', path: o.path, coll: collOf(o.path), entityType: o.entityType, rev: 1, data: { ...o.data, rev: 1 }, updatedAt: NOW })
         .then(() => { done++ })))
   }
   const counts = ops.reduce<Record<string, number>>((m, o) => { m[o.entityType] = (m[o.entityType] || 0) + 1; return m }, {})
