@@ -40,13 +40,17 @@ const SYSTEM = [
   'Every substantive claim MUST cite its source using the bracketed reference tags that appear in the context, e.g. [PH.PROD.001] or a form-number tag. Do not fabricate reference tags.',
 ].join(' ')
 
+// Cap on groundingChunks loaded per chat call — keeps heap bounded regardless of corpus size.
+const GROUNDING_CAP = 200
+
 async function grounding(query, productId, tenantId) {
   try {
     const { docs } = require('./cosmos')
     const params = [{ name: '@tid', value: tenantId }]
-    let sql = "SELECT c.data FROM c WHERE c.kind='entity' AND c.coll='groundingChunks' AND c.tenantId=@tid"
+    // TOP cap is a server constant, not user-supplied → no injection risk.
+    let sql = `SELECT TOP ${GROUNDING_CAP} c.data FROM c WHERE c.kind='entity' AND c.coll='groundingChunks' AND c.tenantId=@tid`
     if (productId) { sql += ' AND c.data.productId=@pid'; params.push({ name: '@pid', value: productId }) }
-    const { resources } = await docs.items.query({ query: sql, parameters: params }, { maxItemCount: 500 }).fetchAll()
+    const { resources } = await docs.items.query({ query: sql, parameters: params }, { maxItemCount: GROUNDING_CAP }).fetchAll()
     const terms = String(query || '').toLowerCase().split(/\W+/).filter((t) => t.length > 2)
     return resources
       .map((r) => { const text = String(r.data?.text || ''); const lc = text.toLowerCase(); return { text, score: terms.reduce((s, t) => s + (lc.includes(t) ? 1 : 0), 0) } })
