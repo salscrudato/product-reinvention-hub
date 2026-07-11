@@ -77,7 +77,7 @@ export function chunkCoverage(c: Coverage, productId: string): GroundingChunk {
 export function chunkRule(r: Rule, productId: string): GroundingChunk {
   const refId = r.refId ?? ''
   const text = body(
-    `Rule ${refId} (${r.category}${r.subCategory ? ` / ${r.subCategory}` : ''})`,
+    `Rule [${refId}] (${r.category}${r.subCategory ? ` / ${r.subCategory}` : ''})`,
     `IF ${r.condition} THEN ${r.outcome}.`,
     (r.coverageRefIds ?? []).length ? `Coverages: ${r.coverageRefIds.join(', ')}.` : '',
     (r.formNumbers ?? []).length ? `Forms: ${r.formNumbers.join(', ')}.` : '',
@@ -93,7 +93,7 @@ export function chunkRule(r: Rule, productId: string): GroundingChunk {
 export function chunkFormRule(fr: FormRule, productId: string): GroundingChunk {
   const refId = fr.refId ?? ''
   const text = body(
-    `Form-attachment rule ${refId}`,
+    `Form-attachment rule [${refId}]`,
     `IF ${fr.condition} THEN ${fr.outcome}.`,
     (fr.formNumbers ?? []).length ? `Forms: ${fr.formNumbers.join(', ')}.` : '',
     fr.mandatory ? 'Mandatory attachment.' : 'Optional attachment.',
@@ -154,7 +154,7 @@ export function chunkRatingProgram(rp: RatingProgram, productId: string): Ground
 
 export function chunkLdTable(refId: string, t: LDTable): GroundingChunk {
   const rows = (t.rows ?? []).map(r => `- ${r.label}: ${String(r.value)}${r.constraintNote ? ` (${r.constraintNote})` : ''}`)
-  const text = body(`Limit/Deductible table ${refId} — ${t.name}`, rows.join('\n'))
+  const text = body(`Limit/Deductible table [${refId}] — ${t.name}`, rows.join('\n'))
   return make(`ldTable:${refId}`, text, {
     type: 'ldTable', refId, formNumber: null, productId: null,
     path: `ldTables/${refId}`, title: t.name,
@@ -163,7 +163,7 @@ export function chunkLdTable(refId: string, t: LDTable): GroundingChunk {
 
 export function chunkRtTable(refId: string, t: RTTable): GroundingChunk {
   const text = body(
-    `Rate table ${refId} — ${t.name}`,
+    `Rate table [${refId}] — ${t.name}`,
     (t.columns ?? []).length ? `Columns: ${t.columns.join(', ')}.` : '',
     `${(t.rows ?? []).length} rows.`,
   )

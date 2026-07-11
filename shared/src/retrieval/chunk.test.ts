@@ -6,9 +6,10 @@ import {
   PH_PRODUCT, PH_COVERAGES, PH_RULES, PH_FORMS, PH_DICTIONARY,
   PH_RATING_PROGRAM, PH_LD_TABLES, PH_RT_TABLES, PH_FORM_RULES,
 } from '../seed/personalHome'
-import type { Product, Coverage, Rule, Form, DictionaryEntry, RatingProgram, FormRule } from '../types'
+import type { Product, Coverage, Rule, Form, DictionaryEntry, RatingProgram, FormRule, LDTable, RTTable } from '../types'
 import {
   chunkCoverage, chunkForm, chunkDictionary, chunkBaseFormText, contentHash,
+  chunkRule, chunkFormRule, chunkLdTable, chunkRtTable,
   buildBundleChunks, dedupeChunks,
 } from './chunk'
 
@@ -57,6 +58,36 @@ describe('chunk builders carry the citation anchor', () => {
     const ch = chunkDictionary(def)
     expect(ch.metadata.refId).toBe('PH.DEF.003')
     expect(ch.text.toLowerCase()).toContain('dwelling')
+  })
+
+  it('rule chunk carries bracketed refId so the system-prompt citation anchor is present', () => {
+    const rule = PH_RULES[0] as unknown as Rule
+    const ch = chunkRule(rule, 'PH.PROD.001')
+    expect(ch.text).toContain(`[${rule.refId}]`)
+    expect(ch.metadata.refId).toBe(rule.refId)
+  })
+
+  it('formRule chunk carries bracketed refId', () => {
+    const fr = PH_FORM_RULES[0] as unknown as FormRule
+    const ch = chunkFormRule(fr, 'PH.PROD.001')
+    expect(ch.text).toContain(`[${fr.refId}]`)
+    expect(ch.metadata.refId).toBe(fr.refId)
+  })
+
+  it('ldTable chunk carries bracketed refId', () => {
+    const firstEntry = Object.entries(PH_LD_TABLES)[0]!
+    const [refId, tbl] = firstEntry
+    const ch = chunkLdTable(refId, tbl as unknown as LDTable)
+    expect(ch.text).toContain(`[${refId}]`)
+    expect(ch.metadata.refId).toBe(refId)
+  })
+
+  it('rtTable chunk carries bracketed refId', () => {
+    const firstEntry = Object.entries(PH_RT_TABLES)[0]!
+    const [refId, tbl] = firstEntry
+    const ch = chunkRtTable(refId, tbl as unknown as RTTable)
+    expect(ch.text).toContain(`[${refId}]`)
+    expect(ch.metadata.refId).toBe(refId)
   })
 
   it('base-form prose splits into anchored section chunks', () => {
