@@ -93,6 +93,24 @@ try {
   console.warn('[prodhub-host] /api/serff/v1 NOT mounted:', err.message)
 }
 
+// ─── HomeCheck consumer surface (guest-accessible, rate-limited, zero portfolio access) ──
+// POST /api/homecheck/v1/risk               — address risk report (Census+FEMA+USGS+NOAA+WHP)
+// POST /api/homecheck/v1/report-html        — saveable single-file HTML risk report
+// POST /api/homecheck/v1/inventory          — photo digital-twin inventory (GPT-5.1 vision)
+// GET  /api/homecheck/v1/inventory/:id      — retrieve session
+// DELETE /api/homecheck/v1/inventory/:id    — delete session (privacy/retention)
+// GET  /api/homecheck/v1/inventory/:id/export — exportable proof-of-condition HTML
+// POST /api/homecheck/v1/twin-diff          — digital-twin diff (new vs prior session)
+//
+// ZERO PORTFOLIO ACCESS: homecheck.js never imports ./cosmos or ./data.
+// Rate limited by IP (no auth required — guest surface).
+try {
+  app.use('/api/homecheck/v1', require('./lib/homecheck'))
+  console.log('[prodhub-host] /api/homecheck/v1 mounted (HomeCheck consumer surface)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/homecheck/v1 NOT mounted:', err.message)
+}
+
 // ─── static SPA + client-router fallback ────────────────────────────────────
 app.use(express.static(PUBLIC, {
   index: false,

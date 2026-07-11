@@ -26,6 +26,7 @@ const Dictionary         = lazy(() => import('./routes/Dictionary'))
 const Admin              = lazy(() => import('./routes/Admin'))
 const Feedback           = lazy(() => import('./routes/Feedback'))
 const News               = lazy(() => import('./routes/News'))
+const HomeCheck          = lazy(() => import('./routes/HomeCheck'))
 
 function PageLoader() {
   return (
@@ -45,6 +46,7 @@ export default function App() {
           <Routes>
             <Route path="/"                      element={<Landing />} />
             <Route path="/must-change-password"  element={<MustChangePassword />} />
+            <Route path="/home-check"            element={<HomeCheck />} />
 
             <Route path="/app" element={<AppShell />}>
               <Route index                element={<Home />} />
