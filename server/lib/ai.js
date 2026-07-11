@@ -15,6 +15,7 @@
 const express = require('express')
 const { requireRole, requireTenant } = require('./auth')
 const fleet = require('./fleet')
+const dataRouter = require('./data')
 
 const router = express.Router()
 // Ops escape hatches: explicit deployment overrides win over the fleet defaults.
@@ -104,21 +105,16 @@ function groundSummary(raw, coverages) {
   return { ...raw, coverageHighlights: grounded }
 }
 
-async function persistSummary(tenantId, productId, data) {
+async function persistSummary(tenantId, productId, data, actor) {
+  // Route through the atomic envelope so audit + version + searchIndex are written
+  // and rev is properly incremented on each re-summary. Non-fatal: a persist failure
+  // never fails the summarizeProduct request.
   try {
-    const { docs } = require('./cosmos')
-    await docs.items.upsert({
-      id: `ent:productSummaries~${String(productId).replace(/[/\\?#]/g, '~')}`,
-      pk: `${tenantId}|productSummaries`,
+    await dataRouter.mutateInternal(
       tenantId,
-      kind: 'entity',
-      path: `productSummaries/${productId}`,
-      coll: 'productSummaries',
-      entityType: 'productSummary',
-      rev: 1,
-      data,
-      updatedAt: data.generatedAt,
-    })
+      { op: 'update', path: `productSummaries/${productId}`, data, entityType: 'productSummary' },
+      actor,
+    )
   } catch (e) {
     console.warn('[ai] summarizeProduct persist failed (non-fatal):', e.message)
   }
@@ -169,7 +165,7 @@ async function summarizeProduct(req, res) {
       generatedBy: req.user.uid,
       stale: false,
     }
-    if (body.productId) await persistSummary(req.user.tenantId, body.productId, stored)
+    if (body.productId) await persistSummary(req.user.tenantId, body.productId, stored, { uid: req.user.uid, name: req.user.name })
     return res.json(stored)
   } catch (err) {
     return res.status(500).json({ error: 'ai_error', message: String((err && err.message) || err).slice(0, 220) })
