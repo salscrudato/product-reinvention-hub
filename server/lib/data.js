@@ -26,6 +26,14 @@ const collOf = (path) => segs(path).slice(0, -1).join('/')
 const idFor = (prefix, key) => `${prefix}:${String(key).replace(/[/\\?#]/g, '~')}`
 const auditId = () => `aud:${Date.now().toString(36)}-${crypto.randomUUID()}`
 const searchText = (data) => Object.values(data || {}).filter((v) => typeof v === 'string').join(' ').slice(0, 4000)
+const fieldDiff = (prev, next) => {
+  const before = {}; const changed = {}
+  const keys = new Set([...Object.keys(prev || {}), ...Object.keys(next || {})])
+  for (const k of keys) {
+    if (JSON.stringify((prev || {})[k]) !== JSON.stringify((next || {})[k])) { before[k] = (prev || {})[k]; changed[k] = (next || {})[k] }
+  }
+  return { before, changed }
+}
 
 async function readEntity(tid, path) {
   try {
@@ -124,7 +132,7 @@ function envelope(tid, payload, actor) {
     if (op === 'delete') ops.push({ operationType: 'Delete', id: idFor('ent', path) })
     else ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ent', path), ...common, kind: 'entity', path, coll: collOf(path), entityType, rev, data: entityData, updatedAt: now } })
     ops.push({ operationType: 'Create', resourceBody: { id: auditId(), ...common, kind: 'audit', entityPath: path, entityType, op, actor, rev, at: now } })
-    ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ver', `${path}:${rev}`), ...common, kind: 'version', entityPath: path, rev, op, data: op === 'delete' ? null : entityData, actor, at: now } })
+    ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ver', `${path}:${rev}`), ...common, kind: 'version', entityPath: path, rev, op, diff: op === 'delete' ? null : fieldDiff(current?.data, data), actor, at: now } })
     ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('idx', path), ...common, kind: 'searchIndex', entityPath: path, entityType, deleted: op === 'delete', text: searchText(data), at: now } })
     // 5th op: grounding chunk (non-delete only; same pk → same Cosmos partition → atomic)
     if (op !== 'delete') {
