@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 21 | CRITICAL: 2 | HIGH: 8 | MEDIUM: 10 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 5
+SUMMARY: OPEN: 26 | CRITICAL: 2 | HIGH: 9 | MEDIUM: 13 | LOW: 2 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -16,6 +16,7 @@ SUMMARY: OPEN: 21 | CRITICAL: 2 | HIGH: 8 | MEDIUM: 10 | LOW: 1 | WONTFIX: 0 | F
 - verified-by:
 - commit:
 - note(ROLE probe 2026-07-11): `signInAsDevAdmin()` confirmed absent from all source — `grep -r 'signInAsDevAdmin' . --include='*.ts' --include='*.tsx' --include='*.js' --include='*.mjs'` returns zero results. Also confirmed `pf.devAdminBypass` localStorage key referenced only in `docs/review/_capture.mjs` (Playwright screenshot cleanup, not app source) — `grep -r 'devAdminBypass' app/src/` returns zero results. BOOTSTRAP users remain the live risk.
+- note(SECRETS probe 2026-07-11): Client bundle `app/dist/assets/Admin-C9uYCkWl.js` contains the string `"Bootstrap admins (admin, sal.scrudato) are always available"` from `app/src/routes/Admin.tsx:177`. This chunk is publicly downloadable by any unauthenticated client; bypass account usernames are discoverable without any credentials, directly enabling exploitation of this DEF. Evidence: `git grep -n "sal.scrudato" app/src/` → `app/src/routes/Admin.tsx:177`; `grep -o ".\{50\}sal\.scrudato.\{100\}" app/dist/assets/Admin-C9uYCkWl.js` → confirms the string in the bundle.
 
 ---
 
@@ -436,4 +437,152 @@ is display-only and SERFF exhibit-only in the current architecture.
 Credit cap path: evaluator.creditFloor.test.ts:50 uses toBeCloseTo for final premium even though
 a roundTo:0 MIN_FLOOR terminates the program — logged as DEF-0026 MEDIUM (weak test assertion).
 All existing canary tests pass on Node 24 per full gate run 2026-07-11 (59+17 test files, 685+187 tests).
+-->
+
+---
+
+### DEF-0027
+- status: OPEN
+- severity: HIGH
+- probe: DATA-INTEGRITY
+- surface: server/lib/data.js:52-56
+- title: POST /api/db/list — SQL has no TOP clause; fetchAll() loads ALL N matching entities into server heap; slice(0,1000) applied only to the HTTP response
+- evidence: `grep -n 'fetchAll\|maxItemCount\|TOP\|slice\|sql' server/lib/data.js` — line 52: `let sql = 'SELECT c.data FROM c WHERE ${where}'` — no `TOP @limit`. Line 55: `docs.items.query({ query: sql, parameters: params }, { maxItemCount: limit }).fetchAll()` — `maxItemCount` controls the Cosmos page size (x-ms-max-item-count) but `fetchAll()` iterates ALL continuation tokens until the query result set is exhausted. Line 56: `resources.slice(0, limit)` — applied AFTER fetchAll() has already loaded the full result set into the Node.js heap. Compare with DEF-0005 (admin endpoints, ADMIN-only, MEDIUM): the `/list` endpoint is requireAuth + requireTenant (VIEWER+), making this higher severity. Any authenticated user can trigger a full table scan of any collection they can name. No SQL-level row cap exists anywhere in server/lib/ (`grep -n 'TOP @\|SELECT TOP' server/lib/*.js` → zero results).
+- repro: Seed or accumulate >1000 entities in one collection (e.g., `tasks`). `POST /api/db/list` with `{ "path": "tasks" }` via a VIEWER JWT → server calls `docs.items.query({...}, { maxItemCount: 1000 }).fetchAll()` with no SQL TOP → Cosmos fetches all N tasks across multiple pages, each page consuming RUs → all N documents land in Node.js heap → `slice(0, 1000)` discards extras before HTTP response. At N=10,000 tasks the server loads ~10× more data than it returns; at high N this risks OOM or request timeout. Being cross-partition (no partitionKey option passed to query), RU cost is also elevated.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0028
+- status: OPEN
+- severity: MEDIUM
+- probe: DATA-INTEGRITY
+- surface: server/lib/ai.js:43-49
+- title: grounding() loads ALL groundingChunks for the tenant into server heap via fetchAll(); only top-8 scored chunks are used; no SQL TOP or result cap
+- evidence: `grep -n 'fetchAll\|maxItemCount\|TOP\|slice' server/lib/ai.js` — line 43: `let sql = "SELECT c.data FROM c WHERE c.kind='entity' AND c.coll='groundingChunks' AND c.tenantId=@tid"` — no `TOP`. Line 45: `docs.items.query({ query: sql, parameters: params }, { maxItemCount: 500 }).fetchAll()` — `maxItemCount: 500` sets page size, not result count; `fetchAll()` fetches all pages. Line 49: `.slice(0, 8)` — applied to the in-process scored array AFTER all chunks are already in memory. With filing imports (ADR-0005), each imported carrier rate-filing generates many grounding chunks per product entity type. A tenant with 10 imported products could have thousands of groundingChunks. Every `POST /api/ai/chat` invocation triggers `grounding()`, loading all of them. Triggered by ANALYST+ role.
+- repro: Import multiple filing PDFs via the filing importer path (ADR-0005) for one tenant, accumulating >500 `kind='entity'` documents in `coll='groundingChunks'`. Issue `POST /api/ai/chat` with a valid ANALYST JWT. Server loads all N groundingChunks into memory (N pages of 500), scores them in-process for keyword overlap, returns top-8 to the LLM context. Memory consumption scales linearly with chunk count; at several thousand chunks each holding up to 4000 chars of text (searchText truncation), heap impact can be significant per concurrent chat request.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0029
+- status: OPEN
+- severity: MEDIUM
+- probe: DATA-INTEGRITY
+- surface: app/src/lib/product/deleteDraft.ts:18-23, app/src/lib/import/importProduct.ts:40-41
+- title: deleteProduct() cascade omits ldTables and rtTables subcollections; these entities become orphans in global collections after product deletion
+- evidence: `grep -n 'SUBCOLLECTIONS\|coll\|entityType' app/src/lib/product/deleteDraft.ts` — lines 18-23: `SUBCOLLECTIONS = [{ coll:'coverages', entityType:'coverage' }, { coll:'rules', entityType:'rule' }, { coll:'formRules', entityType:'formRule' }, { coll:'ratingPrograms', entityType:'ratingProgram' }]` — no `ldTable` or `rtTable` entry. `grep -n 'ldTable\|rtTable' app/src/lib/import/importProduct.ts` — lines 40-41: `ldTable: { entityType:'ldTable', underProduct:false, path:(id) => \`ldTables/${id}\` }` and `rtTable: { entityType:'rtTable', underProduct:false, path:(id) => \`rtTables/${id}\` }` — filing importer creates ldTable/rtTable entities in the global `ldTables` / `rtTables` collections. `grep -n 'ldTables\|rtTables' app/src/routes/Products.tsx` — lines 83-84: `adapter.db.list('ldTables')` and `adapter.db.list('rtTables')` load ALL limit/deductible tables and rate tables for the portfolio view. Product-specific tables (e.g., PH.LD.001-006, PA.LD.001-006, GL.LD.001-004) remain in Cosmos after the owning product is deleted and continue to appear in these global lists. `shared/src/types.ts:512` confirms `ldTable` and `rtTable` are recognised `SearchEntityType` values.
+- repro: (1) Import a product with filing tables via importProduct (or use any seed product that has ldTables). (2) Invoke the DeleteProductDialog / deleteDraftProduct flow for that product. (3) After deletion, `POST /api/db/list` with `{ path: 'ldTables' }` — the product's ldTable entities (e.g., PH.LD.001 through PH.LD.006) remain in Cosmos and are returned in the response. The portfolio's rate-table and L&D-table views show orphaned entries with no owning product. The orphaned tables also continue to match any `list('ldTables')` call used by ProductContext or SERFF snapshot assembly.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0030
+- status: OPEN
+- severity: MEDIUM
+- probe: DATA-INTEGRITY
+- surface: server/lib/data.js:48-53
+- title: POST /api/db/list — client-supplied field names in query.where[].field and query.orderBy[].field are interpolated directly into the Cosmos SQL string without sanitization
+- evidence: `grep -n 'w\.field\|o\.field\|data\.\$' server/lib/data.js` — line 50: `` where += `... c.data.${w.field} ${opMap[w.op] || '='} ${p}` `` and `` where += ` AND ARRAY_CONTAINS(c.data.${w.field}, ${p})` `` — field name from `query.where[i].field` (client-supplied) is interpolated into the SQL string with no allow-list, regex, or property-path validation. Line 53: `` sql += `... c.data.${o.field} ${(o.dir || 'asc').toUpperCase()}` `` — same pattern for `query.orderBy[i].field`. The VALUE `w.value` is correctly parameterised (`@w${i}`), but the FIELD NAME is not. A crafted field name such as `"x) OFFSET 0 LIMIT 99999"` or `"x, c.tenantId"` can modify the query structure or expose schema details. Cosmos SQL is read-only and tenant-scoped by `c.tenantId = @tid` (parameterised from the JWT), so full cross-tenant data exfiltration via injection requires bypassing the WHERE predicate — difficult but the field-name surface is unguarded. Any malformed field name that causes a Cosmos parse error propagates the raw Cosmos error through `res.status(500)` in Express's default error handler, leaking internal query structure to the caller.
+- repro: `POST /api/db/list` with a VIEWER JWT and body `{ "path": "tasks", "query": { "orderBy": [{ "field": "id, c.tenantId", "dir": "asc" }] } }` → server generates `ORDER BY c.data.id, c.tenantId asc` — a syntactically valid Cosmos SQL that retrieves the `tenantId` column alongside sorted results, leaking the partition key layout. Alternatively, send `{ "where": [{ "field": "x) OR (1=1", "op": "==", "value": "y" }] }` → SQL parse error returned verbatim in the response body.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+<!-- DATA-INTEGRITY probe summary 2026-07-11:
+Investigated: POST /api/db/list (VIEWER+), POST /api/db/presence/watch (requireAuth), grounding()
+in ai.js (ANALYST+), cascade delete in deleteDraft.ts, searchIndex consistency, parentId orphan
+detection, ldTable/rtTable orphan path, duckcreek/serff readColl() patterns, auth.js fetchAll().
+
+DEF-0005 (admin unbounded list) confirmed in scope and noted as baseline; no new note added.
+presence/watch fetchAll() assessed: SELECT c.uid only; record count bounded by unique user count
+per (tenant, product) pair (upsert by ${tid}:${pid}:${uid}); not a realistic OOM risk — no new DEF.
+duckcreek readColl() and serff readColl(): scoped to a single Cosmos partition (partitionKey
+passed); product subcollections typically contain dozens of entities — not a realistic OOM risk.
+auth.js:65 fetchAll(): single-record point lookup (username/email equality), not a collection scan.
+
+searchIndex consistency: envelope() correctly emits kind='searchIndex' on every normal mutate().
+SearchIndex is written but NEVER queried server-side or client-side (crossEntity.ts runs entirely
+in-process on data fetched via list; list endpoint queries kind='entity', not kind='searchIndex').
+Orphaned searchIndex tombstones (deleted:true after cascade delete) accumulate but have no observable
+functional impact. Dark entities from persistSummary() (no searchIndex, see DEF-0012) also
+non-impactful since searchIndex is unread. searchIndex consistency: no NEW stand-alone defect.
+
+parentId orphan (coverage child with non-existent parentId): server-side no validation (DEF-0003,
+already logged). Client-side ProductCoverages.tsx:90-103 handles orphans gracefully (surfaces as
+roots). Direct API delete of a product shell (bypassing deleteProduct cascade) leaves all children
+orphaned but still list-accessible — no new DEF added (covered by DEF-0003 scope).
+
+Four new defects logged:
+  DEF-0027 HIGH: /api/db/list fetchAll() no SQL TOP — unbounded heap load, VIEWER+ accessible.
+  DEF-0028 MEDIUM: grounding() fetchAll() no SQL TOP — all groundingChunks into heap, ANALYST+.
+  DEF-0029 MEDIUM: deleteProduct cascade omits ldTables/rtTables — orphaned global entities.
+  DEF-0030 MEDIUM: user field names interpolated into Cosmos SQL — injection vector, VIEWER+.
+-->
+
+---
+
+### DEF-0031
+- status: OPEN
+- severity: LOW
+- probe: SECRETS
+- surface: snowchat/scripts/es-setup-passwords-output.txt
+- title: Internal server IP (10.192.37.11) and hostname (LLMCOEAZHIJMP01) committed to git in Elasticsearch setup output file
+- evidence: `git ls-files snowchat/scripts/es-setup-passwords-output.txt` — file is tracked. `cat snowchat/scripts/es-setup-passwords-output.txt` — line 10 contains: `[10.192.37.11]; the server provided a certificate with subject name [CN=LLMCOEAZHIJMP01]` — a real internal RFC 1918 IP address and internal server hostname. TLS certificate fingerprints also present (`bc7fec352f6f26220981ac1e043375eb3ca34aab`, `2d73f1c7e022f468c03772d18e9ee48d6c5c355e`). No passwords were captured (the ES password setup script failed with an SSL error before writing any credentials). The file is a developer artifact from running `elasticsearch-setup-passwords auto` against a real internal server; it should have been gitignored.
+- repro: `git log -- snowchat/scripts/es-setup-passwords-output.txt` — file has been in git since initial commit; any git clone exposes the internal IP, hostname, and TLS fingerprints. `grep '10\.192\.' snowchat/scripts/es-setup-passwords-output.txt` confirms the private IP.
+- fix:
+- verified-by:
+- commit:
+
+---
+
+### DEF-0032
+- status: FALSE-POSITIVE
+- severity: N/A
+- probe: SECRETS
+- surface: app/dist/assets/ProductRules-CHPnsz19.js
+- title: FP — `pa-[a-zA-Z0-9]` pattern in ProductRules bundle matches Personal Auto HTML element IDs, not Voyage AI API keys
+- evidence: `grep -rl "pa-[a-zA-Z0-9]" app/dist/assets/ProductRules-CHPnsz19.js` returns a match, but `grep -o ".\{20\}pa-[a-zA-Z0-9].\{20\}" app/dist/assets/ProductRules-CHPnsz19.js` shows all occurrences are checkbox element IDs: `id:\`pa-medPay\``, `id:\`pa-um\``, `id:\`pa-collision\``, `id:\`pa-comp\`` — Personal Auto (PA) coverage option identifiers, not Voyage AI key material. No actual `pa-xxxxxxxx` API key format (20+ alphanumeric chars after the prefix) is present.
+- repro: N/A — not a real defect.
+
+---
+
+<!-- SECRETS probe summary 2026-07-11:
+Secrets hygiene confirmed largely clean.
+
+Files checked for gitignore/tracking:
+  tmp_acn_secrets.md — NOT on disk; gitignored by root .gitignore:19 (tmp_acn_secrets.md literal + tmp*.md). CLEAN.
+  functions/.env.local — EXISTS on disk; correctly gitignored by root .gitignore:16 (*.local pattern);
+    NEVER tracked in git (`git ls-files --error-unmatch` fails; `git log -- functions/.env.local` empty). CLEAN.
+  app/.env.development.local — EXISTS on disk; correctly gitignored by app/.gitignore:13 (*.local).
+    NEVER tracked. CLEAN.
+
+Git history for committed secrets:
+  app/.env.emulator (deleted in 02df7348) — contained only `VITE_USE_EMULATORS=true`, no secrets. CLEAN.
+  functions/.env.local — never committed. CLEAN.
+  No API keys (sk-ant-*, AKIA*, AIza*, -----BEGIN PRIVATE) in any tracked file via `git grep`.
+
+Client bundle audit (app/dist/assets/):
+  Grep for COSMOS_KEY|COSMOS_ENDPOINT|AZURE_FOUNDRY*|AZURE_STORAGE_CONNECTION|AUTH_JWT_SECRET|ANTHROPIC_API_KEY|sk-ant-*
+    → zero matches across all *.js chunks. CLEAN.
+  Vite env object (only instance in HomeCheck-D5wh9_8l.js):
+    `{BASE_URL:'/',DEV:false,MODE:'production',PROD:true,SSR:false}` — no VITE_-prefixed keys present.
+    VITE_API_BASE resolves to `undefined → ''` (same-origin default). CLEAN.
+  VITE_MAINTAINER_EMAIL, VITE_SEARCH_LLM, VITE_ALLOW_GUEST — absent from all bundle chunks (replaced
+    with empty string by Vite; tree-shaken). CLEAN.
+  No real email addresses or Azure endpoint URLs in any bundle chunk. CLEAN.
+  pa- pattern in ProductRules chunk = Personal Auto element IDs (DEF-0032 FALSE-POSITIVE).
+
+Real defects:
+  Note added to DEF-0001: Admin bundle chunk discloses bootstrap account names (admin, sal.scrudato)
+    to unauthenticated bundle downloaders via hardcoded UI string in app/src/routes/Admin.tsx:177.
+  DEF-0031 LOW: internal IP 10.192.37.11 + hostname LLMCOEAZHIJMP01 committed in snowchat ES output file.
 -->
