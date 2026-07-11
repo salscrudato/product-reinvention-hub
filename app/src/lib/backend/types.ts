@@ -71,13 +71,11 @@ export interface BackendAdapter {
      *  seeding 70+ tasks, or a re-seed that clears then re-creates) stays atomic per chunk
      *  and fully audited — never a raw write. No-op on an empty list. */
     mutateBatch(ms: MutationPayload[]): Promise<void>
-    /** Narrow, un-audited vote: arrayUnion the uid into votes.voters and +1 votes.count.
-     *  Server-enforced narrow write — only `votes` may change; any authenticated role may vote. */
+    /** Vote (EDITOR+): increments votes.count and unions uid into votes.voters via the
+     *  atomic mutate() envelope (entity + audit + version + searchIndex). VIEWER is read-only. */
     vote(path: string, uid: string): Promise<void>
-    /** Narrow, un-audited owner write to the caller's own `newsPrefs/{uid}` document.
-     *  News is per-user content, not a governed entity, so pins persist WITHOUT the
-     *  mutate() audit/version envelope (server-enforced: the uid must equal the caller). MERGES,
-     *  so a pin update never clobbers the instruction the editor writes to the same doc. */
+    /** Pin update (EDITOR+): persists the caller's pinnedHashes to their `newsPrefs/{uid}`
+     *  document via the atomic mutate() envelope (server-enforced: uid must equal the caller). */
     setNewsPins(uid: string, pinnedHashes: string[]): Promise<void>
     /** Rev-checked transaction wrapper for optimistic concurrency. */
     tx<T>(fn: (helpers: { get: BackendAdapter['db']['get'] }) => Promise<T>): Promise<T>

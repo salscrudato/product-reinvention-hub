@@ -194,12 +194,12 @@ router.post('/vote', requireRole('EDITOR'), requireTenant, async (req, res) => {
   res.json({ ok: true, count: votes.count })
 })
 
-router.post('/setNewsPins', requireAuth, requireTenant, async (req, res) => {
+router.post('/setNewsPins', requireRole('EDITOR'), requireTenant, async (req, res) => {
   const { uid, pinnedHashes } = req.body || {}; const tid = req.user.tenantId
   if (uid !== req.user.uid) return res.status(403).json({ error: 'forbidden' })
-  const path = `newsPrefs/${uid}`; const existing = await readEntity(tid, path)
-  const data = { ...(existing?.data || {}), pinnedHashes: pinnedHashes || [] }
-  await docs.items.upsert({ id: idFor('ent', path), pk: pkFor(tid, path), tenantId: tid, kind: 'entity', path, coll: collOf(path), entityType: 'newsPrefs', rev: (existing?.rev ?? 0) + 1, data, updatedAt: new Date().toISOString() })
+  const path = `newsPrefs/${uid}`
+  const actor = { uid: req.user.uid, name: req.user.name }
+  await mutateInternal(tid, { op: 'update', path, data: { pinnedHashes: pinnedHashes || [] }, entityType: 'newsPrefs' }, actor)
   res.json({ ok: true })
 })
 
