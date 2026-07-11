@@ -17,8 +17,11 @@ const { requireRole, requireTenant } = require('./auth')
 const fleet = require('./fleet')
 
 const router = express.Router()
-// Ops escape hatch: an explicit deployment override still wins for chat (kept from the prior host).
-const CHAT_OVERRIDE = process.env.AZURE_FOUNDRY_DEPLOYMENT || ''
+// Ops escape hatches: explicit deployment overrides win over the fleet defaults.
+// Set AZURE_FOUNDRY_DEPLOYMENT (chat) or AZURE_FOUNDRY_HAIKU_DEPLOYMENT (summarizeProduct)
+// in App Service configuration when the Foundry deployment name differs from the fleet default.
+const CHAT_OVERRIDE  = process.env.AZURE_FOUNDRY_DEPLOYMENT        || ''
+const HAIKU_OVERRIDE = process.env.AZURE_FOUNDRY_HAIKU_DEPLOYMENT  || ''
 
 console.log(`[prodhub-host] AI configured=${fleet.isConfigured()} url=${fleet.anthropicMessagesUrl()} chat=${CHAT_OVERRIDE || fleet.DEPLOY_OPUS}`)
 
@@ -128,7 +131,7 @@ async function summarizeProduct(req, res) {
 
   const g = fleet.guard()
   if (!g.allow) return res.status(503).json({ error: 'ai_budget_ceiling', message: 'AI is temporarily limited — the budget ceiling has been reached.' })
-  const deployment = fleet.resolveModel('BULK_VERIFY', g.degrade)
+  const deployment = HAIKU_OVERRIDE || fleet.resolveModel('BULK_VERIFY', g.degrade)
 
   try {
     const upstream = await fetch(fleet.anthropicMessagesUrl(), {

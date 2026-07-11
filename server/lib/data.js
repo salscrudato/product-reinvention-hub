@@ -37,7 +37,9 @@ async function readEntity(tid, path) {
 // ─── reads (any authenticated role, tenant-scoped) ───────────────────────────
 router.get('/get', requireAuth, requireTenant, async (req, res) => {
   const ent = await readEntity(req.user.tenantId, req.query.path)
-  res.json({ data: ent ? ent.data : null })
+  // Inject the entity's natural id (last path segment) so the client has a stable identifier.
+  const id = ent ? segs(ent.path).at(-1) : null
+  res.json({ data: ent ? { id, ...ent.data } : null })
 })
 
 router.post('/list', requireAuth, requireTenant, async (req, res) => {
@@ -49,11 +51,12 @@ router.post('/list', requireAuth, requireTenant, async (req, res) => {
     const p = `@w${i}`; params.push({ name: p, value: w.value })
     where += w.op === 'array-contains' ? ` AND ARRAY_CONTAINS(c.data.${w.field}, ${p})` : ` AND c.data.${w.field} ${opMap[w.op] || '='} ${p}`
   })
-  let sql = `SELECT c.data FROM c WHERE ${where}`
+  // Select c.path alongside c.data so we can inject the natural id into each record.
+  let sql = `SELECT c.data, c.path FROM c WHERE ${where}`
   ;(query?.orderBy || []).forEach((o, i) => { sql += `${i === 0 ? ' ORDER BY' : ','} c.data.${o.field} ${(o.dir || 'asc').toUpperCase()}` })
   const limit = Math.min(query?.limit || MAX_LIST, MAX_LIST)
   const { resources } = await docs.items.query({ query: sql, parameters: params }, { maxItemCount: limit }).fetchAll()
-  res.json({ data: resources.slice(0, limit).map((r) => r.data) })
+  res.json({ data: resources.slice(0, limit).map((r) => ({ id: segs(r.path).at(-1), ...r.data })) })
 })
 
 // ─── mutations (EDITOR+, tenant-scoped, atomic) ──────────────────────────────

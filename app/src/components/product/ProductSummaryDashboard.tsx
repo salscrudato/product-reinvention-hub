@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { adapter } from '../../lib/backend'
 import { useProductCtx } from '../../context/useProductCtx'
+import { useUser } from '../../context/useUser'
 import { Skeleton } from '../ui'
 import { IconSparkle, IconSpinner, IconRefresh, IconWarning } from '../ui/icons'
 import type { Coverage, Rule, RatingProgram, Product } from '@pf/shared'
@@ -93,6 +94,8 @@ function timeAgo(at: unknown): string {
 
 export function ProductSummaryDashboard() {
   const { pid, product, coverages, rules, ratingProgram } = useProductCtx()
+  const { user } = useUser()
+  const canGenerate = user?.role === 'ANALYST' || user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const [stored, setStored]   = useState<StoredSummary | null>(null)
   const [state, setState]     = useState<'idle' | 'loading' | 'error'>('idle')
   // Whether the cache doc has resolved at least once for this pid (so we don't auto-fire
@@ -134,15 +137,15 @@ export function ProductSummaryDashboard() {
     }
   }
 
-  // Auto-generate exactly once per product when no cached summary exists yet, so the
-  // Overview lands populated rather than on an empty "Generate" prompt.
+  // Auto-generate exactly once per product when no cached summary exists yet. Gated on
+  // ANALYST+ so VIEWER-role sessions never fire the AI endpoint (which requires ANALYST+).
   useEffect(() => {
-    if (!product || !hydrated || stored || state === 'loading') return
+    if (!product || !hydrated || stored || state === 'loading' || !canGenerate) return
     if (autoFired.current === pid) return
     autoFired.current = pid
     void generate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product, hydrated, stored, pid])
+  }, [product, hydrated, stored, pid, canGenerate])
 
   const summary = stored
   // Stale only when the ITEM COMPOSITION changed (a new item added / one removed) — either the
@@ -172,7 +175,7 @@ export function ProductSummaryDashboard() {
             </p>
           </div>
         </div>
-        <button onClick={() => void generate()} disabled={state === 'loading'}
+        <button onClick={() => void generate()} disabled={state === 'loading' || !canGenerate}
           className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[8px] text-[12px] font-medium transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
             isStale ? 'text-white' : 'text-accent hover:bg-accent-soft'}`}
           style={isStale ? { background: 'var(--gradient-accent)' } : undefined}>
@@ -252,8 +255,10 @@ export function ProductSummaryDashboard() {
               </div>
             )}
           </div>
-        ) : (
+        ) : canGenerate ? (
           <button onClick={() => void generate()} className="text-sm text-accent font-medium hover:underline">Generate AI summary</button>
+        ) : (
+          <p className="text-sm text-dim">Summary not yet generated.</p>
         )}
       </div>
     </section>
