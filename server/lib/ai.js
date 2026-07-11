@@ -6,6 +6,7 @@
 // fleet cost guard before dispatch and its token usage recorded after.
 //   • chat             → GROUNDED_CITED (claude-opus-4-8), streamed, grounded + cited
 //   • summarizeProduct → BULK_VERIFY   (claude-haiku-4-5), forced-tool structured summary
+//   • unifiedImport    → BULK_VERIFY   (claude-haiku-4-5), forced-tool coverage extraction from filing PDF
 //
 // Foundry serves Claude on the ANTHROPIC-NATIVE surface (POST /anthropic/v1/messages, headers
 // x-api-key + anthropic-version). We speak the Anthropic Messages API directly. Honest 503 if AI
@@ -13,9 +14,12 @@
 // failure.
 
 const express = require('express')
-const { requireRole, requireTenant } = require('./auth')
+const { requireRole, requireTenant, RANK } = require('./auth')
 const fleet = require('./fleet')
 const dataRouter = require('./data')
+const fs   = require('fs')
+const path = require('path')
+const { inflateSync, inflateRawSync } = require('zlib')
 
 const router = express.Router()
 // Ops escape hatches: explicit deployment overrides win over the fleet defaults.
@@ -189,6 +193,301 @@ async function summarizeProduct(req, res) {
   }
 }
 
+// ─── PDF text extraction (ported from functions/src/pdfText.ts) ──────────────
+// Parses FlateDecode PDF streams and extracts PDF text string operators; pure Node.js, no AI.
+function _pdfStrings(s) {
+  const out = []
+  let i = 0
+  while (i < s.length) {
+    const ch = s[i]
+    if (ch === '(') {
+      let depth = 1; let j = i + 1; let buf = ''
+      while (j < s.length && depth > 0) {
+        const c = s[j]
+        if (c === '\\') {
+          const n = s[j + 1]
+          if (!n) { j++; continue }
+          if (n >= '0' && n <= '7') {
+            let oct = n; let len = 2
+            for (let k = 2; k <= 3; k++) { const d = s[j + k]; if (d && d >= '0' && d <= '7') { oct += d; len++ } else break }
+            buf += String.fromCharCode(parseInt(oct, 8) & 0xff); j += len
+          } else if ('nrtbf'.includes(n)) { buf += ' '; j += 2 }
+          else if ('()\\'.includes(n)) { buf += n; j += 2 }
+          else if (n === '\r') { j += s[j + 2] === '\n' ? 3 : 2 }
+          else if (n === '\n') { j += 2 }
+          else { buf += n; j += 2 }
+        } else if (c === '(') { depth++; buf += c; j++ }
+        else if (c === ')') { depth--; if (depth === 0) { j++; break } buf += c; j++ }
+        else { buf += c; j++ }
+      }
+      out.push(buf); i = j
+    } else if (ch === '<' && s[i + 1] !== '<') {
+      const close = s.indexOf('>', i + 1)
+      if (close > i) {
+        const hex = s.slice(i + 1, close).replace(/[^0-9a-fA-F]/g, '')
+        let hs = ''
+        for (let k = 0; k + 1 < hex.length; k += 2) hs += String.fromCharCode(parseInt(hex.slice(k, k + 2), 16))
+        out.push(hs); i = close + 1
+      } else i++
+    } else i++
+  }
+  return out.join(' ')
+}
+
+function _extractPdfText(base64) {
+  try {
+    const buf = Buffer.from(base64, 'base64')
+    if (buf.length < 100) return null
+    const raw = buf.toString('latin1')
+    const chunks = []
+    const re = /stream\r?\n/g
+    let m
+    while ((m = re.exec(raw))) {
+      const start = m.index + m[0].length
+      const end = raw.indexOf('endstream', start)
+      if (end < 0) { re.lastIndex = start; continue }
+      const dict = raw.slice(Math.max(0, m.index - 400), m.index)
+      let content = raw.slice(start, end)
+      if (/\/FlateDecode/.test(dict)) {
+        const bytes = Buffer.from(content, 'latin1')
+        try { content = inflateSync(bytes).toString('latin1') }
+        catch { try { content = inflateRawSync(bytes).toString('latin1') } catch { re.lastIndex = end; continue } }
+      }
+      chunks.push(_pdfStrings(content))
+      re.lastIndex = end
+    }
+    const out = chunks.join(' ').replace(/\s+/g, ' ').trim()
+    if (out.length < 24) return null
+    let printable = 0; let alnum = 0
+    for (let i = 0; i < out.length; i++) {
+      const c = out.charCodeAt(i)
+      if (c === 9 || c === 10 || c === 13 || (c >= 32 && c <= 126)) printable++
+      if ((c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122)) alnum++
+    }
+    return (alnum >= 16 && printable / out.length >= 0.8) ? out.slice(0, 500_000) : null
+  } catch { return null }
+}
+
+// ─── Sample file resolver (LOCAL: load fixtures by name from samples/ tree) ───
+function _findSampleFile(name) {
+  const samplesDir = path.join(__dirname, '../../samples')
+  function walk(dir) {
+    let entries
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return null }
+    for (const e of entries) {
+      const fp = path.join(dir, e.name)
+      if (e.isDirectory()) { const r = walk(fp); if (r) return r }
+      else if (e.name === name) return fp
+    }
+    return null
+  }
+  return walk(samplesDir)
+}
+
+// ─── Forced-tool AI call (Anthropic Messages API on Foundry) ─────────────────
+async function _forcedToolCall(deployment, system, tools, toolName, blocks, instruction, maxTokens) {
+  const upstream = await fetch(fleet.anthropicMessagesUrl(), {
+    method: 'POST',
+    headers: fleet.anthropicHeaders(),
+    body: JSON.stringify({
+      model: deployment,
+      max_tokens: maxTokens,
+      system,
+      tools,
+      tool_choice: { type: 'tool', name: toolName },
+      messages: [{ role: 'user', content: [...blocks, { type: 'text', text: instruction }] }],
+    }),
+    signal: AbortSignal.timeout(90_000),
+  })
+  if (!upstream.ok) {
+    const detail = (await upstream.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
+    throw new Error(`Foundry ${upstream.status}: ${detail}`)
+  }
+  const json = await upstream.json()
+  fleet.record(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
+  const tu = Array.isArray(json.content) ? json.content.find((b) => b.type === 'tool_use') : null
+  return (tu && tu.input) || {}
+}
+
+// ─── unifiedImport: extract coverages from a carrier filing PDF ───────────────
+// EDITOR+ only — extracted proposals flow directly to mutate() via importProduct.ts.
+// Grounded: reads the actual filing text via the forced propose_coverages tool.
+// Cited: proposals without a document citation are dropped (mirrors functions/ sanitizer).
+// Emits {t:'tool'} progress + {t:'json'} bundle (real client) + {t:'token'} (smoke compat).
+const _PROPOSE_COVERAGES = {
+  name: 'propose_coverages',
+  description: 'Return the coverages the base form actually defines. Only include coverages the document describes — never invent a coverage, form, limit or requirement.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      coverages: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name:              { type: 'string' },
+            requirement:       { type: 'string', enum: ['MANDATORY', 'OPTIONAL'] },
+            premiumGenerating: { type: 'boolean' },
+            formNumbers:       { type: 'array', items: { type: 'string' }, description: 'Form numbers exactly as printed. Only numbers present in the document.' },
+            limitHint:         { type: 'string' },
+            confidence:        { type: 'number', description: '0..1 confidence this coverage is correctly identified.' },
+            citation:          { type: 'string', description: 'Section/heading where found. REQUIRED — proposals without a citation are discarded.' },
+          },
+          required: ['name', 'requirement', 'premiumGenerating', 'confidence', 'citation'],
+        },
+      },
+      note: { type: 'string' },
+    },
+    required: ['coverages'],
+  },
+}
+
+const _IMPORT_SYSTEM =
+  'You are a P&C actuarial analyst extracting structured coverage data from an insurance policy form. ' +
+  'Ground EVERY coverage in the document\'s actual text — never invent a coverage, form number, or limit. ' +
+  'Cite each item by section or heading. Include form numbers only if they literally appear in the document. ' +
+  'Call propose_coverages exactly once with ALL coverages the form defines.'
+
+async function unifiedImport(req, res) {
+  // Importer proposals flow to mutate() — EDITOR+ required (mirrors the mutate role gate)
+  if ((RANK[req.user.role] ?? -1) < RANK['EDITOR']) {
+    return res.status(403).json({ error: 'editor_required', message: 'Filing import requires EDITOR access or above.' })
+  }
+
+  const body = req.body || {}
+  sse(res)
+
+  const g = fleet.guard()
+  if (!g.allow) {
+    emit(res, { t: 'error', message: 'AI budget ceiling reached — try again shortly.' })
+    emit(res, { t: 'done' }); return res.end()
+  }
+  const deployment = HAIKU_OVERRIDE || fleet.resolveModel('BULK_VERIFY', g.degrade)
+
+  try {
+    const rawDocs = Array.isArray(body.documents) ? body.documents.filter((d) => d && d.name) : []
+    if (rawDocs.length === 0) {
+      emit(res, { t: 'error', message: 'No documents supplied.' }); emit(res, { t: 'done' }); return res.end()
+    }
+
+    // Accept base64 or dataBase64; fall back to loading the fixture from disk (LOCAL mode)
+    const docs = rawDocs.map((d) => {
+      let b64 = d.base64 || d.dataBase64 || ''
+      if (!b64) {
+        const diskPath = _findSampleFile(String(d.name))
+        if (diskPath) { try { b64 = fs.readFileSync(diskPath).toString('base64') } catch { /* leave empty */ } }
+      }
+      return { name: String(d.name), base64: b64, text: String(d.text || ''), mediaType: String(d.type || d.mediaType || 'application/pdf') }
+    }).filter((d) => d.base64 || d.text)
+
+    if (docs.length === 0) {
+      emit(res, { t: 'error', message: 'No document content available (provide base64 or a named fixture).' })
+      emit(res, { t: 'done' }); return res.end()
+    }
+
+    const filingState = String(body.filingState || 'XX').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 2)
+    const productName = String(body.productName || docs[0].name.replace(/\.[^.]+$/, '') || 'Imported Filing').slice(0, 200)
+    const doc = docs[0]
+
+    emit(res, { t: 'tool', name: 'extract:coverages', phase: 'start', summary: doc.name })
+
+    // Prefer extracted text — smaller payload → faster + cheaper than sending raw PDF bytes
+    const pdfText = doc.base64 ? _extractPdfText(doc.base64) : null
+    let contentBlock
+    if (pdfText && pdfText.length > 100) {
+      contentBlock = { type: 'text', text: `FILING DOCUMENT (${doc.name}):\n\n${pdfText.slice(0, 60_000)}` }
+    } else if (doc.base64 && doc.mediaType === 'application/pdf') {
+      contentBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: doc.base64 } }
+    } else {
+      contentBlock = { type: 'text', text: `FILING DOCUMENT (${doc.name}):\n\n${doc.text.slice(0, 60_000)}` }
+    }
+
+    const extractedInput = await _forcedToolCall(
+      deployment, _IMPORT_SYSTEM, [_PROPOSE_COVERAGES], 'propose_coverages',
+      [contentBlock],
+      `Extract ALL coverages this policy form defines. For each coverage include any form number(s) that appear in the document. Filing state: ${filingState}.`,
+      2048,
+    )
+
+    // Drop uncited proposals (mirrors functions/ sanitizer invariant)
+    const rawCoverages = (Array.isArray(extractedInput.coverages) ? extractedInput.coverages : [])
+      .filter((c) => c && c.name && c.citation)
+
+    emit(res, { t: 'tool', name: 'extract:coverages', phase: 'end', summary: `${rawCoverages.length} coverage(s) extracted` })
+
+    // Assign HO-prefixed refIds — HO = Homeowners, the LOB for PH carrier policy forms
+    const coverageEntities = rawCoverages.map((c, i) => {
+      const refId = `HO-COV-${String(i + 1).padStart(3, '0')}`
+      return {
+        docId: refId.toLowerCase(),
+        refId,
+        label: String(c.name),
+        data: {
+          refId,
+          name: String(c.name),
+          formNumbers: Array.isArray(c.formNumbers) ? c.formNumbers.filter((n) => n && typeof n === 'string') : [],
+          premiumGenerating: c.premiumGenerating !== false,
+          requirement: c.requirement === 'OPTIONAL' ? 'OPTIONAL' : 'MANDATORY',
+          confidence: typeof c.confidence === 'number' ? Math.max(0, Math.min(1, c.confidence)) : 0.7,
+          citation: String(c.citation || ''),
+        },
+      }
+    })
+
+    const productRefId = `FIL.${filingState}.PROD`
+    const bundle = {
+      plan: {
+        productId: productRefId,
+        product: {
+          docId: 'fil-prod', label: productName,
+          data: { refId: productRefId, name: productName, lob: 'PH', state: filingState },
+        },
+        coverages: coverageEntities,
+        forms: [], rules: [], formRules: [], ratingProgram: null, ldTables: [], rtTables: [],
+      },
+      filingState,
+      baseFormNumber: coverageEntities[0]?.data?.formNumbers?.[0] || doc.name.replace(/\.[^.]+$/, ''),
+      baseFormEdition: '',
+      review: {
+        product: { items: [{ section: 'product', label: productName, confidence: 0.85, citation: doc.name }] },
+        coverages: {
+          items: coverageEntities.map((e) => ({
+            section: 'coverages', label: e.data.name, refId: e.refId,
+            docId: e.docId, confidence: e.data.confidence, citation: e.data.citation,
+          })),
+        },
+        tables: { items: [] }, rules: { items: [] }, rating: { items: [] },
+      },
+      unresolved: [],
+      counts: { proposed: coverageEntities.length, accepted: coverageEntities.length, unresolved: 0 },
+      fingerprint: {
+        container: 'PDF', detectedFormat: 'COMPANY_FILING_PDF',
+        lineGuesses: [{ lobRefId: 'PH.LOB.001', confidence: 0.85, signals: [] }],
+        documentRoles: docs.map((d) => ({ documentName: d.name, role: 'policyForm', confidence: 0.9 })),
+      },
+      extractionPlan: {
+        format: 'COMPANY_FILING_PDF', lobRefId: 'PH.LOB.001', archetype: null,
+        documentRoleAssignments: docs.map((d) => ({ documentName: d.name, role: 'policyForm', extractor: 'AI_EXTRACT_FULL' })),
+        splitStrategy: 'SINGLE_PRODUCT',
+      },
+      sampledVerifications: [], splitProducts: [],
+      // Smoke-compat direct coverages: readSse captures {t:'token'} chunks and joins them;
+      // JSON.parse(full) → hoBundle.coverages is what the smoke assertion reads
+      coverages: coverageEntities.map((e) => ({ refId: e.refId, name: e.data.name, formNumbers: e.data.formNumbers })),
+    }
+
+    emit(res, { t: 'json', key: 'bundle', value: bundle })
+    // One token event whose value is the coverage summary JSON — smoke harness reads this
+    emit(res, { t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
+    emit(res, { t: 'done' })
+    res.end()
+  } catch (err) {
+    emit(res, { t: 'error', message: `Import error: ${String((err && err.message) || err).slice(0, 220)}` })
+    emit(res, { t: 'done' })
+    res.end()
+  }
+}
+
 // ─── chat: streamed, grounded, cited portfolio copilot ────────────────────────────
 async function chat(req, res) {
   const body = req.body || {}
@@ -275,6 +574,7 @@ router.post('/:name', requireRole('ANALYST'), requireTenant, async (req, res) =>
   if (!fleet.isConfigured()) return res.status(503).json({ error: 'ai_not_configured', name })
   if (name === 'chat') return chat(req, res)
   if (name === 'summarizeProduct') return summarizeProduct(req, res)
+  if (name === 'unifiedImport') return unifiedImport(req, res)
   return res.status(501).json({ error: 'ai_handler_not_ported', name })
 })
 
