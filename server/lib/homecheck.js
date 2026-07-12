@@ -1015,9 +1015,14 @@ router.post('/inventory', guestRateLimit('vision'), async (req, res) => {
   try {
     const { items, processedCount } = await processPhotoInventory(photos)
     const sessionId = existingId && _sessions.has(existingId) ? existingId : crypto.randomUUID()
+    // RISK-009: generate a sessionSecret so GET/DELETE/export require knowledge of both
+    // the sessionId (URL) and the sessionSecret (query param or header). Preserves the
+    // existing sessionId if resuming a session; generates a new secret regardless.
+    const sessionSecret = crypto.randomUUID()
     const now = Date.now()
     _sessions.set(sessionId, {
       sessionId,
+      sessionSecret,
       items,
       address: address || null,
       createdAt:  now,
@@ -1028,13 +1033,15 @@ router.post('/inventory', guestRateLimit('vision'), async (req, res) => {
     const totalValue = items.reduce((s, it) => s + (it.estimatedValueUSD || 0), 0)
     return res.json({
       sessionId,
+      sessionSecret,
       itemCount:          items.length,
       totalEstimatedValue: totalValue,
       items,
       processedCount,
       expiresAt:          new Date(now + SESSION_TTL_MS).toISOString(),
       retention:          'Session data and photo metadata are stored in server memory for 24 hours. Photos are NOT persisted to disk or any database. Delete immediately via DELETE /inventory/:sessionId.',
-      cost:               'This call used AI vision (GPT-5.1). Approximate cost: $0.02–$0.05 per photo processed.',
+      cost:               'This call used AI vision (GPT-5.1). Approximate cost: $0.02-$0.05 per photo processed.',
+      secretNote:         'Store sessionSecret securely. Pass it as ?secret=<value> or X-Session-Secret header on subsequent GET/DELETE requests.',
     })
   } catch (e) {
     if (e.code === 'NOT_CONFIGURED') return res.status(503).json({ error: 'vision_not_configured', detail: e.message })
@@ -1043,18 +1050,31 @@ router.post('/inventory', guestRateLimit('vision'), async (req, res) => {
   }
 })
 
+// RISK-009: validate the sessionSecret on session access endpoints.
+// Sessions created before this change have no sessionSecret and are accessible without one
+// (backward-compat for in-flight sessions); new sessions always require it.
+function checkSessionSecret(req, session) {
+  if (!session.sessionSecret) return true // pre-RISK-009 session: no secret required
+  const provided = req.query.secret || req.headers['x-session-secret']
+  return provided === session.sessionSecret
+}
+
 // GET /inventory/:sessionId — retrieve session
 router.get('/inventory/:sessionId', (req, res) => {
   const s = _sessions.get(req.params.sessionId)
   if (!s) return res.status(404).json({ error: 'not_found', detail: 'Session not found or expired.' })
   if (Date.now() > s.expiresAt) { _sessions.delete(req.params.sessionId); return res.status(404).json({ error: 'expired' }) }
+  if (!checkSessionSecret(req, s)) return res.status(403).json({ error: 'invalid_secret', detail: 'Pass sessionSecret as ?secret= or X-Session-Secret header.' })
   return res.json({ sessionId: s.sessionId, items: s.items, address: s.address, createdAt: new Date(s.createdAt).toISOString(), expiresAt: new Date(s.expiresAt).toISOString() })
 })
 
 // DELETE /inventory/:sessionId — explicit delete (privacy/retention)
 router.delete('/inventory/:sessionId', (req, res) => {
-  const existed = _sessions.delete(req.params.sessionId)
-  return res.json({ deleted: existed, sessionId: req.params.sessionId })
+  const s = _sessions.get(req.params.sessionId)
+  if (!s) return res.json({ deleted: false, sessionId: req.params.sessionId })
+  if (!checkSessionSecret(req, s)) return res.status(403).json({ error: 'invalid_secret', detail: 'Pass sessionSecret as ?secret= or X-Session-Secret header.' })
+  _sessions.delete(req.params.sessionId)
+  return res.json({ deleted: true, sessionId: req.params.sessionId })
 })
 
 // GET /inventory/:sessionId/export — downloadable proof-of-condition HTML
@@ -1062,6 +1082,7 @@ router.get('/inventory/:sessionId/export', (req, res) => {
   const s = _sessions.get(req.params.sessionId)
   if (!s) return res.status(404).json({ error: 'not_found' })
   if (Date.now() > s.expiresAt) { _sessions.delete(req.params.sessionId); return res.status(404).json({ error: 'expired' }) }
+  if (!checkSessionSecret(req, s)) return res.status(403).json({ error: 'invalid_secret', detail: 'Pass sessionSecret as ?secret= or X-Session-Secret header.' })
   const html = buildInventoryHtml(s)
   return res
     .set('Content-Type', 'text/html; charset=utf-8')
