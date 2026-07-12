@@ -141,7 +141,7 @@ function me(req, res) { return res.json({ user: req.user }) }
 
 async function changePassword(req, res) {
   const next = String((req.body || {}).password ?? '')
-  if (next.length < 3) return res.status(400).json({ error: 'password_too_short' })
+  if (next.length < 12) return res.status(400).json({ error: 'password_too_short', detail: 'Password must be at least 12 characters.' })
   // Persist to Cosmos so the change survives server restart.
   const docs = systemContainer()
   if (docs) {
