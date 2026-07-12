@@ -26,6 +26,32 @@ const app = express()
 const PORT = process.env.PORT || 8080
 const PUBLIC = path.join(__dirname, 'public')
 
+// ─── Auth endpoint rate limiter (token bucket, per-IP, in-process) ──────────
+// RISK-003: protect /api/auth/login from brute-force and credential stuffing.
+// RISK-007: protect /api/auth/tenants from tenant enumeration scraping.
+// Implementation mirrors homecheck.js guest rate limiter (no new dependencies).
+const _authBuckets = new Map()
+function authRateLimit(name, cap, refillPerSec) {
+  return (req, res, next) => {
+    const fwd = req.headers['x-forwarded-for'] || ''
+    const ip = (fwd ? fwd.split(',')[0] : (req.socket?.remoteAddress || 'unknown')).trim()
+    const key = `${name}:${ip}`
+    const now = Date.now()
+    let b = _authBuckets.get(key)
+    if (!b) { b = { tokens: cap - 1, lastMs: now }; _authBuckets.set(key, b); return next() }
+    b.tokens = Math.min(cap, b.tokens + (now - b.lastMs) / 1000 * refillPerSec)
+    b.lastMs = now
+    if (b.tokens >= 1) { b.tokens -= 1; return next() }
+    const retryAfter = Math.ceil((1 - b.tokens) / refillPerSec)
+    res.set('Retry-After', String(retryAfter))
+    return res.status(429).json({ error: 'rate_limit_exceeded', retryAfter })
+  }
+}
+// 10 login attempts per hour per IP (cap=10, refill=10/3600 tokens/s)
+const loginRateLimit = authRateLimit('login', 10, 10 / 3600)
+// 60 tenant list fetches per hour per IP
+const tenantsRateLimit = authRateLimit('tenants', 60, 60 / 3600)
+
 // ─── cold-start probe (App Insights startup telemetry) ──────────────────────
 try { require('./lib/sys-diag').init() } catch (_) { /* non-fatal; host still boots */ }
 
@@ -40,10 +66,10 @@ app.get('/api/health', (_req, res) => {
 })
 
 // ─── auth ─────────────────────────────────────────────────────────────────
-app.post('/api/auth/login', auth.login)
-app.get('/api/auth/tenants', auth.publicTenants) // login-page dropdown (ids + names only)
+app.post('/api/auth/login', loginRateLimit, auth.login)
+app.get('/api/auth/tenants', tenantsRateLimit, auth.publicTenants) // login-page dropdown (ids + names only)
 app.get('/api/auth/me', auth.requireAuth, auth.me)
-app.post('/api/auth/logout', (_req, res) => res.json({ ok: true })) // token is client-held; nothing server-side to revoke
+app.post('/api/auth/logout', auth.revokeToken, (_req, res) => res.json({ ok: true })) // RISK-006: revoke jti before responding
 app.post('/api/auth/change-password', auth.requireAuth, auth.changePassword)
 
 // ─── tenant + user administration (ADMIN) ───────────────────────────────────
@@ -147,4 +173,14 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(PUBLIC, 'index.html'))
 })
 
-app.listen(PORT, () => console.log(`[prodhub-host] listening on :${PORT} — serving ${PUBLIC}`))
+// RISK-012: global error handler -- must have exactly 4 parameters for Express to treat it as
+// error middleware. Catches unhandled throws from async route handlers. Returns 500 without
+// leaking stack traces; the full error is logged for App Insights log-stream visibility.
+// eslint-disable-next-line no-unused-vars
+app.use(function (err, req, res, next) {
+  console.error('[prodhub-host] unhandled error:', err?.message || String(err))
+  if (res.headersSent) return
+  res.status(500).json({ error: 'internal_server_error' })
+})
+
+app.listen(PORT, () => console.log(`[prodhub-host] listening on :${PORT} -- serving ${PUBLIC}`))
