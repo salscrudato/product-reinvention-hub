@@ -9,8 +9,7 @@
 //
 // Tenancy: every session is bound to a tenantId (carried in the JWT). The data
 // layer scopes ALL reads/writes to that tenant, so companies are isolated.
-// Bootstrap admins (admin / sal.scrudato) are enabled only when BOOTSTRAP_USERS_ENABLED=true.
-// OFF by default in production; set ON for LOCAL dev and smoke harness runs.
+// Bootstrap admins (admin / sal.scrudato) are on by default; set BOOTSTRAP_USERS_ENABLED=false to disable.
 // Additional users live in Cosmos (kind:'user', pk:'__system__'), managed via /api/admin/users.
 
 const crypto = require('crypto')
@@ -23,10 +22,9 @@ const TTL_SECONDS = 12 * 60 * 60
 
 const RANK = { VIEWER: 0, ANALYST: 1, EDITOR: 2, ADMIN: 3 }
 
-// Bootstrap accounts — gated behind BOOTSTRAP_USERS_ENABLED=true (default OFF in production).
-// Enable for LOCAL dev / smoke harness. Passwords sourced from env; defaults preserve
-// hardening/smoke.mjs's admin/admin authentication without additional config.
-const BOOTSTRAP_ENABLED = process.env.BOOTSTRAP_USERS_ENABLED === 'true'
+// Bootstrap accounts — enabled by default; set BOOTSTRAP_USERS_ENABLED=false to disable in hardened prod.
+// Passwords sourced from env; defaults preserve hardening/smoke.mjs's admin/admin authentication.
+const BOOTSTRAP_ENABLED = process.env.BOOTSTRAP_USERS_ENABLED !== 'false'
 const BOOTSTRAP = BOOTSTRAP_ENABLED ? {
   admin: { password: process.env.BOOTSTRAP_ADMIN_PASSWORD || 'admin', role: 'ADMIN', name: 'Admin', email: 'admin@prodhub.local', tenants: '*' },
   'sal.scrudato': { password: process.env.BOOTSTRAP_SAL_PASSWORD || 'sal.scrudato', role: 'ADMIN', name: 'Sal Scrudato', email: 'salvatore.scrudato@accenture.com', tenants: '*' },

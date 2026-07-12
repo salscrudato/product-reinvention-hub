@@ -12,6 +12,10 @@
 //
 // Data + AI routers are mounted only if their modules load (so the host still
 // boots for auth/health while later phases land). See docs/DEPLOY_AZURE.md.
+//
+// [arch] startup banner (banner.js) removed v4.1.0 — commit 3f98282.
+//        Restore:  git show 3f98282:server/lib/banner.js > server/lib/banner.js
+//        Toggle:   SHOW_BANNER=1  (disabled by default; not needed in prod)
 
 const path = require('path')
 const express = require('express')
@@ -21,6 +25,9 @@ const auth = require('./lib/auth')
 const app = express()
 const PORT = process.env.PORT || 8080
 const PUBLIC = path.join(__dirname, 'public')
+
+// ─── cold-start probe (App Insights startup telemetry) ──────────────────────
+try { require('./lib/sys-diag').init() } catch (_) { /* non-fatal; host still boots */ }
 
 app.disable('x-powered-by')
 app.use(compression())

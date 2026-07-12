@@ -1,20 +1,21 @@
-// Public landing — the showpiece AND the sign-in entry point. Aurora background +
+// Public landing - the showpiece AND the sign-in entry point. Aurora background +
 // a bespoke "insight graph": an insurance product manager at the focal point,
 // informed by inward-flowing streams from the app's capabilities (live news,
 // coverages & forms, an AI copilot, rating, intelligent tasks). Coverages branch
 // out from their node. The hero's call-to-action is an inline username/password
-// form beneath the copy — there is no separate sign-in page.
+// form beneath the copy - there is no separate sign-in page.
 // Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
 import type { TenantInfo } from '../lib/backend'
 import { useUser } from '../context/useUser'
+import { reportWebVitals } from '../lib/perf/reportWebVitals'
 import { Logo } from '../components/ui'
 import { Input } from '../components/ui/Input'
 import { IconArrowRight, IconLayers, IconSparkle, IconTasks, IconSpinner, IconEye, IconEyeOff } from '../components/ui/icons'
 
-// A glyph accepts size / className / strokeWidth — matches the in-house icon shape.
+// A glyph accepts size / className / strokeWidth - matches the in-house icon shape.
 type Glyph = (p: { size?: number; className?: string; strokeWidth?: number }) => React.ReactElement
 
 // ─── Aurora background ────────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ const RN  = 22           // feature-node radius
 type GlyphId = 'news' | 'ai' | 'cov' | 'rate' | 'task'
 interface Feature { id: GlyphId; label: string; x: number; y: number }
 
-// Capability sources — arranged on a left arc, converging on the PM.
+// Capability sources - arranged on a left arc, converging on the PM.
 const FEATURES: Feature[] = [
   { id: 'news', label: 'Live news',  x: 100, y: 66  },
   { id: 'ai',   label: 'AI copilot', x: 64,  y: 152 },
@@ -168,7 +169,7 @@ function InsightGraph() {
         </g>
       ))}
 
-      {/* Focal point — the product manager, aggregating every stream */}
+      {/* Focal point - the product manager, aggregating every stream */}
       <g className="rise-in" style={{ '--rise-delay': '150ms' } as React.CSSProperties}>
         <circle cx={PM.x} cy={PM.y} r={RPM + 22} fill="url(#ig-glow)" className="node-glow" />
         {/* Orbiting intake ring (reuses the edge-flow dash animation) */}
@@ -187,7 +188,7 @@ function InsightGraph() {
   )
 }
 
-// ─── Hero call-to-action — an inline username / password sign-in form ─────────
+// ─── Hero call-to-action - an inline username / password sign-in form ─────────
 
 function HeroSignIn() {
   const navigate = useNavigate()
@@ -242,7 +243,7 @@ function HeroSignIn() {
       } else if (msg.includes('403')) {
         setError("You don't have access to that company.")
       } else if (msg.includes('too-many-requests')) {
-        setError('Too many attempts — try again in a moment.')
+        setError('Too many attempts - try again in a moment.')
       } else {
         setError(msg)
       }
@@ -284,7 +285,7 @@ function HeroSignIn() {
         </button>
       </div>
 
-      {/* Company — below password; pre-selected to testco (seeded content default) */}
+      {/* Company - below password; pre-selected to testco (seeded content default) */}
       {tenants.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-text" htmlFor="signin-tenant">Company</label>
@@ -332,17 +333,17 @@ const CARDS: { icon: Glyph; title: string; body: string }[] = [
   {
     icon: IconLayers,
     title: 'Your whole portfolio, one workspace',
-    body: 'Author coverages, forms, rules and rating side by side — versioned, governed and instantly searchable, from first draft to state filing.',
+    body: 'Author coverages, forms, rules and rating side by side - versioned, governed and instantly searchable, from first draft to state filing.',
   },
   {
     icon: IconSparkle,
     title: 'An AI copilot for product managers',
-    body: 'Ask your portfolio anything. Trace a premium, see which forms attach, draft language — every answer grounded in your data and cited to the exact refId.',
+    body: 'Ask your portfolio anything. Trace a premium, see which forms attach, draft language - every answer grounded in your data and cited to the exact refId.',
   },
   {
     icon: IconTasks,
     title: 'Every signal, aggregated',
-    body: 'Live market news, readiness checks, reviews awaiting you and a living task board — the whole picture converges on you, so nothing slips.',
+    body: 'Live market news, readiness checks, reviews awaiting you and a living task board - the whole picture converges on you, so nothing slips.',
   },
 ]
 
@@ -369,9 +370,13 @@ function FeatureCard({ icon: Icon, title, body, delay }: { icon: Glyph; title: s
 export default function Landing() {
   const { user } = useUser()
 
+  // Route-level paint diagnostic (must run before the early return below to keep
+  // hook order stable across renders).
+  useEffect(() => { reportWebVitals('landing') }, [])
+
   // A real (credentialed) session belongs in the app, not on the marketing page.
   // The adapter auto-connects an ANONYMOUS session on load (email === null); those
-  // visitors stay here so the landing — and its sign-in form — remain reachable.
+  // visitors stay here so the landing - and its sign-in form - remain reachable.
   if (user?.email) return <Navigate to="/app" replace />
 
   return (
@@ -408,8 +413,8 @@ export default function Landing() {
 
           <p className="rise-in text-base sm:text-lg text-dim leading-relaxed max-w-md mx-auto lg:mx-0"
             style={{ '--rise-delay': '90ms' } as React.CSSProperties}>
-            The product manager sits at the centre. Coverages, rating, live market news,
-            intelligent tasks and an AI copilot all flow to you — grounded, governed and
+            The product manager sits at the center. Coverages, rating, live market news,
+            intelligent tasks and an AI copilot all flow to you - grounded, governed and
             fully traceable, from first draft to state filing.
           </p>
 

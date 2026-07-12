@@ -58,7 +58,7 @@ async function grounding(query, productId, tenantId) {
     const terms = String(query || '').toLowerCase().split(/\W+/).filter((t) => t.length > 2)
     return resources
       .map((r) => { const text = String(r.data?.text || ''); const lc = text.toLowerCase(); return { text, score: terms.reduce((s, t) => s + (lc.includes(t) ? 1 : 0), 0) } })
-      .filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 8).map((x) => x.text)
+      .filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 16).map((x) => x.text)
   } catch (e) { console.warn('[ai] grounding failed:', e.message); return [] }
 }
 
@@ -156,7 +156,7 @@ async function summarizeProduct(req, res) {
       headers: fleet.anthropicHeaders(),
       body: JSON.stringify({
         model: deployment,
-        max_tokens: 1200,
+        max_tokens: 4096,
         system: SUMMARY_SYSTEM,
         tools: [SUMMARY_TOOL],
         tool_choice: { type: 'tool', name: 'product_summary' },
@@ -406,7 +406,7 @@ async function unifiedImport(req, res) {
       deployment, _IMPORT_SYSTEM, [_PROPOSE_COVERAGES], 'propose_coverages',
       [contentBlock],
       `Extract ALL coverages this policy form defines. For each coverage include any form number(s) that appear in the document. Filing state: ${filingState}.`,
-      2048,
+      4096,
     )
 
     // Drop uncited proposals (mirrors functions/ sanitizer invariant)
@@ -510,7 +510,7 @@ async function chat(req, res) {
     const upstream = await fetch(fleet.anthropicMessagesUrl(), {
       method: 'POST',
       headers: fleet.anthropicHeaders(),
-      body: JSON.stringify({ model: deployment, max_tokens: 1024, system, stream: true, messages: msgs.length ? msgs : [{ role: 'user', content: 'Hello' }] }),
+      body: JSON.stringify({ model: deployment, max_tokens: 8192, system, stream: true, messages: msgs.length ? msgs : [{ role: 'user', content: 'Hello' }] }),
       signal: AbortSignal.timeout(120_000),
     })
     if (!upstream.ok || !upstream.body) {
@@ -686,7 +686,7 @@ async function scaffoldProduct(req, res) {
     emit(res, { t: 'tool', name: 'load:context', phase: 'end', summary: `${ctx.length} context chunk(s) found` })
     const system = `${SCAFFOLD_SYSTEM}\n\nCONTEXT:\n${ctx.length ? ctx.join('\n\n---\n\n') : '(no matching context found)'}`
     emit(res, { t: 'tool', name: 'emit_product_scaffold', phase: 'start', summary: 'Scaffolding product from context' })
-    const raw = await _forcedToolCall(deployment, system, [_EMIT_SCAFFOLD], 'emit_product_scaffold', [], instruction, 2048)
+    const raw = await _forcedToolCall(deployment, system, [_EMIT_SCAFFOLD], 'emit_product_scaffold', [], instruction, 4096)
     const proposed = Array.isArray(raw.coverages) ? raw.coverages : []
     const coverages = proposed.filter((c) => c && c.name && c.citation)
     const forms = (Array.isArray(raw.forms) ? raw.forms : []).filter((f) => f && f.number && f.citation)
@@ -744,7 +744,7 @@ async function draftRule(req, res) {
     const existingNote = body.existingRule ? `\n\nEXISTING RULE TO REFINE:\ncategory: ${body.existingRule.category || ''}\nsubCategory: ${body.existingRule.subCategory || ''}\ncondition: ${body.existingRule.condition || ''}\noutcome: ${body.existingRule.outcome || ''}\nPreserve intent and refId; change only what the instruction requests.` : ''
     const system = `${DRAFT_RULE_SYSTEM}${existingNote}\n\nCONTEXT:\n${ctx.length ? ctx.join('\n\n---\n\n') : '(no matching context found)'}`
     emit(res, { t: 'tool', name: 'emit_rule_draft', phase: 'start', summary: 'Drafting rule' })
-    const raw = await _forcedToolCall(deployment, system, [_EMIT_RULE], 'emit_rule_draft', [], instruction, 1024)
+    const raw = await _forcedToolCall(deployment, system, [_EMIT_RULE], 'emit_rule_draft', [], instruction, 4096)
     const draft = {
       category:       raw.category || 'PRODUCT',
       subCategory:    raw.subCategory || 'general',
@@ -837,7 +837,7 @@ async function analyzeClaim(req, res) {
     const userInstruction = lastUser || 'Analyze claim coverage for the attached form.'
     emit(res, { t: 'tool', name: 'emit_determination', phase: 'start', summary: 'Analyzing claim coverage' })
     const raw = await _forcedToolCall(deployment, system, [_EMIT_DETERMINATION], 'emit_determination',
-      [sandboxNote, contentBlock], userInstruction, 2048)
+      [sandboxNote, contentBlock], userInstruction, 4096)
     // Citation guard: any reasoning point with no citation → downgrade verdict if all empty
     const citedReasoning = (Array.isArray(raw.reasoning) ? raw.reasoning : []).filter((r) => r && /\[/.test(r))
     if (citedReasoning.length === 0 && (raw.verdict === 'COVERED' || raw.verdict === 'NOT_COVERED' || raw.verdict === 'PARTIAL')) {

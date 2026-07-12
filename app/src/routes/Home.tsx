@@ -18,6 +18,7 @@ import { HeroMark } from '../components/home/HeroMark'
 import { PriorityRail } from '../components/home/PriorityRail'
 import { PortfolioMetrics } from '../components/home/PortfolioMetrics'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
+import { reportWebVitals } from '../lib/perf/reportWebVitals'
 import type { SearchIndexEntry, Task, Product } from '@pf/shared'
 
 // ─── Stream protocol (mirror of functions/src/runtime.ts StreamEvent) ───────────
@@ -61,6 +62,9 @@ export default function Home() {
 
   // Abort any in-flight chat on unmount so it doesn't keep consuming tokens/network.
   useEffect(() => () => abortRef.current?.abort(), [])
+
+  // Route-level paint diagnostic for the cockpit surface.
+  useEffect(() => { reportWebVitals('home') }, [])
 
   // Cockpit data — realtime, with genuine loading / error states (see useLiveCollection).
   const tasks    = useLiveCollection<Task>('tasks')

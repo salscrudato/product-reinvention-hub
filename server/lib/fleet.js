@@ -27,6 +27,20 @@ const openaiChatUrl        = () => `${SVC}/openai/v1/chat/completions`
 const anthropicHeaders     = () => ({ 'Content-Type': 'application/json', 'x-api-key': KEY, 'anthropic-version': ANTHROPIC_VERSION })
 const openaiHeaders        = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${KEY}` })
 
+// gpt-5.1 and gpt-5-mini are o-series reasoning models: they reject max_tokens with HTTP 400.
+// Use max_completion_tokens for all OpenAI deployments routed through this fleet.
+const openaiMaxTokensKey = () => 'max_completion_tokens'
+
+/** Build a valid body for an OpenAI o-series chat call (VISION / CHEAP_GENERAL roles).
+ *  @param {string} deployment - Foundry deployment name (e.g. 'gpt-5.1')
+ *  @param {Array}  messages   - Anthropic-style messages array, already converted to OpenAI format
+ *  @param {number} maxTokens  - Output token budget (mapped to max_completion_tokens)
+ *  @param {object} [extra]    - Additional body fields (e.g. { temperature: 0 })
+ */
+function openaiChatBody(deployment, messages, maxTokens, extra = {}) {
+  return { model: deployment, messages, max_completion_tokens: maxTokens, ...extra }
+}
+
 // ─── Role → deployment ────────────────────────────────────────────────────────
 /** Resolve the Foundry deployment name for a fleet role. When `degrade` is true, route to the
  *  cheaper same-family deployment (the cost guard sets this under budget pressure). */
@@ -80,6 +94,8 @@ function snapshot() {
 module.exports = {
   // config
   isConfigured, anthropicMessagesUrl, openaiChatUrl, anthropicHeaders, openaiHeaders, ANTHROPIC_VERSION,
+  // OpenAI o-series helpers
+  openaiMaxTokensKey, openaiChatBody,
   // routing
   resolveModel,
   DEPLOY_OPUS: bridge.DEPLOY_OPUS, DEPLOY_HAIKU: bridge.DEPLOY_HAIKU,
