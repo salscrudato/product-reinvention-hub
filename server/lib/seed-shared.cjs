@@ -3352,6 +3352,17 @@ function dedupeChunks(chunks) {
   return [...seen.values()];
 }
 
+// shared/src/retrieval/retrieve.ts
+function quantizeInt8(vec) {
+  let max = 0;
+  for (const v of vec) {
+    const a = Math.abs(v);
+    if (a > max) max = a;
+  }
+  const scale = max === 0 ? 1 : max / 127;
+  return { values: vec.map((v) => Math.max(-127, Math.min(127, Math.round(v / scale)))), scale };
+}
+
 // scripts/migrate-to-cosmos.ts
 var _endpoint = process.env.COSMOS_ENDPOINT;
 var _key = process.env.COSMOS_KEY;
@@ -3444,10 +3455,54 @@ function buildOps(tenantId) {
   }
   return { ops, pkFor };
 }
+var EMBED_DIMS = Number(process.env.AZURE_FOUNDRY_EMBED_DIMS) || 512;
+async function embedSeedChunks(ops) {
+  const svc = (process.env.AZURE_FOUNDRY_ENDPOINT || "").replace(/\/+$/, "");
+  const key = process.env.AZURE_FOUNDRY_KEY;
+  const deployment = process.env.AZURE_FOUNDRY_EMBED_DEPLOYMENT || "text-embedding-3-small";
+  const chunkOps = ops.filter((o) => o.entityType === "groundingChunk" && typeof o.data["text"] === "string" && o.data["text"]);
+  if (chunkOps.length === 0) return 0;
+  if (!svc || !key) {
+    console.warn("  embeddings skipped: AZURE_FOUNDRY_ENDPOINT / AZURE_FOUNDRY_KEY not set (chunks seeded lexical-only)");
+    return 0;
+  }
+  const texts = chunkOps.map((o) => String(o.data["text"]).slice(0, 8e3));
+  let embedded = 0;
+  const BATCH = 96;
+  for (let i = 0; i < texts.length; i += BATCH) {
+    const slice = texts.slice(i, i + BATCH);
+    try {
+      const res = await fetch(`${svc}/openai/v1/embeddings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "api-key": key },
+        body: JSON.stringify({ model: deployment, input: slice, dimensions: EMBED_DIMS })
+      });
+      if (!res.ok) {
+        console.warn(`  embeddings batch @${i} failed: HTTP ${res.status}`);
+        continue;
+      }
+      const json = await res.json();
+      for (const d of json.data ?? []) {
+        const op = chunkOps[i + d.index];
+        if (op && Array.isArray(d.embedding)) {
+          const { values, scale } = quantizeInt8(d.embedding);
+          op.data["embedding"] = { q: values, s: scale };
+          op.data["embDims"] = EMBED_DIMS;
+          embedded++;
+        }
+      }
+    } catch (e) {
+      console.warn(`  embeddings batch @${i} error:`, e.message);
+    }
+  }
+  console.log(`  grounding embeddings: ${embedded}/${chunkOps.length}`);
+  return embedded;
+}
 async function seedForTenant(tenant) {
   if (!_endpoint || !_key) throw new Error("COSMOS_ENDPOINT / COSMOS_KEY not configured");
   const docs = new import_cosmos.CosmosClient({ endpoint: _endpoint, key: _key }).database(process.env.COSMOS_DB || "prodhub").container("docs");
   const { ops, pkFor } = buildOps(tenant);
+  await embedSeedChunks(ops);
   console.log(`[seed] Migrating ${ops.length} documents into Cosmos (tenant='${tenant}')\u2026`);
   let done = 0;
   const pool = 25;

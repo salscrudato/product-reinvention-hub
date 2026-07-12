@@ -2,20 +2,21 @@
 // Pure TypeScript: no platform imports, no process.env reads, no I/O.
 // Consumed by both app/ (read-only display) and functions/ (instantiates clients).
 //
-// Four deployments in foundry-prodhub-dev, two SDK families:
-//   Anthropic surface (/anthropic): claude-opus-4-8, claude-haiku-4-5
-//   OpenAI surface   (/openai/v1):  gpt-5.1, gpt-5-mini
+// Five deployments in foundry-prodhub-dev, two SDK families:
+//   Anthropic surface (/anthropic):    claude-opus-4-8, claude-haiku-4-5
+//   OpenAI surface   (/openai/v1):     gpt-5.1, gpt-5-mini, text-embedding-3-small
 //
 // SECRETS ARE NOT HERE. The API key and endpoint base live in AZURE_FOUNDRY_KEY and
 // AZURE_FOUNDRY_ENDPOINT (server env only). Deployment names are identifiers, not secrets.
 
-/** The four task roles the ensemble core serves. Every AI call declares its role;
+/** The task roles the ensemble core serves. Every AI call declares its role;
  *  the router maps role → Foundry deployment. */
 export type ModelRole =
-  | 'GROUNDED_CITED'  // claude-opus-4-8:  deep reasoning + grounded cited generation
-  | 'BULK_VERIFY'     // claude-haiku-4-5: bulk verification, cheap cascade passes
-  | 'VISION'          // gpt-5.1:          general reasoning, vision-heavy extraction
-  | 'CHEAP_GENERAL'   // gpt-5-mini:       cheap fast general-purpose calls
+  | 'GROUNDED_CITED'  // claude-opus-4-8:        deep reasoning + grounded cited generation
+  | 'BULK_VERIFY'     // claude-haiku-4-5:       bulk verification, cheap cascade passes
+  | 'VISION'          // gpt-5.1:                general reasoning, vision-heavy extraction
+  | 'CHEAP_GENERAL'   // gpt-5-mini:             cheap fast general-purpose calls
+  | 'EMBED'           // text-embedding-3-small: dense retrieval vectors for RAG grounding
 
 /** SDK family determines which client to instantiate.
  *  anthropic → @anthropic-ai/sdk with baseURL = {endpoint}/anthropic
@@ -59,6 +60,12 @@ const FLEET_REGISTRY: Readonly<Record<ModelRole, FleetDeployment>> = {
     sdkFamily:      'openai',
     roleLabel:      'Cheap fast general — GPT-5-mini',
   },
+  EMBED: {
+    role:           'EMBED',
+    deploymentName: 'text-embedding-3-small',
+    sdkFamily:      'openai',
+    roleLabel:      'Dense retrieval embeddings — text-embedding-3-small',
+  },
 } as const
 
 /** Resolve the FleetDeployment for a role, with optional per-role name overrides
@@ -85,6 +92,7 @@ export const DEPLOY_OPUS     = FLEET_REGISTRY.GROUNDED_CITED.deploymentName  // 
 export const DEPLOY_HAIKU    = FLEET_REGISTRY.BULK_VERIFY.deploymentName      // 'claude-haiku-4-5'
 export const DEPLOY_GPT      = FLEET_REGISTRY.VISION.deploymentName           // 'gpt-5.1'
 export const DEPLOY_GPT_MINI = FLEET_REGISTRY.CHEAP_GENERAL.deploymentName   // 'gpt-5-mini'
+export const DEPLOY_EMBED    = FLEET_REGISTRY.EMBED.deploymentName            // 'text-embedding-3-small'
 
 // ─── Fleet pricing (for cost accounting / spend ceilings) ─────────────────────
 // USD per 1M tokens. Illustrative list-price estimates — the cost GUARD only needs a
@@ -100,6 +108,8 @@ export const FLEET_PRICING: Readonly<Record<string, FleetPricing>> = {
   [DEPLOY_HAIKU]:    { inputPerMTok:  0.80, outputPerMTok:  4.00 },
   [DEPLOY_GPT]:      { inputPerMTok:  3.00, outputPerMTok: 12.00 },
   [DEPLOY_GPT_MINI]: { inputPerMTok:  0.30, outputPerMTok:  1.60 },
+  // Embeddings bill input tokens only (no completion) — the output tier is 0.
+  [DEPLOY_EMBED]:    { inputPerMTok:  0.02, outputPerMTok:  0.00 },
 } as const
 
 /** Estimate USD cost for a call. Unknown deployment names fall back to the priciest tier

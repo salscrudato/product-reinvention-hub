@@ -16,10 +16,20 @@
 const express = require('express')
 const { requireRole, requireTenant, RANK } = require('./auth')
 const fleet = require('./fleet')
+const embed = require('./embed')
 const dataRouter = require('./data')
 const fs   = require('fs')
 const path = require('path')
 const { inflateSync, inflateRawSync } = require('zlib')
+
+// Shared retrieval math (cosine + hybrid scorer), lazily loaded from the retrieve bundle
+// (built by `pnpm build:retrieve`). Absent bundle → dense ranking is skipped and grounding
+// degrades to pure lexical scoring, so the server still answers if the bundle is missing.
+let _retrieveMod = null
+function getRetrieve() {
+  if (!_retrieveMod) { try { _retrieveMod = require('./retrieve-shared.cjs') } catch { _retrieveMod = {} } }
+  return _retrieveMod
+}
 
 const router = express.Router()
 // Ops escape hatches: explicit deployment overrides win over the fleet defaults.
@@ -40,26 +50,100 @@ const emit = (res, ev) => res.write(`data: ${JSON.stringify(ev)}\n\n`)
 
 const SYSTEM = [
   'You are the Product Hub portfolio copilot for P&C insurance.',
-  'Answer ONLY from the CONTEXT provided below. If the context is insufficient, say so plainly — never invent facts, coverages, forms, or numbers.',
-  'Every substantive claim MUST cite its source using the bracketed reference tags that appear in the context, e.g. [PH.PROD.001] or a form-number tag. Do not fabricate reference tags.',
+  'The CONTEXT below has two sections: PORTFOLIO (the tenant\'s COMPLETE product catalogue — one entry per product) and DETAIL (the coverages, forms, rules and rating chunks most relevant to this specific query, retrieved semantically).',
+  'PORTFOLIO is authoritative and exhaustive: when asked what products / lines the customer offers, list EVERY product in PORTFOLIO — never claim the catalogue is incomplete or that you only have one line when PORTFOLIO lists several.',
+  'Answer ONLY from the CONTEXT. If it is insufficient for a specific detail, say so plainly for that detail — never invent facts, coverages, forms, or numbers.',
+  'Every substantive claim MUST cite its source using the bracketed reference tags in the context, e.g. [PH.PROD.001] or a form number like [CG 00 01]. Do not fabricate reference tags.',
 ].join(' ')
 
-// Cap on groundingChunks loaded per chat call — keeps heap bounded regardless of corpus size.
-const GROUNDING_CAP = 200
+// Max candidate chunks fetched per chat call for in-process (brute-force) hybrid ranking —
+// keeps heap + Cosmos payload bounded. There is no server-side vector index; ranking runs in
+// Node over the fetched candidates, which is ample for per-tenant corpora in the low thousands.
+const GROUNDING_CAP = Number(process.env.AI_GROUNDING_CAP) || 400
+// Max detail chunks handed to the model after hybrid ranking (product baseline rides on top).
+const DETAIL_CAP = Number(process.env.AI_DETAIL_CAP) || 18
+// Dense weight in the hybrid score (rest is lexical). Dense dominates so semantic matches win,
+// but lexical keeps exact refIds / form numbers / rare terms competitive.
+const HYBRID_ALPHA = 0.72
+// A detail chunk survives if it clears a real-relevance bar: a non-trivial cosine OR any keyword
+// hit. Filters pure-noise chunks (every text embedding has some small similarity to any query).
+const DENSE_FLOOR = 0.22
 
+// Lexical target for a chunk: repeat the citation anchors (refId ×2, form number, title) ahead
+// of the body so an id/name query weights the right chunk — mirrors shared lexicalRetrieve.
+function lexicalTargetOf(data) {
+  const m = data.metadata || {}
+  return `${m.refId ?? ''} ${m.refId ?? ''} ${m.formNumber ?? ''} ${m.title ?? ''} ${data.text ?? ''}`
+}
+
+// grounding() returns { baseline, detail } (arrays of chunk texts) so chat() can format the two
+// tiers separately.
+// • baseline — every product-level chunk for the tenant, fetched unconditionally (no productId
+//   filter). Guarantees the model always sees the FULL catalogue regardless of query terms —
+//   this is what makes "what products do I offer?" list all lines, not just the keyword winner.
+// • detail   — the top coverages / rules / forms / rating chunks for THIS query, ranked by a
+//   hybrid of dense cosine similarity (query + chunk embeddings) and lexical overlap. Falls back
+//   to lexical-only ranking when embeddings are unavailable (API down, or pre-embedding chunks).
 async function grounding(query, productId, tenantId) {
   try {
     const { docs } = require('./cosmos')
-    const params = [{ name: '@tid', value: tenantId }]
+    const R = getRetrieve()
+    const tidParam = [{ name: '@tid', value: tenantId }]
+
+    // Tier 1: product-level baseline — always fetched when no productId filter is active.
+    let baseline = []
+    if (!productId) {
+      const bSql = `SELECT c.data FROM c WHERE c.kind='entity' AND c.coll='groundingChunks' AND c.tenantId=@tid AND c.data.type=@etype`
+      const { resources: bRes } = await docs.items.query(
+        { query: bSql, parameters: [...tidParam, { name: '@etype', value: 'product' }] },
+        { maxItemCount: 200 },
+      ).fetchAll()
+      baseline = bRes.map((r) => String(r.data?.text || '')).filter(Boolean)
+    }
+
+    // Tier 2: fetch candidate chunks, then rank in-process by hybrid dense + lexical score.
+    const p2 = [...tidParam]
     // TOP cap is a server constant, not user-supplied → no injection risk.
     let sql = `SELECT TOP ${GROUNDING_CAP} c.data FROM c WHERE c.kind='entity' AND c.coll='groundingChunks' AND c.tenantId=@tid`
-    if (productId) { sql += ' AND c.data.productId=@pid'; params.push({ name: '@pid', value: productId }) }
-    const { resources } = await docs.items.query({ query: sql, parameters: params }, { maxItemCount: GROUNDING_CAP }).fetchAll()
-    const terms = String(query || '').toLowerCase().split(/\W+/).filter((t) => t.length > 2)
-    return resources
-      .map((r) => { const text = String(r.data?.text || ''); const lc = text.toLowerCase(); return { text, score: terms.reduce((s, t) => s + (lc.includes(t) ? 1 : 0), 0) } })
-      .filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 16).map((x) => x.text)
-  } catch (e) { console.warn('[ai] grounding failed:', e.message); return [] }
+    if (productId) { sql += ' AND c.data.productId=@pid'; p2.push({ name: '@pid', value: productId }) }
+    const { resources } = await docs.items.query({ query: sql, parameters: p2 }, { maxItemCount: GROUNDING_CAP }).fetchAll()
+
+    // Embed the query once (best-effort). null → dense ranking is skipped for this call and the
+    // hybrid scorer returns the lexical score alone, so retrieval still works when embeddings
+    // are unavailable.
+    const qVec = String(query || '').trim() ? await embed.embedOne(query) : null
+    const cos = R.cosineSim
+    const kw  = R.keywordOverlapScore
+    const hyb = R.hybridScore
+
+    const baselineSet = new Set(baseline)
+    const scored = []
+    for (const r of resources) {
+      const data = r.data || {}
+      const text = String(data.text || '')
+      if (!text || baselineSet.has(text)) continue
+      // Dense: cosine of the query vector against the chunk's stored int8 vector (scale-invariant,
+      // so comparing float query ↔ int8 chunk is correct). null when either side lacks a vector.
+      const cvec = data.embedding && Array.isArray(data.embedding.q) ? data.embedding.q : null
+      const dense = (qVec && cvec && cos) ? cos(qVec, cvec) : null
+      const lexical = kw ? kw(query || '', lexicalTargetOf(data)) : 0
+      const score = hyb ? hyb(dense, lexical, HYBRID_ALPHA) : lexical
+      // Keep only chunks with real relevance: a meaningful cosine OR a keyword hit. When there is
+      // no query (empty), keep nothing in detail (baseline still answers "what do I have?").
+      const relevant = (dense !== null && dense >= DENSE_FLOOR) || lexical > 0
+      if (relevant) scored.push({ text, score })
+    }
+    const detail = scored.sort((a, b) => b.score - a.score).slice(0, DETAIL_CAP).map((x) => x.text)
+
+    return { baseline, detail }
+  } catch (e) { console.warn('[ai] grounding failed:', e.message); return { baseline: [], detail: [] } }
+}
+
+// Flat context array (baseline products + ranked detail) for the forced-tool callers that don't
+// need the two-tier PORTFOLIO/DETAIL split (scaffoldProduct, draftRule, analyzeClaim).
+async function groundingFlat(query, productId, tenantId) {
+  const { baseline, detail } = await grounding(query, productId, tenantId)
+  return [...baseline, ...detail]
 }
 
 // ─── summarizeProduct: grounded, forced-tool structured product summary ───────────
@@ -505,8 +589,12 @@ async function chat(req, res) {
   const deployment = CHAT_OVERRIDE || fleet.resolveModel('GROUNDED_CITED', g.degrade)
 
   try {
-    const ctx = await grounding(lastUser, body.productId, req.user.tenantId)
-    const system = `${SYSTEM}\n\nCONTEXT:\n${ctx.length ? ctx.join('\n\n---\n\n') : '(no matching context found)'}`
+    const { baseline, detail } = await grounding(lastUser, body.productId, req.user.tenantId)
+    const ctx = [...baseline, ...detail]
+    const portfolioSection = baseline.length ? `PORTFOLIO:\n${baseline.join('\n\n---\n\n')}` : ''
+    const detailSection = detail.length ? `DETAIL:\n${detail.join('\n\n---\n\n')}` : ''
+    const contextBody = [portfolioSection, detailSection].filter(Boolean).join('\n\n===\n\n')
+    const system = `${SYSTEM}\n\nCONTEXT:\n${contextBody || '(no matching context found)'}`
     const upstream = await fetch(fleet.anthropicMessagesUrl(), {
       method: 'POST',
       headers: fleet.anthropicHeaders(),
@@ -550,12 +638,14 @@ async function chat(req, res) {
     }
     fleet.record(deployment, inputTokens, outputTokens)
     // Citation validation: extract [refId] patterns the model cited and diff against
-    // the bracketed anchors present in the grounding context. Any cited ref absent from
-    // context is flagged as potentially fabricated so the client can badge the answer.
+    // the grounding context. A citation is verified if the ref appears either as a
+    // [bracketed anchor] OR as plain text anywhere in context (form numbers like
+    // "CG 00 01" live in chunk text without brackets but are still grounded).
     const cited = [...new Set([...fullText.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]))]
     if (cited.length > 0) {
-      const inCtx = new Set(ctx.flatMap((c) => [...c.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1])))
-      const unverified = cited.filter((r) => !inCtx.has(r))
+      const inCtxBracketed = new Set(ctx.flatMap((c) => [...c.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1])))
+      const ctxFullText = ctx.join(' ')
+      const unverified = cited.filter((r) => !inCtxBracketed.has(r) && !ctxFullText.includes(r))
       if (unverified.length > 0) {
         emit(res, { t: 'notice', kind: 'unverified', level: 'warn', message: `Unverified citation(s): ${unverified.join(', ')} — not found in retrieved context.`, refs: unverified })
       }
@@ -682,7 +772,7 @@ async function scaffoldProduct(req, res) {
   const deployment = CHAT_OVERRIDE || fleet.resolveModel('GROUNDED_CITED', g.degrade)
   try {
     emit(res, { t: 'tool', name: 'load:context', phase: 'start', summary: 'Loading portfolio context' })
-    const ctx = await grounding(instruction, null, req.user.tenantId)
+    const ctx = await groundingFlat(instruction, null, req.user.tenantId)
     emit(res, { t: 'tool', name: 'load:context', phase: 'end', summary: `${ctx.length} context chunk(s) found` })
     const system = `${SCAFFOLD_SYSTEM}\n\nCONTEXT:\n${ctx.length ? ctx.join('\n\n---\n\n') : '(no matching context found)'}`
     emit(res, { t: 'tool', name: 'emit_product_scaffold', phase: 'start', summary: 'Scaffolding product from context' })
@@ -739,7 +829,7 @@ async function draftRule(req, res) {
   try {
     const queryTerm = instruction + (body.productId ? ` ${body.productId}` : '')
     emit(res, { t: 'tool', name: 'load:context', phase: 'start', summary: 'Loading portfolio context' })
-    const ctx = await grounding(queryTerm, body.productId || null, req.user.tenantId)
+    const ctx = await groundingFlat(queryTerm, body.productId || null, req.user.tenantId)
     emit(res, { t: 'tool', name: 'load:context', phase: 'end', summary: `${ctx.length} context chunk(s) found` })
     const existingNote = body.existingRule ? `\n\nEXISTING RULE TO REFINE:\ncategory: ${body.existingRule.category || ''}\nsubCategory: ${body.existingRule.subCategory || ''}\ncondition: ${body.existingRule.condition || ''}\noutcome: ${body.existingRule.outcome || ''}\nPreserve intent and refId; change only what the instruction requests.` : ''
     const system = `${DRAFT_RULE_SYSTEM}${existingNote}\n\nCONTEXT:\n${ctx.length ? ctx.join('\n\n---\n\n') : '(no matching context found)'}`
@@ -820,7 +910,7 @@ async function analyzeClaim(req, res) {
     const formText = formB64 ? _extractPdfText(formB64) : (body.formText || null)
     // Load portfolio grounding context scoped to the query
     emit(res, { t: 'tool', name: 'load:context', phase: 'start', summary: 'Loading portfolio context' })
-    const ctx = await grounding(lastUser, null, req.user.tenantId)
+    const ctx = await groundingFlat(lastUser, null, req.user.tenantId)
     emit(res, { t: 'tool', name: 'load:context', phase: 'end', summary: `${ctx.length} context chunk(s)` })
     const system = `${CLAIMS_SYSTEM}\n\nPORTFOLIO CONTEXT:\n${ctx.length ? ctx.join('\n\n---\n\n') : '(no matching context found)'}`
     // Build content blocks: sandbox note + form document + user query
@@ -908,11 +998,16 @@ router.post('/reindexProduct', requireRole('EDITOR'), requireTenant, async (req,
       else if (entityType === 'form')     chunk = ch.chunkForm?.(data)
       if (!chunk?.id || !chunk?.text) return false
       const pk = pkFor(entityPath)
+      // Best-effort dense vector so reindexed chunks are semantically retrievable, not just lexical.
+      let embedding = null
+      try { const v = await embed.embedOne(chunk.text); if (v) embedding = embed.quantize(v) } catch { /* lexical fallback */ }
+      const data = { id: chunk.id, text: chunk.text, contentHash: chunk.contentHash, metadata: chunk.metadata, type: entityType, productId: pid, updatedAt: now }
+      if (embedding) { data.embedding = embedding; data.embDims = embed.EMBED_DIMS }
       await docs.items.upsert({
         id: idFor('chunk', entityPath), pk, tenantId: tid,
         kind: 'entity', coll: 'groundingChunks',
         entityPath, entityType,
-        data: { id: chunk.id, text: chunk.text, contentHash: chunk.contentHash, metadata: chunk.metadata, type: entityType, productId: pid, updatedAt: now },
+        data,
         updatedAt: now,
       })
       return true

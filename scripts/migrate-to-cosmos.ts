@@ -34,6 +34,7 @@ import {
   GL_FORMS, GL_RULES, GL_FORM_RULES, GL_DICTIONARY,
 } from '../shared/src/seed/generalLiability'
 import { buildBundleChunks, dedupeChunks } from '../shared/src/retrieval/chunk'
+import { quantizeInt8 } from '../shared/src/retrieval/retrieve'
 
 type Doc = Record<string, unknown>
 
@@ -125,6 +126,48 @@ function buildOps(tenantId: string) {
   return { ops, pkFor }
 }
 
+// ─── Dense embeddings for grounding chunks (best-effort) ──────────────────────
+// Populate each groundingChunk op's data.embedding with an int8-quantized vector from
+// Azure AI Foundry's text-embedding-3-small (512 dims), so seeded chunks are semantically
+// retrievable by the RAG grounding path immediately — no reindex pass needed. Best-effort:
+// if Foundry creds are absent or a batch fails, chunks are seeded without vectors and the
+// query-time retriever falls back to lexical ranking. Mirrors server/lib/embed.js.
+const EMBED_DIMS = Number(process.env.AZURE_FOUNDRY_EMBED_DIMS) || 512
+async function embedSeedChunks(ops: { entityType: string; data: Doc }[]): Promise<number> {
+  const svc = (process.env.AZURE_FOUNDRY_ENDPOINT || '').replace(/\/+$/, '')
+  const key = process.env.AZURE_FOUNDRY_KEY
+  const deployment = process.env.AZURE_FOUNDRY_EMBED_DEPLOYMENT || 'text-embedding-3-small'
+  const chunkOps = ops.filter((o) => o.entityType === 'groundingChunk' && typeof o.data['text'] === 'string' && o.data['text'])
+  if (chunkOps.length === 0) return 0
+  if (!svc || !key) { console.warn('  embeddings skipped: AZURE_FOUNDRY_ENDPOINT / AZURE_FOUNDRY_KEY not set (chunks seeded lexical-only)'); return 0 }
+  const texts = chunkOps.map((o) => String(o.data['text']).slice(0, 8000))
+  let embedded = 0
+  const BATCH = 96
+  for (let i = 0; i < texts.length; i += BATCH) {
+    const slice = texts.slice(i, i + BATCH)
+    try {
+      const res = await fetch(`${svc}/openai/v1/embeddings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'api-key': key },
+        body: JSON.stringify({ model: deployment, input: slice, dimensions: EMBED_DIMS }),
+      })
+      if (!res.ok) { console.warn(`  embeddings batch @${i} failed: HTTP ${res.status}`); continue }
+      const json = (await res.json()) as { data?: { index: number; embedding: number[] }[] }
+      for (const d of json.data ?? []) {
+        const op = chunkOps[i + d.index]
+        if (op && Array.isArray(d.embedding)) {
+          const { values, scale } = quantizeInt8(d.embedding)
+          op.data['embedding'] = { q: values, s: scale }
+          op.data['embDims'] = EMBED_DIMS
+          embedded++
+        }
+      }
+    } catch (e) { console.warn(`  embeddings batch @${i} error:`, (e as Error).message) }
+  }
+  console.log(`  grounding embeddings: ${embedded}/${chunkOps.length}`)
+  return embedded
+}
+
 // ─── Exported API (used by the server-side seed endpoint) ─────────────────────
 export async function seedForTenant(tenant: string): Promise<{ done: number; total: number; counts: Record<string, number> }> {
   if (!_endpoint || !_key) throw new Error('COSMOS_ENDPOINT / COSMOS_KEY not configured')
@@ -132,6 +175,7 @@ export async function seedForTenant(tenant: string): Promise<{ done: number; tot
     .database(process.env.COSMOS_DB || 'prodhub')
     .container('docs')
   const { ops, pkFor } = buildOps(tenant)
+  await embedSeedChunks(ops)
   console.log(`[seed] Migrating ${ops.length} documents into Cosmos (tenant='${tenant}')…`)
   let done = 0
   const pool = 25

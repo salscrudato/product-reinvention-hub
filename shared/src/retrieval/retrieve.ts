@@ -74,3 +74,55 @@ export function quantizeInt8(vec: readonly number[]): Int8Vector {
 export function dequantizeInt8(q: Int8Vector): number[] {
   return q.values.map(v => v * q.scale)
 }
+
+// ─── Hybrid dense + lexical scoring (the server RAG ranker primitives) ──────────
+// The deployed grounding retriever (server/lib/ai.js) fetches candidate chunks with
+// their stored embedding vectors, embeds the query, and ranks by hybridScore(dense,
+// lexical). These pure helpers keep that ranking logic unit-tested in the offline gate
+// instead of hidden behind a live embeddings call — and guarantee the query and document
+// tokenization always match (a classic source of silent lexical-recall bugs).
+
+/** Tokenize a query or document into lowercased alphanumeric terms of length ≥ 2.
+ *  The single source of truth for tokenization on both sides of the lexical scorer. */
+export function retrievalTerms(s: string): string[] {
+  return String(s ?? '').toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length >= 2)
+}
+
+/** Count non-overlapping occurrences of `needle` in `hay` (both already lowercased). */
+function countOccurrences(hay: string, needle: string): number {
+  if (!needle) return 0
+  let n = 0, i = hay.indexOf(needle)
+  while (i !== -1) { n++; i = hay.indexOf(needle, i + needle.length) }
+  return n
+}
+
+/** Lexical relevance of `text` to `query` in [0,1]: mostly how many DISTINCT query terms
+ *  appear in the text (coverage), plus a small capped bonus for repeated hits (density).
+ *  Deterministic and corpus-free — a cheap complement to dense cosine that keeps exact
+ *  refIds, form numbers and rare domain terms pulling their chunk up even when the
+ *  embedding is lukewarm. Returns 0 for an empty query (dense score then stands alone). */
+export function keywordOverlapScore(query: string, text: string): number {
+  const terms = [...new Set(retrievalTerms(query))]
+  if (terms.length === 0) return 0
+  const lc = String(text ?? '').toLowerCase()
+  let present = 0, hits = 0
+  for (const t of terms) {
+    const n = countOccurrences(lc, t)
+    if (n > 0) { present++; hits += Math.min(n, 3) }
+  }
+  const coverage = present / terms.length          // fraction of query terms matched
+  const density  = hits / (terms.length * 3)        // capped repetition bonus
+  return 0.8 * coverage + 0.2 * density
+}
+
+/** Blend a dense cosine score with a lexical score into one ranking score.
+ *  `alpha` weights the dense component; `1 - alpha` the lexical. When no dense score is
+ *  available (`dense === null`, e.g. the embeddings API is down or a chunk was written
+ *  before embeddings existed) the lexical score is returned unchanged, so lexical-only
+ *  fallback ranking degrades gracefully rather than collapsing to zero. Negative cosines
+ *  (rare for text embeddings) are clamped to 0. */
+export function hybridScore(dense: number | null, lexical: number, alpha = 0.7): number {
+  if (dense === null || Number.isNaN(dense)) return lexical
+  const d = Math.max(0, Math.min(1, dense))
+  return alpha * d + (1 - alpha) * lexical
+}

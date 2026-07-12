@@ -24,8 +24,11 @@ const ANTHROPIC_VERSION = process.env.AZURE_FOUNDRY_ANTHROPIC_VERSION || '2023-0
 const isConfigured        = () => Boolean(SVC && KEY)
 const anthropicMessagesUrl = () => `${SVC}/anthropic/v1/messages`
 const openaiChatUrl        = () => `${SVC}/openai/v1/chat/completions`
+const openaiEmbeddingsUrl  = () => `${SVC}/openai/v1/embeddings`
+// Foundry's OpenAI-native surface authenticates with either `api-key` or Bearer; the embeddings
+// endpoint accepts `api-key`, so we reuse it for symmetry with the rest of the OpenAI surface.
 const anthropicHeaders     = () => ({ 'Content-Type': 'application/json', 'x-api-key': KEY, 'anthropic-version': ANTHROPIC_VERSION })
-const openaiHeaders        = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${KEY}` })
+const openaiHeaders        = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${KEY}`, 'api-key': KEY })
 
 // gpt-5.1 and gpt-5-mini are o-series reasoning models: they reject max_tokens with HTTP 400.
 // Use max_completion_tokens for all OpenAI deployments routed through this fleet.
@@ -93,13 +96,14 @@ function snapshot() {
 
 module.exports = {
   // config
-  isConfigured, anthropicMessagesUrl, openaiChatUrl, anthropicHeaders, openaiHeaders, ANTHROPIC_VERSION,
+  isConfigured, anthropicMessagesUrl, openaiChatUrl, openaiEmbeddingsUrl, anthropicHeaders, openaiHeaders, ANTHROPIC_VERSION,
   // OpenAI o-series helpers
   openaiMaxTokensKey, openaiChatBody,
   // routing
   resolveModel,
   DEPLOY_OPUS: bridge.DEPLOY_OPUS, DEPLOY_HAIKU: bridge.DEPLOY_HAIKU,
   DEPLOY_GPT: bridge.DEPLOY_GPT,   DEPLOY_GPT_MINI: bridge.DEPLOY_GPT_MINI,
+  DEPLOY_EMBED: bridge.DEPLOY_EMBED,
   // cost guard
   guard, record, snapshot,
   estimateCostUsd: bridge.estimateCostUsd,

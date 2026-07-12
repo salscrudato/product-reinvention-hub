@@ -17,7 +17,10 @@ import {
 } from '../seed/personalAuto'
 import type { Product, Coverage, Rule, Form, DictionaryEntry, RatingProgram, FormRule } from '../types'
 import { buildBundleChunks, dedupeChunks, type CorpusBundle } from './chunk'
-import { lexicalRetrieve, cosineSim, quantizeInt8, dequantizeInt8 } from './retrieve'
+import {
+  lexicalRetrieve, cosineSim, quantizeInt8, dequantizeInt8,
+  retrievalTerms, keywordOverlapScore, hybridScore,
+} from './retrieve'
 
 const bundle = (
   product: unknown, coverages: unknown, rules: unknown, formRules: unknown,
@@ -85,5 +88,71 @@ describe('dense-vector math', () => {
     const v = [0.12, -0.44, 0.9, 0.03, -0.71]
     const round = dequantizeInt8(quantizeInt8(v))
     expect(cosineSim(v, round)).toBeGreaterThan(0.999)
+  })
+
+  it('cosine is scale-invariant: float query vs int8-quantized chunk ranks identically', () => {
+    // The production retriever compares a float query vector against int8-stored chunk vectors;
+    // because cosine normalizes magnitude, the int8 scale cancels and ranking is preserved.
+    const chunkA = [0.9, 0.1, -0.2, 0.4]
+    const chunkB = [-0.3, 0.8, 0.5, -0.1]
+    const query  = [0.85, 0.15, -0.1, 0.35] // closest to A
+    const int8A = quantizeInt8(chunkA).values
+    const int8B = quantizeInt8(chunkB).values
+    expect(cosineSim(query, int8A)).toBeGreaterThan(cosineSim(query, int8B))
+    expect(cosineSim(query, int8A)).toBeCloseTo(cosineSim(query, chunkA), 3)
+  })
+})
+
+// ─── Hybrid dense + lexical scoring (the server RAG ranker primitives) ──────────
+describe('retrievalTerms', () => {
+  it('lowercases, splits on non-alphanumerics, and drops sub-2-char tokens', () => {
+    expect(retrievalTerms('Wind & Hail, deductible!')).toEqual(['wind', 'hail', 'deductible'])
+    expect(retrievalTerms('CG 00 01 a I')).toEqual(['cg', '00', '01']) // "a"/"I" dropped (len<2)
+    expect(retrievalTerms('')).toEqual([])
+    expect(retrievalTerms(null as unknown as string)).toEqual([])
+  })
+})
+
+describe('keywordOverlapScore', () => {
+  it('is 0 for an empty query (dense score then stands alone)', () => {
+    expect(keywordOverlapScore('', 'anything here')).toBe(0)
+  })
+  it('is 0 when no query term appears', () => {
+    expect(keywordOverlapScore('marine cargo', 'homeowners dwelling coverage')).toBe(0)
+  })
+  it('rewards more distinct query-term matches (coverage dominates)', () => {
+    const one = keywordOverlapScore('wind hail deductible', 'a wind endorsement')            // 1/3 terms
+    const all = keywordOverlapScore('wind hail deductible', 'wind and hail percentage deductible')
+    expect(all).toBeGreaterThan(one)
+    expect(all).toBeGreaterThan(0.8) // all 3 terms present
+    expect(all).toBeLessThanOrEqual(1)
+  })
+  it('is scored purely on distinct coverage, not unbounded by repetition', () => {
+    const once  = keywordOverlapScore('flood', 'flood risk')
+    const spam  = keywordOverlapScore('flood', 'flood flood flood flood flood flood')
+    expect(spam).toBeGreaterThanOrEqual(once) // repetition helps a little (density)…
+    expect(spam).toBeLessThanOrEqual(1)        // …but never exceeds 1 (capped)
+  })
+})
+
+describe('hybridScore', () => {
+  it('returns the lexical score unchanged when no dense score is available', () => {
+    expect(hybridScore(null, 0.42)).toBe(0.42)
+    expect(hybridScore(Number.NaN, 0.42)).toBe(0.42)
+  })
+  it('blends dense and lexical by alpha (dense-weighted by default)', () => {
+    // alpha=0.7 default: 0.7*0.9 + 0.3*0.5 = 0.78
+    expect(hybridScore(0.9, 0.5)).toBeCloseTo(0.78, 6)
+    // explicit alpha
+    expect(hybridScore(0.9, 0.5, 0.72)).toBeCloseTo(0.72 * 0.9 + 0.28 * 0.5, 6)
+  })
+  it('clamps a negative or >1 cosine into [0,1] before blending', () => {
+    expect(hybridScore(-0.5, 0)).toBe(0)          // negative dense → 0 contribution
+    expect(hybridScore(2, 1, 1)).toBe(1)          // >1 dense clamped, pure-dense alpha
+  })
+  it('ranks a strong dense match above a strong lexical-only match', () => {
+    const denseWin = hybridScore(0.85, 0.1) // semantic match, weak keywords
+    const lexWin   = hybridScore(0.15, 0.9) // keyword match, weak semantics
+    expect(denseWin).toBeGreaterThan(lexWin)
   })
 })

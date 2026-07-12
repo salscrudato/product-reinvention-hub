@@ -116,6 +116,38 @@ function buildChunkOp(entityType, path, data, pk, tid, now) {
   } catch { return null }
 }
 
+// ─── dense-embedding hook (best-effort) ─────────────────────────────────────
+// embed.js is loaded lazily (mirrors getChunker) so the server starts even if the
+// retrieve bundle or Foundry embeddings are unavailable. Given a set of op batches,
+// find every groundingChunks Upsert and attach an int8-quantized embedding of its
+// text IN PLACE — so the vector rides the SAME transactional batch as the chunk (no
+// separate write, no eventual-consistency gap). A failure is swallowed: chunks are
+// simply stored without a vector and the query-time retriever falls back to lexical
+// ranking for them. Embeddings are a retrieval-quality enhancement, never a write
+// dependency, so an embeddings outage can never fail (or slow to a crawl) a mutation.
+let _embed = null
+function getEmbed() {
+  if (!_embed) { try { _embed = require('./embed') } catch { _embed = {} } }
+  return _embed
+}
+async function attachEmbeddings(opsBatches) {
+  const chunkOps = []
+  for (const ops of opsBatches) for (const o of ops) {
+    if (o?.operationType === 'Upsert' && o.resourceBody?.coll === 'groundingChunks' && o.resourceBody.data?.text) chunkOps.push(o)
+  }
+  if (chunkOps.length === 0) return
+  try {
+    const em = getEmbed()
+    if (!em.embedBatch) return
+    const vecs = await em.embedBatch(chunkOps.map((o) => o.resourceBody.data.text))
+    if (!vecs) return
+    chunkOps.forEach((o, i) => {
+      const q = em.quantize?.(vecs[i])
+      if (q) { o.resourceBody.data.embedding = q; o.resourceBody.data.embDims = em.EMBED_DIMS }
+    })
+  } catch { /* best-effort: leave chunks embedding-less, lexical fallback still ranks them */ }
+}
+
 // ─── mutations (EDITOR+, tenant-scoped, atomic) ──────────────────────────────
 function envelope(tid, payload, actor) {
   const { op, path, data = {}, entityType } = payload
@@ -155,6 +187,7 @@ router.post('/mutate', requireRole('EDITOR'), requireTenant, async (req, res) =>
   const actor = { uid: req.user.uid, name: req.user.name }
   try {
     const { pk, ops, rev } = await envelope(req.user.tenantId, payload, actor)()
+    await attachEmbeddings([ops])
     const r = await docs.items.batch(ops, pk)
     if (r.result?.some((o) => o.statusCode >= 400)) return res.status(500).json({ error: 'batch_failed', detail: r.result })
     res.json({ ok: true, rev })
@@ -173,6 +206,9 @@ router.post('/mutateBatch', requireRole('EDITOR'), requireTenant, async (req, re
   try {
     const byPk = new Map()
     for (const p of payloads) { const b = await envelope(req.user.tenantId, p, actor)(); if (!byPk.has(b.pk)) byPk.set(b.pk, []); byPk.get(b.pk).push(b.ops) }
+    // One batched embeddings call across every chunk op in the whole request (keeps a bulk
+    // import/seed to a single embeddings round-trip instead of one per entity).
+    await attachEmbeddings([...byPk.values()].flat())
     for (const [pk, opsList] of byPk) {
       let chunk = []
       for (const ops of opsList) {
@@ -243,6 +279,7 @@ if (process.env.PROBE_MODE === '1') {
 // Internal mutate for same-process callers (e.g., ai.js persistSummary).
 async function mutateInternal(tid, payload, actor) {
   const { pk, ops, rev } = await envelope(tid, payload, actor)()
+  await attachEmbeddings([ops])
   const r = await docs.items.batch(ops, pk)
   if (r.result?.some((o) => o.statusCode >= 400)) throw new Error('batch_failed')
   return { ok: true, rev }

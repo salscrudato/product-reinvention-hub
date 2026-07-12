@@ -20,6 +20,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // shared/src/ai/api-server.ts
 var api_server_exports = {};
 __export(api_server_exports, {
+  DEPLOY_EMBED: () => DEPLOY_EMBED,
   DEPLOY_GPT: () => DEPLOY_GPT,
   DEPLOY_GPT_MINI: () => DEPLOY_GPT_MINI,
   DEPLOY_HAIKU: () => DEPLOY_HAIKU,
@@ -57,6 +58,12 @@ var FLEET_REGISTRY = {
     deploymentName: "gpt-5-mini",
     sdkFamily: "openai",
     roleLabel: "Cheap fast general \u2014 GPT-5-mini"
+  },
+  EMBED: {
+    role: "EMBED",
+    deploymentName: "text-embedding-3-small",
+    sdkFamily: "openai",
+    roleLabel: "Dense retrieval embeddings \u2014 text-embedding-3-small"
   }
 };
 function resolveDeployment(role, overrides) {
@@ -71,11 +78,14 @@ var DEPLOY_OPUS = FLEET_REGISTRY.GROUNDED_CITED.deploymentName;
 var DEPLOY_HAIKU = FLEET_REGISTRY.BULK_VERIFY.deploymentName;
 var DEPLOY_GPT = FLEET_REGISTRY.VISION.deploymentName;
 var DEPLOY_GPT_MINI = FLEET_REGISTRY.CHEAP_GENERAL.deploymentName;
+var DEPLOY_EMBED = FLEET_REGISTRY.EMBED.deploymentName;
 var FLEET_PRICING = {
   [DEPLOY_OPUS]: { inputPerMTok: 15, outputPerMTok: 75 },
   [DEPLOY_HAIKU]: { inputPerMTok: 0.8, outputPerMTok: 4 },
   [DEPLOY_GPT]: { inputPerMTok: 3, outputPerMTok: 12 },
-  [DEPLOY_GPT_MINI]: { inputPerMTok: 0.3, outputPerMTok: 1.6 }
+  [DEPLOY_GPT_MINI]: { inputPerMTok: 0.3, outputPerMTok: 1.6 },
+  // Embeddings bill input tokens only (no completion) — the output tier is 0.
+  [DEPLOY_EMBED]: { inputPerMTok: 0.02, outputPerMTok: 0 }
 };
 function estimateCostUsd(deploymentName, inputTokens, outputTokens) {
   const p = FLEET_PRICING[deploymentName] ?? FLEET_PRICING[DEPLOY_OPUS];
@@ -94,6 +104,7 @@ function degradedRole(role) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  DEPLOY_EMBED,
   DEPLOY_GPT,
   DEPLOY_GPT_MINI,
   DEPLOY_HAIKU,
