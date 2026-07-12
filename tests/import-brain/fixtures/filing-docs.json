@@ -1,0 +1,16 @@
+{
+  "documents": [
+    {
+      "name": "CGL-Rate-Order.txt",
+      "mediaType": "text/plain",
+      "text": "COMMERCIAL GENERAL LIABILITY - RATE ORDER OF CALCULATIONS\n\nThis rate order applies to form CG 00 01 (Edition 04 13).\n\nStep 1 - Base Loss Cost (ADD, BASE_LOSS_COST)\n  Applicability: CG 00 01\n  Source: ISO Advisory Loss Cost Filing, Rule 10.\n\nStep 2 - Class Code Factor (MUL, ADJUSTED_BASE)\n  Applicability: CG 00 01\n  Source: Rate Manual Rule 100, Table A - Class Code Factors.\n  Reference: see Rule 100 for factor values by class code.\n\nStep 3 - Territory Factor (MUL, ADJUSTED_BASE)\n  Applicability: CG 00 01\n  Source: Rate Manual Rule 110, Table B - Territory Factors.\n\nStep 4 - Minimum Premium (ADD, ADDITIONAL_COVERAGE)\n  Applicability: CG 00 01\n  Source: Rate Manual Rule 120 - Minimum Premium Schedule.\n  Maximum credit rule: Rule 92 (credits cannot exceed 25%).\n  Minimum premium rule: Rule 120.\n"
+    },
+    {
+      "name": "CGL-Rate-Manual.txt",
+      "mediaType": "text/plain",
+      "text": "COMMERCIAL GENERAL LIABILITY RATE MANUAL\n\nRule 100 - Class Code Factors\nThis rule governs the class code factor applied to the base loss cost.\nFACTOR TABLE: pairs layout.\nKey column: Class Code\nValue column: Factor\nVerbatim region:\nClass Code | Factor\n45190      | 1.00\n49450      | 1.15\n91111      | 1.32\n99999      | 0.85\n\nRule 110 - Territory Factors\nThis rule governs territory multipliers applied after the class code adjustment.\nFACTOR TABLE: pairs layout.\nKey column: Territory Code\nValue column: Factor\nVerbatim region:\nTerritory | Factor\n001        | 1.00\n002        | 0.92\n003        | 1.18\n\nRule 120 - Minimum Premium Schedule\nThe minimum annual premium for this coverage is $500 per policy.\nSCALAR: Minimum Premium = 500\nForm applicability: CG 00 01\nCitation: Rule 120, Minimum Premium section.\n\nRule 92 - Maximum Credit Schedule\nTotal schedule credits shall not exceed 25% of the standard premium.\nSCALAR: Maximum Credit Percentage = 0.25\nCitation: Rule 92, Credit Limitation section.\n"
+    }
+  ],
+  "productName": "Commercial General Liability",
+  "filingState": "NJ"
+}

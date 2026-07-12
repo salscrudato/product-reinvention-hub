@@ -1,0 +1,132 @@
+{
+  "sourceName": "GL-Workbook-Sample.xlsx",
+  "sourceType": "ISO_WORKBOOK",
+  "sheets": [
+    {
+      "sheetName": "ProductFramework",
+      "layoutShape": "FLAT",
+      "dataRowCount": 5,
+      "dataColCount": 4,
+      "isDefinitionsSheet": false,
+      "columnProfiles": [
+        {
+          "colIndex": 0,
+          "headerLabel": "RefId",
+          "typeMix": { "string": 5 },
+          "distinctSample": ["GL.PROD.001", "GL.COV.001", "GL.COV.002", "GL.COV.003", "GL.FORM.001"],
+          "isEnumLike": false,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        },
+        {
+          "colIndex": 1,
+          "headerLabel": "Name",
+          "typeMix": { "string": 5 },
+          "distinctSample": ["Commercial General Liability", "Bodily Injury and Property Damage", "Personal & Advertising Injury", "Medical Payments", "CG 00 01"],
+          "isEnumLike": false,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        },
+        {
+          "colIndex": 2,
+          "headerLabel": "Kind",
+          "typeMix": { "string": 5 },
+          "distinctSample": ["product", "coverage", "coverage", "coverage", "form"],
+          "isEnumLike": true,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        },
+        {
+          "colIndex": 3,
+          "headerLabel": "Requirement",
+          "typeMix": { "string": 5 },
+          "distinctSample": ["MANDATORY", "MANDATORY", "MANDATORY", "OPTIONAL", "MANDATORY"],
+          "isEnumLike": true,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        }
+      ]
+    },
+    {
+      "sheetName": "RatingROC",
+      "layoutShape": "FLAT",
+      "dataRowCount": 4,
+      "dataColCount": 3,
+      "isDefinitionsSheet": false,
+      "columnProfiles": [
+        {
+          "colIndex": 0,
+          "headerLabel": "Step",
+          "typeMix": { "number": 4 },
+          "distinctSample": [1, 2, 3, 4],
+          "isEnumLike": false,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        },
+        {
+          "colIndex": 1,
+          "headerLabel": "Variable",
+          "typeMix": { "string": 4 },
+          "distinctSample": ["Base Loss Cost", "Class Code Factor", "Territory Factor", "Minimum Premium"],
+          "isEnumLike": false,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        },
+        {
+          "colIndex": 2,
+          "headerLabel": "Operation",
+          "typeMix": { "string": 4 },
+          "distinctSample": ["SET", "MUL", "MUL", "MIN_FLOOR"],
+          "isEnumLike": true,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        }
+      ]
+    },
+    {
+      "sheetName": "Instructions",
+      "layoutShape": "FLAT",
+      "dataRowCount": 2,
+      "dataColCount": 1,
+      "isDefinitionsSheet": false,
+      "columnProfiles": [
+        {
+          "colIndex": 0,
+          "headerLabel": "Instruction",
+          "typeMix": { "string": 2 },
+          "distinctSample": ["Complete all required fields.", "Submit with the signed application."],
+          "isEnumLike": false,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        }
+      ]
+    },
+    {
+      "sheetName": "Definitions",
+      "layoutShape": "FLAT",
+      "dataRowCount": 3,
+      "dataColCount": 2,
+      "isDefinitionsSheet": true,
+      "columnProfiles": [
+        {
+          "colIndex": 0,
+          "headerLabel": "Term",
+          "typeMix": { "string": 3 },
+          "distinctSample": ["Bodily Injury", "Occurrence", "Coverage Territory"],
+          "isEnumLike": false,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        },
+        {
+          "colIndex": 1,
+          "headerLabel": "Definition",
+          "typeMix": { "string": 3 },
+          "distinctSample": ["Physical injury including sickness or disease.", "A single accident or event.", "The United States of America, its territories, Puerto Rico, and Canada."],
+          "isEnumLike": false,
+          "hasDollarPattern": false,
+          "hasDatePattern": false
+        }
+      ]
+    }
+  ]
+}
