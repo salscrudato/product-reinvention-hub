@@ -217,7 +217,13 @@ export const adapter: BackendAdapter = {
     async mutate(m: MutationPayload): Promise<void> {
       // Server derives the truthful actor from the JWT and commits the atomic
       // entity + audit + version + searchIndex envelope in one Cosmos transactional batch.
-      await api('/db/mutate', { method: 'POST', body: JSON.stringify({ payload: m }) })
+      try {
+        await api('/db/mutate', { method: 'POST', body: JSON.stringify({ payload: m }) })
+      } catch (err) {
+        // Re-throw conflict with the path and local data so the UI can show a diff view.
+        if (err instanceof MutationConflictError) throw new MutationConflictError(m.path, m.data)
+        throw err
+      }
       pokeAll()   // reflect the write in every open view without waiting out a backoff
     },
 

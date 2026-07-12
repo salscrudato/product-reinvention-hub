@@ -16,6 +16,8 @@ import { CommentsPanel } from '../../components/product/CommentsPanel'
 import { ExportMenu } from '../../components/product/ExportMenu'
 import { PromoteDraftDialog } from '../../components/product/PromoteDraftDialog'
 import { LineageBadge } from '../../components/product/LineageBadge'
+import { PresenceAvatars } from '../../components/product/PresenceAvatars'
+import { ConflictDiffDialog } from '../../components/product/ConflictDiffDialog'
 import { toast } from 'sonner'
 
 const TABS = [
@@ -37,6 +39,7 @@ function WorkspaceInner() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [promoteOpen, setPromoteOpen] = useState(false)
+  const [conflictCtx, setConflictCtx] = useState<{ path: string; localData: Record<string, unknown> } | null>(null)
   const [siblings, setSiblings] = useState<{ id: string; name: string }[]>([])
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
@@ -75,7 +78,10 @@ function WorkspaceInner() {
       toast.success('Product renamed')
       setEditingName(false)
     } catch (err) {
-      if (err instanceof MutationConflictError) {
+      if (err instanceof MutationConflictError && err.conflictPath && err.localData) {
+        setConflictCtx({ path: err.conflictPath, localData: err.localData })
+        setEditingName(false)
+      } else if (err instanceof MutationConflictError) {
         conflictToast({ discard: () => setEditingName(false) })
       } else {
         toast.error('Rename failed')
@@ -146,7 +152,7 @@ function WorkspaceInner() {
             </div>
           </div>
 
-          <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex items-start gap-4 min-w-0">
             <HeroGlyph name={activeTab as HeroGlyphName} size={56} className="hero-bob-slow mt-0.5" />
             <div className="flex flex-col gap-2 min-w-0">
@@ -203,6 +209,7 @@ function WorkspaceInner() {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              <PresenceAvatars pid={pid} />
               {product.lifecycle !== 'LAUNCHED' && canEdit && (
                 <Button variant="primary" size="sm" onClick={() => setPromoteOpen(true)}>
                   <IconArrowUp size={14} aria-hidden="true" />Promote
@@ -220,14 +227,14 @@ function WorkspaceInner() {
         </div>
       </div>
 
-      {/* Tab strip */}
-      <div className="flex gap-0 mb-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
+      {/* Tab strip — horizontally scrollable on mobile so all tabs stay accessible */}
+      <div className="flex gap-0 mb-0 overflow-x-auto scrollbar-none" style={{ borderBottom: '1px solid var(--color-border)' }}>
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => navigate(`/app/products/${pid}/${tab.id}`)}
             aria-current={activeTab === tab.id ? 'page' : undefined}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px rounded-t-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+            className={`shrink-0 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px rounded-t-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               activeTab === tab.id
                 ? 'text-accent border-accent'
                 : 'text-dim border-transparent hover:text-text hover:border-[var(--color-border-hover)]'
@@ -253,6 +260,13 @@ function WorkspaceInner() {
 
       {historyOpen  && <HistoryDrawer  onClose={() => setHistoryOpen(false)}  entityPath={`products/${pid}`} />}
       {commentsOpen && <CommentsPanel  onClose={() => setCommentsOpen(false)} entityPath={`products/${pid}`} />}
+      {conflictCtx && (
+        <ConflictDiffDialog
+          path={conflictCtx.path}
+          localData={conflictCtx.localData}
+          onClose={() => setConflictCtx(null)}
+        />
+      )}
       {promoteOpen && user && (
         <PromoteDraftDialog
           product={product}

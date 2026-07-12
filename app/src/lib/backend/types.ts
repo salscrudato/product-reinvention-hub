@@ -43,7 +43,15 @@ export interface MutationPayload {
 }
 
 export class MutationConflictError extends Error {
-  constructor() { super('Document was modified by another user — please refresh.') }
+  /** Entity path that triggered the 409 (e.g. "products/PH.PROD.001"). */
+  readonly conflictPath?: string
+  /** The data payload the caller was attempting to write. */
+  readonly localData?: Record<string, unknown>
+  constructor(path?: string, data?: Record<string, unknown>) {
+    super('Document was modified by another user — please refresh.')
+    this.conflictPath = path
+    this.localData = data
+  }
 }
 
 export interface BackendAdapter {
