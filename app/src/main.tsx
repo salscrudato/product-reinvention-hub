@@ -4,6 +4,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { hasCSSCustomProperties } from './lib/capability'
 
 // Self-heal a stale-chunk load failure. After a push-to-main redeploy, a client still
 // running an OLD index.html requests fingerprinted chunk hashes that no longer exist; the
@@ -26,8 +27,9 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// PWA: register the service worker in production only (dev keeps HMR untouched).
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+// PWA: register the service worker only when CSS custom properties are supported and in production.
+// hasCSSCustomProperties() gates on the minimum browser baseline the SPA requires anyway.
+if (import.meta.env.PROD && hasCSSCustomProperties() && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => { /* offline support is best-effort */ })
   })
