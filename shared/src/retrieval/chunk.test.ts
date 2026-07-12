@@ -40,6 +40,7 @@ describe('chunk builders carry the citation anchor', () => {
     expect(ch.metadata.refId).toBe('PH.COV.001.001')
     expect(ch.metadata.type).toBe('coverage')
     expect(ch.metadata.formNumber).toBe('HO 04 95')
+    expect(ch.text).toContain('[PH.COV.001.001]') // bracket format is the citation anchor the SYSTEM prompt instructs the model to reproduce (DEF-0049)
     expect(ch.text).toContain('PH.COV.001.001')
     expect(ch.text).toContain('Water Back-Up')
     expect(ch.id).toBe('coverage:PH.COV.001.001')

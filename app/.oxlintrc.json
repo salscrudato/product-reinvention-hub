@@ -3,6 +3,39 @@
   "plugins": ["react", "typescript", "oxc"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "@azure/cosmos",
+            "message": "Adapter-seam violation (DEF-0050): all Cosmos reads/writes must go through app/src/lib/backend/ — never import @azure/cosmos directly in app/src/."
+          },
+          {
+            "name": "@azure/storage-blob",
+            "message": "Adapter-seam violation (DEF-0050): storage calls must go through the adapter — never import @azure/storage-blob directly in app/src/."
+          },
+          {
+            "name": "firebase",
+            "message": "Firebase removed (DEF-0050): use the adapter (app/src/lib/backend/)."
+          },
+          {
+            "name": "@firebase/app",
+            "message": "Firebase removed (DEF-0050): use the adapter (app/src/lib/backend/)."
+          }
+        ],
+        "patterns": [
+          {
+            "group": ["@firebase/*"],
+            "message": "Firebase removed (DEF-0050): use the adapter (app/src/lib/backend/)."
+          },
+          {
+            "group": ["@azure/cosmos/*"],
+            "message": "Adapter-seam violation (DEF-0050): never import @azure/cosmos/* directly in app/src/."
+          }
+        ]
+      }
+    ]
   }
 }
