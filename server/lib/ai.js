@@ -98,7 +98,10 @@ async function grounding(query, productId, tenantId) {
         { query: bSql, parameters: [...tidParam, { name: '@etype', value: 'product' }] },
         { maxItemCount: 200 },
       ).fetchAll()
-      baseline = bRes.map((r) => String(r.data?.text || '')).filter(Boolean)
+      // Dedupe by text: a chunk can exist twice under different Cosmos doc ids (a product
+      // seeded by the migrate script + the same product re-chunked by the runtime write/reindex
+      // path use different id schemes). Identical text → one PORTFOLIO entry, not two.
+      baseline = [...new Set(bRes.map((r) => String(r.data?.text || '')).filter(Boolean))]
     }
 
     // Tier 2: fetch candidate chunks, then rank in-process by hybrid dense + lexical score.
@@ -116,12 +119,22 @@ async function grounding(query, productId, tenantId) {
     const kw  = R.keywordOverlapScore
     const hyb = R.hybridScore
 
+    // Dedupe the candidate pool by text, PREFERRING the copy that carries an embedding (so the
+    // dense-rankable chunk wins when a seeded + a runtime-written copy of the same content coexist).
     const baselineSet = new Set(baseline)
-    const scored = []
+    const byText = new Map()
     for (const r of resources) {
       const data = r.data || {}
       const text = String(data.text || '')
       if (!text || baselineSet.has(text)) continue
+      const hasEmb = !!(data.embedding && Array.isArray(data.embedding.q))
+      const prev = byText.get(text)
+      if (!prev || (hasEmb && !prev.hasEmb)) byText.set(text, { data, hasEmb })
+    }
+
+    const scored = []
+    for (const { data } of byText.values()) {
+      const text = String(data.text || '')
       // Dense: cosine of the query vector against the chunk's stored int8 vector (scale-invariant,
       // so comparing float query ↔ int8 chunk is correct). null when either side lacks a vector.
       const cvec = data.embedding && Array.isArray(data.embedding.q) ? data.embedding.q : null
