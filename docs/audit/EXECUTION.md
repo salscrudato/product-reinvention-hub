@@ -111,9 +111,9 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 
 ## Session 2 -- Import Brain (S2)
 
-- [ ] **REQ-1** | Port full 6-stage brain pipeline from functions/src/import/brain/ to server/lib/ai.js | Gate green; unifiedImport SSE emits stage1-6 events; BrainCitation { sheet, cell, verbatim } in output; no invented refIds | S2
+- [x] **REQ-1** | Port full 6-stage brain pipeline from functions/src/import/brain/ to server/lib/import-brain/ | 6 named stage modules (classify/headerLock/columnMap/extract/validate/reconcile) + orchestrator index.js + ai.js routing; SSE emits brain:stage1-6 events; BrainCitation {sheet,cell,verbatim} on every field; BLANK_REFID guards needsRefIdSynthesis; no invented refIds; adversarial decorrelation stage5=gpt-5.1 vs stage4-primary=haiku; fleet cost guard enforced on all AI paths (Anthropic+OpenAI); temperature 0 on all Claude calls; tests/import-brain/ has 9-unit reconcile.test.ts + brain-routing.test.ts (8 symbol checks + 2 smoke tests); gate green 881 tests | S2
 
-- [ ] **REQ-2** | Integrate SERFF/ERC/ACORD/filing-PDF classification into unifiedImport | FormatFingerprint detects SERFF_PACKAGE, ERC_PACKAGE, ACORD, COMPANY_FILING_PDF; handler routes accordingly | S2
+- [x] **REQ-2** | Integrate CLASSIFY/RATE_ORDER/MANUAL stages from filingImport.ts into unifiedImport | stage-filing.js: CLASSIFY (haiku forced-tool) -> RATE_ORDER (haiku, escalates to opus on empty) -> MANUAL (haiku, escalates) -> policyForm coverage extraction -> RECONCILE (shared reconcileFiling deterministic); shared/src/insurance/filing/filing-server-entry.ts bundled to filing-shared.cjs; ai.js unifiedImport routes body.structural->brain, body.documents->stage-filing; uncited items dropped by shared sanitizers; model never produces table rows (schema+verbatim only); gate green | S2
 
 ---
 
@@ -184,3 +184,4 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 | Date | Session | Status | Notes |
 |---|---|---|---|
 | 2026-07-12 | S1 | COMPLETE | All RISK-001 to RISK-016 addressed; gate GREEN (862 tests, build within budget); RISK-016 deferred to S4; bundle JS 152.2/175 kB, CSS 17.1/25 kB |
+| 2026-07-12 | S2 | COMPLETE | REQ-1 + REQ-2 complete; 6-stage brain ported to server/lib/import-brain/ (7 modules + orchestrator); stage-filing.js wires CLASSIFY/RATE_ORDER/MANUAL; filing-shared.cjs bundled; ai.js routing added; 881 tests green; build clean |
