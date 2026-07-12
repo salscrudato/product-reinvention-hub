@@ -15,8 +15,8 @@ import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const dir = dirname(fileURLToPath(import.meta.url))
-const dataJs  = readFileSync(resolve(dir, '../../../server/lib/data.js'),  'utf8')
-const aiJs    = readFileSync(resolve(dir, '../../../server/lib/ai.js'),    'utf8')
+const dataJs  = readFileSync(resolve(dir, '../../../server/lib/data.js'),       'utf8')
+const aiJs    = readFileSync(resolve(dir, '../../../server/lib/ai/chat.js'), 'utf8')
 
 // ─── DEF-0043 / DEF-0046 ─────────────────────────────────────────────────────
 // Mutation sweep FAULT-003 dropped the audit ops.push from envelope(); FAULT-B dropped
