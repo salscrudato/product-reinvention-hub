@@ -1158,6 +1158,120 @@ function requiresRateExhibits(stateCode) {
 }
 
 // shared/src/insurance/lobRegistry.ts
+var pad = (n, w) => String(Math.trunc(Math.abs(n))).padStart(w, "0");
+function dottedScheme(code, nameSignals) {
+  return {
+    shapes: {
+      product: `${code}.PROD.###`,
+      lob: `${code}.LOB.###`,
+      coverage: `${code}.COV.###`,
+      subCoverage: `${code}.COV.###.###`,
+      rule: `${code}.RU.###`,
+      formRule: `${code}.FORM.RU.###`,
+      ratingProgram: `${code}.RAT.#`,
+      ratingStep: `${code}.RAT.#.##`
+    },
+    pattern: new RegExp(`^${code}\\.(PROD|LOB|COV|RU|FORM|RAT)`, "i"),
+    nameSignals,
+    synthesize(kind, seq, parentSeq = 1) {
+      switch (kind) {
+        case "product":
+          return `${code}.PROD.${pad(seq, 3)}`;
+        case "lob":
+          return `${code}.LOB.${pad(seq, 3)}`;
+        case "coverage":
+          return `${code}.COV.${pad(seq, 3)}`;
+        case "subCoverage":
+          return `${code}.COV.${pad(parentSeq, 3)}.${pad(seq, 3)}`;
+        case "rule":
+          return `${code}.RU.${pad(seq, 3)}`;
+        case "formRule":
+          return `${code}.FORM.RU.${pad(seq, 3)}`;
+        case "ratingProgram":
+          return `${code}.RAT.${Math.trunc(seq) || 1}`;
+        case "ratingStep":
+          return `${code}.RAT.1.${pad(seq, 2)}`;
+        default:
+          return `${code}.${pad(seq, 3)}`;
+      }
+    }
+  };
+}
+var PH_REFIDS = dottedScheme("PH", [/homeowners?/i, /personal home/i, /\bHO-?[2-8]\b/i, /dwelling/i]);
+var PA_REFIDS = dottedScheme("PA", [/personal auto/i, /\bauto(mobile)?\b/i, /\bPAP\b/i, /\bPP 00 01\b/i]);
+var GL_REFIDS = dottedScheme("GL", [/general liability/i, /\bC\.?G\.?L\b/i, /commercial general/i, /\bCG 00 0[12]\b/i]);
+var IM_REFIDS = {
+  shapes: {
+    product: "IM.PROD###",
+    lob: "IM.LOB###",
+    coverage: "IM.COV###.##",
+    subCoverage: "IM.COV###.##",
+    rule: "IM.RL.###",
+    formRule: "IM.FORM.RL.###",
+    ratingProgram: "IM.RAT.###",
+    ratingStep: "IM.RAT.###"
+  },
+  pattern: /^IM\.(PROD|LOB|COV|RL|RU|FORM|RAT)/i,
+  nameSignals: [/inland marine/i, /scheduled (personal )?property/i, /contractors?.?equipment/i, /\bfloater\b/i],
+  synthesize(kind, seq, parentSeq = seq) {
+    switch (kind) {
+      case "product":
+        return `IM.PROD${pad(seq, 3)}`;
+      case "lob":
+        return `IM.LOB${pad(seq, 3)}`;
+      case "coverage":
+        return `IM.COV${pad(seq, 3)}.00`;
+      case "subCoverage":
+        return `IM.COV${pad(parentSeq, 3)}.${pad(seq, 2)}`;
+      case "rule":
+        return `IM.RL.${pad(seq, 3)}`;
+      case "formRule":
+        return `IM.FORM.RL.${pad(seq, 3)}`;
+      case "ratingProgram":
+        return `IM.RAT.${pad(seq, 3)}`;
+      case "ratingStep":
+        return `IM.RAT.${pad(seq, 3)}`;
+      default:
+        return `IM.${pad(seq, 3)}`;
+    }
+  }
+};
+var PR_REFIDS = {
+  shapes: {
+    product: "PR.PROD###",
+    lob: "PR.LOB###",
+    coverage: "PR.COV###.#",
+    subCoverage: "PR.COV###.#",
+    rule: "PR.RU.###",
+    formRule: "PR.FORM.RU.###",
+    ratingProgram: "PR.ROC",
+    ratingStep: "PR.ROC.###"
+  },
+  pattern: /^PR\.(PROD|LOB|COV|RU|ROC|FORM|RAT)/i,
+  nameSignals: [/commercial property/i, /property (framework|component|coverage part|roc|rating)/i, /building and (business )?personal property/i, /\bCP 00 10\b/i],
+  synthesize(kind, seq, parentSeq = seq) {
+    switch (kind) {
+      case "product":
+        return `PR.PROD${pad(seq, 3)}`;
+      case "lob":
+        return `PR.LOB${pad(seq, 3)}`;
+      case "coverage":
+        return `PR.COV${pad(seq, 3)}.0`;
+      case "subCoverage":
+        return `PR.COV${pad(parentSeq, 3)}.${Math.trunc(seq)}`;
+      case "rule":
+        return `PR.RU.${pad(seq, 3)}`;
+      case "formRule":
+        return `PR.FORM.RU.${pad(seq, 3)}`;
+      case "ratingProgram":
+        return "PR.ROC";
+      case "ratingStep":
+        return `PR.ROC.${pad(seq, 3)}`;
+      default:
+        return `PR.${pad(seq, 3)}`;
+    }
+  }
+};
 var isPHLiability = (name) => /liabilit|medical/i.test(name);
 var PH_SECTIONS = [
   { label: "Section I \u2014 Property", shortName: "Section I", match: (n) => !isPHLiability(n) },
@@ -1186,6 +1300,7 @@ var PH_LOB = {
   sectionTaxonomy: PH_SECTIONS,
   perilModel: PH_PERIL,
   supportsRulesSimulation: true,
+  refIdScheme: PH_REFIDS,
   marketSegments: ["Personal Lines"]
 };
 var PA_SECTIONS = [
@@ -1263,6 +1378,7 @@ var PA_LOB = {
   sectionTaxonomy: PA_SECTIONS,
   perilModel: PA_PERIL,
   supportsRulesSimulation: true,
+  refIdScheme: PA_REFIDS,
   marketSegments: ["Personal Lines"]
 };
 var GL_SECTIONS = [
@@ -1357,12 +1473,174 @@ var GL_LOB = {
   sectionTaxonomy: GL_SECTIONS,
   perilModel: GL_PERIL,
   supportsRulesSimulation: true,
+  refIdScheme: GL_REFIDS,
   marketSegments: ["Commercial Lines", "Small Commercial", "Middle Market"]
+};
+var IM_SECTIONS = [
+  { label: "Scheduled Property", shortName: "Scheduled", match: (n) => /schedul|itemized|valued|floater/i.test(n) },
+  { label: "Blanket & Equipment Coverage", shortName: "Blanket", match: (n) => /blanket|equipment|installation|tool/i.test(n) },
+  { label: "Coverage Extensions", shortName: "Extensions", match: () => true }
+  // catch-all
+];
+var IM_PERIL = { kind: "NONE", eligibleStates: [], label: "None" };
+var IM_LOB = {
+  refId: "IM.LOB.001",
+  prefix: "IM",
+  name: "Inland Marine",
+  vertical: "Commercial Lines",
+  family: "Property",
+  sections: IM_SECTIONS,
+  peril: IM_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  code: "IM",
+  displayName: "Inland Marine",
+  refIdPrefix: "IM",
+  lineCategory: "PROPERTY",
+  personalOrCommercial: "Commercial",
+  sectionTaxonomy: IM_SECTIONS,
+  perilModel: IM_PERIL,
+  supportsRulesSimulation: false,
+  refIdScheme: IM_REFIDS,
+  // Segments drawn from the existing registry set so the portfolio facets are unchanged.
+  marketSegments: ["Commercial Lines", "Small Commercial"]
+};
+var PR_SECTIONS = [
+  { label: "Building & Business Personal Property", shortName: "Property", match: (n) => /building|business personal|contents|stock/i.test(n) },
+  { label: "Time Element", shortName: "Time Element", match: (n) => /business income|extra expense|rental value|time element/i.test(n) },
+  { label: "Additional Coverages", shortName: "Additional", match: () => true }
+  // catch-all (incl. causes of loss)
+];
+var PR_PERIL = {
+  kind: "COASTAL_WIND_HAIL",
+  eligibleStates: ["AL", "FL", "GA", "LA", "MS", "NC", "SC", "TX", "VA"],
+  label: "Coastal wind/hail"
+};
+var PR_LOB = {
+  refId: "PR.LOB.001",
+  prefix: "PR",
+  name: "Commercial Property",
+  vertical: "Commercial Lines",
+  family: "Property",
+  sections: PR_SECTIONS,
+  peril: PR_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  code: "PR",
+  displayName: "Commercial Property",
+  refIdPrefix: "PR",
+  lineCategory: "PROPERTY",
+  personalOrCommercial: "Commercial",
+  sectionTaxonomy: PR_SECTIONS,
+  perilModel: PR_PERIL,
+  supportsRulesSimulation: false,
+  refIdScheme: PR_REFIDS,
+  // Segments drawn from the existing registry set so the portfolio facets are unchanged.
+  marketSegments: ["Commercial Lines", "Middle Market"]
 };
 var LOB_REGISTRY = {
   [PH_LOB.refId]: PH_LOB,
   [PA_LOB.refId]: PA_LOB,
-  [GL_LOB.refId]: GL_LOB
+  [GL_LOB.refId]: GL_LOB,
+  [IM_LOB.refId]: IM_LOB,
+  [PR_LOB.refId]: PR_LOB
 };
 
 // shared/src/rating/rtGrid.ts
@@ -5428,6 +5706,7 @@ var KITS = {
     inputSpec: GL_RATING_INPUT_SPEC
   }
 };
+var BESPOKE_KIT_PREFIXES = Object.keys(KITS);
 function resolveRatingKit(lobPrefix) {
   if (KITS[lobPrefix]) return KITS[lobPrefix];
   const archetype = resolveLineArchetypeByPrefix(lobPrefix);

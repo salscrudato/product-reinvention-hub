@@ -45,6 +45,134 @@ export interface PerilRule {
   label:          string             // badge/legend label, e.g. "Coastal wind/hail"
 }
 
+// ─── refId schemes (line-specific id shapes + synthesis) ─────────────────────────
+// Real source workbooks emit refIds in line-specific shapes that differ in BOTH
+// punctuation and tokens: GL dots every segment ("GL.COV.002.003", "GL.RU.006",
+// "GL.RAT.1.05"); Inland Marine concatenates the number onto the token and pads a
+// two-digit tail ("IM.COV044.00", rules "IM.RL.001"); Property uses a one-digit tail
+// ("PR.COV001.0") and a "ROC" (Rate Order of Calculations) token for rating steps
+// ("PR.ROC.001"). Each line therefore OWNS its shape as data here rather than any
+// consumer hard-coding a format. `synthesize` mints an id in the line's exact shape —
+// the load-bearing path for sources that ship blank / "TBD" ids (e.g. Property ROC
+// steps), so a governed refId can always be assigned without inventing a foreign shape.
+
+/** The canonical entity kinds a refId can identify. */
+export type RefIdEntityKind =
+  | 'product' | 'lob' | 'coverage' | 'subCoverage'
+  | 'rule' | 'formRule' | 'ratingProgram' | 'ratingStep'
+
+export interface RefIdScheme {
+  /** Human-readable shape per entity kind ('#' marks a zero-padded digit run). Documentation
+   *  + grounding for the models; never parsed as logic. */
+  shapes:      Record<RefIdEntityKind, string>
+  /** Prefix-anchored recognizer for any refId belonging to this line. */
+  pattern:     RegExp
+  /** Product-/LOB-name (and sheet-name) signals used to infer the line when a workbook ships
+   *  no usable refIds — never a filename match (see inferLob). */
+  nameSignals: readonly RegExp[]
+  /** Mint a refId in this line's EXACT shape. `seq` is the entity's 1-based index; `parentSeq`
+   *  is the parent coverage's index for a sub-coverage. Used for TBD/blank source ids. */
+  synthesize:  (kind: RefIdEntityKind, seq: number, parentSeq?: number) => string
+}
+
+/** Zero-padded positive integer of a given width. */
+const pad = (n: number, w: number): string => String(Math.trunc(Math.abs(n))).padStart(w, '0')
+
+/** The dotted scheme shared by the fully-dotted lines (PH, PA, GL): every segment is
+ *  dot-separated and the sequence is a 3-digit run, e.g. "GL.COV.002.003". */
+function dottedScheme(code: string, nameSignals: readonly RegExp[]): RefIdScheme {
+  return {
+    shapes: {
+      product:       `${code}.PROD.###`,
+      lob:           `${code}.LOB.###`,
+      coverage:      `${code}.COV.###`,
+      subCoverage:   `${code}.COV.###.###`,
+      rule:          `${code}.RU.###`,
+      formRule:      `${code}.FORM.RU.###`,
+      ratingProgram: `${code}.RAT.#`,
+      ratingStep:    `${code}.RAT.#.##`,
+    },
+    pattern: new RegExp(`^${code}\\.(PROD|LOB|COV|RU|FORM|RAT)`, 'i'),
+    nameSignals,
+    synthesize(kind, seq, parentSeq = 1) {
+      switch (kind) {
+        case 'product':       return `${code}.PROD.${pad(seq, 3)}`
+        case 'lob':           return `${code}.LOB.${pad(seq, 3)}`
+        case 'coverage':      return `${code}.COV.${pad(seq, 3)}`
+        case 'subCoverage':   return `${code}.COV.${pad(parentSeq, 3)}.${pad(seq, 3)}`
+        case 'rule':          return `${code}.RU.${pad(seq, 3)}`
+        case 'formRule':      return `${code}.FORM.RU.${pad(seq, 3)}`
+        case 'ratingProgram': return `${code}.RAT.${Math.trunc(seq) || 1}`
+        case 'ratingStep':    return `${code}.RAT.1.${pad(seq, 2)}`
+        default:              return `${code}.${pad(seq, 3)}`
+      }
+    },
+  }
+}
+
+const PH_REFIDS: RefIdScheme = dottedScheme('PH', [/homeowners?/i, /personal home/i, /\bHO-?[2-8]\b/i, /dwelling/i])
+const PA_REFIDS: RefIdScheme = dottedScheme('PA', [/personal auto/i, /\bauto(mobile)?\b/i, /\bPAP\b/i, /\bPP 00 01\b/i])
+const GL_REFIDS: RefIdScheme = dottedScheme('GL', [/general liability/i, /\bC\.?G\.?L\b/i, /commercial general/i, /\bCG 00 0[12]\b/i])
+
+// Inland Marine — token+number concatenated with a 2-digit tail; rules use the "RL" token.
+const IM_REFIDS: RefIdScheme = {
+  shapes: {
+    product:       'IM.PROD###',
+    lob:           'IM.LOB###',
+    coverage:      'IM.COV###.##',
+    subCoverage:   'IM.COV###.##',
+    rule:          'IM.RL.###',
+    formRule:      'IM.FORM.RL.###',
+    ratingProgram: 'IM.RAT.###',
+    ratingStep:    'IM.RAT.###',
+  },
+  pattern: /^IM\.(PROD|LOB|COV|RL|RU|FORM|RAT)/i,
+  nameSignals: [/inland marine/i, /scheduled (personal )?property/i, /contractors?.?equipment/i, /\bfloater\b/i],
+  synthesize(kind, seq, parentSeq = seq) {
+    switch (kind) {
+      case 'product':       return `IM.PROD${pad(seq, 3)}`
+      case 'lob':           return `IM.LOB${pad(seq, 3)}`
+      case 'coverage':      return `IM.COV${pad(seq, 3)}.00`
+      case 'subCoverage':   return `IM.COV${pad(parentSeq, 3)}.${pad(seq, 2)}`
+      case 'rule':          return `IM.RL.${pad(seq, 3)}`
+      case 'formRule':      return `IM.FORM.RL.${pad(seq, 3)}`
+      case 'ratingProgram': return `IM.RAT.${pad(seq, 3)}`
+      case 'ratingStep':    return `IM.RAT.${pad(seq, 3)}`
+      default:              return `IM.${pad(seq, 3)}`
+    }
+  },
+}
+
+// Property — one-digit tail on coverages; rating steps use the "ROC" (Rate Order of
+// Calculations) token, the scheme the synthesizer fills for TBD Property-ROC step ids.
+const PR_REFIDS: RefIdScheme = {
+  shapes: {
+    product:       'PR.PROD###',
+    lob:           'PR.LOB###',
+    coverage:      'PR.COV###.#',
+    subCoverage:   'PR.COV###.#',
+    rule:          'PR.RU.###',
+    formRule:      'PR.FORM.RU.###',
+    ratingProgram: 'PR.ROC',
+    ratingStep:    'PR.ROC.###',
+  },
+  pattern: /^PR\.(PROD|LOB|COV|RU|ROC|FORM|RAT)/i,
+  nameSignals: [/commercial property/i, /property (framework|component|coverage part|roc|rating)/i, /building and (business )?personal property/i, /\bCP 00 10\b/i],
+  synthesize(kind, seq, parentSeq = seq) {
+    switch (kind) {
+      case 'product':       return `PR.PROD${pad(seq, 3)}`
+      case 'lob':           return `PR.LOB${pad(seq, 3)}`
+      case 'coverage':      return `PR.COV${pad(seq, 3)}.0`
+      case 'subCoverage':   return `PR.COV${pad(parentSeq, 3)}.${Math.trunc(seq)}`
+      case 'rule':          return `PR.RU.${pad(seq, 3)}`
+      case 'formRule':      return `PR.FORM.RU.${pad(seq, 3)}`
+      case 'ratingProgram': return 'PR.ROC'
+      case 'ratingStep':    return `PR.ROC.${pad(seq, 3)}`
+      default:              return `PR.${pad(seq, 3)}`
+    }
+  },
+}
+
 // LobDefinition carries both the original field names (for backward compatibility
 // with all existing consumers) and the task-specified canonical names. The aliased
 // pairs share the same values — `prefix`/`code`/`refIdPrefix`, `name`/`displayName`,
@@ -69,6 +197,10 @@ export interface LobDefinition {
   sectionTaxonomy:      LobSection[]       // how coverages group; same ref as `sections`
   perilModel:           PerilRule          // peril/territory model; same ref as `peril`
   supportsRulesSimulation: boolean         // true only for lines with an evaluateRules() impl
+  // The line's refId shape + synthesizer (see RefIdScheme). Owned here as data so no
+  // importer/exporter hard-codes a line's id format; `refIdScheme.synthesize` mints ids
+  // for sources that ship blank / "TBD" refIds.
+  refIdScheme:          RefIdScheme
   // Size / market bands the line serves (e.g. Small Commercial, Middle Market for
   // commercial casualty; Personal Lines for a personal line). This is the third
   // portfolio-segmentation axis and — like vertical and family — is owned here so
@@ -116,6 +248,7 @@ export const PH_LOB: LobDefinition = {
   sectionTaxonomy:      PH_SECTIONS,
   perilModel:           PH_PERIL,
   supportsRulesSimulation: true,
+  refIdScheme:          PH_REFIDS,
   marketSegments:       ['Personal Lines'],
 }
 
@@ -157,6 +290,7 @@ export const PA_LOB: LobDefinition = {
   sectionTaxonomy:      PA_SECTIONS,
   perilModel:           PA_PERIL,
   supportsRulesSimulation: true,
+  refIdScheme:          PA_REFIDS,
   marketSegments:       ['Personal Lines'],
 }
 
@@ -205,7 +339,90 @@ export const GL_LOB: LobDefinition = {
   sectionTaxonomy:      GL_SECTIONS,
   perilModel:           GL_PERIL,
   supportsRulesSimulation: true,
+  refIdScheme:          GL_REFIDS,
   marketSegments:       ['Commercial Lines', 'Small Commercial', 'Middle Market'],
+}
+
+// ─── Inland Marine (ISO/AAIS Commercial Inland Marine — scheduled + floater) ──────
+
+// Commercial Inland Marine groups coverage into scheduled (per-item, valued) property,
+// blanket/floater coverage, and coverage extensions. No coastal wind/hail territorial
+// deductible in the base — inland marine rates per scheduled item / class.
+const IM_SECTIONS: LobSection[] = [
+  { label: 'Scheduled Property',          shortName: 'Scheduled',  match: (n) => /schedul|itemized|valued|floater/i.test(n) },
+  { label: 'Blanket & Equipment Coverage', shortName: 'Blanket',    match: (n) => /blanket|equipment|installation|tool/i.test(n) },
+  { label: 'Coverage Extensions',          shortName: 'Extensions', match: () => true }, // catch-all
+]
+
+const IM_PERIL: PerilRule = { kind: 'NONE', eligibleStates: [], label: 'None' }
+
+export const IM_LOB: LobDefinition = {
+  refId:    'IM.LOB.001',
+  prefix:   'IM',
+  name:     'Inland Marine',
+  vertical: 'Commercial Lines',
+  family:   'Property',
+  sections: IM_SECTIONS,
+  peril:    IM_PERIL,
+  footprintStates: [
+    'AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','ID','IL','IN','IA','KS','KY',
+    'ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND',
+    'OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
+  ],
+  code:                 'IM',
+  displayName:          'Inland Marine',
+  refIdPrefix:          'IM',
+  lineCategory:         'PROPERTY',
+  personalOrCommercial: 'Commercial',
+  sectionTaxonomy:      IM_SECTIONS,
+  perilModel:           IM_PERIL,
+  supportsRulesSimulation: false,
+  refIdScheme:          IM_REFIDS,
+  // Segments drawn from the existing registry set so the portfolio facets are unchanged.
+  marketSegments:       ['Commercial Lines', 'Small Commercial'],
+}
+
+// ─── Property (ISO Commercial Property — CP 00 10 building & personal property) ───
+
+// Commercial Property groups coverage into building & business personal property,
+// time-element (business income / extra expense), and additional coverages / causes
+// of loss. Commercial property DOES carry a coastal wind/hail deductible programme.
+const PR_SECTIONS: LobSection[] = [
+  { label: 'Building & Business Personal Property', shortName: 'Property',      match: (n) => /building|business personal|contents|stock/i.test(n) },
+  { label: 'Time Element',                          shortName: 'Time Element',  match: (n) => /business income|extra expense|rental value|time element/i.test(n) },
+  { label: 'Additional Coverages',                  shortName: 'Additional',    match: () => true }, // catch-all (incl. causes of loss)
+]
+
+const PR_PERIL: PerilRule = {
+  kind:           'COASTAL_WIND_HAIL',
+  eligibleStates: ['AL', 'FL', 'GA', 'LA', 'MS', 'NC', 'SC', 'TX', 'VA'],
+  label:          'Coastal wind/hail',
+}
+
+export const PR_LOB: LobDefinition = {
+  refId:    'PR.LOB.001',
+  prefix:   'PR',
+  name:     'Commercial Property',
+  vertical: 'Commercial Lines',
+  family:   'Property',
+  sections: PR_SECTIONS,
+  peril:    PR_PERIL,
+  footprintStates: [
+    'AL','AZ','AR','CA','CO','CT','DE','DC','FL','GA','ID','IL','IN','IA','KS','KY',
+    'LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC',
+    'ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
+  ],
+  code:                 'PR',
+  displayName:          'Commercial Property',
+  refIdPrefix:          'PR',
+  lineCategory:         'PROPERTY',
+  personalOrCommercial: 'Commercial',
+  sectionTaxonomy:      PR_SECTIONS,
+  perilModel:           PR_PERIL,
+  supportsRulesSimulation: false,
+  refIdScheme:          PR_REFIDS,
+  // Segments drawn from the existing registry set so the portfolio facets are unchanged.
+  marketSegments:       ['Commercial Lines', 'Middle Market'],
 }
 
 // ─── Registry + resolution ─────────────────────────────────────────────────────
@@ -214,6 +431,8 @@ export const LOB_REGISTRY: Record<string, LobDefinition> = {
   [PH_LOB.refId]: PH_LOB,
   [PA_LOB.refId]: PA_LOB,
   [GL_LOB.refId]: GL_LOB,
+  [IM_LOB.refId]: IM_LOB,
+  [PR_LOB.refId]: PR_LOB,
 }
 
 // Personal Home is the seed reference line and the safe default when a product's LOB
@@ -235,9 +454,67 @@ export function resolveLob(product?: { lob?: { refId?: string | null } | null } 
 }
 
 /** Resolve a LOB from any entity refId by its prefix (e.g. "PH.COV.003" →
- *  Personal Home). Returns undefined when no line claims the prefix. */
+ *  Personal Home; "IM.COV044.00" → Inland Marine; "PR.COV001.0" → Property).
+ *  Returns undefined when no line claims the prefix. */
 export function resolveLobByRefId(refId?: string | null): LobDefinition | undefined {
   return lobByPrefix(refId)
+}
+
+// ─── Workbook line inference (from the source's OWN content, never a filename) ────
+
+/** The evidence inferLob() weighs, gathered from a workbook's own cells — never its
+ *  filename. `refIds` are any traceability ids read from the sheets (blank / "TBD"
+ *  entries are ignored); `productName` / `lobName` come from the product hierarchy;
+ *  `sheetNames` are a weak fallback when a source ships no usable refIds at all. */
+export interface LineInferenceSignals {
+  refIds?:     readonly (string | null | undefined)[]
+  productName?: string | null
+  lobName?:     string | null
+  sheetNames?:  readonly string[]
+}
+
+/** A meaningful refId carries a real prefix — "TBD"/"N/A"/blank do not. */
+function usableRefId(v: string | null | undefined): string | null {
+  if (!v) return null
+  const s = v.trim()
+  if (!s || /^(tbd|n\/?a|none|<.*>)$/i.test(s)) return null
+  return s
+}
+
+/** Infer the line of business from a workbook's OWN content. Strongest signal is the
+ *  majority prefix across its refIds; when a source ships no usable refIds (e.g. a
+ *  Property ROC with "TBD" step ids) it falls back to product/LOB/sheet-name signals.
+ *  Deliberately filename-free: two sources for the same line are named differently, and
+ *  the same file name is reused across lines, so the file name is never evidence. */
+export function inferLob(signals: LineInferenceSignals): LobDefinition | undefined {
+  // 1) Majority refId prefix — the most reliable, content-derived signal.
+  const tally = new Map<string, number>()
+  for (const raw of signals.refIds ?? []) {
+    const lob = lobByPrefix(usableRefId(raw))
+    if (lob) tally.set(lob.refId, (tally.get(lob.refId) ?? 0) + 1)
+  }
+  if (tally.size) {
+    let bestRefId = ''; let bestCount = -1
+    for (const [refId, count] of tally) if (count > bestCount) { bestCount = count; bestRefId = refId }
+    return LOB_REGISTRY[bestRefId]
+  }
+  // 2) Name / sheet signals (order = registry order; first match wins).
+  const hay = [signals.productName, signals.lobName, ...(signals.sheetNames ?? [])]
+    .filter(Boolean).join('  ')
+  if (hay.trim()) {
+    for (const lob of Object.values(LOB_REGISTRY)) {
+      if (lob.refIdScheme.nameSignals.some(re => re.test(hay))) return lob
+    }
+  }
+  return undefined
+}
+
+/** Mint a refId in a line's exact shape (delegates to its RefIdScheme). The one place
+ *  the platform assigns ids to entities a source left blank / "TBD". */
+export function synthesizeRefId(
+  lob: LobDefinition, kind: RefIdEntityKind, seq: number, parentSeq?: number,
+): string {
+  return lob.refIdScheme.synthesize(kind, seq, parentSeq)
 }
 
 /** Group items (coverages) into the line's sections, preserving input order. Each

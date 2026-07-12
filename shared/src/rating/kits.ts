@@ -49,6 +49,13 @@ const KITS: Record<string, RatingKit> = {
   },
 }
 
+/** LOB prefixes that have a BESPOKE rating kit (hand-crafted getters + a real worked
+ *  example). The generic ratingKitGenerator fallback returns an EMPTY worked example, so
+ *  only these lines are canaried by the worked-example gate; generic / import-target lines
+ *  (e.g. IM, PR) are exercised by the Line Intelligence per-family canaries + the import
+ *  validation harness instead. */
+export const BESPOKE_KIT_PREFIXES: readonly string[] = Object.keys(KITS)
+
 /** Resolve the rating kit for a LOB prefix.
  *  Priority order:
  *  1. Bespoke kit (PH/PA/GL — hand-crafted getters for non-simple table shapes).

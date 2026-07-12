@@ -3,9 +3,10 @@
 // Section I/II partition + Personal Auto Part A/B/C/D catch-all), and coastal membership.
 import { describe, it, expect } from 'vitest'
 import {
-  PH_LOB, PA_LOB, LOB_REGISTRY, DEFAULT_LOB,
+  PH_LOB, PA_LOB, GL_LOB, IM_LOB, PR_LOB, LOB_REGISTRY, DEFAULT_LOB,
   resolveLob, resolveLobByRefId, groupBySection, isPerilState,
   deriveSegmentAxes, productSegments, matchesSegments,
+  inferLob, synthesizeRefId,
 } from './lobRegistry'
 
 describe('LOB resolution', () => {
@@ -33,6 +34,23 @@ describe('LOB resolution', () => {
     expect(resolveLobByRefId('PA.COV.001')).toBe(PA_LOB)
     expect(resolveLobByRefId('ZZ.RU.001')).toBeUndefined()
     expect(resolveLobByRefId(undefined)).toBeUndefined()
+  })
+
+  it('resolves the two new lines (IM, PR) from their distinct refId shapes', () => {
+    // Inland Marine + Property use NON-dotted number tails — resolution is by prefix, so
+    // the concatenated shapes ("IM.COV044.00", "PR.COV001.0", "PR.ROC.001") still resolve.
+    expect(resolveLobByRefId('IM.COV044.00')).toBe(IM_LOB)
+    expect(resolveLobByRefId('IM.RL.001')).toBe(IM_LOB)
+    expect(resolveLobByRefId('PR.COV001.0')).toBe(PR_LOB)
+    expect(resolveLobByRefId('PR.ROC.001')).toBe(PR_LOB)
+    expect(resolveLob({ lob: { refId: 'IM.LOB.001' } })).toBe(IM_LOB)
+    expect(resolveLob({ lob: { refId: 'PR.LOB.001' } })).toBe(PR_LOB)
+  })
+
+  it('registers exactly the five lines, each with a distinct prefix', () => {
+    expect(Object.keys(LOB_REGISTRY).sort()).toEqual(
+      ['GL.LOB.001', 'IM.LOB.001', 'PA.LOB.001', 'PH.LOB.001', 'PR.LOB.001'],
+    )
   })
 
   it('every registry entry is keyed by its own refId and carries a distinct prefix', () => {
@@ -147,5 +165,105 @@ describe('segmentation (registry-driven)', () => {
     // combined selection must satisfy every set axis
     expect(matchesSegments(PA, { personalOrCommercial: 'Personal', vertical: 'Personal Lines', family: 'Automobile', marketSegment: 'Personal Lines' })).toBe(true)
     expect(matchesSegments(PH, { vertical: 'Personal Lines', family: 'Automobile' })).toBe(false)
+  })
+
+  it('adding IM + PR does NOT change the derived facet values (segments drawn from the existing set)', () => {
+    const byId = Object.fromEntries(deriveSegmentAxes().map(a => [a.id, a.values]))
+    expect(byId['personalOrCommercial']).toEqual(['Commercial', 'Personal'])
+    expect(byId['vertical']).toEqual(['Commercial Lines', 'Personal Lines'])
+    expect(byId['family']).toEqual(['Automobile', 'Casualty', 'Property'])
+    expect(byId['marketSegment']).toEqual(['Commercial Lines', 'Middle Market', 'Personal Lines', 'Small Commercial'])
+  })
+})
+
+// ─── refId synthesis: the line's EXACT shape, incl. the TBD/blank-id case ────────────
+describe('refId synthesis (per-line exact shapes)', () => {
+  it('GL uses fully-dotted segments', () => {
+    expect(synthesizeRefId(GL_LOB, 'coverage', 2)).toBe('GL.COV.002')
+    expect(synthesizeRefId(GL_LOB, 'subCoverage', 3, 2)).toBe('GL.COV.002.003')
+    expect(synthesizeRefId(GL_LOB, 'rule', 6)).toBe('GL.RU.006')
+    expect(synthesizeRefId(GL_LOB, 'formRule', 7)).toBe('GL.FORM.RU.007')
+    expect(synthesizeRefId(GL_LOB, 'ratingStep', 5)).toBe('GL.RAT.1.05')
+  })
+
+  it('IM concatenates the number onto the token with a 2-digit tail; rules use "RL"', () => {
+    expect(synthesizeRefId(IM_LOB, 'coverage', 44)).toBe('IM.COV044.00')
+    expect(synthesizeRefId(IM_LOB, 'subCoverage', 2, 44)).toBe('IM.COV044.02')
+    expect(synthesizeRefId(IM_LOB, 'rule', 1)).toBe('IM.RL.001')
+  })
+
+  it('PR uses a 1-digit coverage tail and a "ROC" token for rating steps', () => {
+    expect(synthesizeRefId(PR_LOB, 'coverage', 1)).toBe('PR.COV001.0')
+    // Property ROC ships "TBD" step ids — the synthesizer mints the governed shape.
+    expect(synthesizeRefId(PR_LOB, 'ratingStep', 1)).toBe('PR.ROC.001')
+    expect(synthesizeRefId(PR_LOB, 'ratingProgram', 1)).toBe('PR.ROC')
+  })
+
+  it('every synthesized id resolves back to its own line', () => {
+    for (const lob of [PH_LOB, PA_LOB, GL_LOB, IM_LOB, PR_LOB]) {
+      expect(resolveLobByRefId(synthesizeRefId(lob, 'coverage', 3))).toBe(lob)
+      expect(resolveLobByRefId(synthesizeRefId(lob, 'rule', 3))).toBe(lob)
+    }
+  })
+})
+
+// ─── Line inference from a workbook's OWN content (never a filename) ─────────────────
+describe('inferLob (content-driven line inference)', () => {
+  it('infers from the majority refId prefix', () => {
+    expect(inferLob({ refIds: ['IM.COV044.00', 'IM.RL.001', 'IM.COV045.00'] })).toBe(IM_LOB)
+    expect(inferLob({ refIds: ['PR.COV001.0', 'PR.ROC.001'] })).toBe(PR_LOB)
+    expect(inferLob({ refIds: ['GL.COV.002', 'GL.RU.001'] })).toBe(GL_LOB)
+    // Majority wins when mixed.
+    expect(inferLob({ refIds: ['GL.COV.002', 'GL.COV.003', 'IM.COV001.00'] })).toBe(GL_LOB)
+  })
+
+  it('falls back to product/LOB/sheet-name signals when no usable refIds exist', () => {
+    expect(inferLob({ productName: 'Monoline General Liability Product' })).toBe(GL_LOB)
+    expect(inferLob({ lobName: 'Inland Marine' })).toBe(IM_LOB)
+    expect(inferLob({ productName: 'Commercial Property Program' })).toBe(PR_LOB)
+    expect(inferLob({ productName: 'Personal Home — HO-3 Special Form' })).toBe(PH_LOB)
+    expect(inferLob({ productName: 'Personal Auto (PAP)' })).toBe(PA_LOB)
+  })
+
+  it('ignores TBD/blank refIds and recovers the line from sheet names (Property ROC)', () => {
+    expect(inferLob({
+      refIds: ['TBD', 'N/A', '', null, undefined],
+      sheetNames: ['PROPERTY ROC', 'Rules Repository'],
+    })).toBe(PR_LOB)
+  })
+
+  it('returns undefined when there is no content signal at all (filename is never used)', () => {
+    expect(inferLob({})).toBeUndefined()
+    expect(inferLob({ refIds: ['TBD', 'N/A'] })).toBeUndefined()
+  })
+})
+
+// ─── IM + PR peril / section taxonomy ────────────────────────────────────────────────
+describe('IM + PR peril and section taxonomy', () => {
+  it('Inland Marine carries no coastal peril and groups scheduled/blanket/extensions', () => {
+    expect(IM_LOB.perilModel.kind).toBe('NONE')
+    const groups = groupBySection(IM_LOB, [
+      { name: 'Scheduled Equipment Floater' },
+      { name: 'Blanket Tools' },
+      { name: 'Accounts Receivable' }, // → Coverage Extensions catch-all
+    ])
+    expect(groups.map(g => g.label)).toEqual([
+      'Scheduled Property', 'Blanket & Equipment Coverage', 'Coverage Extensions',
+    ])
+  })
+
+  it('Commercial Property carries a coastal wind/hail programme', () => {
+    expect(PR_LOB.perilModel.kind).toBe('COASTAL_WIND_HAIL')
+    expect(isPerilState(PR_LOB, 'FL')).toBe(true)
+    expect(isPerilState(PR_LOB, 'LA')).toBe(true)
+    expect(isPerilState(PR_LOB, 'OH')).toBe(false)
+    const groups = groupBySection(PR_LOB, [
+      { name: 'Building' },
+      { name: 'Business Income' },
+      { name: 'Ordinance or Law' }, // → Additional Coverages catch-all
+    ])
+    expect(groups.map(g => g.label)).toEqual([
+      'Building & Business Personal Property', 'Time Element', 'Additional Coverages',
+    ])
   })
 })

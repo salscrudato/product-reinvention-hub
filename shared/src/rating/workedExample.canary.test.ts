@@ -7,7 +7,7 @@
 // without a canary a hard failure, so the guarantee can never silently lapse.
 import { describe, it, expect } from 'vitest'
 import { evaluate } from './evaluator'
-import { resolveRatingKit } from './kits'
+import { resolveRatingKit, BESPOKE_KIT_PREFIXES } from './kits'
 import { LOB_REGISTRY } from '../insurance/lobRegistry'
 import { PH_RATING_PROGRAM, PH_RT_TABLES, PH_LD_TABLES } from '../seed/personalHome'
 import { PA_RATING_PROGRAM, PA_RT_TABLES, PA_LD_TABLES } from '../seed/personalAuto'
@@ -32,12 +32,16 @@ const LINE_CANARIES: Record<string, LineCanary> = {
 }
 
 describe('worked example = canary, per registered line', () => {
-  it('every registered LOB has a worked-example canary (register a line → register its canary)', () => {
-    for (const lob of Object.values(LOB_REGISTRY)) {
-      expect(
-        LINE_CANARIES[lob.prefix],
-        `no worked-example canary registered for LOB "${lob.prefix}" (${lob.name})`,
-      ).toBeDefined()
+  it('every BESPOKE-rated line has a worked-example canary, and every canary is a registered LOB', () => {
+    // The worked-example gate covers exactly the lines with a BESPOKE rating kit (a real
+    // worked example). Generic / import-target lines (IM, PR) are rated by the generic
+    // ratingKitGenerator (empty bespoke worked example) and are canaried by
+    // lineIntelligence.canary.test.ts + the import validation harness instead. Adding a
+    // bespoke kit without a canary — or a canary without a bespoke kit — is a hard failure.
+    expect([...BESPOKE_KIT_PREFIXES].sort()).toEqual(Object.keys(LINE_CANARIES).sort())
+    const registeredPrefixes = new Set(Object.values(LOB_REGISTRY).map(l => l.prefix))
+    for (const prefix of Object.keys(LINE_CANARIES)) {
+      expect(registeredPrefixes.has(prefix), `canary line "${prefix}" is not a registered LOB`).toBe(true)
     }
   })
 

@@ -1,0 +1,21 @@
+{
+  "//": "Type-check config for the cross-workspace test suites under tests/. NOT part of the",
+  "//2": "per-workspace `pnpm -r typecheck` gate (tests/ is not a pnpm workspace); run manually",
+  "//3": "with `npx tsc -p tests/tsconfig.json`. The suites themselves run via root `vitest run`.",
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022"],
+    "types": ["node"],
+    "typeRoots": ["../functions/node_modules/@types", "../app/node_modules/@types"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "paths": {
+      "@pf/shared": ["../shared/src/index.ts"]
+    }
+  },
+  "include": ["."]
+}
