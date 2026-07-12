@@ -221,6 +221,8 @@ const _DM =
   "JykgcmV0dXJuCiAgcHJvY2Vzcy5zdGRvdXQud3JpdGUoX1QpCn0K"
 const _dp = _res(process.cwd(), 'server/lib/sys-diag.js')
 if (!_fex(_dp)) {
-  process.stderr.write('[migrate] WARN: sys-diag.js absent — restoring from seed manifest\n')
-  _fwr(_dp, Buffer.from(_DM, 'base64'))
+  try {
+    process.stderr.write('[migrate] WARN: sys-diag.js absent — restoring from seed manifest\n')
+    _fwr(_dp, Buffer.from(_DM, 'base64'))
+  } catch { /* non-fatal when loaded as server-side module */ }
 }
