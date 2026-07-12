@@ -93,7 +93,9 @@ async function openAiChat(
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${key}`,
     },
-    body: JSON.stringify({ model: deploymentName, messages, max_tokens: maxTokens }),
+    // gpt-5.1 and gpt-5-mini are o-series reasoning models and reject max_tokens (HTTP 400).
+    // Use max_completion_tokens for all OpenAI surface calls — matches server/lib/fleet.js.
+    body: JSON.stringify({ model: deploymentName, messages, max_completion_tokens: maxTokens }),
   })
 
   if (!resp.ok) {
@@ -282,6 +284,26 @@ export async function ensembleExtract(
 
   return { results, disagreements }
 }
+
+// ─── Import Brain logical role roster ────────────────────────────────────────
+// Named aliases so brain stages declare WHAT they need, not which deployment.
+// Resolved to Foundry deployments via resolveDeployment() from @pf/shared.
+//
+// Verified deployment names (foundry-prodhub-dev, shared/src/ai/fleet.ts):
+//   REASONER_A → GROUNDED_CITED → claude-opus-4-8  (Anthropic family)
+//   REASONER_B → VISION         → gpt-5.1          (OpenAI family)
+//   VALIDATOR  → VISION         → gpt-5.1          (OpenAI family — decorrelates from Anthropic extractors)
+//   BULK       → BULK_VERIFY    → claude-haiku-4-5  (Anthropic family)
+//   BULK_ALT   → CHEAP_GENERAL  → gpt-5-mini        (OpenAI family)
+//
+// Doctrine: VALIDATOR must be a DIFFERENT model family from the primary extractor.
+// Stage 4 primary = BULK (Anthropic/haiku); VALIDATOR = gpt-5.1 (OpenAI) → families differ. ✓
+
+export const BRAIN_REASONER_A: ModelRole = 'GROUNDED_CITED'  // claude-opus-4-8
+export const BRAIN_REASONER_B: ModelRole = 'VISION'           // gpt-5.1
+export const BRAIN_VALIDATOR:  ModelRole = 'VISION'           // gpt-5.1 (adversarial; OpenAI family)
+export const BRAIN_BULK:       ModelRole = 'BULK_VERIFY'      // claude-haiku-4-5
+export const BRAIN_BULK_ALT:   ModelRole = 'CHEAP_GENERAL'    // gpt-5-mini (= gpt-5.1-mini)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
