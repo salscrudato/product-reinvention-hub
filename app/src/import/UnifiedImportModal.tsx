@@ -2,21 +2,24 @@
 // ISO workbooks (XLSX), carrier filing PDFs, SERFF packages, ERC packages, and
 // unknown formats. Streams to the `unifiedImport` Cloud Function (7-stage pipeline).
 //
-// Review invariants that hold for every format:
-//   • UNRESOLVED items are first-class and always shown above accepted sections.
-//   • FormatCard proposals are a DISTINCT approval lane — clearly labelled, never
-//     mixed with ordinary review sections, never auto-persisted.
-//   • SplitProduct proposals are shown so the reviewer sees what multi-product
-//     structure was detected.
-//   • Nothing is written to Firestore until the reviewer clicks "Import as draft".
-//   • Writes go through importPlan() → adapter.db.mutate() — identical to the
-//     existing FilingImportModal path, so the mutation invariant holds.
-//   • VIEWER sees the import button as disabled; the whole modal is read-only.
+// Two-section Import Review:
+//   Section 1 "Detected" — classified entities (refId chips, confidence, citation)
+//     with a per-section Include toggle. Read-only. Nothing writes here.
+//   Section 2 "Review & confirm" — unresolved items, inter-model disagreements,
+//     validator discrepancies, FormatCard. Explicitly states nothing is saved until
+//     the user confirms.
+//
+// Invariants:
+//   • UNRESOLVED items live in Section 2 — clearly labelled "shown, not written."
+//   • FormatCard is a DISTINCT approval lane in Section 2, never auto-persisted.
+//   • Nothing is written to Cosmos until the reviewer clicks "Import N items."
+//   • Writes go through importPlan() → adapter.db.mutate() — the mutation invariant holds.
+//   • VIEWER sees no write action (canEdit = false → modal body is read-only text).
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type {
   UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan,
-  FormatCard, FormatFingerprint, SplitProductProposal, SampledVerification,
+  FormatCard, FormatFingerprint, SplitProductProposal, SampledVerification, UnresolvedItem,
 } from '@pf/shared'
 import { DisagreementHeatmap } from './DisagreementHeatmap'
 import { useUser } from '../context/useUser'
@@ -41,9 +44,16 @@ const SECTION_META: { key: FilingReviewSectionKey; label: string; Icon: typeof I
   { key: 'rating',    label: 'Rating program',     Icon: IconPricing  },
 ]
 
-// Token-only color helpers — never raw hex outside CSS vars.
+// Color helper — token-only, never raw hex.
 function confidenceColor(c: number): string {
   return c >= 0.8 ? 'var(--color-good)' : c >= 0.5 ? 'var(--color-warn)' : 'var(--color-faint)'
+}
+
+// Count writable items for a given plan (matches importPlan()'s `total` computation).
+function countPlan(p: ImportPlan): number {
+  return (p.product ? 1 : 0) + p.coverages.length + p.forms.length +
+    p.rules.length + p.formRules.length + (p.ratingProgram ? 1 : 0) +
+    p.ldTables.length + p.rtTables.length
 }
 
 function acceptedPlan(bundle: UnifiedProposalBundle, accepted: Set<FilingReviewSectionKey>): ImportPlan {
@@ -129,8 +139,8 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       const lineage = buildLineage(bundle, fileNames, actor)
       const res = await importPlan(acceptedPlan(bundle, accepted), actor, setProgress, { productId: draftId, lineage })
       setResult(res); setPhase('done')
-      if (res.failed) toast.warning(`Imported ${res.written} items as a draft, ${res.failed} skipped`)
-      else            toast.success(`Imported ${res.written} items as a draft`)
+      if (res.failed) toast.warning(`Imported ${res.written} items, ${res.failed} skipped`)
+      else            toast.success(`Imported ${res.written} items`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed.')
       setPhase('error')
@@ -140,7 +150,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
 
   return (
-    <Dialog open title="Unified import" onClose={onClose} width="max-w-2xl">
+    <Dialog open title="Import product data" onClose={onClose} width="max-w-2xl">
       {!canEdit ? (
         <p className="text-sm text-danger">Editor access is required to import documents.</p>
       ) : phase === 'select' ? (
@@ -277,7 +287,7 @@ function StreamingPane({ fileNames, stages }: { fileNames: string[]; stages: Uni
   )
 }
 
-// ─── Review pane ──────────────────────────────────────────────────────────────
+// ─── Review pane — two-section Import Review ──────────────────────────────────
 
 function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCancel, onImport }: {
   bundle:         UnifiedProposalBundle
@@ -288,144 +298,195 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
   onCancel:       () => void
   onImport:       () => void
 }) {
-  const { review, unresolved, counts, fingerprint, splitProducts, sampledVerifications, formatCard, ensembleDisagreements } = bundle
-  const acceptedCount = useMemo(() => SECTION_META.filter(s => accepted.has(s.key)).length, [accepted])
+  const { review, unresolved, fingerprint, splitProducts, sampledVerifications, formatCard, ensembleDisagreements } = bundle
+
+  const importCount = useMemo(() => {
+    return countPlan(acceptedPlan(bundle, accepted))
+  }, [bundle, accepted])
+
+  const hasDetectedContent = SECTION_META.some(({ key }) => review[key].items.length > 0)
+
+  const hasReviewItems =
+    unresolved.length > 0 ||
+    (ensembleDisagreements && ensembleDisagreements.length > 0) ||
+    sampledVerifications.length > 0 ||
+    splitProducts.length > 1 ||
+    !!formatCard
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header — product + fingerprint */}
-      <div className="flex items-center gap-3 rounded-[12px] p-3.5"
-        style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
-        <span className="flex items-center justify-center w-9 h-9 rounded-[10px] shrink-0"
-          style={{ background: 'var(--gradient-accent)' }}>
-          <IconFile size={18} className="text-white" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-text truncate">
-            {review.product.items[0]?.label ?? 'Imported product'}
+      <div className="flex flex-col gap-5 max-h-[52vh] overflow-y-auto -mx-1 px-1">
+
+        {/* ── Section 1: Detected ───────────────────────────────────────── */}
+        <section aria-labelledby="u-sec1-heading">
+          <div className="flex items-center gap-2 mb-2">
+            <span aria-hidden="true"
+              className="flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold"
+              style={{ background: 'var(--color-accent)', color: 'white' }}>1</span>
+            <h3 id="u-sec1-heading" className="text-[13px] font-semibold text-text">Detected</h3>
           </div>
-          <div className="text-xs text-dim flex items-center gap-1.5 flex-wrap">
-            {bundle.baseFormNumber &&
-              <span className="font-mono">{bundle.baseFormNumber} {bundle.baseFormEdition}</span>}
-            {bundle.filingState && <><span className="text-faint">·</span><span>{bundle.filingState}</span></>}
-            <span className="text-faint">·</span>
-            <span className="tnum">{counts.accepted} proposed</span>
-            <span className="text-faint">·</span>
-            <span className="tnum">{counts.unresolved} unresolved</span>
-          </div>
-        </div>
-        <FingerprintBadge fingerprint={fingerprint} />
-      </div>
+          <p className="text-sm text-dim mb-3">Here's what was extracted from these documents.</p>
 
-      <div className="flex flex-col gap-4 max-h-[52vh] overflow-y-auto -mx-1 px-1">
-
-        {/* ── UNRESOLVED — first, never persisted ─────────────────────────── */}
-        {unresolved.length > 0 && (
-          <section className="rounded-[12px] overflow-hidden"
-            style={{ border: '1px solid var(--color-warn-line, var(--color-border))' }}>
-            <div className="flex items-center gap-2 px-3.5 py-2.5"
-              style={{ background: 'var(--color-warn-soft, var(--color-raised))' }}>
-              <IconWarning size={15} className="text-warn" />
-              <h4 className="text-[12px] font-semibold uppercase tracking-[.07em] text-text">Unresolved</h4>
-              <span className="text-[11px] text-faint tnum">{unresolved.length}</span>
-              <span className="text-[11px] text-faint ml-auto">shown, not written — nothing is silently dropped</span>
-            </div>
-            <ul className="flex flex-col gap-1.5 px-3.5 py-2.5">
-              {unresolved.map((u, i) => (
-                <li key={i} className="text-xs">
-                  <span className="font-medium text-text">{u.name}</span>
-                  <span className="text-faint"> — {u.reason}</span>
-                  {u.citation && (
-                    <span className="block text-[11px] text-faint truncate" title={u.citation}>
-                      Cited: {u.citation}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* ── FormatCard approval lane — distinct, clearly labelled ─────── */}
-        {formatCard && (
-          <FormatCardLane card={formatCard} status={cardStatus} setStatus={setCardStatus} />
-        )}
-
-        {/* ── Split product proposals ────────────────────────────────────── */}
-        {splitProducts.length > 1 && (
-          <SplitProductsSection proposals={splitProducts} />
-        )}
-
-        {/* ── Sampled table verifications ────────────────────────────────── */}
-        {sampledVerifications.length > 0 && (
-          <SampledVerificationsSection verifications={sampledVerifications} />
-        )}
-
-        {/* ── Ensemble disagreement heatmap (inter-model divergence) ─────── */}
-        {ensembleDisagreements && ensembleDisagreements.length > 0 && (
-          <DisagreementHeatmap disagreements={ensembleDisagreements} />
-        )}
-
-        {/* ── Per-section accept/reject ──────────────────────────────────── */}
-        {SECTION_META.map(({ key, label, Icon }) => {
-          const section = review[key]
-          if (!section.items.length && !section.note) return null
-          const on = accepted.has(key)
-          return (
-            <section key={key} className="flex flex-col gap-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={on} onChange={() => toggle(key)}
-                  className="w-4 h-4 accent-[var(--color-accent)] shrink-0"
-                  aria-label={`Accept ${label}`} />
-                <Icon size={15} className="text-dim shrink-0" aria-hidden="true" />
-                <h4 className="text-[12px] font-semibold uppercase tracking-[.07em] text-dim">{label}</h4>
-                <span className="text-[11px] text-faint tnum">{section.items.length}</span>
-                <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} />
-                <span className="text-[11px] text-faint">{on ? 'Accepted' : 'Skipped'}</span>
-              </label>
-              {section.note && <p className="text-xs text-faint italic px-0.5">{section.note}</p>}
-              <div className={`flex flex-col gap-1.5 ${on ? '' : 'opacity-50'}`}>
-                {section.items.map((it, i) => (
-                  <div key={i} className="flex items-start gap-3 rounded-[10px] p-2.5 bg-raised"
-                    style={{ border: '1px solid var(--color-border)' }}>
-                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {/* refId chip — load-bearing display element, never stripped */}
-                        {it.refId && (
-                          <span className="text-[11px] font-mono text-accent shrink-0">{it.refId}</span>
-                        )}
-                        <span className="text-[13px] text-text truncate">{it.label}</span>
-                      </div>
-                      {it.detail && (
-                        <span className="text-[11px] text-dim font-mono truncate" title={it.detail}>
-                          {it.detail}
-                        </span>
-                      )}
-                      <span className="text-[11px] text-faint truncate" title={it.citation}>
-                        Cited: {it.citation}
-                      </span>
-                    </div>
-                    <span
-                      className="text-[11px] font-mono tnum shrink-0 mt-0.5"
-                      style={{ color: confidenceColor(it.confidence) }}
-                      title="Confidence"
-                    >
-                      {Math.round(it.confidence * 100)}%
-                    </span>
-                  </div>
-                ))}
+          {/* Product identity + format fingerprint */}
+          <div className="flex items-center gap-3 rounded-[12px] p-3.5 mb-3"
+            style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
+            <span className="flex items-center justify-center w-9 h-9 rounded-[10px] shrink-0"
+              style={{ background: 'var(--gradient-accent)' }}>
+              <IconFile size={18} className="text-white" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-text truncate">
+                {review.product.items[0]?.label ?? 'Imported product'}
               </div>
-            </section>
-          )
-        })}
+              <div className="text-xs text-dim flex items-center gap-1.5 flex-wrap">
+                {bundle.baseFormNumber && (
+                  <span className="font-mono text-accent">{bundle.baseFormNumber} {bundle.baseFormEdition}</span>
+                )}
+                {bundle.filingState && <><span className="text-faint">·</span><span>{bundle.filingState}</span></>}
+                <span className="text-faint">·</span>
+                <span className="tnum text-faint">{bundle.counts.proposed} proposed</span>
+                <span className="text-faint">·</span>
+                <span className="tnum text-faint">{bundle.counts.unresolved} unresolved</span>
+              </div>
+            </div>
+            <FingerprintBadge fingerprint={fingerprint} />
+          </div>
+
+          {/* Entity sections with include toggles */}
+          {!hasDetectedContent ? (
+            <div className="rounded-[12px] p-4 text-sm text-dim"
+              style={{ background: 'var(--color-raised)', border: '1px solid var(--color-border)' }}>
+              No insurance content detected in this file. Supported: product framework, forms,
+              rating/ROC, rules, limits/deductibles.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {SECTION_META.map(({ key, label, Icon }) => {
+                const section = review[key]
+                if (!section.items.length && !section.note) return null
+                const on = accepted.has(key)
+                return (
+                  <div key={key} className="rounded-[12px] overflow-hidden"
+                    style={{ border: `1px solid ${on ? 'var(--color-accent)' : 'var(--color-border)'}` }}>
+
+                    {/* Section header with include toggle */}
+                    <label className="flex items-center gap-2 px-3.5 py-2.5 cursor-pointer bg-raised hover:bg-raised transition-colors"
+                      style={{ userSelect: 'none' }}>
+                      <input type="checkbox" checked={on} onChange={() => toggle(key)}
+                        className="w-4 h-4 accent-[var(--color-accent)] shrink-0"
+                        aria-label={`Include ${label} in import`} />
+                      <Icon size={13} className="text-dim shrink-0" aria-hidden />
+                      <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-dim flex-1">
+                        {label}
+                      </span>
+                      <span className="text-[11px] text-faint tnum">{section.items.length}</span>
+                      <span className="text-[11px] font-medium ml-2 shrink-0"
+                        style={{ color: on ? 'var(--color-good)' : 'var(--color-faint)' }}>
+                        {on ? 'Included' : 'Skipped'}
+                      </span>
+                    </label>
+
+                    {/* Per-item list: refId chip · label · confidence · citation */}
+                    {section.note && (
+                      <p className="text-xs text-faint italic px-3.5 py-1.5">{section.note}</p>
+                    )}
+                    <div className={`flex flex-col divide-y ${on ? '' : 'opacity-40'}`}
+                      style={{ borderColor: 'var(--color-border)' }}>
+                      {section.items.slice(0, 8).map((it, i) => (
+                        <div key={i} className="flex items-center gap-2 px-3.5 py-1.5 min-w-0">
+                          {/* refId chip — load-bearing display element, never stripped */}
+                          {it.refId && (
+                            <span className="text-[11px] font-mono text-accent shrink-0 px-1.5 py-0.5 rounded"
+                              style={{ background: 'var(--color-accent-soft)' }}>
+                              {it.refId}
+                            </span>
+                          )}
+                          <span className="text-xs text-text truncate flex-1">{it.label}</span>
+                          {it.detail && (
+                            <span className="text-[11px] text-faint font-mono truncate max-w-[90px] shrink-0"
+                              title={it.detail}>{it.detail}</span>
+                          )}
+                          <span className="text-[11px] font-mono tnum shrink-0"
+                            style={{ color: confidenceColor(it.confidence) }}
+                            title="Confidence">
+                            {Math.round(it.confidence * 100)}%
+                          </span>
+                          <span className="text-[10px] text-faint truncate max-w-[80px] shrink-0"
+                            title={it.citation}>
+                            {it.citation}
+                          </span>
+                        </div>
+                      ))}
+                      {section.items.length > 8 && (
+                        <div className="px-3.5 py-1.5 text-[11px] text-faint text-center">
+                          +{section.items.length - 8} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ── Section 2: Review & confirm ───────────────────────────────── */}
+        <section aria-labelledby="u-sec2-heading">
+          <div className="flex items-center gap-2 mb-2">
+            <span aria-hidden="true"
+              className="flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold"
+              style={{ background: 'var(--color-warn)', color: 'white' }}>2</span>
+            <h3 id="u-sec2-heading" className="text-[13px] font-semibold text-text">Review & confirm</h3>
+          </div>
+          <p className="text-sm text-dim mb-3">
+            Nothing is saved until you click &ldquo;Import {importCount} items&rdquo;
+            {hasReviewItems ? ' — review these items before confirming.' : ' — no discrepancies or unresolved fields.'}
+          </p>
+
+          {hasReviewItems ? (
+            <div className="flex flex-col gap-2.5">
+              {/* Unresolved — shown, not written */}
+              {unresolved.length > 0 && <UnresolvedSection unresolved={unresolved} />}
+
+              {/* Inter-model disagreement heatmap */}
+              {ensembleDisagreements && ensembleDisagreements.length > 0 && (
+                <DisagreementHeatmap disagreements={ensembleDisagreements} />
+              )}
+
+              {/* Sampled table verifications */}
+              {sampledVerifications.length > 0 && (
+                <SampledVerificationsSection verifications={sampledVerifications} />
+              )}
+
+              {/* Split product proposals */}
+              {splitProducts.length > 1 && (
+                <SplitProductsSection proposals={splitProducts} />
+              )}
+
+              {/* FormatCard approval lane — distinct, never auto-persisted */}
+              {formatCard && (
+                <FormatCardLane card={formatCard} status={cardStatus} setStatus={setCardStatus} />
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs text-good">
+              <IconCheckCircle size={14} />
+              <span>All extracted items are verified — no unresolved fields or inter-model disagreements.</span>
+            </div>
+          )}
+        </section>
       </div>
 
-      <div className="flex items-center justify-between gap-2 pt-1">
-        <span className="text-xs text-faint">{acceptedCount} section{acceptedCount === 1 ? '' : 's'} accepted</span>
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-2 pt-1"
+        style={{ borderTop: '1px solid var(--color-border)' }}>
+        <span className="text-xs text-faint">
+          {importCount} item{importCount !== 1 ? 's' : ''} will be written
+        </span>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-          <Button variant="primary" onClick={onImport}>
-            Import as draft <IconArrowRight size={14} />
+          <Button variant="primary" onClick={onImport} disabled={importCount === 0}>
+            Import {importCount} item{importCount !== 1 ? 's' : ''} <IconArrowRight size={14} />
           </Button>
         </div>
       </div>
@@ -446,6 +507,36 @@ function FingerprintBadge({ fingerprint }: { fingerprint: FormatFingerprint }) {
   )
 }
 
+function UnresolvedSection({ unresolved }: { unresolved: UnresolvedItem[] }) {
+  return (
+    <section className="rounded-[12px] overflow-hidden"
+      style={{ border: '1px solid var(--color-warn-line, var(--color-border))' }}>
+      <div className="flex items-center gap-2 px-3.5 py-2.5"
+        style={{ background: 'var(--color-warn-soft, var(--color-raised))' }}>
+        <IconWarning size={15} className="text-warn" />
+        <h4 className="text-[12px] font-semibold uppercase tracking-[.07em] text-text flex-1">
+          Unresolved
+        </h4>
+        <span className="text-[11px] text-faint tnum">{unresolved.length}</span>
+        <span className="text-[11px] text-faint ml-2">shown, not written</span>
+      </div>
+      <ul className="flex flex-col gap-1.5 px-3.5 py-2.5">
+        {unresolved.map((u, i) => (
+          <li key={i} className="text-xs">
+            <span className="font-medium text-text">{u.name}</span>
+            <span className="text-faint"> — {u.reason}</span>
+            {u.citation && (
+              <span className="block text-[11px] text-faint truncate" title={u.citation}>
+                Cited: {u.citation}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 function FormatCardLane({ card, status, setStatus }: {
   card:      FormatCard
   status:    'PROPOSED' | 'APPROVED' | 'REJECTED'
@@ -455,7 +546,6 @@ function FormatCardLane({ card, status, setStatus }: {
     <section className="rounded-[12px] overflow-hidden"
       style={{ border: `1px solid ${status === 'APPROVED' ? 'var(--color-good)' : status === 'REJECTED' ? 'var(--color-danger, var(--color-border))' : 'var(--color-accent)'}` }}>
 
-      {/* Lane header */}
       <div className="flex items-center gap-2 px-3.5 py-2.5"
         style={{ background: 'var(--color-accent-soft)' }}>
         <IconFile size={14} className="text-accent shrink-0" />
@@ -465,14 +555,12 @@ function FormatCardLane({ card, status, setStatus }: {
         <span className="text-[11px] text-faint">proposed · approve to teach the registry</span>
       </div>
 
-      {/* Card body */}
       <div className="flex flex-col gap-3 px-3.5 py-3">
         <p className="text-xs text-dim">
           This format was not recognized. The AI proposed the following document-role fingerprints
           and translation recipe fragment. Review and approve below — the card is never auto-persisted.
         </p>
 
-        {/* Proposed document roles */}
         {card.documentRoleFingerprints.length > 0 && (
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[.06em] text-faint mb-1.5">
@@ -489,7 +577,6 @@ function FormatCardLane({ card, status, setStatus }: {
           </div>
         )}
 
-        {/* Proposed recipe fragment */}
         {Object.keys(card.translationRecipeFragment).length > 0 && (
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[.06em] text-faint mb-1.5">
@@ -502,10 +589,8 @@ function FormatCardLane({ card, status, setStatus }: {
           </div>
         )}
 
-        {/* Approve / Reject controls */}
         <div className="flex gap-2 pt-1">
-          <button
-            type="button"
+          <button type="button"
             onClick={() => setStatus(status === 'APPROVED' ? 'PROPOSED' : 'APPROVED')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-xs font-medium transition-colors"
             style={{
@@ -517,8 +602,7 @@ function FormatCardLane({ card, status, setStatus }: {
             <IconCheckCircle size={13} />
             {status === 'APPROVED' ? 'Approved' : 'Approve'}
           </button>
-          <button
-            type="button"
+          <button type="button"
             onClick={() => setStatus(status === 'REJECTED' ? 'PROPOSED' : 'REJECTED')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-xs font-medium transition-colors"
             style={{
