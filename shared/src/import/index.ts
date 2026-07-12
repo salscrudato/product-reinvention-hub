@@ -5,3 +5,5 @@ export * from './types'
 // enum conformance, silent drops).
 export * from './canonicalMap'
 export * from './validateAgainstExpected'
+// Structural extraction layer — deterministic StructuralModel + pure shaping helpers.
+export * from './structure'
