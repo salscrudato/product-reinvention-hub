@@ -10,7 +10,7 @@ import { resolveClaimsLineProfile } from '@pf/shared'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { ChatComposer } from '../components/chat/ChatComposer'
-import { Markdown } from '../components/chat/Markdown'
+import { StreamRenderer } from '../components/ai/StreamRenderer'
 import { BaseFormsLibrary, type BaseForm } from '../components/claims/BaseFormsLibrary'
 import { DeterminationCard, type Determination } from '../components/claims/DeterminationCard'
 import { shouldRenderDetermination } from '../lib/claims/determination'
@@ -108,8 +108,7 @@ function AssistantContent({ m, streamingThisTurn, onCreateFeedback, linked }: {
       )}
       {content === 'text' && (
         <div className="text-sm text-text">
-          <Markdown text={m.text} />
-          {streamingThisTurn && <span aria-hidden="true" className="inline-block text-accent animate-pulse ml-0.5 select-none opacity-70" style={{ lineHeight: 1 }}>▍</span>}
+          <StreamRenderer text={m.text} streaming={streamingThisTurn} />
         </div>
       )}
       {content === 'thinking' && (
@@ -300,8 +299,8 @@ export default function Claims() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-5 h-full min-h-0">
-      {/* Left — base-forms library */}
-      <aside className="lg:w-[320px] lg:shrink-0 flex flex-col min-h-0 lg:h-full lg:border-r lg:pr-5" style={{ borderColor: 'var(--color-border)' }}>
+      {/* Left — base-forms library (full-width on mobile, fixed sidebar on desktop) */}
+      <aside className="w-full lg:w-[320px] lg:shrink-0 flex flex-col min-h-0 lg:h-full lg:border-r lg:pr-5" style={{ borderColor: 'var(--color-border)' }}>
         <BaseFormsLibrary
           forms={sortedForms} loading={loading} selectedId={selectedId}
           onSelect={id => setSelectedId(id || null)} canEdit={canEdit} actor={actor}

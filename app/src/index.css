@@ -511,6 +511,9 @@ h1, h2 { text-wrap: balance; }
 .chip-in { animation: chip-in .18s var(--ease-spring) both; }
 @keyframes facet-reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 .facet-reveal { animation: facet-reveal .2s var(--ease-spring) both; }
+/* ── Streaming paragraph fade-in (StreamRenderer) ───────────────────────────── */
+@keyframes para-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.para-in { animation: para-in .28s var(--ease-spring) both; }
 
 /* Glassmorphism surface for the facet panel + command-bar dropdown. */
 .glass {
@@ -613,5 +616,6 @@ h1, h2 { text-wrap: balance; }
   .page-in { animation: none !important; }
   .rise-in, .flow-step, .flow-changed, .col-in { animation: none !important; }
   .flow-pulse, .algo-pulse { animation: none !important; opacity: 0 !important; }
+  .para-in { animation: none !important; }
   .state-tile__cell, .state-tile__ring { transition: none !important; }
 }

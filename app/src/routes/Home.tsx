@@ -13,7 +13,7 @@ import { NoticeBanner, Tooltip } from '../components/ui'
 import { isCacheNotice, type NoticeEvent, type NoticeKind } from '../lib/ai/notices'
 import { adapter } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
-import { Markdown } from '../components/chat/Markdown'
+import { StreamRenderer } from '../components/ai/StreamRenderer'
 import { HeroMark } from '../components/home/HeroMark'
 import { PriorityRail } from '../components/home/PriorityRail'
 import { PortfolioMetrics } from '../components/home/PortfolioMetrics'
@@ -245,7 +245,7 @@ export default function Home() {
                         </div>
                       )}
                       {m.role === 'assistant'
-                        ? <div className="text-sm text-text"><Markdown text={m.text} onCite={openCitation} />{streaming && i === messages.length - 1 && <span aria-hidden="true" className="inline-block text-accent animate-pulse ml-0.5 select-none opacity-70" style={{ lineHeight: 1 }}>▍</span>}</div>
+                        ? <div className="text-sm text-text"><StreamRenderer text={m.text} streaming={streaming && i === messages.length - 1} onCite={openCitation} citationIndex={indexEntries} /></div>
                         : m.text}
                       {/* Degrade / deny / breaker / unverified → the shared honest-status banner.
                           A cache HIT is NOT a banner — it's the quiet badge in the footer row below. */}
