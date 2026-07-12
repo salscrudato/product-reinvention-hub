@@ -129,9 +129,9 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 
 - [x] **REQ-8** | Re-verify all previously-fixed bugs from hardening ledger | DEF-0033: migrate-to-cosmos.ts scopes ops to tenantId; DEF-0034: data.js has grounding chunk hook (line 80-87); DEF-0039: auth.js:142-166 persists changePassword to Cosmos; DEF-0040: ai/index.js routes unifiedImport (not 501); DEF-0041: auth.js:19 throws if AUTH_JWT_SECRET unset | S3
 
-- [ ] **REQ-10a** | Add supertest integration tests for auth endpoints | /api/auth/login (401 bad creds, 200 valid), /api/db/mutate (403 VIEWER, 200 EDITOR), /api/ai/chat (503 unconfigured) | S3
+- [x] **REQ-10a** | Add supertest integration tests for auth endpoints | tests/server/integration.test.ts: /api/auth/login (401 bad creds, 200 valid), /api/db/mutate (403 VIEWER, non-403 EDITOR), /api/ai/chat (503 unconfigured); server.js exports app guarded by require.main; 6 tests pass; 887 total | S3
 
-- [ ] **REQ-10b** | Add rate limit test for /api/auth/login | Test confirms 429 after rate limit exceeded | S3
+- [x] **REQ-10b** | Add rate limit test for /api/auth/login | Test exhausts 10-token bucket (11 requests with X-Forwarded-For isolation) and asserts 429 on final request | S3
 
 - [ ] **REQ-12g** | OpenTelemetry: structured spans for Azure Application Insights | Replace console.log/warn with OTel spans; integrate with App Insights | S3
 
@@ -185,3 +185,4 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 |---|---|---|---|
 | 2026-07-12 | S1 | COMPLETE | All RISK-001 to RISK-016 addressed; gate GREEN (862 tests, build within budget); RISK-016 deferred to S4; bundle JS 152.2/175 kB, CSS 17.1/25 kB |
 | 2026-07-12 | S2 | COMPLETE | REQ-1 + REQ-2 complete; 6-stage brain ported to server/lib/import-brain/ (7 modules + orchestrator); stage-filing.js wires CLASSIFY/RATE_ORDER/MANUAL; filing-shared.cjs bundled; ai.js routing added; 881 tests green; build clean |
+| 2026-07-12 | S3 | COMPLETE | REQ-3a/b/c/d (temperature:0, cache_control, fetchWithRetry, extended thinking); REQ-5 (ai.js split to ai/ directory, 10 modules); REQ-6a (homecheck already parallel); REQ-6b (pathFetches coalescing in adapter); REQ-6c (docs/COSMOS-INDEXES.md); REQ-8 (DEF-0033/0034/0039/0040/0041 verified); REQ-10a/b (6 supertest integration tests); 887 tests green; build clean |

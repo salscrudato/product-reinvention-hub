@@ -183,4 +183,7 @@ app.use(function (err, req, res, next) {
   res.status(500).json({ error: 'internal_server_error' })
 })
 
-app.listen(PORT, () => console.log(`[prodhub-host] listening on :${PORT} -- serving ${PUBLIC}`))
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`[prodhub-host] listening on :${PORT} -- serving ${PUBLIC}`))
+}
+module.exports = { app }
