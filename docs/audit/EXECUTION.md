@@ -139,7 +139,7 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 
 ## Session 4 -- Experience (S4)
 
-- [ ] **REQ-4** | Browser console easter egg (Accenture-owned, obfuscated) | Easter egg fires on first render, not findable by grep, Accenture branding + personal shout-outs | S4
+- [x] **REQ-4** | Browser console easter egg (Accenture-owned, obfuscated) | Base64 payload in capability.ts decoded with atob() at module init; bracket notation _w["console"]["log"] avoids static grep; imported legitimately as the SW registration guard; commit 022d0ca | S4
 
 - [x] **REQ-5** | Lean code: split ai.js (1069 lines) into named stage modules | ai.js deleted; server/lib/ai/ directory: _shared.js + 8 handler modules + index.js router; Node resolves require('./lib/ai') to index.js transparently; gate green; commit dba4be9 | S3 (pulled forward)
 
@@ -149,19 +149,19 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 
 - [x] **REQ-6c** | Document recommended Cosmos composite indexes | docs/COSMOS-INDEXES.md created with composite index recommendations for (coll, tenantId, data.updatedAt) and 3 additional patterns | S3 (pulled forward)
 
-- [ ] **REQ-9** | Beautiful AI responses: interactive citations, streaming markdown, collapsible reasoning | Citation hover cards, fade-in per paragraph, coverage comparison tables | S4
+- [x] **REQ-9** | Beautiful AI responses: interactive citations, streaming markdown, collapsible reasoning | Citation hover cards with entity summary, per-paragraph para-in fade animation, collapsible reasoning/considerations, coverage comparison tables, hand-rolled SVG sparklines (no chart libs, 4.84 kB gzip); commit 8891d76 | S4
 
-- [ ] **REQ-12a** | Real-time presence indicators in ProductWorkspace | Collaborator avatars show who else is editing; uses existing presence system | S4
+- [x] **REQ-12a** | Real-time presence indicators in ProductWorkspace | PresenceAvatars uses adapter.presence.join + watch; token-based color palette, up to 3 avatars + overflow chip; commit 3c31f8b | S4
 
-- [ ] **REQ-12b** | Conflict resolution UI for MutationConflictError (409) | Diff UI showing conflicting changes instead of just a toast | S4
+- [x] **REQ-12b** | Conflict resolution UI for MutationConflictError (409) | ConflictDiffDialog fetches remote via adapter.db.get, renders side-by-side field diff (warn=local, good=remote); MutationConflictError gains conflictPath + localData; commit 49dc5c0 | S4
 
 - [ ] **REQ-12c** | Cosmos composite index on (coll, tenantId, data.updatedAt) | Index documented + added to docs/COSMOS_INDEXES.md | S4
 
-- [ ] **REQ-12d** | Mobile-first responsive layout for sidebar + product workspace | Sidebar collapses to hamburger; workspace grid stacks on mobile | S4
+- [x] **REQ-12d** | Mobile-first responsive layout for sidebar + product workspace | Sidebar fixed/translate-x overlay on mobile, lg:relative on desktop; Topbar hamburger; workspace tab strip scrolls horizontally; commit 04870c3 | S4
 
 - [ ] **REQ-12e** | Surface SERFF reviewer (checkTexasBundle) results in the UI | SERFF bundle page shows DOI reviewer findings; not just in API response | S4
 
-- [ ] **REQ-12f** | Expand a11y audit to all modal dialogs and command palette | a11y.axe.test.tsx covers all modals + CommandPalette | S4
+- [x] **REQ-12f** | Expand a11y audit to all modal dialogs and command palette | CommandPalette + PromoteDraftDialog + ConflictDiffDialog covered; 890 tests (up from 887); commit 3a9e794 | S4
 
 - [ ] **REQ-12h** | News LOB-specific topic interest tracking | Topic weights persisted per user per LOB in Cosmos | S4
 
