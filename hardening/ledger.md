@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 0 | CRITICAL: 0 | HIGH: 0 | MEDIUM: 0 | LOW: 0 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 8 | CRITICAL: 0 | HIGH: 7 | MEDIUM: 1 | LOW: 0 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -904,3 +904,127 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 - fix: Admin.tsx:177 EmptyState description changed from "Bootstrap admins (admin, sal.scrudato) are always available. Create tenant-gated users here..." to "No tenant-gated users yet. Create them here — each with a username, password, role and company." — account names no longer present in the component source or compiled bundle.
 - verified-by: static probe 2026-07-11 (WAVE-08) — `git grep -n "sal.scrudato" app/src/` → zero results; `git grep -n "admin, sal" app/src/` → zero; repro no longer reproduces; gate green (689+187 tests).
 - commit: cb29fe25
+
+---
+
+<!-- MUTATION SWEEP 2026-07-11 (Phase 3)
+Theater gaps discovered during deliberate fault injection — faults that left pnpm test GREEN.
+Each OPEN DEF below needs a unit test to close it. FAULT-F (claude-fable-5) and FAULT-G
+(chunkRule bracket) were already covered — RED confirmed — and are excluded from this list.
+FAULT-A (seam bypass via @azure/cosmos import) is caught by pnpm typecheck (TS2307) but NOT
+by pnpm test alone; TypeScript compiler guards the invariant at the gate level, not the test
+level. A DEF is still logged because a future maintainer could disable strict module checks or
+switch to a lenient tsconfig without knowing the seam is unguarded in tests.
+-->
+
+---
+
+### DEF-0043
+- status: OPEN
+- severity: HIGH
+- probe: MUTATION-SWEEP
+- surface: server/lib/data.js:141 (envelope, audit push)
+- title: No unit test detects dropped audit write in mutation envelope (FAULT-003 theater gap)
+- evidence: Deliberate fault injection 2026-07-11: removed `ops.push({ operationType: 'Create', resourceBody: { id: auditId(), ...common, kind: 'audit', ... } })` from `envelope()` in `server/lib/data.js`. `pnpm test` (187 tests) passed GREEN. No test asserts that `ops` contains an audit-kind entry before the Cosmos batch is committed. The PROBE endpoint (GET /api/db/audit, gated behind PROBE_MODE=1) was wired to enable a smoke-harness assertion, but smoke.mjs requires a live server and is excluded from the unit suite.
+- repro: Comment out the audit `ops.push` in `server/lib/data.js:141`. Run `pnpm test` → 187 green.
+- fix: Add a unit test that constructs an envelope with a mock Cosmos client and asserts `ops.some(o => o.resourceBody?.kind === 'audit')` before the batch call.
+- verified-by: OPEN — no unit test written yet.
+- commit: N/A
+
+---
+
+### DEF-0044
+- status: OPEN
+- severity: HIGH
+- probe: MUTATION-SWEEP
+- surface: server/lib/data.js:153 (requireRole on /mutate)
+- title: No unit test detects VIEWER role bypass on POST /api/db/mutate (FAULT-004 theater gap)
+- evidence: Deliberate fault injection 2026-07-11: changed `requireRole('EDITOR')` to `requireRole('VIEWER')` on the `/mutate` route. `pnpm test` (187 tests) passed GREEN. `server/src/roleGuard.test.ts` tests the `requireRole` helper in isolation but does not mount the actual `/api/db/mutate` route and assert that a VIEWER-role JWT is rejected with 403.
+- repro: Change `requireRole('EDITOR')` to `requireRole('VIEWER')` on data.js:153. Run `pnpm test` → 187 green.
+- fix: Add a supertest (or equivalent) route-level test that POSTs to `/db/mutate` with a VIEWER JWT and asserts HTTP 403.
+- verified-by: OPEN — no route-level test written yet.
+- commit: N/A
+
+---
+
+### DEF-0045
+- status: OPEN
+- severity: HIGH
+- probe: MUTATION-SWEEP
+- surface: server/lib/ai.js:44 (SYSTEM prompt citation instruction)
+- title: No unit test detects removal of citation instruction from AI SYSTEM prompt (FAULT-005 theater gap)
+- evidence: Deliberate fault injection 2026-07-11: removed the citation line (`'Every substantive claim MUST cite its source using the bracketed reference tags...'`) from the `SYSTEM` constant in `server/lib/ai.js`. `pnpm test` (187 tests) passed GREEN. `server/src/ai.test.ts` exercises the AI route logic but does not assert the content of the SYSTEM prompt string or require `[refId]` anchors to be present in the instruction.
+- repro: Remove line 44 from the SYSTEM array in server/lib/ai.js. Run `pnpm test` → 187 green.
+- fix: Add a unit test (or snapshot) that imports/requires the SYSTEM string and asserts it contains `'MUST cite its source'` and the bracketed-tag instruction phrase.
+- verified-by: OPEN — no test written yet.
+- commit: N/A
+
+---
+
+### DEF-0046
+- status: OPEN
+- severity: HIGH
+- probe: MUTATION-SWEEP
+- surface: server/lib/data.js:142 (envelope, version push)
+- title: No unit test detects dropped version write in mutation envelope (FAULT-B theater gap)
+- evidence: Deliberate fault injection 2026-07-11: removed `ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ver', ...), kind: 'version', diff: fieldDiff(...) } })` from `envelope()`. `pnpm test` (187 tests) passed GREEN. No unit test asserts the `ops` array includes a version-kind entry. Without version writes, the audit trail loses diff history and the `rev` bump cannot be verified by read-back.
+- repro: Comment out the version `ops.push` in `server/lib/data.js:142`. Run `pnpm test` → 187 green.
+- fix: Same test harness as DEF-0043 — assert `ops.some(o => o.resourceBody?.kind === 'version')` with a valid `diff` field before the batch commit.
+- verified-by: OPEN — no unit test written yet.
+- commit: N/A
+
+---
+
+### DEF-0047
+- status: OPEN
+- severity: HIGH
+- probe: MUTATION-SWEEP
+- surface: server/lib/data.js:168 (requireRole on /mutateBatch)
+- title: No unit test detects VIEWER role bypass on POST /api/db/mutateBatch (FAULT-C theater gap)
+- evidence: Deliberate fault injection 2026-07-11: changed `requireRole('EDITOR')` to `requireRole('VIEWER')` on the `/mutateBatch` route. `pnpm test` (187 tests) passed GREEN. The `/mutateBatch` route has no route-level test; the role-guard helper is tested in isolation only.
+- repro: Change `requireRole('EDITOR')` to `requireRole('VIEWER')` on data.js:168. Run `pnpm test` → 187 green.
+- fix: Add a supertest route-level test (parallel to DEF-0044's fix) that POSTs to `/db/mutateBatch` with a VIEWER JWT and asserts HTTP 403.
+- verified-by: OPEN — no route-level test written yet.
+- commit: N/A
+
+---
+
+### DEF-0048
+- status: OPEN
+- severity: HIGH
+- probe: MUTATION-SWEEP
+- surface: app/vite.config.ts:29 (define block)
+- title: No test detects server-side secret injected into Vite client bundle via define block (FAULT-D theater gap)
+- evidence: Deliberate fault injection 2026-07-11: added `AZURE_FOUNDRY_KEY: JSON.stringify('fake-secret-key-DO-NOT-SHIP')` to the `define` block in `app/vite.config.ts`. `pnpm test` (187 tests) passed GREEN. No test audits the Vite `define` object for keys that match known secret env-var names (`COSMOS_KEY`, `AZURE_FOUNDRY_KEY`, `AUTH_JWT_SECRET`, etc.). An inadvertent or malicious addition would silently bundle the value into every JS chunk served to the browser.
+- repro: Add any server-secret key to the `define` block in `app/vite.config.ts`. Run `pnpm test` → 187 green.
+- fix: Add a Vite config unit test (or CI bundle-audit script) that reads `vite.config.ts`'s `define` keys and asserts none matches the pattern `/(COSMOS|FOUNDRY|JWT_SECRET|STORAGE_KEY|API_KEY)/i`.
+- verified-by: OPEN — no test written yet.
+- commit: N/A
+
+---
+
+### DEF-0049
+- status: OPEN
+- severity: HIGH
+- probe: MUTATION-SWEEP
+- surface: shared/src/retrieval/chunk.ts:64 (chunkCoverage bracket format)
+- title: No unit test detects removal of bracketed refId from coverage chunk text (FAULT-E theater gap)
+- evidence: Deliberate fault injection 2026-07-11: changed `` `Coverage: ${c.name} [${refId}]` `` to `` `Coverage: ${c.name} ${refId}` `` in `chunkCoverage`. `pnpm test` (187 tests) passed GREEN. `shared/src/retrieval/chunk.test.ts:37-46` asserts `expect(ch.text).toContain('PH.COV.001.001')` — the refId substring — but does NOT assert the bracket format `[PH.COV.001.001]`. The bracket is the citation anchor that the SYSTEM prompt instructs the model to reproduce; without it the model sees no bracket to cite and the AI grounded+cited invariant is silently degraded for all coverage chunks.
+- repro: Strip `[${refId}]` brackets from `chunkCoverage` in chunk.ts:64. Run `pnpm test` → 187 green.
+- fix: Add `expect(ch.text).toContain(`[${cov.refId}]`)` to the coverage chunk test in `chunk.test.ts`, mirroring the existing rule-chunk bracket assertion at line 66.
+- verified-by: OPEN — fix is one-line; not yet written.
+- commit: N/A
+
+---
+
+### DEF-0050
+- status: OPEN
+- severity: MEDIUM
+- probe: MUTATION-SWEEP
+- surface: app/src/lib/backend/azure.adapter.ts (adapter seam)
+- title: pnpm test alone does not detect direct platform SDK import in the adapter seam; only typecheck catches it (FAULT-A nuance)
+- evidence: Deliberate fault injection 2026-07-11: added `import type { CosmosClient } from '@azure/cosmos'` to `azure.adapter.ts`. `pnpm test` (187 tests) passed GREEN — no test imports or inspects `azure.adapter.ts` in the jsdom environment, and the Vite-based test runner does not enforce the module-resolution seam. However `pnpm typecheck` (tsc) failed immediately with TS2307 `Cannot find module '@azure/cosmos'` because `@azure/cosmos` is not in `app/package.json` — the TypeScript compiler's dependency graph guards the seam at the gate level. Severity MEDIUM (lower than the other OPEN theater gaps) because the gate DOES catch it via typecheck; a developer who runs the full `pnpm typecheck && pnpm lint && pnpm test && pnpm build` gate cannot miss this. Still logged because a permissive tsconfig change or a `paths` alias could silently disable the guard without a matching test failing.
+- repro: Add `import type { CosmosClient } from '@azure/cosmos'` to azure.adapter.ts. Run `pnpm test` → GREEN. Run `pnpm typecheck` → TS2307 error.
+- fix: Add an import-restriction lint rule (`import/no-restricted-paths` or ESLint `no-restricted-imports`) that forbids `@azure/cosmos` (and `@firebase/*`, `mongodb`, etc.) in `app/src/`. This converts a typecheck-only guard into a test-suite-visible failure (lint runs in `pnpm test`).
+- verified-by: OPEN — lint rule not yet written.
+- commit: N/A
