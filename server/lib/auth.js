@@ -44,8 +44,12 @@ const fromB64url = (s) => Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), '
 
 function sign(payload) {
   const now = Math.floor(Date.now() / 1000)
+  // RISK-006: jti (JWT ID) enables server-side revocation. Adding jti is additive
+  // and backward-compatible -- tokens without jti (issued before this change) still
+  // verify correctly; they are simply not revocable (they expire at 12h TTL).
+  const jti = crypto.randomUUID()
   const head = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const data = `${head}.${b64url(JSON.stringify({ ...payload, iat: now, exp: now + TTL_SECONDS }))}`
+  const data = `${head}.${b64url(JSON.stringify({ ...payload, jti, iat: now, exp: now + TTL_SECONDS }))}`
   return `${data}.${b64url(crypto.createHmac('sha256', SECRET).update(data).digest())}`
 }
 function verify(token) {
@@ -57,6 +61,29 @@ function verify(token) {
   let payload; try { payload = JSON.parse(fromB64url(p[1]).toString('utf8')) } catch { return null }
   if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) return null
   return payload
+}
+
+// ─── JWT revocation (RISK-006) ───────────────────────────────────────────────
+// Revoked JTIs are stored in Cosmos (kind:'revokedToken', pk:'__system__') and
+// cached locally for REVOKE_CACHE_TTL ms to avoid a Cosmos round-trip per request.
+// Fail-open on Cosmos error to prevent a storage outage from locking everyone out.
+const _revokedCache = new Map() // jti -> { revoked: bool, cachedAt: ms }
+const REVOKE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+async function isRevoked(jti) {
+  const cached = _revokedCache.get(jti)
+  if (cached && Date.now() - cached.cachedAt < REVOKE_CACHE_TTL) return cached.revoked
+  const docs = systemContainer()
+  if (!docs) return false
+  try {
+    const { resources } = await docs.items.query({
+      query: "SELECT c.id FROM c WHERE c.pk='__system__' AND c.kind='revokedToken' AND c.data.jti=@jti",
+      parameters: [{ name: '@jti', value: jti }],
+    }).fetchAll()
+    const revoked = resources.length > 0
+    _revokedCache.set(jti, { revoked, cachedAt: Date.now() })
+    return revoked
+  } catch { return false }
 }
 
 // ─── user + tenant lookups (Cosmos overlay on bootstrap) ─────────────────────
@@ -142,11 +169,41 @@ async function changePassword(req, res) {
 // Public tenant list for the login dropdown (ids + names only — no data).
 async function publicTenants(_req, res) { res.json({ tenants: await listTenants() }) }
 
-function attachUser(req, _res, next) {
+async function attachUser(req, _res, next) {
   const h = req.headers.authorization || ''
   const token = h.startsWith('Bearer ') ? h.slice(7) : null
   const p = token ? verify(token) : null
-  req.user = p ? { uid: p.sub, name: p.name, email: p.email, role: p.role, tenantId: p.tenantId || null } : null
+  if (p) {
+    // RISK-006: skip revocation check for tokens without jti (issued before this change)
+    if (p.jti && await isRevoked(p.jti)) {
+      req.user = null
+    } else {
+      req.user = { uid: p.sub, name: p.name, email: p.email, role: p.role, tenantId: p.tenantId || null, _jti: p.jti || null }
+    }
+  } else {
+    req.user = null
+  }
+  next()
+}
+
+// Revoke the token carried by req.user (called from the logout route).
+// Best-effort: local cache is always updated; Cosmos write may fail silently.
+async function revokeToken(req, _res, next) {
+  const jti = req.user?._jti
+  if (jti) {
+    _revokedCache.set(jti, { revoked: true, cachedAt: Date.now() })
+    const docs = systemContainer()
+    if (docs) {
+      try {
+        await docs.items.upsert({
+          id: `revokedToken:${jti}`,
+          pk: '__system__',
+          kind: 'revokedToken',
+          data: { jti, uid: req.user.uid, revokedAt: Date.now() },
+        })
+      } catch { /* best-effort; token is already invalidated in local cache */ }
+    }
+  }
   next()
 }
 function requireAuth(req, res, next) { if (!req.user) return res.status(401).json({ error: 'unauthenticated' }); next() }
@@ -168,5 +225,5 @@ module.exports = {
   RANK, BOOTSTRAP, listTenants, findUser,
   sign, verify,
   login, me, changePassword, publicTenants,
-  attachUser, requireAuth, requireRole, requireTenant,
+  attachUser, requireAuth, requireRole, requireTenant, revokeToken,
 }
