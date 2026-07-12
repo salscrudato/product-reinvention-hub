@@ -127,8 +127,23 @@ app.use(express.static(PUBLIC, {
   },
 }))
 
+// A request for a hashed static asset that reaches this fallback means the file is MISSING
+// — almost always a stale chunk hash requested by a client still running an older index.html
+// after a redeploy (Vite fingerprints every chunk, so old hashes vanish on each build).
+// Serving index.html here returns text/html for a `<script type=module>`, which the browser
+// refuses to parse ("Expected a JavaScript-or-Wasm module script but the server responded
+// with a MIME type of text/html") and the app fails to load. Return a real 404 instead so
+// the dynamic import rejects cleanly and the client can self-heal (see the vite:preloadError
+// handler in app/src/main.tsx, which reloads once onto fresh index.html + current hashes).
+const ASSET_PATH = /^\/assets\//
+const STATIC_EXT = /\.(?:js|mjs|cjs|css|map|json|wasm|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|eot|txt|xml|webmanifest)$/i
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'not_found', path: req.path })
+  if (ASSET_PATH.test(req.path) || STATIC_EXT.test(req.path)) {
+    // Missing static asset — 404 (never the SPA shell). client routes carry no file
+    // extension and don't live under /assets/, so they still fall through to index.html.
+    return res.status(404).type('text/plain').send('Not found')
+  }
   res.sendFile(path.join(PUBLIC, 'index.html'))
 })
 
