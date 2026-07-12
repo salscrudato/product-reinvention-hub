@@ -21,6 +21,8 @@ export type RtGetter = (tableRef: string, queryInputs: Record<string, unknown>) 
 /** Look up a value from an LD table by the selected option value (or label). */
 export type LdGetter = (tableRef: string, selectedValue: number | string) => number
 
+// Single canonical rounding-discipline helper: every RatingStep that sets `roundTo`
+// routes through here so no intermediate step accumulates uncapped float drift.
 function round(value: number, decimals: number): number {
   const factor = 10 ** decimals
   return Math.round(value * factor) / factor

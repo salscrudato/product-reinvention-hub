@@ -27,14 +27,14 @@ describe('HO-3 rating evaluator', () => {
     expect(by('s4a').runningTotal).toBe(956)          // ×1.00 ded1000 (no change)
     // s4b skipped (windHailElected=false)
     expect(result.trace.find(t => t.stepId === 's4b')).toBeUndefined()
-    expect(by('s5').runningTotal).toBeCloseTo(1013.36, 2)   // ×1.06 covC70%
-    expect(by('s6').runningTotal).toBeCloseTo(1037.36, 2)   // +24 covE300k
-    expect(by('s7').runningTotal).toBeCloseTo(1043.36, 2)   // +6 covF2k
-    expect(by('s8a').runningTotal).toBeCloseTo(1147.696, 2) // ×1.10 RC
-    expect(by('s8b').runningTotal).toBe(1147.70)            // ×1.00 device=none, rounded to ¢
-    expect(by('s9').runningTotal).toBeCloseTo(1262.47, 2)   // ×1.10 tierB
-    expect(by('s10a').runningTotal).toBeCloseTo(1337.47, 2) // +75 water backup
-    expect(by('s10b').runningTotal).toBeCloseTo(1527.97, 2) // +190.50 SPP jewelry
+    expect(by('s5').runningTotal).toBe(1013.36)   // ×1.06 covC70%, rounded to ¢
+    expect(by('s6').runningTotal).toBe(1037.36)   // +24 covE300k, rounded to ¢
+    expect(by('s7').runningTotal).toBe(1043.36)   // +6 covF2k, rounded to ¢
+    expect(by('s8a').runningTotal).toBe(1147.70)  // ×1.10 RC (1043.36×1.10→1147.696, rounded to ¢)
+    expect(by('s8b').runningTotal).toBe(1147.70)  // ×1.00 device=none, rounded to ¢
+    expect(by('s9').runningTotal).toBe(1262.47)   // ×1.10 tierB, rounded to ¢
+    expect(by('s10a').runningTotal).toBe(1337.47) // +75 water backup, rounded to ¢
+    expect(by('s10b').runningTotal).toBe(1527.97) // +190.50 SPP jewelry, rounded to ¢
     expect(by('s11').runningTotal).toBe(1528)               // MAX(1527.97,500) rounded
   })
 

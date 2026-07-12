@@ -909,14 +909,14 @@
       <step id="s826181F7FD3C4F26358BA3C56F221034" refId="PH.RAT.1#s3" key="s3" order="3" op="MUL" label="Coverage A key factor → Key Premium" sourceType="RT" tableRef="PH.RT.003" keys="covA" roundTo="0" />
       <step id="sE5785C8D1CF7D41AE6C145731F9D3840" refId="PH.RAT.1#s4a" key="s4a" order="4" op="MUL" label="All-peril deductible factor" sourceType="RT" tableRef="PH.RT.004" keys="allPerilDed" />
       <step id="sE27857D41BF7D287E7C14706229D3CF9" refId="PH.RAT.1#s4b" key="s4b" order="5" op="MUL" label="Wind/hail deductible factor" sourceType="RT" tableRef="PH.RT.004" keys="windHailPct" condition="windHailElected" />
-      <step id="s80617ED1FF3C524C2F8B9A536D220D0E" refId="PH.RAT.1#s5" key="s5" order="6" op="MUL" label="Coverage C percentage factor" sourceType="RT" tableRef="PH.RT.005" keys="covCPct" />
-      <step id="s7D617A18023C5705308B9BE66C220B7B" refId="PH.RAT.1#s6" key="s6" order="7" op="ADD" label="Coverage E increased-limit charge" sourceType="RT" tableRef="PH.RT.006" keys="covELimit" />
-      <step id="s7E617BAB013C5572318B9D796B2209E8" refId="PH.RAT.1#s7" key="s7" order="8" op="ADD" label="Coverage F increased-limit charge" sourceType="RT" tableRef="PH.RT.006" keys="covFLimit" />
-      <step id="sCD6DA969F502227EEEDF671F4792E9DC" refId="PH.RAT.1#s8a" key="s8a" order="9" op="MUL" label="Replacement Cost endorsement factor" sourceType="CONST" const="1.1" condition="rcElected" />
+      <step id="s80617ED1FF3C524C2F8B9A536D220D0E" refId="PH.RAT.1#s5" key="s5" order="6" op="MUL" label="Coverage C percentage factor" sourceType="RT" tableRef="PH.RT.005" keys="covCPct" roundTo="2" />
+      <step id="s7D617A18023C5705308B9BE66C220B7B" refId="PH.RAT.1#s6" key="s6" order="7" op="ADD" label="Coverage E increased-limit charge" sourceType="RT" tableRef="PH.RT.006" keys="covELimit" roundTo="2" />
+      <step id="s7E617BAB013C5572318B9D796B2209E8" refId="PH.RAT.1#s7" key="s7" order="8" op="ADD" label="Coverage F increased-limit charge" sourceType="RT" tableRef="PH.RT.006" keys="covFLimit" roundTo="2" />
+      <step id="sCD6DA969F502227EEEDF671F4792E9DC" refId="PH.RAT.1#s8a" key="s8a" order="9" op="MUL" label="Replacement Cost endorsement factor" sourceType="CONST" const="1.1" condition="rcElected" roundTo="2" />
       <step id="sCA6DA4B0F40220EBEFDF68B24A92EE95" refId="PH.RAT.1#s8b" key="s8b" order="10" op="MUL" label="Protective device credit" sourceType="RT" tableRef="PH.RT.008" keys="deviceCredit" roundTo="2" />
-      <step id="s7C617885033C58983B8BAD37692206C2" refId="PH.RAT.1#s9" key="s9" order="11" op="MUL" label="Tier factor" sourceType="RT" tableRef="PH.RT.009" keys="tier" />
-      <step id="s5CD0DD82E16AB8638935B514680E49AD" refId="PH.RAT.1#s10a" key="s10a" order="12" op="ADD" label="Water back-up flat premium" sourceType="RT" tableRef="PH.RT.010" keys="waterBackupLimit" condition="waterBackupElected" />
-      <step id="s5BD0DBEFE26AB9F68C35B9CD650E44F4" refId="PH.RAT.1#s10b" key="s10b" order="13" op="ADD" label="Scheduled Personal Property premium" sourceType="SPP" tableRef="PH.RT.007" condition="sppElected" />
+      <step id="s7C617885033C58983B8BAD37692206C2" refId="PH.RAT.1#s9" key="s9" order="11" op="MUL" label="Tier factor" sourceType="RT" tableRef="PH.RT.009" keys="tier" roundTo="2" />
+      <step id="s5CD0DD82E16AB8638935B514680E49AD" refId="PH.RAT.1#s10a" key="s10a" order="12" op="ADD" label="Water back-up flat premium" sourceType="RT" tableRef="PH.RT.010" keys="waterBackupLimit" condition="waterBackupElected" roundTo="2" />
+      <step id="s5BD0DBEFE26AB9F68C35B9CD650E44F4" refId="PH.RAT.1#s10b" key="s10b" order="13" op="ADD" label="Scheduled Personal Property premium" sourceType="SPP" tableRef="PH.RT.007" condition="sppElected" roundTo="2" />
       <step id="s9184A444B0EBF123D2CDF1EA83A49171" refId="PH.RAT.1#s11" key="s11" order="14" op="MIN_FLOOR" label="Apply minimum premium ($500)" sourceType="CONST" const="500" roundTo="0" />
     </program>
     <factorTables>
