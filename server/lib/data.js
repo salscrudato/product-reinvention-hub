@@ -223,6 +223,23 @@ router.post('/presence/watch', requireAuth, requireTenant, async (req, res) => {
   res.json({ viewers: [...new Set(resources.map((r) => r.uid))] })
 })
 
+// ─── PROBE endpoint: audit documents (ADMIN + PROBE_MODE=1 only) ─────────────
+// Added for Phase 3 fault-injection testing (FAULT-003). Returns raw kind=audit
+// documents for a path so the smoke harness can verify the audit write is present.
+// Only active when PROBE_MODE=1 is set in the server env — never shipped to prod.
+if (process.env.PROBE_MODE === '1') {
+  router.get('/audit', requireRole('ADMIN'), requireTenant, async (req, res) => {
+    const { path } = req.query
+    if (!path) return res.status(400).json({ error: 'path_required' })
+    const tid = req.user.tenantId
+    const pk = pkFor(tid, String(path))
+    const sql = "SELECT * FROM c WHERE c.kind='audit' AND c.entityPath=@path AND c.tenantId=@tid"
+    const params = [{ name: '@path', value: String(path) }, { name: '@tid', value: tid }]
+    const { resources } = await docs.items.query({ query: sql, parameters: params }, { partitionKey: pk }).fetchAll()
+    res.json({ ok: true, count: resources.length, items: resources })
+  })
+}
+
 // Internal mutate for same-process callers (e.g., ai.js persistSummary).
 async function mutateInternal(tid, payload, actor) {
   const { pk, ops, rev } = await envelope(tid, payload, actor)()
