@@ -29,12 +29,24 @@ function guard(res) {
   return true
 }
 
-// Upload (EDITOR+): base64 body → blob → returns a URL.
+// RISK-004: sanitize the blob path before passing to the Azure SDK.
+// Reject any path that contains directory traversal sequences, backslashes,
+// leading slashes, null bytes, or other control characters.
+function sanitizeBlobPath(p) {
+  const s = String(p || '')
+  if (!s) return null
+  if (s.includes('..') || s.includes('\\') || s.startsWith('/') || /[\x00-\x1f]/.test(s)) return null
+  return s
+}
+
+// Upload (EDITOR+): base64 body -> blob -> returns a URL.
 router.post('/upload', requireRole('EDITOR'), async (req, res) => {
   if (!guard(res)) return
   const { path, contentType, dataBase64 } = req.body || {}
+  const safePath = sanitizeBlobPath(path)
+  if (!safePath) return res.status(400).json({ error: 'invalid_path', detail: 'path must not contain .., \\, or begin with /.' })
   try {
-    const blob = containerClient.getBlockBlobClient(path)
+    const blob = containerClient.getBlockBlobClient(safePath)
     const buf = Buffer.from(dataBase64, 'base64')
     await blob.upload(buf, buf.length, { blobHTTPHeaders: { blobContentType: contentType || 'application/octet-stream' } })
     res.json({ url: blob.url })
