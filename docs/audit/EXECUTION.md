@@ -119,15 +119,15 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 
 ## Session 3 -- AI Quality (S3)
 
-- [ ] **REQ-3a** | Add temperature:0 to all structured extraction AI calls | server/lib/ai.js unifiedImport, summarizeProduct, scaffoldProduct, draftRule, analyzeClaim all have temperature:0 | S3
+- [x] **REQ-3a** | Add temperature:0 to all structured extraction AI calls | server/lib/ai/ unifiedImport, summarizeProduct, scaffoldProduct, draftRule, analyzeClaim all have temperature:0; thinking handlers use temperature:1 as required | S3
 
-- [ ] **REQ-3b** | Add prompt caching (ephemeral cache blocks) to all server AI calls | Source-audit: ai.js has cache_control blocks on stable system prompt portions | S3
+- [x] **REQ-3b** | Add prompt caching (ephemeral cache blocks) to all server AI calls | Source-audit: ai/chat.js, ai/scaffold-product.js, ai/draft-rule.js, ai/analyze-claim.js all have cache_control blocks on stable system prompt portions | S3
 
-- [ ] **REQ-3c** | Add retry with exponential backoff (408/429/5xx) to all AI fetch() calls | Source-audit: ai.js has retry logic with backoff on all fetch() AI calls | S3
+- [x] **REQ-3c** | Add retry with exponential backoff (408/429/5xx) to all AI fetch() calls | fetchWithRetry in ai/_shared.js: 3 attempts, exponential backoff + jitter, Retry-After honored; all handlers route through it | S3
 
-- [ ] **REQ-3d** | Consider extended thinking for opus-4-8 scaffoldProduct and analyzeClaim | Extended thinking enabled with budget_tokens:2048 for GROUNDED_CITED calls | S3
+- [x] **REQ-3d** | Consider extended thinking for opus-4-8 scaffoldProduct and analyzeClaim | Extended thinking enabled with budget_tokens:2048 for GROUNDED_CITED calls in scaffold-product.js and analyze-claim.js | S3
 
-- [ ] **REQ-8** | Re-verify all previously-fixed bugs from hardening ledger | DEF-0033/0034/0039/0040/0041 verified fixed by inspecting source at fix points | S3
+- [x] **REQ-8** | Re-verify all previously-fixed bugs from hardening ledger | DEF-0033: migrate-to-cosmos.ts scopes ops to tenantId; DEF-0034: data.js has grounding chunk hook (line 80-87); DEF-0039: auth.js:142-166 persists changePassword to Cosmos; DEF-0040: ai/index.js routes unifiedImport (not 501); DEF-0041: auth.js:19 throws if AUTH_JWT_SECRET unset | S3
 
 - [ ] **REQ-10a** | Add supertest integration tests for auth endpoints | /api/auth/login (401 bad creds, 200 valid), /api/db/mutate (403 VIEWER, 200 EDITOR), /api/ai/chat (503 unconfigured) | S3
 
@@ -141,13 +141,13 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 
 - [ ] **REQ-4** | Browser console easter egg (Accenture-owned, obfuscated) | Easter egg fires on first render, not findable by grep, Accenture branding + personal shout-outs | S4
 
-- [ ] **REQ-5** | Lean code: split ai.js (1069 lines) into named stage modules | ai.js split into handler modules; gate green; no functional change | S4
+- [x] **REQ-5** | Lean code: split ai.js (1069 lines) into named stage modules | ai.js deleted; server/lib/ai/ directory: _shared.js + 8 handler modules + index.js router; Node resolves require('./lib/ai') to index.js transparently; gate green; commit dba4be9 | S3 (pulled forward)
 
-- [ ] **REQ-6a** | Parallelize all HomeCheck external API calls with Promise.all() | homecheck.js external API calls run in parallel; risk endpoint latency reduced | S4
+- [x] **REQ-6a** | Parallelize all HomeCheck external API calls with Promise.all() | homecheck.js already uses Promise.allSettled (line 523) with per-source error isolation; no code change needed | S3 (pulled forward)
 
-- [ ] **REQ-6b** | Request coalescing on adapter.db.subscribe | Multiple subscribers to same path share one HTTP request | S4
+- [x] **REQ-6b** | Request coalescing on adapter.db.subscribe | pathFetches Map added to azure.adapter.ts; concurrent subscribers to same path share one HTTP request via coalesced Promise | S3 (pulled forward)
 
-- [ ] **REQ-6c** | Document recommended Cosmos composite indexes | docs/COSMOS_INDEXES.md with recommended indexes for paginated list queries | S4
+- [x] **REQ-6c** | Document recommended Cosmos composite indexes | docs/COSMOS-INDEXES.md created with composite index recommendations for (coll, tenantId, data.updatedAt) and 3 additional patterns | S3 (pulled forward)
 
 - [ ] **REQ-9** | Beautiful AI responses: interactive citations, streaming markdown, collapsible reasoning | Citation hover cards, fade-in per paragraph, coverage comparison tables | S4
 

@@ -78,8 +78,9 @@ const BACKOFF = 1.6
 
 interface Poller { tick: () => void; stop: () => void; reset: () => void }
 const pollers = new Set<Poller>()
-const snapshotCache = new Map<string, string>() // path -> last JSON (change detection)
-const dataCache = new Map<string, unknown>()     // path -> last value (instant SWR paint)
+const snapshotCache = new Map<string, string>()    // path -> last JSON (change detection)
+const dataCache = new Map<string, unknown>()        // path -> last value (instant SWR paint)
+const pathFetches = new Map<string, Promise<unknown>>() // path -> in-flight coalesced fetch
 let tabHidden = typeof document !== 'undefined' && document.hidden
 
 /** Wipe every client-held cache on logout so a subsequent sign-in on the same tab can never see
@@ -177,7 +178,14 @@ export const adapter: BackendAdapter = {
         if (stopped || inFlight) return   // dedupe: never overlap a fetch
         inFlight = true
         try {
-          const data = (doc ? await adapter.db.get<T>(path) : await adapter.db.list<T>(path)) as T | T[]
+          // Coalesce: concurrent subscribers to the same path share one HTTP request.
+          let rawFetch = pathFetches.get(path) as Promise<T | T[]> | undefined
+          if (!rawFetch) {
+            rawFetch = (doc ? adapter.db.get<T>(path) : adapter.db.list<T>(path)) as Promise<T | T[]>
+            pathFetches.set(path, rawFetch)
+            void rawFetch.finally(() => { if (pathFetches.get(path) === rawFetch) pathFetches.delete(path) })
+          }
+          const data = await rawFetch
           if (stopped) return
           const json = JSON.stringify(data ?? null)
           const changed = snapshotCache.get(path) !== json
