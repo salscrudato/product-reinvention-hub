@@ -60,9 +60,17 @@ crashes the server with a clear error message.
 | `AZURE_BLOB_CONNECTION` | Azure Blob Storage connection string | no (storage returns 503) |
 | `AUTH_JWT_SECRET` | HS256 JWT signing secret (min 32 chars) | ✅ yes |
 
-> **Bootstrap users (local/smoke only):** set `BOOTSTRAP_USERS_ENABLED=true` to enable the
-> `admin`/`admin` and `sal.scrudato` bootstrap accounts for local dev and smoke harness runs.
-> Default is OFF in production — do not set this on the live App Service.
+> **Bootstrap users (RISK-002):** Bootstrap accounts (`admin` / `sal.scrudato`) are enabled
+> by DEFAULT when `BOOTSTRAP_USERS_ENABLED` is not set. **For production App Service, explicitly
+> set `BOOTSTRAP_USERS_ENABLED=false` to disable them.** For local dev and smoke harness, set
+> `BOOTSTRAP_USERS_ENABLED=true` and supply strong passwords via `BOOTSTRAP_ADMIN_PASSWORD` and
+> `BOOTSTRAP_SAL_PASSWORD`. The server logs a security warning at startup if bootstrap is on with
+> default passwords.
+>
+> **PROBE_MODE (RISK-010):** Do NOT set `PROBE_MODE=1` in production App Service configuration.
+> This env var enables the `GET /api/db/audit` endpoint (ADMIN-gated) which exposes raw Cosmos
+> audit documents. It is intended for local debugging only. Verify it is absent from the live
+> App Service environment variables.
 
 Set them with the az CLI:
 
@@ -104,6 +112,24 @@ Seed Cosmos with the canonical PH/PA/GL dataset:
 COSMOS_ENDPOINT=<value> COSMOS_KEY=<value> \
   npx tsx scripts/migrate-to-cosmos.ts
 ```
+
+## Single-instance requirement (RISK-005)
+
+The following server state is held **in-process** and is NOT shared across App Service instances:
+
+| State | Location | Impact of scale-out |
+|---|---|---|
+| AI cost guard (spend window) | `server/lib/fleet.js` `windowSpendUsd` | Each instance has its own $25/h ceiling; horizontal scale multiplies effective spend cap |
+| HomeCheck rate limiter buckets | `server/lib/homecheck.js` `_ipBuckets` | IP limits reset on instance restart; different instances track independently |
+| HomeCheck session store | `server/lib/homecheck.js` `_sessions` | Sessions are lost on restart; GET/DELETE after failover to new instance returns 404 |
+| DuckCreek bundle store | `server/lib/duckcreek.js` (Map) | Bundle download after failover returns 404 |
+| JWT revocation cache | `server/lib/auth.js` `_revokedCache` | Cache is per-instance; revocations from Cosmos are re-loaded on first access |
+
+**Action required for scale-out:** Configure the App Service plan to **max 1 instance** (no auto-scale)
+until these state stores are migrated to Cosmos or Redis. Document this setting in the App Service
+configuration with a note referencing RISK-005.
+
+To enforce single-instance in the portal: App Service plan -> Scale out (App Service plan) -> Manual scale -> 1 instance maximum.
 
 ## Follow-ups
 
