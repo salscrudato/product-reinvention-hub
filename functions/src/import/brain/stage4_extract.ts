@@ -33,12 +33,59 @@ const BLANK_REFID = /^(tbd|n\/a|na|blank|—|–|-|\?+|x+)$/i
 
 // ─── Multi-refId splitter ──────────────────────────────────────────────────────
 // Splits "GL.COV.002 GL.COV.003" → ["GL.COV.002", "GL.COV.003"].
-// Delimiter: one or more whitespace chars between what look like refId tokens.
-const REFID_TOKEN = /[A-Z]{1,3}\.[A-Z]{1,6}\.\d{3,4}(?:\.\d+)*/i
+// Pattern must handle all line-style refId schemes:
+//   GL: GL.COV.004, GL.COV.004.009, GL.FORM.RU.001 (mixed alpha/digit segments)
+//   IM: IM.COV044.00 (alphanumeric second segment), IM.RL.001
+//   PR: PR.COV001.0 (single-digit tail), PR.ROC.001
+//   HO: PH.COV.003.001 (4-segment)
+// LDTable.001 / RTTable.001 are intentionally excluded (>4-char prefix → no match).
+const REFID_TOKEN = /[A-Z]{1,4}(?:\.[A-Z0-9]+){2,}/i
 
 function splitMultiRefId(raw: string): string[] {
   const tokens = raw.match(new RegExp(REFID_TOKEN.source, 'gi'))
   return tokens && tokens.length > 1 ? tokens : [raw.trim()]
+}
+
+// ─── Server-side parentId derivation ─────────────────────────────────────────
+// After all rows for a sheet are extracted, derive parentId for sub-coverages.
+// Sub-coverage detection: entity.fields has a non-empty 'subCoverageName' field.
+// Parent: the most recent preceding coverage without subCoverageName (top-level).
+// This is the row-context approach — more reliable than refId segment-count parsing
+// because IM-style refIds (IM.COV044.00 / IM.COV044.01) have the same segment count.
+
+function deriveParentIds(entities: BrainEntity[]): void {
+  const coverages = entities
+    .filter(e => e.kind === 'coverage')
+    .sort((a, b) => a.sourceRowIndex - b.sourceRowIndex)
+
+  let lastTopLevelRefId: string | null = null
+
+  for (const entity of coverages) {
+    const subCovField = entity.fields.find(f => f.fieldName === 'subCoverageName')
+    const isSub =
+      subCovField != null &&
+      typeof subCovField.value === 'string' &&
+      subCovField.value.trim() !== ''
+
+    const refIdField = entity.fields.find(f => f.fieldName === 'refId')
+    const refId = typeof refIdField?.value === 'string' ? refIdField.value : null
+
+    if (!isSub) {
+      lastTopLevelRefId = refId
+    } else {
+      const alreadyHasParent = entity.fields.some(
+        f => f.fieldName === 'parentId' || f.fieldName === 'parentRefId',
+      )
+      if (!alreadyHasParent && lastTopLevelRefId) {
+        entity.fields.push({
+          fieldName:  'parentId',
+          value:      lastTopLevelRefId,
+          confidence: 0.90,
+          citation:   { sheet: entity.sourceSheet, cell: '', verbatim: '(derived from row context)' },
+        })
+      }
+    }
+  }
 }
 
 // ─── AI extraction response shape ─────────────────────────────────────────────
@@ -339,6 +386,9 @@ export async function extractRows(
     const rows: unknown[][] = gatherRows(fp, lock)
     if (rows.length === 0) continue
 
+    // Collect per-sheet entities so deriveParentIds can see the full sheet context
+    const sheetEntities: BrainEntity[] = []
+
     // Batch extraction
     for (let batchStart = 0; batchStart < rows.length; batchStart += BATCH_ROWS) {
       const batch = rows.slice(batchStart, batchStart + BATCH_ROWS)
@@ -415,8 +465,12 @@ export async function extractRows(
         }
       }
 
-      allEntities.push(...entities)
+      sheetEntities.push(...entities)
     }
+
+    // After all batches for this sheet, derive parentId for sub-coverages from row context
+    deriveParentIds(sheetEntities)
+    allEntities.push(...sheetEntities)
   }
 
   return allEntities

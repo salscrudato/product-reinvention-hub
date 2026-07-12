@@ -29,7 +29,9 @@ export const DOMAIN_ENTITY_KINDS: Record<SheetDomain, CanonicalEntityKind[]> = {
   'product-framework':  ['product', 'coverage'],
   'forms':              ['form', 'dynamicField', 'formRule'],
   'rating-roc':         ['ratingProgram', 'ratingStep', 'rtTable'],
-  'rules':              ['rule'],
+  // formRule added: form-attachment-rule sheets ("GL Optional Forms Rules") classify as
+  // 'rules'; without it Stage 3 never sees the formRule field dictionary for those sheets.
+  'rules':              ['rule', 'formRule'],
   'limits-deductibles': ['ldTable', 'coverage'],
   'rate-tables':        ['rtTable', 'ratingStep'],
   'definitions':        [],

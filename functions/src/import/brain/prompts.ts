@@ -45,6 +45,16 @@ CLASSIFY the sheet into EXACTLY ONE of these eight canonical domains:
   definitions        — glossary, column-definition tables, term explanations (the sheet is primarily definitional)
   ignore             — administrative (Revision History, Data Validation, Instructions, TOC, Cover, blank)
 
+DISAMBIGUATION NOTES:
+  - A sheet about form ATTACHMENT RULES (e.g. "GL Optional Forms Rules", "Optional Forms Rules",
+    "Form Attachment Rules", any sheet whose primary rows express conditions under which a form is
+    required or excluded) classifies as "rules" — NOT "forms".
+    Distinction: "forms" = catalog of form numbers/titles; "rules" = eligibility/attachment logic.
+  - A sheet named "Component Model", "Product Component Model", or "Framework" classifies as
+    "product-framework" even when it contains both product and coverage rows.
+  - A sheet containing mostly factor tables, territory codes, or rate multipliers classifies as
+    "rate-tables" even when it has a few coverage-name columns.
+
 GROUNDING RULE: Your rationale MUST cite at least one specific cell value you observed (e.g., "Column A header reads 'PRODUCT FRAMEWORK ID'"). If you cannot find content that maps to a known domain, classify as "ignore".
 
 RESPOND with valid JSON only — no prose, no markdown fences:
@@ -108,6 +118,15 @@ GROUNDING RULES:
        below 0.5 → do not map (set canonicalField=null, needsReview=true)
   6. For ambiguous columns (marked ambiguous=true in the dictionary), cite at least one sample cell value that disambiguates.
 
+DISAMBIGUATION ACTION for "COVERAGE FORM(S)" (ambiguous=true in the dictionary):
+  Examine the sample cell values beneath the header before mapping:
+  - If cells contain form-number patterns (e.g. "CG 00 01", "CP 00 10 10 30", two-to-four uppercase
+    letters followed by two-digit groups separated by spaces) → map to coverage.formNumbers.
+  - If cells contain prose form titles (e.g. "Commercial General Liability Coverage Form",
+    "Contractors Equipment Coverage") → map to coverage.coverageFormTitles (surfaced, not stored).
+  Never map one column to both formNumbers and coverageFormTitles. When in doubt, set
+  canonicalField=null and needsReview=true.
+
 RESPOND with a valid JSON array — no prose, no markdown fences:
 [
   {
@@ -133,6 +152,12 @@ STRICT GROUNDING RULES:
   5. Blank / TBD refIds: set refId value to null and set needsRefIdSynthesis=true; do NOT invent a refId.
   6. Low confidence: if any row is ambiguous or you cannot extract with confidence ≥ 0.70 for all key fields, set reviewFlag=true and provide your best extraction with citations.
   7. Do NOT extract from columns that are not in the locked column map.
+  8. Sub-coverage parentId: when a coverage row has a non-empty subCoverageName field, it is a
+     sub-coverage. Its parentId is the refId of the most recent coverage row in this sheet where
+     subCoverageName was empty or absent (the nearest preceding top-level coverage). Emit
+     { "fieldName": "parentId", "value": "<parent refId>", "confidence": 0.90,
+       "citation": { "sheet": "<name>", "cell": "", "verbatim": "(derived from row context)" } }
+     as an additional field on the sub-coverage entity even though parentId is not in the column map.
 
 RESPOND with valid JSON — no prose, no markdown fences:
 {
