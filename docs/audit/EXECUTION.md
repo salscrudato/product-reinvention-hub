@@ -57,11 +57,11 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 **Code-side actions (automated in this session):**
 - [x] Captured remote URLs before filter-repo (see top of this file)
 - [x] Verified tmp.md is already in .gitignore (tmp*.md and tmp.md patterns)
-- [ ] Run `git filter-repo --path tmp.md --invert-paths --force` (strips tmp.md from ALL commits)
-- [ ] Re-add remote after filter-repo strips it
-- [ ] Verify `git log --all --full-history -- tmp.md` returns nothing
-- [ ] Add gitleaks full-history scan step to azure-pipelines.yml
-- [ ] Verify gitleaks scan is clean on current tree
+- [x] Run `git filter-repo --path tmp.md --invert-paths --force` (strips tmp.md from ALL commits)
+- [x] Re-add remote after filter-repo strips it
+- [x] Verify `git log --all --full-history -- tmp.md` returns nothing
+- [x] Add gitleaks full-history scan step to azure-pipelines.yml
+- [x] Verify gitleaks scan is clean on current tree
 
 - **Acceptance test:** `git log --all --full-history -- tmp.md` returns empty; gitleaks exits 0
 - **Session:** S1
@@ -90,22 +90,22 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 
 - [x] **RISK-009** | HomeCheck session accessible by UUID-knower only | Source-audit: homecheck.js generates sessionSecret on creation, returns it in POST response, validates on GET/DELETE/export | S1
 
-- [ ] **RISK-010** | PROBE_MODE=1 exposes raw audit docs | docs/DEPLOY_AZURE.md explicitly states PROBE_MODE must NOT be set in production App Service config | S1
+- [x] **RISK-010** | PROBE_MODE=1 exposes raw audit docs | docs/DEPLOY_AZURE.md explicitly states PROBE_MODE must NOT be set in production App Service config | S1
 
 - [x] **RISK-011** | Password minimum length is 3 chars (trivially weak) | Source-audit: auth.js changePassword rejects passwords shorter than 12 chars | S1
 
 - [x] **RISK-012** | No global Express error handler (stack traces may leak) | Source-audit: server.js has 4-arg `(err, req, res, next)` error handler before app.listen | S1
 
-- [ ] **RISK-013** | Personal names in server-side sys-diag.js banner | sys-diag.js banner replaced with org-level branding (no personal names) | S1
+- [x] **RISK-013** | Personal names in server-side sys-diag.js banner | sys-diag.js banner replaced with org-level branding (no personal names) | S1
 
 - [x] **RISK-014** | functions/ reference workspace not clearly documented | CLAUDE.md and functions/CLAUDE.md clearly state reference-only, not deployed | S1 (documentation verified)
 
-- [ ] **RISK-015** | No structured logging (console.log/warn throughout server) | Startup warning added noting OpenTelemetry is a future follow-up; tagged log format for key security events | S1
+- [x] **RISK-015** | No structured logging (console.log/warn throughout server) | Startup warning added noting OpenTelemetry is a future follow-up; tagged log format for key security events | S1
 
   **Note:** Full structured logging (pino/winston + App Insights) requires a new server dependency and
   significant refactor. Tagged minimal approach covers key security events in S1; full OTel is REQ-12g (S4).
 
-- [ ] **RISK-016** | ANALYST role not differentiated in UI (same affordances as VIEWER) | UI change deferred to S4 (REQ-12 experience); no code change in S1 | S4
+- [ ] **RISK-016** | ANALYST role not differentiated in UI (same affordances as VIEWER) | UI change deferred to S4 (REQ-12 experience); no code change in S1 | S4 (DEFERRED)
 
 ---
 
@@ -183,4 +183,4 @@ origin  https://dev.azure.com/garage-repos/Product%20Hub/_git/Product%20Hub (pus
 
 | Date | Session | Status | Notes |
 |---|---|---|---|
-| 2026-07-12 | S1 | In progress | Branch created; EXECUTION.md built; executing RISK items |
+| 2026-07-12 | S1 | COMPLETE | All RISK-001 to RISK-016 addressed; gate GREEN (862 tests, build within budget); RISK-016 deferred to S4; bundle JS 152.2/175 kB, CSS 17.1/25 kB |
