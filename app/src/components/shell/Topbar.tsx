@@ -7,7 +7,7 @@ import { useUser } from '../../context/useUser'
 import { adapter } from '../../lib/backend'
 import type { Product } from '@pf/shared'
 
-interface TopbarProps { onOpenPalette: () => void }
+interface TopbarProps { onOpenPalette: () => void; onOpenMobileSidebar?: () => void }
 
 const LABELS: Record<string, string> = {
   products: 'Products', builder: 'Builder', explorer: 'Explorer',
@@ -74,7 +74,7 @@ function Breadcrumb() {
 // Detect Mac so the shortcut badge reads ⌘K instead of Ctrl+K.
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
-export function Topbar({ onOpenPalette }: TopbarProps) {
+export function Topbar({ onOpenPalette, onOpenMobileSidebar }: TopbarProps) {
   const { user } = useUser()
   const navigate  = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -86,9 +86,21 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
 
   return (
     <header
-      className="flex items-center gap-4 h-14 px-5 bg-surface shrink-0"
+      className="flex items-center gap-3 h-14 px-4 bg-surface shrink-0"
       style={{ borderBottom: '1px solid var(--color-border)' }}
     >
+      {/* Hamburger for mobile — opens the sidebar overlay */}
+      {onOpenMobileSidebar && (
+        <button
+          onClick={onOpenMobileSidebar}
+          className="lg:hidden p-1.5 rounded-[8px] text-dim hover:text-text hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent shrink-0"
+          aria-label="Open navigation"
+        >
+          <svg width={18} height={18} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+            <path d="M2.5 4.5h13M2.5 9h13M2.5 13.5h13" />
+          </svg>
+        </button>
+      )}
       <div className="flex-1 min-w-0"><Breadcrumb /></div>
 
       {/* Search field — opens palette */}

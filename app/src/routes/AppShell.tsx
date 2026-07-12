@@ -17,8 +17,9 @@ export default function AppShell() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [theme] = useTheme()
-  const [collapsed,    setCollapsed]    = useState(false)
-  const [paletteOpen, setPaletteOpen]   = useState(false)
+  const [collapsed,        setCollapsed]        = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [paletteOpen,      setPaletteOpen]       = useState(false)
   // Top-level route segment drives the page-in key so transitions fire on section changes
   // (Home → Products → Explorer) but not on product-tab sub-navigation.
   const topSegment = pathname.split('/')[2] ?? 'home'
@@ -56,10 +57,27 @@ export default function AppShell() {
     <CaptureProvider>
     <FeedbackProvider>
       <div className="flex h-svh overflow-hidden bg-page">
-        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+        {/* Mobile sidebar backdrop */}
+        {mobileSidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 lg:hidden"
+            style={{ background: 'var(--color-overlay)' }}
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+        <Sidebar
+          collapsed={collapsed}
+          onToggle={() => setCollapsed(c => !c)}
+          mobileOpen={mobileSidebarOpen}
+          onMobileClose={() => setMobileSidebarOpen(false)}
+        />
 
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          <Topbar onOpenPalette={() => setPaletteOpen(true)} />
+          <Topbar
+            onOpenPalette={() => setPaletteOpen(true)}
+            onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+          />
 
           {/* Persistent banner until the seeded/temp password is changed */}
           {profile?.mustChangePassword && (

@@ -33,7 +33,12 @@ const SECTIONS = [
   { label: 'Intelligence', items: INTELLIGENCE_ITEMS },
 ]
 
-interface SidebarProps { collapsed: boolean; onToggle: () => void }
+interface SidebarProps {
+  collapsed: boolean
+  onToggle: () => void
+  mobileOpen?: boolean
+  onMobileClose?: () => void
+}
 
 const ROUTE_IMPORTS: Record<string, () => Promise<unknown>> = {
   '/app':            () => import('../../routes/Home'),
@@ -71,7 +76,7 @@ function Item({ item, collapsed, active }: { item: NavItem; collapsed: boolean; 
   )
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation()
   const { profile } = useUser()
   const isActive = (to: string, exact?: boolean) => exact ? location.pathname === to : location.pathname.startsWith(to)
@@ -79,13 +84,29 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className="flex flex-col shrink-0 h-full bg-surface transition-all duration-200"
+      className={`flex flex-col shrink-0 h-full bg-surface transition-all duration-200
+        ${mobileOpen !== undefined
+          ? 'fixed inset-y-0 left-0 z-50 lg:relative lg:z-auto'
+          : 'relative'}
+        ${mobileOpen === false ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'}
+      `}
       style={{ width: collapsed ? 60 : 232, borderRight: '1px solid var(--color-border)' }}
     >
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-4 h-14 shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <Logo size={26} className="shrink-0" />
-        {!collapsed && <span className="font-semibold text-sm text-text tracking-tight truncate">Product Reinvention Hub</span>}
+        {!collapsed && <span className="font-semibold text-sm text-text tracking-tight truncate flex-1 min-w-0">Product Reinvention Hub</span>}
+        {onMobileClose && !collapsed && (
+          <button
+            onClick={onMobileClose}
+            className="lg:hidden ml-auto p-1 rounded-[7px] text-dim hover:text-text hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            aria-label="Close navigation"
+          >
+            <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+              <path d="M3 3l10 10M13 3L3 13" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Nav sections */}
