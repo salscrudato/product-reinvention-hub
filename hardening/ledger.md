@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 4 | CRITICAL: 1 | HIGH: 1 | MEDIUM: 1 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 2 | CRITICAL: 1 | HIGH: 0 | MEDIUM: 0 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -51,16 +51,16 @@ SUMMARY: OPEN: 4 | CRITICAL: 1 | HIGH: 1 | MEDIUM: 1 | LOW: 1 | WONTFIX: 0 | FAL
 ---
 
 ### DEF-0004
-- status: OPEN
+- status: FIXED
 - severity: HIGH
 - probe: SEED
 - surface: shared/src/seed/personalHome.ts, shared/src/seed/generalLiability.ts, shared/src/seed/personalAuto.ts, shared/src/types.ts
 - title: Money stored as float dollars throughout; intermediate rating steps accumulate sub-cent rounding drift
 - evidence: No `toCents`, `toFixed`, or integer-cent conversion anywhere in shared/src/seed/*.ts or server/lib/data.js. Rating tables use plain JS number literals (e.g., `premium: 380`). Intermediate steps use `roundTo:2` (sub-dollar precision): HO-3 canary trace shows s5: 1013.36, s8b: 1147.70, s10b: 1527.97 before the final MIN_FLOOR rounds to whole dollars. `Coverage.terms` premium values stored as whatever float the client sends via `data` spread. `grep -n 'toCents\|toFixed\|cents' shared/src/seed/personalHome.ts shared/src/types.ts` returns zero results.
 - repro: Inspect `shared/src/rating/evaluator.test.ts:33` — `expect(s5?.runningTotal).toBeCloseTo(1013.36, 2)` — sub-cent accumulation is the tested path. A future rating step using truncation instead of rounding on a float intermediate can diverge from the canary.
-- fix:
-- verified-by:
-- commit:
+- fix: Added roundTo:2 to PH.RAT.1 steps s5, s6, s7, s8a, s9, s10a, s10b in personalHome.ts; round() documented as canonical rounding-discipline helper in evaluator.ts; evaluator.test.ts intermediate trace assertions upgraded from toBeCloseTo to byte-exact toBe (s8a value updated 1147.696→1147.70 — correct after Math.round(1043.36×1.10×100)/100). Duck Creek golden regenerated (roundTo="2" attributes added); serff-shared.cjs bundle rebuilt.
+- verified-by: WAVE-12 2026-07-11 — gate green (528+187 tests pass); HO-3 $1,528 / PA $1,002 / GL $2,635 canaries byte-exact; evaluator.test.ts toBe intermediate assertions green; Duck Creek golden 9/9 pass.
+- commit: f275adc9
 
 ---
 
@@ -430,16 +430,16 @@ DEF-0024 clears DEFAULT_LOB=PH_LOB and isHO routing as intentional/documented.
 ---
 
 ### DEF-0026
-- status: OPEN
+- status: FIXED
 - severity: MEDIUM
 - probe: RATING-CANARY
 - surface: shared/src/rating/evaluator.creditFloor.test.ts:50
 - title: Credit-cap test uses toBeCloseTo for finalPremium instead of toBe, masking non-integer premium on creditFloor path
 - evidence: `evaluator.creditFloor.test.ts:50` — `expect(r.finalPremium).toBeCloseTo(800, 6)`. The program under test (`makeCreditProgram(0.70)`) ends with `{ id: 's6', op: 'MIN_FLOOR', source: { type: 'CONST', value: 500 }, roundTo: 0 }` (line 28). After a `roundTo: 0` MIN_FLOOR step the running total is always a whole-dollar integer: the `__credit_cap__` adjustment fires after the last credit step (s4, order 4) and BEFORE s5 (flat add) and s6 (MIN_FLOOR + roundTo:0), so the final `running` is `Math.round(≈800) = 800` exactly. Using `.toBeCloseTo(800, 6)` means the test PASSES for any `finalPremium` within ±0.0000005 of 800 — a non-integer like 800.0001 passes silently. Contrast: the no-creditFloor path (line 39) uses `.toBe(748)`; the gated-credits path (line 75) uses `.toBe(910)`; the filing-importer canary (`functions/src/filingImport.test.ts:71`) uses `.toBe(1281)` for a creditFloor=0.5 program with a trailing MIN_FLOOR. All three demonstrate that `.toBe()` is correct and achievable for final premiums from programs with `roundTo: 0` MIN_FLOOR termination. Secondary risk: if a PM-authored or filing-imported program places credit steps AFTER the MIN_FLOOR step in the step ordering (e.g., credit at order 10, MIN_FLOOR at order 5), the credit cap fires after MIN_FLOOR and `finalPremium` is a non-integer float. The weak assertion would not detect this regression. `grep -n 'toBeCloseTo' shared/src/rating/evaluator.creditFloor.test.ts` — line 50 is the sole premium assertion using approximate equality; the cap-mechanism assertion at line 48 (`cap.factorOrAmount`) is correctly approximate (0.70/0.648 is irrational in IEEE 754). `grep -n 'toBeCloseTo.*800\|toBe.*800' shared/src/rating/evaluator.creditFloor.test.ts` confirms the mismatch.
 - repro: In `evaluator.creditFloor.test.ts`, change line 50 from `expect(r.finalPremium).toBeCloseTo(800, 6)` to `expect(r.finalPremium).toBe(800)`. Run `pnpm --filter @pf/shared test evaluator.creditFloor`. If the test PASSES, the assertion is simply too loose (a weakness, not a runtime error). If it FAILS, the credit cap path is leaving a non-integer finalPremium even after `roundTo: 0`, confirming active float drift.
-- fix:
-- verified-by:
-- commit:
+- fix: evaluator.creditFloor.test.ts:50 changed from toBeCloseTo(800, 6) to toBe(800); roundTo:0 MIN_FLOOR guarantees the final running total is an exact integer; toBe is achievable and catches any future float-drift regression on the creditFloor path.
+- verified-by: WAVE-12 2026-07-11 — gate green (528+187 tests pass); creditFloor test 9/9 pass with toBe(800) strict equality.
+- commit: 99472f90
 - note(RATING-CANARY probe 2026-07-11 on DEF-0004): The "silent corruption of stored premium" concern is PROVED FALSE for the current architecture. `grep -r 'finalPremium' app/src/ shared/src/ server/ --include="*.ts" --include="*.tsx" --include="*.js"` — every consumer of `finalPremium` either displays it in the UI (ProductPricing.tsx, HomeCheck.tsx, TaskLensPanel.tsx) or uses it for a transient SERFF rate-exhibit computation returned to the browser as HTTP JSON. No `adapter.db.mutate()` or `adapter.db.mutateBatch()` call is ever passed a `finalPremium` value; no rating output is stored to Cosmos. The float-money risk (DEF-0004) is therefore a future-state concern (e.g., if a quote-binding path were added) rather than a live data-corruption path.
 
 ---

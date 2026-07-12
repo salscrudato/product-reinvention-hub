@@ -114,7 +114,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: none
 - verify: harden-probe DEF-0029; /gate; delete a product with tables → its ldTables/rtTables no longer appear in list('ldTables')/list('rtTables').
 
-## WAVE-12  tier:T3  chains:NO  blocks-smoke:NO  status:PENDING
+## WAVE-12  tier:T3  chains:NO  blocks-smoke:NO  status:DONE
 - members: DEF-0004, DEF-0026
 - root-cause: Rating money is float dollars throughout the seed + rating tables with no integer-cent encoding and no single rounding discipline (intermediate HO-3 trace s5=1013.36 … s10b=1527.97); and evaluator.creditFloor.test.ts:50 masks non-integer drift on the credit-cap path with toBeCloseTo(800,6) even though a trailing roundTo:0 MIN_FLOOR yields an exact integer.
 - fix-approach: (1) DEF-0004 — introduce one rounding-discipline helper applied at every rating step so no intermediate step truncates, and lock the HO-3 intermediate trace byte-exact with a regression assertion. Do NOT restructure stored money into integer cents in this wave — a cents migration would perturb the $1,528/$1,002/$2,635 canaries and needs its own ADR. (2) DEF-0026 — tighten the sole approximate final-premium assertion to `expect(r.finalPremium).toBe(800)`, matching the sibling exact-equality paths. Both canaries stay byte-exact.
