@@ -1001,13 +1001,15 @@ router.post('/reindexProduct', requireRole('EDITOR'), requireTenant, async (req,
       // Best-effort dense vector so reindexed chunks are semantically retrievable, not just lexical.
       let embedding = null
       try { const v = await embed.embedOne(chunk.text); if (v) embedding = embed.quantize(v) } catch { /* lexical fallback */ }
-      const data = { id: chunk.id, text: chunk.text, contentHash: chunk.contentHash, metadata: chunk.metadata, type: entityType, productId: pid, updatedAt: now }
-      if (embedding) { data.embedding = embedding; data.embDims = embed.EMBED_DIMS }
+      // NB: named chunkDoc (not `data`) — the function parameter is already `data`; a `const data`
+      // here would shadow it and put the earlier `data.refId` read in the const's temporal dead zone.
+      const chunkDoc = { id: chunk.id, text: chunk.text, contentHash: chunk.contentHash, metadata: chunk.metadata, type: entityType, productId: pid, updatedAt: now }
+      if (embedding) { chunkDoc.embedding = embedding; chunkDoc.embDims = embed.EMBED_DIMS }
       await docs.items.upsert({
         id: idFor('chunk', entityPath), pk, tenantId: tid,
         kind: 'entity', coll: 'groundingChunks',
         entityPath, entityType,
-        data,
+        data: chunkDoc,
         updatedAt: now,
       })
       return true
