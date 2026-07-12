@@ -28,8 +28,6 @@ exports[`GL golden fixtures — Phase 0 baseline counts > counts snapshot (locks
 }
 `;
 
-exports[`GL golden fixtures — Phase 0 baseline counts > form-rules: merge-aware count (golden=259, likely < due to merged-anchor gap) 1`] = `259`;
-
 exports[`GL golden fixtures — Phase 0 baseline counts > form-rules: merge-aware count (golden=259; ExcelJS resolves merges → 259 already reached) 1`] = `259`;
 
 exports[`GL golden fixtures — Phase 0 baseline counts > forms: distinct form-number count (golden=795) 1`] = `795`;

@@ -1,10 +1,9 @@
 // tests/fixtures/import/registry.ts — registration of the eight real source workbooks the
-// format-agnostic importer is judged against. Four ISO GL workbooks physically ship in the
-// repo (samples/iso/*.xlsx) and are extracted faithfully; the SECURA Inland Marine framework
-// + rules, the Property rating repository, and the multi-domain Property RF .xlsm are NOT in
-// the repo, so their fixtures are marked presentInRepo:false and their expected snapshots are
-// authored from the DOCUMENTED cross-source variance (sheet names + refId schemes + column
-// synonyms). The sheet-name variance recorded here is the exact variance the pipeline handles.
+// format-agnostic importer is judged against. All eight workbooks are present in samples/iso/:
+// four ISO GL workbooks extracted by the deterministic mapIsoWorkbook parser, plus the SECURA
+// Inland Marine framework + rules and the multi-domain Property RF workbooks which require the
+// Brain pipeline (AI stages) for full coverage. The sheet-name variance recorded here is the
+// exact variance the pipeline must handle across carriers and lines.
 import type { WorkbookFixture } from './types'
 
 export const WORKBOOK_FIXTURES: readonly WorkbookFixture[] = [
@@ -38,34 +37,34 @@ export const WORKBOOK_FIXTURES: readonly WorkbookFixture[] = [
     provenance: 'ISO GL rating; step ids "GL.RAT.1.00" (definitions also show "GL.RAT.0001.0"); CALCULATION column uses = + - * /.',
   },
 
-  // ── SECURA Inland Marine (NOT in repo — authored from the observed variance) ────
+  // ── SECURA Inland Marine (files present in samples/iso/) ─────────────────────────
   {
     id: 'im-framework', line: 'IM',
-    files: ['samples/secura/SECURA-InlandMarine-Framework.xlsx'],
-    presentInRepo: false,
+    files: ['samples/iso/Product Framework - SECURA - Inland Marine.xlsx'],
+    presentInRepo: true,
     sheetNames: ['Product Component Model', 'Forms Library'],
     provenance: 'SECURA IM framework: hierarchy sheet "Product Component Model" (id column just "ID"); forms on "Forms Library"; refIds like IM.COV044.00.',
   },
   {
     id: 'im-rules', line: 'IM',
-    files: ['samples/secura/SECURA-InlandMarine-Rules.xlsx'],
-    presentInRepo: false,
+    files: ['samples/iso/Inland Marine Rules Repository - SECURA - Master.xlsx'],
+    presentInRepo: true,
     sheetNames: ['Rules Repository'],
     provenance: 'SECURA IM rules: "Rules Repository" sheet; rule ids like IM.RL.001 (RL token, not RU).',
   },
 
-  // ── Property rating repository + multi-domain Property RF (NOT in repo) ──────────
+  // ── Property rating repository + multi-domain Property RF (files present in samples/iso/) ──
   {
     id: 'pr-rating', line: 'PR',
-    files: ['samples/property/Property-Rating-Repository.xlsx'],
-    presentInRepo: false,
+    files: ['samples/iso/Property Rating Repository - Master.xlsx'],
+    presentInRepo: true,
     sheetNames: ['PROPERTY ROC', 'ROC'],
     provenance: 'Property rating repository: "PROPERTY ROC"/"ROC" sheets; some rows ship "TBD" step ids → refId synthesized as PR.ROC.###.',
   },
   {
     id: 'pr-rf', line: 'PR',
-    files: ['samples/property/Property-RF.xlsm'],
-    presentInRepo: false,
+    files: ['samples/iso/Product Framework - SECURA - Property RF.xlsm'],
+    presentInRepo: true,
     sheetNames: ['Product Component Model', 'Forms Library', 'PROPERTY ROC', 'Rules Repository'],
     provenance: 'Multi-domain Property RF (.xlsm, macro-enabled): framework + forms + rating + rules in one book; coverage refIds like PR.COV001.0.',
   },

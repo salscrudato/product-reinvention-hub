@@ -90,8 +90,8 @@ export function ImportWorkbookModal({ onClose, onImported }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFiles = useCallback(async (files: File[]) => {
-    const xlsx = files.filter(f => /\.xlsx$/i.test(f.name))
-    if (!xlsx.length) { setError('Please choose one or more .xlsx workbooks.'); setPhase('error'); return }
+    const xlsx = files.filter(f => /\.(xlsx|xlsm)$/i.test(f.name))
+    if (!xlsx.length) { setError('Please choose one or more .xlsx or .xlsm workbooks.'); setPhase('error'); return }
     setFiles(xlsx.map(f => f.name)); setPhase('parsing'); setError('')
     try {
       const grids = await readWorkbooks(xlsx)
@@ -159,10 +159,10 @@ export function ImportWorkbookModal({ onClose, onImported }: Props) {
               <IconUpload size={22} className="text-accent" />
             </span>
             <span className="text-sm font-medium text-text">Drop workbooks here, or click to browse</span>
-            <span className="text-xs text-faint">.xlsx · Framework · Forms · Rating · Rules</span>
+            <span className="text-xs text-faint">.xlsx / .xlsm · Framework · Forms · Rating · Rules</span>
           </button>
           <input
-            ref={inputRef} type="file" accept=".xlsx" multiple className="sr-only"
+            ref={inputRef} type="file" accept=".xlsx,.xlsm" multiple className="sr-only"
             onChange={e => { if (e.target.files) void handleFiles(Array.from(e.target.files)) }}
           />
         </div>

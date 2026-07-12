@@ -1,7 +1,7 @@
 // tests/import/harness.test.ts — the offline test harness for the format-agnostic importer.
 // It runs the pure scorer (shared/src/import/validateAgainstExpected) against the golden
 // fixtures (tests/fixtures/import) with PLACEHOLDER producers, proving:
-//   1. the eight source workbooks are registered (and the four GL books physically exist);
+//   1. all eight source workbooks are registered and physically exist in samples/iso/;
 //   2. a PERFECT producer scores 1.0 on every axis — which also proves each hand-authored
 //      snapshot is internally consistent (no dangling parentId, all enums valid, refIds present);
 //   3. a DEGRADED producer is caught on every axis (the judge actually discriminates);
@@ -55,18 +55,12 @@ describe('importer harness — workbook registration', () => {
     expect(fixturesForLine('PR')).toHaveLength(2)
   })
 
-  it('the four ISO GL workbooks physically exist in the repo', () => {
-    for (const wb of fixturesForLine('GL')) {
-      expect(wb.presentInRepo).toBe(true)
+  it('all eight workbooks are marked presentInRepo and physically exist in samples/iso/', () => {
+    for (const wb of WORKBOOK_FIXTURES) {
+      expect(wb.presentInRepo, `${wb.id} should be presentInRepo`).toBe(true)
       for (const f of wb.files) {
         expect(fs.existsSync(path.join(REPO_ROOT, f)), `${f} should exist`).toBe(true)
       }
-    }
-  })
-
-  it('the IM/PR workbooks are marked not-in-repo (snapshots authored from documented variance)', () => {
-    for (const wb of [...fixturesForLine('IM'), ...fixturesForLine('PR')]) {
-      expect(wb.presentInRepo).toBe(false)
     }
   })
 
