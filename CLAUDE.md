@@ -74,3 +74,53 @@ host (Cosmos + Foundry AI + Blob), and deploys it. The browser only ever talks t
 - [docs/adr/0004-guest-read-floor.md](docs/adr/0004-guest-read-floor.md) — guest (anonymous) read-only floor + `VITE_ALLOW_GUEST`
 - [docs/adr/0005-filing-importer.md](docs/adr/0005-filing-importer.md) — filing importer (second ingestion mechanism) + evaluator credit-cap extension
 - [docs/adr/0006-process-value-explorer.md](docs/adr/0006-process-value-explorer.md) — deterministic Process Value Explorer → GTM process converter (4E drop, fixture + generator)
+
+## Hardening campaign (2026-07-12, branch feat/hardening-2026-07)
+
+**Work queue:** [docs/audit/EXECUTION.md](docs/audit/EXECUTION.md) -- update checkboxes continuously.
+
+### Gate (non-negotiable)
+
+```sh
+pnpm typecheck && pnpm lint && pnpm test && pnpm build
+```
+
+Must stay green after every commit. Rating canaries $1,528 / $1,002 / $2,635 are deploy blockers.
+
+### Architecture invariants (from HANDOFF.md section 3)
+
+These are non-negotiable in addition to the binding invariants above:
+
+| Invariant | Enforcement |
+|---|---|
+| Adapter seam | oxlint no-restricted-imports; TS2307 |
+| Atomic mutations | source-audit test (DEF-0044/0047) |
+| Role enforcement | requireRole middleware; source-audit test |
+| AI server-side | oxlint; no SDK in app/src/ |
+| AI grounded+cited | SYSTEM prompt; source-audit test (DEF-0045) |
+| refId chips | never strip |
+| HO-3 $1,528 canary | CI gate; deploys fail otherwise |
+| Model IDs | claude-opus-4-8 (GROUNDED_CITED), claude-haiku-4-5 (BULK_VERIFY); never claude-fable-5 |
+| Design tokens | No hard-coded hex in browser code |
+
+### Do-not-change list (from HANDOFF.md section 8)
+
+- `shared/src/rating/evaluator.ts` canary behavior (unless fixing a documented bug with a new canary value)
+- `app/src/lib/backend/azure.adapter.ts` interface surface (extending is fine; renaming public methods breaks all callers)
+- `server/lib/auth.js` RANK ordering or JWT format -- exception: adding `jti` claim for RISK-006 is additive/backward-compatible
+- `azure-pipelines.yml` gate steps (adding steps is fine; removing the canary or budget check is not)
+- DuckCreek golden XML fixtures (`shared/src/duckcreek/__golden__/*.xml`) unless serializer semantics change
+
+### Commit format
+
+```
+type(RISK-00X): summary line
+type(REQ-X): summary line
+```
+
+One ID per commit. No em-dashes, no en-dashes, no emoji in any new code, comment, or doc.
+
+### Blocked item protocol
+
+After 3 failed attempts on any item: mark it **BLOCKED** in EXECUTION.md with failure notes and move on.
+Do not re-attempt a blocked item in the same session.

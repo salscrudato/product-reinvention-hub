@@ -53,6 +53,14 @@ steps:
       pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
     displayName: 'Install (pnpm)'
 
+  - script: |
+      set -e
+      GITLEAKS_VERSION=8.18.4
+      curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o /tmp/gitleaks.tar.gz
+      tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+      gitleaks detect --source . --log-opts="--all" --redact --no-git=false
+    displayName: 'Gate: gitleaks full-history secret scan (blocks deploy on any detected secret)'
+
   - script: pnpm -r typecheck
     displayName: 'Gate: typecheck (all workspaces)'
 
