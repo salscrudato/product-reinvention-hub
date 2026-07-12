@@ -406,11 +406,28 @@ async function _forcedToolCall(deployment, system, tools, toolName, blocks, inst
   return (tu && tu.input) || {}
 }
 
-// ─── unifiedImport: extract coverages from a carrier filing PDF ───────────────
+// ─── Import brain + filing pipeline (lazy-loaded; built by pnpm build) ────────
+// Both loaders use the same guard-before-dispatch pattern as every other AI path.
+let _importBrain = null
+function getImportBrain() {
+  if (!_importBrain) { try { _importBrain = require('./import-brain/index') } catch { _importBrain = {} } }
+  return _importBrain
+}
+let _stageFiling = null
+function getStageFiling() {
+  if (!_stageFiling) { try { _stageFiling = require('./import-brain/stage-filing') } catch { _stageFiling = {} } }
+  return _stageFiling
+}
+
+// ─── unifiedImport: extract coverages from a carrier filing PDF OR workbook ───
 // EDITOR+ only — extracted proposals flow directly to mutate() via importProduct.ts.
 // Grounded: reads the actual filing text via the forced propose_coverages tool.
 // Cited: proposals without a document citation are dropped (mirrors functions/ sanitizer).
 // Emits {t:'tool'} progress + {t:'json'} bundle (real client) + {t:'token'} (smoke compat).
+//
+// Routing (REQ-2):
+//   body.structural (StructuralModel) -> ISO_WORKBOOK -> 6-stage Adaptive Import Brain
+//   body.documents  (filing PDFs)     -> COMPANY_FILING_PDF -> CLASSIFY/RATE_ORDER/MANUAL pipeline
 const _PROPOSE_COVERAGES = {
   name: 'propose_coverages',
   description: 'Return the coverages the base form actually defines. Only include coverages the document describes — never invent a coverage, form, limit or requirement.',
@@ -462,9 +479,34 @@ async function unifiedImport(req, res) {
   const deployment = HAIKU_OVERRIDE || fleet.resolveModel('BULK_VERIFY', g.degrade)
 
   try {
+    // ── ISO_WORKBOOK path: StructuralModel provided → 6-stage Adaptive Import Brain ──
+    if (body.structural && typeof body.structural === 'object') {
+      const brain = getImportBrain()
+      if (typeof brain.runAdaptiveImportBrain !== 'function') {
+        emit(res, { t: 'error', message: 'Import brain not available (build:import-brain may not have run).' })
+        emit(res, { t: 'done' }); return res.end()
+      }
+      const brainOutput = await brain.runAdaptiveImportBrain({
+        structural:   body.structural,
+        lobRefIdHint: body.lobRefIdHint || undefined,
+        emit:         (ev) => emit(res, ev),
+      })
+      // Smoke-compat token: coverage-like entities from all extracted brain entities
+      const brainCoverages = (brainOutput.entities || [])
+        .filter((e) => e.kind === 'coverage' || e.kind === 'product')
+        .map((e) => {
+          const refIdF = e.fields.find(f => f.fieldName === 'refId' || f.fieldName === 'number')
+          const nameF  = e.fields.find(f => f.fieldName === 'name' || f.fieldName === 'label')
+          return { refId: String(refIdF?.value ?? ''), name: String(nameF?.value ?? e.kind), kind: e.kind }
+        })
+      emit(res, { t: 'token', v: JSON.stringify({ coverages: brainCoverages }) })
+      emit(res, { t: 'done' }); return res.end()
+    }
+
+    // ── COMPANY_FILING_PDF path: documents array → CLASSIFY/RATE_ORDER/MANUAL pipeline ──
     const rawDocs = Array.isArray(body.documents) ? body.documents.filter((d) => d && d.name) : []
     if (rawDocs.length === 0) {
-      emit(res, { t: 'error', message: 'No documents supplied.' }); emit(res, { t: 'done' }); return res.end()
+      emit(res, { t: 'error', message: 'No documents or structural model supplied.' }); emit(res, { t: 'done' }); return res.end()
     }
 
     // Accept base64 or dataBase64; fall back to loading the fixture from disk (LOCAL mode)
@@ -484,8 +526,27 @@ async function unifiedImport(req, res) {
 
     const filingState = String(body.filingState || 'XX').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 2)
     const productName = String(body.productName || docs[0].name.replace(/\.[^.]+$/, '') || 'Imported Filing').slice(0, 200)
-    const doc = docs[0]
 
+    // Use stage-filing pipeline when available (full CLASSIFY/RATE_ORDER/MANUAL/RECONCILE).
+    const stageFiling = getStageFiling()
+    if (typeof stageFiling.runFilingPipeline === 'function') {
+      const { bundle, extraction } = await stageFiling.runFilingPipeline({
+        documents:        docs,
+        productNameHint:  productName,
+        filingStateHint:  filingState,
+        extractPdfText:   _extractPdfText,
+        emit:             (ev) => emit(res, ev),
+      })
+      // Merge extracted plan coverages for smoke-compat token
+      const planCoverages = (Array.isArray(bundle?.plan?.coverages) ? bundle.plan.coverages : [])
+        .map((e) => ({ refId: e.data?.refId ?? e.refId ?? '', name: e.data?.name ?? e.label ?? '', formNumbers: e.data?.formNumbers ?? [] }))
+      emit(res, { t: 'json', key: 'bundle', value: bundle })
+      emit(res, { t: 'token', v: JSON.stringify({ coverages: planCoverages }) })
+      emit(res, { t: 'done' }); return res.end()
+    }
+
+    // Fallback: simple single-pass coverage extraction (legacy path, kept for robustness)
+    const doc = docs[0]
     emit(res, { t: 'tool', name: 'extract:coverages', phase: 'start', summary: doc.name })
 
     // Prefer extracted text — smaller payload → faster + cheaper than sending raw PDF bytes
