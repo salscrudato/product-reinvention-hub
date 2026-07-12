@@ -29,6 +29,13 @@ const BOOTSTRAP = BOOTSTRAP_ENABLED ? {
   admin: { password: process.env.BOOTSTRAP_ADMIN_PASSWORD || 'admin', role: 'ADMIN', name: 'Admin', email: 'admin@prodhub.local', tenants: '*' },
   'sal.scrudato': { password: process.env.BOOTSTRAP_SAL_PASSWORD || 'sal.scrudato', role: 'ADMIN', name: 'Sal Scrudato', email: 'salvatore.scrudato@accenture.com', tenants: '*' },
 } : {}
+
+// RISK-002: warn loudly when bootstrap accounts are live with default passwords.
+// Set BOOTSTRAP_USERS_ENABLED=false in App Service config to disable entirely.
+if (BOOTSTRAP_ENABLED && (!process.env.BOOTSTRAP_ADMIN_PASSWORD || !process.env.BOOTSTRAP_SAL_PASSWORD)) {
+  console.warn('[auth] SECURITY: bootstrap accounts are enabled with default passwords. Set BOOTSTRAP_USERS_ENABLED=false in App Service config for production, or set BOOTSTRAP_ADMIN_PASSWORD and BOOTSTRAP_SAL_PASSWORD to strong values.')
+}
+
 const overrides = new Map() // in-process password cache for same-session after changePassword
 
 // ─── base64url HS256 JWT ─────────────────────────────────────────────────────
