@@ -96,8 +96,10 @@ export function ProductSummaryDashboard() {
   const { pid, product, coverages, rules, ratingProgram } = useProductCtx()
   const { user } = useUser()
   const canGenerate = user?.role === 'ANALYST' || user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
   const [stored, setStored]   = useState<StoredSummary | null>(null)
   const [state, setState]     = useState<'idle' | 'loading' | 'error'>('idle')
+  const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')
   // Whether the cache doc has resolved at least once for this pid (so we don't auto-fire
   // a generation before we know whether one already exists).
   const [hydrated, setHydrated] = useState(false)
@@ -119,6 +121,19 @@ export function ProductSummaryDashboard() {
     })
     return unsub
   }, [pid])
+
+  async function syncContext() {
+    if (!pid) return
+    setSyncState('syncing')
+    try {
+      await adapter.fns.call<{ productId: string }, { ok: boolean; indexed: number }>('reindexProduct', { productId: pid })
+      setSyncState('done')
+      setTimeout(() => setSyncState('idle'), 3000)
+    } catch {
+      setSyncState('error')
+      setTimeout(() => setSyncState('idle'), 4000)
+    }
+  }
 
   async function generate() {
     if (!product) return
@@ -175,15 +190,27 @@ export function ProductSummaryDashboard() {
             </p>
           </div>
         </div>
-        <button onClick={() => void generate()} disabled={state === 'loading' || !canGenerate}
-          className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[8px] text-[12px] font-medium transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
-            isStale ? 'text-white' : 'text-accent hover:bg-accent-soft'}`}
-          style={isStale ? { background: 'var(--gradient-accent)' } : undefined}>
-          {state === 'loading'
-            ? <IconSpinner size={13} className="animate-spin" aria-hidden="true" />
-            : summary ? <IconRefresh size={13} aria-hidden="true" /> : <IconSparkle size={13} aria-hidden="true" />}
-          {state === 'loading' ? 'Generating…' : summary ? 'Regenerate' : 'Generate summary'}
-        </button>
+        <div className="flex items-center gap-2">
+          {canEdit && (
+            <button onClick={() => void syncContext()} disabled={syncState === 'syncing'}
+              title="Re-index this product's grounding context so the portfolio chat can find it"
+              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[8px] text-[12px] font-medium transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent text-dim hover:bg-raised hover:text-text">
+              {syncState === 'syncing'
+                ? <IconSpinner size={13} className="animate-spin" aria-hidden="true" />
+                : <IconRefresh size={13} aria-hidden="true" />}
+              {syncState === 'syncing' ? 'Syncing…' : syncState === 'done' ? 'Synced ✓' : syncState === 'error' ? 'Sync failed' : 'Sync AI context'}
+            </button>
+          )}
+          <button onClick={() => void generate()} disabled={state === 'loading' || !canGenerate}
+            className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[8px] text-[12px] font-medium transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+              isStale ? 'text-white' : 'text-accent hover:bg-accent-soft'}`}
+            style={isStale ? { background: 'var(--gradient-accent)' } : undefined}>
+            {state === 'loading'
+              ? <IconSpinner size={13} className="animate-spin" aria-hidden="true" />
+              : summary ? <IconRefresh size={13} aria-hidden="true" /> : <IconSparkle size={13} aria-hidden="true" />}
+            {state === 'loading' ? 'Generating…' : summary ? 'Regenerate' : 'Generate summary'}
+          </button>
+        </div>
       </div>
 
       {/* Stale banner — the product changed since this summary was written. */}
