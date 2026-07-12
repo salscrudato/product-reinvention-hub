@@ -47,7 +47,7 @@ describe('maximum-credit cap', () => {
     expect(cap).toBeDefined()
     expect(cap!.factorOrAmount).toBeCloseTo(0.70 / 0.648, 6)
     // Effective credit is now exactly the floor: 1000 × 0.70 = 700, +100 = 800.
-    expect(r.finalPremium).toBeCloseTo(800, 6)
+    expect(r.finalPremium).toBe(800)
   })
 
   it('stays quiet when credits do NOT pierce the floor', () => {
