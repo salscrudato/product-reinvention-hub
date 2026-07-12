@@ -1,4 +1,4 @@
-SUMMARY: OPEN: 2 | CRITICAL: 1 | HIGH: 0 | MEDIUM: 0 | LOW: 1 | WONTFIX: 0 | FALSE-POSITIVE: 6
+SUMMARY: OPEN: 0 | CRITICAL: 0 | HIGH: 0 | MEDIUM: 0 | LOW: 0 | WONTFIX: 0 | FALSE-POSITIVE: 6
 
 <!-- convergence.mjs rewrites the SUMMARY line above on every run. Do not hand-edit it. -->
 
@@ -552,16 +552,16 @@ Four new defects logged:
 ---
 
 ### DEF-0031
-- status: OPEN
+- status: BLOCKED-ON-HUMAN
 - severity: LOW
 - probe: SECRETS
 - surface: snowchat/scripts/es-setup-passwords-output.txt
 - title: Internal server IP (10.192.37.11) and hostname (LLMCOEAZHIJMP01) committed to git in Elasticsearch setup output file
 - evidence: `git ls-files snowchat/scripts/es-setup-passwords-output.txt` — file is tracked. `cat snowchat/scripts/es-setup-passwords-output.txt` — line 10 contains: `[10.192.37.11]; the server provided a certificate with subject name [CN=LLMCOEAZHIJMP01]` — a real internal RFC 1918 IP address and internal server hostname. TLS certificate fingerprints also present (`bc7fec352f6f26220981ac1e043375eb3ca34aab`, `2d73f1c7e022f468c03772d18e9ee48d6c5c355e`). No passwords were captured (the ES password setup script failed with an SSL error before writing any credentials). The file is a developer artifact from running `elasticsearch-setup-passwords auto` against a real internal server; it should have been gitignored.
 - repro: `git log -- snowchat/scripts/es-setup-passwords-output.txt` — file has been in git since initial commit; any git clone exposes the internal IP, hostname, and TLS fingerprints. `grep '10\.192\.' snowchat/scripts/es-setup-passwords-output.txt` confirms the private IP.
-- fix:
-- verified-by:
-- commit:
+- fix: IN-REPO DONE (commit 2e1e4c17): `git rm --cached` removed es-setup-passwords-output.txt, es-port-checks-report.txt, and es-port-checks-tmp/httpcheck.txt from tracking; all three added to .gitignore. `git grep 10.192.37.11` at HEAD returns only hardening/ledger.md documentation — no active tracked source. BLOCKED-ON-HUMAN for history purge: Sal must run `git filter-repo --path snowchat/scripts/ --invert-paths` (or BFG equivalent) and force-push to expunge internal IP from git DAG.
+- verified-by: WAVE-13 2026-07-11 — `git grep "10\.192\.37\.11"` at HEAD returns only ledger.md (documentation); `git ls-files snowchat/scripts/es-setup-passwords-output.txt` returns empty; .gitignore entries confirmed.
+- commit: 2e1e4c17 (in-repo); history purge BLOCKED-ON-HUMAN (Sal: git filter-repo --path snowchat/scripts/ --invert-paths)
 
 ---
 
@@ -738,16 +738,16 @@ One new defect:
 ---
 
 ### DEF-0036
-- status: OPEN
+- status: BLOCKED-ON-HUMAN
 - severity: CRITICAL
 - probe: CONFIG
 - surface: tmp.md (git history commit f6c7611e, 2026-07-10)
 - title: Azure Foundry API key committed to git history in tmp.md; permanently retrievable by any repo cloner
 - evidence: `git show f6c7611e -- tmp.md` returns the full `AZURE_FOUNDRY_KEY` value (`C0S1LR7AUnd9CjUR6tdi1083JhVh4QhOZjPYwTyamNgCF1dpMY8BJQQJ99CGACHYHv6XJ3w3AAAAACOGjwNo`) across all four deployment lines (opus 4.8, haiku, GPT-5.1, gpt-5-mini). File added in commit `f6c7611e fix(ai): call Foundry Claude on the Anthropic-native surface` (2026-07-10) and deleted in `866f728f fix(tenancy+storage): drop tmp.md`, but the credential is permanently embedded in the git DAG. `git log --all --oneline -- tmp.md` confirms the two-commit exposure window; `git ls-files tmp.md` returns empty (not tracked now). The untracked, gitignored `model_secrets.md:8` also holds the same key in plaintext and additionally exposes the full Foundry resource endpoint (`https://foundry-prodhub-dev.services.ai.azure.com`). The SECRETS probe (2026-07-11) searched `git grep` for `sk-ant-*`, `AKIA*`, `AIza*`, `-----BEGIN PRIVATE` — the Azure Foundry key format (long alphanumeric Base64-like string with no standard prefix) did not match any pattern and was missed. CLAUDE.md binding invariant: "Secrets are server-side only. Foundry (`AZURE_FOUNDRY_ENDPOINT` / `AZURE_FOUNDRY_KEY`) live in App Service configuration. Never embed them in code or the client bundle."
 - repro: `git show f6c7611e -- tmp.md` — returns the live AZURE_FOUNDRY_KEY in plaintext. Combined with the endpoint in `model_secrets.md` (or reconstructed from `server/lib/fleet.js` comment), any caller can issue `POST https://foundry-prodhub-dev.services.ai.azure.com/anthropic/v1/messages` with `x-api-key: <key>` and consume Foundry quota at the project's expense. Key must be rotated immediately; history must be cleaned with `git filter-repo --path tmp.md --invert-paths` and all stale clones re-seeded.
-- fix:
-- verified-by:
-- commit:
+- fix: IN-REPO PORTION: tmp.md is already deleted from HEAD (commit 866f728f); model_secrets.md is gitignored; no code change required. FULLY BLOCKED-ON-HUMAN — Sal must: (1) Rotate AZURE_FOUNDRY_KEY NOW in Azure AI Foundry portal (key C0S1LR7AUnd9CjUR6tdi... is compromised); (2) Update AZURE_FOUNDRY_KEY in App Service configuration to the new key; (3) Run `git filter-repo --path tmp.md --invert-paths` (or BFG: `java -jar bfg.jar --delete-files tmp.md .`); (4) Force-push: `git push origin main --force`; (5) Notify all repo cloners to re-clone or re-seed from origin.
+- verified-by: BLOCKED-ON-HUMAN — no code verification possible until key rotated and history cleaned. In-repo state: tmp.md not tracked at HEAD (`git ls-files tmp.md` empty); model_secrets.md gitignored.
+- commit: N/A (BLOCKED-ON-HUMAN)
 
 ---
 

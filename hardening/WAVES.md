@@ -122,7 +122,7 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: none
 - verify: harden-probe DEF-0004,0026; CANARY: pnpm --filter shared test — HO-3 $1,528 + PA $1,002 + GL $2,635 byte-exact + the $800 creditFloor assertion + the intermediate-trace lock; /gate.
 
-## WAVE-13  tier:T0  chains:YES  blocks-smoke:NO  status:PENDING
+## WAVE-13  tier:T0  chains:YES  blocks-smoke:NO  status:BLOCKED-ON-HUMAN
 - members: DEF-0036, DEF-0031
 - root-cause: Two sensitive artifacts are reachable via git — a LIVE AZURE_FOUNDRY_KEY committed in tmp.md (deleted from HEAD but permanent in the DAG; also plaintext in gitignored model_secrets.md) and an internal RFC1918 IP + hostname + TLS fingerprints in a tracked snowchat ES setup-output file. The in-repo portion (gitignore/removal) is fixable now; key rotation + history rewrite are out-of-code human steps.
 - fix-approach: In-repo (this wave): `git rm --cached snowchat/scripts/es-setup-passwords-output.txt`; add it + `model_secrets.md` to .gitignore (tmp*.md already covered); confirm `git grep` finds no live secret at HEAD.
