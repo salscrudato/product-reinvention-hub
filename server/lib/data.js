@@ -68,7 +68,10 @@ router.post('/list', requireAuth, requireTenant, async (req, res) => {
   for (let i = 0; i < (query?.orderBy || []).length; i++) {
     const o = query.orderBy[i]
     if (!FIELD_RE.test(String(o.field || ''))) return res.status(400).json({ error: 'invalid_field', field: o.field })
-    sql += `${i === 0 ? ' ORDER BY' : ','} c.data.${o.field} ${(o.dir || 'asc').toUpperCase()}`
+    // RISK-008: explicitly constrain direction to ASC or DESC before interpolating into SQL.
+    const dir = (o.dir || 'asc').toUpperCase()
+    if (!['ASC', 'DESC'].includes(dir)) return res.status(400).json({ error: 'invalid_direction', detail: "orderBy.dir must be 'asc' or 'desc'" })
+    sql += `${i === 0 ? ' ORDER BY' : ','} c.data.${o.field} ${dir}`
   }
   const { resources } = await docs.items.query({ query: sql, parameters: params }, { maxItemCount: limit }).fetchAll()
   res.json({ data: resources.map((r) => ({ id: segs(r.path).at(-1), ...r.data })) })
