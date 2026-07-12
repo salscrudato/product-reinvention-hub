@@ -35,8 +35,9 @@
     "Definitions-Rating Specificants",
     "Data Validation"
   ],
-  "warningCount": 32,
+  "warningCount": 33,
   "warnings": [
+    "Framework sheet \"GL Product Framework\": 4 distinct product names detected — imported under a single product GL.PROD.001. Split into separate products if the source is a multi-product book.",
     "Sheet \"GL Rating Tables\" row 163 col \"RATE TABLE ID\": table RTTable.002 appears more than once — rows merged.",
     "Sheet \"GL Rating Tables\" row 183 col \"RATE TABLE ID\": table RTTable.004 appears more than once — rows merged.",
     "Sheet \"GL Rating Tables\" row 209 col \"RATE TABLE ID\": table RTTable.006 appears more than once — rows merged.",

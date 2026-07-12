@@ -17,6 +17,7 @@ import type {
   RTTable, LDTable, RatingStep,
 } from '../types'
 import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
+import { resolveCoverageHierarchy } from './coverageHierarchy'
 
 // ─── Public shapes ─────────────────────────────────────────────────────────────
 
@@ -167,8 +168,13 @@ function mapFormCategory(v: IsoCell): { category: FormCategory; exact: boolean }
   return { category: 'ENDORSEMENT', exact: s === '' }
 }
 
-/** Parent refId of a sub-coverage/rule = its refId minus the last dot-segment. */
-function parentRefId(refId: string): string { return refId.split('.').slice(0, -1).join('.') }
+/** The line prefix (LOB token) of a coverage refId. Tolerant of inconsistent source formatting:
+ *  "PR.COV001.0", "PRCOV0010.0" and "GL.COV.001" all yield the leading line code (PR / PR / GL). */
+function refIdPrefix(refId: string): string {
+  const m = refId.match(/^([A-Za-z]{2,4})\.?(?:COV|PROD|LOB|RAT|RU|FORM)/i)
+  if (m) return m[1]!.toUpperCase()
+  return (refId.split(/[.\d]/).filter(Boolean)[0] ?? '').toUpperCase()
+}
 /** Firestore-safe doc id (matches the seed: dots → dashes). */
 function dashId(refId: string): string { return refId.replace(/\./g, '-') }
 /** Pull an LD/RT table ref out of a free-text "rule reference" cell. */
@@ -268,9 +274,12 @@ class Ctx {
 
 // ─── Framework → product + coverages ────────────────────────────────────────────
 
+// Field aliases span the ISO template ("PRODUCT FRAMEWORK ID", "BUREAU"/"PROPRIETARY") and the
+// SECURA "Product Component Model" template ("ID", "RATING BUREAU?", "SUB COVERAGE"). Matching is
+// punctuation/whitespace-insensitive, so trailing "?" and embedded newlines are tolerated.
 const FW_FIELDS: Record<string, string[]> = {
   status:      ['STATUS'],
-  id:          ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID'],
+  id:          ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID', 'ID'],
   product:     ['PRODUCT'],
   lob:         ['LINE OF BUSINESS', 'LOB'],
   coverage:    ['COVERAGE'],
@@ -279,9 +288,9 @@ const FW_FIELDS: Record<string, string[]> = {
   edition:     ['EDITION DATE'],
   claimsBasis: ['CLAIMS BASIS'],
   requirement: ['COVERAGE REQUIREMENT', 'REQUIREMENT', 'MANDATORY/ OPTIONAL', 'MANDATORY / OPTIONAL'],
-  premiumGen:  ['PREMIUM GENERATING'],
-  bureau:      ['BUREAU'],
-  proprietary: ['PROPRIETARY'],
+  premiumGen:  ['PREMIUM GENERATING', 'PREMIUM GENERATING?'],
+  bureau:      ['BUREAU', 'RATING BUREAU', 'RATING BUREAU?'],
+  proprietary: ['PROPRIETARY', 'PROPRIETARY?'],
   review:      ['REVIEW STATUS'],
 }
 
@@ -292,6 +301,15 @@ interface FrameworkResult {
   lobName:      string
   coverages:    PlannedEntity[]
   productScope: { allStates: boolean; states: string[] }
+}
+
+interface CoverageDraft {
+  refId: string
+  coverageName: string
+  subCoverageName: string
+  rowIndex: number
+  cells: IsoCell[]
+  scope: { allStates: boolean; states: string[] }
 }
 
 function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
@@ -308,11 +326,13 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
   let productName = ''
   let lobRefId: string | null = null
   let lobName = ''
-  const coverages: PlannedEntity[] = []
-  const byRefId = new Set<string>()
-  const topOrder = { n: 0 }
-  const childOrder: Record<string, number> = {}
-  const scopes: { allStates: boolean; states: string[] }[] = []
+  let productNameHint = ''
+  let lobNameHint = ''
+  const distinctProducts = new Set<string>()
+
+  // ── Pass 1: separate identity rows from coverage rows (source order preserved) ──
+  const drafts: CoverageDraft[] = []
+  const draftByRefId = new Map<string, CoverageDraft>()
 
   for (let r = hr + 1; r < grid.cells.length; r++) {
     const cells = row(grid, r)
@@ -320,61 +340,112 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
     if (!id) continue
     const covName = clean(at(cells, 'coverage'))
     const subName = clean(at(cells, 'subCoverage'))
+    const prod = clean(at(cells, 'product'))
+    const lob = clean(at(cells, 'lob'))
+    if (prod) distinctProducts.add(prod)
 
-    // Product / LOB header rows carry no coverage — capture identity (first wins, so a
-    // multi-product framework anchors on its primary line), create no coverage.
-    if (/\.PROD\b|\.PROD\./i.test(id) || (!covName && !subName && clean(at(cells, 'product')) && !clean(at(cells, 'lob')))) {
-      if (!productRefId) { productRefId = id; productName = clean(at(cells, 'product')) || productName }
+    // Explicit product / LOB rows (ISO carries .PROD / .LOB tokens in the id column).
+    if (/\.PROD\b|\.PROD\./i.test(id)) {
+      if (!productRefId) { productRefId = id; productName = prod || productName }
       continue
     }
-    if (/\.LOB\b|\.LOB\./i.test(id) || (!covName && !subName && clean(at(cells, 'lob')))) {
-      if (!lobRefId) { lobRefId = id; lobName = clean(at(cells, 'lob')) || lobName }
-      if (!productName) productName = clean(at(cells, 'product'))
+    if (/\.LOB\b|\.LOB\./i.test(id)) {
+      if (!lobRefId) { lobRefId = id; lobName = lob || lobName }
+      if (!productName) productName = prod
       continue
     }
-    if (!covName && !subName) continue // nothing to make a coverage from
+    // A row with neither a coverage nor a sub-coverage name is a hierarchy/identity row
+    // (the SECURA component model has no .PROD/.LOB tokens — product/LOB appear as plain rows).
+    if (!covName && !subName) {
+      if (!productNameHint && prod) productNameHint = prod
+      if (!lobNameHint && lob) lobNameHint = lob
+      continue
+    }
 
-    const isSub = subName !== ''
-    const name = isSub ? subName : covName
-    const parent = isSub ? parentRefId(id) : null
-    const scope = stateScope(cells, sc)
-    scopes.push(scope)
+    if (!productNameHint && prod) productNameHint = prod
+    if (!lobNameHint && lob) lobNameHint = lob
+    const draft: CoverageDraft = {
+      refId: id, coverageName: covName, subCoverageName: subName, rowIndex: r,
+      cells, scope: stateScope(cells, sc),
+    }
+    drafts.push(draft)
+    if (!draftByRefId.has(id)) draftByRefId.set(id, draft)
+  }
 
-    let order: number
-    if (parent) order = (childOrder[parent] = (childOrder[parent] ?? 0) + 1)
-    else order = (topOrder.n += 1)
+  // ── Pass 2: first-principles hierarchy resolution (format-agnostic) ──
+  const resolved = resolveCoverageHierarchy(drafts.map(d => ({
+    refId: d.refId, coverageName: d.coverageName, subCoverageName: d.subCoverageName, rowIndex: d.rowIndex,
+  })))
+  for (const rc of resolved) {
+    if (rc.parentSignal === 'orphan-promoted') {
+      ctx.warn(`Sheet "${grid.sheet}" coverage ${rc.refId} ("${rc.name}"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.`)
+    }
+  }
 
-    coverages.push({
-      docId: dashId(id), refId: id, label: `${id} — ${name}`,
+  const coverages: PlannedEntity[] = resolved.map(rc => {
+    const cells = (draftByRefId.get(rc.refId) as CoverageDraft).cells
+    return {
+      docId: dashId(rc.refId), refId: rc.refId, label: `${rc.refId} — ${rc.name}`,
       data: {
-        refId: id, name, parentId: parent, order,
+        refId: rc.refId, name: rc.name, parentId: rc.parentRefId, order: rc.order,
         requirement: mapRequirement(at(cells, 'requirement')),
         claimsBasis: mapClaimsBasis(at(cells, 'claimsBasis')),
         premiumGenerating: isYes(at(cells, 'premiumGen')),
         source: mapSource(at(cells, 'bureau'), at(cells, 'proprietary')),
         formNumbers: splitList(at(cells, 'forms')),
         terms: [],
-        ...scope,
+        ...(draftByRefId.get(rc.refId) as CoverageDraft).scope,
         status: mapStatus(at(cells, 'status')),
         lifecycle: 'DRAFT' as Lifecycle,
         reviewStatus: mapReview(at(cells, 'review')),
         reviewer: '',
       },
-    })
-    byRefId.add(id)
+    }
+  })
+
+  // ── Product identity: synthesize when the sheet has no explicit .PROD row ──
+  if (!productRefId && coverages.length) {
+    const prefix = refIdPrefix(coverages[0]!.refId!) || 'XX'
+    productRefId = `${prefix}.PROD.001`
+    productName = productName || productNameHint
+    ctx.warn(`Framework sheet "${grid.sheet}": no explicit product (.PROD) row — synthesized product id "${productRefId}" from the coverage id prefix "${prefix}".`)
+  } else if (!productName) {
+    productName = productNameHint
+  }
+  if (!lobName) lobName = lobNameHint
+  if (distinctProducts.size > 1) {
+    ctx.warnOnce('multiproduct', `Framework sheet "${grid.sheet}": ${distinctProducts.size} distinct product names detected — imported under a single product ${productRefId ?? '(none)'}. Split into separate products if the source is a multi-product book.`)
   }
 
-  // Integrity: never leave a dangling parentId — promote orphans to top-level.
+  // Integrity: never leave a dangling parentId — promote orphans to top-level (belt-and-braces;
+  // the resolver already guarantees this, but a source with a mid-import dedup could surprise us).
+  const byRefId = new Set(coverages.map(c => c.refId!))
   for (const cov of coverages) {
     const pid = cov.data['parentId'] as string | null
     if (pid && !byRefId.has(pid)) {
-      ctx.warn(`Sheet "${grid.sheet}" coverage ${cov.refId} (col "PRODUCT FRAMEWORK ID"): parent "${pid}" not found — imported as top-level.`)
+      ctx.warn(`Sheet "${grid.sheet}" coverage ${cov.refId}: parent "${pid}" not found — imported as top-level.`)
       cov.data['parentId'] = null
     }
   }
-  // Parent-before-child: shallower refIds (fewer dot-segments) first.
-  coverages.sort((a, b) => (a.refId!.split('.').length) - (b.refId!.split('.').length))
+  // Parent-before-child write order by hierarchy DEPTH (not refId string length — SECURA parent and
+  // child share a segment count). Stable sort preserves source order within a depth band.
+  const depthOf = (refId: string): number => {
+    let d = 0
+    let cur: string | null = refId
+    const guard = new Set<string>()
+    while (cur && !guard.has(cur)) {
+      guard.add(cur)
+      const c = coverages.find(x => x.refId === cur)
+      const pid = c ? (c.data['parentId'] as string | null) : null
+      if (!pid) break
+      d += 1; cur = pid
+    }
+    return d
+  }
+  const depthCache = new Map(coverages.map(c => [c.refId!, depthOf(c.refId!)]))
+  coverages.sort((a, b) => (depthCache.get(a.refId!) ?? 0) - (depthCache.get(b.refId!) ?? 0))
 
+  const scopes = drafts.map(d => d.scope)
   const productScope = scopes.some(s => s.allStates) || scopes.length === 0
     ? { allStates: true, states: [] }
     : { allStates: false, states: [...new Set(scopes.flatMap(s => s.states))].sort() }
@@ -850,7 +921,7 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
 export function mapIsoWorkbook(grids: IsoGrid[]): ImportPlan {
   const ctx = new Ctx()
 
-  const fwGrid   = findSheet(grids, /product framework/i)
+  const fwGrid   = findSheet(grids, /product framework|product component model|component model/i)
   const formGrid = findSheet(grids, /forms specifications|forms specification/i, /dynamic/i)
   const dynGrid  = findSheet(grids, /forms dynamic|dynamic data/i)
   const ruleGrid = findSheet(grids, /rules specifications|rules specification/i, /optional/i)

@@ -58,4 +58,4 @@ exports[`GL golden fixtures — Phase 0 baseline counts > sheets recognized — 
 ]
 `;
 
-exports[`GL golden fixtures — Phase 0 baseline counts > warnings — logs all summary warnings for review 1`] = `32`;
+exports[`GL golden fixtures — Phase 0 baseline counts > warnings — logs all summary warnings for review 1`] = `33`;

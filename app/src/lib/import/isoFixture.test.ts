@@ -248,17 +248,15 @@ describe('synthetic fixture A — duplicate coverage refId (Phase 2 prerequisite
 
   const plan = mapIsoWorkbook([dupFramework])
 
-  it('current behaviour: both rows create entities (docId collision — Phase 2 will dedup)', () => {
-    // Phase 0: parser pushes BOTH rows as separate PlannedEntities even though
-    // they have the same refId and therefore the same docId. This creates a
-    // silent overwrite when mutate() is called (second wins).
-    // Phase 2 assertion will be: coverages.length === 2 (distinct refIds, GL.COV.001 deduped)
+  it('dedups a repeated coverage refId (first row wins — no docId collision)', () => {
+    // The coverage-hierarchy resolver dedups by refId (first occurrence wins), so a repeated
+    // GL.COV.001 no longer produces two PlannedEntities that silently overwrite each other in
+    // mutate(). Distinct refIds: GL.COV.001 (once) + GL.COV.002 = 2 coverages.
     const docIds = plan.coverages.map(c => c.docId)
     const dupCount = docIds.filter(id => id === 'GL-COV-001').length
-    console.info(`[Phase 0] Dup fixture: GL.COV.001 appears ${dupCount} time(s) in coverages array`)
-    // Lock current behaviour: 2 entries for same docId (the collision)
-    expect(dupCount).toBe(2) // Phase 2 will change this assertion to 1
-    expect(plan.summary.counts['coverages']).toBe(3) // 3 rows → 3 entities today
+    console.info(`[Phase 2] Dup fixture: GL.COV.001 appears ${dupCount} time(s) in coverages array`)
+    expect(dupCount).toBe(1)                          // deduped (was 2 pre-resolver)
+    expect(plan.summary.counts['coverages']).toBe(2)  // GL.COV.001 + GL.COV.002
   })
 })
 
