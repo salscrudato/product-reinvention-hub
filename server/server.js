@@ -118,26 +118,6 @@ try {
   console.warn('[prodhub-host] /api/homecheck/v1 NOT mounted:', err.message)
 }
 
-// ─── ONE-SHOT CORPUS SEED (ADMIN only — remove after seeding) ────────────────
-// Runs on the App Service (already inside the Cosmos DB firewall) so seed data
-// can be written regardless of the caller's network location. Protected by the
-// platform ADMIN role check — no unauthenticated access possible.
-// Remove this route once all tenant corpora (hackensack-insurance, hagerty,
-// testco) are populated.
-app.post('/api/admin/seed-corpus', auth.requireRole('ADMIN'), async (req, res) => {
-  const tenant = String(req.body?.tenant || 'default').replace(/[^a-z0-9-]/gi, '')
-  if (!tenant) return res.status(400).json({ error: 'tenant required' })
-  try {
-    const { seedForTenant } = require('./lib/seed-shared.cjs')
-    const result = await seedForTenant(tenant)
-    res.json({ ok: true, tenant, ...result })
-  } catch (e) {
-    const msg = (e instanceof Error ? e.message : String(e)).slice(0, 500)
-    res.status(500).json({ error: 'seed_failed', message: msg })
-  }
-})
-console.log('[prodhub-host] /api/admin/seed-corpus mounted (ADMIN only)')
-
 // ─── static SPA + client-router fallback ────────────────────────────────────
 app.use(express.static(PUBLIC, {
   index: false,
