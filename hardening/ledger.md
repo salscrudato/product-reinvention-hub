@@ -929,7 +929,7 @@ switch to a lenient tsconfig without knowing the seam is unguarded in tests.
 - repro: Comment out the audit `ops.push` in `server/lib/data.js:141`. Run `pnpm test` → 187 green.
 - fix: Source-audit test in `app/src/__invariants__/server-invariants.test.ts` reads `server/lib/data.js` and asserts (1) `kind: 'audit'` appears in the file, (2) `kind: 'audit'` appears after an `ops.push({` call. Approach: server is CJS with no vitest runner; source-audit catches the exact fault (dropped ops.push line changes source text) and runs within the existing vitest config (app/src/**/*.test.ts include).
 - verified-by: 2026-07-12 — `pnpm test:unit` 707/707 tests green (61 files); new tests at app/src/__invariants__/server-invariants.test.ts pass; FAULT-003 mutation (removing ops.push audit line) would cause `kind: 'audit'` match to fail → test RED.
-- commit: pending
+- commit: 3ae8e51
 
 ---
 
@@ -943,7 +943,7 @@ switch to a lenient tsconfig without knowing the seam is unguarded in tests.
 - repro: Change `requireRole('EDITOR')` to `requireRole('VIEWER')` on data.js:153. Run `pnpm test` → 187 green.
 - fix: Source-audit test in `app/src/__invariants__/server-invariants.test.ts` reads `server/lib/data.js` and asserts `router.post('/mutate', requireRole('EDITOR')` is present. FAULT-004 mutation (changing 'EDITOR' to 'VIEWER') changes the string, causing the regex match to fail → test RED.
 - verified-by: 2026-07-12 — 707/707 tests green; FAULT-004 mutation would cause the /mutate requireRole pattern to fail → RED confirmed by static analysis.
-- commit: pending
+- commit: 3ae8e51
 
 ---
 
@@ -957,7 +957,7 @@ switch to a lenient tsconfig without knowing the seam is unguarded in tests.
 - repro: Remove line 44 from the SYSTEM array in server/lib/ai.js. Run `pnpm test` → 187 green.
 - fix: Source-audit test in `app/src/__invariants__/server-invariants.test.ts` reads `server/lib/ai.js` and asserts three required phrases: 'MUST cite its source', 'bracketed reference tags', 'Do not fabricate reference tags'. FAULT-005 mutation (removing the citation line) removes all three → all three assertions fail → test RED.
 - verified-by: 2026-07-12 — 707/707 tests green; all three SYSTEM-phrase assertions pass against current ai.js source.
-- commit: pending
+- commit: 3ae8e51
 
 ---
 
@@ -971,7 +971,7 @@ switch to a lenient tsconfig without knowing the seam is unguarded in tests.
 - repro: Comment out the version `ops.push` in `server/lib/data.js:142`. Run `pnpm test` → 187 green.
 - fix: Source-audit test in `app/src/__invariants__/server-invariants.test.ts` — same test file as DEF-0043. Asserts `kind: 'version'` appears in data.js and after an `ops.push({` call. FAULT-B mutation removes the version push → string absent → test RED.
 - verified-by: 2026-07-12 — 707/707 tests green; version-kind assertions pass against current data.js source.
-- commit: pending
+- commit: 3ae8e51
 
 ---
 
@@ -985,7 +985,7 @@ switch to a lenient tsconfig without knowing the seam is unguarded in tests.
 - repro: Change `requireRole('EDITOR')` to `requireRole('VIEWER')` on data.js:168. Run `pnpm test` → 187 green.
 - fix: Source-audit test in `app/src/__invariants__/server-invariants.test.ts` — same test file as DEF-0044. Asserts `router.post('/mutateBatch', requireRole('EDITOR')` is present in data.js. FAULT-C mutation ('EDITOR' → 'VIEWER') changes the string → regex fails → test RED.
 - verified-by: 2026-07-12 — 707/707 tests green; /mutateBatch EDITOR pattern passes against current data.js source.
-- commit: pending
+- commit: 3ae8e51
 
 ---
 
@@ -999,7 +999,7 @@ switch to a lenient tsconfig without knowing the seam is unguarded in tests.
 - repro: Add any server-secret key to the `define` block in `app/vite.config.ts`. Run `pnpm test` → 187 green.
 - fix: Source-audit test `app/src/__invariants__/vite-define.test.ts` reads `app/vite.config.ts`, extracts the `define: { ... }` block with a regex, and asserts no key matches `COSMOS_KEY|COSMOS_ENDPOINT|FOUNDRY_KEY|FOUNDRY_ENDPOINT|JWT_SECRET|BLOB_CONNECTION|STORAGE_KEY|API_KEY`. FAULT-D mutation adds `AZURE_FOUNDRY_KEY` → pattern matches → test RED.
 - verified-by: 2026-07-12 — 707/707 tests green; define-block assertion passes against current vite.config.ts (only `__BUILD_ID__` key present).
-- commit: pending
+- commit: 3ae8e51
 
 ---
 
@@ -1013,7 +1013,7 @@ switch to a lenient tsconfig without knowing the seam is unguarded in tests.
 - repro: Strip `[${refId}]` brackets from `chunkCoverage` in chunk.ts:64. Run `pnpm test` → 187 green.
 - fix: Added `expect(ch.text).toContain('[PH.COV.001.001]')` to `shared/src/retrieval/chunk.test.ts:43` — one line added before the existing `toContain('PH.COV.001.001')`. FAULT-E mutation (stripping brackets from chunkCoverage) removes `[` and `]` from the text → the exact-bracket assertion fails → test RED.
 - verified-by: 2026-07-12 — 707/707 tests green; `[PH.COV.001.001]` assertion passes against current chunkCoverage output.
-- commit: pending
+- commit: 3ae8e51
 
 ---
 
@@ -1027,4 +1027,4 @@ switch to a lenient tsconfig without knowing the seam is unguarded in tests.
 - repro: Add `import type { CosmosClient } from '@azure/cosmos'` to azure.adapter.ts. Run `pnpm test` → GREEN. Run `pnpm typecheck` → TS2307 error.
 - fix: Added `no-restricted-imports` rule to `app/.oxlintrc.json` forbidding `@azure/cosmos`, `@azure/storage-blob`, `firebase`, `@firebase/app`, and `@firebase/*`/`@azure/cosmos/*` patterns with descriptive messages. This makes `pnpm lint` (which runs as `pnpm -r lint` in the gate) catch any SDK import in `app/src/` regardless of tsconfig strictness. Existing code passes because no such imports exist in app/src/. The gate's `pnpm lint` step would turn RED on FAULT-A mutation.
 - verified-by: 2026-07-12 — `pnpm lint` green; `app/.oxlintrc.json` updated with no-restricted-imports rule; existing app/src/ code contains zero violations; typecheck guard (TS2307) also still in place as defense-in-depth.
-- commit: pending
+- commit: 3ae8e51
