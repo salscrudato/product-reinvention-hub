@@ -191,18 +191,40 @@ function InsightGraph() {
 
 function HeroSignIn() {
   const navigate = useNavigate()
-  const [email,    setEmail]    = useState('')
-  const [pass,     setPass]     = useState('')
-  const [tenant,   setTenant]   = useState('')
-  const [tenants,  setTenants]  = useState<TenantInfo[]>([])
-  const [showPass, setShowPass] = useState(false)
-  const [error,    setError]    = useState('')
-  const [loading,  setLoading]  = useState(false)
+  const [email,        setEmail]        = useState('')
+  const [pass,         setPass]         = useState('')
+  const [tenant,       setTenant]       = useState('')
+  const [tenants,      setTenants]      = useState<TenantInfo[]>([])
+  const [tenantPinned, setTenantPinned] = useState(false)
+  const [showPass,     setShowPass]     = useState(false)
+  const [error,        setError]        = useState('')
+  const [loading,      setLoading]      = useState(false)
 
-  // Populate the tenant (company) dropdown. Public list — ids + names only.
+  // Populate the tenant dropdown and pre-select the testco default (seeded content).
   useEffect(() => {
-    adapter.auth.listTenants().then(setTenants).catch(() => setTenants([]))
+    adapter.auth.listTenants().then(list => {
+      setTenants(list)
+      if (!tenantPinned && list.length > 0) {
+        const def = list.find(t => t.id === 'testco') ?? list[0]
+        setTenant(def.id)
+      }
+    }).catch(() => setTenants([]))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // When the username field is blurred, try to infer the company from the typed name.
+  // Matches on: exact tenant-id, username contains tenant-id, or tenant name words.
+  // Won't override a company the user has already explicitly chosen.
+  function inferTenant(username: string) {
+    if (!username || tenantPinned || tenants.length === 0) return
+    const u = username.toLowerCase()
+    const match = tenants.find(t =>
+      t.id.toLowerCase() === u ||
+      u.includes(t.id.toLowerCase()) ||
+      t.name.toLowerCase().split(/\s+/).some(w => w.length > 2 && u.includes(w)),
+    )
+    if (match) setTenant(match.id)
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -232,23 +254,11 @@ function HeroSignIn() {
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 w-full max-w-sm mx-auto lg:mx-0">
       <Input
         id="signin-username"
-        label="Username" type="text" value={email} onChange={e => setEmail(e.target.value)}
+        label="Username" type="text" value={email}
+        onChange={e => setEmail(e.target.value)}
+        onBlur={() => inferTenant(email)}
         placeholder="first name" autoComplete="username" required disabled={loading}
       />
-
-      {tenants.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-text" htmlFor="signin-tenant">Company</label>
-          <select
-            id="signin-tenant" value={tenant} onChange={e => setTenant(e.target.value)} disabled={loading}
-            className="h-11 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            style={{ borderColor: 'var(--color-border-strong)' }}
-          >
-            <option value="">Select company…</option>
-            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
-      )}
 
       {/* Password with show/hide toggle */}
       <div className="relative">
@@ -273,6 +283,23 @@ function HeroSignIn() {
           {showPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
         </button>
       </div>
+
+      {/* Company — below password; pre-selected to testco (seeded content default) */}
+      {tenants.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-text" htmlFor="signin-tenant">Company</label>
+          <select
+            id="signin-tenant" value={tenant}
+            onChange={e => { setTenantPinned(true); setTenant(e.target.value) }}
+            disabled={loading}
+            className="h-11 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            style={{ borderColor: 'var(--color-border-strong)' }}
+          >
+            <option value="">Select company…</option>
+            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+      )}
 
       {error && (
         <p role="alert" className="text-sm text-danger bg-[var(--color-danger-soft)] rounded-[8px] px-3 py-2">
