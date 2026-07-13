@@ -10,6 +10,7 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Dialog, Button, EmptyState, RefChip } from '../ui'
 import { IconForm, IconClose, IconPlus, IconTrash, IconSearch, IconStates } from '../ui/icons'
 import { resolveLob } from '@pf/shared'
@@ -25,7 +26,7 @@ export function CoverageFormsDialog({ cov, onClose }: Props) {
   // this dialog first so the drawer there opens cleanly.
   const openForm = (num: string) => { onClose(); navigate(`/app/products/${pid}/forms?form=${encodeURIComponent(num)}`) }
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
 
   const [formNumbers, setFormNumbers] = useState<string[]>(() => cov.formNumbers ?? [])

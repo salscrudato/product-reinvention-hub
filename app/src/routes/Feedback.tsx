@@ -31,6 +31,7 @@ import {
 import { adapter, MutationConflictError } from '../lib/backend'
 import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
+import { canI } from '../lib/canI'
 import { Skeleton, Dialog, Button } from '../components/ui'
 import { priorityScore, type Feedback, type FeedbackStatus, type FeedbackType } from '@pf/shared'
 
@@ -194,8 +195,8 @@ function buildCardPrompt(fb: FeedbackDoc): string {
 export default function Feedback() {
   const navigate = useNavigate()
   const { user, profile } = useUser()
-  const canEdit = profile?.role === 'EDITOR' || profile?.role === 'ADMIN'
-  const isAdmin = profile?.role === 'ADMIN'
+  const canEdit = canI(profile, 'product:write')
+  const isAdmin = canI(profile, 'member:manage')
   const actor: Actor | null = user ? { uid: user.uid, name: user.name ?? user.email ?? 'User' } : null
 
   const [items, setItems] = useState<FeedbackDoc[] | null>(null)

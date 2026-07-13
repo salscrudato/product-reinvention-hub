@@ -14,6 +14,7 @@ import { Badge, Skeleton, EmptyState, RefChip } from '../../components/ui'
 import { IconForm, IconClose, IconSparkle, IconSpinner, IconArrowRight, IconStates, IconLink } from '../../components/ui/icons'
 import { adapter } from '../../lib/backend'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { useEntityFilters } from '../../features/search/useEntityFilters'
 import { FacetPanel } from '../../features/search/FacetPanel'
 import { CommandBar } from '../../features/search/CommandBar'
@@ -34,7 +35,7 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
   form: WithId<Form>; coverages: WithId<Coverage>[]; onOpenCoverage: (id: string) => void
 }) {
   const { user } = useUser()
-  const canEdit  = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit  = canI(user, 'product:write')
   const referencedBy = coverages.filter(c => c.formNumbers?.includes(form.number))
 
   const [description, setDescription] = useState(form.description ?? '')
@@ -175,7 +176,7 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
 export default function ProductForms() {
   const { pid, forms, coverages, loading } = useProductCtx()
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<string | null>(null)

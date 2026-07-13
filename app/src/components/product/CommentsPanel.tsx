@@ -6,6 +6,7 @@ import { Drawer } from '../ui/Drawer'
 import { Button } from '../ui/Button'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { adapter } from '../../lib/backend'
 
 interface Props { onClose: () => void; entityPath: string }
@@ -24,7 +25,7 @@ function timeAgo(at: unknown): string {
 export function CommentsPanel({ onClose, entityPath }: Props) {
   const { comments, pid } = useProductCtx()
   const { user }   = useUser()
-  const canEdit    = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit    = canI(user, 'product:write')
   const actor      = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
   const [body,     setBody]     = useState('')
   const [loading,  setLoading]  = useState(false)

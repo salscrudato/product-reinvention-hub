@@ -7,6 +7,7 @@ import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { mapIsoWorkbook, type ImportPlan, type PlannedEntity } from '@pf/shared'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Dialog } from '../ui/Dialog'
 import { Button } from '../ui/Button'
 import {
@@ -78,7 +79,7 @@ function EntityGroup({ icon: Icon, label, entities }: {
 
 export function ImportWorkbookModal({ onClose, onImported }: Props) {
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
 
   const [phase, setPhase]       = useState<Phase>('select')
   const [dragOver, setDragOver] = useState(false)

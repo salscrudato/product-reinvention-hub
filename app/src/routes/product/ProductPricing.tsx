@@ -12,6 +12,7 @@ import { linkCoverageToPricing } from '../../lib/insurance/pricingLinks'
 import { useProductCtx } from '../../context/useProductCtx'
 import type { WithId } from '../../context/ProductContext'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Button, Badge, Skeleton, RefChip } from '../../components/ui'
 import { HomeownersRatingPanel } from '../../components/product/HomeownersRatingPanel'
 import { GenericRatingPanel } from '../../components/product/GenericRatingPanel'
@@ -162,7 +163,7 @@ export default function ProductPricing() {
   const covFilter = coverages.find(c => c.refId === params.get('cov') || c.id === params.get('cov'))
   const clearCov = () => { const p = new URLSearchParams(params); p.delete('cov'); setParams(p, { replace: true }) }
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'User' }
   const lob  = useMemo(() => resolveLob(product), [product])
   const kit  = useMemo(() => resolveRatingKit(lob.prefix), [lob.prefix])

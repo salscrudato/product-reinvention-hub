@@ -9,6 +9,7 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Dialog, Button } from '../ui'
 import { IconStates, IconClose } from '../ui/icons'
 import { StateTileMap } from './StateTileMap'
@@ -20,7 +21,7 @@ export function CoverageStatesDialog({ cov, onClose }: { cov: WithId<Coverage>; 
   const { pid, product } = useProductCtx()
   const lob = resolveLob(product)
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
 
 	  // The product footprint bounds every coverage; default to the line's

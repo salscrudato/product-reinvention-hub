@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { IconDownload, IconStates } from '../../components/ui/icons'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { Button, Skeleton } from '../../components/ui'
@@ -29,7 +30,7 @@ export default function ProductStates() {
   const FOOTPRINT = new Set<string>(lob.footprintStates)
   const COASTAL = new Set<string>(lob.peril.eligibleStates)
   const { user }   = useUser()
-  const canEdit    = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit    = canI(user, 'product:write')
   const actor      = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
   const svgRef     = useRef<HTMLDivElement>(null)
 

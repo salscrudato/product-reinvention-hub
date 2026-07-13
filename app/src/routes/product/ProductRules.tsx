@@ -10,6 +10,7 @@ import type { RuleCategory, SelectionContext, PASelectionContext, GLSelectionCon
 import { useProductCtx } from '../../context/useProductCtx'
 import type { WithId } from '../../context/ProductContext'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { Badge, Skeleton, EmptyState } from '../../components/ui'
@@ -418,7 +419,7 @@ export default function ProductRules() {
   const { user } = useUser()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const canEdit  = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit  = canI(user, 'product:write')
   const [simOpen, setSimOpen] = useState(false)
   // PH selection state
   const [sel,   setSel]   = useState<SelectionContext>(DEFAULT_SEL)

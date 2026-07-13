@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { adapter } from '../../lib/backend'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Dialog, Button, Badge, RefChip, NoticeBanner } from '../ui'
 import { type NoticeEvent, type NoticeKind } from '../../lib/ai/notices'
 import {
@@ -38,7 +39,7 @@ const EXAMPLES = [
 
 export function ScaffoldProductModal({ onClose, onCreated }: Props) {
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
 
   const [phase, setPhase]         = useState<Phase>('input')
   const [instruction, setInstr]   = useState('')

@@ -9,6 +9,7 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { ProductStatusPill } from '../ui'
 import { InlineEdit } from '../ui/InlineEdit'
 import { IconEdit } from '../ui/icons'
@@ -21,7 +22,7 @@ export function ProductDetailsCard() {
   const { pid, product } = useProductCtx()
   const { user } = useUser()
   const navigate = useNavigate()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   if (!product) return null
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
 

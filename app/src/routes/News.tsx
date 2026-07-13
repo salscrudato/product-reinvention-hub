@@ -21,6 +21,7 @@ import {
 import { adapter, MutationConflictError } from '../lib/backend'
 import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
+import { canI } from '../lib/canI'
 import { Badge, Button, Card, Drawer, RefChip, Skeleton, EmptyState, Tabs } from '../components/ui'
 import { useLiveCollection } from '../lib/useLiveCollection'
 import type { News as NewsType, NewsPrefs, Product } from '@pf/shared'
@@ -846,7 +847,7 @@ const PAGE = 24   // initial render cap; long feeds reveal more on demand
 
 export default function News() {
   const { user } = useUser()
-  const isAdmin = user?.role === 'ADMIN'
+  const isAdmin = canI(user, 'member:manage')
 
   const [items, setItems]           = useState<NewsDoc[] | null>(null)
   const [instruction, setInstr]     = useState(BASE_NEWS_INSTRUCTION)

@@ -23,6 +23,7 @@ import { ScaffoldProductModal } from '../components/product/ScaffoldProductModal
 import { PromoteDraftDialog } from '../components/product/PromoteDraftDialog'
 import { DeleteDraftDialog } from '../components/product/DeleteDraftDialog'
 import { LineageBadge } from '../components/product/LineageBadge'
+import { canI } from '../lib/canI'
 import type { Product } from '@pf/shared'
 import type { WithId } from '../context/ProductContext'
 
@@ -31,7 +32,7 @@ type Modal = 'new' | 'import' | 'unified' | 'clone' | 'scaffold' | null
 export default function Builder() {
   const navigate = useNavigate()
   const { user } = useUser()
-  const canEdit  = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit  = canI(user, 'product:write')
 
   const [products, setProducts] = useState<WithId<Product>[]>([])
   const [loading, setLoading]   = useState(true)

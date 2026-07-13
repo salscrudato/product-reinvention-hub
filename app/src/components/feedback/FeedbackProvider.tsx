@@ -21,6 +21,7 @@ import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { useCapture } from '../../context/useCapture'
 import { FeedbackLaunchCtx, type FeedbackPrefill } from '../../context/FeedbackLaunchContext'
 import { Button } from '../ui'
@@ -147,7 +148,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const { user } = useUser()
   const { viewed } = useCapture()
   const location = useLocation()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const isMaintainer = MAINTAINER_EMAIL !== '' && (user?.email ?? '').toLowerCase() === MAINTAINER_EMAIL
 
   // A programmatic prefill (Claims coverage-gap → "Create product feedback"). When set, its

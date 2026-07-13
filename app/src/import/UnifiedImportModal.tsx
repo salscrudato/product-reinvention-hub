@@ -31,6 +31,7 @@ import {
   IconCoverage, IconRule, IconPricing, IconTable, IconArrowRight, IconClose,
 } from '../components/ui/icons'
 import { readUploadFiles, runUnifiedImport, type UnifiedStageEvent } from './unifiedImportClient'
+import { canI } from '../lib/canI'
 import { importPlan, type ImportProgress, type ImportResult } from '../lib/import/importProduct'
 import { newDraftId, filingLineage, importLineage } from '../lib/draft/draft'
 
@@ -82,7 +83,7 @@ function buildLineage(bundle: UnifiedProposalBundle, fileNames: string[], actor:
 
 export function UnifiedImportModal({ onClose, onImported }: Props) {
   const { user }   = useUser()
-  const canEdit    = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit    = canI(user, 'product:write')
 
   const [phase, setPhase]       = useState<Phase>('select')
   const [dragOver, setDrag]     = useState(false)

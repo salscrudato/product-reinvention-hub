@@ -11,6 +11,7 @@ import { IconBook, IconPlus, IconSearch, IconTrash, IconEdit, IconCoverage, Icon
 import { adapter, MutationConflictError } from '../lib/backend'
 import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
+import { canI } from '../lib/canI'
 import { useLiveCollection } from '../lib/useLiveCollection'
 import { useDebounce } from '../lib/useDebounce'
 import { useDictionaryCorpus } from '../lib/useDictionaryCorpus'
@@ -52,7 +53,7 @@ const EMPTY_DRAFT: Draft = { name: '', type: 'TEXT', description: '', allowedVal
 export default function Dictionary() {
   const navigate = useNavigate()
   const { user, profile } = useUser()
-  const canEdit = profile?.role === 'EDITOR' || profile?.role === 'ADMIN'
+  const canEdit = canI(profile, 'product:write')
 
   const { items: entries, status } = useLiveCollection<DictDoc>('dictionary')
   const { corpus, status: corpusStatus } = useDictionaryCorpus()

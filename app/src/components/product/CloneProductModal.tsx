@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { adapter } from '../../lib/backend'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Dialog, Button, Skeleton, RefChip, LifecyclePill } from '../ui'
 import { IconSearch, IconCopy, IconSpinner, IconProduct } from '../ui/icons'
 import { cloneProductToDraft, type CloneProgress } from '../../lib/draft/cloneProduct'
@@ -17,7 +18,7 @@ interface Props { onClose: () => void; onCloned: (id: string) => void }
 
 export function CloneProductModal({ onClose, onCloned }: Props) {
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const [products, setProducts] = useState<WithId<Product>[]>([])
   const [loading, setLoading]   = useState(true)
   const [query, setQuery]       = useState('')

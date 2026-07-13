@@ -21,6 +21,7 @@ import { useFeedbackLaunch } from '../context/useFeedbackLaunch'
 import { RefChip, NoticeBanner } from '../components/ui'
 import type { NoticeEvent, NoticeKind } from '../lib/ai/notices'
 import { IconCheck, IconSpinner, IconShield, IconWarning } from '../components/ui/icons'
+import { canI } from '../lib/canI'
 
 // ─── Stream protocol (mirror of functions/src/runtime.ts StreamEvent) ───────────
 type StreamEvent =
@@ -123,7 +124,7 @@ function AssistantContent({ m, streamingThisTurn, onCreateFeedback, linked }: {
 
 export default function Claims() {
   const { user, profile } = useUser()
-  const canEdit = profile?.role === 'EDITOR' || profile?.role === 'ADMIN'
+  const canEdit = canI(profile, 'product:write')
   const actor = user ? { uid: user.uid, name: user.name ?? user.email ?? 'User' } : null
 
   const [forms, setForms]         = useState<BaseForm[]>([])

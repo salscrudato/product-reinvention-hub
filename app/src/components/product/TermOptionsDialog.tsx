@@ -14,6 +14,7 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Dialog, Button, EmptyState } from '../ui'
 import {
 	  IconPlus, IconTrash, IconStar, IconCheck, IconClose, IconInfo, IconWarning,
@@ -87,7 +88,7 @@ interface Props { cov: WithId<Coverage>; mode: Mode; onClose: () => void }
 export function TermOptionsDialog({ cov, mode, onClose }: Props) {
 	  const { pid, product, ldTables, coverages } = useProductCtx()
 	  const { user } = useUser()
-	  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+	  const canEdit = canI(user, 'product:write')
 	  const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
 
 	  const structures = mode === 'LIMIT' ? LIMIT_STRUCTURES : DEDUCTIBLE_STRUCTURES

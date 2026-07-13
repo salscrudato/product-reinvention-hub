@@ -14,6 +14,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { useCapture } from '../../context/useCapture'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
@@ -42,7 +43,7 @@ const byOrder = (a: WithId<Coverage>, b: WithId<Coverage>) => (a.order ?? 0) - (
 export default function ProductCoverages() {
   const { pid, product, coverages, loading } = useProductCtx()
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
   const navigate = useNavigate()
   const [params] = useSearchParams()

@@ -13,6 +13,7 @@ import Fuse from 'fuse.js'
 import { toast } from 'sonner'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
+import { canI } from '../lib/canI'
 import { usePortfolioInventory } from '../lib/usePortfolioInventory'
 import { useDebounce } from '../lib/useDebounce'
 import { Button, Skeleton, EmptyState } from '../components/ui'
@@ -58,7 +59,7 @@ function searchTextFor(p: WithId<Product>, axes: ReturnType<typeof deriveSegment
 export default function Products() {
   const navigate   = useNavigate()
   const { user }   = useUser()
-  const canEdit    = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit    = canI(user, 'product:write')
 
   const [products, setProducts] = useState<WithId<Product>[]>([])
   const [loading,  setLoading]  = useState(true)

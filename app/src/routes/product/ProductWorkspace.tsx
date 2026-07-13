@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { ProductProvider } from '../../context/ProductContext'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { useCapture } from '../../context/useCapture'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
@@ -34,7 +35,7 @@ function WorkspaceInner() {
   const navigate     = useNavigate()
   const { pathname } = useLocation()
   const { user }     = useUser()
-  const canEdit      = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit      = canI(user, 'product:write')
   const activeTab    = TABS.find(t => pathname.includes(t.id))?.id ?? 'overview'
   const [historyOpen, setHistoryOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)

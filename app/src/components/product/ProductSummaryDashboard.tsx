@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { adapter } from '../../lib/backend'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Skeleton } from '../ui'
 import { IconSparkle, IconSpinner, IconRefresh, IconWarning } from '../ui/icons'
 import type { Coverage, Rule, RatingProgram, Product } from '@pf/shared'
@@ -95,8 +96,8 @@ function timeAgo(at: unknown): string {
 export function ProductSummaryDashboard() {
   const { pid, product, coverages, rules, ratingProgram } = useProductCtx()
   const { user } = useUser()
-  const canGenerate = user?.role === 'ANALYST' || user?.role === 'EDITOR' || user?.role === 'ADMIN'
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canGenerate = canI(user, 'ai:invoke')
+  const canEdit = canI(user, 'product:write')
   const [stored, setStored]   = useState<StoredSummary | null>(null)
   const [state, setState]     = useState<'idle' | 'loading' | 'error'>('idle')
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle')

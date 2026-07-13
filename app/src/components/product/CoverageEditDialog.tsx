@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Dialog, Button, Input } from '../ui'
 import { IconCoverage, IconClose } from '../ui/icons'
 import { conflictToast } from '../../lib/conflict'
@@ -23,7 +24,7 @@ type Draft = {
 export function CoverageEditDialog({ cov, onClose }: { cov: WithId<Coverage> | null; onClose: () => void }) {
   const { pid, coverages } = useProductCtx()
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
   const isNew = !cov
 

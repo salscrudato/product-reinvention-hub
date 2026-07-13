@@ -16,6 +16,7 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { Dialog, Button, RefChip } from '../ui'
 import {
   IconPlus, IconTrash, IconClose, IconChevronUp, IconChevronDown, IconTable, IconInfo, IconCheck,
@@ -36,7 +37,7 @@ type Dim = GridDimension
 export function RatingTableEditor({ step, table, candidateDimensions, seedInputs, onClose }: Props) {
   const { pid, ratingProgram } = useProductCtx()
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
 
   const model = useMemo(() => deriveGridModel(table), [table])

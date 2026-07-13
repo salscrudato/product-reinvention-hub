@@ -12,6 +12,7 @@ import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
+import { canI } from '../../lib/canI'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import type { WithId } from '../../context/ProductContext'
@@ -103,7 +104,7 @@ function DiffView({ diff }: { diff: WithId<Version>['diff'] }) {
 export function HistoryDrawer({ onClose }: Props) {
   const { versions, pid } = useProductCtx()
   const { user } = useUser()
-  const canEdit = user?.role === 'EDITOR' || user?.role === 'ADMIN'
+  const canEdit = canI(user, 'product:write')
   const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
   const [expanded, setExpanded] = useState<string | null>(null)
   const [restoring, setRestoring] = useState<string | null>(null)

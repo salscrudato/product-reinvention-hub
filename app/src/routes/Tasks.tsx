@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
+import { canI } from '../lib/canI'
 import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
 import {
   IconPlus, IconChart, IconChevronDown, IconTasks, IconWarning,
@@ -43,7 +44,7 @@ const isMine = (t: TaskDoc, uid?: string) =>
 
 export default function Tasks() {
   const { user, profile } = useUser()
-  const canEdit = profile?.role === 'EDITOR' || profile?.role === 'ADMIN'
+  const canEdit = canI(profile, 'product:write')
   const actor = user ? { uid: user.uid, name: user.name ?? user.email ?? 'User' } : null
 
   const [projects, setProjects] = useState<ProjectDoc[] | null>(null)
