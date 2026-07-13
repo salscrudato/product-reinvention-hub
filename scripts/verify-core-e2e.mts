@@ -125,18 +125,26 @@ async function main() {
   console.log(`writes: written=${written} failed=${failed}`)
   errors.slice(0, 5).forEach(e => console.log(`  ERR ${e}`))
 
-  // Readback
+  // Readback: coverages (hierarchy) + rules + forms
   const covs = await listColl(`products/${PID}/coverages`, token)
   const subs = covs.filter(c => c.parentId).length
   const orphanSubs = covs.filter(c => c.parentId && !covs.some(p => p.refId === c.parentId)).length
   console.log(`readback coverages: ${covs.length}/${plan.coverages.length} (subs=${subs}, orphan-subs=${orphanSubs})`)
+  const rulesBack = await listColl(`products/${PID}/rules`, token)
+  console.log(`readback rules: ${rulesBack.length}/${plan.rules.length}`)
+  const formsBack = (await listColl('forms', token)).filter((f: { productRefIds?: string[] }) => (f.productRefIds ?? []).includes(PID))
+  console.log(`readback forms: ${formsBack.length}/${plan.forms.length} (list cap-aware)`)
 
-  // Teardown (best-effort): delete coverages + product
+  // Teardown (best-effort): delete every entity we wrote, then the product.
   for (const e of plan.coverages) await api('/db/mutate', { payload: { op: 'delete', path: `products/${PID}/coverages/${e.docId}`, entityType: 'coverage', actor } }, token).catch(() => {})
+  for (const e of plan.rules)     await api('/db/mutate', { payload: { op: 'delete', path: `products/${PID}/rules/${e.docId}`, entityType: 'rule', actor } }, token).catch(() => {})
+  for (const e of plan.forms)     await api('/db/mutate', { payload: { op: 'delete', path: `forms/${PID}__${e.docId}`, entityType: 'form', actor } }, token).catch(() => {})
   await api('/db/mutate', { payload: { op: 'delete', path: `products/${PID}`, entityType: 'product', actor } }, token).catch(() => {})
-  console.log('teardown done (coverages + product)')
+  console.log('teardown done (coverages + rules + forms + product)')
 
-  const pass = failed === 0 && covs.length === plan.coverages.length && orphanSubs === 0
+  // Rules count may fall short only if the /db/list cap is below plan.rules; coverages + rules
+  // are the hierarchy/parent-sensitive writes we most need to confirm landed.
+  const pass = failed === 0 && covs.length === plan.coverages.length && orphanSubs === 0 && rulesBack.length === plan.rules.length
   console.log(`\nPASS: ${pass}`)
   process.exit(pass ? 0 : 1)
 }

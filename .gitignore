@@ -65,3 +65,5 @@ docs/review/*
 !docs/review/COST_BASELINE.md
 !docs/review/COST_PROGRESS.md
 !docs/review/COST_REPORT.md
+docs/audit/import_live_results.json
+docs/audit/import_ledger.json
