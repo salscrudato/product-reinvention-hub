@@ -111,8 +111,37 @@ describe('resolveCoverageHierarchy — robustness on unseen shapes', () => {
     const res = resolveCoverageHierarchy(rows)
     const sub = res.find(c => c.refId === 'X.2')
     expect(sub?.isSub).toBe(true)
+    // The blank COVERAGE cell fills forward to "Building", so it resolves by group name.
     expect(sub?.parentRefId).toBe('X.1')
-    expect(sub?.parentSignal).toBe('nearest-preceding')
+    expect(sub?.parentSignal).toBe('group-name')
+  })
+
+  it('fills a merged/blank COVERAGE cell forward across a run of sub rows (anchor precedes)', () => {
+    // SECURA IM merges the COVERAGE column: the name shows once on the anchor, blank on the subs.
+    const rows = [
+      row('IM.COV083.02', 'Machinery and Equipment', '', 700),      // anchor
+      row('IM.COV083.03', '', 'Additional Acquired Property', 701),  // blank COVERAGE, continuation
+      row('IM.COV083.04', '', 'Debris Removal', 702),                // blank COVERAGE, continuation
+    ]
+    const res = resolveCoverageHierarchy(rows)
+    expect(res.find(c => c.refId === 'IM.COV083.03')?.parentRefId).toBe('IM.COV083.02')
+    expect(res.find(c => c.refId === 'IM.COV083.04')?.parentRefId).toBe('IM.COV083.02')
+    expect(res.filter(c => c.isSub).length).toBe(2)
+  })
+
+  it('a row whose SUB name equals its COVERAGE name is the top-level coverage, not a child', () => {
+    // SECURA repeats the coverage name in the sub column on the anchor row.
+    const rows = [
+      row('PR.COV002.0', 'Ordinance or Law', 'Ordinance Or Law', 38),   // COV == SUB -> top-level
+      row('PR.COV002.1', 'Ordinance or Law', 'Demolition Cost', 39),      // real child
+    ]
+    const res = resolveCoverageHierarchy(rows)
+    const anchor = res.find(c => c.refId === 'PR.COV002.0')
+    expect(anchor?.isSub).toBe(false)
+    expect(anchor?.parentRefId).toBeNull()
+    expect(anchor?.parentSignal).toBe('none')       // clean top-level, not orphan-promoted
+    expect(anchor?.name).toBe('Ordinance or Law')
+    expect(res.find(c => c.refId === 'PR.COV002.1')?.parentRefId).toBe('PR.COV002.0')
   })
 
   it('a parentless sub (no preceding top-level) is promoted, never dropped', () => {

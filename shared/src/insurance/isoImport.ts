@@ -369,7 +369,15 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
       cells, scope: stateScope(cells, sc),
     }
     drafts.push(draft)
-    if (!draftByRefId.has(id)) draftByRefId.set(id, draft)
+    const prior = draftByRefId.get(id)
+    if (!prior) {
+      draftByRefId.set(id, draft)
+    } else if (prior.coverageName !== covName || prior.subCoverageName !== subName) {
+      // Same refId, different coverage content: the source reuses a traceability id across two
+      // distinct coverages, which violates refId uniqueness (parentId links resolve by refId). Keep
+      // the first and surface the collision rather than dropping the row silently.
+      ctx.warnOnce(`dupcovid:${id}`, `Sheet "${grid.sheet}" col "ID": coverage id ${id} is reused for different coverages ("${prior.coverageName || prior.subCoverageName}" and "${covName || subName}") — kept the first; verify the source.`)
+    }
   }
 
   // ── Pass 2: first-principles hierarchy resolution (format-agnostic) ──

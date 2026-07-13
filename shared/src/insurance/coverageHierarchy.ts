@@ -90,6 +90,7 @@ export function resolveCoverageHierarchy(rows: CoverageRow[]): ResolvedCoverage[
   const topLevelByName = new Map<string, string>()   // coverage-group name -> anchor refId
   const known: { refId: string; segs: string[] }[] = [] // every accepted coverage, for nesting lookup
   let lastTopLevelRefId: string | null = null
+  let lastCoverageName = ''   // for fill-forward of merged/blank COVERAGE cells
 
   // Sibling order counters.
   let topOrder = 0
@@ -98,8 +99,14 @@ export function resolveCoverageHierarchy(rows: CoverageRow[]): ResolvedCoverage[
   for (const raw of rows) {
     const refId = raw.refId.trim()
     if (!refId || seen.has(refId)) continue           // dedup: first occurrence wins
-    const coverageName = raw.coverageName.trim()
+    let coverageName = raw.coverageName.trim()
     const subName = raw.subCoverageName.trim()
+    // Fill-forward: a sub row with a blank COVERAGE cell continues the merged coverage above it
+    // (real books merge the COVERAGE column across a coverage's sub rows; the reader sees the value
+    // only on the anchor row and null on the continuation rows). Only inherit for sub rows so a
+    // blank identity/header row is still skipped below.
+    if (coverageName) lastCoverageName = coverageName
+    else if (subName && lastCoverageName) coverageName = lastCoverageName
     if (!coverageName && !subName) continue            // not a coverage row
 
     const mySegs = segs(refId)
@@ -113,9 +120,13 @@ export function resolveCoverageHierarchy(rows: CoverageRow[]): ResolvedCoverage[
       }
     }
 
-    // A row is a sub-coverage when the sub field is populated (SIGNAL 1) or its refId nests
+    // A sub name identical to the coverage name is the coverage repeating its own name on the
+    // top-level row (a common SECURA pattern: COVERAGE="Ordinance or Law", SUB="Ordinance Or Law")
+    // — it is the coverage itself, not a child, so it does not count as an explicit sub signal.
+    const explicitSub = subName !== '' && nameKey(subName) !== nameKey(coverageName)
+    // A row is a sub-coverage when the sub field distinguishes it (SIGNAL 1) or its refId nests
     // under an existing coverage (SIGNAL 2 / 3). Otherwise it is a top-level coverage.
-    const isSub = subName !== '' || nestParent !== null
+    const isSub = explicitSub || nestParent !== null
 
     if (!isSub) {
       // Top-level coverage. Its COVERAGE name anchors the group for later children.
