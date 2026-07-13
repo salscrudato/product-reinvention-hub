@@ -109,6 +109,13 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
       toast.success('Base form uploaded')
 
       // 3) Server-side identify (grounded header read) → enrich + mark READY.
+      // IMPORTANT: adapter.db.mutate() op:'update' is a FULL replace (server does Upsert,
+      // not a partial patch). Every field that must survive must be re-sent here — including
+      // storagePath, url, mediaType, fileName, uploadedBy, uploadedByName from step 1.
+      const baseFields = {
+        fileName: file.name, storagePath, url, mediaType,
+        uploadedBy: actor.uid, uploadedByName: actor.name,
+      }
       try {
         const buf = await file.arrayBuffer()
         const payload = isPdf
@@ -122,7 +129,13 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
         // chip, so analysis is never silently disabled by a catalogue miss.
         await adapter.db.mutate({
           op: 'update', path: `baseForms/${id}`,
-          data: { title: meta.title || file.name, formNumber: meta.formNumber || '', edition: meta.edition || '', lob: meta.lob || '', status: statusAfterIdentify(meta), ...(meta.verified === false ? { verified: false } : {}) },
+          data: {
+            ...baseFields,
+            title: meta.title || file.name, formNumber: meta.formNumber || '',
+            edition: meta.edition || '', lob: meta.lob || '',
+            status: statusAfterIdentify(meta),
+            ...(meta.verified === false ? { verified: false } : {}),
+          },
           entityType: 'baseForm', actor,
         })
 
@@ -140,7 +153,12 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
       } catch {
         // Identify failed entirely — we know neither the form number nor the line. Hold it for
         // review rather than marking it READY: an unidentified form must not be analyzable.
-        await adapter.db.mutate({ op: 'update', path: `baseForms/${id}`, data: { status: 'NEEDS_REVIEW' }, entityType: 'baseForm', actor })
+        // Re-send all base fields so storagePath/url survive the full-replace Upsert.
+        await adapter.db.mutate({
+          op: 'update', path: `baseForms/${id}`,
+          data: { ...baseFields, title: file.name, formNumber: '', edition: '', lob: '', status: 'NEEDS_REVIEW' as const },
+          entityType: 'baseForm', actor,
+        })
       }
     } catch (err) {
       if (err instanceof MutationConflictError) {

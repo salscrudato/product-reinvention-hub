@@ -203,15 +203,46 @@ function findHeaderRow(grid: IsoGrid, aliasGroups: string[][], limit = 20): numb
 }
 
 /** Map each field key → the first column whose header matches one of its aliases
- *  (punctuation/whitespace-insensitive). */
+ *  (punctuation/whitespace-insensitive). A secondary fuzzy word-overlap pass handles
+ *  novel templates whose header phrasing isn't in the alias list: if a column header
+ *  shares at least half its significant words with an alias, it qualifies. Exact
+ *  squish matches always win; fuzzy only fills unmapped keys. */
 function mapColumns(header: IsoCell[], fields: Record<string, string[]>): Record<string, number> {
   const heads = header.map(squish)
   const map: Record<string, number> = {}
+
+  // Pass 1 — exact squish match (primary, fast).
   for (const [key, aliases] of Object.entries(fields)) {
     const sq = aliases.map(squishStr)
     const idx = heads.findIndex(h => h !== '' && sq.includes(h))
     if (idx >= 0) map[key] = idx
   }
+
+  // Pass 2 — fuzzy word-overlap for unmapped keys (tolerates synonym phrasing).
+  // Score = (shared significant words) / (words in the shorter of header vs alias).
+  // Threshold 0.5 keeps false-positive rate low while catching paraphrase variants.
+  const STOP = new Set(['THE','A','AN','OF','OR','AND','TO','IN','IS','FOR','ON','AT','BY'])
+  function sigWords(s: string): string[] {
+    return s.replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2 && !STOP.has(w))
+  }
+  for (const [key, aliases] of Object.entries(fields)) {
+    if (key in map) continue
+    let bestCol = -1, bestScore = 0
+    for (let i = 0; i < heads.length; i++) {
+      if (!heads[i]) continue
+      const hw = sigWords(heads[i]!)
+      if (!hw.length) continue
+      for (const alias of aliases) {
+        const aw = sigWords(squishStr(alias))
+        if (!aw.length) continue
+        const shared = hw.filter(w => aw.includes(w)).length
+        const score = shared / Math.min(hw.length, aw.length)
+        if (score > bestScore && score >= 0.5) { bestScore = score; bestCol = i }
+      }
+    }
+    if (bestCol >= 0) map[key] = bestCol
+  }
+
   return map
 }
 
@@ -274,24 +305,35 @@ class Ctx {
 
 // ─── Framework → product + coverages ────────────────────────────────────────────
 
-// Field aliases span the ISO template ("PRODUCT FRAMEWORK ID", "BUREAU"/"PROPRIETARY") and the
-// Sample Mutual "Product Component Model" template ("ID", "RATING BUREAU?", "SUB COVERAGE"). Matching is
-// punctuation/whitespace-insensitive, so trailing "?" and embedded newlines are tolerated.
+// Field aliases span the ISO template ("PRODUCT FRAMEWORK ID", "BUREAU"/"PROPRIETARY"), the
+// Sample Mutual "Product Component Model" template ("ID", "RATING BUREAU?", "SUB COVERAGE"), and
+// any novel template a carrier might produce. Matching is punctuation/whitespace-insensitive
+// via squishStr(), and a fuzzy word-overlap pass in mapColumns() catches further paraphrases.
 const FW_FIELDS: Record<string, string[]> = {
-  status:      ['STATUS'],
-  id:          ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID', 'ID'],
-  product:     ['PRODUCT'],
-  lob:         ['LINE OF BUSINESS', 'LOB'],
-  coverage:    ['COVERAGE'],
-  subCoverage: ['SUB-COVERAGE', 'SUB COVERAGE', 'SUBCOVERAGE'],
-  forms:       ['FORM NUMBER(S)', 'FORM NUMBER', 'FORM NUMBERS'],
-  edition:     ['EDITION DATE'],
-  claimsBasis: ['CLAIMS BASIS'],
-  requirement: ['COVERAGE REQUIREMENT', 'REQUIREMENT', 'MANDATORY/ OPTIONAL', 'MANDATORY / OPTIONAL'],
-  premiumGen:  ['PREMIUM GENERATING', 'PREMIUM GENERATING?'],
-  bureau:      ['BUREAU', 'RATING BUREAU', 'RATING BUREAU?'],
-  proprietary: ['PROPRIETARY', 'PROPRIETARY?'],
-  review:      ['REVIEW STATUS'],
+  status:      ['STATUS', 'ACTIVE STATUS', 'ITEM STATUS', 'ROW STATUS'],
+  id:          ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID', 'ID', 'REFERENCE ID', 'REF ID',
+                 'ITEM ID', 'COMPONENT ID', 'COVERAGE ID', 'COV ID'],
+  product:     ['PRODUCT', 'PRODUCT NAME', 'PROGRAM', 'POLICY PROGRAM', 'PRODUCT LINE'],
+  lob:         ['LINE OF BUSINESS', 'LOB', 'LINE', 'BUSINESS LINE', 'COVERAGE LINE',
+                 'POLICY TYPE', 'COVERAGE TYPE'],
+  coverage:    ['COVERAGE', 'COVERAGE NAME', 'COVERAGE DESCRIPTION', 'PERIL',
+                 'BENEFIT', 'INSURING AGREEMENT', 'RISK ITEM'],
+  subCoverage: ['SUB-COVERAGE', 'SUB COVERAGE', 'SUBCOVERAGE', 'SUB-PERIL', 'SUB PERIL',
+                 'COVERAGE OPTION', 'OPTION', 'SUBLIMIT ITEM', 'COVERAGE PART', 'ADDITIONAL COVERAGE'],
+  forms:       ['FORM NUMBER(S)', 'FORM NUMBER', 'FORM NUMBERS', 'ASSOCIATED FORMS',
+                 'POLICY FORM', 'FORM NO'],
+  edition:     ['EDITION DATE', 'EFFECTIVE DATE', 'FORM EDITION'],
+  claimsBasis: ['CLAIMS BASIS', 'TRIGGER', 'LOSS TRIGGER', 'REPORTING BASIS'],
+  requirement: ['COVERAGE REQUIREMENT', 'REQUIREMENT', 'MANDATORY/ OPTIONAL', 'MANDATORY / OPTIONAL',
+                 'REQUIRED/OPTIONAL', 'MANDATORY OR OPTIONAL', 'OPTIONAL OR MANDATORY'],
+  premiumGen:  ['PREMIUM GENERATING', 'PREMIUM GENERATING?', 'GENERATES PREMIUM',
+                 'RATING', 'RATED', 'PREMIUM BEARING'],
+  bureau:      ['BUREAU', 'RATING BUREAU', 'RATING BUREAU?', 'ISO', 'BUREAU FORM',
+                 'FILED', 'BUREAU FILED'],
+  proprietary: ['PROPRIETARY', 'PROPRIETARY?', 'CARRIER PROPRIETARY', 'NON-BUREAU',
+                 'COMPANY SPECIFIC', 'CARRIER SPECIFIC'],
+  review:      ['REVIEW STATUS', 'REVIEW', 'STATUS (REVIEW)', 'APPROVAL STATUS',
+                 'CLIENT REVIEW STATUS'],
 }
 
 interface FrameworkResult {
@@ -466,23 +508,31 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
 // ─── Forms specifications + dynamic data ─────────────────────────────────────────
 
 const FORM_FIELDS: Record<string, string[]> = {
-  ids:         ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID'],
-  name:        ['FORM NAME'],
-  number:      ['FORM NUMBER'],
-  edition:     ['FORM EDITION DATE (MM YY)', 'FORM EDITION DATE', 'EDITION DATE'],
-  claimsBasis: ['CLAIMS BASIS'],
-  bureau:      ['BUREAU'],
-  proprietary: ['PROPRIETARY'],
-  // "ADMITTED/NOT ADMITTED" is the PR/Property template's phrase for the admitted field.
-  admitted:    ['ADMITTED / NON-ADMITTED', 'ADMITTED/NON-ADMITTED', 'ADMITTED / NON-ADMITTED', 'ADMITTED', 'ADMITTED/NOT ADMITTED', 'ADMITTED / NOT ADMITTED'],
-  category:    ['FORM CATEGORY'],
-  dynamic:     ['DYNAMIC / STATIC', 'DYNAMIC/STATIC'],
-  mandatory:   ['MANDATORY/ OPTIONAL', 'MANDATORY / OPTIONAL', 'MANDATORY/OPTIONAL'],
+  ids:         ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID', 'COVERAGE ID', 'COVERAGE REF',
+                 'APPLICABLE COVERAGE', 'COVERAGE'],
+  name:        ['FORM NAME', 'FORM TITLE', 'DESCRIPTION', 'FORM DESCRIPTION', 'TITLE'],
+  number:      ['FORM NUMBER', 'FORM NO', 'FORM NO.', 'POLICY FORM', 'FORM', 'FORM #'],
+  edition:     ['FORM EDITION DATE (MM YY)', 'FORM EDITION DATE', 'EDITION DATE',
+                 'EDITION', 'EFFECTIVE DATE', 'VERSION DATE'],
+  claimsBasis: ['CLAIMS BASIS', 'TRIGGER', 'LOSS TRIGGER'],
+  bureau:      ['BUREAU', 'RATING BUREAU', 'ISO', 'FILED', 'BUREAU FILED'],
+  proprietary: ['PROPRIETARY', 'CARRIER PROPRIETARY', 'NON-BUREAU', 'COMPANY SPECIFIC'],
+  // "ADMITTED/NOT ADMITTED" is the PR/Property template; "FILING STATUS" is a common carrier variant.
+  admitted:    ['ADMITTED / NON-ADMITTED', 'ADMITTED/NON-ADMITTED', 'ADMITTED',
+                 'ADMITTED/NOT ADMITTED', 'ADMITTED / NOT ADMITTED',
+                 'ADMITTED STATUS', 'FILING STATUS', 'ADMITTED NON-ADMITTED'],
+  category:    ['FORM CATEGORY', 'CATEGORY', 'TYPE', 'FORM TYPE', 'DOCUMENT TYPE'],
+  dynamic:     ['DYNAMIC / STATIC', 'DYNAMIC/STATIC', 'DYNAMIC', 'VARIABLE', 'VARIABLE CONTENT'],
+  mandatory:   ['MANDATORY/ OPTIONAL', 'MANDATORY / OPTIONAL', 'MANDATORY/OPTIONAL',
+                 'REQUIRED', 'MANDATORY OR OPTIONAL', 'REQUIRED OR OPTIONAL', 'APPLICABILITY'],
   // "ATTACHMENT CONDITIONS" (plural) is the PR/Property template variant.
-  attachment:  ['ATTACHMENT CONDITION', 'ATTACHMENT CONDITIONS'],
-  display:     ['DISPLAY ON FORMS SCHEDULE', 'DISPLAY ON SCHEDULE'],
-  useCount:    ['SINGLE OR MULTI-USE', 'SINGLE OR MULTI USE'],
-  review:      ['REVIEW STATUS'],
+  attachment:  ['ATTACHMENT CONDITION', 'ATTACHMENT CONDITIONS', 'CONDITION',
+                 'WHEN ATTACHED', 'ATTACH WHEN'],
+  display:     ['DISPLAY ON FORMS SCHEDULE', 'DISPLAY ON SCHEDULE', 'SCHEDULE DISPLAY',
+                 'SHOW ON SCHEDULE', 'PRINT ON SCHEDULE'],
+  useCount:    ['SINGLE OR MULTI-USE', 'SINGLE OR MULTI USE', 'USE COUNT', 'USAGE',
+                 'SINGLE/MULTI USE'],
+  review:      ['REVIEW STATUS', 'REVIEW', 'APPROVAL STATUS', 'CLIENT REVIEW STATUS'],
 }
 
 const DYN_FIELDS: Record<string, string[]> = {
@@ -602,16 +652,22 @@ function parseForms(grid: IsoGrid, dynByForm: Record<string, DynamicField[]>, pr
 // ─── Rules specifications ────────────────────────────────────────────────────────
 
 const RULE_FIELDS: Record<string, string[]> = {
-  status:      ['STATUS'],
-  ids:         ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID'],
-  id:          ['RULE ID'],
-  category:    ['RULE CATEGORY'],
-  subCategory: ['RULE SUB-CATEGORY', 'RULE SUB CATEGORY'],
-  forms:       ['FORM NUMBER', 'FORM NUMBER(S)'],
-  condition:   ['RULE CONDITION'],
-  outcome:     ['RULE OUTCOME'],
-  reference:   ['RULE REFERENCE'],
-  review:      ['REVIEW STATUS (CLIENT TEAM)', 'REVIEW STATUS'],
+  status:      ['STATUS', 'ACTIVE STATUS', 'RULE STATUS'],
+  ids:         ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID', 'COVERAGE ID', 'COVERAGE REF', 'COVERAGE'],
+  id:          ['RULE ID', 'ID', 'RULE NO', 'RULE NO.', 'RULE #', 'RULE NUMBER', 'ITEM ID'],
+  category:    ['RULE CATEGORY', 'CATEGORY', 'TYPE', 'RULE TYPE', 'RULE CLASS'],
+  subCategory: ['RULE SUB-CATEGORY', 'RULE SUB CATEGORY', 'SUB CATEGORY', 'SUB-CATEGORY',
+                 'SUBCATEGORY', 'TOPIC', 'SUBJECT', 'RULE TOPIC'],
+  forms:       ['FORM NUMBER', 'FORM NUMBER(S)', 'ASSOCIATED FORM', 'APPLICABLE FORM',
+                 'FORM REFERENCE', 'RELATED FORM'],
+  condition:   ['RULE CONDITION', 'CONDITION', 'WHEN', 'APPLICABILITY', 'TRIGGER',
+                 'IF', 'CRITERIA', 'RULE CRITERIA', 'ELIGIBILITY'],
+  outcome:     ['RULE OUTCOME', 'OUTCOME', 'RESULT', 'EFFECT', 'THEN', 'APPLIES',
+                 'ACTION', 'RULE ACTION', 'APPLIES TO'],
+  reference:   ['RULE REFERENCE', 'REFERENCE', 'TABLE REF', 'LD TABLE', 'SEE ALSO',
+                 'RATE TABLE', 'FACTOR TABLE', 'NOTES'],
+  review:      ['REVIEW STATUS (CLIENT TEAM)', 'REVIEW STATUS', 'REVIEW',
+                 'APPROVAL STATUS', 'CLIENT REVIEW STATUS'],
 }
 
 function parseRules(grid: IsoGrid, ctx: Ctx): PlannedEntity[] {
@@ -848,19 +904,25 @@ function parseRtTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
 // ─── Rating specifications → rating program + steps ──────────────────────────────
 
 const RATE_FIELDS: Record<string, string[]> = {
-  status:    ['STATUS'],
-  ids:       ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID'],
-  stepId:    ['RATING STEP ID', 'STEP ID'],
-  grouping:  ['RATING GROUPING'],
-  manualId:  ['RATING MANUAL RULE/ STEP ID', 'RATING MANUAL RULE/STEP ID', 'MANUAL RULE/ STEP ID'],
-  // "RULES" is the ROC-template short form of "RATING RULES" (used by PR/Property ROC sheets).
-  rules:     ['RATING RULES', 'RULES'],
-  algorithm: ['ALGORITHM STEP'],
-  calc:      ['CALCULATION'],
-  rounding:  ['ROUNDING NUMBER OF DIGITS', 'ROUNDING'],
+  status:    ['STATUS', 'ACTIVE STATUS', 'STEP STATUS'],
+  ids:       ['PRODUCT FRAMEWORK ID', 'FRAMEWORK ID', 'COVERAGE ID', 'COVERAGE'],
+  stepId:    ['RATING STEP ID', 'STEP ID', 'STEP', 'STEP NUMBER', 'STEP NO',
+               'ITEM', 'ID', 'SEQUENCE', 'STEP #', 'LINE NO', 'LINE NUMBER'],
+  grouping:  ['RATING GROUPING', 'GROUPING', 'GROUP', 'SECTION', 'ELEMENT', 'CATEGORY'],
+  manualId:  ['RATING MANUAL RULE/ STEP ID', 'RATING MANUAL RULE/STEP ID',
+               'MANUAL RULE/ STEP ID', 'MANUAL STEP', 'MANUAL REF', 'MANUAL RULE'],
+  // "RULES" is the ROC-template short form; broader synonyms for novel formats.
+  rules:     ['RATING RULES', 'RULES', 'RULE', 'DESCRIPTION', 'STEP DESCRIPTION',
+               'LABEL', 'RATING ELEMENT', 'ELEMENT DESCRIPTION'],
+  algorithm: ['ALGORITHM STEP', 'ALGORITHM', 'FORMULA', 'CALCULATION DESCRIPTION',
+               'STEP DETAIL', 'LOGIC'],
+  calc:      ['CALCULATION', 'OPERATOR', 'OPERATION', 'CALC', 'MATH', 'OP'],
+  rounding:  ['ROUNDING NUMBER OF DIGITS', 'ROUNDING', 'ROUND TO', 'ROUNDING RULE',
+               'DIGITS', 'DECIMAL PLACES'],
   // "TABLE REFERENCE" is the ROC-template equivalent of "RATE REFERENCE".
-  reference: ['RATE REFERENCE', 'TABLE REFERENCE'],
-  review:    ['REVIEW STATUS'],
+  reference: ['RATE REFERENCE', 'TABLE REFERENCE', 'RT TABLE', 'RATE TABLE',
+               'TABLE', 'FACTOR TABLE', 'LOOKUP TABLE', 'RATE TABLE REFERENCE'],
+  review:    ['REVIEW STATUS', 'REVIEW', 'APPROVAL STATUS'],
 }
 
 function mapOp(v: IsoCell): RatingStep['op'] {
