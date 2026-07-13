@@ -835,11 +835,13 @@ const RATE_FIELDS: Record<string, string[]> = {
   stepId:    ['RATING STEP ID', 'STEP ID'],
   grouping:  ['RATING GROUPING'],
   manualId:  ['RATING MANUAL RULE/ STEP ID', 'RATING MANUAL RULE/STEP ID', 'MANUAL RULE/ STEP ID'],
-  rules:     ['RATING RULES'],
+  // "RULES" is the ROC-template short form of "RATING RULES" (used by PR/Property ROC sheets).
+  rules:     ['RATING RULES', 'RULES'],
   algorithm: ['ALGORITHM STEP'],
   calc:      ['CALCULATION'],
   rounding:  ['ROUNDING NUMBER OF DIGITS', 'ROUNDING'],
-  reference: ['RATE REFERENCE'],
+  // "TABLE REFERENCE" is the ROC-template equivalent of "RATE REFERENCE".
+  reference: ['RATE REFERENCE', 'TABLE REFERENCE'],
   review:    ['REVIEW STATUS'],
 }
 
