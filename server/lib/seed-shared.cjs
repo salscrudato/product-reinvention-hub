@@ -2518,7 +2518,7 @@ var GL_RT_TABLES = {
   "GL.RT.002": {
     // Per-Occurrence Increased Limits Factor — scales base-limit premium to the selected
     // each-occurrence limit. Base = $100,000 (factor 1.000). Source: GL Forms workbook
-    // (samples/iso/20-ISO-Pricing-GL.xlsx, Rating Specifications sheet, ILF table).
+    // (samples/iso/sample-GL-pricing.xlsx, Rating Specifications sheet, ILF table).
     name: "Per-Occurrence Increased Limits Factor",
     columns: ["occLimit", "factor"],
     rows: [

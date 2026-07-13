@@ -1,5 +1,5 @@
 // tests/fixtures/import/expected.im.ts — EXPECTED canonical snapshot for Inland Marine.
-// AUTHORED FROM THE DOCUMENTED VARIANCE (the SECURA IM workbooks are not in the repo): the
+// AUTHORED FROM THE DOCUMENTED VARIANCE (the component-model IM workbooks are not in the repo): the
 // "Product Component Model" / "Forms Library" / "Rules Repository" sheet names, the "ID"
 // column, and the IM.COV###.## / IM.RL.### refId schemes. refIds are in the line's exact
 // shape (see lobRegistry IM_REFIDS). The rating canary prices a small authored program
@@ -22,7 +22,7 @@ const entities: HarnessEntity[] = [
   { entityType: 'coverage', key: 'cov:installation-floater', refId: 'IM.COV045.00', parentRefId: null,
     fields: { requirement: 'OPTIONAL', source: 'PROPRIETARY', status: 'ACTIVE' } },
 
-  // Forms — a SECURA-proprietary form + an AAIS/ISO bureau conditions form.
+  // Forms — a Sample Mutual-proprietary form + an AAIS/ISO bureau conditions form.
   { entityType: 'form', key: 'form:IM 7000', refId: null,
     fields: { category: 'BASE_COVERAGE', source: 'PROPRIETARY', status: 'ACTIVE' } },
   { entityType: 'form', key: 'form:CM 00 01', refId: null,

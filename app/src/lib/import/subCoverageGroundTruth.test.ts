@@ -2,8 +2,8 @@
 // extraction, grounded in the REAL sample workbooks in samples/iso.
 //
 // This is the deterministic regression guard for the bug that motivated the coverage-hierarchy
-// resolver: the importer produced coverages but no sub-coverages for the SECURA "Product Component
-// Model" books (Property, Inland Marine). It reads each real workbook (true-data-region reader,
+// resolver: the importer produced coverages but no sub-coverages for the "Product Component
+// Model" carrier books (Property, Inland Marine). It reads each real workbook (true-data-region reader,
 // robust to the 1,048,576-row phantom sheets), runs mapIsoWorkbook, and asserts:
 //   * headline parent/child relationships that a human verified from the source (the "ground truth")
 //   * structural invariants (every parent resolves, parents precede children, sub-coverages exist)
@@ -67,20 +67,20 @@ interface GroundTruth {
 }
 const GROUND_TRUTH: GroundTruth[] = [
   {
-    file: '20-ISO-Framework-GL.xlsx', productPrefix: 'GL', minTopLevel: 15, minSubs: 80,
+    file: 'sample-GL-framework.xlsx', productPrefix: 'GL', minTopLevel: 15, minSubs: 80,
     pairs: [
       ['Terrorism Coverage', 'Wrongful Acts Coverage'],
       ['Watercraft Liability Coverage', 'Bodily Injury (Premises Operations) Coverage'],
     ],
   },
   {
-    file: 'Product Framework - SECURA - Inland Marine.xlsx', productPrefix: 'IM', minTopLevel: 50, minSubs: 400,
+    file: 'sample-IM-framework.xlsx', productPrefix: 'IM', minTopLevel: 50, minSubs: 400,
     pairs: [
-      ['Debris Removal', 'Signs'],                         // the headline SECURA case
+      ['Debris Removal', 'Signs'],                         // the headline component-model case
     ],
   },
   {
-    file: 'Product Framework - SECURA - Property RF.xlsx', productPrefix: 'PR', minTopLevel: 60, minSubs: 400,
+    file: 'sample-PR-framework.xlsx', productPrefix: 'PR', minTopLevel: 60, minSubs: 400,
     pairs: [
       ['Debris Removal', 'Building'],                      // the user's headline example
       ['Preservation Of Property', 'Building'],

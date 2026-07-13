@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-// scripts/import-judge.ts — live Foundry-AI judge for the ISO/SECURA workbook importer.
+// scripts/import-judge.ts — live Foundry-AI judge for the ISO/Sample Mutual workbook importer.
 //
 // Grades the DETERMINISTIC coverage/sub-coverage tree produced by mapIsoWorkbook against an
 // INDEPENDENT reading of the raw workbook rows by claude-opus-4-8 (GROUNDED_CITED) on Azure AI

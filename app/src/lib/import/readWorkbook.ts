@@ -22,7 +22,7 @@ function flatten(v: ExcelJS.CellValue): IsoCell {
 }
 
 /** Read one workbook into a grid per worksheet, reading ONLY the true data region.
- *  ExcelJS's ws.rowCount / ws.columnCount include styling-only phantom cells: real ISO/SECURA
+ *  ExcelJS's ws.rowCount / ws.columnCount include styling-only phantom cells: real ISO/Sample Mutual
  *  books ship sheets that report the full 1,048,576-row sheet extent because a fill or border was
  *  applied to whole columns. Walking that naively freezes the browser (60M+ empty cells). We first
  *  find the last value-bearing row/column by iterating only non-empty cells, then materialise a

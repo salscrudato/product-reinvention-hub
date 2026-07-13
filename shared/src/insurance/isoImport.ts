@@ -275,7 +275,7 @@ class Ctx {
 // ─── Framework → product + coverages ────────────────────────────────────────────
 
 // Field aliases span the ISO template ("PRODUCT FRAMEWORK ID", "BUREAU"/"PROPRIETARY") and the
-// SECURA "Product Component Model" template ("ID", "RATING BUREAU?", "SUB COVERAGE"). Matching is
+// Sample Mutual "Product Component Model" template ("ID", "RATING BUREAU?", "SUB COVERAGE"). Matching is
 // punctuation/whitespace-insensitive, so trailing "?" and embedded newlines are tolerated.
 const FW_FIELDS: Record<string, string[]> = {
   status:      ['STATUS'],
@@ -355,7 +355,7 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
       continue
     }
     // A row with neither a coverage nor a sub-coverage name is a hierarchy/identity row
-    // (the SECURA component model has no .PROD/.LOB tokens — product/LOB appear as plain rows).
+    // (the Sample Mutual component model has no .PROD/.LOB tokens — product/LOB appear as plain rows).
     if (!covName && !subName) {
       if (!productNameHint && prod) productNameHint = prod
       if (!lobNameHint && lob) lobNameHint = lob
@@ -435,7 +435,7 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
       cov.data['parentId'] = null
     }
   }
-  // Parent-before-child write order by hierarchy DEPTH (not refId string length — SECURA parent and
+  // Parent-before-child write order by hierarchy DEPTH (not refId string length — Sample Mutual parent and
   // child share a segment count). Stable sort preserves source order within a depth band.
   const depthOf = (refId: string): number => {
     let d = 0

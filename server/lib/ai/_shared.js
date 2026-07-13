@@ -93,7 +93,7 @@ function lexicalTargetOf(data) {
 
 async function grounding(query, productId, tenantId) {
   try {
-    const { docs } = require('../cosmos')
+    const { docs } = require('../cosmos').resolveTenantStore(tenantId)   // SILO_READY seam
     const R = getRetrieve()
     const tidParam = [{ name: '@tid', value: tenantId }]
 

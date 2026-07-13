@@ -360,10 +360,10 @@ describe('PdfSourceReader', () => {
 // the most critical: every sheet must report dataRowCount < 10_000.
 
 const GL_FILES = [
-  '20-ISO-Framework-GL.xlsx',
-  '20-ISO-Forms-GL.xlsx',
-  '20-ISO-Rules-GL.xlsx',
-  '20-ISO-Pricing-GL.xlsx',
+  'sample-GL-framework.xlsx',
+  'sample-GL-forms.xlsx',
+  'sample-GL-rules.xlsx',
+  'sample-GL-pricing.xlsx',
 ]
 
 let glModels: StructuralModel[]

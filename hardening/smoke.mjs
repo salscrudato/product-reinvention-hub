@@ -45,11 +45,11 @@ const FIXTURES = [
   'samples/filings/nj-lemonade-ho/LEM 03 05 23 Lemonade Homeowners_FINAL.pdf',
   'samples/filings/nj-lemonade-ho/NJ HO Manual 02.27.24.pdf',
   'samples/filings/nj-lemonade-ho/NJ HO Rate Order of Calculations.pdf',
-  'samples/iso/20-BaseForm-HO3-Homeowners.pdf',
-  'samples/iso/20-ISO-Forms-GL.xlsx',
-  'samples/iso/20-ISO-Framework-GL.xlsx',
-  'samples/iso/20-ISO-Pricing-GL.xlsx',
-  'samples/iso/20-ISO-Rules-GL.xlsx',
+  'samples/iso/sample-PH-baseform-HO3.pdf',
+  'samples/iso/sample-GL-forms.xlsx',
+  'samples/iso/sample-GL-framework.xlsx',
+  'samples/iso/sample-GL-pricing.xlsx',
+  'samples/iso/sample-GL-rules.xlsx',
   'samples/mock/mock-HO3-baseform.md',
   'samples/mock/mock-GL-baseform.md',
   'samples/process-value-explorer.xlsx',
@@ -370,7 +370,7 @@ else pass(`HO chat: exact refId [${hoChatRef}] cited in response`)
 // ─── GL PATH: ISO workbook import ────────────────────────────────────────────
 
 section('GL path: ISO workbook import + rating canary')
-note(`Fixture: samples/iso/20-ISO-{Forms,Framework,Pricing,Rules}-GL.xlsx`)
+note(`Fixture: samples/iso/sample-GL-{forms,framework,pricing,rules}.xlsx`)
 note(`GL canary expected: $${GL_CANARY_EXPECTED} (per shared/src/rating/generalLiability.evaluator.test.ts:27)`)
 
 // The ISO workbook import is browser-side only (ExcelJS + mapIsoWorkbook in the React app).

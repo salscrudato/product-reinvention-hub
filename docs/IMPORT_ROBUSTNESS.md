@@ -11,7 +11,7 @@ layer changed, and expected metric delta.
 - fabrication = 0
 - entity F1 ≥ 0.95 on every fixture
 - both canaries exact (HO = $1,528, GL = $2,635)
-- SECURA IM + multi-domain Property .xlsm pass with no human flags
+- component-model IM + multi-domain Property .xlsm pass with no human flags
 
 **Fixture registry** (8 total):
 
@@ -21,8 +21,8 @@ layer changed, and expected metric delta.
 | 2 | `20-ISO-GL-PL2.xlsx` | GL | ✓ |
 | 3 | `20-ISO-GL-PL3.xlsx` | GL | ✓ |
 | 4 | `20-ISO-GL-PL4.xlsx` | GL | ✓ |
-| 5 | SECURA IM workbook | IM | — |
-| 6 | SECURA IM workbook (variant) | IM | — |
+| 5 | component-model IM workbook | IM | — |
+| 6 | component-model IM workbook (variant) | IM | — |
 | 7 | Multi-domain Property .xlsm | PR | — |
 | 8 | Multi-domain Property .xlsm (variant) | PR | — |
 
@@ -209,10 +209,10 @@ All 8 workbooks are now in `samples/iso/` and registered with `presentInRepo: tr
 
 | Fixture | File | Status |
 |---------|------|--------|
-| SECURA IM framework | `samples/iso/Product Framework - SECURA - Inland Marine.xlsx` | In repo ✅ |
-| SECURA IM rules | `samples/iso/Inland Marine Rules Repository - SECURA - Master.xlsx` | In repo ✅ |
-| Property rating | `samples/iso/Property Rating Repository - Master.xlsx` | In repo ✅ |
-| Property RF multi-domain | `samples/iso/Product Framework - SECURA - Property RF.xlsm` | In repo ✅ |
+| component-model IM framework | `samples/iso/sample-IM-framework.xlsx` | In repo ✅ |
+| component-model IM rules | `samples/iso/sample-IM-rules.xlsx` | In repo ✅ |
+| Property rating | `samples/iso/sample-PR-rating.xlsx` | In repo ✅ |
+| Property RF multi-domain | `samples/iso/sample-PR-framework.xlsx` | In repo ✅ |
 
 **Remaining gap**: `mapIsoWorkbook` is GL-specific (hard-coded GL sheet names). IM/PR workbooks
 use different sheet names ("Product Component Model", "Forms Library", "Rules Repository",
@@ -247,7 +247,7 @@ produce Brain-level F1 / human-flag-rate metrics to complete the stop-criteria v
 | entity F1 ≥ 0.95 | ✅ GL (F1 = 1.0) | IM/PR: cannot measure |
 | HO-3 canary exact ($1,528) | ✅ | evaluator.test.ts |
 | GL canary exact ($2,635) | ✅ | glRobustness.test.ts |
-| SECURA IM — no human flags | 🔲 PENDING | Files in repo; eval harness needed (Brain AI stages) |
+| component-model IM — no human flags | 🔲 PENDING | Files in repo; eval harness needed (Brain AI stages) |
 | Property .xlsm — no human flags | 🔲 PENDING | Files in repo; eval harness needed (Brain AI stages) |
 
 **All in-repo, measurable criteria are green. The two BLOCKED items require carrier file access.**

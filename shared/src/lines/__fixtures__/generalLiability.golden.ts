@@ -52,7 +52,7 @@ export const GENERAL_LIABILITY_ARCHETYPE: LineArchetype = {
 export const GENERAL_LIABILITY_FIXTURE: ArchetypeFixture = {
   rt: {
     'LI.GL.RT.001': {
-      // Source: ISO CGL illustrative class rates (samples/iso/20-ISO-Pricing-GL.xlsx).
+      // Source: ISO CGL illustrative class rates (samples/iso/sample-GL-pricing.xlsx).
       name: 'Class Code Base Rate (per $1,000 payroll)',
       columns: ['classCode', 'rate'],
       dimensions: [{ key: 'classCode', label: 'Class Code', values: ['41677', '91342', '96816'] }],

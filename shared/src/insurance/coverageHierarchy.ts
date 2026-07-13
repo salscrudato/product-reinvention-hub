@@ -10,22 +10,22 @@
 // template's layout, so it generalises:
 //
 //   SIGNAL 1 — explicit sub-coverage field. A dedicated "SUB-COVERAGE" column is populated on the
-//     row while the "COVERAGE" column names the parent. (ISO GL, SECURA Property, SECURA IM.)
+//     row while the "COVERAGE" column names the parent. (ISO GL, Sample Mutual Property, component-model IM.)
 //   SIGNAL 2 — refId nesting. The row's refId strictly SEGMENT-nests under another coverage's
 //     refId, e.g. GL.COV.001.001 under GL.COV.001. (Nested-id schemes.)
 //   SIGNAL 3 — group + row context. Rows are grouped by a shared coverage name; the first row of a
-//     group (no sub-coverage value) is the parent anchor, later rows are its children. (SECURA
+//     group (no sub-coverage value) is the parent anchor, later rows are its children. (Sample Mutual
 //     schemes, where the child's refId is a sibling counter — PR.COV001.5 — NOT a prefix child.)
 //
 // PARENT RESOLUTION PRECEDENCE (most structurally certain first):
 //   1. refId segment-nesting — unambiguous when present.
 //   2. coverage-group name match — the COVERAGE column names the parent; resolve to that group's
-//      top-level anchor. This is what carries the SECURA schemes, where refIds do not nest.
+//      top-level anchor. This is what carries the Sample Mutual schemes, where refIds do not nest.
 //   3. nearest preceding top-level coverage — last resort so a child is never dropped.
 // A child that resolves to no parent is PROMOTED to top-level (never silently dropped); callers
 // surface that as a warning.
 //
-// Ordering is by SOURCE ROW, never by refId string: SECURA tails are not zero-padded (.1, .10, .3)
+// Ordering is by SOURCE ROW, never by refId string: Sample Mutual tails are not zero-padded (.1, .10, .3)
 // so string/number sorts reorder siblings. Duplicate refIds keep the first occurrence.
 //
 // Pure TypeScript, zero platform imports. Consumed by the deterministic ISO mapper
@@ -121,7 +121,7 @@ export function resolveCoverageHierarchy(rows: CoverageRow[]): ResolvedCoverage[
     }
 
     // A sub name identical to the coverage name is the coverage repeating its own name on the
-    // top-level row (a common SECURA pattern: COVERAGE="Ordinance or Law", SUB="Ordinance Or Law")
+    // top-level row (a common Sample Mutual pattern: COVERAGE="Ordinance or Law", SUB="Ordinance Or Law")
     // — it is the coverage itself, not a child, so it does not count as an explicit sub signal.
     const explicitSub = subName !== '' && nameKey(subName) !== nameKey(coverageName)
     // A row is a sub-coverage when the sub field distinguishes it (SIGNAL 1) or its refId nests

@@ -186,10 +186,10 @@ let allProduced: HarnessEntity[]
 
 beforeAll(async () => {
   const files = [
-    '20-ISO-Framework-GL.xlsx',
-    '20-ISO-Forms-GL.xlsx',
-    '20-ISO-Rules-GL.xlsx',
-    '20-ISO-Pricing-GL.xlsx',
+    'sample-GL-framework.xlsx',
+    'sample-GL-forms.xlsx',
+    'sample-GL-rules.xlsx',
+    'sample-GL-pricing.xlsx',
   ]
   const grids = (
     await Promise.all(files.map(f => readWorkbookNode(resolve(SAMPLES, f))))
@@ -323,7 +323,7 @@ describe('GL rating canary (must not regress)', () => {
 })
 
 // ─── IM / PR gap documentation ────────────────────────────────────────────────
-// SECURA IM and Property RF workbooks are NOT in the repo and the Brain pipeline
+// component-model IM and Property RF workbooks are NOT in the repo and the Brain pipeline
 // requires live LLM calls (REASONER_A / REASONER_B) that cannot run in CI.
 // This test asserts the limitation is explicit, not that it passes silently.
 

@@ -12,11 +12,11 @@ A missing fixture is an immediate hard failure — the harness never silently sk
 | `samples/filings/nj-lemonade-ho/LEM 03 05 23 Lemonade Homeowners_FINAL.pdf` | Lemonade NJ HO-3 policy form filing (primary HO smoke fixture) | REQUIRED |
 | `samples/filings/nj-lemonade-ho/NJ HO Manual 02.27.24.pdf` | NJ Homeowners Manual | REQUIRED |
 | `samples/filings/nj-lemonade-ho/NJ HO Rate Order of Calculations.pdf` | NJ HO Rate Order of Calculations | REQUIRED |
-| `samples/iso/20-BaseForm-HO3-Homeowners.pdf` | ISO HO-3 base form (golden reference) | REQUIRED |
-| `samples/iso/20-ISO-Forms-GL.xlsx` | ISO GL forms workbook | REQUIRED |
-| `samples/iso/20-ISO-Framework-GL.xlsx` | ISO GL framework workbook | REQUIRED |
-| `samples/iso/20-ISO-Pricing-GL.xlsx` | ISO GL pricing workbook | REQUIRED |
-| `samples/iso/20-ISO-Rules-GL.xlsx` | ISO GL rules workbook | REQUIRED |
+| `samples/iso/sample-PH-baseform-HO3.pdf` | ISO HO-3 base form (golden reference) | REQUIRED |
+| `samples/iso/sample-GL-forms.xlsx` | ISO GL forms workbook | REQUIRED |
+| `samples/iso/sample-GL-framework.xlsx` | ISO GL framework workbook | REQUIRED |
+| `samples/iso/sample-GL-pricing.xlsx` | ISO GL pricing workbook | REQUIRED |
+| `samples/iso/sample-GL-rules.xlsx` | ISO GL rules workbook | REQUIRED |
 | `samples/mock/mock-HO3-baseform.md` | Expected-field fixture for HO-3 extraction regression diffing | REQUIRED |
 | `samples/mock/mock-GL-baseform.md` | Expected-field fixture for GL extraction regression diffing | REQUIRED |
 | `samples/process-value-explorer.xlsx` | Process Value Explorer workbook (ADR-0006, GTM process) | REQUIRED |
@@ -34,11 +34,11 @@ const FIXTURES = [
   'samples/filings/nj-lemonade-ho/LEM 03 05 23 Lemonade Homeowners_FINAL.pdf',
   'samples/filings/nj-lemonade-ho/NJ HO Manual 02.27.24.pdf',
   'samples/filings/nj-lemonade-ho/NJ HO Rate Order of Calculations.pdf',
-  'samples/iso/20-BaseForm-HO3-Homeowners.pdf',
-  'samples/iso/20-ISO-Forms-GL.xlsx',
-  'samples/iso/20-ISO-Framework-GL.xlsx',
-  'samples/iso/20-ISO-Pricing-GL.xlsx',
-  'samples/iso/20-ISO-Rules-GL.xlsx',
+  'samples/iso/sample-PH-baseform-HO3.pdf',
+  'samples/iso/sample-GL-forms.xlsx',
+  'samples/iso/sample-GL-framework.xlsx',
+  'samples/iso/sample-GL-pricing.xlsx',
+  'samples/iso/sample-GL-rules.xlsx',
   'samples/mock/mock-HO3-baseform.md',
   'samples/mock/mock-GL-baseform.md',
   'samples/process-value-explorer.xlsx',

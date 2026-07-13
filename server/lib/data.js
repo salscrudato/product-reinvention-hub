@@ -12,10 +12,14 @@
 
 const express = require('express')
 const crypto = require('crypto')
-const { docs } = require('./cosmos')
-const { requireAuth, requireRole, requireTenant } = require('./auth')
+const { resolveTenantStore } = require('./cosmos')
+const { requireAuth, requireRole, requireTenant, resolveTenantForPrincipal } = require('./auth')
 
 const router = express.Router()
+// storeFor(tid) — resolve a tenant's Cosmos container through the SILO_READY seam
+// (pooled today; a promoted tenant gets its own container with no change here). Every
+// tenant-scoped read/write below goes through this, so isolation follows the seam.
+const storeFor = (tid) => resolveTenantStore(tid).docs
 const MAX_LIST = 1000
 const BATCH_OPS = 96
 const FIELD_RE = /^[A-Za-z0-9_.]+$/ // property-name allow-list; prevents SQL structure-injection via where/orderBy fields
@@ -38,14 +42,14 @@ const fieldDiff = (prev, next) => {
 
 async function readEntity(tid, path) {
   try {
-    const r = (await docs.item(idFor('ent', path), pkFor(tid, path)).read()).resource
+    const r = (await storeFor(tid).item(idFor('ent', path), pkFor(tid, path)).read()).resource
     return r && r.tenantId === tid ? r : null // defense-in-depth
   } catch { return null }
 }
 
 // ─── reads (any authenticated role, tenant-scoped) ───────────────────────────
 router.get('/get', requireAuth, requireTenant, async (req, res) => {
-  const ent = await readEntity(req.user.tenantId, req.query.path)
+  const ent = await readEntity(resolveTenantForPrincipal(req.user), req.query.path)
   // Inject the entity's natural id (last path segment) so the client has a stable identifier.
   const id = ent ? segs(ent.path).at(-1) : null
   res.json({ data: ent ? { id, ...ent.data } : null })
@@ -53,7 +57,8 @@ router.get('/get', requireAuth, requireTenant, async (req, res) => {
 
 router.post('/list', requireAuth, requireTenant, async (req, res) => {
   const { path, query } = req.body || {}
-  const params = [{ name: '@coll', value: String(path || '') }, { name: '@tid', value: req.user.tenantId }]
+  const tid = resolveTenantForPrincipal(req.user)
+  const params = [{ name: '@coll', value: String(path || '') }, { name: '@tid', value: tid }]
   let where = "c.kind = 'entity' AND c.coll = @coll AND c.tenantId = @tid"
   const opMap = { '==': '=', '!=': '!=', '<': '<', '<=': '<=', '>': '>', '>=': '>=' }
   for (let i = 0; i < (query?.where || []).length; i++) {
@@ -73,7 +78,7 @@ router.post('/list', requireAuth, requireTenant, async (req, res) => {
     if (!['ASC', 'DESC'].includes(dir)) return res.status(400).json({ error: 'invalid_direction', detail: "orderBy.dir must be 'asc' or 'desc'" })
     sql += `${i === 0 ? ' ORDER BY' : ','} c.data.${o.field} ${dir}`
   }
-  const { resources } = await docs.items.query({ query: sql, parameters: params }, { maxItemCount: limit }).fetchAll()
+  const { resources } = await storeFor(tid).items.query({ query: sql, parameters: params }, { maxItemCount: limit }).fetchAll()
   res.json({ data: resources.map((r) => ({ id: segs(r.path).at(-1), ...r.data })) })
 })
 
@@ -152,8 +157,16 @@ async function attachEmbeddings(opsBatches) {
 }
 
 // ─── mutations (EDITOR+, tenant-scoped, atomic) ──────────────────────────────
+// Storage-envelope fields the SERVER owns exclusively. A client mutation carries only a
+// domain payload (`data`); stripping any client-supplied copy of these keys means a client
+// can never smuggle a tenant boundary (or storage metadata) into a write. The server is the
+// sole writer of tenantId — it is set from the pk/common envelope below, never from `data`.
+const RESERVED_ENVELOPE_KEYS = ['tenantId', 'pk', 'kind', 'coll', 'path']
+
 function envelope(tid, payload, actor) {
-  const { op, path, data = {}, entityType } = payload
+  const { op, path, entityType } = payload
+  const data = { ...(payload.data || {}) }
+  for (const k of RESERVED_ENVELOPE_KEYS) delete data[k]
   const pk = pkFor(tid, path)
   const now = new Date().toISOString()
   return async () => {
@@ -188,10 +201,11 @@ function envelope(tid, payload, actor) {
 router.post('/mutate', requireRole('EDITOR'), requireTenant, async (req, res) => {
   const payload = (req.body || {}).payload || req.body
   const actor = { uid: req.user.uid, name: req.user.name }
+  const tid = resolveTenantForPrincipal(req.user)
   try {
-    const { pk, ops, rev } = await envelope(req.user.tenantId, payload, actor)()
+    const { pk, ops, rev } = await envelope(tid, payload, actor)()
     await attachEmbeddings([ops])
-    const r = await docs.items.batch(ops, pk)
+    const r = await storeFor(tid).items.batch(ops, pk)
     if (r.result?.some((o) => o.statusCode >= 400)) return res.status(500).json({ error: 'batch_failed', detail: r.result })
     res.json({ ok: true, rev })
   } catch (e) {
@@ -204,21 +218,23 @@ router.post('/mutate', requireRole('EDITOR'), requireTenant, async (req, res) =>
 router.post('/mutateBatch', requireRole('EDITOR'), requireTenant, async (req, res) => {
   const payloads = (req.body || {}).payloads || []
   const actor = { uid: req.user.uid, name: req.user.name }
+  const tid = resolveTenantForPrincipal(req.user)
+  const store = storeFor(tid)
   // Track chunk commits so that on failure the caller can identify partial-commit state (DEF-0013).
   let committedChunks = 0; let totalChunks = 0
   try {
     const byPk = new Map()
-    for (const p of payloads) { const b = await envelope(req.user.tenantId, p, actor)(); if (!byPk.has(b.pk)) byPk.set(b.pk, []); byPk.get(b.pk).push(b.ops) }
+    for (const p of payloads) { const b = await envelope(tid, p, actor)(); if (!byPk.has(b.pk)) byPk.set(b.pk, []); byPk.get(b.pk).push(b.ops) }
     // One batched embeddings call across every chunk op in the whole request (keeps a bulk
     // import/seed to a single embeddings round-trip instead of one per entity).
     await attachEmbeddings([...byPk.values()].flat())
     for (const [pk, opsList] of byPk) {
       let chunk = []
       for (const ops of opsList) {
-        if (chunk.length + ops.length > BATCH_OPS) { totalChunks++; await docs.items.batch(chunk, pk); committedChunks++; chunk = [] }
+        if (chunk.length + ops.length > BATCH_OPS) { totalChunks++; await store.items.batch(chunk, pk); committedChunks++; chunk = [] }
         chunk.push(...ops)
       }
-      if (chunk.length) { totalChunks++; await docs.items.batch(chunk, pk); committedChunks++ }
+      if (chunk.length) { totalChunks++; await store.items.batch(chunk, pk); committedChunks++ }
     }
     res.json({ ok: true, count: payloads.length })
   } catch (e) {
@@ -230,7 +246,7 @@ router.post('/mutateBatch', requireRole('EDITOR'), requireTenant, async (req, re
 })
 
 router.post('/vote', requireRole('EDITOR'), requireTenant, async (req, res) => {
-  const { path } = req.body || {}; const uid = req.user.uid; const tid = req.user.tenantId
+  const { path } = req.body || {}; const uid = req.user.uid; const tid = resolveTenantForPrincipal(req.user)
   const ent = await readEntity(tid, path)
   if (!ent) return res.status(404).json({ error: 'not_found' })
   const votes = ent.data.votes || { voters: [], count: 0 }
@@ -241,7 +257,7 @@ router.post('/vote', requireRole('EDITOR'), requireTenant, async (req, res) => {
 })
 
 router.post('/setNewsPins', requireRole('EDITOR'), requireTenant, async (req, res) => {
-  const { uid, pinnedHashes } = req.body || {}; const tid = req.user.tenantId
+  const { uid, pinnedHashes } = req.body || {}; const tid = resolveTenantForPrincipal(req.user)
   if (uid !== req.user.uid) return res.status(403).json({ error: 'forbidden' })
   const path = `newsPrefs/${uid}`
   const actor = { uid: req.user.uid, name: req.user.name }
@@ -250,13 +266,13 @@ router.post('/setNewsPins', requireRole('EDITOR'), requireTenant, async (req, re
 })
 
 router.post('/presence/join', requireRole('EDITOR'), requireTenant, async (req, res) => {
-  const { pid } = req.body || {}; const tid = req.user.tenantId
+  const { pid } = req.body || {}; const tid = resolveTenantForPrincipal(req.user)
   const { presence } = require('./cosmos')
   await presence.items.upsert({ id: `${tid}:${pid}:${req.user.uid}`, pid: `${tid}:${pid}`, uid: req.user.uid, name: req.user.name, at: Date.now() })
   res.json({ ok: true })
 })
 router.post('/presence/watch', requireAuth, requireTenant, async (req, res) => {
-  const { pid } = req.body || {}; const tid = req.user.tenantId
+  const { pid } = req.body || {}; const tid = resolveTenantForPrincipal(req.user)
   const { presence } = require('./cosmos')
   const { resources } = await presence.items.query({ query: 'SELECT c.uid FROM c WHERE c.pid = @pid', parameters: [{ name: '@pid', value: `${tid}:${pid}` }] }).fetchAll()
   res.json({ viewers: [...new Set(resources.map((r) => r.uid))] })
@@ -270,11 +286,11 @@ if (process.env.PROBE_MODE === '1') {
   router.get('/audit', requireRole('ADMIN'), requireTenant, async (req, res) => {
     const { path } = req.query
     if (!path) return res.status(400).json({ error: 'path_required' })
-    const tid = req.user.tenantId
+    const tid = resolveTenantForPrincipal(req.user)
     const pk = pkFor(tid, String(path))
     const sql = "SELECT * FROM c WHERE c.kind='audit' AND c.entityPath=@path AND c.tenantId=@tid"
     const params = [{ name: '@path', value: String(path) }, { name: '@tid', value: tid }]
-    const { resources } = await docs.items.query({ query: sql, parameters: params }, { partitionKey: pk }).fetchAll()
+    const { resources } = await storeFor(tid).items.query({ query: sql, parameters: params }, { partitionKey: pk }).fetchAll()
     res.json({ ok: true, count: resources.length, items: resources })
   })
 }
@@ -283,7 +299,7 @@ if (process.env.PROBE_MODE === '1') {
 async function mutateInternal(tid, payload, actor) {
   const { pk, ops, rev } = await envelope(tid, payload, actor)()
   await attachEmbeddings([ops])
-  const r = await docs.items.batch(ops, pk)
+  const r = await storeFor(tid).items.batch(ops, pk)
   if (r.result?.some((o) => o.statusCode >= 400)) throw new Error('batch_failed')
   return { ok: true, rev }
 }

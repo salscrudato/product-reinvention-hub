@@ -15,7 +15,7 @@
 // ratingProgram + ratingStep; rtTable; ldTable; rule; formRule) EVERY field is recorded
 // with: canonical name, role, type/enum, a one-line description, ≥2 examples, and the
 // KNOWN SOURCE ALIASES. Aliases below are grounded in the shipped ISO GL workbooks
-// (samples/iso/20-ISO-*-GL.xlsx) and the observed SECURA Inland Marine / Property ROC /
+// (samples/iso/sample-GL-*.xlsx) and the observed component-model Inland Marine / Property ROC /
 // Property RF variance. Zero platform imports.
 
 // ─── Shapes ──────────────────────────────────────────────────────────────────────

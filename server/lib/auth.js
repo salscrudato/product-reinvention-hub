@@ -22,6 +22,11 @@ const TTL_SECONDS = 12 * 60 * 60
 
 const RANK = { VIEWER: 0, ANALYST: 1, EDITOR: 2, ADMIN: 3 }
 
+// DEFAULT_TENANT_ID — mirror of shared/src/types.ts DEFAULT_TENANT_ID (this CJS module
+// cannot import the TS shared package). The backfill/demo tenant + the floor for a
+// principal with no explicit binding. Keep the two literals in sync.
+const DEFAULT_TENANT_ID = 'default'
+
 // Bootstrap accounts — enabled by default; set BOOTSTRAP_USERS_ENABLED=false to disable in hardened prod.
 // Passwords sourced from env; defaults preserve hardening/smoke.mjs's admin/admin authentication.
 const BOOTSTRAP_ENABLED = process.env.BOOTSTRAP_USERS_ENABLED !== 'false'
@@ -221,9 +226,23 @@ function requireTenant(req, res, next) {
   next()
 }
 
+// resolveTenantForPrincipal(principal) — THE server-side seam that maps an authenticated
+// principal to the tenant it operates in. Every tenant-scoped read/write derives its
+// tenantId through here, NEVER from anything a client can set. Today a principal's tenant
+// is bound at login (validated against the user's allowed tenants) and carried in the
+// verified JWT, so this returns that server-derived tenantId; DEFAULT_TENANT_ID is the
+// floor for a principal with no explicit binding (a pre-multi-tenant / seed actor) so
+// legacy data still resolves. requireTenant remains the authorization gate for interactive
+// sessions (a tenant-less session is rejected before it reaches a handler); this seam is
+// the resolution step. Prompt 2 will EXTEND it (org-membership lookup / default-org
+// provisioning) — the signature and the server-derived guarantee stay stable.
+function resolveTenantForPrincipal(principal) {
+  return (principal && principal.tenantId) || DEFAULT_TENANT_ID
+}
+
 module.exports = {
-  RANK, BOOTSTRAP, listTenants, findUser,
+  RANK, DEFAULT_TENANT_ID, BOOTSTRAP, listTenants, findUser,
   sign, verify,
   login, me, changePassword, publicTenants,
-  attachUser, requireAuth, requireRole, requireTenant, revokeToken,
+  attachUser, requireAuth, requireRole, requireTenant, resolveTenantForPrincipal, revokeToken,
 }

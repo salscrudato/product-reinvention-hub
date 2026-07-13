@@ -3,7 +3,7 @@
 // ISO CGL program: exposure base × class rate → increased-limits factor →
 // deductible credit → PCO premium (conditional) → experience modification →
 // minimum-premium floor. Rates and factors are ILLUSTRATIVE — derived from the
-// GL workbook fixtures at samples/iso/20-ISO-Pricing-GL.xlsx; replace with
+// GL workbook fixtures at samples/iso/sample-GL-pricing.xlsx; replace with
 // filed rates when importing via the ISO workbook pipeline.
 // The $2,635 canary is locked by generalLiability.evaluator.test.ts.
 import type {
@@ -53,7 +53,7 @@ export const GL_PRODUCT: Omit<Product, 'createdAt' | 'updatedAt'> & {
 
 // ─── Limits & Deductible tables (LD) ─────────────────────────────────────────
 // Table refs follow GL.LD.NNN pattern. Options and defaults derived from the
-// GL product framework workbook (samples/iso/20-ISO-Framework-GL.xlsx).
+// GL product framework workbook (samples/iso/sample-GL-framework.xlsx).
 
 export const GL_LD_TABLES: Record<string, LDTable> = {
   'GL.LD.001': {
@@ -110,7 +110,7 @@ export const GL_LD_TABLES: Record<string, LDTable> = {
 }
 
 // ─── Rating tables (RT) ───────────────────────────────────────────────────────
-// Illustrative class rates and factors derived from samples/iso/20-ISO-Pricing-GL.xlsx.
+// Illustrative class rates and factors derived from samples/iso/sample-GL-pricing.xlsx.
 // Replace with filed manual rates before any regulatory or commercial use.
 
 export const GL_RT_TABLES: Record<string, RTTable> = {
@@ -132,7 +132,7 @@ export const GL_RT_TABLES: Record<string, RTTable> = {
   'GL.RT.002': {
     // Per-Occurrence Increased Limits Factor — scales base-limit premium to the selected
     // each-occurrence limit. Base = $100,000 (factor 1.000). Source: GL Forms workbook
-    // (samples/iso/20-ISO-Pricing-GL.xlsx, Rating Specifications sheet, ILF table).
+    // (samples/iso/sample-GL-pricing.xlsx, Rating Specifications sheet, ILF table).
     name:    'Per-Occurrence Increased Limits Factor',
     columns: ['occLimit', 'factor'],
     rows: [

@@ -387,7 +387,7 @@ s7 MIN_FLOOR CONST 500 round 0     → max(2,635, 500)            = $2,635
 
 **HOSTILE SELF-REVIEW:**
 - No GL coverage, form number, rule, or factor was invented; all derive from the ISO CGL programme
-  structure and the workbook fixture definitions in `samples/iso/20-ISO-*-GL.xlsx` (referenced in
+  structure and the workbook fixture definitions in `samples/iso/sample-GL-*.xlsx` (referenced in
   the seed file header). The illustrative rates are marked as such in every RT table comment.
 - HO-3 $1,528 canary is unchanged — evaluator.ts was not modified.
 - PA $1,002 canary is unchanged — personalAuto seed and evaluator were not modified.

@@ -49,6 +49,30 @@ export interface Lineage {
   at:      unknown                    // ISO string in seed/wire; Timestamp in Firebase
 }
 
+// ─── Organization (customer tenant — the data-isolation boundary) ─────────────
+// An Organization is the CUSTOMER: the top-level boundary every domain entity is
+// partitioned under. `tenantId` is a stable, opaque, server-assigned slug — the Cosmos
+// partition prefix (`${tenantId}|${base}`) and the value every read/write is scoped to.
+// It is NEVER the Azure Entra directory/tenant id, and is NEVER accepted from a client:
+// the server derives it per principal (see resolveTenantForPrincipal in server/lib/auth).
+// Provisioned ADMIN-only and stored as a system record (kind:'tenant', pk:'__system__').
+//
+// NOTE ON STAMPING: the server stamps `tenantId` onto the STORAGE ENVELOPE of every entity
+// (beside kind/path/rev), deliberately OUTSIDE the client-writable `data` payload — which is
+// precisely why a client cannot forge it. The domain interfaces below therefore carry NO
+// tenantId field; it is an envelope concern, not a domain-model one.
+export interface Organization {
+  tenantId:   string
+  name:       string
+  createdAt:  unknown    // ISO string on the wire; server-stamped
+  createdBy?: string     // uid of the provisioning ADMIN (or a seed/script marker)
+}
+
+// The backfill/demo tenant every pre-multi-tenant record is homed under, and the floor
+// resolveTenantForPrincipal() returns for a principal with no explicit tenant binding.
+// Mirrored server-side in server/lib/auth.js (CJS cannot import this TS module directly).
+export const DEFAULT_TENANT_ID = 'default'
+
 // ─── Users ──────────────────────────────────────────────────────────────────
 
 export interface User {

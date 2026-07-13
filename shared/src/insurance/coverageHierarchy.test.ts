@@ -1,7 +1,7 @@
 // coverageHierarchy.test.ts — first-principles sub-coverage resolution across formats.
 //
 // The point of this suite is FORMAT ROBUSTNESS: the same logic must resolve the parent/child
-// tree for schemes it has seen (ISO GL nested ids, SECURA flat-sibling ids) AND for shapes it
+// tree for schemes it has seen (ISO GL nested ids, Sample Mutual flat-sibling ids) AND for shapes it
 // has not — as long as the row expresses one of the three structural signals.
 import { describe, it, expect } from 'vitest'
 import { resolveCoverageHierarchy, type CoverageRow } from './coverageHierarchy'
@@ -40,7 +40,7 @@ describe('resolveCoverageHierarchy — ISO GL nested-id scheme', () => {
   })
 })
 
-describe('resolveCoverageHierarchy — SECURA flat-sibling scheme (Property)', () => {
+describe('resolveCoverageHierarchy — Sample Mutual flat-sibling scheme (Property)', () => {
   // The headline case: PR.COV001.5 "Debris Removal" is a sub of PR.COV001.0 "Building" — but the
   // parent refId is NOT a prefix of the child (both live under PR.COV001.*). Resolution must be by
   // the COVERAGE-group name, not by string surgery.
@@ -72,7 +72,7 @@ describe('resolveCoverageHierarchy — SECURA flat-sibling scheme (Property)', (
   })
 })
 
-describe('resolveCoverageHierarchy — SECURA IM (same-name sub reused across groups)', () => {
+describe('resolveCoverageHierarchy — component-model IM (same-name sub reused across groups)', () => {
   // "Debris Removal" appears under both Signs and Contractors Equipment — it must attach to the
   // right group each time (the COVERAGE column disambiguates, not the sub name).
   const rows: CoverageRow[] = [
@@ -117,7 +117,7 @@ describe('resolveCoverageHierarchy — robustness on unseen shapes', () => {
   })
 
   it('fills a merged/blank COVERAGE cell forward across a run of sub rows (anchor precedes)', () => {
-    // SECURA IM merges the COVERAGE column: the name shows once on the anchor, blank on the subs.
+    // component-model IM merges the COVERAGE column: the name shows once on the anchor, blank on the subs.
     const rows = [
       row('IM.COV083.02', 'Machinery and Equipment', '', 700),      // anchor
       row('IM.COV083.03', '', 'Additional Acquired Property', 701),  // blank COVERAGE, continuation
@@ -130,7 +130,7 @@ describe('resolveCoverageHierarchy — robustness on unseen shapes', () => {
   })
 
   it('a row whose SUB name equals its COVERAGE name is the top-level coverage, not a child', () => {
-    // SECURA repeats the coverage name in the sub column on the anchor row.
+    // Sample Mutual repeats the coverage name in the sub column on the anchor row.
     const rows = [
       row('PR.COV002.0', 'Ordinance or Law', 'Ordinance Or Law', 38),   // COV == SUB -> top-level
       row('PR.COV002.1', 'Ordinance or Law', 'Demolition Cost', 39),      // real child
