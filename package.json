@@ -23,10 +23,12 @@
     "harden:seed": "node hardening/seed.mjs",
     "harden:smoke:local": "node hardening/smoke.mjs",
     "harden:smoke:live": "node hardening/smoke.mjs",
-    "import:live": "tsx scripts/import-live.ts",
-    "import:loop": "tsx scripts/import-loop.ts"
+    "import:live": "tsx scripts/import-live.mts",
+    "import:loop": "tsx scripts/import-loop.mts"
   },
   "devDependencies": {
+    "@pf/shared": "workspace:*",
+    "exceljs": "^4.4.0",
     "jsdom": "^25.0.1",
     "supertest": "^7.0.0",
     "@types/supertest": "^6.0.0",

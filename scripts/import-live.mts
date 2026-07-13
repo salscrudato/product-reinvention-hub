@@ -85,12 +85,28 @@ interface SseResult {
   errors:   string[]
   notices:  string[]
   tools:    string[]
+  /** Coverages parsed from the token stream. The XLSX (structural) path returns
+   *  coverages as a token carrying JSON `{ coverages: [...] }` and emits NO bundle;
+   *  the PDF (filing) path emits both a bundle and a coverages token. */
+  tokenCoverages: Array<{ refId?: string; name?: string; kind?: string }>
+}
+
+/** Scan the joined token stream for the last `{"coverages":[...]}` JSON object. */
+function coveragesFromTokens(tokens: string[]): Array<{ refId?: string; name?: string; kind?: string }> {
+  const joined = tokens.join('')
+  // Find the last occurrence of a coverages JSON payload (the final summary token).
+  const matches = [...joined.matchAll(/\{"coverages":\s*(\[[\s\S]*?\])\s*\}/g)]
+  if (matches.length === 0) return []
+  try {
+    const arr = JSON.parse(matches[matches.length - 1][1]) as unknown[]
+    return Array.isArray(arr) ? arr as Array<{ refId?: string; name?: string; kind?: string }> : []
+  } catch { return [] }
 }
 
 async function readSse(path: string, bodyData: unknown, token: string, timeoutMs = 60_000): Promise<SseResult> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
-  const out: SseResult = { status: 0, ok: false, bundle: null, tokens: [], errors: [], notices: [], tools: [] }
+  const out: SseResult = { status: 0, ok: false, bundle: null, tokens: [], errors: [], notices: [], tools: [], tokenCoverages: [] }
   try {
     const res = await fetch(`${BASE_URL}/api${path}`, {
       method: 'POST',
@@ -130,6 +146,7 @@ async function readSse(path: string, bodyData: unknown, token: string, timeoutMs
       }
     }
     out.ok = out.errors.length === 0
+    out.tokenCoverages = coveragesFromTokens(out.tokens)
   } catch (err) {
     out.errors.push(`fetch error: ${(err as Error).message}`)
   } finally {
@@ -379,26 +396,38 @@ async function runXlsx(
   }
 
   try {
+    // The deterministic mapIsoWorkbook parse is the source of truth for XLSX imports
+    // (the app persists this plan; the server structural call is an adaptive AI pass).
+    // Assert on the LOCAL plan, then confirm the server brain runs without crashing.
     const plan = await parseXlsx(files)
-    const sseResult = await readSse('/ai/unifiedImport', {
-      structural: plan,
-      lobRefIdHint: lobHint,
-    }, token, 90_000)
+    const localProducts  = plan.product ? 1 : 0
+    const localCoverages = plan.coverages.length
+    result.productCount   = localProducts
+    result.coverageCount  = localCoverages
 
-    if (!sseResult.ok) {
-      result.crashed = true
-      notes.push(...sseResult.errors)
-    } else {
-      const fab = detectFabrication(sseResult.bundle)
-      result.fabrication = fab.fabricated
-      if (fab.evidence.length) notes.push(...fab.evidence)
-
-      const { valid, products, coverages, notes: vNotes } = validateBundle(sseResult.bundle)
-      result.planValid = valid
-      result.productCount = products
-      result.coverageCount = coverages
-      notes.push(...vNotes)
+    // Orphaned sub-coverage check (parentId that resolves to no coverage) — a real
+    // hierarchy defect. finalizeCoverages promotes true orphans, so this should be 0.
+    const covRefIds = new Set(plan.coverages.map(c => c.refId))
+    const orphanSubs = plan.coverages.filter(c => {
+      const pid = (c.data as { parentId?: string | null }).parentId
+      return pid != null && !covRefIds.has(String(pid))
+    })
+    if (orphanSubs.length > 0) {
+      result.fabrication = false
+      notes.push(`${orphanSubs.length} orphan sub-coverage(s): ${orphanSubs.slice(0, 5).map(o => o.refId).join(', ')}`)
     }
+    const subCount = plan.coverages.filter(c => (c.data as { parentId?: string | null }).parentId).length
+    notes.push(`local parse: ${localProducts} product, ${localCoverages} coverages (${subCount} sub), ${plan.forms.length} forms, ${plan.rules.length} rules`)
+
+    result.planValid = localProducts > 0 && localCoverages > 0 && orphanSubs.length === 0
+
+    // Server structural pass is an OPTIONAL adaptive-AI enrichment, not the app's persist
+    // path (the app persists the deterministic plan above). It is informational here:
+    // a slow/failed brain call is noted but never fails the format. Coverages come back
+    // as a token, not a bundle.
+    const sseResult = await readSse('/ai/unifiedImport', { structural: plan, lobRefIdHint: lobHint }, token, 360_000)
+    if (!sseResult.ok) notes.push(`server brain (non-fatal): ${sseResult.errors.join('; ')}`)
+    else notes.push(`server brain returned ${sseResult.tokenCoverages.length} entit(y|ies)`)
     if (sseResult.notices.length) notes.push(...sseResult.notices.map(n => `notice: ${n}`))
   } catch (err) {
     result.crashed = true
