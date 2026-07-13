@@ -107,7 +107,24 @@ export function resolveCoverageHierarchy(rows: CoverageRow[]): ResolvedCoverage[
     // blank identity/header row is still skipped below.
     if (coverageName) lastCoverageName = coverageName
     else if (subName && lastCoverageName) coverageName = lastCoverageName
-    if (!coverageName && !subName) continue            // not a coverage row
+    if (!coverageName && !subName) {
+      // Safety net for CORE-style workbooks where the sub-coverage name column is
+      // unlabeled or uses an unrecognized header: the row has a non-empty refId that
+      // clearly nests under a coverage already in `known` (e.g. CORE.COV.001.001
+      // under CORE.COV.001). Use the last refId segment as a fallback display name
+      // so the row is not silently dropped. Only fires when there is a nesting parent
+      // with at least 3 segments (i.e. a coverage, not a product/LOB row).
+      const mySegs2 = segs(refId)
+      let nestFallback: string | null = null
+      for (const k of known) {
+        if (k.segs.length >= 3 && isSegmentPrefix(k.segs, mySegs2)) {
+          if (!nestFallback || k.segs.length > segs(nestFallback).length) nestFallback = k.refId
+        }
+      }
+      if (!nestFallback) continue  // genuinely not a coverage row
+      // Promote the last refId segment as display name; signal handled below.
+      coverageName = mySegs2[mySegs2.length - 1] ?? refId
+    }
 
     const mySegs = segs(refId)
 

@@ -22,7 +22,9 @@
     "harden:check": "node hardening/convergence.mjs",
     "harden:seed": "node hardening/seed.mjs",
     "harden:smoke:local": "node hardening/smoke.mjs",
-    "harden:smoke:live": "node hardening/smoke.mjs"
+    "harden:smoke:live": "node hardening/smoke.mjs",
+    "import:live": "tsx scripts/import-live.ts",
+    "import:loop": "tsx scripts/import-loop.ts"
   },
   "devDependencies": {
     "jsdom": "^25.0.1",
