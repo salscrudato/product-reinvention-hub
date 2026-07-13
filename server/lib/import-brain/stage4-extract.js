@@ -26,7 +26,7 @@ const { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI } = require('
 const { STAGE4_EXTRACT_SYSTEM, STAGE4_JUDGE_SYSTEM } = require('./prompts')
 const {
   extractJson, colLetter,
-  BLANK_REFID, splitMultiRefId, CONFIDENCE_REVIEW,
+  BLANK_REFID, splitMultiRefId, CONFIDENCE_REVIEW, pMap,
 } = require('./constants')
 
 const BATCH_ROWS = 20
@@ -637,7 +637,12 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
       continue
     }
 
-    for (let batchStart = 0; batchStart < rows.length; batchStart += BATCH_ROWS) {
+    // Batches extract independently — up to 3 in flight (pMap keeps batch order;
+    // synthesis/flagging runs after collection so SYNTH numbering stays stable).
+    const batchStarts = []
+    for (let b = 0; b < rows.length; b += BATCH_ROWS) batchStarts.push(b)
+
+    const batchResults = await pMap(batchStarts, async (batchStart) => {
       const batch      = rows.slice(batchStart, batchStart + BATCH_ROWS)
       const userPrompt = buildExtractionPrompt(fp, colMap, lock.headerRowIndex, batch, batchStart)
 
@@ -664,11 +669,10 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
         }
         if (!recovered) {
           review.push({ kind: 'dropped-batch', sheetName: fp.sheetName, detail: `Rows ${batchStart}-${batchStart + batch.length - 1}: every extractor tier failed to parse — rows require manual review.` })
-          continue
+          return []
         }
         const { entities } = reconcileEntities(recovered.entities, [], fp.sheetName, review)
-        sheetEntities.push(...expandMultiRefIds(entities, fp.sheetName))
-        continue
+        return entities
       }
 
       const { entities, conflicts } = reconcileEntities(
@@ -685,18 +689,18 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
         sheetName: fp.sheetName, budget, review, deployJudge,
       })
 
-      // RefId synthesis for blank/TBD cells.
+      return entities
+    }, 3)
+
+    for (const entities of batchResults) {
+      // RefId synthesis for blank/TBD cells (sequential — stable SYNTH numbering).
       for (const entity of entities) {
         if (entity.needsRefIdSynthesis) {
           synthesizeRefId(entity, lobRefIdHint, synthCounter)
           review.push({ kind: 'refid-synthesis-needed', sheetName: fp.sheetName, rowIndex: entity.sourceRowIndex, detail: `Row ${entity.sourceRowIndex} had no refId; synthesized placeholder — human review required.` })
         }
-      }
-
-      for (const entity of entities) {
         if (entity.overallConfidence < CONFIDENCE_REVIEW) entity.reviewFlag = true
       }
-
       sheetEntities.push(...expandMultiRefIds(entities, fp.sheetName))
     }
 

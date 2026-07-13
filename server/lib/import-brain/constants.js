@@ -66,7 +66,28 @@ function colLetter(idx) {
   return result
 }
 
+// ─── Bounded parallel map ──────────────────────────────────────────────────────
+// Runs fn over items with at most `concurrency` in flight; results keep item order.
+// Brain stages use this to overlap independent AI calls (per sheet / per batch)
+// without stampeding the Foundry endpoints.
+
+async function pMap(items, fn, concurrency) {
+  const results = new Array(items.length)
+  let next = 0
+  async function worker() {
+    for (;;) {
+      const i = next++
+      if (i >= items.length) return
+      results[i] = await fn(items[i], i)
+    }
+  }
+  const n = Math.max(1, Math.min(concurrency, items.length))
+  await Promise.all(Array.from({ length: n }, worker))
+  return results
+}
+
 module.exports = {
+  pMap,
   SHEET_DOMAINS,
   DOMAIN_ENTITY_KINDS,
   CONFIDENCE_ACCEPT,

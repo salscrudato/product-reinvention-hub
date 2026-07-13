@@ -14,7 +14,7 @@
 const fleet = require('../fleet')
 const { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI } = require('./ai-call')
 const { STAGE3_MAP_SYSTEM } = require('./prompts')
-const { extractJson, DOMAIN_ENTITY_KINDS, CONFIDENCE_REVIEW, colLetter } = require('./constants')
+const { extractJson, DOMAIN_ENTITY_KINDS, CONFIDENCE_REVIEW, colLetter, pMap } = require('./constants')
 
 // Load CANONICAL_MAP and SURFACED_COLUMNS from the shared CJS bundle.
 const brainShared = require('../import-brain-shared.cjs')
@@ -180,11 +180,12 @@ async function mapColumns(classified, locks, fpByName, budget, review) {
 
   const contentSheets = classified.filter(c => c.domain !== 'ignore' && c.domain !== 'definitions')
 
-  for (const sheet of contentSheets) {
+  // Sheets map independently — up to 3 in flight (each already batches internally).
+  async function mapOne(sheet) {
     const lock = lockMap.get(sheet.sheetName)
     const fp   = fpByName.get(sheet.sheetName)
-    if (!fp || !lock) continue
-    if (sheet.sheetName.includes('::')) continue  // skip stacked sub-sheet pseudo-names
+    if (!fp || !lock) return null
+    if (sheet.sheetName.includes('::')) return null  // skip stacked sub-sheet pseudo-names
 
     const entityKinds = DOMAIN_ENTITY_KINDS[sheet.domain] || []
     const dictionary  = buildDomainDictionary(entityKinds)
@@ -258,8 +259,11 @@ async function mapColumns(classified, locks, fpByName, budget, review) {
     const mappings    = reconcileMappings(mappableCols, aAll.length ? aAll : null, bAll.length ? bAll : null, fp.sheetName, review)
     const unmappedIdx = mappings.filter(m => m.canonicalField === null).map(m => m.colIndex)
 
-    maps.push({ sheetName: fp.sheetName, mappings, unmappedIndices: unmappedIdx, stateColumns })
+    return { sheetName: fp.sheetName, mappings, unmappedIndices: unmappedIdx, stateColumns }
   }
+
+  const mapped = await pMap(contentSheets, mapOne, 3)
+  maps.push(...mapped.filter(Boolean))
 
   return maps
 }

@@ -18,7 +18,7 @@ const { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI } = require('
 const {
   STAGE1_PREFILTER_SYSTEM, STAGE1_CLASSIFY_SYSTEM, STAGE1_ADJUDICATE_SYSTEM,
 } = require('./prompts')
-const { extractJson, SHEET_DOMAINS } = require('./constants')
+const { extractJson, SHEET_DOMAINS, pMap } = require('./constants')
 
 // ─── Serialise sheet metadata for the model ────────────────────────────────────
 // Compact, grounding-safe representation of a SheetFingerprint.
@@ -94,26 +94,24 @@ function parseAdjudicate(raw) {
  * @returns {Promise<object[]>} ClassifiedSheet[]
  */
 async function classifySheets(sheets, budget, review) {
-  const results = []
-
   // Resolve deployments — all four calls go through fleet.guard() via resolvers.
   const deployBulk    = resolveAnthropic('BULK_VERIFY', budget)
   const deployOpus    = resolveAnthropic('GROUNDED_CITED', budget)
   const deployGptMini = resolveOpenAI(fleet.DEPLOY_GPT_MINI, budget)  // BULK_ALT prefilter
   const deployGpt     = resolveOpenAI(fleet.DEPLOY_GPT, budget)       // REASONER_B (gpt-5.1)
 
-  for (const fp of sheets) {
+  // Sheets classify independently — run up to 4 in flight (pMap keeps order).
+  async function classifyOne(fp) {
     // Auto-classify Definitions sheets — fingerprinter already identified them.
     if (fp.isDefinitionsSheet) {
-      results.push({
+      return {
         sheetName:       fp.sheetName,
         domain:          'definitions',
         confidence:      1.0,
         rationale:       'Fingerprinter identified this as a Definitions/Glossary sheet.',
         disagreed:       false,
         humanFlagNeeded: false,
-      })
-      continue
+      }
     }
 
     const meta = serialiseSheet(fp)
@@ -129,15 +127,14 @@ async function classifySheets(sheets, budget, review) {
     const bothIgnore = (pA?.prefilter === true) && (pB?.prefilter === true)
 
     if (bothIgnore) {
-      results.push({
+      return {
         sheetName:       fp.sheetName,
         domain:          'ignore',
         confidence:      1.0,
         rationale:       `Both bulk models agree: ${pA.reason}.`,
         disagreed:       false,
         humanFlagNeeded: false,
-      })
-      continue
+      }
     }
 
     // ── Step b: REASONER_A (opus) + REASONER_B (gpt-5.1) classify in parallel ─
@@ -151,22 +148,21 @@ async function classifySheets(sheets, budget, review) {
 
     // Parse failure on both → human flag
     if (!rA && !rB) {
-      results.push({
+      review.push({ kind: 'disagreement', sheetName: fp.sheetName, detail: 'Both reasoners failed to classify sheet.' })
+      return {
         sheetName:       fp.sheetName,
         domain:          'ignore',
         confidence:      0,
         rationale:       'Both reasoners returned unparseable responses; treating as ignore.',
         disagreed:       true,
         humanFlagNeeded: true,
-      })
-      review.push({ kind: 'disagreement', sheetName: fp.sheetName, detail: 'Both reasoners failed to classify sheet.' })
-      continue
+      }
     }
 
     // One parse failure → use the winner at reduced confidence
     if (!rA || !rB) {
       const winner = rA ?? rB
-      results.push({
+      return {
         sheetName:       fp.sheetName,
         domain:          winner.domain,
         confidence:      winner.confidence * 0.8,
@@ -175,13 +171,12 @@ async function classifySheets(sheets, budget, review) {
         reasonerBDomain: rB?.domain,
         disagreed:       false,
         humanFlagNeeded: false,
-      })
-      continue
+      }
     }
 
     // ── Step c: Agreement → auto-accept ─────────────────────────────────────
     if (rA.domain === rB.domain) {
-      results.push({
+      return {
         sheetName:       fp.sheetName,
         domain:          rA.domain,
         confidence:      (rA.confidence + rB.confidence) / 2,
@@ -190,8 +185,7 @@ async function classifySheets(sheets, budget, review) {
         reasonerBDomain: rB.domain,
         disagreed:       false,
         humanFlagNeeded: false,
-      })
-      continue
+      }
     }
 
     // ── Step d: Disagreement → adjudication (REASONER_A sees both rationales) ─
@@ -203,14 +197,18 @@ async function classifySheets(sheets, budget, review) {
 
     const adjRes = await callAnthropic({
       deployment: deployOpus, systemPrompt: STAGE1_ADJUDICATE_SYSTEM, userPrompt: adjUser, maxTokens: 256, budget,
-      budget,
     }).catch(() => ({ raw: '' }))
 
     const adj = parseAdjudicate(adjRes.raw)
 
     // ── Step e: Adjudicator failed or flagged human ──────────────────────────
     if (!adj || adj.humanFlag) {
-      results.push({
+      review.push({
+        kind:      'disagreement',
+        sheetName: fp.sheetName,
+        detail:    `Reasoner A: ${rA.domain} vs Reasoner B: ${rB.domain}. Adjudicator: ${adj?.domain ?? 'parse failure'}.`,
+      })
+      return {
         sheetName:       fp.sheetName,
         domain:          'ignore',
         confidence:      0,
@@ -219,16 +217,10 @@ async function classifySheets(sheets, budget, review) {
         reasonerBDomain: rB.domain,
         disagreed:       true,
         humanFlagNeeded: true,
-      })
-      review.push({
-        kind:      'disagreement',
-        sheetName: fp.sheetName,
-        detail:    `Reasoner A: ${rA.domain} vs Reasoner B: ${rB.domain}. Adjudicator: ${adj?.domain ?? 'parse failure'}.`,
-      })
-      continue
+      }
     }
 
-    results.push({
+    return {
       sheetName:       fp.sheetName,
       domain:          adj.domain,
       confidence:      adj.confidence,
@@ -237,10 +229,10 @@ async function classifySheets(sheets, budget, review) {
       reasonerBDomain: rB.domain,
       disagreed:       true,
       humanFlagNeeded: false,
-    })
+    }
   }
 
-  return results
+  return pMap(sheets, classifyOne, 4)
 }
 
 module.exports = { classifySheets }
