@@ -95,7 +95,17 @@ function recordSpend(budget, deployment, inputTokens, outputTokens) {
 // `contentBlocks` (optional) replaces the plain userPrompt with rich blocks — used by
 // the vision fallback to pass a base64 PDF document block for scanned documents.
 
+// Deployments that returned 404 (not provisioned in this Foundry project, e.g.
+// claude-sonnet-5 until it is deployed) — skipped for the process lifetime so
+// ladder climbs never pay repeat round-trips for a known-missing rung.
+const MISSING_DEPLOYMENTS = new Set()
+
 async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, tools, toolName, contentBlocks, budget }) {
+  if (MISSING_DEPLOYMENTS.has(deployment)) {
+    const err = new Error(`deployment ${deployment} not provisioned (cached 404)`)
+    err.status = 404
+    throw err
+  }
   const content = Array.isArray(contentBlocks) && contentBlocks.length > 0
     ? contentBlocks
     : userPrompt
@@ -119,6 +129,9 @@ async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, 
   })
   if (!upstream.ok) {
     const detail = (await upstream.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
+    if (upstream.status === 404 || /model.+not.+(found|exist)|no deployment/i.test(detail)) {
+      MISSING_DEPLOYMENTS.add(deployment)
+    }
     const err = new Error(`Foundry Anthropic ${upstream.status}: ${detail}`)
     err.status = upstream.status
     throw err
