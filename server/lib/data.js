@@ -14,6 +14,7 @@ const express = require('express')
 const crypto = require('crypto')
 const { resolveTenantStore } = require('./cosmos')
 const { requireAuth, requireRole, requireTenant, resolveTenantForPrincipal } = require('./auth')
+const { requireCapability } = require('./authz')
 
 const router = express.Router()
 // storeFor(tid): resolve a tenant's Cosmos container through the SILO_READY seam
@@ -198,7 +199,7 @@ function envelope(tid, payload, actor) {
   }
 }
 
-router.post('/mutate', requireRole('EDITOR'), requireTenant, async (req, res) => {
+router.post('/mutate', requireCapability('product:write'), requireTenant, async (req, res) => {
   const payload = (req.body || {}).payload || req.body
   const actor = { uid: req.user.uid, name: req.user.name }
   const tid = resolveTenantForPrincipal(req.user)
@@ -215,7 +216,7 @@ router.post('/mutate', requireRole('EDITOR'), requireTenant, async (req, res) =>
   }
 })
 
-router.post('/mutateBatch', requireRole('EDITOR'), requireTenant, async (req, res) => {
+router.post('/mutateBatch', requireCapability('product:write'), requireTenant, async (req, res) => {
   const payloads = (req.body || {}).payloads || []
   const actor = { uid: req.user.uid, name: req.user.name }
   const tid = resolveTenantForPrincipal(req.user)
@@ -245,7 +246,7 @@ router.post('/mutateBatch', requireRole('EDITOR'), requireTenant, async (req, re
   }
 })
 
-router.post('/vote', requireRole('EDITOR'), requireTenant, async (req, res) => {
+router.post('/vote', requireCapability('product:write'), requireTenant, async (req, res) => {
   const { path } = req.body || {}; const uid = req.user.uid; const tid = resolveTenantForPrincipal(req.user)
   const ent = await readEntity(tid, path)
   if (!ent) return res.status(404).json({ error: 'not_found' })
@@ -256,7 +257,7 @@ router.post('/vote', requireRole('EDITOR'), requireTenant, async (req, res) => {
   res.json({ ok: true, count: votes.count })
 })
 
-router.post('/setNewsPins', requireRole('EDITOR'), requireTenant, async (req, res) => {
+router.post('/setNewsPins', requireCapability('product:write'), requireTenant, async (req, res) => {
   const { uid, pinnedHashes } = req.body || {}; const tid = resolveTenantForPrincipal(req.user)
   if (uid !== req.user.uid) return res.status(403).json({ error: 'forbidden' })
   const path = `newsPrefs/${uid}`
@@ -265,7 +266,7 @@ router.post('/setNewsPins', requireRole('EDITOR'), requireTenant, async (req, re
   res.json({ ok: true })
 })
 
-router.post('/presence/join', requireRole('EDITOR'), requireTenant, async (req, res) => {
+router.post('/presence/join', requireCapability('product:write'), requireTenant, async (req, res) => {
   const { pid } = req.body || {}; const tid = resolveTenantForPrincipal(req.user)
   const { presence } = require('./cosmos')
   await presence.items.upsert({ id: `${tid}:${pid}:${req.user.uid}`, pid: `${tid}:${pid}`, uid: req.user.uid, name: req.user.name, at: Date.now() })
@@ -283,7 +284,7 @@ router.post('/presence/watch', requireAuth, requireTenant, async (req, res) => {
 // documents for a path so the smoke harness can verify the audit write is present.
 // Only active when PROBE_MODE=1 is set in the server env — never shipped to prod.
 if (process.env.PROBE_MODE === '1') {
-  router.get('/audit', requireRole('ADMIN'), requireTenant, async (req, res) => {
+  router.get('/audit', requireCapability('audit:read'), requireTenant, async (req, res) => {
     const { path } = req.query
     if (!path) return res.status(400).json({ error: 'path_required' })
     const tid = resolveTenantForPrincipal(req.user)

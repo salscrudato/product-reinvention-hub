@@ -10,6 +10,7 @@ import {
   IconChevronRight, IconSettings, IconShield, type IconType,
 } from '../ui/icons'
 import { useUser } from '../../context/useUser'
+import { isPlatform, isTenantAdmin } from '../../lib/canI'
 
 interface NavItem { to: string; label: string; icon: IconType; exact?: boolean }
 
@@ -41,16 +42,17 @@ interface SidebarProps {
 }
 
 const ROUTE_IMPORTS: Record<string, () => Promise<unknown>> = {
-  '/app':            () => import('../../routes/Home'),
-  '/app/products':   () => import('../../routes/Products'),
-  '/app/builder':    () => import('../../routes/Builder'),
-  '/app/explorer':   () => import('../../routes/Explorer'),
-  '/app/tasks':      () => import('../../routes/Tasks'),
-  '/app/news':       () => import('../../routes/News'),
-  '/app/claims':     () => import('../../routes/Claims'),
-  '/app/dictionary': () => import('../../routes/Dictionary'),
-  '/app/feedback':   () => import('../../routes/Feedback'),
-  '/app/admin':      () => import('../../routes/Admin'),
+  '/app':                () => import('../../routes/Home'),
+  '/app/products':       () => import('../../routes/Products'),
+  '/app/builder':        () => import('../../routes/Builder'),
+  '/app/explorer':       () => import('../../routes/Explorer'),
+  '/app/tasks':          () => import('../../routes/Tasks'),
+  '/app/news':           () => import('../../routes/News'),
+  '/app/claims':         () => import('../../routes/Claims'),
+  '/app/dictionary':     () => import('../../routes/Dictionary'),
+  '/app/feedback':       () => import('../../routes/Feedback'),
+  '/app/admin':          () => import('../../routes/Admin'),
+  '/app/tenant-admin':   () => import('../../routes/TenantAdmin'),
 }
 
 function Item({ item, collapsed, active }: { item: NavItem; collapsed: boolean; active: boolean }) {
@@ -80,7 +82,11 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
   const location = useLocation()
   const { profile } = useUser()
   const isActive = (to: string, exact?: boolean) => exact ? location.pathname === to : location.pathname.startsWith(to)
-  const isAdmin  = profile?.role === 'ADMIN'
+  // Platform plane (SUPER_ADMIN/SUPPORT) → platform console at /app/admin
+  // Tenant admin (TENANT_ADMIN) → self-service org console at /app/tenant-admin
+  // Everyone else → settings at /app/admin (the page gates itself and shows settings)
+  const onPlatform    = isPlatform(profile)
+  const onTenantAdmin = isTenantAdmin(profile)
 
   return (
     <aside
@@ -127,11 +133,12 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
 
       {/* Footer */}
       <div className="py-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-        {/* Footer nav: ADMIN users get a shield-branded "Admin" item; others see "Settings".
-            The /app/admin route guards itself server-side (rules + Functions). */}
-        {isAdmin
-          ? <Item item={{ to: '/app/admin', label: 'Admin', icon: IconShield }} collapsed={collapsed} active={isActive('/app/admin')} />
-          : <Item item={{ to: '/app/admin', label: 'Settings', icon: IconSettings }} collapsed={collapsed} active={isActive('/app/admin')} />
+        {/* Footer nav: platform roles → platform console; org admins → org admin; others → settings. */}
+        {onPlatform
+          ? <Item item={{ to: '/app/admin',        label: 'Platform', icon: IconShield }} collapsed={collapsed} active={isActive('/app/admin')} />
+          : onTenantAdmin
+            ? <Item item={{ to: '/app/tenant-admin', label: 'Org Admin', icon: IconShield }} collapsed={collapsed} active={isActive('/app/tenant-admin')} />
+            : <Item item={{ to: '/app/admin',        label: 'Settings',  icon: IconSettings }} collapsed={collapsed} active={isActive('/app/admin')} />
         }
         <button
           onClick={onToggle}

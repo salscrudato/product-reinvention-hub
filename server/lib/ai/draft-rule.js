@@ -1,5 +1,5 @@
 'use strict'
-const { RANK } = require('../auth')
+const { hasCapability } = require('../authz')
 const fleet = require('../fleet')
 const { sse, emit, _forcedToolCall, groundingFlat } = require('./_shared')
 
@@ -31,8 +31,8 @@ const DRAFT_RULE_SYSTEM = [
 ].join(' ')
 
 async function draftRule(req, res) {
-  if ((RANK[req.user.role] ?? -1) < RANK['EDITOR'])
-    return res.status(403).json({ error: 'editor_required', message: 'Rule drafting requires EDITOR access or above.' })
+  if (!hasCapability(req.user, 'product:write'))
+    return res.status(403).json({ error: 'forbidden', need: 'product:write', have: req.user.role })
   const body = req.body || {}
   const instruction = String(body.instruction || '').trim()
   sse(res)

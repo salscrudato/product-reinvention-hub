@@ -1,6 +1,7 @@
 'use strict'
 const express = require('express')
 const { requireRole, requireTenant } = require('../auth')
+const { requireCapability } = require('../authz')
 const fleet = require('../fleet')
 
 const { chat }            = require('./chat')
@@ -18,7 +19,7 @@ const router = express.Router()
 
 registerReindexRoute(router)
 
-router.post('/:name', requireRole('ANALYST'), requireTenant, async (req, res) => {
+router.post('/:name', requireCapability('ai:invoke'), requireTenant, async (req, res) => {
   const name = req.params.name
   if (name === 'exportDuckCreek') return exportDuckCreek(req, res)
   if (!fleet.isConfigured()) return res.status(503).json({ error: 'ai_not_configured', name })

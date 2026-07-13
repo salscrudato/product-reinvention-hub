@@ -24,6 +24,7 @@ const Tasks              = lazy(() => import('./routes/Tasks'))
 const Claims             = lazy(() => import('./routes/Claims'))
 const Dictionary         = lazy(() => import('./routes/Dictionary'))
 const Admin              = lazy(() => import('./routes/Admin'))
+const TenantAdmin        = lazy(() => import('./routes/TenantAdmin'))
 const Feedback           = lazy(() => import('./routes/Feedback'))
 const News               = lazy(() => import('./routes/News'))
 const HomeCheck          = lazy(() => import('./routes/HomeCheck'))
@@ -69,8 +70,9 @@ export default function App() {
               <Route path="news"       element={<News />} />
               <Route path="claims"     element={<Claims />} />
               <Route path="dictionary" element={<Dictionary />} />
-              <Route path="feedback"   element={<Feedback />} />
-              <Route path="admin"      element={<Admin />} />
+              <Route path="feedback"     element={<Feedback />} />
+              <Route path="admin"        element={<Admin />} />
+              <Route path="tenant-admin" element={<TenantAdmin />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

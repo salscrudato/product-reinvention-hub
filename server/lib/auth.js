@@ -27,7 +27,32 @@ if (!_secret) throw new Error('[auth] AUTH_JWT_SECRET is required — set it in 
 const SECRET = _secret
 const TTL_SECONDS = 12 * 60 * 60
 
-const RANK = { VIEWER: 0, ANALYST: 1, EDITOR: 2, ADMIN: 3, SUPER_ADMIN: 4 }
+// Two-plane role model.
+// Tenant plane: VIEWER, inquiry personas (UNDERWRITING/COMPLIANCE/CLAIMS/ACTUARIAL/ANALYST),
+//               EDITOR, TENANT_ADMIN.  ADMIN is a legacy alias for TENANT_ADMIN.
+// Platform plane: SUPPORT (read + impersonation), SUPER_ADMIN (break-glass).
+// RANK is used only by requireRole() for backward-compatible route guards.
+// New routes use requireCapability() from authz.js instead of rank checks.
+// SUPPORT is rank 0 so it cannot bypass any rank-gated write route; capability checks
+// in authz.js are the authoritative gate for what SUPPORT is allowed to do.
+const RANK = {
+  VIEWER: 0,
+  UNDERWRITING: 1, COMPLIANCE: 1, CLAIMS: 1, ACTUARIAL: 1, ANALYST: 1,
+  EDITOR: 2,
+  TENANT_ADMIN: 3, ADMIN: 3,  // ADMIN is the legacy name; normalizeRole() maps it to TENANT_ADMIN
+  SUPPORT: 0,                  // platform plane; rank 0 so rank checks reject it from all write routes
+  SUPER_ADMIN: 4,
+}
+
+// Roles that a TENANT_ADMIN may assign. Never SUPER_ADMIN, SUPPORT, or legacy ADMIN.
+const MANAGED_TENANT_ROLES = ['VIEWER', 'UNDERWRITING', 'COMPLIANCE', 'CLAIMS', 'ACTUARIAL', 'ANALYST', 'EDITOR', 'TENANT_ADMIN']
+
+// normalizeRole: transparently migrates legacy 'ADMIN' JWTs to 'TENANT_ADMIN' at decode
+// time so downstream capability checks always see the canonical role name.
+function normalizeRole(role) {
+  if (role === 'ADMIN') return 'TENANT_ADMIN'
+  return role || 'VIEWER'
+}
 
 // DEFAULT_TENANT_ID: mirror of shared/src/types.ts DEFAULT_TENANT_ID.
 // Floor for a principal with no explicit binding (pre-multi-tenant / seed actor).
@@ -297,6 +322,42 @@ async function loginBootstrap(req, res) {
   return res.json({ user: { uid: uKey, email: admin.email, name: admin.name, role: 'SUPER_ADMIN', tenantId: tid }, token })
 }
 
+// ─── Impersonation token (SUPPORT only, platform:impersonate capability) ─────
+// Creates a short-lived (1 h) JWT that carries the target user's identity AND a
+// dual-attribution field (_impersonatedBy) so every audit event shows both actors.
+// The token carries the target's tenant-plane role — a platform role can NEVER be
+// granted through impersonation (the role field comes from the target user record,
+// never from the SUPPORT actor).
+const IMPERSONATION_TTL = 60 * 60  // 1 hour
+
+function signImpersonation(targetUser, supportActor, tenantId) {
+  const now = Math.floor(Date.now() / 1000)
+  const jti = crypto.randomUUID()
+  const head = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  // Ensure impersonation can never grant a platform role to a tenant user.
+  const targetRole = normalizeRole(targetUser.role)
+  if (targetRole === 'SUPER_ADMIN' || targetRole === 'SUPPORT') {
+    throw new Error('Cannot impersonate a platform-plane user')
+  }
+  const payload = {
+    sub: targetUser.username || targetUser.uid,
+    name: targetUser.name,
+    email: targetUser.email,
+    role: targetRole,
+    tenantId,
+    method: 'impersonation',
+    impersonatedBy: { uid: supportActor.uid, name: supportActor.name, email: supportActor.email },
+    jti, iat: now, exp: now + IMPERSONATION_TTL,
+  }
+  const data = `${head}.${b64url(JSON.stringify(payload))}`
+  return {
+    token: `${data}.${b64url(crypto.createHmac('sha256', SECRET).update(data).digest())}`,
+    expiresAt: new Date((now + IMPERSONATION_TTL) * 1000).toISOString(),
+    subject: payload.sub,
+    tenantId,
+  }
+}
+
 // ─── SSO seam (unimplemented) — see docs/IDENTITY.md ─────────────────────────
 // eslint-disable-next-line no-unused-vars
 function discoverHomeRealm(_email) {
@@ -341,14 +402,20 @@ async function attachUser(req, _res, next) {
     if (p.jti && await isRevoked(p.jti)) {
       req.user = null
     } else {
+      const role = normalizeRole(p.role)
       let tenantId = p.tenantId || null
       // SUPER_ADMIN: allow per-request tenant override via X-Tenant-Id header.
       // This lets admin/sal switch between any tenant without re-authenticating.
-      if (p.role === 'SUPER_ADMIN') {
+      if (role === 'SUPER_ADMIN') {
         const override = String(req.headers['x-tenant-id'] || '').trim()
         if (override) tenantId = override
       }
-      req.user = { uid: p.sub, name: p.name, email: p.email, role: p.role, tenantId, _jti: p.jti || null }
+      req.user = { uid: p.sub, name: p.name, email: p.email, role, tenantId, _jti: p.jti || null }
+      // Impersonation token: dual-attributed; the real actor is in _impersonatedBy.
+      // Every audit action must include both identities (see tenant-admin.js actorFor).
+      if (p.impersonatedBy) {
+        req.user._impersonatedBy = p.impersonatedBy
+      }
     }
   } else {
     req.user = null
@@ -384,6 +451,7 @@ function requireRole(min) {
 function requireTenant(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'unauthenticated' })
   // SUPER_ADMIN can work across all tenants; if no tenantId is set they default to 'default'.
+  // SUPPORT is NOT exempt — it must operate within a tenantId (set via impersonation token).
   if (req.user.role === 'SUPER_ADMIN') return next()
   if (!req.user.tenantId) return res.status(409).json({ error: 'no_tenant_selected' })
   next()
@@ -398,8 +466,8 @@ function resolveTenantForPrincipal(principal) {
 }
 
 module.exports = {
-  RANK, DEFAULT_TENANT_ID, BOOTSTRAP_ADMINS, listTenants, findUser,
-  sign, verify,
+  RANK, DEFAULT_TENANT_ID, BOOTSTRAP_ADMINS, MANAGED_TENANT_ROLES, listTenants, findUser,
+  normalizeRole, sign, verify, signImpersonation,
   requestOtp, verifyOtp, loginBootstrap, me, changePassword, publicTenants, discoverHomeRealm,
   attachUser, requireAuth, requireRole, requireTenant, resolveTenantForPrincipal, revokeToken,
 }

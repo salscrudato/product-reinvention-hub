@@ -1,5 +1,5 @@
 'use strict'
-const { RANK } = require('../auth')
+const { hasCapability } = require('../authz')
 const fleet = require('../fleet')
 const { sse, emit, _forcedToolCall, _extractPdfText, _findSampleFile, getImportBrain, getStageFiling } = require('./_shared')
 const fs = require('fs')
@@ -41,8 +41,8 @@ const _IMPORT_SYSTEM =
   'Call propose_coverages exactly once with ALL coverages the form defines.'
 
 async function unifiedImport(req, res) {
-  if ((RANK[req.user.role] ?? -1) < RANK['EDITOR']) {
-    return res.status(403).json({ error: 'editor_required', message: 'Filing import requires EDITOR access or above.' })
+  if (!hasCapability(req.user, 'product:write')) {
+    return res.status(403).json({ error: 'forbidden', need: 'product:write', have: req.user.role })
   }
 
   const body = req.body || {}

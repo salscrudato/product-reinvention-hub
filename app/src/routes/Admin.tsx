@@ -1,12 +1,13 @@
-// Admin (/app/admin, ADMIN only) — user management (via the setUserRole callable),
-// an audit-log explorer that opens any event to its before/after diff, the seed
-// report, AI cost telemetry, and local app settings.
+// Admin (/app/admin) — PLATFORM console (SUPER_ADMIN and SUPPORT only).
+// Cross-tenant: tenant management, global user management, platform audit, AI cost.
+// TENANT_ADMIN users are redirected to /app/tenant-admin (self-service org console).
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { IconShield, IconPlus, IconUserX, IconSearch, IconFileClock, IconWarning } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
 import type { ManagedUser, TenantInfo, Tier } from '../lib/backend'
 import { useUser } from '../context/useUser'
+import { isPlatform } from '../lib/canI'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
 import { DEFAULT_BUDGET } from '@pf/shared'
 import type { AuditEvent, Version, SeedReport } from '@pf/shared'
@@ -59,15 +60,15 @@ export default function Admin() {
   // Hold until the profile resolves — prevents console content from flashing
   // to non-admins while the Firestore user doc is still in-flight.
   if (loading || !profile) return null
-  if (profile.role !== 'ADMIN') {
-    return <EmptyState icon={<IconShield size={28} />} title="Admins only" description="You need the ADMIN role to view the admin console." />
+  if (!isPlatform(profile)) {
+    return <EmptyState icon={<IconShield size={28} />} title="Platform access only" description="The platform console requires SUPER_ADMIN or SUPPORT role." />
   }
 
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-xl font-bold text-text">Admin</h1>
-        <p className="text-sm text-dim">Users, audit trail, seed report, AI cost and settings.</p>
+        <h1 className="text-xl font-bold text-text">Platform</h1>
+        <p className="text-sm text-dim">Cross-tenant administration, global users, audit trail, seed report and AI cost.</p>
       </div>
       <Tabs
         tabs={[
@@ -92,9 +93,16 @@ export default function Admin() {
 
 // ─── Users ──────────────────────────────────────────────────────────────────
 
-const TIERS: Tier[] = ['VIEWER', 'ANALYST', 'EDITOR', 'ADMIN']
-const tierColor: Record<Tier, 'purple' | 'blue' | 'good' | 'default'> = { SUPER_ADMIN: 'purple', ADMIN: 'purple', EDITOR: 'blue', ANALYST: 'good', VIEWER: 'default' }
-const TIER_HELP = 'VIEWER = read · ANALYST = read + AI · EDITOR = edit + AI · ADMIN = full (tenants + users)'
+// Platform console manages global users; SUPER_ADMIN can assign any tenant-plane role.
+const TIERS: Tier[] = ['VIEWER', 'UNDERWRITING', 'COMPLIANCE', 'CLAIMS', 'ACTUARIAL', 'ANALYST', 'EDITOR', 'TENANT_ADMIN']
+const tierColor: Record<string, 'purple' | 'blue' | 'good' | 'default'> = {
+  SUPER_ADMIN: 'purple', SUPPORT: 'purple',
+  TENANT_ADMIN: 'purple', ADMIN: 'purple',
+  EDITOR: 'blue',
+  ANALYST: 'good', UNDERWRITING: 'good', COMPLIANCE: 'good', CLAIMS: 'good', ACTUARIAL: 'good',
+  VIEWER: 'default',
+}
+const TIER_HELP = 'VIEWER = read | inquiry personas = read+AI | EDITOR = edit+AI | TENANT_ADMIN = org admin'
 
 // ─── Tenants ──────────────────────────────────────────────────────────────
 function TenantsTab() {
@@ -147,13 +155,20 @@ function TenantsTab() {
 }
 
 // ─── Users ──────────────────────────────────────────────────────────────────
+const USER_PAGE = 100
+
 function UsersTab() {
-  const [users, setUsers] = useState<ManagedUser[] | null>(null)
+  const [users, setUsers]   = useState<ManagedUser[] | null>(null)
+  const [hasMore, setHasMore] = useState(false)
   const [tenants, setTenants] = useState<TenantInfo[]>([])
   const [creating, setCreating] = useState(false)
   const [draft, setDraft] = useState<{ username: string; password: string; role: Tier; tenant: string }>({ username: '', password: '', role: 'VIEWER', tenant: '' })
   const [busy, setBusy] = useState(false)
-  const load = () => adapter.tenancy.listUsers().then(setUsers).catch(() => setUsers([]))
+  async function load(after?: string) {
+    const result = await adapter.tenancy.listUsers({ limit: USER_PAGE, after }).catch(() => ({ users: [], hasMore: false }))
+    if (after) setUsers(prev => [...(prev ?? []), ...result.users])
+    else { setUsers(result.users); setHasMore(result.hasMore) }
+  }
   useEffect(() => { load(); adapter.tenancy.listTenants().then(setTenants).catch(() => {}) }, [])
 
   async function create() {
@@ -184,10 +199,15 @@ function UsersTab() {
                 <div className="text-sm font-medium text-text">{u.username}</div>
                 <div className="text-xs text-faint font-mono">{u.tenants === '*' ? 'all tenants' : ((u.tenants || []).join(', ') || '— no tenant —')}</div>
               </div>
-              <Badge label={u.role} color={tierColor[u.role]} />
+              <Badge label={u.role} color={tierColor[u.role] ?? 'default'} />
               <Button variant="ghost" size="sm" onClick={() => remove(u.username)}><IconUserX size={13} /> Delete</Button>
             </div>
           ))}
+        </div>
+      )}
+      {hasMore && (
+        <div className="flex justify-center">
+          <button className="text-xs text-accent hover:underline" onClick={() => load(users.at(-1)?.username)}>Load more</button>
         </div>
       )}
       <Dialog open={creating} onClose={() => setCreating(false)} title="New user">

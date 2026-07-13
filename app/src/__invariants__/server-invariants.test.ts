@@ -47,16 +47,17 @@ describe('DEF-0043 / DEF-0046 — mutation envelope must push both audit and ver
 
 // ─── DEF-0044 / DEF-0047 ─────────────────────────────────────────────────────
 // Mutation sweep FAULT-004 changed requireRole('EDITOR') → requireRole('VIEWER') on /mutate;
-// FAULT-C did the same on /mutateBatch. Neither was caught — these tests close the gap.
-describe("DEF-0044 / DEF-0047 — /mutate and /mutateBatch must be gated by requireRole('EDITOR')", () => {
-  it("POST /mutate uses requireRole('EDITOR'), not VIEWER (FAULT-004 regression guard)", () => {
-    // Match: router.post('/mutate', requireRole('EDITOR')
-    // Fails if 'EDITOR' is replaced with 'VIEWER' or any other role string.
-    expect(dataJs).toMatch(/router\.post\(['"]\/mutate['"],\s*requireRole\(['"]EDITOR['"]\)/)
+// FAULT-C did the same on /mutateBatch. Now migrated to capability-based checks (authz.js).
+// requireCapability('product:write') is the authoritative gate; only EDITOR+ have this capability.
+describe("DEF-0044 / DEF-0047 — /mutate and /mutateBatch must be gated by requireCapability('product:write')", () => {
+  it("POST /mutate uses requireCapability('product:write'), not a VIEWER role (FAULT-004 regression guard)", () => {
+    // Match: router.post('/mutate', requireCapability('product:write')
+    // Fails if capability is removed or downgraded to a read-only capability.
+    expect(dataJs).toMatch(/router\.post\(['"]\/mutate['"],\s*requireCapability\(['"]product:write['"]\)/)
   })
 
-  it("POST /mutateBatch uses requireRole('EDITOR'), not VIEWER (FAULT-C regression guard)", () => {
-    expect(dataJs).toMatch(/router\.post\(['"]\/mutateBatch['"],\s*requireRole\(['"]EDITOR['"]\)/)
+  it("POST /mutateBatch uses requireCapability('product:write'), not a VIEWER role (FAULT-C regression guard)", () => {
+    expect(dataJs).toMatch(/router\.post\(['"]\/mutateBatch['"],\s*requireCapability\(['"]product:write['"]\)/)
   })
 })
 

@@ -76,12 +76,20 @@ app.get('/api/auth/me', auth.requireAuth, auth.me)
 app.post('/api/auth/logout', auth.revokeToken, (_req, res) => res.json({ ok: true })) // RISK-006: revoke jti before responding
 app.post('/api/auth/change-password', auth.requireAuth, auth.changePassword)
 
-// ─── tenant + user administration (ADMIN) ───────────────────────────────────
+// ─── platform administration (SUPER_ADMIN + SUPPORT only) ───────────────────
 try {
   app.use('/api/admin', require('./lib/admin'))
-  console.log('[prodhub-host] /api/admin mounted (tenants + users)')
+  console.log('[prodhub-host] /api/admin mounted (platform: tenants + users + impersonation)')
 } catch (err) {
   console.warn('[prodhub-host] /api/admin NOT mounted:', err.message)
+}
+
+// ─── tenant self-service administration (TENANT_ADMIN, own org only) ─────────
+try {
+  app.use('/api/tenant-admin', require('./lib/tenant-admin'))
+  console.log('[prodhub-host] /api/tenant-admin mounted (member management)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/tenant-admin NOT mounted:', err.message)
 }
 
 // ─── data (Cosmos) — mounted if the module loads ────────────────────────────

@@ -11,7 +11,7 @@
 // document, odd = collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
-import type { AuthUser, BackendAdapter, ManagedUser, MutationPayload, Query, Session, TenantInfo } from './types'
+import type { AuthUser, BackendAdapter, ManagedUser, TenantMember, MutationPayload, Query, Session, TenantInfo } from './types'
 import { MutationConflictError } from './types'
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -360,15 +360,46 @@ export const adapter: BackendAdapter = {
     async deleteTenant(id: string): Promise<void> {
       await api(`/admin/tenants/${encodeURIComponent(id)}`, { method: 'DELETE' })
     },
-    async listUsers(): Promise<ManagedUser[]> {
-      const { users } = await api<{ users: ManagedUser[] }>('/admin/users')
-      return users
+    async listUsers(opts?: { limit?: number; after?: string }): Promise<{ users: ManagedUser[]; hasMore: boolean }> {
+      const params = new URLSearchParams()
+      if (opts?.limit) params.set('limit', String(opts.limit))
+      if (opts?.after)  params.set('after',  opts.after)
+      const qs = params.size > 0 ? `?${params}` : ''
+      return api<{ users: ManagedUser[]; hasMore: boolean }>(`/admin/users${qs}`)
     },
     async createUser(u: ManagedUser & { password?: string }): Promise<void> {
       await api('/admin/users', { method: 'POST', body: JSON.stringify(u) })
     },
     async deleteUser(username: string): Promise<void> {
       await api(`/admin/users/${encodeURIComponent(username)}`, { method: 'DELETE' })
+    },
+    async impersonate(targetUid: string, tenantId: string, reason: string): Promise<{ token: string; expiresAt: string; subject: string; tenantId: string }> {
+      return api('/admin/impersonate', { method: 'POST', body: JSON.stringify({ targetUid, tenantId, reason }) })
+    },
+  },
+
+  orgAdmin: {
+    async listMembers(opts?: { limit?: number; after?: string }): Promise<{ members: TenantMember[]; hasMore: boolean }> {
+      const params = new URLSearchParams()
+      if (opts?.limit) params.set('limit', String(opts.limit))
+      if (opts?.after)  params.set('after',  opts.after)
+      const qs = params.size > 0 ? `?${params}` : ''
+      return api<{ members: TenantMember[]; hasMore: boolean }>(`/tenant-admin/members${qs}`)
+    },
+    async inviteMember(m: { username?: string; email?: string; name?: string; role: string; password?: string }): Promise<TenantMember> {
+      const { member } = await api<{ ok: boolean; member: TenantMember }>('/tenant-admin/members', { method: 'POST', body: JSON.stringify(m) })
+      return member
+    },
+    async changeMemberRole(username: string, role: string): Promise<void> {
+      await api(`/tenant-admin/members/${encodeURIComponent(username)}/role`, { method: 'PATCH', body: JSON.stringify({ role }) })
+    },
+    async removeMember(username: string): Promise<void> {
+      await api(`/tenant-admin/members/${encodeURIComponent(username)}`, { method: 'DELETE' })
+    },
+    async listAudit(opts?: { limit?: number }): Promise<unknown[]> {
+      const qs = opts?.limit ? `?limit=${opts.limit}` : ''
+      const { events } = await api<{ events: unknown[] }>(`/tenant-admin/audit${qs}`)
+      return events
     },
   },
 }

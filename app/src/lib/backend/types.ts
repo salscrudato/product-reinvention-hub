@@ -4,7 +4,26 @@
 // adapter (azure.adapter.ts) — JWT auth, Cosmos data, and Foundry AI over /api/*.
 import type { Unsubscribe } from '@pf/shared'
 
-export type Tier = 'VIEWER' | 'ANALYST' | 'EDITOR' | 'ADMIN' | 'SUPER_ADMIN'
+// Two-plane role set. See docs/AUTHORITIES.md for the full capability matrix.
+// Tenant plane: VIEWER, inquiry personas (UNDERWRITING/COMPLIANCE/CLAIMS/ACTUARIAL/ANALYST), EDITOR, TENANT_ADMIN.
+// Platform plane: SUPPORT, SUPER_ADMIN.
+// ADMIN is the legacy alias for TENANT_ADMIN (still appears in existing JWTs; normalized server-side).
+export type Tier =
+  | 'VIEWER'
+  | 'UNDERWRITING' | 'COMPLIANCE' | 'CLAIMS' | 'ACTUARIAL' | 'ANALYST'
+  | 'EDITOR'
+  | 'TENANT_ADMIN' | 'ADMIN'
+  | 'SUPPORT'
+  | 'SUPER_ADMIN'
+
+// Capabilities that can be checked client-side (supplementary UI gating only;
+// server is always the authoritative gate).
+export type Capability =
+  | 'product:read' | 'product:write'
+  | 'ai:invoke'
+  | 'filing:generate' | 'changeset:approve'
+  | 'member:manage' | 'role:assign' | 'audit:read'
+  | 'platform:tenants' | 'platform:users' | 'platform:audit' | 'platform:impersonate'
 
 export interface AuthUser {
   uid: string
@@ -17,6 +36,9 @@ export interface AuthUser {
 
 export interface TenantInfo { id: string; name: string; createdAt?: string; createdBy?: string }
 export interface ManagedUser { username: string; role: Tier; tenants: string[] | '*'; email?: string; name?: string }
+
+// Member of a specific tenant (returned by tenant-admin endpoints).
+export interface TenantMember { username: string; role: Tier; email?: string; name?: string; invitedBy?: string; invitedAt?: string }
 
 export interface Session {
   user: AuthUser
@@ -111,13 +133,23 @@ export interface BackendAdapter {
     /** Watch presence for a product; returns unsubscribe fn. */
     watch(pid: string, cb: (viewerUids: string[]) => void): Unsubscribe
   }
-  /** Platform administration (ADMIN only, server-enforced): tenants + gated users. */
+  /** Platform administration (SUPER_ADMIN + SUPPORT only, server-enforced): cross-tenant ops. */
   tenancy: {
     listTenants(): Promise<TenantInfo[]>
     createTenant(id: string, name: string): Promise<void>
     deleteTenant(id: string): Promise<void>
-    listUsers(): Promise<ManagedUser[]>
+    listUsers(opts?: { limit?: number; after?: string }): Promise<{ users: ManagedUser[]; hasMore: boolean }>
     createUser(u: ManagedUser & { password?: string }): Promise<void>
     deleteUser(username: string): Promise<void>
+    /** Impersonate a tenant user (SUPPORT/SUPER_ADMIN only). Returns a short-lived token. */
+    impersonate(targetUid: string, tenantId: string, reason: string): Promise<{ token: string; expiresAt: string; subject: string; tenantId: string }>
+  }
+  /** Self-service org admin (TENANT_ADMIN only, same-tenant enforced). */
+  orgAdmin: {
+    listMembers(opts?: { limit?: number; after?: string }): Promise<{ members: TenantMember[]; hasMore: boolean }>
+    inviteMember(m: { username?: string; email?: string; name?: string; role: Tier; password?: string }): Promise<TenantMember>
+    changeMemberRole(username: string, role: Tier): Promise<void>
+    removeMember(username: string): Promise<void>
+    listAudit(opts?: { limit?: number }): Promise<unknown[]>
   }
 }

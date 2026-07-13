@@ -1,10 +1,11 @@
 'use strict'
-const { requireRole, requireTenant } = require('../auth')
+const { requireTenant } = require('../auth')
+const { requireCapability } = require('../authz')
 const embed = require('../embed')
 const { _getChunker } = require('./_shared')
 
 function registerReindexRoute(router) {
-  router.post('/reindexProduct', requireRole('EDITOR'), requireTenant, async (req, res) => {
+  router.post('/reindexProduct', requireCapability('product:write'), requireTenant, async (req, res) => {
     const { productId } = req.body || {}
     if (typeof productId !== 'string' || !productId)
       return res.status(400).json({ error: 'productId_required' })

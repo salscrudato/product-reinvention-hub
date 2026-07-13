@@ -6,7 +6,11 @@
 export type Status       = 'ACTIVE' | 'INACTIVE' | 'FUTURE'
 export type Lifecycle    = 'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'LAUNCHED'
 export type ReviewStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'BUSINESS_REVIEW' | 'APPROVED' | 'REJECTED'
-export type Role         = 'VIEWER' | 'EDITOR' | 'ADMIN'
+// Full role set (two-plane model). See docs/AUTHORITIES.md for the capability matrix.
+// Tenant plane: VIEWER, inquiry personas, EDITOR, TENANT_ADMIN.
+// Platform plane: SUPPORT, SUPER_ADMIN.
+// ADMIN is kept as a legacy alias (normalized to TENANT_ADMIN at JWT decode in auth.js).
+export type Role = 'VIEWER' | 'UNDERWRITING' | 'COMPLIANCE' | 'CLAIMS' | 'ACTUARIAL' | 'ANALYST' | 'EDITOR' | 'TENANT_ADMIN' | 'ADMIN' | 'SUPPORT' | 'SUPER_ADMIN'
 export type Requirement  = 'MANDATORY' | 'OPTIONAL'
 export type Source       = 'BUREAU' | 'PROPRIETARY'
 export type TermKind     = 'LIMIT' | 'DEDUCTIBLE' | 'OPTION'
