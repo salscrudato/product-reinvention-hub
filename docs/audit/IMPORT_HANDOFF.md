@@ -23,8 +23,8 @@ are deploy blockers).
 ## What was already fixed & deployed (verify each is live)
 
 All commits are on `main`. Deploys: **2402** (coverage persist), **2406** (merge + crashes),
-**2409** (rules + forms cap — IN FLIGHT when this handoff was written; confirm it reached
-`succeeded` and is live).
+**2409** (rules + forms cap, live), **2412** (server-side forms filter — IN FLIGHT when this handoff
+was last updated; confirm it reached `succeeded` and is live).
 
 1. **Coverage import regression (deploy 2402) — VERIFIED live (112/112).** Two bugs:
    - Client `app/src/lib/import/importProduct.ts`: batched `mutateBatch` put a child coverage in the
@@ -58,14 +58,39 @@ All commits are on `main`. Deploys: **2402** (coverage persist), **2406** (merge
    (was 401), `chat` (emits `chatCard` json event with citations), `analyzeClaim` (coverages/
    exclusions now `{name, refId, formNumber, definition}` — Document Citations boxes populate).
 
-5. **Rules + forms cap (deploy 2409 — CONFIRM LIVE).**
+5. **Rules + forms cap (deploy 2409 — LIVE).**
    - `shared/src/insurance/isoImport.ts` `parseRules`: CORE's "Core Rules Specifications" declares a
      RULE ID column but leaves it blank on every row, so all 233 rows were dropped (`if (!id)
      continue`) → **0 rules**. Fix = synthesize `frameworkId.RULE.NNN` for rows that carry rule
-     content when RULE ID is blank. **Local parse now yields 234 rules** (`CORE.LOB.001.RULE.001…`).
-   - `server/lib/data.js` `MAX_LIST` 1000 → **6000**: the app subscribes to the whole `forms`
-     collection and filters client-side, so 1000 truncated CORE's 1359 forms. Raising the cap makes
-     the **existing** CORE product show all forms immediately after this deploy.
+     content when RULE ID is blank. **Parse + persist now yields 234 rules** (verified live, below).
+   - `server/lib/data.js` `MAX_LIST` 1000 → **6000**: first band-aid for the forms cap (see #6 for
+     the real fix).
+
+6. **Forms library scaling — server-side filter (deploy 2412 — CONFIRM LIVE).** The forms library is
+   a shared top-level collection; the app subscribed to ALL of it and filtered by `productRefIds`
+   client-side. `testco` accumulated **>6000 forms** because the user ran CORE import ~5 times (each
+   draft adds ~1359 forms — see "known testco state" below), so a product's forms fell outside the
+   list window and vanished from the UI. Fix = `adapter.subscribe` now takes an optional `Query`
+   (backward compatible; reads via `list(path, query)`, caches per path+query) and
+   `ProductContext` subscribes to forms filtered SERVER-SIDE by
+   `productRefIds array-contains pid`. Each product loads only its own forms regardless of total
+   collection size. Verified live: array-contains returns 1062 / 1359 for two distinct CORE drafts.
+
+### Full-scale e2e result (deploy 2409, live) — PASSED
+`scripts/verify-core-e2e.mts` against `testco`: parsed 112 coverages / 1359 forms / 234 rules;
+`writes=1706 failed=0`; **readback coverages 112/112 (93 sub, 0 orphan), rules 234/234**;
+`PASS: true`. The script's `readback forms: 0/1359` line is a LIST-WINDOW artifact (testco had
+>6000 forms at the time, so the unfiltered list didn't include the run's rows) — NOT a persistence
+failure; forms writes returned 0 failed and were independently confirmed. After the #6 fix the
+verifier should filter forms by productRefIds; update it if you want a clean forms readback.
+
+### Known testco state (clutter, user's call)
+`testco` has ~5 duplicate CORE draft products (`draft-core-prd-001-*`, from repeated import
+attempts) plus a GL draft, each carrying its full forms set. With the #6 fix each displays its own
+forms correctly, so this no longer breaks anything — but the user may want to delete the extra
+drafts (draft deletion cascades to forms via `app/src/lib/product/deleteDraft.ts`). The user's
+current "Core" product is `draft-core-prd-001-mrjkxuim-2jg1` (1062 forms, **0 rules** — imported
+before the rules fix; re-import to get 234). `PH.PROD.001` / `PA.PROD.001` seeds were restored.
 
 ## Verification tools already built (use them)
 
@@ -86,27 +111,31 @@ All commits are on `main`. Deploys: **2402** (coverage persist), **2406** (merge
 
 ## Remaining work — do these in order
 
-1. **Confirm deploy 2409 is live** (`az.cmd pipelines runs show --id 2409`; health ok). If it failed,
-   re-trigger and diagnose.
-2. **Definitive full-scale e2e:** run `scripts/verify-core-e2e.mts` against `testco`. Expect
-   `readback coverages: 112/112 (subs=93, orphan-subs=0)`, `readback rules: 234/234`, forms ~1359,
-   `PASS: true`. If rules < 234, the rules-persist path (free-batch, no parentId) is broken — debug.
-   The script tears down; **confirm testco is clean afterward** (leftover `forms/verify-core-*` from
-   any earlier aborted run must be deleted — the `/db/list` cap means loop the delete until the
-   `array-contains PID` query returns 0).
-3. **Verify the EXISTING "Core" product in testco** (the user's live import, product id visible in
-   Products): after 2409, its **forms should now show >1000** (up to its stored count) and it still
-   has **0 rules** (it was imported before the rules fix). Tell the user they must **re-import CORE**
-   to get the 234 rules on that product — the fix only affects new imports, not already-persisted
-   docs. Offer to re-import for them (or backfill rules via the API from a fresh parse) if they want.
-4. **Verify News + Products + a product's States tab load without ErrorBoundary** in the browser for
-   `testco` (PH/PA restored + defensive lobInfo). Confirm editing a product's state footprint no
-   longer wipes the product (open a product, change states, save, reload — name/lob must survive).
-5. **Run the gate** and `pnpm import:loop`; ensure `docs/audit/import_ledger.json` shows
-   `pass: true` (fix `import:loop`'s canary-detection or `import:live` XLSX timeout handling if it
-   trips on the slow brain — the brain pass must be non-fatal).
-6. **Commit** the uncommitted `scripts/verify-core-e2e.mts`. Decide whether to gitignore
-   `docs/audit/import_live_results.json` (run artifact). Do NOT commit `tmp_keys.md`.
+1. **Confirm deploy 2412 is live** (`az.cmd pipelines runs show --id 2412`; then `curl <BASE>/api/health`).
+   If it failed, re-trigger (id 810) and diagnose. (2402/2406/2409 already verified live.)
+2. **Browser verification (the last gap — cannot be done via curl):** open the app on `testco` and
+   confirm, with no ErrorBoundary:
+   - **Products** page renders (all products have valid `lob`).
+   - **News** page renders (was the reported crash; PH/PA restored + defensive `lobInfo`).
+   - A product's **Forms** tab shows its full count after 2412 (e.g. the user's Core =
+     `draft-core-prd-001-mrjkxuim-2jg1` should show 1062 forms, not 1000).
+   - **Data-integrity regression test:** open a product → States tab → change the footprint → Save →
+     reload. The product's name/lob/coverages MUST survive (this is the merge-on-update fix; before
+     it, this exact action wiped the doc). Also confirm the **History/audit** tab shows the footprint
+     change as a clean diff (only `states`/`allStates` changed, not "everything → undefined").
+3. **Tell the user about their existing "Core" product:** `draft-core-prd-001-mrjkxuim-2jg1` has
+   **0 rules** (imported before the rules fix). To get the 234 rules they must **re-import CORE**, or
+   you can backfill: parse CORE locally (`mapIsoWorkbook`) and POST the 234 rule entities to
+   `products/<pid>/rules/<docId>` via `/api/db/mutateBatch` (rules have no parentId → free-batch is
+   safe). They also have ~5 duplicate CORE drafts they may want to delete (cascades via
+   `deleteDraft.ts`).
+4. **Run the gate** and `pnpm import:loop`; ensure `docs/audit/import_ledger.json` shows
+   `pass: true`. `import:loop` runs `import:live` (XLSX server "structural" pass is slow/non-fatal;
+   CORE brain ~300s). If the ledger trips on the slow brain, make the XLSX server pass non-blocking.
+5. **Optional:** update `scripts/verify-core-e2e.mts`'s forms readback to filter by `productRefIds`
+   (array-contains) so it reports a real forms count instead of the list-window `0/1359` artifact.
+   `scripts/verify-core-e2e.mts` and the handoff are committed; run artifacts are gitignored. Do NOT
+   commit `tmp_keys.md`.
 
 ## Watch-outs / invariants
 - Never commit secrets; `tmp_keys.md` is gitignored — read creds there, don't echo them into commits.
