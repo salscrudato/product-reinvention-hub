@@ -9,7 +9,7 @@ function registerReindexRoute(router) {
     if (typeof productId !== 'string' || !productId)
       return res.status(400).json({ error: 'productId_required' })
     const tid = req.user.tenantId
-    const { docs } = require('../cosmos')
+    const { docs } = require('../cosmos').resolveTenantStore(tid)   // SILO_READY seam
     const ch = _getChunker()
     const now = new Date().toISOString()
     const segs = (p) => String(p || '').split('/').filter(Boolean)

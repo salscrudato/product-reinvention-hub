@@ -35,11 +35,11 @@ try {
   )
 }
 
-// ─── Cosmos lazy handle ────────────────────────────────────────────────────────────
-let _cosmos = null
-function cosmos() {
-  if (!_cosmos) _cosmos = require('./cosmos').docs
-  return _cosmos
+// ─── Cosmos tenant-store seam ────────────────────────────────────────────────────────
+// Resolve a tenant's container through cosmos.resolveTenantStore (pooled today; SILO_READY).
+// Every SERFF read is tenant-scoped, so it flows through the same seam as data.js.
+function cosmos(tenantId) {
+  return require('./cosmos').resolveTenantStore(tenantId).docs
 }
 
 // ─── Cosmos helpers ───────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ const idFor = (prefix, key) => `${prefix}:${String(key).replace(/[/\\?#]/g, '~')
 const pkFor = (tid, base)   => `${tid}|${base}`
 
 async function readColl(tenantId, productId, coll) {
-  const { resources } = await cosmos().items.query({
+  const { resources } = await cosmos(tenantId).items.query({
     query: "SELECT c.data FROM c WHERE c.kind='entity' AND c.coll=@coll AND c.tenantId=@tid",
     parameters: [
       { name: '@coll', value: `products/${productId}/${coll}` },
@@ -61,7 +61,7 @@ async function readColl(tenantId, productId, coll) {
 async function readEntity(tenantId, path) {
   const base = path.split('/').filter(Boolean)[1] || path
   try {
-    const r = (await cosmos().item(idFor('ent', path), pkFor(tenantId, base)).read()).resource
+    const r = (await cosmos(tenantId).item(idFor('ent', path), pkFor(tenantId, base)).read()).resource
     return r?.tenantId === tenantId ? r.data : null
   } catch { return null }
 }

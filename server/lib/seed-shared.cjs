@@ -3363,6 +3363,9 @@ function quantizeInt8(vec) {
   return { values: vec.map((v) => Math.max(-127, Math.min(127, Math.round(v / scale)))), scale };
 }
 
+// shared/src/types.ts
+var DEFAULT_TENANT_ID = "default";
+
 // scripts/migrate-to-cosmos.ts
 var _endpoint = process.env.COSMOS_ENDPOINT;
 var _key = process.env.COSMOS_KEY;
@@ -3524,7 +3527,7 @@ if (_isCLI) {
     console.error("COSMOS_ENDPOINT / COSMOS_KEY required");
     process.exit(1);
   }
-  const tenant = process.env.COSMOS_TENANT || "default";
+  const tenant = process.env.COSMOS_TENANT || DEFAULT_TENANT_ID;
   seedForTenant(tenant).then((r) => console.log(`\u2705 Done: ${r.done}/${r.total} docs`)).catch((e) => {
     console.error("migration failed:", e);
     process.exit(1);

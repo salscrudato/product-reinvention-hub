@@ -56,12 +56,11 @@ try {
   )
 }
 
-// ─── Lazy Cosmos handle ────────────────────────────────────────────────────────
-let _cosmos = null
-function getDocs() {
-  if (_cosmos) return _cosmos
-  try { _cosmos = require('./cosmos').docs } catch { /* offline or not yet wired */ }
-  return _cosmos
+// ─── Cosmos tenant-store seam ────────────────────────────────────────────────────
+// Resolve a tenant's container through cosmos.resolveTenantStore (pooled today; SILO_READY).
+// Returns null when Cosmos is not wired (offline dev) so callers can degrade to 503.
+function getDocs(tenantId) {
+  try { return require('./cosmos').resolveTenantStore(tenantId).docs } catch { return null }
 }
 
 const SCHEMA_VERSION = '1.0.0'
@@ -112,7 +111,7 @@ function getBundle(id) {
 // Partition key uses a dedicated "__duckcreek_api__" base so these events live in
 // their own partition, not in any product partition.
 async function emitAudit(tenantId, action, payload) {
-  const docs = getDocs()
+  const docs = getDocs(tenantId)
   if (!docs) return  // offline dev — skip silently
   const pk = `${tenantId || '__system__'}|__duckcreek_api__`
   try {
@@ -135,7 +134,7 @@ async function emitAudit(tenantId, action, payload) {
 // at paths like `products/{refId}/coverages/{covRefId}`, all in the partition
 // `${tenantId}|${productRefId}` (same partition-key scheme as data.js).
 async function loadBundle(tenantId, productRefId) {
-  const docs = getDocs()
+  const docs = getDocs(tenantId)
   if (!docs) throw Object.assign(new Error('Data store unavailable'), { code: 'NO_COSMOS' })
 
   const pk  = `${tenantId}|${productRefId}`

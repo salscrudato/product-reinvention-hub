@@ -18,6 +18,7 @@
 // To seed the reference products after this, run migrate-to-cosmos.ts next.
 
 import { CosmosClient } from '@azure/cosmos'
+import type { Organization } from '../shared/src/types'
 
 const endpoint = process.env.COSMOS_ENDPOINT!
 const key = process.env.COSMOS_KEY!
@@ -42,17 +43,19 @@ const docs = new CosmosClient({ endpoint, key }).database(process.env.COSMOS_DB 
 async function run() {
   console.log(`Creating tenant "${tenantId}" and ${role} user "${username}"…`)
 
-  // Write tenant record into __system__ partition
+  // Write tenant record into __system__ partition. The Organization is the CUSTOMER
+  // data boundary; tenantId is the stable partition prefix every domain entity is scoped to.
+  const org: Organization = {
+    tenantId,
+    name: process.env.TENANT_NAME || tenantId,
+    createdAt: NOW,
+    createdBy: 'create-tenant-script',
+  }
   const tenantDoc = {
     id: `tenant:${tenantId}`,
     pk: '__system__',
     kind: 'tenant',
-    data: {
-      tenantId,
-      name: process.env.TENANT_NAME || tenantId,
-      createdAt: NOW,
-      createdBy: 'create-tenant-script',
-    },
+    data: org,
   }
   await docs.items.upsert(tenantDoc)
   console.log(`  ✅ Tenant "${tenantId}" created (name: "${tenantDoc.data.name}")`)

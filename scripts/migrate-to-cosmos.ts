@@ -35,6 +35,7 @@ import {
 } from '../shared/src/seed/generalLiability'
 import { buildBundleChunks, dedupeChunks } from '../shared/src/retrieval/chunk'
 import { quantizeInt8 } from '../shared/src/retrieval/retrieve'
+import { DEFAULT_TENANT_ID } from '../shared/src/types'
 
 type Doc = Record<string, unknown>
 
@@ -199,7 +200,9 @@ const _isCLI = Boolean(process.argv[1] && (
 ))
 if (_isCLI) {
   if (!_endpoint || !_key) { console.error('COSMOS_ENDPOINT / COSMOS_KEY required'); process.exit(1) }
-  const tenant = process.env.COSMOS_TENANT || 'default'
+  // Backfill/demo default. seedForTenant upserts on deterministic ids, so re-running is
+  // idempotent (never double-writes). Override with COSMOS_TENANT to seed another org.
+  const tenant = process.env.COSMOS_TENANT || DEFAULT_TENANT_ID
   seedForTenant(tenant).then(r => console.log(`✅ Done: ${r.done}/${r.total} docs`))
     .catch((e) => { console.error('migration failed:', e); process.exit(1) })
 }

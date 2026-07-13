@@ -16,7 +16,7 @@ const { resolveTenantStore } = require('./cosmos')
 const { requireAuth, requireRole, requireTenant, resolveTenantForPrincipal } = require('./auth')
 
 const router = express.Router()
-// storeFor(tid) — resolve a tenant's Cosmos container through the SILO_READY seam
+// storeFor(tid): resolve a tenant's Cosmos container through the SILO_READY seam
 // (pooled today; a promoted tenant gets its own container with no change here). Every
 // tenant-scoped read/write below goes through this, so isolation follows the seam.
 const storeFor = (tid) => resolveTenantStore(tid).docs
@@ -160,7 +160,7 @@ async function attachEmbeddings(opsBatches) {
 // Storage-envelope fields the SERVER owns exclusively. A client mutation carries only a
 // domain payload (`data`); stripping any client-supplied copy of these keys means a client
 // can never smuggle a tenant boundary (or storage metadata) into a write. The server is the
-// sole writer of tenantId — it is set from the pk/common envelope below, never from `data`.
+// sole writer of tenantId: it is set from the pk/common envelope below, never from `data`.
 const RESERVED_ENVELOPE_KEYS = ['tenantId', 'pk', 'kind', 'coll', 'path']
 
 function envelope(tid, payload, actor) {

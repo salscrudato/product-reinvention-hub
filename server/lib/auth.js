@@ -22,7 +22,7 @@ const TTL_SECONDS = 12 * 60 * 60
 
 const RANK = { VIEWER: 0, ANALYST: 1, EDITOR: 2, ADMIN: 3 }
 
-// DEFAULT_TENANT_ID — mirror of shared/src/types.ts DEFAULT_TENANT_ID (this CJS module
+// DEFAULT_TENANT_ID: mirror of shared/src/types.ts DEFAULT_TENANT_ID (this CJS module
 // cannot import the TS shared package). The backfill/demo tenant + the floor for a
 // principal with no explicit binding. Keep the two literals in sync.
 const DEFAULT_TENANT_ID = 'default'
@@ -226,7 +226,7 @@ function requireTenant(req, res, next) {
   next()
 }
 
-// resolveTenantForPrincipal(principal) — THE server-side seam that maps an authenticated
+// resolveTenantForPrincipal(principal): THE server-side seam that maps an authenticated
 // principal to the tenant it operates in. Every tenant-scoped read/write derives its
 // tenantId through here, NEVER from anything a client can set. Today a principal's tenant
 // is bound at login (validated against the user's allowed tenants) and carried in the
@@ -235,7 +235,7 @@ function requireTenant(req, res, next) {
 // legacy data still resolves. requireTenant remains the authorization gate for interactive
 // sessions (a tenant-less session is rejected before it reaches a handler); this seam is
 // the resolution step. Prompt 2 will EXTEND it (org-membership lookup / default-org
-// provisioning) — the signature and the server-derived guarantee stay stable.
+// provisioning); the signature and the server-derived guarantee stay stable.
 function resolveTenantForPrincipal(principal) {
   return (principal && principal.tenantId) || DEFAULT_TENANT_ID
 }
