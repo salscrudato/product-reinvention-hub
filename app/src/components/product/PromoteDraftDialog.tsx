@@ -29,8 +29,11 @@ interface Props {
 export function PromoteDraftDialog({ product, actor, onClose, onPromoted }: Props) {
   const [typed, setTyped]   = useState('')
   const [busy, setBusy]     = useState(false)
-  const target = product.name.trim()
-  const matches = typed.trim() === target
+  // A malformed / partially-imported draft may lack a name; fall back to refId/id so the
+  // dialog never crashes and still gates promotion behind a typed confirmation.
+  const target = (product.name ?? product.refId ?? product.id ?? '').trim()
+  const displayName = target || 'this draft'
+  const matches = target.length > 0 && typed.trim() === target
 
   async function promote() {
     if (!matches || busy) return
@@ -41,7 +44,7 @@ export function PromoteDraftDialog({ product, actor, onClose, onPromoted }: Prop
         data: { lifecycle: 'LAUNCHED', status: 'ACTIVE', reviewStatus: 'APPROVED' },
         expectedRev: product.rev,
       })
-      toast.success(`${product.name} promoted to the portfolio`)
+      toast.success(`${displayName} promoted to the portfolio`)
       onPromoted?.(product.id)
       onClose()
     } catch (err) {
@@ -61,7 +64,7 @@ export function PromoteDraftDialog({ product, actor, onClose, onPromoted }: Prop
         <div className="flex items-start gap-2.5 rounded-[12px] p-3.5" style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
           <IconArrowUp size={16} className="text-accent shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-sm text-dim">
-            Promoting moves <span className="font-medium text-text">{product.name}</span> out of Drafts and into the
+            Promoting moves <span className="font-medium text-text">{displayName}</span> out of Drafts and into the
             published <span className="font-medium text-text">Products</span> portfolio, where it counts toward the
             portfolio and is visible to everyone. This is the only way a draft becomes published.
           </p>

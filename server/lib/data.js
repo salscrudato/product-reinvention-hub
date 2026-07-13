@@ -193,17 +193,28 @@ function envelope(tid, payload, actor) {
       if (!parent) { const e = new Error('invalid_parent'); e.code = 'INVALID_PARENT'; throw e }
     }
     const rev = curRev + 1
-    const entityData = { ...data, rev, updatedAt: now, updatedBy: actor }
+    // op:'update' is a PARTIAL update — shallow-merge the incoming fields onto the
+    // existing domain data so a caller that sends only what changed (e.g. the state-
+    // footprint editor sending just { states, allStates }) never wipes the rest of the
+    // document. Without this, an update REPLACES the whole doc: editing a product's
+    // footprint stripped its name/lob/lifecycle and corrupted it. create/delete keep
+    // prior semantics (create writes verbatim). Merge is shallow: a supplied key
+    // replaces its value wholesale (arrays/objects are not deep-merged); absent keys
+    // retain their prior value. The merged doc feeds the entity, the version diff, the
+    // search index and the grounding chunk so all four stay consistent.
+    const prevData = (op === 'update' && current && current.data && typeof current.data === 'object') ? current.data : {}
+    const mergedData = { ...prevData, ...data }
+    const entityData = { ...mergedData, rev, updatedAt: now, updatedBy: actor }
     const common = { pk, tenantId: tid }
     const ops = []
     if (op === 'delete') ops.push({ operationType: 'Delete', id: idFor('ent', path) })
     else ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ent', path), ...common, kind: 'entity', path, coll: collOf(path), entityType, rev, data: entityData, updatedAt: now } })
     ops.push({ operationType: 'Create', resourceBody: { id: auditId(), ...common, kind: 'audit', entityPath: path, entityType, op, actor, rev, at: now } })
-    ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ver', `${path}:${rev}`), ...common, kind: 'version', entityPath: path, rev, op, diff: op === 'delete' ? null : fieldDiff(current?.data, data), actor, at: now } })
-    ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('idx', path), ...common, kind: 'searchIndex', entityPath: path, entityType, deleted: op === 'delete', text: searchText(data), at: now } })
+    ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ver', `${path}:${rev}`), ...common, kind: 'version', entityPath: path, rev, op, diff: op === 'delete' ? null : fieldDiff(current?.data, mergedData), actor, at: now } })
+    ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('idx', path), ...common, kind: 'searchIndex', entityPath: path, entityType, deleted: op === 'delete', text: searchText(mergedData), at: now } })
     // 5th op: grounding chunk (non-delete only; same pk → same Cosmos partition → atomic)
     if (op !== 'delete') {
-      const chunkOp = buildChunkOp(entityType, path, data, pk, tid, now)
+      const chunkOp = buildChunkOp(entityType, path, mergedData, pk, tid, now)
       if (chunkOp) ops.push(chunkOp)
     }
     return { pk, ops, rev }

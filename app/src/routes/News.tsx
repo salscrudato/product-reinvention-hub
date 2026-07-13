@@ -82,6 +82,21 @@ interface RelevanceResult {
   states: string[]  // matched state codes shown in provenance row
 }
 
+/** Safely read a product's line-of-business as { name, refId }. Seeded products carry
+ *  lob as an object; some imported / filing-derived products carry it as a bare string
+ *  (or omit it). Never throw on a malformed product — a bad row must not crash the feed. */
+function lobInfo(lob: unknown): { name: string; refId: string } {
+  if (lob && typeof lob === 'object') {
+    const o = lob as { name?: unknown; refId?: unknown }
+    return {
+      name:  typeof o.name === 'string' ? o.name : '',
+      refId: typeof o.refId === 'string' ? o.refId : '',
+    }
+  }
+  if (typeof lob === 'string') return { name: lob, refId: '' }
+  return { name: '', refId: '' }
+}
+
 /** Score a news item against the PM's product portfolio.
  *  Returns the score and the reasons (LOBs + states) that contributed to it. */
 function computeRelevance(
@@ -97,14 +112,15 @@ function computeRelevance(
   const matchedStates = new Set<string>()
 
   for (const product of products) {
-    const lobName   = product.lob.name.toLowerCase()
-    const lobPrefix = (product.lob.refId ?? '').split('.')[0] ?? ''
+    const { name: lobDisplay, refId: lobRefId } = lobInfo(product.lob)
+    const lobName   = lobDisplay.toLowerCase()
+    const lobPrefix = lobRefId.split('.')[0] ?? ''
     const extras    = LOB_KEYWORDS[lobPrefix] ?? []
 
     // LOB match: the bare LOB name or any known expansion keyword appears in the text.
-    if (lower.includes(lobName) || extras.some(kw => lower.includes(kw))) {
+    if (lobName && (lower.includes(lobName) || extras.some(kw => lower.includes(kw)))) {
       score += 3
-      matchedLobs.add(product.lob.name)
+      if (lobDisplay) matchedLobs.add(lobDisplay)
     }
 
     // State match: full state name (unambiguous) OR uppercase word-boundary code.
@@ -124,7 +140,7 @@ function computeRelevance(
     // to a specific product via LOB/state analysis; a direct hit is the strongest signal.
     if ((item.relatedProductIds ?? []).includes(product.id)) {
       score += 4
-      matchedLobs.add(product.lob.name)
+      if (lobDisplay) matchedLobs.add(lobDisplay)
     }
   }
 
@@ -939,7 +955,8 @@ export default function News() {
     const lobs = new Set<string>(), states = new Set<string>()
     let allStates = false
     for (const p of products.items) {
-      lobs.add(p.lob.name)
+      const n = lobInfo(p.lob).name
+      if (n) lobs.add(n)
       if (p.allStates) allStates = true
       for (const s of p.states ?? []) states.add(s)
     }

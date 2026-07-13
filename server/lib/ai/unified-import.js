@@ -166,7 +166,10 @@ async function unifiedImport(req, res) {
         productId: productRefId,
         product: {
           docId: 'fil-prod', label: productName,
-          data: { refId: productRefId, name: productName, lob: 'PH', state: filingState },
+          // lob must be an object { refId, name } to match the seeded/ISO-imported product
+          // shape — the app reads product.lob.name across Products/News/etc. A bare string
+          // here produces a product that crashes those surfaces.
+          data: { refId: productRefId, name: productName, lob: { refId: 'PH.LOB.001', name: 'Personal Home' }, state: filingState },
         },
         coverages: coverageEntities,
         forms: [], rules: [], formRules: [], ratingProgram: null, ldTables: [], rtTables: [],
