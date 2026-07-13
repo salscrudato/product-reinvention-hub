@@ -99,16 +99,25 @@ async function refreshNews(req, res) {
     'Make each article specific with real-sounding entities, figures, and regulatory detail.',
   ].join(' ')
 
-  let rawBatch
+  // 10 detailed articles (summary + 3 bullets + tags each) can exceed a small
+  // max_tokens budget; a truncated forced-tool response yields an incomplete JSON
+  // input that parses to zero articles. Give it ample room (8192) and retry once
+  // if the first pass still comes back empty, so a user "Refresh" never silently
+  // returns nothing.
+  async function callOnce() {
+    const raw = await _forcedToolCall(deployment, NEWS_SYSTEM, [_NEWS_TOOL], 'emit_news_batch',
+      [], instruction, 8192)
+    return Array.isArray(raw?.articles) ? raw.articles : []
+  }
+
+  let articles = []
   try {
-    rawBatch = await _forcedToolCall(deployment, NEWS_SYSTEM, [_NEWS_TOOL], 'emit_news_batch',
-      [], instruction, 4096)
+    articles = await callOnce()
+    if (articles.length === 0) articles = await callOnce()   // one retry on empty
   } catch (err) {
     console.error('[refreshNews] AI error:', err)
     return res.status(500).json({ error: `AI call failed: ${String(err.message || err).slice(0, 200)}` })
   }
-
-  const articles = Array.isArray(rawBatch?.articles) ? rawBatch.articles : []
   let stored = 0
   const actor = { uid: req.user.uid || 'system', name: req.user.name || 'News Bot' }
 
