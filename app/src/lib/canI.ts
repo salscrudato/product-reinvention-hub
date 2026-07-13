@@ -10,7 +10,7 @@ import type { Capability } from './backend/types'
 interface HasRole { role?: string | null }
 
 const ROLE_CAPS: Record<string, Capability[]> = {
-  VIEWER:       ['product:read'],
+  VIEWER:       ['product:read', 'ai:invoke'],
   UNDERWRITING: ['product:read', 'ai:invoke'],
   COMPLIANCE:   ['product:read', 'ai:invoke'],
   CLAIMS:       ['product:read', 'ai:invoke'],

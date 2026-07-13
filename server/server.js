@@ -66,6 +66,52 @@ app.use(compression({ filter: (req, res) => {
 app.use(express.json({ limit: '25mb' }))
 app.use(auth.attachUser)
 
+// ─── Global auth + write gates (defense-in-depth) ────────────────────────────
+// 1. requireAuth on ALL /api/* except the public surface (health, login, guest
+//    HomeCheck). Individual routers keep their own guards; this is the floor.
+// 2. Break-glass: a SUPER_ADMIN X-Tenant-Id override without a live grant is
+//    refused explicitly — never silently served from another tenant (auth.js).
+// 3. Default-deny write gate: every non-GET /api/* requires product:write unless
+//    whitelisted below, so a VIEWER can never reach a mutation even if a route
+//    forgot its own guard. Read-shaped POSTs and the read-only AI surface are
+//    whitelisted; write-shaped AI calls (import, reindex) are NOT.
+const { hasCapability } = require('./lib/authz')
+const PUBLIC_API = [
+  '/api/health',
+  '/api/auth/otp/request', '/api/auth/otp/verify', '/api/auth/bootstrap', '/api/auth/tenants',
+  '/api/homecheck/',  // guest consumer surface — rate-limited, zero portfolio access
+]
+const isPublicApi = (p) => PUBLIC_API.some((pub) => (pub.endsWith('/') ? p.startsWith(pub) : p === pub))
+// Routers that enforce their own capability gates with pinned error contracts
+// (platform gates, member:manage, filing:generate) — exempt from the generic
+// product:write check so their specific `need` codes keep reaching clients.
+const WRITE_EXEMPT_PREFIX = ['/api/auth/', '/api/admin', '/api/tenant-admin', '/api/filing', '/api/serff']
+const WRITE_EXEMPT_EXACT = ['/api/db/list', '/api/db/presence/watch']  // read-shaped POSTs
+const AI_WRITE = new Set(['unifiedImport', 'reindexProduct'])          // write-shaped AI calls
+
+app.use((req, res, next) => {
+  const p = req.path
+  if (!p.startsWith('/api/')) return next()
+  if (isPublicApi(p)) return next()
+  if (!req.user) return res.status(401).json({ error: 'unauthenticated' })
+  if (req.breakGlassDenied) {
+    return res.status(403).json({
+      error: 'break_glass_required', tenantId: req.breakGlassDenied,
+      detail: 'Cross-tenant access requires an active break-glass grant (POST /api/admin/break-glass).',
+    })
+  }
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next()
+  if (WRITE_EXEMPT_EXACT.includes(p) || WRITE_EXEMPT_PREFIX.some((x) => p.startsWith(x))) return next()
+  if (p.startsWith('/api/ai/')) {
+    const name = p.slice('/api/ai/'.length).split('/')[0]
+    if (!AI_WRITE.has(name)) return next()  // read-only AI (chat, analyze, …) — ai:invoke gate applies per-route
+  }
+  if (!hasCapability(req.user, 'product:write')) {
+    return res.status(403).json({ error: 'forbidden', need: 'product:write', have: req.user.role })
+  }
+  next()
+})
+
 // ─── health ─────────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
   res.set('Cache-Control', 'no-store').json({ status: 'ok' })
@@ -79,7 +125,7 @@ app.post('/api/auth/otp/verify',  loginRateLimit, auth.verifyOtp)
 app.post('/api/auth/bootstrap',   loginRateLimit, auth.loginBootstrap)
 app.get('/api/auth/tenants', tenantsRateLimit, auth.publicTenants) // login-page dropdown (ids + names only)
 app.get('/api/auth/me', auth.requireAuth, auth.me)
-app.post('/api/auth/logout', auth.revokeToken, (_req, res) => res.json({ ok: true })) // RISK-006: revoke jti before responding
+app.post('/api/auth/logout', auth.revokeToken, (req, res) => { auth.clearSessionCookie(req, res); res.json({ ok: true }) }) // RISK-006: revoke jti + clear session cookie before responding
 app.post('/api/auth/change-password', auth.requireAuth, auth.changePassword)
 
 // ─── platform administration (SUPER_ADMIN + SUPPORT only) ───────────────────

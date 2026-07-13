@@ -25,7 +25,7 @@ const emailAdapter = require('./email')
 const _secret = process.env.AUTH_JWT_SECRET
 if (!_secret) throw new Error('[auth] AUTH_JWT_SECRET is required — set it in App Service config (production) or local env (dev/smoke)')
 const SECRET = _secret
-const TTL_SECONDS = 12 * 60 * 60
+const TTL_SECONDS = 8 * 60 * 60
 
 // Two-plane role model.
 // Tenant plane: VIEWER, inquiry personas (UNDERWRITING/COMPLIANCE/CLAIMS/ACTUARIAL/ANALYST),
@@ -80,22 +80,27 @@ function resolveTenantFromDomain(email) {
 }
 
 // ─── Bootstrap admins (config/env only, never in the client bundle) ──────────
-// RISK-002: warn loudly when defaults are live.
+// DEF-0041 (fail-closed, re-hardened after a regression): a bootstrap account
+// EXISTS only when its password is explicitly configured via env
+// (BOOTSTRAP_ADMIN_PASSWORD / BOOTSTRAP_SAL_PASSWORD in App Service config).
+// The well-known dev defaults are available ONLY behind the explicit opt-in
+// BOOTSTRAP_USERS_ENABLED=true (local dev + hardening/smoke.mjs — never set it in
+// a deployed environment). With neither set, loginBootstrap always returns 401.
 // NOTE: seed admins should migrate to normal admin management after the pilot.
-const BOOTSTRAP_ADMINS = {
-  admin: {
-    password: process.env.BOOTSTRAP_ADMIN_PASSWORD || 'admin',
-    name: 'Admin',
-    email: 'admin@prodhub.local',
-  },
-  sal: {
-    password: process.env.BOOTSTRAP_SAL_PASSWORD || 'scrudato',
-    name: 'Sal Scrudato',
-    email: 'salvatore.scrudato@accenture.com',
-  },
+const BOOTSTRAP_DEFAULTS_OK = process.env.BOOTSTRAP_USERS_ENABLED === 'true'
+function bootstrapAccount(envPassword, devDefault, name, email) {
+  const password = envPassword || (BOOTSTRAP_DEFAULTS_OK ? devDefault : null)
+  return password ? { password, name, email } : null
 }
-if (!process.env.BOOTSTRAP_ADMIN_PASSWORD || !process.env.BOOTSTRAP_SAL_PASSWORD) {
-  console.warn('[auth] SECURITY: bootstrap admins are using default passwords. Set BOOTSTRAP_ADMIN_PASSWORD and BOOTSTRAP_SAL_PASSWORD in App Service config.')
+const BOOTSTRAP_ADMINS = {}
+{
+  const admin = bootstrapAccount(process.env.BOOTSTRAP_ADMIN_PASSWORD, 'admin', 'Admin', 'admin@prodhub.local')
+  const sal = bootstrapAccount(process.env.BOOTSTRAP_SAL_PASSWORD, 'scrudato', 'Sal Scrudato', 'salvatore.scrudato@accenture.com')
+  if (admin) BOOTSTRAP_ADMINS.admin = admin
+  if (sal) BOOTSTRAP_ADMINS.sal = sal
+}
+if (BOOTSTRAP_DEFAULTS_OK && (!process.env.BOOTSTRAP_ADMIN_PASSWORD || !process.env.BOOTSTRAP_SAL_PASSWORD)) {
+  console.warn('[auth] SECURITY: BOOTSTRAP_USERS_ENABLED=true with default passwords — acceptable ONLY for local dev/smoke. Never set this in a deployed environment.')
 }
 
 // ─── base64url HS256 JWT ──────────────────────────────────────────────────────
@@ -118,6 +123,37 @@ function verify(token) {
   let payload; try { payload = JSON.parse(fromB64url(p[1]).toString('utf8')) } catch { return null }
   if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) return null
   return payload
+}
+
+// ─── HTTP-only session cookie ─────────────────────────────────────────────────
+// The session JWT is ALSO set as an HTTP-only cookie so the browser never has to
+// hold it in script-readable storage. Bearer remains accepted (existing clients,
+// smoke harnesses); the cookie is the fallback when no Authorization header is
+// present. Entra SSO can later mint the same cookie behind the same middleware.
+const SESSION_COOKIE = 'pf_session'
+
+function isSecureReq(req) {
+  return req.secure || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https'
+}
+function setSessionCookie(req, res, token) {
+  const attrs = [`${SESSION_COOKIE}=${token}`, 'Path=/', 'HttpOnly', 'SameSite=Lax', `Max-Age=${TTL_SECONDS}`]
+  if (isSecureReq(req)) attrs.push('Secure')
+  res.append('Set-Cookie', attrs.join('; '))
+}
+function clearSessionCookie(req, res) {
+  const attrs = [`${SESSION_COOKIE}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0']
+  if (isSecureReq(req)) attrs.push('Secure')
+  res.append('Set-Cookie', attrs.join('; '))
+}
+function readSessionCookie(req) {
+  const raw = req.headers.cookie
+  if (!raw) return null
+  for (const part of String(raw).split(';')) {
+    const eq = part.indexOf('=')
+    if (eq === -1) continue
+    if (part.slice(0, eq).trim() === SESSION_COOKIE) return part.slice(eq + 1).trim() || null
+  }
+  return null
 }
 
 // ─── JWT revocation (RISK-006) ────────────────────────────────────────────────
@@ -144,6 +180,35 @@ async function isRevoked(jti) {
 function systemContainer() {
   try { return require('./cosmos').docs } catch { return null }
 }
+
+// ─── Break-glass grants (SUPER_ADMIN cross-tenant override) ──────────────────
+// The X-Tenant-Id override is honoured ONLY while an explicit, time-bounded,
+// audited break-glass grant exists for (uid, tenantId). Never implicit: without
+// a live grant the override is refused (403 via server.js), not silently ignored.
+// Grants are created/ended by POST/DELETE /api/admin/break-glass (admin.js) and
+// stored in __system__ as kind='breakGlass' with an expiresAt.
+const _grantCache = new Map()  // `${uid}|${tid}` -> { until, cachedAt }
+const GRANT_CACHE_TTL = 30 * 1000
+
+async function hasBreakGlass(uid, tenantId) {
+  const key = `${uid}|${tenantId}`
+  const now = Date.now()
+  const cached = _grantCache.get(key)
+  if (cached && now - cached.cachedAt < GRANT_CACHE_TTL) return cached.until > now
+  const docs = systemContainer()
+  if (!docs) return false
+  try {
+    const { resource } = await docs.item(`breakGlass:${uid}:${tenantId}`, '__system__').read()
+    const until = Date.parse(resource?.data?.expiresAt || '') || 0
+    _grantCache.set(key, { until, cachedAt: now })
+    return until > now
+  } catch {
+    _grantCache.set(key, { until: 0, cachedAt: now })
+    return false
+  }
+}
+// Called by admin.js when a grant is created or ended so the next request sees it.
+function bustBreakGlassCache(uid, tenantId) { _grantCache.delete(`${uid}|${tenantId}`) }
 
 // ─── Immutable login audit trail ──────────────────────────────────────────────
 // Every auth event writes an append-only Cosmos record (Create, not Upsert).
@@ -278,6 +343,10 @@ async function verifyOtp(req, res) {
 
   const resolvedTenant = result.tenantId || (tenant ? String(tenant) : null)
   const user = await jitProvisionUser(normalized, resolvedTenant)
+  if (user.disabled) {
+    await writeLoginAudit('login_disabled', normalized, resolvedTenant, ip, ua)
+    return res.status(403).json({ error: 'account_disabled' })
+  }
   const effectiveTenant = resolvedTenant || DEFAULT_TENANT_ID
 
   const token = sign({
@@ -287,6 +356,7 @@ async function verifyOtp(req, res) {
   })
 
   await writeLoginAudit('otp_success', normalized, effectiveTenant, ip, ua)
+  setSessionCookie(req, res, token)
   return res.json({
     user: { uid: user.username, email: normalized, name: user.name || user.username, role: user.role || 'VIEWER', tenantId: effectiveTenant },
     token,
@@ -319,6 +389,7 @@ async function loginBootstrap(req, res) {
   await writeLoginAudit('bootstrap_success', uKey, tid, ip, ua)
   await writeLoginAudit('bootstrap_super_admin_granted', uKey, tid, ip, ua)
 
+  setSessionCookie(req, res, token)
   return res.json({ user: { uid: uKey, email: admin.email, name: admin.name, role: 'SUPER_ADMIN', tenantId: tid }, token })
 }
 
@@ -376,9 +447,12 @@ async function changePassword(req, res) {
   if (docs) {
     try {
       const u = await findUser(req.user.uid)
+      // Spread the existing record so flags like `disabled` survive a password change.
+      const { source: _src, ...uData } = u || {}
       await docs.items.upsert({
         id: `user:${req.user.uid}`, pk: '__system__', kind: 'user',
         data: {
+          ...uData,
           username: req.user.uid, email: u?.email || req.user.email || null,
           name: u?.name || req.user.name || req.user.uid,
           role: u?.role || req.user.role,
@@ -396,7 +470,8 @@ async function publicTenants(_req, res) { res.json({ tenants: await listTenants(
 // ─── Per-request middleware ───────────────────────────────────────────────────
 async function attachUser(req, _res, next) {
   const h = req.headers.authorization || ''
-  const token = h.startsWith('Bearer ') ? h.slice(7) : null
+  // Bearer first (existing clients, harnesses); HTTP-only session cookie fallback.
+  const token = h.startsWith('Bearer ') ? h.slice(7) : readSessionCookie(req)
   const p = token ? verify(token) : null
   if (p) {
     if (p.jti && await isRevoked(p.jti)) {
@@ -404,11 +479,16 @@ async function attachUser(req, _res, next) {
     } else {
       const role = normalizeRole(p.role)
       let tenantId = p.tenantId || null
-      // SUPER_ADMIN: allow per-request tenant override via X-Tenant-Id header.
-      // This lets admin/sal switch between any tenant without re-authenticating.
+      // SUPER_ADMIN: per-request tenant override via X-Tenant-Id header — honoured
+      // ONLY under a live break-glass grant (explicit, time-bounded, audited).
+      // Without one the request is refused downstream (server.js → 403
+      // break_glass_required), never silently served from another tenant.
       if (role === 'SUPER_ADMIN') {
         const override = String(req.headers['x-tenant-id'] || '').trim()
-        if (override) tenantId = override
+        if (override && override !== tenantId) {
+          if (await hasBreakGlass(p.sub, override)) tenantId = override
+          else req.breakGlassDenied = override
+        }
       }
       req.user = { uid: p.sub, name: p.name, email: p.email, role, tenantId, _jti: p.jti || null }
       // Impersonation token: dual-attributed; the real actor is in _impersonatedBy.
@@ -470,4 +550,5 @@ module.exports = {
   normalizeRole, sign, verify, signImpersonation,
   requestOtp, verifyOtp, loginBootstrap, me, changePassword, publicTenants, discoverHomeRealm,
   attachUser, requireAuth, requireRole, requireTenant, resolveTenantForPrincipal, revokeToken,
+  setSessionCookie, clearSessionCookie, hasBreakGlass, bustBreakGlassCache,
 }

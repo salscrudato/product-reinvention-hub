@@ -34,11 +34,40 @@ export interface AuthUser {
   tenantId?: string | null
 }
 
-export interface TenantInfo { id: string; name: string; createdAt?: string; createdBy?: string }
-export interface ManagedUser { username: string; role: Tier; tenants: string[] | '*'; email?: string; name?: string }
+export interface TenantInfo { id: string; name: string; status?: 'active' | 'suspended'; createdAt?: string; createdBy?: string }
+export interface ManagedUser { username: string; role: Tier; tenants: string[] | '*'; email?: string; name?: string; disabled?: boolean }
 
 // Member of a specific tenant (returned by tenant-admin endpoints).
-export interface TenantMember { username: string; role: Tier; email?: string; name?: string; invitedBy?: string; invitedAt?: string }
+export interface TenantMember { username: string; role: Tier; email?: string; name?: string; disabled?: boolean; invitedBy?: string; invitedAt?: string }
+
+// Per-tenant drill-down returned by GET /api/admin/tenants/:id/summary.
+export interface TenantSummary {
+  tenant: { tenantId: string; name: string; status?: 'active' | 'suspended'; createdAt?: string; createdBy?: string }
+  userCount: number
+  entityCounts: Record<string, number>
+  recentActivity: Array<{ op: string; entityType: string; entityPath: string; actor?: { uid: string; name?: string }; at: string }>
+}
+
+// One event from the platform / tenant audit viewers (server-filtered, paginated).
+export interface AuditSearchEvent {
+  id: string
+  op?: string; action?: string; event?: string
+  entityType?: string; entityPath?: string
+  actor?: { uid?: string; name?: string; impersonatedBy?: { uid: string; name?: string } } | string
+  detail?: Record<string, unknown>
+  tenantId?: string; rev?: number
+  at: string
+}
+
+export interface AuditSearchFilters {
+  source?: 'data' | 'platform'
+  tenant?: string; actor?: string; entityType?: string; action?: string
+  since?: string; until?: string
+  limit?: number; cursor?: string
+}
+
+// A live break-glass grant (SUPER_ADMIN cross-tenant access).
+export interface BreakGlassGrant { uid: string; tenantId: string; reason: string; grantedAt: string; expiresAt: string }
 
 export interface Session {
   user: AuthUser
@@ -94,6 +123,8 @@ export interface BackendAdapter {
   db: {
     get<T>(path: string): Promise<T | null>
     list<T>(path: string, q?: Query): Promise<T[]>
+    /** Cursor-paged list (server-enforced page cap). Pass the returned cursor to get the next page. */
+    listPage<T>(path: string, q?: Query & { pageSize?: number; cursor?: string }): Promise<{ data: T[]; cursor: string | null; hasMore: boolean }>
     /** Subscribe to a document or collection query. Returns unsubscribe fn. On a listener
      *  error (e.g. a failed poll / offline) the data callback still degrades to `[]`/`null`
      *  so consumers resolve their loading state; pass `onError` to ALSO surface a recoverable
@@ -135,21 +166,32 @@ export interface BackendAdapter {
   }
   /** Platform administration (SUPER_ADMIN + SUPPORT only, server-enforced): cross-tenant ops. */
   tenancy: {
-    listTenants(): Promise<TenantInfo[]>
+    listTenants(opts?: { q?: string; limit?: number; after?: string }): Promise<{ tenants: TenantInfo[]; hasMore: boolean }>
     createTenant(id: string, name: string): Promise<void>
+    updateTenant(id: string, patch: { name?: string; status?: 'active' | 'suspended' }): Promise<void>
     deleteTenant(id: string): Promise<void>
-    listUsers(opts?: { limit?: number; after?: string }): Promise<{ users: ManagedUser[]; hasMore: boolean }>
-    createUser(u: ManagedUser & { password?: string }): Promise<void>
+    /** Per-tenant drill-down: user count, entity counts by type, recent activity. */
+    tenantSummary(id: string): Promise<TenantSummary>
+    listUsers(opts?: { q?: string; tenant?: string; limit?: number; after?: string }): Promise<{ users: ManagedUser[]; hasMore: boolean }>
+    createUser(u: Partial<ManagedUser> & { username: string; password?: string }): Promise<void>
+    updateUser(username: string, patch: { role?: Tier; tenants?: string[] | '*'; disabled?: boolean; password?: string; name?: string; email?: string }): Promise<void>
     deleteUser(username: string): Promise<void>
     /** Impersonate a tenant user (SUPPORT/SUPER_ADMIN only). Returns a short-lived token. */
     impersonate(targetUid: string, tenantId: string, reason: string): Promise<{ token: string; expiresAt: string; subject: string; tenantId: string }>
+    /** Break-glass: explicit, time-bounded, audited grant for cross-tenant data access. */
+    requestBreakGlass(tenantId: string, reason: string, minutes?: number): Promise<BreakGlassGrant>
+    endBreakGlass(tenantId: string): Promise<void>
+    listBreakGlass(): Promise<BreakGlassGrant[]>
+    /** Platform audit viewer: server-filtered, cursor-paginated, read-only. */
+    searchAudit(filters: AuditSearchFilters): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }>
   }
   /** Self-service org admin (TENANT_ADMIN only, same-tenant enforced). */
   orgAdmin: {
     listMembers(opts?: { limit?: number; after?: string }): Promise<{ members: TenantMember[]; hasMore: boolean }>
     inviteMember(m: { username?: string; email?: string; name?: string; role: Tier; password?: string }): Promise<TenantMember>
     changeMemberRole(username: string, role: Tier): Promise<void>
+    setMemberDisabled(username: string, disabled: boolean): Promise<void>
     removeMember(username: string): Promise<void>
-    listAudit(opts?: { limit?: number }): Promise<unknown[]>
+    listAudit(opts?: { entityType?: string; action?: string; actor?: string; since?: string; limit?: number; cursor?: string }): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }>
   }
 }

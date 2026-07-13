@@ -11,7 +11,7 @@
 // document, odd = collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
-import type { AuthUser, BackendAdapter, ManagedUser, TenantMember, MutationPayload, Query, Session, TenantInfo } from './types'
+import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, BreakGlassGrant, ManagedUser, TenantMember, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
 import { MutationConflictError } from './types'
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -64,8 +64,13 @@ function setToken(t: string | null) {
   }
 }
 
+/** The active SUPER_ADMIN tenant override, if any (see setSuperAdminTenant). */
+export function getSuperAdminTenant(): string | null { return activeTenantOverride }
+
 /** Set or clear the active tenant for a SUPER_ADMIN session.
- *  Clears all cached data so the next poll loads from the new tenant. */
+ *  Clears all cached data so the next poll loads from the new tenant.
+ *  Server-side, the X-Tenant-Id override is only honoured under a live
+ *  break-glass grant (adapter.tenancy.requestBreakGlass) — never implicitly. */
 export function setSuperAdminTenant(id: string | null): void {
   activeTenantOverride = id
   snapshotCache.clear()
@@ -188,6 +193,11 @@ export const adapter: BackendAdapter = {
     async list<T>(path: string, q?: Query): Promise<T[]> {
       const { data } = await api<{ data: T[] }>('/db/list', { method: 'POST', body: JSON.stringify({ path, query: q }) })
       return data
+    },
+
+    async listPage<T>(path: string, q?: Query & { pageSize?: number; cursor?: string }): Promise<{ data: T[]; cursor: string | null; hasMore: boolean }> {
+      const query = { pageSize: 100, ...q }
+      return api<{ data: T[]; cursor: string | null; hasMore: boolean }>('/db/list', { method: 'POST', body: JSON.stringify({ path, query }) })
     },
 
     subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void, onError?: (err: unknown) => void, query?: Query): Unsubscribe {
@@ -362,31 +372,60 @@ export const adapter: BackendAdapter = {
   },
 
   tenancy: {
-    async listTenants(): Promise<TenantInfo[]> {
-      const { tenants } = await api<{ tenants: TenantInfo[] }>('/admin/tenants')
-      return tenants
+    async listTenants(opts?: { q?: string; limit?: number; after?: string }): Promise<{ tenants: TenantInfo[]; hasMore: boolean }> {
+      const params = new URLSearchParams()
+      if (opts?.q)     params.set('q', opts.q)
+      if (opts?.limit) params.set('limit', String(opts.limit))
+      if (opts?.after) params.set('after', opts.after)
+      const qs = params.size > 0 ? `?${params}` : ''
+      return api<{ tenants: TenantInfo[]; hasMore: boolean }>(`/admin/tenants${qs}`)
     },
     async createTenant(id: string, name: string): Promise<void> {
       await api('/admin/tenants', { method: 'POST', body: JSON.stringify({ id, name }) })
     },
+    async updateTenant(id: string, patch: { name?: string; status?: 'active' | 'suspended' }): Promise<void> {
+      await api(`/admin/tenants/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(patch) })
+    },
     async deleteTenant(id: string): Promise<void> {
       await api(`/admin/tenants/${encodeURIComponent(id)}`, { method: 'DELETE' })
     },
-    async listUsers(opts?: { limit?: number; after?: string }): Promise<{ users: ManagedUser[]; hasMore: boolean }> {
+    async tenantSummary(id: string): Promise<TenantSummary> {
+      return api<TenantSummary>(`/admin/tenants/${encodeURIComponent(id)}/summary`)
+    },
+    async listUsers(opts?: { q?: string; tenant?: string; limit?: number; after?: string }): Promise<{ users: ManagedUser[]; hasMore: boolean }> {
       const params = new URLSearchParams()
-      if (opts?.limit) params.set('limit', String(opts.limit))
+      if (opts?.q)      params.set('q', opts.q)
+      if (opts?.tenant) params.set('tenant', opts.tenant)
+      if (opts?.limit)  params.set('limit', String(opts.limit))
       if (opts?.after)  params.set('after',  opts.after)
       const qs = params.size > 0 ? `?${params}` : ''
       return api<{ users: ManagedUser[]; hasMore: boolean }>(`/admin/users${qs}`)
     },
-    async createUser(u: ManagedUser & { password?: string }): Promise<void> {
+    async createUser(u: Partial<ManagedUser> & { username: string; password?: string }): Promise<void> {
       await api('/admin/users', { method: 'POST', body: JSON.stringify(u) })
+    },
+    async updateUser(username: string, patch: { role?: Tier; tenants?: string[] | '*'; disabled?: boolean; password?: string; name?: string; email?: string }): Promise<void> {
+      await api(`/admin/users/${encodeURIComponent(username)}`, { method: 'PATCH', body: JSON.stringify(patch) })
     },
     async deleteUser(username: string): Promise<void> {
       await api(`/admin/users/${encodeURIComponent(username)}`, { method: 'DELETE' })
     },
     async impersonate(targetUid: string, tenantId: string, reason: string): Promise<{ token: string; expiresAt: string; subject: string; tenantId: string }> {
       return api('/admin/impersonate', { method: 'POST', body: JSON.stringify({ targetUid, tenantId, reason }) })
+    },
+    async requestBreakGlass(tenantId: string, reason: string, minutes?: number): Promise<BreakGlassGrant> {
+      const { grant } = await api<{ ok: boolean; grant: BreakGlassGrant }>('/admin/break-glass', { method: 'POST', body: JSON.stringify({ tenantId, reason, minutes }) })
+      return grant
+    },
+    async endBreakGlass(tenantId: string): Promise<void> {
+      await api(`/admin/break-glass/${encodeURIComponent(tenantId)}`, { method: 'DELETE' })
+    },
+    async listBreakGlass(): Promise<BreakGlassGrant[]> {
+      const { grants } = await api<{ grants: BreakGlassGrant[] }>('/admin/break-glass')
+      return grants
+    },
+    async searchAudit(filters: AuditSearchFilters): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }> {
+      return api('/admin/audit/search', { method: 'POST', body: JSON.stringify(filters) })
     },
   },
 
@@ -405,13 +444,22 @@ export const adapter: BackendAdapter = {
     async changeMemberRole(username: string, role: string): Promise<void> {
       await api(`/tenant-admin/members/${encodeURIComponent(username)}/role`, { method: 'PATCH', body: JSON.stringify({ role }) })
     },
+    async setMemberDisabled(username: string, disabled: boolean): Promise<void> {
+      await api(`/tenant-admin/members/${encodeURIComponent(username)}/disabled`, { method: 'PATCH', body: JSON.stringify({ disabled }) })
+    },
     async removeMember(username: string): Promise<void> {
       await api(`/tenant-admin/members/${encodeURIComponent(username)}`, { method: 'DELETE' })
     },
-    async listAudit(opts?: { limit?: number }): Promise<unknown[]> {
-      const qs = opts?.limit ? `?limit=${opts.limit}` : ''
-      const { events } = await api<{ events: unknown[] }>(`/tenant-admin/audit${qs}`)
-      return events
+    async listAudit(opts?: { entityType?: string; action?: string; actor?: string; since?: string; limit?: number; cursor?: string }): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }> {
+      const params = new URLSearchParams()
+      if (opts?.entityType) params.set('entityType', opts.entityType)
+      if (opts?.action)     params.set('action', opts.action)
+      if (opts?.actor)      params.set('actor', opts.actor)
+      if (opts?.since)      params.set('since', opts.since)
+      if (opts?.limit)      params.set('limit', String(opts.limit))
+      if (opts?.cursor)     params.set('cursor', opts.cursor)
+      const qs = params.size > 0 ? `?${params}` : ''
+      return api<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }>(`/tenant-admin/audit${qs}`)
     },
   },
 }

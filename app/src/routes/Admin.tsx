@@ -1,16 +1,16 @@
 // Admin (/app/admin) — PLATFORM console (SUPER_ADMIN and SUPPORT only).
 // Cross-tenant: tenant management, global user management, platform audit, AI cost.
 // TENANT_ADMIN users are redirected to /app/tenant-admin (self-service org console).
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { IconShield, IconPlus, IconUserX, IconSearch, IconFileClock, IconWarning } from '../components/ui/icons'
-import { adapter } from '../lib/backend'
-import type { ManagedUser, TenantInfo, Tier } from '../lib/backend'
+import { IconShield, IconPlus, IconUserX, IconSearch, IconFileClock, IconWarning, IconLayers, IconTable, IconEdit } from '../components/ui/icons'
+import { adapter, getSuperAdminTenant } from '../lib/backend'
+import type { AuditSearchEvent, ManagedUser, TenantInfo, TenantSummary, Tier } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { isPlatform } from '../lib/canI'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
 import { DEFAULT_BUDGET } from '@pf/shared'
-import type { AuditEvent, Version, SeedReport } from '@pf/shared'
+import type { SeedReport } from '@pf/shared'
 
 // Headline cost-program result (projected — mirrors docs/review/COST_REPORT.md). No live
 // Anthropic key exists in this environment, so these are structural projections from the
@@ -38,8 +38,6 @@ interface AiUsageDoc {
   at:               unknown
 }
 
-type AuditDoc     = AuditEvent & { id: string }
-type VersionDoc   = Version & { id: string }
 type SeedReportDoc = SeedReport & { id: string }
 
 function toMillis(v: unknown): number | null {
@@ -74,6 +72,7 @@ export default function Admin() {
         tabs={[
           { id: 'tenants',  label: 'Tenants'      },
           { id: 'users',    label: 'Users'       },
+          { id: 'data',     label: 'Data'         },
           { id: 'audit',    label: 'Audit Log'    },
           { id: 'seed',     label: 'Seed Report'  },
           { id: 'ai-cost',  label: 'AI Cost'      },
@@ -83,6 +82,7 @@ export default function Admin() {
       />
       {tab === 'tenants'  && <TenantsTab />}
       {tab === 'users'    && <UsersTab />}
+      {tab === 'data'     && <DataTab />}
       {tab === 'audit'    && <AuditTab />}
       {tab === 'seed'     && <SeedTab />}
       {tab === 'ai-cost'  && <AiCostTab />}
@@ -105,39 +105,64 @@ const tierColor: Record<string, 'purple' | 'blue' | 'good' | 'default'> = {
 const TIER_HELP = 'VIEWER = read | inquiry personas = read+AI | EDITOR = edit+AI | TENANT_ADMIN = org admin'
 
 // ─── Tenants ──────────────────────────────────────────────────────────────
+const TENANT_PAGE = 50
+
 function TenantsTab() {
   const [tenants, setTenants] = useState<TenantInfo[] | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [q, setQ] = useState('')
   const [creating, setCreating] = useState(false)
   const [draft, setDraft] = useState({ name: '', id: '' })
   const [busy, setBusy] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState<TenantInfo | null>(null)
   const [removing, setRemoving] = useState(false)
-  const load = () => adapter.tenancy.listTenants().then(setTenants).catch(() => setTenants([]))
-  useEffect(() => { load() }, [])
+  const [detail, setDetail] = useState<TenantInfo | null>(null)
+
+  const load = useCallback(async (after?: string) => {
+    const r = await adapter.tenancy.listTenants({ q: q.trim() || undefined, limit: TENANT_PAGE, after }).catch(() => ({ tenants: [], hasMore: false }))
+    setTenants(prev => (after ? [...(prev ?? []), ...r.tenants] : r.tenants))
+    setHasMore(r.hasMore)
+  }, [q])
+  useEffect(() => { const t = setTimeout(() => void load(), 250); return () => clearTimeout(t) }, [load])
 
   async function create() {
     if (!draft.name) { toast.error('Company name required'); return }
     setBusy(true)
-    try { await adapter.tenancy.createTenant(draft.id || draft.name, draft.name); toast.success('Tenant created'); setCreating(false); setDraft({ name: '', id: '' }); load() }
+    try { await adapter.tenancy.createTenant(draft.id || draft.name, draft.name); toast.success('Tenant created'); setCreating(false); setDraft({ name: '', id: '' }); void load() }
     catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') } finally { setBusy(false) }
   }
   async function confirmAndRemove() {
     if (!confirmRemove) return
     setRemoving(true)
-    try { await adapter.tenancy.deleteTenant(confirmRemove.id); toast.success('Tenant removed'); setConfirmRemove(null); load() }
+    try { await adapter.tenancy.deleteTenant(confirmRemove.id); toast.success('Tenant removed'); setConfirmRemove(null); void load() }
     catch { toast.error('Failed') } finally { setRemoving(false) }
   }
 
   if (tenants === null) return <Skeleton className="h-24" />
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center"><Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New tenant</Button></div>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-xs">
+          <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
+          <input
+            value={q} onChange={e => setQ(e.target.value)}
+            placeholder="Search tenants…" aria-label="Search tenants"
+            className="w-full h-8 pl-8 pr-3 rounded-[8px] bg-surface border text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
+            style={{ borderColor: 'var(--color-border)' }}
+          />
+        </div>
+        <Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New tenant</Button>
+      </div>
       {tenants.length === 0 ? (
-        <EmptyState icon={<IconShield size={26} />} title="No tenants yet" description="Create a tenant to load a company's isolated data. Each tenant is a securely separated database." />
+        q.trim()
+          ? <EmptyState icon={<IconSearch size={24} />} title="No tenants match" description={`No tenants match "${q}".`} />
+          : <EmptyState icon={<IconShield size={26} />} title="No tenants yet" description="Create a tenant to load a company's isolated data. Each tenant is a securely separated database." />
       ) : (
         <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
           {tenants.map(t => (
-            <div key={t.id} className="flex items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
+            <button key={t.id} onClick={() => setDetail(t)}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-surface text-left hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+              style={{ borderBottom: '1px solid var(--color-border)' }}>
               <span className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[11px] font-bold text-white shrink-0" style={{ background: 'var(--gradient-accent)' }}>
                 {t.name.slice(0, 2).toUpperCase()}
               </span>
@@ -145,11 +170,22 @@ function TenantsTab() {
                 <div className="text-sm font-medium text-text">{t.name}</div>
                 <div className="text-xs text-faint font-mono">{t.id}</div>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(t)}>
-                <IconUserX size={13} /> Remove
-              </Button>
-            </div>
+              {t.status === 'suspended' && <Badge label="suspended" color="danger" />}
+              <span className="text-xs text-faint hidden sm:block">{t.createdAt ? new Date(t.createdAt).toLocaleDateString() : ''}</span>
+              <span
+                role="button" tabIndex={0} aria-label={`Remove ${t.name}`} title="Remove tenant"
+                onClick={e => { e.stopPropagation(); setConfirmRemove(t) }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setConfirmRemove(t) } }}
+                className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-[7px] text-faint hover:text-danger hover:bg-danger/10 transition-colors">
+                <IconUserX size={14} aria-hidden="true" />
+              </span>
+            </button>
           ))}
+        </div>
+      )}
+      {hasMore && (
+        <div className="flex justify-center">
+          <button className="text-xs text-accent hover:underline" onClick={() => void load(tenants.at(-1)?.id)}>Load more</button>
         </div>
       )}
 
@@ -164,6 +200,9 @@ function TenantsTab() {
           </div>
         </div>
       </Dialog>
+
+      {/* Drill-down: user count, entity counts, recent activity, configure */}
+      {detail && <TenantDetailDialog tenant={detail} onClose={() => setDetail(null)} onChanged={() => void load()} />}
 
       {/* Remove confirmation dialog */}
       <Dialog open={!!confirmRemove} onClose={() => setConfirmRemove(null)} title="Remove tenant" width="max-w-md">
@@ -188,6 +227,99 @@ function TenantsTab() {
   )
 }
 
+function TenantDetailDialog({ tenant, onClose, onChanged }: { tenant: TenantInfo; onClose: () => void; onChanged: () => void }) {
+  const [summary, setSummary] = useState<TenantSummary | null>(null)
+  const [error, setError] = useState(false)
+  const [name, setName] = useState(tenant.name)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    adapter.tenancy.tenantSummary(tenant.id).then(setSummary).catch(() => setError(true))
+  }, [tenant.id])
+
+  const status = summary?.tenant.status ?? tenant.status ?? 'active'
+
+  async function save(patch: { name?: string; status?: 'active' | 'suspended' }) {
+    setBusy(true)
+    try {
+      await adapter.tenancy.updateTenant(tenant.id, patch)
+      toast.success('Tenant updated')
+      const s = await adapter.tenancy.tenantSummary(tenant.id).catch(() => null)
+      if (s) setSummary(s)
+      onChanged()
+    } catch { toast.error('Update failed') } finally { setBusy(false) }
+  }
+
+  return (
+    <Dialog open onClose={onClose} title={tenant.name} width="max-w-2xl">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2 text-xs text-faint font-mono">
+          {tenant.id}
+          <Badge label={status} color={status === 'active' ? 'good' : 'danger'} />
+          {summary?.tenant.createdAt && <span className="ml-auto font-sans">created {new Date(summary.tenant.createdAt).toLocaleDateString()}{summary.tenant.createdBy ? ` by ${summary.tenant.createdBy}` : ''}</span>}
+        </div>
+
+        {error ? (
+          <EmptyState icon={<IconWarning size={24} />} title="Summary unavailable" description="Could not load this tenant's summary. Try again." />
+        ) : summary === null ? (
+          <div className="flex flex-col gap-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
+        ) : (
+          <>
+            {/* Counts */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-surface rounded-[12px] p-3" style={{ border: '1px solid var(--color-border)' }}>
+                <div className="text-lg font-bold text-text tabular-nums">{summary.userCount}</div>
+                <div className="text-xs text-faint">users</div>
+              </div>
+              {Object.entries(summary.entityCounts).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([k, n]) => (
+                <div key={k} className="bg-surface rounded-[12px] p-3" style={{ border: '1px solid var(--color-border)' }}>
+                  <div className="text-lg font-bold text-text tabular-nums">{n.toLocaleString()}</div>
+                  <div className="text-xs text-faint truncate">{k}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Recent activity */}
+            <div>
+              <div className="text-xs font-semibold text-dim uppercase mb-2">Recent activity</div>
+              {summary.recentActivity.length === 0 ? (
+                <p className="text-sm text-faint">No mutations recorded yet.</p>
+              ) : (
+                <div className="rounded-[10px] overflow-hidden max-h-56 overflow-y-auto" style={{ border: '1px solid var(--color-border)' }}>
+                  {summary.recentActivity.map((a, i) => (
+                    <div key={i} className="flex flex-wrap items-center gap-2 px-3 py-2 bg-surface text-xs" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <Badge label={a.op} color={actionColor[a.op] ?? 'default'} />
+                      <span className="text-text">{a.entityType}</span>
+                      <span className="font-mono text-faint flex-1 min-w-[100px] truncate">{a.entityPath}</span>
+                      <span className="text-dim">{a.actor?.name ?? '—'}</span>
+                      <span className="text-faint">{fmt(a.at)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Configure */}
+        <div className="flex flex-wrap items-end gap-2 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <div className="flex-1 min-w-[180px]">
+            <Input label="Company name" value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <Button variant="ghost" size="sm" disabled={busy || !name.trim() || name.trim() === (summary?.tenant.name ?? tenant.name)} onClick={() => void save({ name: name.trim() })}>
+            <IconEdit size={13} /> Rename
+          </Button>
+          <Button variant="ghost" size="sm" disabled={busy}
+            className={status === 'active' ? 'text-danger border-danger/40 hover:bg-danger/10' : ''}
+            onClick={() => void save({ status: status === 'active' ? 'suspended' : 'active' })}>
+            {status === 'active' ? 'Suspend' : 'Reactivate'}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
 // ─── Users ──────────────────────────────────────────────────────────────────
 const USER_PAGE = 100
 
@@ -201,45 +333,48 @@ function UsersTab() {
   const [confirmDelete, setConfirmDelete] = useState<ManagedUser | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [userSearch, setUserSearch] = useState('')
+  const [tenantFilter, setTenantFilter] = useState('')
+  const [editTarget, setEditTarget] = useState<ManagedUser | null>(null)
 
-  async function load(after?: string) {
-    const result = await adapter.tenancy.listUsers({ limit: USER_PAGE, after }).catch(() => ({ users: [], hasMore: false }))
-    if (after) setUsers(prev => [...(prev ?? []), ...result.users])
-    else { setUsers(result.users); setHasMore(result.hasMore) }
-  }
-  useEffect(() => { load(); adapter.tenancy.listTenants().then(setTenants).catch(() => {}) }, [])
-
-  const visibleUsers = useMemo(() => {
-    if (!users) return []
-    const q = userSearch.trim().toLowerCase()
-    if (!q) return users
-    return users.filter(u =>
-      u.username.toLowerCase().includes(q) ||
-      u.role.toLowerCase().includes(q) ||
-      (u.tenants !== '*' && (u.tenants || []).some(t => t.toLowerCase().includes(q)))
-    )
-  }, [users, userSearch])
+  const load = useCallback(async (after?: string) => {
+    const result = await adapter.tenancy.listUsers({
+      q: userSearch.trim() || undefined,
+      tenant: tenantFilter || undefined,
+      limit: USER_PAGE, after,
+    }).catch(() => ({ users: [], hasMore: false }))
+    setUsers(prev => (after ? [...(prev ?? []), ...result.users] : result.users))
+    setHasMore(result.hasMore)
+  }, [userSearch, tenantFilter])
+  useEffect(() => { const t = setTimeout(() => void load(), 250); return () => clearTimeout(t) }, [load])
+  useEffect(() => { adapter.tenancy.listTenants({ limit: 200 }).then(r => setTenants(r.tenants)).catch(() => {}) }, [])
 
   async function create() {
     if (!draft.username || !draft.password) { toast.error('Username and password required'); return }
     setBusy(true)
     try {
       await adapter.tenancy.createUser({ username: draft.username, password: draft.password, role: draft.role, tenants: draft.tenant ? [draft.tenant] : [] })
-      toast.success('User created'); setCreating(false); setDraft({ username: '', password: '', role: 'VIEWER', tenant: '' }); load()
+      toast.success('User created'); setCreating(false); setDraft({ username: '', password: '', role: 'VIEWER', tenant: '' }); void load()
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') } finally { setBusy(false) }
   }
   async function confirmAndDelete() {
     if (!confirmDelete) return
     setDeleting(true)
-    try { await adapter.tenancy.deleteUser(confirmDelete.username); toast.success('User deleted'); setConfirmDelete(null); load() }
+    try { await adapter.tenancy.deleteUser(confirmDelete.username); toast.success('User deleted'); setConfirmDelete(null); void load() }
     catch { toast.error('Failed') } finally { setDeleting(false) }
+  }
+  async function toggleDisabled(u: ManagedUser) {
+    try {
+      await adapter.tenancy.updateUser(u.username, { disabled: !u.disabled })
+      toast.success(u.disabled ? `${u.username} enabled` : `${u.username} disabled`)
+      void load()
+    } catch { toast.error('Failed') }
   }
 
   if (users === null) return <Skeleton className="h-24" />
   return (
     <div className="flex flex-col gap-3">
-      {/* Toolbar: search + new user */}
-      <div className="flex items-center gap-2">
+      {/* Toolbar: search + tenant filter + new user */}
+      <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 max-w-xs">
           <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
           <input
@@ -251,23 +386,31 @@ function UsersTab() {
             style={{ borderColor: 'var(--color-border)' }}
           />
         </div>
+        <select value={tenantFilter} onChange={e => setTenantFilter(e.target.value)} aria-label="Filter by tenant"
+          className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }}>
+          <option value="">All tenants</option>
+          {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
         <Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New user</Button>
       </div>
 
       {users.length === 0 ? (
-        <EmptyState icon={<IconShield size={26} />} title="No gated users yet" description="No tenant-gated users yet. Create them here — each with a username, password, role and company." />
-      ) : visibleUsers.length === 0 ? (
-        <EmptyState icon={<IconSearch size={24} />} title="No users match" description={`No users match "${userSearch}".`} />
+        userSearch.trim() || tenantFilter
+          ? <EmptyState icon={<IconSearch size={24} />} title="No users match" description="No users match the current search/filter." />
+          : <EmptyState icon={<IconShield size={26} />} title="No gated users yet" description="No tenant-gated users yet. Create them here — each with a username, password, role and company." />
       ) : (
         <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-          {visibleUsers.map(u => (
-            <div key={u.username} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface hover:bg-raised transition-colors" style={{ borderBottom: '1px solid var(--color-border)' }}>
-              <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'var(--gradient-accent)' }}>{u.username.slice(0, 2).toUpperCase()}</span>
+          {users.map(u => (
+            <div key={u.username} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface hover:bg-raised transition-colors" style={{ borderBottom: '1px solid var(--color-border)', opacity: u.disabled ? 0.6 : 1 }}>
+              <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: u.disabled ? 'var(--color-border-strong)' : 'var(--gradient-accent)' }}>{u.username.slice(0, 2).toUpperCase()}</span>
               <div className="flex-1 min-w-[140px]">
                 <div className="text-sm font-medium text-text">{u.username}</div>
                 <div className="text-xs text-faint font-mono">{u.tenants === '*' ? 'all tenants' : ((u.tenants || []).join(', ') || '— no tenant —')}</div>
               </div>
+              {u.disabled && <Badge label="disabled" color="danger" />}
               <Badge label={u.role} color={tierColor[u.role] ?? 'default'} />
+              <Button variant="ghost" size="sm" onClick={() => setEditTarget(u)}><IconEdit size={13} /> Edit</Button>
+              <Button variant="ghost" size="sm" onClick={() => void toggleDisabled(u)}>{u.disabled ? 'Enable' : 'Disable'}</Button>
               <button onClick={() => setConfirmDelete(u)} aria-label={`Delete ${u.username}`} title="Delete user"
                 className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-[7px] text-faint hover:text-danger hover:bg-danger/10 transition-colors">
                 <IconUserX size={14} aria-hidden="true" />
@@ -278,8 +421,15 @@ function UsersTab() {
       )}
       {hasMore && (
         <div className="flex justify-center">
-          <button className="text-xs text-accent hover:underline" onClick={() => load(users.at(-1)?.username)}>Load more</button>
+          <button className="text-xs text-accent hover:underline" onClick={() => void load(users.at(-1)?.username)}>Load more</button>
         </div>
+      )}
+
+      {/* Edit user dialog: role + tenant + password reset (every change is audited server-side) */}
+      {editTarget && (
+        <EditUserDialog user={editTarget} tenants={tenants}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => { setEditTarget(null); void load() }} />
       )}
 
       {/* New user dialog */}
@@ -333,127 +483,285 @@ function UsersTab() {
   )
 }
 
-// ─── Audit explorer ─────────────────────────────────────────────────────────
+// ─── Edit user (role / tenant / password — all changes audited server-side) ──
+function EditUserDialog({ user, tenants, onClose, onSaved }: { user: ManagedUser; tenants: TenantInfo[]; onClose: () => void; onSaved: () => void }) {
+  const [role, setRole] = useState<Tier>(user.role)
+  const origTenant = user.tenants === '*' ? '*' : (user.tenants?.[0] ?? '')
+  const [tenant, setTenant] = useState(origTenant)
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
 
-const actionColor: Record<string, 'good' | 'blue' | 'danger' | 'default'> = { create: 'good', update: 'blue', delete: 'danger' }
-
-const AUDIT_PAGE = 200
-
-function AuditTab() {
-  const [events, setEvents]     = useState<AuditDoc[] | null>(null)
-  const [versions, setVersions] = useState<VersionDoc[]>([])
-  const [actor, setActor]       = useState('')
-  const [entityType, setEntityType] = useState('')
-  const [action, setAction]     = useState('')
-  const [since, setSince]       = useState('')
-  const [open, setOpen]         = useState<AuditDoc | null>(null)
-  const [limit, setLimit]       = useState(AUDIT_PAGE)
-  const [loadingMore, setLoadingMore] = useState(false)
-
-  useEffect(() => {
-    setEvents(null)
-    Promise.all([
-      adapter.db.list<AuditDoc>('auditEvents',  { orderBy: [{ field: 'at', dir: 'desc' }], limit }),
-      adapter.db.list<VersionDoc>('versions', { orderBy: [{ field: 'at', dir: 'desc' }], limit }),
-    ]).then(([evts, vers]) => { setEvents(evts); setVersions(vers); setLoadingMore(false) })
-      .catch(() => { setEvents([]); setVersions([]); setLoadingMore(false) })
-  }, [limit])
-
-  const entityTypes = useMemo(() => [...new Set((events ?? []).map(e => e.entityType))].sort(), [events])
-
-  const filtered = useMemo(() => {
-    let list = [...(events ?? [])]
-    if (actor)      list = list.filter(e => (e.actor?.name ?? '').toLowerCase().includes(actor.toLowerCase()))
-    if (entityType) list = list.filter(e => e.entityType === entityType)
-    if (action)     list = list.filter(e => e.action === action)
-    if (since)      { const s = Date.parse(since); list = list.filter(e => (toMillis(e.at) ?? 0) >= s) }
-    return list.sort((a, b) => (toMillis(b.at) ?? 0) - (toMillis(a.at) ?? 0)).slice(0, 200)
-  }, [events, actor, entityType, action, since])
-
-  // Correlate an audit event to its version (same entityPath, closest timestamp).
-  const versionFor = (e: AuditDoc): VersionDoc | null => {
-    const at = toMillis(e.at) ?? 0
-    const candidates = versions.filter(v => v.entityPath === e.entityPath)
-    if (!candidates.length) return null
-    return candidates.reduce((best, v) => Math.abs((toMillis(v.at) ?? 0) - at) < Math.abs((toMillis(best.at) ?? 0) - at) ? v : best)
+  async function save() {
+    const patch: { role?: Tier; tenants?: string[] | '*'; password?: string } = {}
+    if (role !== user.role) patch.role = role
+    if (tenant !== origTenant) patch.tenants = tenant === '*' ? '*' : (tenant ? [tenant] : [])
+    if (password) patch.password = password
+    if (Object.keys(patch).length === 0) { onClose(); return }
+    setBusy(true)
+    try { await adapter.tenancy.updateUser(user.username, patch); toast.success('User updated'); onSaved() }
+    catch { toast.error('Failed to update user') } finally { setBusy(false) }
   }
 
-  if (events === null) return <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+  return (
+    <Dialog open onClose={onClose} title={`Edit ${user.username}`}>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-text" htmlFor="edit-user-role">Role</label>
+          <select id="edit-user-role" value={role} onChange={e => setRole(e.target.value as Tier)}
+            className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none" style={{ borderColor: 'var(--color-border-strong)' }}>
+            {TIERS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <p className="text-xs text-faint">{TIER_HELP}</p>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-text" htmlFor="edit-user-tenant">Company (tenant)</label>
+          <select id="edit-user-tenant" value={tenant} onChange={e => setTenant(e.target.value)}
+            className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none" style={{ borderColor: 'var(--color-border-strong)' }}>
+            <option value="">— no tenant —</option>
+            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            <option value="*">all tenants (*)</option>
+          </select>
+        </div>
+        <Input label="Reset password (leave blank to keep)" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="new password" />
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="primary" size="sm" onClick={() => void save()} disabled={busy}>{busy ? 'Saving…' : 'Save'}</Button>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
+// ─── Data browser (paged, break-glass scoped) ─────────────────────────────────
+// Browses the ACTIVE tenant (Topbar switcher — requires a break-glass grant for
+// any tenant other than the session's own). Every page is a bounded server read
+// (cursor + hard cap), never a full-container dump.
+const DATA_COLLECTIONS = ['products', 'coverages', 'rules', 'forms', 'ratingPrograms', 'filings', 'dictionary', 'groundingChunks']
+const DATA_PAGE = 50
+
+interface DataRow { id: string; refId?: string; name?: string; updatedAt?: string; [k: string]: unknown }
+
+function DataTab() {
+  const { user } = useUser()
+  const activeTenant = getSuperAdminTenant() ?? user?.tenantId ?? 'default'
+  const [coll, setColl] = useState('products')
+  const [rows, setRows] = useState<DataRow[] | null>(null)
+  const [cursor, setCursor] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState<DataRow | null>(null)
+
+  const load = useCallback(async (nextCursor?: string) => {
+    setLoading(true); setError(null)
+    try {
+      const page = await adapter.db.listPage<DataRow>(coll, { pageSize: DATA_PAGE, cursor: nextCursor })
+      setRows(prev => (nextCursor ? [...(prev ?? []), ...page.data] : page.data))
+      setCursor(page.cursor)
+      setHasMore(page.hasMore)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load')
+      if (!nextCursor) setRows([])
+    } finally { setLoading(false) }
+  }, [coll])
+  useEffect(() => { setRows(null); void load() }, [load, activeTenant])
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Input value={actor} onChange={e => setActor(e.target.value)} placeholder="Actor…" leftIcon={<IconSearch size={13} />} className="max-w-[180px] h-8" />
-        <select value={entityType} onChange={e => setEntityType(e.target.value)} className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }} aria-label="Entity type">
-          <option value="">All entities</option>
-          {entityTypes.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select value={action} onChange={e => setAction(e.target.value)} className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }} aria-label="Action">
-          <option value="">All actions</option>
-          {['create', 'update', 'delete'].map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
-        <input type="date" value={since} onChange={e => setSince(e.target.value)} className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }} aria-label="Since date" />
-        {(actor || entityType || action || since) && <button className="text-xs text-accent" onClick={() => { setActor(''); setEntityType(''); setAction(''); setSince('') }}>Clear</button>}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[8px] text-xs text-dim bg-raised" style={{ border: '1px solid var(--color-border)' }}>
+          <IconLayers size={13} className="text-accent" aria-hidden="true" />
+          tenant <span className="font-mono text-text">{activeTenant}</span>
+        </span>
+        <div className="flex gap-1 flex-wrap">
+          {DATA_COLLECTIONS.map(c => (
+            <button key={c} onClick={() => setColl(c)}
+              className={`px-2.5 py-1 rounded-[8px] text-xs font-medium transition-colors ${coll === c ? 'text-white' : 'text-dim hover:text-text bg-surface'}`}
+              style={coll === c ? { background: 'var(--gradient-accent)' } : { border: '1px solid var(--color-border)' }}>
+              {c}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-faint ml-auto">{rows ? `${rows.length} loaded · ${DATA_PAGE}/page` : ''}</span>
       </div>
+      <p className="text-xs text-faint">
+        Pages are server-bounded (cursor + hard cap) — a large container is never dumped. Switch tenant via the
+        topbar switcher; cross-tenant access requires a break-glass grant.
+      </p>
 
-      {filtered.length === 0 ? (
-        <EmptyState icon={<IconFileClock size={26} />} title="No matching events" description="Adjust the filters, or perform a change to generate audit events." />
-      ) : (
+      {error && (
+        <div role="alert" className="flex items-start gap-2.5 rounded-[12px] px-4 py-3" style={{ border: '1px solid var(--color-danger)', background: 'var(--color-danger-badge)' }}>
+          <IconWarning size={16} className="text-danger shrink-0 mt-0.5" aria-hidden="true" />
+          <p className="text-sm text-dim">{error.includes('403') ? 'Access refused — request a break-glass grant for this tenant via the topbar tenant switcher.' : error}</p>
+        </div>
+      )}
+
+      {rows === null ? (
+        <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+      ) : rows.length === 0 && !error ? (
+        <EmptyState icon={<IconTable size={26} />} title="Empty collection" description={`No documents in "${coll}" for tenant ${activeTenant}.`} />
+      ) : rows.length > 0 && (
         <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-          {filtered.map(e => (
-            <button key={e.id} onClick={() => setOpen(e)} className="w-full flex flex-wrap items-center gap-3 px-4 py-2.5 bg-surface text-left hover:bg-raised transition-colors" style={{ borderBottom: '1px solid var(--color-border)' }}>
-              <Badge label={e.action} color={actionColor[e.action] ?? 'default'} />
-              <span className="text-sm text-text">{e.entityType}</span>
-              <span className="text-xs font-mono text-faint flex-1 min-w-[120px] truncate">{e.entityPath}</span>
-              <span className="text-xs text-dim">{e.actor?.name ?? '—'}</span>
-              <span className="text-xs text-faint">{fmt(e.at)}</span>
+          <div className="grid grid-cols-[1.2fr_1fr_1.6fr_auto] gap-3 px-4 py-2 text-[11px] font-semibold text-faint uppercase bg-raised">
+            <span>Id</span><span>refId</span><span>Name</span><span>Updated</span>
+          </div>
+          {rows.map(r => (
+            <button key={r.id} onClick={() => setOpen(r)}
+              className="w-full grid grid-cols-[1.2fr_1fr_1.6fr_auto] gap-3 items-center px-4 py-2 text-left text-xs bg-surface hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+              style={{ borderTop: '1px solid var(--color-border)' }}>
+              <span className="font-mono text-text truncate">{r.id}</span>
+              <span className="font-mono text-dim truncate">{r.refId ?? '—'}</span>
+              <span className="text-dim truncate">{typeof r.name === 'string' ? r.name : '—'}</span>
+              <span className="text-faint whitespace-nowrap">{r.updatedAt ? fmt(r.updatedAt) : '—'}</span>
             </button>
           ))}
         </div>
       )}
-      {(events?.length ?? 0) >= limit && (
-        <div className="flex justify-center pt-1">
-          <button
-            className="text-xs text-accent hover:underline disabled:opacity-50"
-            disabled={loadingMore}
-            onClick={() => { setLoadingMore(true); setLimit(l => l + AUDIT_PAGE) }}
-          >
-            {loadingMore ? 'Loading…' : `Load more (showing ${limit})`}
+      {hasMore && cursor && (
+        <div className="flex justify-center">
+          <button className="text-xs text-accent hover:underline disabled:opacity-50" disabled={loading} onClick={() => void load(cursor)}>
+            {loading ? 'Loading…' : 'Load next page'}
           </button>
         </div>
       )}
 
-      {/* Diff viewer */}
+      {/* Raw document viewer */}
+      <Dialog open={!!open} onClose={() => setOpen(null)} title={open?.id ?? 'Document'} width="max-w-2xl">
+        {open && (
+          <pre className="text-xs font-mono text-dim bg-raised rounded-[10px] p-3 overflow-auto max-h-[60vh]" style={{ border: '1px solid var(--color-border)' }}>
+            {JSON.stringify(open, null, 2)}
+          </pre>
+        )}
+      </Dialog>
+    </div>
+  )
+}
+
+// ─── Audit explorer (server-filtered, cursor-paginated, read-only) ───────────
+
+const actionColor: Record<string, 'good' | 'blue' | 'danger' | 'default'> = { create: 'good', update: 'blue', delete: 'danger' }
+
+const AUDIT_PAGE = 50
+
+const actorName = (a: AuditSearchEvent['actor']): string =>
+  typeof a === 'string' ? a : (a?.name ?? a?.uid ?? '—')
+
+function AuditTab() {
+  const [source, setSource] = useState<'data' | 'platform'>('data')
+  const [tenant, setTenant] = useState('')
+  const [tenants, setTenants] = useState<TenantInfo[]>([])
+  const [actor, setActor] = useState('')
+  const [entityType, setEntityType] = useState('')
+  const [action, setAction] = useState('')
+  const [since, setSince] = useState('')
+  const [events, setEvents] = useState<AuditSearchEvent[] | null>(null)
+  const [cursor, setCursor] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState<AuditSearchEvent | null>(null)
+
+  useEffect(() => { adapter.tenancy.listTenants({ limit: 200 }).then(r => setTenants(r.tenants)).catch(() => {}) }, [])
+
+  const load = useCallback(async (nextCursor?: string) => {
+    setLoading(true)
+    try {
+      const page = await adapter.tenancy.searchAudit({
+        source,
+        tenant: tenant || undefined,
+        actor: actor.trim() || undefined,
+        entityType: entityType.trim() || undefined,
+        action: action || undefined,
+        since: since || undefined,
+        limit: AUDIT_PAGE,
+        cursor: nextCursor,
+      })
+      setEvents(prev => (nextCursor ? [...(prev ?? []), ...page.events] : page.events))
+      setCursor(page.cursor)
+      setHasMore(page.hasMore)
+    } catch {
+      if (!nextCursor) setEvents([])
+    } finally { setLoading(false) }
+  }, [source, tenant, actor, entityType, action, since])
+  useEffect(() => { setEvents(null); const t = setTimeout(() => void load(), 250); return () => clearTimeout(t) }, [load])
+
+  const anyFilter = tenant || actor || entityType || action || since
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Source + filters — all applied SERVER-side; results are cursor-paginated */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1">
+          {([['data', 'Data changes'], ['platform', 'Platform events']] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setSource(id)}
+              className={`px-3 py-1 rounded-[8px] text-xs font-medium transition-colors ${source === id ? 'text-white' : 'text-dim hover:text-text bg-surface'}`}
+              style={source === id ? { background: 'var(--gradient-accent)' } : { border: '1px solid var(--color-border)' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <select value={tenant} onChange={e => setTenant(e.target.value)} className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }} aria-label="Tenant">
+          <option value="">All tenants</option>
+          {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        <Input value={actor} onChange={e => setActor(e.target.value)} placeholder="Actor…" leftIcon={<IconSearch size={13} />} className="max-w-[160px] h-8" />
+        {source === 'data' && (
+          <Input value={entityType} onChange={e => setEntityType(e.target.value)} placeholder="Entity type…" className="max-w-[140px] h-8" />
+        )}
+        {source === 'data' ? (
+          <select value={action} onChange={e => setAction(e.target.value)} className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }} aria-label="Action">
+            <option value="">All actions</option>
+            {['create', 'update', 'delete'].map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        ) : (
+          <Input value={action} onChange={e => setAction(e.target.value)} placeholder="Action (e.g. tenant:create)…" className="max-w-[190px] h-8" />
+        )}
+        <input type="date" value={since} onChange={e => setSince(e.target.value)} className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }} aria-label="Since date" />
+        {anyFilter && <button className="text-xs text-accent" onClick={() => { setTenant(''); setActor(''); setEntityType(''); setAction(''); setSince('') }}>Clear</button>}
+      </div>
+
+      {events === null ? (
+        <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+      ) : events.length === 0 ? (
+        <EmptyState icon={<IconFileClock size={26} />} title="No matching events" description="Adjust the filters, or perform a change to generate audit events." />
+      ) : (
+        <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+          {events.map(e => {
+            const act = e.op ?? e.action ?? e.event ?? '—'
+            return (
+              <button key={e.id} onClick={() => setOpen(e)} className="w-full flex flex-wrap items-center gap-3 px-4 py-2.5 bg-surface text-left hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <Badge label={act} color={actionColor[act] ?? 'default'} />
+                <span className="text-sm text-text">{e.entityType ?? (e.tenantId || '')}</span>
+                <span className="text-xs font-mono text-faint flex-1 min-w-[120px] truncate">{e.entityPath ?? JSON.stringify(e.detail ?? {}).slice(0, 80)}</span>
+                <span className="text-xs text-dim">{actorName(e.actor)}</span>
+                <span className="text-xs text-faint">{fmt(e.at)}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {hasMore && cursor && (
+        <div className="flex justify-center pt-1">
+          <button className="text-xs text-accent hover:underline disabled:opacity-50" disabled={loading} onClick={() => void load(cursor)}>
+            {loading ? 'Loading…' : 'Load more'}
+          </button>
+        </div>
+      )}
+
+      {/* Event detail */}
       <Dialog open={!!open} onClose={() => setOpen(null)} title="Audit event" width="max-w-2xl">
-        {open && (() => {
-          const v = versionFor(open)
-          return (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <Badge label={open.action} color={actionColor[open.action] ?? 'default'} />
-                <span className="font-mono text-xs text-dim">{open.entityPath}</span>
-              </div>
-              <div className="text-xs text-faint">{open.actor?.name} · {fmt(open.at)}</div>
-              {v && v.diff?.length ? (
-                <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-                  <div className="grid grid-cols-[1fr_1fr_1fr] text-[11px] font-semibold text-faint uppercase px-3 py-1.5 bg-raised">
-                    <span>Field</span><span>Before</span><span>After</span>
-                  </div>
-                  {v.diff.map((d, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_1fr_1fr] gap-2 px-3 py-2 text-xs" style={{ borderTop: '1px solid var(--color-border)' }}>
-                      <span className="font-mono text-text">{d.field}</span>
-                      <span className="text-danger font-mono break-all">{JSON.stringify(d.before)}</span>
-                      <span className="text-good font-mono break-all">{JSON.stringify(d.after)}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-dim">{v ? 'No field-level diff recorded for this event.' : 'No version snapshot correlated to this event.'}</p>
-              )}
+        {open && (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <Badge label={open.op ?? open.action ?? open.event ?? '—'} color={actionColor[open.op ?? open.action ?? ''] ?? 'default'} />
+              {open.entityPath && <span className="font-mono text-xs text-dim">{open.entityPath}</span>}
+              {open.tenantId && <Badge label={open.tenantId} color="default" />}
             </div>
-          )
-        })()}
+            <div className="text-xs text-faint">{actorName(open.actor)} · {fmt(open.at)}</div>
+            <pre className="text-xs font-mono text-dim bg-raised rounded-[10px] p-3 overflow-auto max-h-[50vh]" style={{ border: '1px solid var(--color-border)' }}>
+              {JSON.stringify(open, null, 2)}
+            </pre>
+          </div>
+        )}
       </Dialog>
     </div>
   )

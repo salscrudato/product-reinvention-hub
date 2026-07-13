@@ -1,11 +1,11 @@
 // TenantAdmin (/app/tenant-admin) — self-service org administration.
 // Gate: member:manage capability (TENANT_ADMIN only, server-enforced).
 // Scope: the caller's OWN tenant. Cannot read another org's members or audit.
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { IconShield, IconPlus, IconUserX, IconFileClock } from '../components/ui/icons'
+import { IconShield, IconPlus, IconUserX, IconFileClock, IconSearch } from '../components/ui/icons'
 import { adapter } from '../lib/backend'
-import type { TenantMember, Tier } from '../lib/backend'
+import type { AuditSearchEvent, TenantMember, Tier } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
 import { canI } from '../lib/canI'
@@ -118,6 +118,14 @@ function MembersTab() {
     } catch { toast.error('Failed') }
   }
 
+  async function toggleDisabled(m: TenantMember) {
+    try {
+      await adapter.orgAdmin.setMemberDisabled(m.username, !m.disabled)
+      toast.success(m.disabled ? `${m.username} enabled` : `${m.username} disabled — blocked at next login`)
+      load()
+    } catch { toast.error('Failed') }
+  }
+
   if (members === null) return <Skeleton className="h-24" />
 
   return (
@@ -144,9 +152,13 @@ function MembersTab() {
                 <div className="text-sm font-medium text-text">{m.name ?? m.username}</div>
                 <div className="text-xs text-faint font-mono">{m.email ?? m.username}</div>
               </div>
+              {m.disabled && <Badge label="disabled" color="danger" />}
               <Badge label={m.role} color={roleColor[m.role] ?? 'default'} />
               {canAssign && (
                 <Button variant="ghost" size="sm" onClick={() => setEditTarget(m)}>Change role</Button>
+              )}
+              {canAssign && (
+                <Button variant="ghost" size="sm" onClick={() => void toggleDisabled(m)}>{m.disabled ? 'Enable' : 'Disable'}</Button>
               )}
               <Button variant="ghost" size="sm" onClick={() => remove(m.username)}>
                 <IconUserX size={13} /> Remove
@@ -231,27 +243,84 @@ const fmt = (v: unknown) => {
   return String(v)
 }
 
+// All of the org's audit events (products, coverages, members, …), filterable
+// and cursor-paginated — the server enforces own-tenant scope and page caps.
 function OrgAuditTab() {
-  const [events, setEvents] = useState<unknown[] | null>(null)
-  useEffect(() => {
-    adapter.orgAdmin.listAudit({ limit: 200 })
-      .then(setEvents)
-      .catch(() => setEvents([]))
-  }, [])
+  const [events, setEvents] = useState<AuditSearchEvent[] | null>(null)
+  const [cursor, setCursor] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [entityType, setEntityType] = useState('')
+  const [action, setAction] = useState('')
+  const [actor, setActor] = useState('')
+  const [since, setSince] = useState('')
 
-  if (events === null) return <div className="flex flex-col gap-2">{[0,1,2].map(i => <Skeleton key={i} className="h-12" />)}</div>
-  if (events.length === 0) return <EmptyState icon={<IconFileClock size={26} />} title="No member events yet" description="Member changes (invite, role change, removal) will appear here." />
+  const load = useCallback(async (nextCursor?: string) => {
+    setLoading(true)
+    try {
+      const page = await adapter.orgAdmin.listAudit({
+        entityType: entityType.trim() || undefined,
+        action: action || undefined,
+        actor: actor.trim() || undefined,
+        since: since || undefined,
+        limit: 50,
+        cursor: nextCursor,
+      })
+      setEvents(prev => (nextCursor ? [...(prev ?? []), ...page.events] : page.events))
+      setCursor(page.cursor)
+      setHasMore(page.hasMore)
+    } catch {
+      if (!nextCursor) setEvents([])
+    } finally { setLoading(false) }
+  }, [entityType, action, actor, since])
+  useEffect(() => { setEvents(null); const t = setTimeout(() => void load(), 250); return () => clearTimeout(t) }, [load])
+
+  const anyFilter = entityType || action || actor || since
 
   return (
-    <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-      {(events as Record<string, unknown>[]).map((e, i) => (
-        <div key={i} className="flex flex-wrap items-center gap-3 px-4 py-2.5 bg-surface text-sm" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          <span className="font-mono text-xs text-faint w-20">{String(e.op ?? e.action ?? '—')}</span>
-          <span className="text-text flex-1">{String((e.data as Record<string, unknown>)?.username ?? e.entityPath ?? '—')}</span>
-          <span className="text-xs text-dim">{String((e.actor as Record<string, unknown>)?.name ?? '—')}</span>
-          <span className="text-xs text-faint">{fmt(e.at)}</span>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <IconSearch size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
+          <input value={actor} onChange={e => setActor(e.target.value)} placeholder="Actor…" aria-label="Actor"
+            className="h-8 pl-7 pr-2 rounded-[8px] bg-surface border text-xs text-text placeholder:text-faint focus:outline-none w-[150px]"
+            style={{ borderColor: 'var(--color-border)' }} />
         </div>
-      ))}
+        <input value={entityType} onChange={e => setEntityType(e.target.value)} placeholder="Entity type…" aria-label="Entity type"
+          className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-text placeholder:text-faint focus:outline-none w-[130px]"
+          style={{ borderColor: 'var(--color-border)' }} />
+        <select value={action} onChange={e => setAction(e.target.value)} className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }} aria-label="Action">
+          <option value="">All actions</option>
+          {['create', 'update', 'delete'].map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <input type="date" value={since} onChange={e => setSince(e.target.value)} className="h-8 px-2 rounded-[8px] bg-surface border text-xs text-dim" style={{ borderColor: 'var(--color-border)' }} aria-label="Since date" />
+        {anyFilter && <button className="text-xs text-accent" onClick={() => { setEntityType(''); setAction(''); setActor(''); setSince('') }}>Clear</button>}
+      </div>
+
+      {events === null ? (
+        <div className="flex flex-col gap-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-12" />)}</div>
+      ) : events.length === 0 ? (
+        <EmptyState icon={<IconFileClock size={26} />} title="No audit events" description="Changes in your org (products, members, roles) will appear here." />
+      ) : (
+        <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+          {events.map(e => (
+            <div key={e.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 bg-surface text-sm" style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <span className="font-mono text-xs text-faint w-16">{String(e.op ?? '—')}</span>
+              <span className="text-xs text-dim w-24 truncate">{e.entityType ?? '—'}</span>
+              <span className="text-text flex-1 font-mono text-xs truncate">{e.entityPath ?? '—'}</span>
+              <span className="text-xs text-dim">{typeof e.actor === 'string' ? e.actor : (e.actor?.name ?? '—')}</span>
+              <span className="text-xs text-faint">{fmt(e.at)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {hasMore && cursor && (
+        <div className="flex justify-center">
+          <button className="text-xs text-accent hover:underline disabled:opacity-50" disabled={loading} onClick={() => void load(cursor)}>
+            {loading ? 'Loading…' : 'Load more'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -8,56 +8,143 @@
 // pk='__system__' so the tenant-scoped data layer never sees them and no tenant can
 // read another's users. Only platform-plane roles (SUPER_ADMIN, SUPPORT) reach here.
 //
-// Impersonation (POST /api/admin/impersonate) is gated to platform:impersonate.
-// SUPER_ADMIN additionally has platform:tenants and platform:users for global CRUD.
+// Every mutation on this router writes an append-only platformAudit record
+// (pk='__system__', kind='platformAudit') — tenant create/update/delete, user
+// create/update/delete, break-glass grant/end, impersonation.
+//
+// Break-glass (POST /break-glass): SUPER_ADMIN cross-tenant data access is explicit,
+// time-bounded and audited. auth.js honours the X-Tenant-Id override ONLY while a
+// live grant exists; without one the request is refused with break_glass_required.
 
 const express = require('express')
-const { docs } = require('./cosmos')
-const { requireAuth, MANAGED_TENANT_ROLES, findUser, signImpersonation } = require('./auth')
-const { requirePlatform, CAP_PLATFORM_TENANTS, CAP_PLATFORM_USERS, CAP_PLATFORM_IMPERSONATE, CAP_AUDIT_READ } = require('./authz')
+const crypto = require('crypto')
+const { docs, resolveTenantStore } = require('./cosmos')
+const { MANAGED_TENANT_ROLES, findUser, signImpersonation, normalizeRole, bustBreakGlassCache } = require('./auth')
+const { requirePlatform, CAP_PLATFORM_TENANTS, CAP_PLATFORM_USERS, CAP_PLATFORM_IMPERSONATE, CAP_PLATFORM_AUDIT } = require('./authz')
 
 const router = express.Router()
 
 // Gate: ALL /api/admin/* routes require platform-plane membership (SUPER_ADMIN or SUPPORT).
 router.use(requirePlatform())
 
-const MAX_PLATFORM = 1000  // bound platform list reads
+const PAGE_MAX = 200            // hard cap per page on every platform list read
+const AUDIT_PAGE_MAX = 200
 const slug = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
 const userId = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '')
+const clampInt = (v, def, max) => Math.min(Math.max(parseInt(v, 10) || def, 1), max)
+
+// ─── platform audit (append-only, fail-open) ─────────────────────────────────
+async function platformAudit(action, actor, detail) {
+  try {
+    await docs.items.create({
+      id: `platformAudit:${Date.now().toString(36)}-${crypto.randomUUID()}`,
+      pk: '__system__', kind: 'platformAudit',
+      action,
+      actor: { uid: actor.uid, name: actor.name || actor.uid, ...(actor._impersonatedBy ? { impersonatedBy: actor._impersonatedBy } : {}) },
+      detail: detail || {},
+      at: new Date().toISOString(),
+    })
+  } catch { /* fail-open: the admin operation itself already succeeded */ }
+}
 
 // ─── tenants (SUPER_ADMIN only) ──────────────────────────────────────────────
-router.get('/tenants', requirePlatform(CAP_PLATFORM_TENANTS), async (_req, res) => {
-  const { resources } = await docs.items.query(
-    { query: `SELECT TOP ${MAX_PLATFORM} c.data FROM c WHERE c.pk='__system__' AND c.kind='tenant'` },
-    { maxItemCount: MAX_PLATFORM }
-  ).fetchAll()
-  res.json({ tenants: resources.map((r) => r.data).sort((a, b) => a.name.localeCompare(b.name)) })
+// Searchable + cursor-paginated: ?q= substring on id/name, ?after=<tenantId>,
+// ?limit (<= PAGE_MAX). Alphabetical by tenantId for a stable cursor.
+router.get('/tenants', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const limit = clampInt(req.query.limit, PAGE_MAX, PAGE_MAX)
+  const q = String(req.query.q || '').trim().toLowerCase()
+  const after = req.query.after ? String(req.query.after).toLowerCase() : null
+  let query = `SELECT TOP ${limit} c.data FROM c WHERE c.pk='__system__' AND c.kind='tenant'`
+  const params = []
+  if (q) { query += " AND (CONTAINS(LOWER(c.data.name), @q) OR CONTAINS(c.data.tenantId, @q))"; params.push({ name: '@q', value: q }) }
+  if (after) { query += ' AND c.data.tenantId > @after'; params.push({ name: '@after', value: after }) }
+  query += ' ORDER BY c.data.tenantId'
+  const { resources } = await docs.items.query({ query, parameters: params }, { maxItemCount: limit }).fetchAll()
+  res.json({ tenants: resources.map((r) => r.data), hasMore: resources.length === limit })
 })
 
 router.post('/tenants', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
   const { id, name } = req.body || {}
   const tid = slug(id || name)
   if (!tid) return res.status(400).json({ error: 'tenant_id_required' })
-  const data = { tenantId: tid, name: name || tid, createdAt: new Date().toISOString(), createdBy: req.user.uid }
+  const existing = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  if (existing) return res.status(409).json({ error: 'tenant_exists', tenantId: tid })
+  const data = { tenantId: tid, name: name || tid, status: 'active', createdAt: new Date().toISOString(), createdBy: req.user.uid }
   await docs.items.upsert({ id: `tenant:${tid}`, pk: '__system__', kind: 'tenant', data })
+  await platformAudit('tenant:create', req.user, { tenantId: tid, name: data.name })
+  res.json({ ok: true, tenant: data })
+})
+
+// Configure a tenant: rename and/or suspend/reactivate.
+router.patch('/tenants/:id', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const tid = slug(req.params.id)
+  const { name, status } = req.body || {}
+  if (status !== undefined && !['active', 'suspended'].includes(status)) {
+    return res.status(400).json({ error: 'invalid_status', valid: ['active', 'suspended'] })
+  }
+  const existing = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  if (!existing) return res.status(404).json({ error: 'tenant_not_found' })
+  const before = { name: existing.data.name, status: existing.data.status || 'active' }
+  const data = { ...existing.data }
+  if (name !== undefined && String(name).trim()) data.name = String(name).trim()
+  if (status !== undefined) data.status = status
+  data.updatedAt = new Date().toISOString()
+  data.updatedBy = req.user.uid
+  await docs.items.upsert({ id: `tenant:${tid}`, pk: '__system__', kind: 'tenant', data })
+  await platformAudit('tenant:update', req.user, { tenantId: tid, before, after: { name: data.name, status: data.status } })
   res.json({ ok: true, tenant: data })
 })
 
 router.delete('/tenants/:id', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
-  try { await docs.item(`tenant:${slug(req.params.id)}`, '__system__').delete() } catch { /* idempotent */ }
+  const tid = slug(req.params.id)
+  try { await docs.item(`tenant:${tid}`, '__system__').delete() } catch { /* idempotent */ }
+  await platformAudit('tenant:delete', req.user, { tenantId: tid })
   res.json({ ok: true })
+})
+
+// Per-tenant drill-down: user count, entity counts by type, recent activity.
+// Read-only, bounded (GROUP BY aggregation + TOP 15 activity), tenant-scoped via
+// the SILO_READY store seam + c.tenantId filter (isolation re-checked per read).
+router.get('/tenants/:id/summary', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const tid = slug(req.params.id)
+  const tenantDoc = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  if (!tenantDoc) return res.status(404).json({ error: 'tenant_not_found' })
+  const store = resolveTenantStore(tid).docs
+  const [userCountRes, entityCountsRes, activityRes] = await Promise.all([
+    docs.items.query({
+      query: "SELECT VALUE COUNT(1) FROM c WHERE c.pk='__system__' AND c.kind='user' AND (ARRAY_CONTAINS(c.data.tenants, @tid) OR c.data.tenants='*')",
+      parameters: [{ name: '@tid', value: tid }],
+    }).fetchAll(),
+    store.items.query({
+      query: "SELECT c.entityType, COUNT(1) AS cnt FROM c WHERE c.tenantId=@tid AND c.kind='entity' GROUP BY c.entityType",
+      parameters: [{ name: '@tid', value: tid }],
+    }).fetchAll(),
+    store.items.query({
+      query: "SELECT TOP 15 c.op, c.entityType, c.entityPath, c.actor, c.at FROM c WHERE c.tenantId=@tid AND c.kind='audit' ORDER BY c.at DESC",
+      parameters: [{ name: '@tid', value: tid }],
+    }).fetchAll(),
+  ])
+  const entityCounts = {}
+  for (const r of entityCountsRes.resources) if (r.entityType) entityCounts[r.entityType] = r.cnt
+  res.json({
+    tenant: tenantDoc.data,
+    userCount: userCountRes.resources[0] ?? 0,
+    entityCounts,
+    recentActivity: activityRes.resources,
+  })
 })
 
 // ─── users (SUPER_ADMIN only) ─────────────────────────────────────────────────
 router.get('/users', requirePlatform(CAP_PLATFORM_USERS), async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit, 10) || MAX_PLATFORM, MAX_PLATFORM)
+  const limit = clampInt(req.query.limit, PAGE_MAX, PAGE_MAX)
+  const q = String(req.query.q || '').trim().toLowerCase()
+  const tenant = String(req.query.tenant || '').trim()
   const after = req.query.after ? String(req.query.after).toLowerCase() : null
   let query = `SELECT TOP ${limit} c.data FROM c WHERE c.pk='__system__' AND c.kind='user'`
   const params = []
-  if (after) {
-    query += ' AND c.data.username > @after'
-    params.push({ name: '@after', value: after })
-  }
+  if (q) { query += ' AND (CONTAINS(c.data.username, @q) OR CONTAINS(LOWER(c.data.email), @q))'; params.push({ name: '@q', value: q }) }
+  if (tenant) { query += " AND (ARRAY_CONTAINS(c.data.tenants, @tenant) OR c.data.tenants='*')"; params.push({ name: '@tenant', value: tenant }) }
+  if (after) { query += ' AND c.data.username > @after'; params.push({ name: '@after', value: after }) }
   query += ' ORDER BY c.data.username'
   const { resources } = await docs.items.query({ query, parameters: params }, { maxItemCount: limit }).fetchAll()
   res.json({
@@ -70,24 +157,149 @@ router.post('/users', requirePlatform(CAP_PLATFORM_USERS), async (req, res) => {
   const { username, password, role, tenants, email, name } = req.body || {}
   const u = userId(username)
   if (!u) return res.status(400).json({ error: 'username_required' })
-  if (!MANAGED_TENANT_ROLES.includes(role)) return res.status(400).json({ error: 'invalid_role', valid: MANAGED_TENANT_ROLES })
-  if (tenants !== '*' && !Array.isArray(tenants)) return res.status(400).json({ error: 'tenants_must_be_array_or_star' })
+  // New users default to the lowest role (VIEWER) unless an explicit managed role is given.
+  const effectiveRole = role === undefined || role === null || role === '' ? 'VIEWER' : role
+  if (!MANAGED_TENANT_ROLES.includes(effectiveRole)) return res.status(400).json({ error: 'invalid_role', valid: MANAGED_TENANT_ROLES })
+  if (tenants !== undefined && tenants !== '*' && !Array.isArray(tenants)) return res.status(400).json({ error: 'tenants_must_be_array_or_star' })
   const existing = (await docs.item(`user:${u}`, '__system__').read().catch(() => ({ resource: null }))).resource
   const data = {
-    username: u, role,
-    tenants: tenants ?? [],
-    email: email || `${u}@prodhub.local`,
-    name: name || u,
+    username: u, role: normalizeRole(effectiveRole),
+    tenants: tenants ?? existing?.data?.tenants ?? [],
+    email: email || existing?.data?.email || `${u}@prodhub.local`,
+    name: name || existing?.data?.name || u,
+    disabled: existing?.data?.disabled ?? false,
     password: password || existing?.data?.password || u,
   }
   await docs.items.upsert({ id: `user:${u}`, pk: '__system__', kind: 'user', data })
+  await platformAudit(existing ? 'user:update' : 'user:create', req.user, { username: u, role: data.role, tenants: data.tenants })
+  const { password: _p, ...safe } = data
+  res.json({ ok: true, user: safe })
+})
+
+// Update a user: change role, disable/enable, reassign tenants, reset password.
+router.patch('/users/:username', requirePlatform(CAP_PLATFORM_USERS), async (req, res) => {
+  const u = userId(req.params.username)
+  const { role, tenants, disabled, password, name, email } = req.body || {}
+  const existing = (await docs.item(`user:${u}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  if (!existing) return res.status(404).json({ error: 'user_not_found' })
+  if (role !== undefined && !MANAGED_TENANT_ROLES.includes(role)) {
+    return res.status(400).json({ error: 'invalid_role', valid: MANAGED_TENANT_ROLES })
+  }
+  if (tenants !== undefined && tenants !== '*' && !Array.isArray(tenants)) {
+    return res.status(400).json({ error: 'tenants_must_be_array_or_star' })
+  }
+  const before = { role: normalizeRole(existing.data.role), tenants: existing.data.tenants, disabled: !!existing.data.disabled }
+  const data = { ...existing.data }
+  if (role !== undefined) data.role = normalizeRole(role)
+  if (tenants !== undefined) data.tenants = tenants
+  if (disabled !== undefined) data.disabled = !!disabled
+  if (password) data.password = String(password)
+  if (name !== undefined) data.name = String(name)
+  if (email !== undefined) data.email = String(email)
+  await docs.items.upsert({ id: `user:${u}`, pk: '__system__', kind: 'user', data })
+  await platformAudit('user:update', req.user, {
+    username: u, before,
+    after: { role: data.role, tenants: data.tenants, disabled: !!data.disabled },
+    passwordReset: !!password,
+  })
   const { password: _p, ...safe } = data
   res.json({ ok: true, user: safe })
 })
 
 router.delete('/users/:username', requirePlatform(CAP_PLATFORM_USERS), async (req, res) => {
-  try { await docs.item(`user:${userId(req.params.username)}`, '__system__').delete() } catch { /* idempotent */ }
+  const u = userId(req.params.username)
+  try { await docs.item(`user:${u}`, '__system__').delete() } catch { /* idempotent */ }
+  await platformAudit('user:delete', req.user, { username: u })
   res.json({ ok: true })
+})
+
+// ─── break-glass (SUPER_ADMIN cross-tenant access) ───────────────────────────
+// Explicit, time-bounded (5 min – 8 h), reason-required, audited. auth.js honours
+// the X-Tenant-Id override only while the grant is live.
+const BREAK_GLASS_MIN = 5
+const BREAK_GLASS_MAX = 8 * 60
+
+router.post('/break-glass', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const { tenantId, reason, minutes } = req.body || {}
+  const tid = slug(tenantId)
+  if (!tid) return res.status(400).json({ error: 'tenantId_required' })
+  if (!reason || !String(reason).trim()) return res.status(400).json({ error: 'reason_required', detail: 'Break-glass access requires a stated reason for audit.' })
+  const mins = Math.min(Math.max(parseInt(minutes, 10) || 60, BREAK_GLASS_MIN), BREAK_GLASS_MAX)
+  const now = Date.now()
+  const grant = {
+    uid: req.user.uid, tenantId: tid, reason: String(reason).trim().slice(0, 500),
+    grantedAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + mins * 60_000).toISOString(),
+  }
+  await docs.items.upsert({ id: `breakGlass:${req.user.uid}:${tid}`, pk: '__system__', kind: 'breakGlass', data: grant })
+  bustBreakGlassCache(req.user.uid, tid)
+  await platformAudit('break-glass:grant', req.user, { tenantId: tid, reason: grant.reason, minutes: mins, expiresAt: grant.expiresAt })
+  res.json({ ok: true, grant })
+})
+
+// End a grant early (or confirm none). Idempotent.
+router.delete('/break-glass/:tenantId', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const tid = slug(req.params.tenantId)
+  try {
+    const item = docs.item(`breakGlass:${req.user.uid}:${tid}`, '__system__')
+    const { resource } = await item.read()
+    if (resource) {
+      resource.data.expiresAt = new Date().toISOString()
+      await docs.items.upsert(resource)
+    }
+  } catch { /* idempotent */ }
+  bustBreakGlassCache(req.user.uid, tid)
+  await platformAudit('break-glass:end', req.user, { tenantId: tid })
+  res.json({ ok: true })
+})
+
+// Active grants for the caller (drives the tenant-switcher UI).
+router.get('/break-glass', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const { resources } = await docs.items.query({
+    query: "SELECT c.data FROM c WHERE c.pk='__system__' AND c.kind='breakGlass' AND c.data.uid=@uid AND c.data.expiresAt > @now",
+    parameters: [{ name: '@uid', value: req.user.uid }, { name: '@now', value: new Date().toISOString() }],
+  }).fetchAll()
+  res.json({ grants: resources.map((r) => r.data) })
+})
+
+// ─── audit viewer (platform:audit — read-only, searchable, paginated) ────────
+// POST body (read-only search — body carries filters + a Cosmos continuation
+// token that can exceed URL length limits):
+//   { source: 'data'|'platform', tenant?, actor?, entityType?, action?,
+//     since?, until?, limit?, cursor? }
+// source='data'      → kind='audit' mutation events (optionally one tenant)
+// source='platform'  → __system__ platformAudit + loginAudit + impersonateAudit
+router.post('/audit/search', requirePlatform(CAP_PLATFORM_AUDIT), async (req, res) => {
+  const b = req.body || {}
+  const limit = clampInt(b.limit, 50, AUDIT_PAGE_MAX)
+  const source = b.source === 'platform' ? 'platform' : 'data'
+  const params = []
+  let query
+  let container = docs
+  if (source === 'platform') {
+    query = "SELECT c.id, c.kind, c.action, c.event, c.actor, c.detail, c.tenantId, c.targetUid, c.reason, c.at FROM c WHERE c.pk='__system__' AND c.kind IN ('platformAudit','loginAudit','impersonateAudit')"
+    if (b.actor) { query += ' AND (CONTAINS(LOWER(c.actor.uid ?? c.actor ?? ""), @actor) OR CONTAINS(LOWER(c.actor.name ?? ""), @actor))'; params.push({ name: '@actor', value: String(b.actor).toLowerCase() }) }
+    if (b.action) { query += ' AND (c.action = @action OR c.event = @action)'; params.push({ name: '@action', value: String(b.action) }) }
+    if (b.tenant) { query += ' AND (c.tenantId = @tenant OR c.detail.tenantId = @tenant)'; params.push({ name: '@tenant', value: String(b.tenant) }) }
+  } else {
+    query = "SELECT c.id, c.op, c.entityType, c.entityPath, c.actor, c.tenantId, c.rev, c.at FROM c WHERE c.kind='audit'"
+    if (b.tenant) {
+      container = resolveTenantStore(String(b.tenant)).docs  // SILO_READY seam — isolation follows the store
+      query += ' AND c.tenantId = @tenant'; params.push({ name: '@tenant', value: String(b.tenant) })
+    }
+    if (b.actor) { query += ' AND (CONTAINS(LOWER(c.actor.uid ?? ""), @actor) OR CONTAINS(LOWER(c.actor.name ?? ""), @actor))'; params.push({ name: '@actor', value: String(b.actor).toLowerCase() }) }
+    if (b.entityType) { query += ' AND c.entityType = @etype'; params.push({ name: '@etype', value: String(b.entityType) }) }
+    if (b.action) { query += ' AND c.op = @action'; params.push({ name: '@action', value: String(b.action) }) }
+  }
+  if (b.since) { query += ' AND c.at >= @since'; params.push({ name: '@since', value: new Date(b.since).toISOString() }) }
+  if (b.until) { query += ' AND c.at <= @until'; params.push({ name: '@until', value: new Date(b.until).toISOString() }) }
+  query += ' ORDER BY c.at DESC'
+  const iterator = container.items.query(
+    { query, parameters: params },
+    { maxItemCount: limit, continuationToken: b.cursor || undefined }
+  )
+  const page = await iterator.fetchNext()
+  res.json({ events: page.resources, cursor: page.continuationToken || null, hasMore: !!page.continuationToken })
 })
 
 // ─── impersonation (platform:impersonate — SUPER_ADMIN and SUPPORT) ──────────
@@ -111,9 +323,7 @@ router.post('/impersonate', requirePlatform(CAP_PLATFORM_IMPERSONATE), async (re
   try {
     const result = signImpersonation(targetUser, { uid: req.user.uid, name: req.user.name, email: req.user.email }, tenantId)
     // Write an immutable audit record in __system__ for the impersonation event.
-    const { docs: sysDocs } = require('./cosmos')
-    const crypto = require('crypto')
-    await sysDocs.items.create({
+    await docs.items.create({
       id: `impersonateAudit:${Date.now().toString(36)}-${crypto.randomUUID()}`,
       pk: '__system__', kind: 'impersonateAudit',
       actor: { uid: req.user.uid, name: req.user.name, email: req.user.email },

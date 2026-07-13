@@ -34,7 +34,10 @@ const CAP_PLATFORM_IMPERSONATE = 'platform:impersonate'
 // product:read + ai:invoke — they can never write.
 const ROLE_CAPS = {
   // Tenant plane — inquiry personas (read + AI only)
-  VIEWER:       [CAP_PRODUCT_READ],
+  // VIEWER holds ai:invoke for the read-only copilot chat; every write surface is
+  // still closed to it (no product:write) and the server-side write gate + per-route
+  // capability checks reject any VIEWER mutation.
+  VIEWER:       [CAP_PRODUCT_READ, CAP_AI_INVOKE],
   UNDERWRITING: [CAP_PRODUCT_READ, CAP_AI_INVOKE],
   COMPLIANCE:   [CAP_PRODUCT_READ, CAP_AI_INVOKE],
   CLAIMS:       [CAP_PRODUCT_READ, CAP_AI_INVOKE],

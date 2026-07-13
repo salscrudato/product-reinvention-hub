@@ -32,7 +32,7 @@ Inquiry-only personas (`UNDERWRITING`, `COMPLIANCE`, `CLAIMS`, `ACTUARIAL`, `ANA
 
 | Role | `product:read` | `product:write` | `ai:invoke` | `filing:generate` | `changeset:approve` | `member:manage` | `role:assign` | `audit:read` | `platform:*` |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| `VIEWER` | Y | | | | | | | | |
+| `VIEWER` | Y | | Y | | | | | | |
 | `UNDERWRITING` | Y | | Y | | | | | | |
 | `COMPLIANCE` | Y | | Y | | | | | | |
 | `CLAIMS` | Y | | Y | | | | | | |

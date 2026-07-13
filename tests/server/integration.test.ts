@@ -22,6 +22,9 @@ import request from 'supertest'
 process.env.AUTH_JWT_SECRET ??= 'test-secret-hardening-integration-tests-min32'
 process.env.COSMOS_ENDPOINT ??= 'https://dummy.documents.azure.com:443/'
 process.env.COSMOS_KEY     ??= 'dGVzdGtleQ=='
+// DEF-0041: bootstrap admins are fail-closed. Opt in to the dev defaults so the
+// bootstrap login tests exercise the real credential path (never set in prod).
+process.env.BOOTSTRAP_USERS_ENABLED ??= 'true'
 // Leave AZURE_FOUNDRY_ENDPOINT / AZURE_FOUNDRY_KEY unset so fleet.isConfigured() = false.
 
 const _require = createRequire(import.meta.url)

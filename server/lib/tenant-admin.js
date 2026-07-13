@@ -49,7 +49,7 @@ async function auditMemberOp(tid, op, username, data, actor) {
     data: { ...data, username, tenantId: tid },
     entityType: 'member',
     actor,
-  }, actor)
+  }, actor, '/api/tenant-admin/members')
 }
 
 // ─── requireCapability + requireSameTenant for all routes ───────────────────
@@ -158,17 +158,49 @@ router.delete('/members/:username', async (req, res) => {
   res.json({ ok: true })
 })
 
-// ─── list audit trail for this tenant ────────────────────────────────────────
-// Returns member audit events (entityType:'member') from the tenant's Cosmos partition.
+// ─── disable / enable member ─────────────────────────────────────────────────
+// Disabling blocks the member's next login (enforced at OTP verify); existing
+// sessions expire at the 8 h JWT TTL. Append-only audit in the tenant partition.
+router.patch('/members/:username/disabled', requireCapability('role:assign'), async (req, res) => {
+  const u = userId(req.params.username)
+  const disabled = !!(req.body || {}).disabled
+  const tid = req.user.tenantId
+  const actor = actorFor(req.user)
+
+  const existing = (await docs.item(`user:${u}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  if (!existing) return res.status(404).json({ error: 'user_not_found' })
+  const tenants = existing.data.tenants
+  if (tenants !== '*' && (!Array.isArray(tenants) || !tenants.includes(tid))) {
+    return res.status(403).json({ error: 'user_not_in_tenant' })
+  }
+  await docs.items.upsert({ id: `user:${u}`, pk: '__system__', kind: 'user', data: { ...existing.data, disabled } })
+  await auditMemberOp(tid, 'update', u, { disabled, previousDisabled: !!existing.data.disabled }, actor)
+
+  res.json({ ok: true, username: u, disabled })
+})
+
+// ─── audit trail for this tenant (read-only, searchable, paginated) ──────────
+// ALL of the tenant's mutation audit events (products, coverages, members, …),
+// filterable by entityType / actor / action / since, cursor-paginated via a
+// Cosmos continuation token. Scope is ALWAYS the caller's own tenant.
 router.get('/audit', requireCapability('audit:read'), async (req, res) => {
   const tid = req.user.tenantId
-  const limit = Math.min(parseInt(req.query.limit, 10) || 200, 200)
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200)
   const { resolveTenantStore } = require('./cosmos')
   const store = resolveTenantStore(tid).docs
-  const sql = `SELECT TOP ${limit} * FROM c WHERE c.kind='audit' AND c.entityType='member' AND c.tenantId=@tid ORDER BY c.at DESC`
+  let sql = "SELECT c.id, c.op, c.entityType, c.entityPath, c.actor, c.rev, c.at FROM c WHERE c.kind='audit' AND c.tenantId=@tid"
   const params = [{ name: '@tid', value: tid }]
-  const { resources } = await store.items.query({ query: sql, parameters: params }, { maxItemCount: limit }).fetchAll()
-  res.json({ events: resources })
+  if (req.query.entityType) { sql += ' AND c.entityType = @etype'; params.push({ name: '@etype', value: String(req.query.entityType) }) }
+  if (req.query.action) { sql += ' AND c.op = @op'; params.push({ name: '@op', value: String(req.query.action) }) }
+  if (req.query.actor) { sql += " AND (CONTAINS(LOWER(c.actor.uid ?? ''), @actor) OR CONTAINS(LOWER(c.actor.name ?? ''), @actor))"; params.push({ name: '@actor', value: String(req.query.actor).toLowerCase() }) }
+  if (req.query.since) { sql += ' AND c.at >= @since'; params.push({ name: '@since', value: new Date(String(req.query.since)).toISOString() }) }
+  sql += ' ORDER BY c.at DESC'
+  const iterator = store.items.query(
+    { query: sql, parameters: params },
+    { maxItemCount: limit, continuationToken: req.query.cursor ? String(req.query.cursor) : undefined }
+  )
+  const page = await iterator.fetchNext()
+  res.json({ events: page.resources, cursor: page.continuationToken || null, hasMore: !!page.continuationToken })
 })
 
 module.exports = router
