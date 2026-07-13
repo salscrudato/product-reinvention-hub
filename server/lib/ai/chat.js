@@ -78,14 +78,19 @@ async function chat(req, res) {
     }
     fleet.record(deployment, inputTokens, outputTokens)
     const cited = [...new Set([...fullText.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]))]
+    let unverified = []
     if (cited.length > 0) {
       const inCtxBracketed = new Set(ctx.flatMap((c) => [...c.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1])))
       const ctxFullText = ctx.join(' ')
-      const unverified = cited.filter((r) => !inCtxBracketed.has(r) && !ctxFullText.includes(r))
+      unverified = cited.filter((r) => !inCtxBracketed.has(r) && !ctxFullText.includes(r))
       if (unverified.length > 0) {
         emit(res, { t: 'notice', kind: 'unverified', level: 'warn', message: `Unverified citation(s): ${unverified.join(', ')} — not found in retrieved context.`, refs: unverified })
       }
     }
+    // Emit a structured card payload: citation chips + provenance metadata.
+    // The client renders this below the markdown text as a "Data citations" panel.
+    const verified = cited.filter((r) => !unverified.includes(r))
+    emit(res, { t: 'json', key: 'chatCard', value: { citations: verified, allCitations: cited, contextHits: ctx.length, inputTokens, outputTokens } })
     emit(res, { t: 'done' })
     res.end()
   } catch (err) {

@@ -14,6 +14,8 @@ const { exportDuckCreek }  = require('./export-duckcreek')
 const { registerReindexRoute } = require('./reindex-product')
 const { identifyBaseForm } = require('./identify-base-form')
 const { proposeMapping }   = require('./propose-mapping')
+const { shapeFeedback }    = require('./shape-feedback')
+const { refreshNews }      = require('./refresh-news')
 
 console.log(`[prodhub-host] AI configured=${fleet.isConfigured()}`)
 
@@ -34,6 +36,8 @@ router.post('/:name', requireCapability('ai:invoke'), requireTenant, async (req,
   if (name === 'draftRule')        return draftRule(req, res)
   if (name === 'analyzeClaim')     return analyzeClaim(req, res)
   if (name === 'proposeMapping')   return proposeMapping(req, res)
+  if (name === 'shapeFeedback')    return shapeFeedback(req, res)
+  if (name === 'refreshNews')      return refreshNews(req, res)
   return res.status(501).json({ error: 'ai_handler_not_ported', name })
 })
 

@@ -35,13 +35,11 @@
     "Definitions-Rating Specificants",
     "Data Validation"
   ],
-  "warningCount": 33,
+  "warningCount": 30,
   "warnings": [
-    "Framework sheet \"GL Product Framework\": 4 distinct product names detected — imported under a single product GL.PROD.001. Split into separate products if the source is a multi-product book.",
     "Sheet \"GL Rating Tables\" row 163 col \"RATE TABLE ID\": table RTTable.002 appears more than once — rows merged.",
     "Sheet \"GL Rating Tables\" row 183 col \"RATE TABLE ID\": table RTTable.004 appears more than once — rows merged.",
     "Sheet \"GL Rating Tables\" row 209 col \"RATE TABLE ID\": table RTTable.006 appears more than once — rows merged.",
-    "Sheet \"GL Forms Specifications\" row 18 col \"FORM CATEGORY\": value \"Policy Conditions\" not recognised — mapped to ENDORSEMENT, verify intent.",
     "Sheet \"GL Forms Specifications\" row 23 col \"FORM CATEGORY\": value \"Other Coverage Form\" not recognised — mapped to ENDORSEMENT, verify intent.",
     "Sheet \"GL Forms Specifications\" row 101 col \"FORM NUMBER\": form CG 04 37 appears on multiple rows — applicability merged.",
     "Sheet \"GL Forms Specifications\" row 110 col \"FORM NUMBER\": form CG 04 71 appears on multiple rows — applicability merged.",
@@ -64,7 +62,6 @@
     "Sheet \"GL Forms Specifications\" row 220 col \"FORM NUMBER\": form CG 22 36 appears on multiple rows — applicability merged.",
     "Sheet \"GL Forms Specifications\" row 274 col \"FORM NUMBER\": form CG 24 04 appears on multiple rows — applicability merged.",
     "Sheet \"GL Forms Specifications\" row 540 col \"FORM NUMBER\": form CG 29 88 appears on multiple rows — applicability merged.",
-    "Sheet \"GL Forms Specifications\" row 639 col \"FORM CATEGORY\": value \"Other Policy Documents\" not recognised — mapped to ENDORSEMENT, verify intent.",
     "Sheet \"GL Optional Forms Rules\" row 13 col \"FORM RULE ID\": form rule GL.FORM.RU.007 appears on multiple rows — form numbers merged.",
     "Sheet \"GL Optional Forms Rules\" row 31 col \"FORM RULE ID\": form rule GL.FORM.RU.018 appears on multiple rows — form numbers merged.",
     "Sheet \"GL Optional Forms Rules\" row 40 col \"FORM RULE ID\": form rule GL.FORM.RU.021 appears on multiple rows — form numbers merged.",

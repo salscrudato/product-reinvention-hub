@@ -14,8 +14,34 @@ const _EMIT_DETERMINATION = {
       summary:         { type: 'string', description: 'Three-sentence coverage summary.' },
       reasoning:       { type: 'array',  items: { type: 'string' }, description: 'Exactly 3 reasoning points, each citing [formSection] or [refId].' },
       considerations:  { type: 'array',  items: { type: 'string' }, description: 'Exactly 3 considerations.' },
-      coverages:       { type: 'array',  items: { type: 'object', properties: { coverage: { type: 'string' }, applicable: { type: 'boolean' }, note: { type: 'string' } } } },
-      exclusions:      { type: 'array',  items: { type: 'string' } },
+      coverages: {
+        type: 'array',
+        description: 'Coverage grants that apply or partially apply to this loss.',
+        items: {
+          type: 'object',
+          properties: {
+            name:       { type: 'string', description: 'Short name of the coverage part or section (e.g. "Coverage A – Dwelling").' },
+            refId:      { type: 'string', description: 'Internal refId if known (e.g. PH.COV.001.001).' },
+            formNumber: { type: 'string', description: 'Form/section identifier (e.g. "Section I – Coverage A").' },
+            definition: { type: 'string', description: 'The verbatim or paraphrased clause from the form that grants or limits coverage, with [section] citations.' },
+          },
+          required: ['name', 'definition'],
+        },
+      },
+      exclusions: {
+        type: 'array',
+        description: 'Exclusions or carve-outs that limit or negate coverage for this loss.',
+        items: {
+          type: 'object',
+          properties: {
+            name:       { type: 'string', description: 'Short name of the exclusion (e.g. "Water Damage – Flood Exclusion").' },
+            refId:      { type: 'string', description: 'Internal refId if known.' },
+            formNumber: { type: 'string', description: 'Form/section identifier.' },
+            note:       { type: 'string', description: 'The verbatim or paraphrased exclusion clause with [section] citations.' },
+          },
+          required: ['name'],
+        },
+      },
       citations:       { type: 'array',  items: { type: 'string' } },
       formNumber:      { type: 'string' },
     },
@@ -79,13 +105,35 @@ async function analyzeClaim(req, res) {
       raw.verdict = 'NOT_ADDRESSED'
       raw.summary = (raw.summary || '') + ' (Determination downgraded to NOT_ADDRESSED: no cited reasoning provided.)'
     }
+    // Normalize coverages: accept both the new { name, refId, formNumber, definition }
+    // shape and any legacy { coverage, applicable, note } the model may still emit.
+    const normCoverages = (Array.isArray(raw.coverages) ? raw.coverages : []).map((c) => {
+      if (typeof c === 'string') return { name: c, definition: c }
+      return {
+        name:       c.name       || c.coverage || String(c),
+        refId:      c.refId      || undefined,
+        formNumber: c.formNumber || undefined,
+        definition: c.definition || c.note     || '',
+      }
+    })
+    // Normalize exclusions: accept both the new { name, refId, formNumber, note } shape
+    // and legacy plain strings.
+    const normExclusions = (Array.isArray(raw.exclusions) ? raw.exclusions : []).map((e) => {
+      if (typeof e === 'string') return { name: e, note: e }
+      return {
+        name:       e.name       || String(e),
+        refId:      e.refId      || undefined,
+        formNumber: e.formNumber || undefined,
+        note:       e.note       || '',
+      }
+    })
     const determination = {
       verdict:        raw.verdict || 'NOT_ADDRESSED',
       summary:        raw.summary || '',
       reasoning:      Array.isArray(raw.reasoning) ? raw.reasoning : [],
       considerations: Array.isArray(raw.considerations) ? raw.considerations : [],
-      coverages:      Array.isArray(raw.coverages) ? raw.coverages : [],
-      exclusions:     Array.isArray(raw.exclusions) ? raw.exclusions : [],
+      coverages:      normCoverages,
+      exclusions:     normExclusions,
       citations:      Array.isArray(raw.citations) ? raw.citations : [],
       formNumber:     String(body.formNumber || raw.formNumber || ''),
     }

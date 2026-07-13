@@ -578,11 +578,14 @@ function reconcileFiling(ex, opts = {}) {
     warnings: unresolved.map((u) => `UNRESOLVED [${u.stage}/${u.kind}] ${u.name}: ${u.reason} (cited: ${u.citation})`),
     unmappedColumns: [],
     sheetsRecognized: [`rate order \xB7 ${ex.rateOrder.variables.length} variables`, `manual \xB7 ${ex.manual.rules.length} rules`, `policy form \xB7 ${ex.baseFormNumber}`],
-    sheetsSkipped: []
+    sheetsSkipped: [],
+    defects: [],
+    notices: []
   };
   const plan = {
     productId,
     product,
+    products: [product],
     coverages,
     forms,
     rules,

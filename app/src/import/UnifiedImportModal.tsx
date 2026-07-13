@@ -34,6 +34,7 @@ import {
 } from '../components/ui/icons'
 import { readWorkbooks } from '../lib/import/readWorkbook'
 import { readUploadFiles, runUnifiedImport, type UnifiedStageEvent } from './unifiedImportClient'
+import { adapter } from '../lib/backend'
 import { canI } from '../lib/canI'
 import { importPlan, type ImportProgress, type ImportResult } from '../lib/import/importProduct'
 import { newDraftId, filingLineage, importLineage } from '../lib/draft/draft'
@@ -251,13 +252,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
         samples,
         dataValidationVocab: {},
       }
-      const resp = await fetch('/api/ai/proposeMapping', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(body),
-      })
-      if (!resp.ok) throw new Error(`proposeMapping ${resp.status}`)
-      const data = await resp.json() as AISuggestions
+      const data = await adapter.fns.call<typeof body, AISuggestions>('proposeMapping', body)
       setAiSuggestions(data)
       setAcceptedSuggestions(new Set()) // start with all suggestions unaccepted
     } catch (e) {

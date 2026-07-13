@@ -8,8 +8,8 @@
 // so a VIEWER sees exactly what everyone else does (no edit affordances to hide).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { IconCheck, IconSpinner, IconRecent } from '../components/ui/icons'
-import { NoticeBanner, Tooltip } from '../components/ui'
+import { IconCheck, IconSpinner, IconRecent, IconLayers, IconInfo } from '../components/ui/icons'
+import { NoticeBanner, Tooltip, RefChip } from '../components/ui'
 import { isCacheNotice, type NoticeEvent, type NoticeKind } from '../lib/ai/notices'
 import { adapter } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
@@ -32,7 +32,46 @@ type StreamEvent =
   | { t: 'done' }
 
 interface ToolChip { name: string; done: boolean; summary?: string }
-interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[]; notice?: NoticeEvent }
+interface ChatCard { citations: string[]; allCitations: string[]; contextHits: number; inputTokens: number; outputTokens: number }
+interface ChatMessage { role: 'user' | 'assistant'; text: string; tools: ToolChip[]; notice?: NoticeEvent; chatCard?: ChatCard }
+
+// ─── Chat response card — structured provenance panel rendered below each assistant
+// turn. Shows the deduplicated data citations (cited refIds) as clickable chips and a
+// quiet provenance badge ("Grounded in N sources"). Mirrors DeterminationCard's style.
+function ChatResponseCard({ card, onCite }: { card: ChatCard; onCite: (cite: string) => void }) {
+  const hasCitations = card.citations.length > 0
+  if (!hasCitations && card.contextHits === 0) return null
+  return (
+    <div
+      className="rounded-[12px] flex flex-col gap-2.5 px-3.5 py-3 mt-1"
+      style={{ background: 'var(--color-raised)', border: '1px solid var(--color-border)' }}
+    >
+      {hasCitations && (
+        <div className="flex flex-col gap-1.5">
+          <h4 className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[.07em] text-faint">
+            <IconLayers size={12} aria-hidden="true" />
+            Data citations
+            <span className="text-faint/70 font-normal normal-case tracking-normal tabular-nums">· {card.citations.length}</span>
+          </h4>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {card.citations.map((id, i) => (
+              <button key={i} onClick={() => onCite(id)} title={`Navigate to ${id}`}
+                className="focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent rounded-[5px]">
+                <RefChip id={id} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {card.contextHits > 0 && (
+        <div className="flex items-center gap-1.5 text-[11px] text-faint">
+          <IconInfo size={12} aria-hidden="true" />
+          <span>Grounded in {card.contextHits} portfolio source{card.contextHits !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Cockpit ────────────────────────────────────────────────────────────────────
 
@@ -158,7 +197,9 @@ export default function Home() {
           case 'error':
             patchAssistant(m => ({ ...m, text: m.text + `\n\n⚠️ ${ev.message}` })); break
           case 'done': break
-          case 'json': break
+          case 'json':
+            if (ev.key === 'chatCard') patchAssistant(m => ({ ...m, chatCard: ev.value as ChatCard }))
+            break
         }
       }, controller.signal)
     } catch (err) {
@@ -245,7 +286,12 @@ export default function Home() {
                         </div>
                       )}
                       {m.role === 'assistant'
-                        ? <div className="text-sm text-text"><StreamRenderer text={m.text} streaming={streaming && i === messages.length - 1} onCite={openCitation} citationIndex={indexEntries} /></div>
+                        ? (
+                          <>
+                            <div className="text-sm text-text"><StreamRenderer text={m.text} streaming={streaming && i === messages.length - 1} onCite={openCitation} citationIndex={indexEntries} /></div>
+                            {m.chatCard && !streaming && <ChatResponseCard card={m.chatCard} onCite={openCitation} />}
+                          </>
+                        )
                         : m.text}
                       {/* Degrade / deny / breaker / unverified → the shared honest-status banner.
                           A cache HIT is NOT a banner — it's the quiet badge in the footer row below. */}
