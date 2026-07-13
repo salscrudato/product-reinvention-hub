@@ -23,12 +23,14 @@ const LOB_BY_PREFIX = [
   { re: /^IL[\s-]?\d/i, lob: 'PR' },   // Interline
 ]
 
-// Standard ISO form number: 2-3 alpha prefix + two-digit triplet (e.g. "CG 00 01", "HO 00 03").
-// Also matches 4-digit suffix format (e.g. "CP 00 10", "IM 7002").
-const FORM_NUM_RE = /\b([A-Z]{1,4}[\s-]?\d{2}[\s-]\d{2}[\s-]\d{2}|[A-Z]{1,4}[\s-]\d{4})\b/g
+// ISO base form number: alpha prefix (1-4 chars) + NN NN (two pairs).
+// "CG 00 01 04 13" → form "CG 00 01", edition "04 13" (edition parsed separately below).
+// 4-digit suffix variant: "IM 7002", "CP 00 10" already covered by the two-pair rule.
+const FORM_NUM_RE = /\b([A-Z]{1,4}[\s-]?\d{2}[\s-]\d{2}|[A-Z]{1,4}[\s-]\d{4})\b/g
 
-// Edition: "Ed. 01 23", "(01 23)", "01/23", stand-alone 4-digit year
-const EDITION_RE = /\b(?:Ed(?:ition)?s?\.?\s*)?(\d{1,2}[\s/-]\d{2,4}|\d{4})\b/
+// Edition: the digit pair(s) that follow a form number inline ("CG 00 01 04 13" → "04 13"),
+// or introduced by an explicit "Ed." / "Edition" label.
+const EDITION_RE = /(?:[A-Z]{1,4}[\s-]?\d{2}[\s-]\d{2}[\s-]|Ed(?:ition)?s?\.?\s*)(\d{1,2}[\s/-]\d{2,4}|\d{4})\b/
 
 function lobFor(num) {
   return (LOB_BY_PREFIX.find(e => e.re.test(num)) || {}).lob || ''
@@ -43,7 +45,7 @@ function regexExtract(text) {
     if (!nums.includes(n)) nums.push(n)
   }
   const formNumber = nums[0] || ''
-  const em = EDITION_RE.exec(text)
+  const em = new RegExp(EDITION_RE.source, 'i').exec(text)
   const edition = em ? em[1].trim() : ''
   return { formNumber, edition, lob: lobFor(formNumber) }
 }
