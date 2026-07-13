@@ -930,11 +930,14 @@ export function mapIsoWorkbook(grids: IsoGrid[]): ImportPlan {
   const ctx = new Ctx()
 
   const fwGrid   = findSheet(grids, /product framework|product component model|component model/i)
-  const formGrid = findSheet(grids, /forms specifications|forms specification/i, /dynamic/i)
+  // "Forms Library" is the IM/PR component-model template's name for the forms sheet.
+  const formGrid = findSheet(grids, /forms specifications?|forms library/i, /dynamic/i)
   const dynGrid  = findSheet(grids, /forms dynamic|dynamic data/i)
-  const ruleGrid = findSheet(grids, /rules specifications|rules specification/i, /optional/i)
+  // "Rules Repository" is the IM/PR component-model template's name for the rules sheet.
+  const ruleGrid = findSheet(grids, /rules specifications?|rules repository/i, /optional/i)
   const optGrid  = findSheet(grids, /optional forms rules/i)
-  const rateGrid = findSheet(grids, /rating specifications|rating specification/i)
+  // "PROPERTY ROC" and the exact sheet name "ROC" are the Property/IM Rate Order of Calculations.
+  const rateGrid = findSheet(grids, /rating specifications?|property roc|^roc$/i)
   const rtGrid   = findSheet(grids, /rating tables|rate tables/i)
   const ldGrid   = findSheet(grids, /limits and deductibles|limits & deductibles/i)
 

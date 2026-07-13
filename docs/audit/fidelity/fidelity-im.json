@@ -6,7 +6,8 @@
   ],
   "sheetsRecognized": [
     "Product Component Model",
-    "Limits and Deductibles Tables"
+    "Limits and Deductibles Tables",
+    "Rules Repository"
   ],
   "sheetsSkipped": [
     "Revision History",
@@ -16,7 +17,6 @@
     "Revision History",
     "Definitions",
     "Rules Categories",
-    "Rules Repository",
     "Class Codes Tables",
     "Data Validation"
   ],
@@ -25,7 +25,7 @@
     "coverages": 798,
     "forms": 0,
     "dynamicFields": 0,
-    "rules": 0,
+    "rules": 752,
     "formRules": 0,
     "ratingSteps": 0,
     "rtTables": 0,
@@ -57,6 +57,35 @@
         "SPECIALTY IMPLEMENTATION BUSINESS PRIORITY",
         "CONFIRMED RELEASE"
       ]
+    },
+    {
+      "sheet": "Rules Repository",
+      "columns": [
+        "PRODUCT",
+        "LOB",
+        "COVERAGE",
+        "SUB\nCOVERAGE",
+        "RULE EFFECTIVE DATE",
+        "RULE EXPIRATION DATE",
+        "PROPRIETARY",
+        "SOURCE",
+        "SPECIALTY",
+        "COMMERCIAL",
+        "AGRIBUSINESS",
+        "Quote",
+        "Bind",
+        "New Business",
+        "Endorse",
+        "Rewrite",
+        "Reissue",
+        "Renew",
+        "Non-Renew",
+        "Reinstate",
+        "Final Audit",
+        "Cancel Pending",
+        "Cancel",
+        "REVIEWER"
+      ]
     }
   ],
   "orphanedParents": [],
@@ -64,6 +93,6 @@
   "badSource": [],
   "spotChecks": {
     "IM.COV044.00": false,
-    "IM.RL.001": false
+    "IM.RL.001": true
   }
 }

@@ -5,14 +5,14 @@
     "sample-PR-rating.xlsx"
   ],
   "sheetsRecognized": [
-    "Product Component Model"
+    "Product Component Model",
+    "Forms Library",
+    "Rules Repository",
+    "ROC"
   ],
   "sheetsSkipped": [
     "Revision History",
     "Definitions",
-    "ROC",
-    "Forms Library",
-    "Rules Repository",
     "Coverage Summary",
     "Data Validation",
     "Sheet2",
@@ -26,20 +26,23 @@
   "counts": {
     "products": 1,
     "coverages": 603,
-    "forms": 0,
+    "forms": 240,
     "dynamicFields": 0,
-    "rules": 0,
+    "rules": 1608,
     "formRules": 0,
-    "ratingSteps": 0,
+    "ratingSteps": 909,
     "rtTables": 0,
     "ldTables": 0
   },
   "warnings": [
     "Sheet \"Product Component Model\" col \"ID\": coverage id PR.COV001.20 is reused for different coverages (\"Building\" and \"Building\") — kept the first; verify the source.",
     "Framework sheet \"Product Component Model\": no explicit product (.PROD) row — synthesized product id \"PR.PROD.001\" from the coverage id prefix \"PR\".",
-    "Framework sheet \"Product Component Model\": 10 distinct product names detected — imported under a single product PR.PROD.001. Split into separate products if the source is a multi-product book."
+    "Framework sheet \"Product Component Model\": 10 distinct product names detected — imported under a single product PR.PROD.001. Split into separate products if the source is a multi-product book.",
+    "Sheet \"Forms Library\" row 9 col \"FORM CATEGORY\": value \"Other Policy Documents\" not recognised — mapped to ENDORSEMENT, verify intent.",
+    "Sheet \"Forms Library\" row 76 col \"FORM NUMBER\": form CP 04 10 appears on multiple rows — applicability merged.",
+    "Sheet \"Forms Library\" row 211 col \"FORM NUMBER\": form CP 01 20 appears on multiple rows — applicability merged."
   ],
-  "warningCount": 3,
+  "warningCount": 6,
   "unmappedColumns": [
     {
       "sheet": "Product Component Model",
@@ -51,6 +54,89 @@
         "SPECIALTY IMPLEMENTATION BUSINESS PRIORITY",
         "CONFIRMED RELEASE"
       ]
+    },
+    {
+      "sheet": "Forms Library",
+      "columns": [
+        "FORM EDITION DATE (MMYY - ISO and PROPRIETARY)",
+        "FORM EFFECTIVE DATE",
+        "FORM EXPIRATION DATE",
+        "ADMITTED/NOT ADMITTED",
+        "DYNAMIC DATA",
+        "Sample Mutual PREMIUM BEARING",
+        "MARKET SEGMENT : SPECIALTY",
+        "MARKET SEGMENT : COMMERCIAL",
+        "MARKET SEGMENT : AGRIBUSINESS",
+        "BUILDING AND PERSONAL PROPERTY",
+        "CONDOMINIUM ASSOCIATION",
+        "BUILDERS RISK",
+        "BUSINESS INCOME (AND EXTRA EXPENSE)",
+        "BUSINESS INCOME (WITHOUT EXTRA EXPENSE)",
+        "CONDO COMMERCIAL UNIT OWNERS",
+        "EXTRA EXPENSE",
+        "LEASEHOLD INTEREST",
+        "LEGAL LIABILITY",
+        "MORTGAGEHOLDERS E&O",
+        "MANDATORY /\nOPTIONAL /\nCONDTIONAL",
+        "ATTACHMENT CONDITIONS",
+        "Quote",
+        "Bind",
+        "New Business"
+      ]
+    },
+    {
+      "sheet": "Rules Repository",
+      "columns": [
+        "PRODUCT",
+        "LOB",
+        "COVERAGE",
+        "SUB\nCOVERAGE",
+        "RULE EFFECTIVE DATE",
+        "RULE EXPIRATION DATE",
+        "PROPRIETARY",
+        "SOURCE",
+        "SPECIALTY",
+        "COMMERCIAL",
+        "AGRIBUSINESS",
+        "Quote",
+        "Bind",
+        "New Business",
+        "Endorse",
+        "Rewrite",
+        "Reissue",
+        "Renew",
+        "Non-Renew",
+        "Reinstate",
+        "Final Audit",
+        "Cancel Pending",
+        "Cancel",
+        "REVIEWER"
+      ]
+    },
+    {
+      "sheet": "ROC",
+      "columns": [
+        "PRODUCT",
+        "LOB",
+        "COVERAGE",
+        "SUB-COVERAGE",
+        "COVERAGE NAME",
+        "PARENTHESES",
+        "RULES",
+        "TABLE NAME",
+        "TABLE REFERENCE",
+        "EXAMPLE VALUES",
+        "PROPRIETARY",
+        "RATING STEP - EFFECTIVE DATE",
+        "RATING STEP - EXPIRATION DATE",
+        "REVIEWER",
+        "DATE COMPLETED",
+        "RULE NUMBER",
+        "CIRCULAR NUMBER",
+        "BUREAU FILING NUMBER",
+        "SPECIALTY IMPLEMENTATION BUSINESS PRIORITY",
+        "CONFIRMED RELEASE"
+      ]
     }
   ],
   "orphanedParents": [],
@@ -58,6 +144,6 @@
   "badSource": [],
   "spotChecks": {
     "PR.COV001.0": true,
-    "form:CP 00 10": false
+    "form:CP 00 10": true
   }
 }

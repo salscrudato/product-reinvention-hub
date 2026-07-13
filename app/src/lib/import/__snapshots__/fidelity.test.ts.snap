@@ -31,7 +31,7 @@ exports[`fidelity — IM (2 workbooks) > IM forms spot-check (present when Forms
 
 exports[`fidelity — IM (2 workbooks) > IM.COV044.00 spot-check (present when framework sheet found) 1`] = `false`;
 
-exports[`fidelity — IM (2 workbooks) > IM.RL.001 spot-check (present when rules sheet found) 1`] = `false`;
+exports[`fidelity — IM (2 workbooks) > IM.RL.001 spot-check (present when rules sheet found) 1`] = `true`;
 
 exports[`fidelity — IM (2 workbooks) > counts snapshot (regression anchor) 1`] = `
 {
@@ -43,7 +43,7 @@ exports[`fidelity — IM (2 workbooks) > counts snapshot (regression anchor) 1`]
   "products": 1,
   "ratingSteps": 0,
   "rtTables": 0,
-  "rules": 0,
+  "rules": 752,
 }
 `;
 
@@ -52,6 +52,7 @@ exports[`fidelity — IM (2 workbooks) > recognized + skipped sheets snapshot 1`
   "recognized": [
     "Product Component Model",
     "Limits and Deductibles Tables",
+    "Rules Repository",
   ],
   "skipped": [
     "Revision History",
@@ -61,16 +62,15 @@ exports[`fidelity — IM (2 workbooks) > recognized + skipped sheets snapshot 1`
     "Revision History",
     "Definitions",
     "Rules Categories",
-    "Rules Repository",
     "Class Codes Tables",
     "Data Validation",
   ],
 }
 `;
 
-exports[`fidelity — PR (2 workbooks) > CP 00 10 form spot-check (present when Forms Library sheet found) 1`] = `false`;
+exports[`fidelity — PR (2 workbooks) > CP 00 10 form spot-check (present when Forms Library sheet found) 1`] = `true`;
 
-exports[`fidelity — PR (2 workbooks) > PR rules present (present when Rules Repository sheet found) 1`] = `0`;
+exports[`fidelity — PR (2 workbooks) > PR rules present (present when Rules Repository sheet found) 1`] = `1608`;
 
 exports[`fidelity — PR (2 workbooks) > PR.COV001.0 spot-check (present when framework sheet found) 1`] = `true`;
 
@@ -79,28 +79,28 @@ exports[`fidelity — PR (2 workbooks) > counts snapshot (regression anchor) 1`]
   "coverages": 603,
   "dynamicFields": 0,
   "formRules": 0,
-  "forms": 0,
+  "forms": 240,
   "ldTables": 0,
   "products": 1,
-  "ratingSteps": 0,
+  "ratingSteps": 909,
   "rtTables": 0,
-  "rules": 0,
+  "rules": 1608,
 }
 `;
 
-exports[`fidelity — PR (2 workbooks) > rating steps present (present when ROC sheet found) 1`] = `0`;
+exports[`fidelity — PR (2 workbooks) > rating steps present (present when ROC sheet found) 1`] = `909`;
 
 exports[`fidelity — PR (2 workbooks) > recognized + skipped sheets snapshot 1`] = `
 {
   "recognized": [
     "Product Component Model",
+    "Forms Library",
+    "Rules Repository",
+    "ROC",
   ],
   "skipped": [
     "Revision History",
     "Definitions",
-    "ROC",
-    "Forms Library",
-    "Rules Repository",
     "Coverage Summary",
     "Data Validation",
     "Sheet2",
