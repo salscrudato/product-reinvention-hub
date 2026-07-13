@@ -1,0 +1,39 @@
+# gitleaks configuration for Product Hub.
+#
+# Extends the built-in gitleaks ruleset (useDefault = true) so every default
+# secret rule still fires. The allowlist below scopes out THREE documented
+# false positives / removed-legacy artifacts ONLY. A real credential (a Cosmos
+# key, a Foundry key, an sk-ant-* token, the JWT signing secret, an SMTP
+# password, etc.) matches none of these patterns and is still blocked -- this
+# config narrows the scanner, it does not disable it.
+#
+# The pipeline invokes `gitleaks detect --source . ...` with no --config flag,
+# so gitleaks auto-discovers this file at the repo root. Adding it is not a
+# change to azure-pipelines.yml.
+
+title = "Product Hub secret-scan policy"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented false positives and removed legacy artifacts"
+
+# (1) Firebase WEB API keys (AIzaSy...) are client identifiers, NOT credentials:
+#     they ship in every Firebase client bundle by design and are safe to expose
+#     (access is gated by Firestore rules + JWT auth). The only occurrences are
+#     in the handoff docs that quote the retired Firebase project's key while
+#     explaining exactly this -- see docs/handoff/07_PRODUCTION_READINESS.md SEC-03.
+regexes = [
+  '''AIzaSy[0-9A-Za-z_\-]{33}''',
+]
+
+# (2)+(3) The "snowchat" project is a SEPARATE, non-deployed legacy app
+#     (docs/audit/AUDIT.md) that was removed from HEAD; its files survive only in
+#     git history. The truncated dev-profile JWT "token_preview" strings it
+#     carried are not live credentials. These paths cover both the snowchat tree
+#     and the dev-profile file that briefly lived at the repo root before it moved.
+paths = [
+  '''snowchat/''',
+  '''(^|/)\.oneclick\.devcopilot\.profile\.json$''',
+]

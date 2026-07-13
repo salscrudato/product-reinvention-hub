@@ -37,7 +37,7 @@
 ### SEC-03 — Firebase API key exposed in client bundle (INFO, expected by design)
 **File:** `app/src/lib/backend/firebase.config.ts`
 **Severity:** INFO (by Firebase design, not a vulnerability)
-**Detail:** `apiKey: 'AIzaSyCoqf7-ty_z-0VI6EDGs56MHy-RH_5giN8'` is in the client bundle. Firebase client API keys are NOT secrets — they identify the project and are always public. Security is enforced by Firestore rules and Function auth (which both verify the JWT). This is correct Firebase architecture; however, the key's Firebase App Check or authorized domains list should be configured in the Firebase console to prevent unauthorized project use.
+**Detail:** `apiKey: 'AIzaSy<redacted>'` is in the client bundle (literal redacted here; the value is a client identifier, not a credential). Firebase client API keys are NOT secrets — they identify the project and are always public. Security is enforced by Firestore rules and Function auth (which both verify the JWT). This is correct Firebase architecture; however, the key's Firebase App Check or authorized domains list should be configured in the Firebase console to prevent unauthorized project use.
 **Fix:** Enable Firebase App Check or restrict authorized domains in the Firebase console. No code change required.
 
 ### SEC-04 — Anonymous auto sign-in grants read access to all portfolio data
