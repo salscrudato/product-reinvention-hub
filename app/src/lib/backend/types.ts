@@ -98,7 +98,7 @@ export interface BackendAdapter {
      *  error (e.g. a failed poll / offline) the data callback still degrades to `[]`/`null`
      *  so consumers resolve their loading state; pass `onError` to ALSO surface a recoverable
      *  error state instead of a silent empty (see the subscribe-error gap in ELEVATION_MATRIX). */
-    subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void, onError?: (err: unknown) => void): Unsubscribe
+    subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void, onError?: (err: unknown) => void, query?: Query): Unsubscribe
     /** Atomic entity + audit + version + searchIndex write. */
     mutate(m: MutationPayload): Promise<void>
     /** Batched mutate: each payload gets the SAME full envelope (entity + audit + version

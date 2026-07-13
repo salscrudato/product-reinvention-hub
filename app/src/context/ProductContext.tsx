@@ -73,13 +73,17 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
       adapter.db.subscribe<WithId<RatingProgram>>(`products/${pid}/ratingPrograms`, (d) => {
         if (Array.isArray(d)) { setRatingProgram(d[0] ?? null); inc() }
       }),
-      // Global collections (small — filter client-side)
+      // Forms are a shared top-level library that can grow past the list cap once several
+      // large products are imported (a single CORE import adds ~1359). Filter SERVER-SIDE by
+      // productRefIds so we only ever load this product's forms — a client-side filter over the
+      // whole collection would silently miss rows beyond MAX_LIST.
       adapter.db.subscribe<WithId<Form>>('forms', (d) => {
         if (Array.isArray(d)) {
-          setForms(d.filter(f => (f.productRefIds ?? []).includes(pid) || (f.productRefIds ?? []).some(r => r === pid)))
+          // Server already scoped to this product; keep the defensive filter as a belt-and-braces.
+          setForms(d.filter(f => (f.productRefIds ?? []).includes(pid)))
           inc()
         }
-      }),
+      }, undefined, { where: [{ field: 'productRefIds', op: 'array-contains', value: pid }] }),
       adapter.db.subscribe<WithId<LDTable> & { id: string }>('ldTables', (d) => {
         if (Array.isArray(d)) {
           const rec: Record<string, LDTable> = {}

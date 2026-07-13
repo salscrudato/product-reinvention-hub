@@ -190,10 +190,17 @@ export const adapter: BackendAdapter = {
       return data
     },
 
-    subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void, onError?: (err: unknown) => void): Unsubscribe {
+    subscribe<T>(pathOrQuery: string | Query, cb: (data: T | T[]) => void, onError?: (err: unknown) => void, query?: Query): Unsubscribe {
       if (typeof pathOrQuery !== 'string') throw new Error('subscribe() with a Query object requires a string path')
       const path = pathOrQuery
       const doc = isDoc(path)
+      // When a query is supplied the read is filtered SERVER-SIDE (list(path, query)) instead
+      // of loading the whole collection and filtering in the client. This is essential for
+      // collections that can grow past MAX_LIST (e.g. 'forms', where several large imported
+      // products together exceed the list cap and a client-side filter would silently miss a
+      // product's rows). Cache/coalesce under a key that includes the query so distinct filters
+      // never collide. Callers without a query keep the exact prior behaviour.
+      const key = query ? `${path}?${JSON.stringify(query)}` : path
       let stopped = false
       let inFlight = false
       let deliveredOnce = false
@@ -208,19 +215,19 @@ export const adapter: BackendAdapter = {
         if (stopped || inFlight) return   // dedupe: never overlap a fetch
         inFlight = true
         try {
-          // Coalesce: concurrent subscribers to the same path share one HTTP request.
-          let rawFetch = pathFetches.get(path) as Promise<T | T[]> | undefined
+          // Coalesce: concurrent subscribers to the same path+query share one HTTP request.
+          let rawFetch = pathFetches.get(key) as Promise<T | T[]> | undefined
           if (!rawFetch) {
-            rawFetch = (doc ? adapter.db.get<T>(path) : adapter.db.list<T>(path)) as Promise<T | T[]>
-            pathFetches.set(path, rawFetch)
-            void rawFetch.finally(() => { if (pathFetches.get(path) === rawFetch) pathFetches.delete(path) })
+            rawFetch = (doc ? adapter.db.get<T>(path) : adapter.db.list<T>(path, query)) as Promise<T | T[]>
+            pathFetches.set(key, rawFetch)
+            void rawFetch.finally(() => { if (pathFetches.get(key) === rawFetch) pathFetches.delete(key) })
           }
           const data = await rawFetch
           if (stopped) return
           const json = JSON.stringify(data ?? null)
-          const changed = snapshotCache.get(path) !== json
-          snapshotCache.set(path, json)
-          dataCache.set(path, data)
+          const changed = snapshotCache.get(key) !== json
+          snapshotCache.set(key, json)
+          dataCache.set(key, data)
           if (changed || !deliveredOnce) { deliveredOnce = true; deliver(data) }
           interval = changed ? POLL_MIN : Math.min(Math.round(interval * BACKOFF), POLL_MAX)
         } catch (err) {
@@ -237,8 +244,8 @@ export const adapter: BackendAdapter = {
 
       const poller: Poller = { tick: () => void tick(), stop: clear, reset: () => { interval = POLL_MIN } }
       pollers.add(poller)
-      // Instant stale-while-revalidate paint from the last value seen for this path.
-      if (dataCache.has(path)) queueMicrotask(() => deliver(dataCache.get(path) as T | T[]))
+      // Instant stale-while-revalidate paint from the last value seen for this path+query.
+      if (dataCache.has(key)) queueMicrotask(() => deliver(dataCache.get(key) as T | T[]))
       void tick()   // fresh initial fetch (even if loaded hidden — first paint stays truthful)
 
       return () => { stopped = true; clear(); pollers.delete(poller) }
