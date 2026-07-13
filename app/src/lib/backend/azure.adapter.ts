@@ -284,7 +284,12 @@ export const adapter: BackendAdapter = {
   storage: {
     async upload(path: string, file: File): Promise<string> {
       const buf = await file.arrayBuffer()
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
+      // Chunked base64 — avoids call-stack overflow on large PDFs (spread limit ~32k args).
+      const bytes = new Uint8Array(buf)
+      let bin = ''
+      const CH = 0x8000
+      for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode(...bytes.subarray(i, i + CH))
+      const b64 = btoa(bin)
       const { url } = await api<{ url: string }>('/storage/upload', {
         method: 'POST', body: JSON.stringify({ path, contentType: file.type, dataBase64: b64 }),
       })

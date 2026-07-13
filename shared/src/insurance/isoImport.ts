@@ -713,26 +713,42 @@ function parseFormRules(grid: IsoGrid, ctx: Ctx): PlannedEntity[] {
 }
 
 // ─── Stacked LD tables ───────────────────────────────────────────────────────────
+// Two known marker styles:
+//   GL template:  "LDTable.001" in col 0  — norm → "LDTABLE.001"  → GL pattern
+//   IM/component: "LD001" in col 1         — norm → "LD001"        → IM pattern
+// The combined LD_MARKER covers both; markerCol is auto-detected per grid.
 
-const LD_MARKER = /^LD ?TABLE\.\s*\w+/i
+const LD_MARKER_GL = /^LD ?TABLE\.\s*\w+/i   // GL: "LDTable.001", "LD TABLE. 001"
+const LD_MARKER_IM = /^LD\d+$/i              // IM: "LD001", "LD002"
+const LD_MARKER    = /^LD ?TABLE\.\s*\w+|^LD\d+$/i  // combined — used for loop-break tests
+
 function parseLdTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
   if (!grid) return []
   ctx.recognized.push(grid.sheet)
   const tables = new Map<string, { name: string; rows: { label: string; value: number; constraintNote?: string }[]; defaultValue?: number }>()
   const rows = grid.cells
 
+  // Detect which column holds the LD markers. GL puts them at col 0; the IM/component-model
+  // template shifts the table block one column right (col 1), leaving col 0 empty.
+  let markerCol = 0
+  for (let r = 0; r < Math.min(rows.length, 20); r++) {
+    if (LD_MARKER_GL.test(norm(cell(grid, r, 0)))) break               // GL pattern found at col 0
+    if (LD_MARKER_IM.test(norm(cell(grid, r, 1)))) { markerCol = 1; break } // IM pattern at col 1
+  }
+
   for (let r = 0; r < rows.length; r++) {
-    const first = norm(cell(grid, r, 0))
+    const first = norm(cell(grid, r, markerCol))
     if (!LD_MARKER.test(first)) continue
-    const refId = text(cell(grid, r, 0))                      // preserve exact ("LDTable.001")
+    const refId = text(cell(grid, r, markerCol))                       // preserve verbatim
     const markerRow = row(grid, r)
-    // Table name = the non-empty cell after a "TABLE NAME" marker, else the 2nd value.
+    // Table name: prefer cell after an explicit "TABLE NAME" label; else first non-empty
+    // cell after the marker column itself.
     const nameIdx = markerRow.findIndex(c => /TABLE NAME/i.test(text(c)))
     let name = ''
     if (nameIdx >= 0) name = clean(markerRow.slice(nameIdx + 1).find(c => clean(c)) ?? null)
-    if (!name) name = clean(markerRow.slice(1).find(c => clean(c) && !/TABLE NAME/i.test(text(c))) ?? null)
+    if (!name) name = clean(markerRow.slice(markerCol + 1).find(c => clean(c) && !/TABLE NAME/i.test(text(c))) ?? null)
 
-    // Locate the value + comment columns from the marker row or the next row. Anchor
+    // Locate the value + comment columns from the marker row or the next 2 rows. Anchor
     // to the column *header* label so a table name like "Occurrence Limits" (which
     // contains "LIMIT") can't be mistaken for the value column.
     let valueCol = -1, commentCol = -1, headerR = r
@@ -745,14 +761,14 @@ function parseLdTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
         break
       }
     }
-    if (valueCol < 0) { valueCol = 3; commentCol = 4; headerR = r } // template default columns
+    if (valueCol < 0) { valueCol = markerCol + 3; commentCol = markerCol + 4; headerR = r }
 
     const entry = tables.get(refId) ?? { name, rows: [] as { label: string; value: number; constraintNote?: string }[], defaultValue: undefined }
-    if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} col 0 (LD marker): table ${refId} appears more than once — rows merged.`)
+    if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} (LD marker): table ${refId} appears more than once — rows merged.`)
     if (!entry.name) entry.name = name
 
     for (let dr = headerR + 1; dr < rows.length; dr++) {
-      if (LD_MARKER.test(norm(cell(grid, dr, 0)))) break
+      if (LD_MARKER.test(norm(cell(grid, dr, markerCol)))) break
       const raw = cell(grid, dr, valueCol)
       const label = clean(raw)
       if (!label || /^available|^comment|^limit$|^deductible/i.test(label)) continue

@@ -39,7 +39,7 @@ exports[`fidelity — IM (2 workbooks) > counts snapshot (regression anchor) 1`]
   "dynamicFields": 0,
   "formRules": 0,
   "forms": 0,
-  "ldTables": 0,
+  "ldTables": 34,
   "products": 1,
   "ratingSteps": 0,
   "rtTables": 0,

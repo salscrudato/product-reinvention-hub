@@ -8,8 +8,9 @@
     "severity": "blocking",
     "expected": "Rules Repository sheet parsed as rules → IM.RL.001 and siblings produced",
     "actual": "Sheet skipped; rules count = 0; regex /rules specifications?/i does not match 'Rules Repository'",
-    "status": "open",
-    "rootCauseWave": 1
+    "status": "fixed",
+    "rootCauseWave": 1,
+    "fixedIn": "Wave 1 — extended ruleGrid regex to /rules specifications?|rules repository/i"
   },
   {
     "id": "DEF-002",
@@ -20,8 +21,9 @@
     "severity": "blocking",
     "expected": "Forms Library sheet parsed as forms → CP form entities produced",
     "actual": "Sheet skipped; forms count = 0; regex /forms specifications?/i does not match 'Forms Library'",
-    "status": "open",
-    "rootCauseWave": 1
+    "status": "fixed",
+    "rootCauseWave": 1,
+    "fixedIn": "Wave 1 — extended formGrid regex to /forms specifications?|forms library/i"
   },
   {
     "id": "DEF-003",
@@ -32,8 +34,9 @@
     "severity": "blocking",
     "expected": "Rules Repository sheet parsed as rules → PR rule entities produced",
     "actual": "Sheet skipped; rules count = 0 for PR line",
-    "status": "open",
-    "rootCauseWave": 1
+    "status": "fixed",
+    "rootCauseWave": 1,
+    "fixedIn": "Wave 1 — same ruleGrid regex fix as DEF-001"
   },
   {
     "id": "DEF-004",
@@ -44,8 +47,9 @@
     "severity": "blocking",
     "expected": "ROC sheet parsed as rating program → rating steps produced",
     "actual": "Sheet skipped; ratingSteps count = 0; regex /rating specifications?/i does not match 'ROC'",
-    "status": "open",
-    "rootCauseWave": 1
+    "status": "fixed",
+    "rootCauseWave": 1,
+    "fixedIn": "Wave 1 — extended rateGrid regex to /rating specifications?|property roc|^roc$/i"
   },
   {
     "id": "DEF-005",
@@ -56,20 +60,22 @@
     "severity": "blocking",
     "expected": "PROPERTY ROC sheet parsed as rating program → rating steps produced",
     "actual": "Sheet skipped; ratingSteps count = 0; regex /rating specifications?/i does not match 'PROPERTY ROC'",
-    "status": "open",
-    "rootCauseWave": 1
+    "status": "fixed",
+    "rootCauseWave": 1,
+    "fixedIn": "Wave 1 — same rateGrid regex fix as DEF-004"
   },
   {
     "id": "DEF-006",
-    "sourceFile": "samples/iso/sample-IM-framework.xlsx",
+    "sourceFile": "samples/iso/sample-IM-rules.xlsx",
     "sheet": "Limits and Deductibles Tables",
-    "locus": "parseLdTables() LD_MARKER pattern /^LD ?TABLE\\.\\s*\\w+/i",
+    "locus": "parseLdTables() LD_MARKER pattern and markerCol detection",
     "category": "dropped-row",
     "severity": "blocking",
-    "expected": "LD rows parsed → LD table entities produced",
-    "actual": "Sheet recognized but 0 LD tables produced; IM sheet rows do not contain 'LDTable.NNN' marker in column 0",
-    "status": "open",
-    "rootCauseWave": 2
+    "expected": "LD rows parsed → 34 LD table entities produced (LD001..LD034)",
+    "actual": "Sheet recognized but 0 LD tables produced; root cause: (1) LD_MARKER /^LD ?TABLE\\.\\s*\\w+/i only matches GL 'LDTable.001' format; (2) IM format uses 'LD001' at col 1 (not col 0); (3) name extraction used .slice(1) which picked the marker id as the table name",
+    "status": "fixed",
+    "rootCauseWave": 4,
+    "fixedIn": "Wave 4 — added LD_MARKER_IM /^LD\\d+$/i; auto-detected markerCol (0 for GL, 1 for IM) by scanning first 20 rows; updated name extraction to .slice(markerCol+1); break condition uses markerCol; fallback valueCol uses markerCol+3"
   },
   {
     "id": "DEF-007",
@@ -80,8 +86,9 @@
     "severity": "cosmetic",
     "expected": "authored fixture expected.im.ts has refId IM.COV044.00 for Contractors Equipment parent",
     "actual": "Actual workbook produces 798 coverages but IM.COV044.00 is not among them; authored fixture was speculative (groundedInRepo: false)",
-    "status": "open",
-    "rootCauseWave": null
+    "status": "not-a-bug",
+    "rootCauseWave": null,
+    "fixedIn": "Not a bug — fixture was written speculatively before the workbook was in the repo; actual refId scheme differs"
   },
   {
     "id": "DEF-008",
@@ -92,8 +99,9 @@
     "severity": "cosmetic",
     "expected": "product refId derived from a .PROD row in the source",
     "actual": "No .PROD row in 'Product Component Model' sheet; importer synthesizes IM.PROD.001 from coverage prefix; correct behavior but warnable",
-    "status": "open",
-    "rootCauseWave": null
+    "status": "acceptable",
+    "rootCauseWave": null,
+    "fixedIn": "By design — the importer already emits a warning for this case; source workbook genuinely has no .PROD row"
   },
   {
     "id": "DEF-009",
@@ -104,19 +112,21 @@
     "severity": "cosmetic",
     "expected": "product refId derived from a .PROD row in the source",
     "actual": "No .PROD row; importer synthesizes PR.PROD.001 from coverage prefix; same as DEF-008",
-    "status": "open",
-    "rootCauseWave": null
+    "status": "acceptable",
+    "rootCauseWave": null,
+    "fixedIn": "By design — same as DEF-008"
   },
   {
     "id": "DEF-010",
     "sourceFile": "samples/iso/sample-PR-rating.xlsx",
     "sheet": "ISO TABLES",
-    "locus": "mapIsoWorkbook() rtGrid findSheet regex",
+    "locus": "mapIsoWorkbook() rtGrid findSheet regex + parseRtTables()",
     "category": "unmapped-sheet",
     "severity": "blocking",
-    "expected": "ISO TABLES sheet may contain RT/LD rate tables used by the PR ROC program",
-    "actual": "Sheet skipped; regex /rating tables|rate tables/i does not match 'ISO TABLES'; content unknown until Wave 2 investigation",
-    "status": "open",
-    "rootCauseWave": 2
+    "expected": "ISO TABLES sheet may contain RT rate tables referenced by the PR ROC rating program",
+    "actual": "Sheet skipped. Investigation (Wave 4): sheet contains stacked rate tables (e.g. 'Rule 85 BG1 Class Loss Costs') with Construction/ContentType/Value structure — NO 'RATE TABLE ID' or 'RATE TABLE NAME' markers that parseRtTables() requires. The table name is in col B (not col A), and there is no standardized block marker. Implementing a new parser for this format would require (a) unknown block-delimiter heuristic, (b) no connecting reference between the PROPERTY ROC step 'TABLE REFERENCE' column and the ISO TABLES block names, and (c) no safe way to attribute which ROC step uses which ISO TABLE row. Risk of fabrication is high.",
+    "status": "BLOCKED",
+    "rootCauseWave": 4,
+    "blockedReason": "After 1 attempt: ISO TABLES uses a non-standard flat matrix format with no RATE TABLE ID/NAME markers. Extending parseRtTables() for this format requires a new block-detection heuristic AND a mapping between ROC step TABLE REFERENCE values and ISO TABLE titles — neither is consistently present. Fabricating the linkage would violate the no-fabrication invariant."
   }
 ]

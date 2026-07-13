@@ -29,7 +29,7 @@
     "formRules": 0,
     "ratingSteps": 0,
     "rtTables": 0,
-    "ldTables": 0
+    "ldTables": 34
   },
   "warnings": [
     "Sheet \"Product Component Model\" col \"ID\": coverage id IM.COV044.09 is reused for different coverages (\"Signs\" and \"Signs\") — kept the first; verify the source.",

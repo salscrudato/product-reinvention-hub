@@ -12,6 +12,7 @@ const { analyzeClaim }     = require('./analyze-claim')
 const { unifiedImport }    = require('./unified-import')
 const { exportDuckCreek }  = require('./export-duckcreek')
 const { registerReindexRoute } = require('./reindex-product')
+const { identifyBaseForm } = require('./identify-base-form')
 
 console.log(`[prodhub-host] AI configured=${fleet.isConfigured()}`)
 
@@ -22,6 +23,8 @@ registerReindexRoute(router)
 router.post('/:name', requireCapability('ai:invoke'), requireTenant, async (req, res) => {
   const name = req.params.name
   if (name === 'exportDuckCreek') return exportDuckCreek(req, res)
+  // identifyBaseForm has its own AI-not-configured fallback (regex extraction still works).
+  if (name === 'identifyBaseForm') return identifyBaseForm(req, res)
   if (!fleet.isConfigured()) return res.status(503).json({ error: 'ai_not_configured', name })
   if (name === 'chat')            return chat(req, res)
   if (name === 'summarizeProduct') return summarizeProduct(req, res)
