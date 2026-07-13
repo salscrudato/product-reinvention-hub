@@ -240,7 +240,7 @@ router.post('/bundle', requireAuth, requireRole('EDITOR'), requireTenant, async 
       path: `products/${cloneProductId}/serffBundles/${resolvedFilingId}`,
       entityType: 'serffBundle',
       data: { filingId: resolvedFilingId, state, parentProductId, cloneProductId, reviewerPassed: reviewerResult.passed },
-    }, actor)
+    }, actor, '/api/serff/v1/bundle')
   } catch (e) {
     console.warn('[serff-api] bundle record write failed (non-fatal):', e.message)
   }

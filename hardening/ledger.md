@@ -889,6 +889,7 @@ FALSE-POSITIVE re-confirmation (re-checked against current source during plannin
 - fix: (1) auth.js:19-21 — AUTH_JWT_SECRET required; `if (!_secret) throw new Error('[auth] AUTH_JWT_SECRET is required...')` — fail-closed, no insecure default. (2) auth.js:29-33 — BOOTSTRAP gated behind `BOOTSTRAP_USERS_ENABLED === 'true'`; default OFF in production; passwords sourced from BOOTSTRAP_ADMIN_PASSWORD / BOOTSTRAP_SAL_PASSWORD env vars with fallback defaults (admin/admin, sal.scrudato/sal.scrudato) preserved for LOCAL dev and smoke harness. (3) auth.js:12-13 module comment updated to document the opt-in env var.
 - verified-by: static probe 2026-07-11 (WAVE-07) — auth.js:20 fail-closed throw confirmed; auth.js:29 BOOTSTRAP_ENABLED gate confirmed; repro (admin/admin login without AUTH_JWT_SECRET) no longer possible — server refuses to start without the secret; gate green (689+187 tests).
 - commit: c086b6f0
+- note(REGRESSION + re-fix 2026-07-13): the multi-tenant auth rewrite reintroduced always-on BOOTSTRAP_ADMINS with default passwords (`admin`/`admin`, `sal`/`scrudato`) gated only by a console.warn — the BOOTSTRAP_USERS_ENABLED gate from the original fix was lost. Re-hardened fail-closed: a bootstrap account now EXISTS only when its password env var is set (BOOTSTRAP_ADMIN_PASSWORD / BOOTSTRAP_SAL_PASSWORD); dev defaults require explicit BOOTSTRAP_USERS_ENABLED=true (local dev + smoke only). New source-audit tests in server-invariants.test.ts pin the gate shape AND assert the regressed `password: process.env.X || '<default>'` pattern never returns, so this cannot silently regress again.
 
 ---
 
@@ -986,6 +987,7 @@ switch to a lenient tsconfig without knowing the seam is unguarded in tests.
 - fix: Source-audit test in `app/src/__invariants__/server-invariants.test.ts` — same test file as DEF-0044. Asserts `router.post('/mutateBatch', requireRole('EDITOR')` is present in data.js. FAULT-C mutation ('EDITOR' → 'VIEWER') changes the string → regex fails → test RED.
 - verified-by: 2026-07-12 — 707/707 tests green; /mutateBatch EDITOR pattern passes against current data.js source.
 - commit: 3ae8e51
+- note(AUDIT-COMPLETENESS extension 2026-07-13): DEF-0047 extended from route-guard assertion to an EXHAUSTIVE Cosmos write-call census — `app/src/__invariants__/no-bare-writes.test.ts` scans every `server/**/*.js` (excluding generated `*-shared.cjs`) for `items.create|upsert|batch` and `.item().delete|replace`, and pins each file to an exact allowlisted count with a written rationale (data.js envelope, filing.js create-only batch, __system__ identity/platform writes, presence heartbeat, grounding-chunk rebuild). Any NEW bare write anywhere in server/ fails the gate until consciously allowlisted. Same wave: mutate envelope audit events are now hash-chained (prevHash/hash + chainHead anchor in the same transactional batch, `shared/src/audit/chain.ts`, verified via GET /api/db/audit/verify); mutateBatch per-op statusCode check closes a silent partial-failure gap; filing.js freeze is now ONE Create-only transactional batch (record + chained audit + chainHead).
 
 ---
 

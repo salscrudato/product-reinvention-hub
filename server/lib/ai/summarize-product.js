@@ -64,6 +64,7 @@ async function persistSummary(tenantId, productId, data, actor) {
       tenantId,
       { op: 'update', path: `productSummaries/${productId}`, data, entityType: 'productSummary' },
       actor,
+      '/api/ai/summarizeProduct',
     )
   } catch (e) {
     console.warn('[ai] summarizeProduct persist failed (non-fatal):', e.message)

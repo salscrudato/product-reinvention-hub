@@ -145,7 +145,7 @@ async function refreshNews(req, res) {
       }
 
       const path = `news/${urlHash}`
-      await dataRouter.mutateInternal(tid, { op: 'update', path, data, entityType: 'news' }, actor)
+      await dataRouter.mutateInternal(tid, { op: 'update', path, data, entityType: 'news' }, actor, '/api/ai/refreshNews')
       stored++
     } catch (err) {
       console.warn('[refreshNews] skipping article:', err?.message || err)

@@ -18,6 +18,7 @@ const dir = dirname(fileURLToPath(import.meta.url))
 const dataJs   = readFileSync(resolve(dir, '../../../server/lib/data.js'),       'utf8')
 const aiJs     = readFileSync(resolve(dir, '../../../server/lib/ai/chat.js'),    'utf8')
 const filingJs = readFileSync(resolve(dir, '../../../server/lib/filing.js'),     'utf8')
+const authJs   = readFileSync(resolve(dir, '../../../server/lib/auth.js'),       'utf8')
 
 // ─── DEF-0043 / DEF-0046 ─────────────────────────────────────────────────────
 // Mutation sweep FAULT-003 dropped the audit ops.push from envelope(); FAULT-B dropped
@@ -43,6 +44,69 @@ describe('DEF-0043 / DEF-0046 — mutation envelope must push both audit and ver
 
   it("envelope() version op is inside an ops.push() call", () => {
     expect(dataJs).toMatch(/ops\.push\(\{[\s\S]*?kind:\s*'version'/)
+  })
+})
+
+// ─── Audit hash-chain (tamper evidence) ──────────────────────────────────────
+// Every audit event must seal its content + link to its predecessor; the chainHead
+// anchor must ride the SAME transactional batch; the verifier endpoint must exist.
+describe('audit hash-chain — envelope seals every audit event', () => {
+  it('envelope computes the event hash via the shared chain module', () => {
+    expect(dataJs).toMatch(/require\(['"]\.\/audit-chain-shared\.cjs['"]\)/)
+    expect(dataJs).toMatch(/computeAuditHash\(/)
+  })
+
+  it('audit op carries prevHash and the sealed hash', () => {
+    expect(dataJs).toMatch(/prevHash:\s*head\?\.hash\s*\?\?\s*null/)
+    expect(dataJs).toMatch(/kind:\s*'audit',\s*\.\.\.auditBody,\s*hash/)
+  })
+
+  it('audit op carries source attribution and the before/after field diff', () => {
+    expect(dataJs).toMatch(/source:\s*source\s*\|\|\s*null/)
+    expect(dataJs).toMatch(/auditBody\s*=\s*\{[\s\S]*?diff/)
+  })
+
+  it("chainHead anchor (kind:'chainHead') is pushed into the same ops batch", () => {
+    expect(dataJs).toMatch(/kind:\s*'chainHead'/)
+    expect(dataJs).toMatch(/ops\.push\(headOp\)/)
+  })
+
+  it('chainHead upsert is etag-guarded so concurrent writers serialize per path', () => {
+    expect(dataJs).toMatch(/ifMatchETag/)
+  })
+
+  it('GET /audit/verify endpoint exists behind the audit:read capability', () => {
+    expect(dataJs).toMatch(/router\.get\(['"]\/audit\/verify['"],\s*requireCapability\(['"]audit:read['"]\)/)
+    expect(dataJs).toMatch(/verifyAuditChain\(/)
+  })
+})
+
+// ─── DEF-0003 — parentId validated server-side in the envelope ───────────────
+describe('DEF-0003 — parentId must resolve to an existing same-tenant entity', () => {
+  it('envelope rejects a dangling parentId with INVALID_PARENT', () => {
+    expect(dataJs).toMatch(/data\.parentId\s*&&\s*op\s*!==\s*'delete'/)
+    expect(dataJs).toMatch(/INVALID_PARENT/)
+  })
+  it('parent resolution goes through readEntity (which enforces r.tenantId === tid)', () => {
+    expect(dataJs).toMatch(/parent\s*=\s*await readEntity\(tid,/)
+    expect(dataJs).toMatch(/r\.tenantId === tid \? r : null/)
+  })
+})
+
+// ─── DEF-0041 (re-hardened) — bootstrap admins are fail-closed ───────────────
+// The original fix regressed during the multi-tenant rewrite: BOOTSTRAP_ADMINS came
+// back always-on with default passwords. These assertions pin the fail-closed shape.
+describe('DEF-0041 — bootstrap admins fail-closed (no default passwords in production)', () => {
+  it('dev-default passwords exist only behind the BOOTSTRAP_USERS_ENABLED opt-in', () => {
+    expect(authJs).toMatch(/BOOTSTRAP_USERS_ENABLED\s*===\s*'true'/)
+    expect(authJs).toMatch(/BOOTSTRAP_DEFAULTS_OK\s*\?\s*devDefault\s*:\s*null/)
+  })
+  it('no unconditional env-or-default password fallback remains', () => {
+    // The regressed shape was: password: process.env.X || 'admin'
+    expect(authJs).not.toMatch(/password:\s*process\.env\.\w+\s*\|\|\s*'/)
+  })
+  it('AUTH_JWT_SECRET stays fail-closed (server refuses to start without it)', () => {
+    expect(authJs).toMatch(/AUTH_JWT_SECRET is required/)
   })
 })
 
@@ -91,14 +155,17 @@ describe('filing.js — authority gate + create-only + verifier-before-freeze in
     expect(filingJs).toMatch(/requireCapability\(['"]filing:generate['"]\)/)
   })
 
-  it('freezeFiling uses items.create() for the filing record (never upsert — CREATE-ONLY)', () => {
-    // items.upsert() would allow silent overwrite of an existing filing record.
-    // Only items.create() enforces immutability at the storage layer.
-    expect(filingJs).toMatch(/items\.create\(filingRecord\)/)
+  it('freezeFiling commits filing record + audit + chainHead in ONE Create-only transactional batch', () => {
+    // A separate create for each doc would let a filing record exist without its
+    // audit event. createBatch() maps every body to operationType:'Create' inside
+    // one Cosmos transactional batch — atomic AND immutable (Create throws on dup id).
+    expect(filingJs).toMatch(/createBatch\(docs,\s*pk,\s*\[filingRecord,\s*auditRecord,\s*chainHead\]\)/)
+    expect(filingJs).toMatch(/operationType:\s*'Create'/)
   })
 
-  it('freezeFiling uses items.create() for the audit event (never upsert — append-only)', () => {
-    expect(filingJs).toMatch(/items\.create\(auditRecord\)/)
+  it('filing audit events are hash-chained (computeAuditHash from the shared chain module)', () => {
+    expect(filingJs).toMatch(/require\(['"]\.\/audit-chain-shared\.cjs['"]\)/)
+    expect(filingJs).toMatch(/computeAuditHash\(/)
   })
 
   it('filing.js contains NO items.upsert() or items.replace() calls (no update path for filing records)', () => {

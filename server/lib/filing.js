@@ -12,8 +12,10 @@
 //                 Separate AI call; verifier confirms every field value in the package is present
 //                 verbatim in a cited source version. refIds and form numbers are verified
 //                 character-for-character. ANY discrepancy → REJECT (not freeze); issues logged.
-//   5. FREEZE  -- On clean verdict: write IMMUTABLE filing record (items.create only, never upsert).
-//                 Append-only auditEvent carrying packageHash + verifier verdict. Create-only.
+//   5. FREEZE  -- On clean verdict: write the IMMUTABLE filing record + a hash-chained
+//                 append-only auditEvent + its chainHead anchor in ONE Cosmos
+//                 transactional batch of Create operations (never upsert/replace —
+//                 Create throws on duplicate id, enforcing immutability at storage).
 //
 // The frozen record answers "what exactly did you file for this state on this date?" with no
 // live re-query needed. Every field traces to a real versionId. No code path in this file
@@ -33,6 +35,7 @@ const { requireCapability }              = require('./authz')
 const { requireTenant, resolveTenantForPrincipal } = require('./auth')
 const fleet                              = require('./fleet')
 const { fetchWithRetry }                 = require('./ai/_shared')
+const { computeAuditHash }               = require('./audit-chain-shared.cjs')
 
 const router = express.Router()
 
@@ -47,6 +50,32 @@ const baseKey = (path) => { const s = segs(path); return (s[0] === 'products' &&
 const pkFor   = (tid, base)  => `${tid}|${base}`
 const idFor   = (prefix, key) => `${prefix}:${String(key).replace(/[/\\?#]/g, '~')}`
 const auditId = () => `aud:${Date.now().toString(36)}-${crypto.randomUUID()}`
+
+// Build a hash-chained audit record + its chainHead anchor (same scheme as the
+// data.js mutation envelope, so GET /api/db/audit/verify covers filing events too).
+// Filing paths are unique per attempt (filingId embeds an epoch), so each chain has
+// exactly one event: prevHash null, rev 1. The hash seals tenant/path/op/actor/at/
+// payload (via diff); `action`/`productId`/`data` are kept as unsealed UI-compat mirrors.
+function chainedAudit(tenantId, entityPath, op, actor, at, payload, extra) {
+  const auditBody = {
+    tenantId, entityPath, entityType: 'filing', op, actor, rev: 1, at,
+    source: '/api/filing/generate', diff: { before: {}, changed: payload }, prevHash: null,
+  }
+  const hash = computeAuditHash(auditBody)
+  const pk = pkFor(tenantId, 'filings')
+  return {
+    auditRecord: { id: auditId(), pk, kind: 'audit', ...auditBody, hash, action: op, data: payload, ...extra },
+    chainHead:   { id: idFor('chn', entityPath), pk, kind: 'chainHead', tenantId, entityPath, hash, rev: 1, at },
+  }
+}
+
+// Commit a set of Create resource bodies as ONE transactional batch (all-or-nothing).
+async function createBatch(docs, pk, bodies) {
+  const r = await docs.items.batch(bodies.map((resourceBody) => ({ operationType: 'Create', resourceBody })), pk)
+  if (r.result?.some((o) => o.statusCode >= 400)) {
+    const err = new Error('filing_batch_failed'); err.detail = r.result.map((o) => o.statusCode); throw err
+  }
+}
 
 // ─── STEP 2: RESOLVE ─────────────────────────────────────────────────────────
 // Reconstructs exact entity states at asOf from Cosmos version history.
@@ -336,16 +365,18 @@ async function verifyPackage(pkg, resolvedItems) {
 }
 
 // ─── STEP 5: FREEZE ──────────────────────────────────────────────────────────
-// Writes the immutable filing record and an append-only audit event.
+// Writes the immutable filing record, a hash-chained append-only audit event, and
+// the chainHead anchor in ONE Cosmos transactional batch (all-or-nothing — a filing
+// record can never exist without its audit event, or vice versa).
 //
 // IMMUTABILITY PROOF:
-//   Both writes use docs.items.create() — never upsert, never replace.
+//   All writes are Create operations — never upsert, never replace.
 //   No update path for filing records exists anywhere in this file.
-//   If the create fails (e.g. duplicate filingId), the freeze aborts and no record is written.
+//   If any create fails (e.g. duplicate filingId), the whole batch aborts and nothing is written.
 //
 // Partition: ${tenantId}|filings  (a dedicated filing partition, not mixed with entity data).
 // Filing record kind: 'filing'
-// Audit record kind: 'audit', action: 'filing.generate'
+// Audit record kind: 'audit', op/action: 'filing.generate', hash-chained (chain.ts)
 
 async function freezeFiling(tenantId, filingId, pkg, verifierVerdict, scope, actor, storagePath) {
   const docs = cosmosFor(tenantId)
@@ -382,19 +413,11 @@ async function freezeFiling(tenantId, filingId, pkg, verifierVerdict, scope, act
     createdAt: now,
   }
 
-  // Audit event — append-only. Carries packageHash and verifier outcome.
-  const auditRecord = {
-    id:        auditId(),
-    pk,
-    kind:      'audit',
-    tenantId,
-    action:    'filing.generate',
-    entityType: 'filing',
-    entityPath: `filings/${filingId}`,
-    productId:  scope.productId,
-    actor:      { uid: actor.uid, name: actor.name },
-    at:         now,
-    data: {
+  // Audit event — append-only, hash-chained. Carries packageHash and verifier outcome.
+  const { auditRecord, chainHead } = chainedAudit(
+    tenantId, `filings/${filingId}`, 'filing.generate',
+    { uid: actor.uid, name: actor.name }, now,
+    {
       filingId,
       stateCode:        scope.stateCode,
       asOf:             scope.asOf,
@@ -403,12 +426,14 @@ async function freezeFiling(tenantId, filingId, pkg, verifierVerdict, scope, act
       verifierApproved: verifierVerdict.approved,
       itemCount:        pkg.items.length,
     },
-  }
+    { productId: scope.productId },
+  )
 
-  // CREATE-ONLY: items.create() throws if the id already exists (no silent overwrite).
-  // This enforces immutability at the storage layer, not just at the application layer.
-  await docs.items.create(filingRecord)
-  await docs.items.create(auditRecord)
+  // CREATE-ONLY + ATOMIC: one transactional batch of Create ops. Create throws if
+  // an id already exists (no silent overwrite) — immutability is enforced at the
+  // storage layer; atomicity means the filing record and its audit event can never
+  // exist without each other.
+  await createBatch(docs, pk, [filingRecord, auditRecord, chainHead])
 
   return { filingId, packageHash: pkg.packageHash, createdAt: now }
 }
@@ -474,22 +499,15 @@ router.post('/generate',
       try {
         verifierVerdict = await verifyPackage(pkg, resolvedItems)
       } catch (e) {
-        // Write a verify-error audit event so the failed attempt is on record.
+        // Write a verify-error audit event (hash-chained) so the failed attempt is on record.
         try {
           const docs = cosmosFor(tenantId)
-          await docs.items.create({
-            id:        auditId(),
-            pk:        pkFor(tenantId, 'filings'),
-            kind:      'audit',
-            tenantId,
-            action:    'filing.verify_error',
-            entityType: 'filing',
-            entityPath: `filings/${filingId}`,
-            productId:  scope.productId,
-            actor,
-            at:        new Date().toISOString(),
-            data:      { filingId, stateCode: scope.stateCode, asOf: scope.asOf, error: String(e.message || e).slice(0, 300) },
-          })
+          const { auditRecord, chainHead } = chainedAudit(
+            tenantId, `filings/${filingId}`, 'filing.verify_error', actor, new Date().toISOString(),
+            { filingId, stateCode: scope.stateCode, asOf: scope.asOf, error: String(e.message || e).slice(0, 300) },
+            { productId: scope.productId },
+          )
+          await createBatch(docs, pkFor(tenantId, 'filings'), [auditRecord, chainHead])
         } catch { /* best-effort audit; caller still gets 503 */ }
         return res.status(503).json({ error: 'verifier_unavailable', detail: String(e.message || e).slice(0, 300) })
       }
@@ -500,19 +518,12 @@ router.post('/generate',
         console.error('[filing] VERIFIER REJECTED filing', filingId, JSON.stringify(issues).slice(0, 500))
         try {
           const docs = cosmosFor(tenantId)
-          await docs.items.create({
-            id:        auditId(),
-            pk:        pkFor(tenantId, 'filings'),
-            kind:      'audit',
-            tenantId,
-            action:    'filing.verify_rejected',
-            entityType: 'filing',
-            entityPath: `filings/${filingId}`,
-            productId:  scope.productId,
-            actor,
-            at:        new Date().toISOString(),
-            data:      { filingId, stateCode: scope.stateCode, asOf: scope.asOf, packageHash: pkg.packageHash, issues },
-          })
+          const { auditRecord, chainHead } = chainedAudit(
+            tenantId, `filings/${filingId}`, 'filing.verify_rejected', actor, new Date().toISOString(),
+            { filingId, stateCode: scope.stateCode, asOf: scope.asOf, packageHash: pkg.packageHash, issues },
+            { productId: scope.productId },
+          )
+          await createBatch(docs, pkFor(tenantId, 'filings'), [auditRecord, chainHead])
         } catch { /* best-effort audit */ }
         return res.status(422).json({
           error:    'filing_rejected_by_verifier',
