@@ -1,0 +1,346 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 820" width="1100" height="820" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f9f9f9"/>
+      <stop offset="100%" stop-color="#f2f2f7"/>
+    </linearGradient>
+
+    <!-- Card shadows -->
+    <filter id="shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#00000014"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#0000000a"/>
+    </filter>
+    <filter id="shadow-strong" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#0000001a"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#00000010"/>
+    </filter>
+
+    <!-- Accent gradients -->
+    <linearGradient id="grad-xlsx" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34c759"/>
+      <stop offset="100%" stop-color="#30d158"/>
+    </linearGradient>
+    <linearGradient id="grad-pdf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff6b6b"/>
+      <stop offset="100%" stop-color="#ff3b30"/>
+    </linearGradient>
+    <linearGradient id="grad-engine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6e6af2"/>
+      <stop offset="100%" stop-color="#5856d6"/>
+    </linearGradient>
+    <linearGradient id="grad-ai" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#bf5af2"/>
+      <stop offset="100%" stop-color="#af52de"/>
+    </linearGradient>
+    <linearGradient id="grad-cosmos" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a84ff"/>
+      <stop offset="100%" stop-color="#007aff"/>
+    </linearGradient>
+    <linearGradient id="grad-plan" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff9f0a"/>
+      <stop offset="100%" stop-color="#ff9500"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="820" fill="url(#bg)"/>
+
+  <!-- Title block -->
+  <text x="550" y="46" text-anchor="middle" font-size="20" font-weight="700" fill="#1c1c1e" letter-spacing="-0.5">Insurance Product Ingestion Pipeline</text>
+  <text x="550" y="68" text-anchor="middle" font-size="12" fill="#8e8e93" letter-spacing="0.2">Product Reinvention Hub — Import Architecture</text>
+
+  <!-- ═══════════════════════════════════════ SOURCE COLUMN ═══════════════════════ -->
+
+  <!-- XLSX Source card -->
+  <g filter="url(#shadow-soft)">
+    <rect x="42" y="98" width="180" height="100" rx="18" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="58" y="114" width="32" height="32" rx="9" fill="url(#grad-xlsx)"/>
+  <text x="74" y="134" text-anchor="middle" font-size="15" fill="white" font-weight="600">X</text>
+  <text x="58" y="164" font-size="13" font-weight="600" fill="#1c1c1e">ISO Workbooks</text>
+  <text x="58" y="179" font-size="10.5" fill="#8e8e93">.xlsx — up to 4 files</text>
+  <text x="58" y="192" font-size="10.5" fill="#8e8e93">GL / IM / PR / HO / PA</text>
+
+  <!-- PDF Source card -->
+  <g filter="url(#shadow-soft)">
+    <rect x="42" y="218" width="180" height="100" rx="18" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="58" y="234" width="32" height="32" rx="9" fill="url(#grad-pdf)"/>
+  <text x="74" y="254" text-anchor="middle" font-size="15" fill="white" font-weight="600">P</text>
+  <text x="58" y="284" font-size="13" font-weight="600" fill="#1c1c1e">Rate Filings</text>
+  <text x="58" y="299" font-size="10.5" fill="#8e8e93">.pdf — carrier filings</text>
+  <text x="58" y="312" font-size="10.5" fill="#8e8e93">SERFF / bureau filings</text>
+
+  <!-- Base Form card -->
+  <g filter="url(#shadow-soft)">
+    <rect x="42" y="338" width="180" height="100" rx="18" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="58" y="354" width="32" height="32" rx="9" fill="#ff9f0a"/>
+  <text x="74" y="374" text-anchor="middle" font-size="12" fill="white" font-weight="700">F</text>
+  <text x="58" y="404" font-size="13" font-weight="600" fill="#1c1c1e">Base Forms</text>
+  <text x="58" y="419" font-size="10.5" fill="#8e8e93">.pdf / .txt policy forms</text>
+  <text x="58" y="432" font-size="10.5" fill="#8e8e93">Claims Analysis</text>
+
+  <!-- Column label -->
+  <text x="132" y="90" text-anchor="middle" font-size="10" font-weight="600" fill="#8e8e93" letter-spacing="1" text-transform="uppercase">SOURCES</text>
+
+  <!-- ═══════════════════════════════════════ INGESTION COLUMN ═══════════════════ -->
+
+  <text x="378" y="90" text-anchor="middle" font-size="10" font-weight="600" fill="#8e8e93" letter-spacing="1">INGESTION</text>
+
+  <!-- ISO Engine card (large) -->
+  <g filter="url(#shadow-strong)">
+    <rect x="278" y="98" width="200" height="220" rx="20" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="294" y="114" width="40" height="40" rx="11" fill="url(#grad-engine)"/>
+  <text x="314" y="140" text-anchor="middle" font-size="18" fill="white" font-weight="700">≋</text>
+  <text x="294" y="174" font-size="13" font-weight="700" fill="#1c1c1e">ISO Workbook Mapper</text>
+  <text x="294" y="189" font-size="10" fill="#8e8e93">isoImport.ts — pure TypeScript</text>
+  <line x1="294" y1="198" x2="462" y2="198" stroke="#f2f2f7" stroke-width="1"/>
+  <!-- Steps inside -->
+  <circle cx="304" cy="214" r="3" fill="#6e6af2"/>
+  <text x="314" y="218" font-size="10.5" fill="#3c3c43">findHeaderRow() — confidence scoring</text>
+  <circle cx="304" cy="232" r="3" fill="#6e6af2"/>
+  <text x="314" y="236" font-size="10.5" fill="#3c3c43">mapColumns() — exact + fuzzy match</text>
+  <circle cx="304" cy="250" r="3" fill="#6e6af2"/>
+  <text x="314" y="254" font-size="10.5" fill="#3c3c43">parseFramework() — coverages</text>
+  <circle cx="304" cy="268" r="3" fill="#6e6af2"/>
+  <text x="314" y="272" font-size="10.5" fill="#3c3c43">parseForms / Rules / Rating</text>
+  <circle cx="304" cy="286" r="3" fill="#6e6af2"/>
+  <text x="314" y="290" font-size="10.5" fill="#3c3c43">parseLdTables / parseRtTables</text>
+  <circle cx="304" cy="304" r="3" fill="#5856d6"/>
+  <text x="314" y="308" font-size="10.5" fill="#3c3c43">→ ImportPlan (pure, no writes)</text>
+
+  <!-- PDF Pipeline card (large) -->
+  <g filter="url(#shadow-strong)">
+    <rect x="278" y="338" width="200" height="160" rx="20" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="294" y="354" width="40" height="40" rx="11" fill="url(#grad-ai)"/>
+  <text x="314" y="379" text-anchor="middle" font-size="14" fill="white" font-weight="700">AI</text>
+  <text x="294" y="414" font-size="13" font-weight="700" fill="#1c1c1e">PDF Filing Pipeline</text>
+  <text x="294" y="429" font-size="10" fill="#8e8e93">import-brain/ — 6 AI stages</text>
+  <line x1="294" y1="438" x2="462" y2="438" stroke="#f2f2f7" stroke-width="1"/>
+  <text x="294" y="455" font-size="10" fill="#3c3c43">S1 Classify · S2 Metadata · S3 Coverages</text>
+  <text x="294" y="470" font-size="10" fill="#3c3c43">S4 Rates · S5 Forms · S6 Reconcile</text>
+  <text x="294" y="487" font-size="10" fill="#af52de">→ ProposalBundle + citations</text>
+
+  <!-- Identify endpoint card (small) -->
+  <g filter="url(#shadow-soft)">
+    <rect x="278" y="518" width="200" height="80" rx="16" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="294" y="530" width="28" height="28" rx="7" fill="#ff9f0a"/>
+  <text x="308" y="549" text-anchor="middle" font-size="11" fill="white" font-weight="700">ID</text>
+  <text x="332" y="547" font-size="12" font-weight="600" fill="#1c1c1e">identifyBaseForm</text>
+  <text x="294" y="572" font-size="10" fill="#8e8e93">Regex fast path → AI (haiku) fallback</text>
+  <text x="294" y="585" font-size="10" fill="#ff9500">Form number · Edition · LOB · Verified</text>
+
+  <!-- Arrows: sources → ingestion -->
+  <!-- XLSX → Engine -->
+  <path d="M222,148 Q250,148 278,197" fill="none" stroke="#6e6af2" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+  <polygon points="275,195 283,200 277,207" fill="#6e6af2" opacity="0.7"/>
+
+  <!-- PDF → AI Pipeline -->
+  <path d="M222,268 Q250,268 278,398" fill="none" stroke="#af52de" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+  <polygon points="275,396 283,401 277,408" fill="#af52de" opacity="0.7"/>
+
+  <!-- BaseForm → Identify -->
+  <path d="M222,388 Q250,388 278,548" fill="none" stroke="#ff9f0a" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+  <polygon points="275,546 283,551 277,558" fill="#ff9f0a" opacity="0.7"/>
+
+  <!-- Azure Blob (side) -->
+  <g filter="url(#shadow-soft)">
+    <rect x="278" y="616" width="200" height="64" rx="14" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="294" y="627" width="24" height="24" rx="6" fill="#0a84ff"/>
+  <text x="306" y="644" text-anchor="middle" font-size="10" fill="white" font-weight="700">Az</text>
+  <text x="328" y="642" font-size="12" font-weight="600" fill="#1c1c1e">Azure Blob Storage</text>
+  <text x="294" y="665" font-size="10" fill="#8e8e93">baseforms/{uid}/{id}/{name}.pdf</text>
+  <text x="294" y="677" font-size="10" fill="#8e8e93">/api/storage/upload — EDITOR+ only</text>
+
+  <!-- BaseForm → Blob -->
+  <line x1="222" y1="388" x2="260" y2="648" stroke="#0a84ff" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+
+  <!-- ═══════════════════════════════════════ PLAN / OUTPUT COLUMN ════════════════ -->
+
+  <text x="628" y="90" text-anchor="middle" font-size="10" font-weight="600" fill="#8e8e93" letter-spacing="1">PLAN OBJECT</text>
+
+  <!-- ImportPlan card -->
+  <g filter="url(#shadow-strong)">
+    <rect x="528" y="98" width="200" height="310" rx="20" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="544" y="114" width="40" height="40" rx="11" fill="url(#grad-plan)"/>
+  <text x="564" y="140" text-anchor="middle" font-size="16" fill="white" font-weight="700">📦</text>
+  <text x="544" y="174" font-size="13" font-weight="700" fill="#1c1c1e">ImportPlan</text>
+  <text x="544" y="189" font-size="10" fill="#8e8e93">Typed, pure — no writes</text>
+  <line x1="544" y1="198" x2="712" y2="198" stroke="#f2f2f7" stroke-width="1"/>
+
+  <!-- Entity type chips -->
+  <rect x="544" y="208" width="76" height="22" rx="7" fill="#f2f2f7"/>
+  <text x="582" y="223" text-anchor="middle" font-size="10" font-weight="600" fill="#3c3c43">Product</text>
+
+  <rect x="628" y="208" width="76" height="22" rx="7" fill="#f2f2f7"/>
+  <text x="666" y="223" text-anchor="middle" font-size="10" font-weight="600" fill="#3c3c43">Coverage</text>
+
+  <rect x="544" y="238" width="76" height="22" rx="7" fill="#f2f2f7"/>
+  <text x="582" y="253" text-anchor="middle" font-size="10" font-weight="600" fill="#3c3c43">Form</text>
+
+  <rect x="628" y="238" width="76" height="22" rx="7" fill="#f2f2f7"/>
+  <text x="666" y="253" text-anchor="middle" font-size="10" font-weight="600" fill="#3c3c43">Rule</text>
+
+  <rect x="544" y="268" width="76" height="22" rx="7" fill="#f2f2f7"/>
+  <text x="582" y="283" text-anchor="middle" font-size="10" font-weight="600" fill="#3c3c43">LDTable</text>
+
+  <rect x="628" y="268" width="76" height="22" rx="7" fill="#f2f2f7"/>
+  <text x="666" y="283" text-anchor="middle" font-size="10" font-weight="600" fill="#3c3c43">RTTable</text>
+
+  <rect x="544" y="298" width="76" height="22" rx="7" fill="#fff3e0"/>
+  <text x="582" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="#e65100">RatingProgram</text>
+
+  <rect x="628" y="298" width="76" height="22" rx="7" fill="#f2f2f7"/>
+  <text x="666" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="#3c3c43">FormRule</text>
+
+  <line x1="544" y1="332" x2="712" y2="332" stroke="#f2f2f7" stroke-width="1"/>
+  <text x="544" y="350" font-size="10" fill="#8e8e93">+ImportSummary:</text>
+  <text x="544" y="364" font-size="10" fill="#3c3c43">  counts · warnings · unmappedColumns</text>
+  <text x="544" y="378" font-size="10" fill="#3c3c43">  sheetsRecognized · sheetsSkipped</text>
+  <text x="544" y="393" font-size="10" fill="#5856d6">  RefId verbatim · no fabrication</text>
+
+  <!-- Arrows: ingestion → plan -->
+  <path d="M478,210 Q503,210 528,197" fill="none" stroke="#6e6af2" stroke-width="1.5" opacity="0.8"/>
+  <polygon points="524,194 532,199 526,206" fill="#6e6af2" opacity="0.8"/>
+
+  <!-- PDF → (ProposalBundle annotation) -->
+  <g filter="url(#shadow-soft)">
+    <rect x="528" y="420" width="200" height="80" rx="16" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="544" y="432" width="28" height="28" rx="7" fill="url(#grad-ai)"/>
+  <text x="558" y="451" text-anchor="middle" font-size="10" fill="white" font-weight="700">AI</text>
+  <text x="582" y="449" font-size="12" font-weight="600" fill="#1c1c1e">ProposalBundle</text>
+  <text x="544" y="475" font-size="10" fill="#8e8e93">Grounded + cited — every claim</text>
+  <text x="544" y="488" font-size="10" fill="#8e8e93">references its source paragraph</text>
+
+  <path d="M478,418 Q503,440 528,460" fill="none" stroke="#af52de" stroke-width="1.5" opacity="0.8"/>
+  <polygon points="525,457 533,462 527,469" fill="#af52de" opacity="0.8"/>
+
+  <!-- Identify → BaseForm record -->
+  <g filter="url(#shadow-soft)">
+    <rect x="528" y="518" width="200" height="80" rx="16" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="544" y="530" width="28" height="28" rx="7" fill="#ff9f0a"/>
+  <text x="558" y="549" text-anchor="middle" font-size="10" fill="white" font-weight="700">DB</text>
+  <text x="582" y="547" font-size="12" font-weight="600" fill="#1c1c1e">BaseForm record</text>
+  <text x="544" y="572" font-size="10" fill="#8e8e93">storagePath · url · formNumber</text>
+  <text x="544" y="585" font-size="10" fill="#8e8e93">edition · lob · status (READY)</text>
+
+  <path d="M478,558 Q503,558 528,558" fill="none" stroke="#ff9500" stroke-width="1.5" opacity="0.8"/>
+  <polygon points="524,555 532,560 524,565" fill="#ff9500" opacity="0.8"/>
+
+  <!-- ═══════════════════════════════════════ PERSISTENCE COLUMN ══════════════════ -->
+
+  <text x="878" y="90" text-anchor="middle" font-size="10" font-weight="600" fill="#8e8e93" letter-spacing="1">PERSISTENCE</text>
+
+  <!-- mutate() card -->
+  <g filter="url(#shadow-strong)">
+    <rect x="778" y="98" width="280" height="200" rx="20" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="794" y="114" width="40" height="40" rx="11" fill="url(#grad-cosmos)"/>
+  <text x="814" y="140" text-anchor="middle" font-size="14" fill="white" font-weight="700">⚛</text>
+  <text x="794" y="174" font-size="13" font-weight="700" fill="#1c1c1e">adapter.db.mutate()</text>
+  <text x="794" y="189" font-size="10" fill="#8e8e93">Atomic 5-op Cosmos batch — EDITOR+</text>
+  <line x1="794" y1="198" x2="1042" y2="198" stroke="#f2f2f7" stroke-width="1"/>
+
+  <text x="800" y="218" font-size="10" fill="#8e8e93">1</text>
+  <text x="816" y="218" font-size="10.5" fill="#3c3c43" font-weight="500">Entity Upsert</text>
+  <text x="794" y="218" font-size="9" fill="#0a84ff">●</text>
+
+  <text x="794" y="236" font-size="9" fill="#0a84ff">●</text>
+  <text x="816" y="236" font-size="10.5" fill="#3c3c43" font-weight="500">Audit Create</text>
+
+  <text x="794" y="254" font-size="9" fill="#0a84ff">●</text>
+  <text x="816" y="254" font-size="10.5" fill="#3c3c43" font-weight="500">Version Upsert (field diff)</text>
+
+  <text x="794" y="272" font-size="9" fill="#0a84ff">●</text>
+  <text x="816" y="272" font-size="10.5" fill="#3c3c43" font-weight="500">SearchIndex Upsert</text>
+
+  <text x="794" y="290" font-size="9" fill="#6e6af2">●</text>
+  <text x="816" y="290" font-size="10.5" fill="#3c3c43" font-weight="500">GroundingChunk Upsert + int8 embedding</text>
+
+  <line x1="794" y1="298" x2="1042" y2="298" stroke="#f2f2f7" stroke-width="1"/>
+  <text x="916" y="316" text-anchor="middle" font-size="9.5" fill="#8e8e93">Partition: {tenantId}|{productId}</text>
+  <text x="916" y="330" text-anchor="middle" font-size="9.5" fill="#007aff" font-weight="600">One transactional batch — never partial</text>
+
+  <!-- Cosmos DB icon -->
+  <g filter="url(#shadow-soft)">
+    <rect x="778" y="320" width="130" height="60" rx="14" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="793" y="331" width="24" height="24" rx="6" fill="#0a84ff"/>
+  <text x="805" y="348" text-anchor="middle" font-size="9" fill="white" font-weight="700">Cosmos</text>
+  <text x="825" y="347" font-size="11" font-weight="600" fill="#1c1c1e">Azure Cosmos DB</text>
+  <text x="793" y="370" font-size="9.5" fill="#8e8e93">Serverless · multi-tenant</text>
+
+  <!-- Grounding chunk path -->
+  <g filter="url(#shadow-soft)">
+    <rect x="928" y="320" width="130" height="60" rx="14" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="943" y="331" width="24" height="24" rx="6" fill="#6e6af2"/>
+  <text x="955" y="348" text-anchor="middle" font-size="9" fill="white" font-weight="700">RAG</text>
+  <text x="975" y="347" font-size="11" font-weight="600" fill="#1c1c1e">Grounding Chunks</text>
+  <text x="943" y="370" font-size="9.5" fill="#8e8e93">Dense + lexical retrieval</text>
+
+  <!-- Arrows: plan → mutate -->
+  <path d="M728,220 Q753,220 778,200" fill="none" stroke="#0a84ff" stroke-width="1.5" opacity="0.8"/>
+  <polygon points="774,197 782,202 776,209" fill="#0a84ff" opacity="0.8"/>
+
+  <path d="M728,460 Q753,280 778,260" fill="none" stroke="#af52de" stroke-width="1.5" opacity="0.5" stroke-dasharray="5 3"/>
+  <polygon points="774,257 782,262 776,269" fill="#af52de" opacity="0.5"/>
+
+  <path d="M728,558 Q753,430 778,280" fill="none" stroke="#ff9500" stroke-width="1.5" opacity="0.5" stroke-dasharray="5 3"/>
+
+  <!-- mutate → cosmos -->
+  <line x1="916" y1="298" x2="843" y2="320" stroke="#0a84ff" stroke-width="1.5" opacity="0.7"/>
+  <polygon points="840,318 848,323 842,330" fill="#0a84ff" opacity="0.7"/>
+  <line x1="916" y1="298" x2="993" y2="320" stroke="#6e6af2" stroke-width="1.5" opacity="0.7"/>
+  <polygon points="990,318 998,323 992,330" fill="#6e6af2" opacity="0.7"/>
+
+  <!-- ═══════════════════════════════════════ INVARIANTS FOOTER ══════════════════ -->
+
+  <g filter="url(#shadow-soft)">
+    <rect x="42" y="708" width="1016" height="88" rx="16" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <text x="550" y="730" text-anchor="middle" font-size="11" font-weight="700" fill="#1c1c1e" letter-spacing="0.5">NON-NEGOTIABLE INVARIANTS</text>
+
+  <!-- Invariant pills -->
+  <rect x="58" y="742" width="140" height="22" rx="7" fill="#f2fff6"/>
+  <text x="128" y="757" text-anchor="middle" font-size="9.5" font-weight="600" fill="#30d158">No bare data-store writes</text>
+
+  <rect x="210" y="742" width="140" height="22" rx="7" fill="#f2f2ff"/>
+  <text x="280" y="757" text-anchor="middle" font-size="9.5" font-weight="600" fill="#5856d6">RefId verbatim always</text>
+
+  <rect x="362" y="742" width="120" height="22" rx="7" fill="#fff3e0"/>
+  <text x="422" y="757" text-anchor="middle" font-size="9.5" font-weight="600" fill="#ff9500">No fabrication</text>
+
+  <rect x="494" y="742" width="130" height="22" rx="7" fill="#f2f2f7"/>
+  <text x="559" y="757" text-anchor="middle" font-size="9.5" font-weight="600" fill="#3c3c43">AI server-side only</text>
+
+  <rect x="636" y="742" width="148" height="22" rx="7" fill="#f2f5ff"/>
+  <text x="710" y="757" text-anchor="middle" font-size="9.5" font-weight="600" fill="#6e6af2">shared/ platform-free</text>
+
+  <rect x="796" y="742" width="158" height="22" rx="7" fill="#fff0f0"/>
+  <text x="875" y="757" text-anchor="middle" font-size="9.5" font-weight="600" fill="#ff3b30">HO-3 $1,528 canary</text>
+
+  <text x="550" y="787" text-anchor="middle" font-size="9" fill="#8e8e93">Models: claude-opus-4-8 (GROUNDED_CITED reasoning) · claude-haiku-4-5 (BULK_VERIFY extraction) · Never claude-fable-5</text>
+
+  <!-- Role guard note -->
+  <g filter="url(#shadow-soft)">
+    <rect x="778" y="400" width="280" height="64" rx="14" fill="white" stroke="#e5e5ea" stroke-width="1"/>
+  </g>
+  <rect x="793" y="412" width="24" height="24" rx="6" fill="#ff3b30"/>
+  <text x="805" y="429" text-anchor="middle" font-size="9" fill="white" font-weight="700">🔒</text>
+  <text x="826" y="427" font-size="12" font-weight="600" fill="#1c1c1e">Role enforcement</text>
+  <text x="793" y="450" font-size="9.5" fill="#8e8e93">VIEWER = read-only · EDITOR+ = writes</text>
+  <text x="793" y="463" font-size="9.5" fill="#8e8e93">requireCapability('product:write') — server-side</text>
+
+  <!-- Floor notes at bottom left -->
+  <text x="42" y="702" font-size="9" fill="#8e8e93">Tenant isolation: every read/write scoped to JWT tenantId · partition key {tenantId}|{productId}</text>
+</svg>

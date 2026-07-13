@@ -1,0 +1,195 @@
+{
+  "version": "2026-07-13",
+  "system": "Product Reinvention Hub — Insurance Import Pipeline",
+  "ingestion_pathways": [
+    {
+      "id": "xlsx-iso",
+      "name": "ISO / Bureau Workbook Importer",
+      "entry_point": "shared/src/insurance/isoImport.ts#mapIsoWorkbook",
+      "trigger": "app/src/import/UnifiedImportModal.tsx — user drops .xlsx files",
+      "source_format": "Excel .xlsx — up to 4 workbooks concatenated",
+      "output_type": "ImportPlan",
+      "platform_free": true,
+      "ai_involved": false,
+      "stages": [
+        {
+          "step": 1,
+          "name": "Sheet resolution",
+          "fn": "findSheet()",
+          "logic": "Regex on sheet name; combined regex covers ISO template names and component-model variants",
+          "sheet_roles": {
+            "fwGrid": "/product framework|product component model|component model/i",
+            "formGrid": "/forms specifications?|forms library/i (excl. dynamic)",
+            "dynGrid": "/forms dynamic|dynamic data/i",
+            "ruleGrid": "/rules specifications?|rules repository/i (excl. optional)",
+            "optGrid": "/optional forms rules/i",
+            "rateGrid": "/rating specifications?|property roc|^roc$/i",
+            "rtGrid": "/rating tables|rate tables/i",
+            "ldGrid": "/limits and deductibles|limits & deductibles/i"
+          }
+        },
+        {
+          "step": 2,
+          "name": "Header detection",
+          "fn": "findHeaderRow()",
+          "logic": "Score each of the first 20 rows by how many field-alias groups it matches. Threshold: score >= 3. Returns -1 (skip sheet) if nothing clears threshold.",
+          "tolerance": "Headers at arbitrary row positions; title/desc rows above data are ignored"
+        },
+        {
+          "step": 3,
+          "name": "Column mapping",
+          "fn": "mapColumns()",
+          "passes": [
+            {
+              "pass": 1,
+              "name": "Exact squish match",
+              "algorithm": "squishStr(header) compared against squishStr(alias) for each field. Case-insensitive, alphanumerics only."
+            },
+            {
+              "pass": 2,
+              "name": "Fuzzy word-overlap",
+              "algorithm": "For unmapped fields: share significant words (excl. stop-words) between header and any alias. Map if shared/min(hw,aw) >= 0.5",
+              "purpose": "Handles novel templates with paraphrase column names"
+            }
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Coverage hierarchy resolution",
+          "fn": "resolveCoverageHierarchy() in shared/src/insurance/coverageHierarchy.ts",
+          "signals": ["refId nesting depth", "subCoverage column presence", "sequence proximity"],
+          "output": "Parent-before-child ordered array safe for sequential mutate() writes",
+          "orphan_policy": "Promote to top-level + warn"
+        },
+        {
+          "step": 5,
+          "name": "LD table parsing",
+          "fn": "parseLdTables()",
+          "format_variants": [
+            {"template": "ISO GL", "markerCol": 0, "pattern": "LDTable.NNN", "example": "LDTable.001"},
+            {"template": "Component model", "markerCol": 1, "pattern": "LDNNN", "example": "LD001"}
+          ],
+          "markerCol_detection": "Auto-detected by scanning first 20 rows for each pattern"
+        },
+        {
+          "step": 6,
+          "name": "Plan assembly",
+          "output_fields": ["product", "coverages", "forms", "rules", "formRules", "ratingProgram", "ldTables", "rtTables"],
+          "invariants": ["No writes", "No fabrication", "RefId verbatim", "platform-free"]
+        }
+      ],
+      "field_tables": {
+        "FW_FIELDS": "Coverage framework: id, coverage, subCoverage, requirement, premiumGen, bureau, proprietary",
+        "FORM_FIELDS": "Forms: number, edition, category, admitted, mandatory, attachment, display",
+        "RULE_FIELDS": "Rules: id, condition, outcome, reference, category, subCategory",
+        "RATE_FIELDS": "Rating: stepId, rules, algorithm, calc, rounding, reference",
+        "DYN_FIELDS": "Dynamic fields: number, fieldName, dataType, repeating"
+      }
+    },
+    {
+      "id": "pdf-filing",
+      "name": "PDF Rate Filing Importer",
+      "entry_point": "server/lib/ai/unified-import.js → POST /api/ai/unifiedImport",
+      "trigger": "UnifiedImportModal — user selects PDF filing",
+      "source_format": "PDF — regulatory rate filings, carrier filings",
+      "output_type": "ProposalBundle",
+      "platform_free": false,
+      "ai_involved": true,
+      "ai_models": {
+        "reasoning": "claude-opus-4-8 (GROUNDED_CITED role)",
+        "extraction": "claude-haiku-4-5 (BULK_VERIFY role)"
+      },
+      "stages": [
+        {"step": 1, "name": "Classify", "model": "claude-haiku-4-5", "output": "filing_type: regulatory|product|rate|form"},
+        {"step": 2, "name": "Extract metadata", "model": "claude-haiku-4-5", "output": "carrier, state, LOB, effective_date"},
+        {"step": 3, "name": "Extract coverages", "model": "claude-opus-4-8", "output": "coverages[], exclusions[], conditions[]"},
+        {"step": 4, "name": "Extract rates", "model": "claude-opus-4-8", "output": "rate_tables[], factors[]"},
+        {"step": 5, "name": "Extract forms", "model": "claude-haiku-4-5", "output": "forms[], form_metadata"},
+        {"step": 6, "name": "Reconcile", "model": "claude-opus-4-8", "output": "ProposalBundle with citations"}
+      ],
+      "grounding_invariant": "Every AI claim cites a source paragraph from the input document. Responses without citations are rejected."
+    },
+    {
+      "id": "base-form-upload",
+      "name": "Base Form Upload (Claims Analysis)",
+      "entry_point": "app/src/components/claims/BaseFormsLibrary.tsx#upload()",
+      "trigger": "User drag-drops or clicks to upload on Claims page",
+      "source_format": "PDF or text (.pdf, .txt, .md)",
+      "output_type": "BaseForm record in Cosmos",
+      "platform_free": false,
+      "ai_involved": true,
+      "steps": [
+        {
+          "step": 1,
+          "name": "Blob upload",
+          "action": "adapter.storage.upload(storagePath, file)",
+          "server": "POST /api/storage/upload",
+          "role_required": "EDITOR",
+          "encoding": "Chunked base64 (32KB chunks — avoids btoa call-stack overflow on large PDFs)",
+          "storage": "Azure Blob — baseforms/{uid}/{id}/{filename}"
+        },
+        {
+          "step": 2,
+          "name": "DB create (PROCESSING)",
+          "action": "adapter.db.mutate({ op: 'create', ... })",
+          "data": "storagePath, url, mediaType, fileName, uploadedBy, uploadedByName, status: PROCESSING",
+          "note": "Record appears immediately in UI as 'Reading form…'"
+        },
+        {
+          "step": 3,
+          "name": "Identify",
+          "action": "adapter.fns.call('identifyBaseForm', payload)",
+          "server": "POST /api/ai/identifyBaseForm",
+          "fast_path": "Regex extracts form number (ISO 2-pair pattern). Returns immediately if bureau prefix recognized.",
+          "ai_fallback": "claude-haiku-4-5 forced tool call to identify_form schema",
+          "update": "adapter.db.mutate({ op: 'update', data: { ...ALL_FIELDS_FROM_STEP_1, title, formNumber, edition, lob, status } })",
+          "critical": "op:update is a FULL Cosmos Upsert. All base fields (storagePath, url, etc.) must be re-sent or they are wiped."
+        }
+      ]
+    }
+  ],
+  "persistence": {
+    "fn": "adapter.db.mutate()",
+    "server_endpoint": "POST /api/db/mutate",
+    "role_required": "EDITOR",
+    "capability_required": "product:write",
+    "atomic_batch_ops": [
+      "1. Entity Upsert — the actual entity data",
+      "2. Audit Create — who/when/op",
+      "3. Version Upsert — field diff for this revision",
+      "4. SearchIndex Upsert — full-text search",
+      "5. GroundingChunk Upsert + int8 embedding — RAG retrieval"
+    ],
+    "cosmos_partition_key": "{tenantId}|{productId}",
+    "tenant_isolation": "Every read/write scoped to JWT tenantId. Partition key + WHERE tenantId filter on every query.",
+    "update_semantics": "FULL REPLACE (Upsert). Not a partial patch. All fields that must survive must be re-sent."
+  },
+  "invariants": {
+    "no_bare_writes": "All writes via adapter.db.mutate(). Never direct SDK calls in app/ components.",
+    "refid_verbatim": "RefId is raw cell value. Only docId transformation: dots to dashes.",
+    "no_fabrication": "Importers return only what source cells contain. Empty string, not invented data.",
+    "platform_free_shared": "shared/src/insurance/isoImport.ts has zero platform imports.",
+    "ai_server_side": "No AI SDK calls in app/src/. All AI is /api/ai/* server-side.",
+    "models": {
+      "reasoning": "claude-opus-4-8",
+      "extraction": "claude-haiku-4-5",
+      "never": "claude-fable-5"
+    },
+    "canaries": {
+      "HO3": "$1,528 — shared/src/rating/evaluator.test.ts",
+      "PA": "$1,002 — shared/src/rating/personalAuto.evaluator.test.ts",
+      "GL": "$2,635 — shared/src/rating/generalLiability.evaluator.test.ts"
+    }
+  },
+  "fidelity_baseline": {
+    "GL": {"coverages": 105, "forms": 795, "rules": 146, "ldTables": 37, "rtTables": 4, "ratingSteps": 55},
+    "IM": {"coverages": 798, "forms": 0, "rules": 752, "ldTables": 34, "rtTables": 0, "ratingSteps": 0},
+    "PR": {"coverages": 603, "forms": 240, "rules": 1608, "ldTables": 0, "rtTables": 0, "ratingSteps": 909}
+  },
+  "known_gaps": [
+    {"id": "DEF-010", "status": "BLOCKED", "description": "PR ISO TABLES sheet — non-standard flat rate matrix, no block markers"},
+    {"id": "IM-forms", "status": "source-gap", "description": "IM component-model workbooks contain no forms sheet"},
+    {"id": "IM-ratingSteps", "status": "source-gap", "description": "IM workbooks contain no ROC/rating sheet"},
+    {"id": "formRules-IM-PR", "status": "source-gap", "description": "GL Optional Forms Rules has no equivalent in IM/PR templates"}
+  ]
+}
