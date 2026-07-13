@@ -473,11 +473,13 @@ const FORM_FIELDS: Record<string, string[]> = {
   claimsBasis: ['CLAIMS BASIS'],
   bureau:      ['BUREAU'],
   proprietary: ['PROPRIETARY'],
-  admitted:    ['ADMITTED / NON-ADMITTED', 'ADMITTED/NON-ADMITTED', 'ADMITTED / NON-ADMITTED', 'ADMITTED'],
+  // "ADMITTED/NOT ADMITTED" is the PR/Property template's phrase for the admitted field.
+  admitted:    ['ADMITTED / NON-ADMITTED', 'ADMITTED/NON-ADMITTED', 'ADMITTED / NON-ADMITTED', 'ADMITTED', 'ADMITTED/NOT ADMITTED', 'ADMITTED / NOT ADMITTED'],
   category:    ['FORM CATEGORY'],
   dynamic:     ['DYNAMIC / STATIC', 'DYNAMIC/STATIC'],
   mandatory:   ['MANDATORY/ OPTIONAL', 'MANDATORY / OPTIONAL', 'MANDATORY/OPTIONAL'],
-  attachment:  ['ATTACHMENT CONDITION'],
+  // "ATTACHMENT CONDITIONS" (plural) is the PR/Property template variant.
+  attachment:  ['ATTACHMENT CONDITION', 'ATTACHMENT CONDITIONS'],
   display:     ['DISPLAY ON FORMS SCHEDULE', 'DISPLAY ON SCHEDULE'],
   useCount:    ['SINGLE OR MULTI-USE', 'SINGLE OR MULTI USE'],
   review:      ['REVIEW STATUS'],
