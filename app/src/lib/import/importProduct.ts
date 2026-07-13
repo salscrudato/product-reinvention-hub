@@ -85,42 +85,11 @@ export async function importPlan(
   written++
   tick(plan.product.label)
 
-  // Build all remaining payloads in dependency order (coverages are pre-sorted parent-first).
-  // Forms: namespaced to the draft and re-linked via productRefIds so they never collide
-  // with the shared library. Tables: tagged with productId so cascade delete finds them.
-  const ordered: [keyof typeof GROUPS, PlannedEntity[]][] = [
-    ['ldTable', plan.ldTables],
-    ['rtTable', plan.rtTables],
-    ['coverage', plan.coverages],
-    ['form', plan.forms],
-    ['rule', plan.rules],
-    ['formRule', plan.formRules],
-    ['ratingProgram', plan.ratingProgram ? [plan.ratingProgram] : []],
-  ]
-
-  type LabeledPayload = { payload: MutationPayload; label: string }
-  const queue: LabeledPayload[] = []
-  for (const [kind, entities] of ordered) {
-    const g = GROUPS[kind]
-    for (const e of entities) {
-      const data =
-        kind === 'form'    ? { ...e.data, productRefIds: [productId] } :
-        kind === 'ldTable' || kind === 'rtTable' ? { ...e.data, productId } :
-        e.data
-      queue.push({
-        label: e.label,
-        payload: {
-          op: 'create', path: g.path(e.docId, productId), entityType: g.entityType,
-          ...(g.underProduct ? { productId } : {}), actor, data,
-        } as MutationPayload,
-      })
-    }
-  }
-
-  // Send in batches of BATCH_SIZE. Progress fires after each batch so the UI updates
-  // at a coarser but much faster cadence than before.
-  for (let i = 0; i < queue.length; i += BATCH_SIZE) {
-    const slice = queue.slice(i, i + BATCH_SIZE)
+  // Helper: commit one batch of payloads, update counters, surface a per-batch error.
+  let batchNo = 0
+  const flush = async (slice: { payload: MutationPayload; label: string }[]) => {
+    if (slice.length === 0) return
+    batchNo += 1
     const firstLabel = slice[0]?.label ?? ''
     tick(firstLabel)
     try {
@@ -129,9 +98,65 @@ export async function importPlan(
     } catch (err) {
       failed += slice.length
       const msg = err instanceof Error ? err.message : String(err)
-      errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1} (${slice[0]?.label}…): ${msg}`)
+      errors.push(`Batch ${batchNo} (${firstLabel}…): ${msg}`)
     }
     tick(firstLabel)
+  }
+
+  const toPayload = (kind: keyof typeof GROUPS, e: PlannedEntity): { payload: MutationPayload; label: string } => {
+    const g = GROUPS[kind]
+    const data =
+      kind === 'form'    ? { ...e.data, productRefIds: [productId] } :
+      kind === 'ldTable' || kind === 'rtTable' ? { ...e.data, productId } :
+      e.data
+    return {
+      label: e.label,
+      payload: {
+        op: 'create', path: g.path(e.docId, productId), entityType: g.entityType,
+        ...(g.underProduct ? { productId } : {}), actor, data,
+      } as MutationPayload,
+    }
+  }
+
+  // ── Coverages: WAVE batching (parent-before-child correctness) ────────────────
+  // The server validates every coverage's parentId with a live readEntity DURING the
+  // envelope phase, before ANY op in the mutateBatch call is committed. So a child
+  // may never share a batch with an ancestor: the ancestor would not yet exist in
+  // Cosmos and the whole batch would fail with invalid_parent. Coverages are pre-sorted
+  // parent-before-child, so we accumulate a batch and flush it the moment we hit a
+  // coverage whose parentId is already pending in the current batch (or when it is full).
+  // Every flush fully commits before the next batch is enveloped, so an ancestor is
+  // always present when its descendant is validated. Correct for arbitrary nesting depth.
+  {
+    let batch: { payload: MutationPayload; label: string }[] = []
+    let pendingRefIds = new Set<string>()
+    for (const e of plan.coverages) {
+      const parentId = (e.data as { parentId?: string | null }).parentId
+      const parentPending = parentId != null && pendingRefIds.has(String(parentId))
+      if (parentPending || batch.length >= BATCH_SIZE) {
+        await flush(batch)
+        batch = []
+        pendingRefIds = new Set<string>()
+      }
+      batch.push(toPayload('coverage', e))
+      if (e.refId) pendingRefIds.add(e.refId)
+    }
+    await flush(batch)
+  }
+
+  // ── Everything else: free batching (no intra-collection parent dependency) ────
+  const freeGroups: [keyof typeof GROUPS, PlannedEntity[]][] = [
+    ['ldTable', plan.ldTables],
+    ['rtTable', plan.rtTables],
+    ['form', plan.forms],
+    ['rule', plan.rules],
+    ['formRule', plan.formRules],
+    ['ratingProgram', plan.ratingProgram ? [plan.ratingProgram] : []],
+  ]
+  const freeQueue: { payload: MutationPayload; label: string }[] = []
+  for (const [kind, entities] of freeGroups) for (const e of entities) freeQueue.push(toPayload(kind, e))
+  for (let i = 0; i < freeQueue.length; i += BATCH_SIZE) {
+    await flush(freeQueue.slice(i, i + BATCH_SIZE))
   }
 
   return { productId, written, failed, errors }
