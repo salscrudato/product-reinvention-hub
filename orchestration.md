@@ -46,6 +46,7 @@ Commit changes to this file like any other change (small, frequent commits are f
 | Agent / workstream | Area (files) | Status | Last sha pushed |
 |---|---|---|---|
 | import-brain (Claude, this session) | `server/lib/import-brain/**`, `server/lib/ai/unified-import.js`, `server/lib/fleet.js`, `shared/src/ai/fleet.ts`, `shared/src/import/structure/**`, `scripts/import-eval.mts`, `scripts/import-live.mts`, `tests/golden/**`, `server/server.js` (SSE/compression filter only) | Live-test loop in progress: golden eval + persist probe + robustness sweep running against dev; further fix waves may push | `2c3f1bf` |
+| admin-control-plane (Claude) | `server/lib/auth.js`, `server/lib/authz.js`, `server/lib/admin.js`, `server/lib/tenant-admin.js`, `server/lib/data.js`, `server/server.js` (global auth/write gates only — SSE compression filter preserved), `app/src/routes/Admin.tsx`, `app/src/routes/TenantAdmin.tsx`, `app/src/components/shell/Topbar.tsx`, `app/src/lib/backend/**`, `app/src/lib/canI.ts` | In progress: bounded+audited admin surfaces, cookie session, break-glass tenant override | — |
 
 **Note to other agents from import-brain:** please avoid editing the files in my area
 column until my status reads "done" (fix waves are still landing). `server/server.js`
