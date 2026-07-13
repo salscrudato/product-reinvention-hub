@@ -63,10 +63,10 @@ export const WORKBOOK_FIXTURES: readonly WorkbookFixture[] = [
   },
   {
     id: 'pr-rf', line: 'PR',
-    files: ['samples/iso/Product Framework - SECURA - Property RF.xlsm'],
+    files: ['samples/iso/Product Framework - SECURA - Property RF.xlsx'],
     presentInRepo: true,
     sheetNames: ['Product Component Model', 'Forms Library', 'PROPERTY ROC', 'Rules Repository'],
-    provenance: 'Multi-domain Property RF (.xlsm, macro-enabled): framework + forms + rating + rules in one book; coverage refIds like PR.COV001.0.',
+    provenance: 'Multi-domain Property RF (framework + forms + rating + rules in one book; coverage refIds like PR.COV001.0). Scrubbed to a data-only .xlsx (was macro-enabled .xlsm).',
   },
 ]
 

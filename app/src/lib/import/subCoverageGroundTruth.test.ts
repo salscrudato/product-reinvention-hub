@@ -80,7 +80,7 @@ const GROUND_TRUTH: GroundTruth[] = [
     ],
   },
   {
-    file: 'Product Framework - SECURA - Property RF.xlsm', productPrefix: 'PR', minTopLevel: 60, minSubs: 400,
+    file: 'Product Framework - SECURA - Property RF.xlsx', productPrefix: 'PR', minTopLevel: 60, minSubs: 400,
     pairs: [
       ['Debris Removal', 'Building'],                      // the user's headline example
       ['Preservation Of Property', 'Building'],

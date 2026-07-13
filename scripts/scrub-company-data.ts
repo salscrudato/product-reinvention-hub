@@ -15,13 +15,14 @@
 // still carry a term so a human can decide.
 //
 // Usage:
-//   npx tsx scripts/scrub-company-data.ts                 # dry run: report everything
-//   npx tsx scripts/scrub-company-data.ts --apply         # write scrubbed workbook copies + text
+//   npx tsx scripts/scrub-company-data.ts                      # dry run: report everything
+//   npx tsx scripts/scrub-company-data.ts --apply              # write scrubbed workbook COPIES
 //   npx tsx scripts/scrub-company-data.ts --apply --in-place   # overwrite workbooks in place
-//   npx tsx scripts/scrub-company-data.ts --terms "Acme,Globex"  # extra terms (comma-separated)
+//   npx tsx scripts/scrub-company-data.ts --apply --text       # also rewrite source/docs text
+//   npx tsx scripts/scrub-company-data.ts --terms "Acme,Globex" # extra terms (comma-separated)
 
 import ExcelJS from 'exceljs'
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'fs'
 import { join, extname, basename } from 'path'
 
 // ─── Sensitive term rules (find -> generic replacement). Case-insensitive, longest first. ───────
@@ -40,6 +41,7 @@ function extraRules(): Rule[] {
 
 const APPLY    = process.argv.includes('--apply')
 const IN_PLACE = process.argv.includes('--in-place')
+const DO_TEXT  = process.argv.includes('--text')   // text (source/docs/fixtures) scrub is opt-in
 const ROOT = process.cwd()
 const SAMPLES = join(ROOT, 'samples/iso')
 const SCRUBBED = join(ROOT, 'samples/iso-scrubbed')
@@ -51,11 +53,17 @@ function scrub(s: string, rules: Rule[]): { out: string; hits: number } {
 }
 
 // ─── Workbooks ──────────────────────────────────────────────────────────────
-function flat(v: ExcelJS.CellValue): string | null {
-  if (typeof v === 'string') return v
-  if (v && typeof v === 'object' && 'richText' in (v as object)) {
-    return (v as { richText: { text?: string }[] }).richText.map(t => t.text ?? '').join('')
-  }
+// Reduce a raw exceljs cell to a plain value: strings (incl. rich text / hyperlink / formula
+// string results) are returned as strings for scrubbing; numbers / booleans / dates pass through
+// unchanged so rating tables keep their numeric values.
+function plainCell(v: ExcelJS.CellValue): string | number | boolean | Date | null {
+  if (v == null) return null
+  if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v instanceof Date) return v
+  const o = v as unknown as Record<string, unknown>
+  if (Array.isArray(o['richText'])) return (o['richText'] as { text?: string }[]).map(t => t.text ?? '').join('')
+  if ('result' in o) { const r = o['result']; return (typeof r === 'object' || r == null) ? null : (r as string | number | boolean) }
+  if ('hyperlink' in o) return String(o['text'] ?? o['hyperlink'] ?? '')
+  if ('text' in o) return String(o['text'])
   return null
 }
 
@@ -63,32 +71,47 @@ async function scrubWorkbooks(rules: Rule[]) {
   const files = readdirSync(SAMPLES).filter(f => /\.(xlsx|xlsm)$/i.test(f))
   if (APPLY && !IN_PLACE && !existsSync(SCRUBBED)) mkdirSync(SCRUBBED, { recursive: true })
   for (const f of files) {
-    const wb = new ExcelJS.Workbook()
-    await wb.xlsx.readFile(join(SAMPLES, f))
+    const src = new ExcelJS.Workbook()
+    await src.xlsx.readFile(join(SAMPLES, f))
+    // Rebuild a clean, DATA-ONLY workbook: only the true-data region, values only (no styling, no
+    // phantom rows, no macros). This is both the scrub and the "just structured data" cleanup.
+    const out = new ExcelJS.Workbook()
     let cellHits = 0
     const samples: string[] = []
-    wb.eachSheet(ws => {
-      ws.eachRow({ includeEmpty: false }, row => {
-        row.eachCell({ includeEmpty: false }, cell => {
-          const s = flat(cell.value)
-          if (s == null) return
-          const { out, hits } = scrub(s, rules)
-          if (hits > 0) {
-            cellHits += hits
-            if (samples.length < 3) samples.push(`"${s.slice(0, 40)}" -> "${out.slice(0, 40)}"`)
-            if (APPLY) cell.value = out
-          }
-        })
+    src.eachSheet(ws => {
+      let maxRow = 0, maxCol = 0
+      ws.eachRow({ includeEmpty: false }, (row, rn) => {
+        let lastCol = 0
+        row.eachCell({ includeEmpty: false }, (_c, cn) => { if (cn > lastCol) lastCol = cn })
+        if (lastCol > 0) { if (rn > maxRow) maxRow = rn; if (lastCol > maxCol) maxCol = lastCol }
       })
+      const os = out.addWorksheet(ws.name.slice(0, 31))
+      for (let r = 1; r <= maxRow; r++) {
+        const rowVals: (string | number | boolean | Date | null)[] = []
+        for (let c = 1; c <= maxCol; c++) {
+          let v = plainCell(ws.getRow(r).getCell(c).value)
+          if (typeof v === 'string') {
+            const { out: s, hits } = scrub(v, rules)
+            if (hits > 0) {
+              cellHits += hits
+              if (samples.length < 3) samples.push(`"${v.slice(0, 40)}" -> "${s.slice(0, 40)}"`)
+              v = s
+            }
+          }
+          rowVals[c - 1] = v
+        }
+        os.getRow(r).values = [undefined, ...rowVals] as ExcelJS.CellValue[]  // exceljs is 1-based
+      }
     })
     const fileNameHit = scrub(f, rules).hits > 0
-    console.log(`  ${f}: ${cellHits} cell hit(s)${fileNameHit ? ' [FILENAME also carries a term — rename manually]' : ''}`)
+    console.log(`  ${f}: ${cellHits} cell hit(s)${fileNameHit ? " [FILENAME still carries a term — not renamed]" : ''}`)
     for (const s of samples) console.log(`      e.g. ${s}`)
     if (APPLY && cellHits > 0) {
-      const outName = f.replace(/\.xlsm$/i, '.xlsx')   // data-only copy is always .xlsx
-      const outPath = IN_PLACE ? join(SAMPLES, f) : join(SCRUBBED, outName)
-      await wb.xlsx.writeFile(outPath)
-      console.log(`      wrote ${IN_PLACE ? 'IN PLACE' : 'scrubbed copy'}: ${outPath}`)
+      const outName = f.replace(/\.xlsm$/i, '.xlsx')   // data-only output is always .xlsx
+      const outPath = IN_PLACE ? join(SAMPLES, outName) : join(SCRUBBED, outName)
+      await out.xlsx.writeFile(outPath)
+      if (IN_PLACE && outName !== f) rmSync(join(SAMPLES, f))   // drop the old .xlsm
+      console.log(`      wrote ${IN_PLACE ? 'IN PLACE' : 'scrubbed copy'}: ${basename(outPath)}${outName !== f ? ` (was ${extname(f)})` : ''}`)
     }
   }
 }
@@ -116,7 +139,7 @@ function scrubText(rules: Rule[]) {
       if (hits > 0) {
         total += hits
         console.log(`  ${rel}: ${hits} occurrence(s)`)
-        if (APPLY) writeFileSync(join(ROOT, rel), out)
+        if (APPLY && DO_TEXT) writeFileSync(join(ROOT, rel), out)
       }
     }
   }
@@ -129,7 +152,7 @@ async function main() {
   console.log(`terms: ${rules.map(r => r.label).join(', ')}\n`)
   console.log('WORKBOOKS (samples/iso):')
   await scrubWorkbooks(rules)
-  console.log('\nTEXT (seed / insurance / import / fixtures / docs):')
+  console.log(`\nTEXT (seed / insurance / import / fixtures / docs)${DO_TEXT ? '' : ' — report only; pass --text to also rewrite'}:`)
   scrubText(rules)
   console.log(`\n${APPLY ? 'Applied.' : 'Dry run only — re-run with --apply to write.'}`)
 }
