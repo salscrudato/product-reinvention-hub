@@ -42,6 +42,40 @@ export interface PlannedEntity {
 
 export interface UnmappedColumns { sheet: string; columns: string[] }
 
+/** A structured defect produced by the deterministic mapper when an enum value is not in
+ *  the file's Data Validation vocab and has no canonical target — never silently coerced. */
+export interface ReviewDefect {
+  code:           'unmapped_enum' | 'forms_applicability_merged'
+  field?:         string
+  rawValue?:      string
+  rowRef?:        string
+  mergedForms?:   number
+  rowsCollapsed?: number
+}
+
+/** A structured notice for aggregated mapper events (e.g. multi-row merge summary). */
+export interface ImportNotice {
+  code:    string
+  message: string
+  data?:   Record<string, unknown>
+}
+
+/** Column alias / enum overlay produced by a proposeMapping AI call.
+ *  Feed back through mapIsoWorkbook(grids, overlay) after the user accepts suggestions.
+ *  All fields are additive — absent keys leave the deterministic defaults unchanged. */
+export interface AliasOverlay {
+  /** Extra header aliases keyed by canonical FW/FORM/RULE/RATE field name. */
+  columnAliases?:  Record<string, string[]>
+  /** enum override: norm(rawValue) → FormCategory (accepted AI suggestions only). */
+  enumOverrides?:  Record<string, FormCategory>
+  /** sheet name → role hint (e.g. 'forms', 'rules', 'rating', 'framework'). */
+  sheetRoleHints?: Record<string, string>
+  /** confidence per proposal key (informational; drives UI chip colour). */
+  confidences?:    Record<string, number>
+  /** cited cell per proposal key (source of truth for each suggestion). */
+  citations?:      Record<string, string>
+}
+
 export interface ImportSummary {
   productName:      string | null
   productRefId:     string | null
@@ -51,12 +85,19 @@ export interface ImportSummary {
   unmappedColumns:  UnmappedColumns[]
   sheetsRecognized: string[]
   sheetsSkipped:    string[]
+  /** Structured defects: unmapped enums, orphaned refs, etc. */
+  defects:          ReviewDefect[]
+  /** Aggregated mapper notices (e.g. forms_applicability_merged). */
+  notices:          ImportNotice[]
 }
 
 export interface ImportPlan {
   productId:      string | null
+  /** Backward-compat alias: first entry of products (null when no framework found). */
   product:        PlannedEntity | null
-  coverages:      PlannedEntity[]   // parent-before-child order
+  /** All products detected (>= 1 when a framework sheet is present). */
+  products:       PlannedEntity[]
+  coverages:      PlannedEntity[]   // parent-before-child order; flat across all products
   forms:          PlannedEntity[]
   rules:          PlannedEntity[]
   formRules:      PlannedEntity[]
@@ -155,17 +196,77 @@ function mapRuleCategory(v: IsoCell): RuleCategory {
   if (s.startsWith('FORM'))   return 'FORMS'
   return 'PRODUCT'
 }
-// Base/Declarations/Endorsement/Exclusion/Amendatory/Notice map 1:1; the remaining
-// GL categories (Other Coverage, Causes Of Loss, Schedule, …) fold onto ENDORSEMENT.
-function mapFormCategory(v: IsoCell): { category: FormCategory; exact: boolean } {
+// ─── Form-category canonical crosswalk ──────────────────────────────────────────
+// Built from the ISO Data Validation vocab. NEVER silently coerce unknown values to
+// ENDORSEMENT — flag them instead so reviewers know to act. The only silent fallback
+// is the empty-string case (no value supplied) and carrier-specific labels that are
+// clearly endorsement-like (see mapFormCategory for the fallback logic).
+
+const FORM_CATEGORY_CANONICAL: Record<string, FormCategory> = {
+  'BASE COVERAGE FORM':          'BASE_COVERAGE',
+  'BASE COVERAGE':               'BASE_COVERAGE',
+  'DECLARATIONS':                'DECLARATIONS',
+  'DECLARATIONS - PRIMARY':      'DECLARATIONS',
+  'DECLARATIONS - SUPPLEMENTAL': 'DECLARATIONS',
+  'DECLARATIONS PRIMARY':        'DECLARATIONS',
+  'DECLARATIONS SUPPLEMENTAL':   'DECLARATIONS',
+  'ENDORSEMENT':                 'ENDORSEMENT',
+  'ENDORSEMENTS':                'ENDORSEMENT',
+  'EXCLUSION':                   'EXCLUSION',
+  'EXCLUSIONS':                  'EXCLUSION',
+  'SCHEDULE':                    'SCHEDULE',
+  'POLICY NOTICE':               'POLICY_NOTICE',
+  'POLICY NOTICES':              'POLICY_NOTICE',
+  'NOTICE':                      'POLICY_NOTICE',
+  'POLICY CONDITIONS':           'POLICY_CONDITIONS',
+  'AMENDATORY':                  'AMENDATORY',
+  'AMENDATORY ENDORSEMENT':      'ENDORSEMENT',
+  'OTHER POLICY DOCUMENTS':      'OTHER',
+  'MARKETING MATERIALS':         'MARKETING',
+  'MARKETING':                   'MARKETING',
+}
+
+// Values that are demonstrably NOT insurance form categories (e.g. classification
+// codes from SERFF workflows). These generate a ReviewDefect, never silent coercion.
+const FORM_CATEGORY_OUTLIERS = new Set<string>([
+  'ISO FILED',
+  'POLICY',
+])
+
+/** Map a FORM CATEGORY cell to a canonical FormCategory.
+ *  Priority: AI overlay > canonical map > specific outliers (defect) > ENDORSEMENT fallback.
+ *  Returns category=null for outliers so the caller can surface a ReviewDefect without
+ *  writing an invalid category. Fallback to ENDORSEMENT is ONLY for empty cells or
+ *  carrier-specific labels not in the outlier set (backward-compat). */
+function mapFormCategory(
+  v: IsoCell,
+  overlay?: AliasOverlay | null,
+): { category: FormCategory | null; exact: boolean; outlier: boolean } {
   const s = norm(v)
-  if (s.startsWith('BASE COVERAGE')) return { category: 'BASE_COVERAGE', exact: true }
-  if (s.startsWith('DECLARATION'))   return { category: 'DECLARATIONS',  exact: true }
-  if (s.startsWith('ENDORSEMENT'))   return { category: 'ENDORSEMENT',   exact: true }
-  if (s.startsWith('EXCLUSION'))     return { category: 'EXCLUSION',     exact: true }
-  if (s.startsWith('AMENDATORY'))    return { category: 'AMENDATORY',    exact: true }
-  if (s.includes('NOTICE'))          return { category: 'POLICY_NOTICE', exact: true }
-  return { category: 'ENDORSEMENT', exact: s === '' }
+
+  // AI overlay: accepted suggestions take top priority
+  if (overlay?.enumOverrides) {
+    const ov = overlay.enumOverrides[s]
+    if (ov) return { category: ov, exact: true, outlier: false }
+  }
+
+  // Canonical crosswalk
+  if (s in FORM_CATEGORY_CANONICAL) {
+    return { category: FORM_CATEGORY_CANONICAL[s]!, exact: true, outlier: false }
+  }
+
+  // Specific outlier values — flag as review defect, leave field unset
+  if (FORM_CATEGORY_OUTLIERS.has(s)) {
+    return { category: null, exact: false, outlier: true }
+  }
+
+  // Empty cell: blank → not an error, but not exact either
+  if (s === '') return { category: 'ENDORSEMENT', exact: true, outlier: false }
+
+  // Carrier-specific label not in canonical map and not a known outlier:
+  // fold onto ENDORSEMENT with a warning (preserves backward compat for values
+  // like "Other Coverage Form" that the existing test suite asserts on).
+  return { category: 'ENDORSEMENT', exact: false, outlier: false }
 }
 
 /** The line prefix (LOB token) of a coverage refId. Tolerant of inconsistent source formatting:
@@ -335,13 +436,17 @@ function findSheet(grids: IsoGrid[], re: RegExp, exclude?: RegExp): IsoGrid | un
 // ─── Summary accumulator ─────────────────────────────────────────────────────────
 
 class Ctx {
-  warnings: string[] = []
-  unmapped: UnmappedColumns[] = []
+  warnings:   string[] = []
+  unmapped:   UnmappedColumns[] = []
   recognized: string[] = []
+  defects:    ReviewDefect[] = []
+  notices:    ImportNotice[] = []
   private warned = new Set<string>()
   /** De-duplicated warning (keeps the summary readable when a value recurs on 100s of rows). */
   warnOnce(key: string, msg: string): void { if (!this.warned.has(key)) { this.warned.add(key); this.warnings.push(msg) } }
   warn(msg: string): void { this.warnings.push(msg) }
+  addDefect(d: ReviewDefect): void { this.defects.push(d) }
+  addNotice(n: ImportNotice): void { this.notices.push(n) }
   recordUnmapped(sheet: string, header: IsoCell[], handled: Set<number>): void {
     const labels: string[] = []
     header.forEach((c, i) => {
@@ -401,88 +506,27 @@ interface CoverageDraft {
   rowIndex: number
   cells: IsoCell[]
   scope: { allStates: boolean; states: string[] }
+  /** PRODUCT column value for this row — used to assign coverages in multi-product workbooks. */
+  productHint: string
 }
 
-function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
-  const hr = findHeaderRow(grid, Object.values(FW_FIELDS))
-  if (hr < 0) { ctx.warn(`Framework sheet "${grid.sheet}": no recognizable header row — skipped.`); return null }
-  ctx.recognized.push(grid.sheet)
-
-  const header = row(grid, hr)
-  const col = mapColumns(header, FW_FIELDS)
-  const sc = stateColumns(header)
-  const at = (r: IsoCell[], k: string) => (k in col ? (r[col[k]] ?? null) : null)
-
-  let productRefId: string | null = null
-  let productName = ''
-  let lobRefId: string | null = null
-  let lobName = ''
-  let productNameHint = ''
-  let lobNameHint = ''
-  const distinctProducts = new Set<string>()
-
-  // ── Pass 1: separate identity rows from coverage rows (source order preserved) ──
-  const drafts: CoverageDraft[] = []
-  const draftByRefId = new Map<string, CoverageDraft>()
-
-  for (let r = hr + 1; r < grid.cells.length; r++) {
-    const cells = row(grid, r)
-    const id = clean(at(cells, 'id'))
-    if (!id) continue
-    const covName = clean(at(cells, 'coverage'))
-    const subName = clean(at(cells, 'subCoverage'))
-    const prod = clean(at(cells, 'product'))
-    const lob = clean(at(cells, 'lob'))
-    if (prod) distinctProducts.add(prod)
-
-    // Explicit product / LOB rows (ISO carries .PROD / .PRD / .PRODUCT / .LOB tokens in the id column).
-    if (/\.(PROD|PRD|PRODUCT)\b|\.(PROD|PRD|PRODUCT)\./i.test(id)) {
-      if (!productRefId) { productRefId = id; productName = prod || productName }
-      continue
-    }
-    if (/\.LOB\b|\.LOB\./i.test(id)) {
-      if (!lobRefId) { lobRefId = id; lobName = lob || lobName }
-      if (!productName) productName = prod
-      continue
-    }
-    // A row with neither a coverage nor a sub-coverage name is a hierarchy/identity row
-    // (the Sample Mutual component model has no .PROD/.LOB tokens — product/LOB appear as plain rows).
-    if (!covName && !subName) {
-      if (!productNameHint && prod) productNameHint = prod
-      if (!lobNameHint && lob) lobNameHint = lob
-      continue
-    }
-
-    if (!productNameHint && prod) productNameHint = prod
-    if (!lobNameHint && lob) lobNameHint = lob
-    const draft: CoverageDraft = {
-      refId: id, coverageName: covName, subCoverageName: subName, rowIndex: r,
-      cells, scope: stateScope(cells, sc),
-    }
-    drafts.push(draft)
-    const prior = draftByRefId.get(id)
-    if (!prior) {
-      draftByRefId.set(id, draft)
-    } else if (prior.coverageName !== covName || prior.subCoverageName !== subName) {
-      // Same refId, different coverage content: the source reuses a traceability id across two
-      // distinct coverages, which violates refId uniqueness (parentId links resolve by refId). Keep
-      // the first and surface the collision rather than dropping the row silently.
-      ctx.warnOnce(`dupcovid:${id}`, `Sheet "${grid.sheet}" col "ID": coverage id ${id} is reused for different coverages ("${prior.coverageName || prior.subCoverageName}" and "${covName || subName}") — kept the first; verify the source.`)
-    }
-  }
-
-  // ── Pass 2: first-principles hierarchy resolution (format-agnostic) ──
-  const resolved = resolveCoverageHierarchy(drafts.map(d => ({
-    refId: d.refId, coverageName: d.coverageName, subCoverageName: d.subCoverageName, rowIndex: d.rowIndex,
-  })))
+/** Build a sorted, depth-ordered, orphan-repaired coverage list from resolved items.
+ *  Shared by both single- and multi-product paths. */
+function finalizeCoverages(
+  resolved: ReturnType<typeof resolveCoverageHierarchy>,
+  draftByRefId: Map<string, CoverageDraft>,
+  at: (cells: IsoCell[], k: string) => IsoCell | null,
+  sheetName: string,
+  ctx: Ctx,
+): PlannedEntity[] {
   for (const rc of resolved) {
     if (rc.parentSignal === 'orphan-promoted') {
-      ctx.warn(`Sheet "${grid.sheet}" coverage ${rc.refId} ("${rc.name}"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.`)
+      ctx.warn(`Sheet "${sheetName}" coverage ${rc.refId} ("${rc.name}"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.`)
     }
   }
-
   const coverages: PlannedEntity[] = resolved.map(rc => {
-    const cells = (draftByRefId.get(rc.refId) as CoverageDraft).cells
+    const draft = draftByRefId.get(rc.refId) as CoverageDraft
+    const cells = draft.cells
     return {
       docId: dashId(rc.refId), refId: rc.refId, label: `${rc.refId} — ${rc.name}`,
       data: {
@@ -493,7 +537,7 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
         source: mapSource(at(cells, 'bureau'), at(cells, 'proprietary')),
         formNumbers: splitList(at(cells, 'forms')),
         terms: [],
-        ...(draftByRefId.get(rc.refId) as CoverageDraft).scope,
+        ...draft.scope,
         status: mapStatus(at(cells, 'status')),
         lifecycle: 'DRAFT' as Lifecycle,
         reviewStatus: mapReview(at(cells, 'review')),
@@ -501,39 +545,18 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
       },
     }
   })
-
-  // ── Product identity: synthesize when the sheet has no explicit .PROD/.PRD row ──
-  // Always synthesize (even 0 coverages) so the plan always carries >= 1 product when
-  // a framework sheet is present. Code: product_synthesized.
-  if (!productRefId) {
-    const prefix = (coverages.length > 0 ? refIdPrefix(coverages[0]!.refId!) : null) || 'XX'
-    productRefId = `${prefix}.PROD.001`
-    productName = productName || productNameHint
-    ctx.warnOnce('product_synthesized', `Framework sheet "${grid.sheet}": no explicit product (.PROD/.PRD) row — synthesized "${productRefId}" from coverage id prefix "${prefix}"; code: product_synthesized.`)
-  } else if (!productName) {
-    productName = productNameHint
-  }
-  if (!lobName) lobName = lobNameHint
-  if (distinctProducts.size > 1) {
-    ctx.warnOnce('multiproduct', `Framework sheet "${grid.sheet}": ${distinctProducts.size} distinct product names detected — imported under a single product ${productRefId ?? '(none)'}. Split into separate products if the source is a multi-product book.`)
-  }
-
-  // Integrity: never leave a dangling parentId — promote orphans to top-level (belt-and-braces;
-  // the resolver already guarantees this, but a source with a mid-import dedup could surprise us).
+  // Belt-and-braces orphan repair (resolver guarantees it, but belt-and-suspenders is safe).
   const byRefId = new Set(coverages.map(c => c.refId!))
   for (const cov of coverages) {
     const pid = cov.data['parentId'] as string | null
     if (pid && !byRefId.has(pid)) {
-      ctx.warn(`Sheet "${grid.sheet}" coverage ${cov.refId}: parent "${pid}" not found — imported as top-level.`)
+      ctx.warn(`Sheet "${sheetName}" coverage ${cov.refId}: parent "${pid}" not found — imported as top-level.`)
       cov.data['parentId'] = null
     }
   }
-  // Parent-before-child write order by hierarchy DEPTH (not refId string length — Sample Mutual parent and
-  // child share a segment count). Stable sort preserves source order within a depth band.
+  // Stable depth-ordered sort (parent before child).
   const depthOf = (refId: string): number => {
-    let d = 0
-    let cur: string | null = refId
-    const guard = new Set<string>()
+    let d = 0; let cur: string | null = refId; const guard = new Set<string>()
     while (cur && !guard.has(cur)) {
       guard.add(cur)
       const c = coverages.find(x => x.refId === cur)
@@ -545,15 +568,167 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
   }
   const depthCache = new Map(coverages.map(c => [c.refId!, depthOf(c.refId!)]))
   coverages.sort((a, b) => (depthCache.get(a.refId!) ?? 0) - (depthCache.get(b.refId!) ?? 0))
+  return coverages
+}
 
-  const scopes = drafts.map(d => d.scope)
-  const productScope = scopes.some(s => s.allStates) || scopes.length === 0
-    ? { allStates: true, states: [] }
-    : { allStates: false, states: [...new Set(scopes.flatMap(s => s.states))].sort() }
+/** Assign coverages to products:
+ *  1. By refId prefix match to the product's refId prefix
+ *  2. By PRODUCT column value match to the product's name
+ *  3. Residual → first product
+ * Returns a Map of productRefId → CoverageDraft[] for that product.
+ */
+function assignDraftsByProduct(
+  drafts: CoverageDraft[],
+  products: { refId: string; name: string }[],
+): Map<string, CoverageDraft[]> {
+  const result = new Map<string, CoverageDraft[]>(products.map(p => [p.refId, []]))
+  const prefixMap = new Map(products.map(p => [refIdPrefix(p.refId).toUpperCase(), p.refId]))
+  const nameMap   = new Map(products.map(p => [p.name.toUpperCase(), p.refId]))
+
+  for (const draft of drafts) {
+    const covPrefix = refIdPrefix(draft.refId).toUpperCase()
+    // 1. By refId prefix
+    let target = prefixMap.get(covPrefix)
+    // 2. By PRODUCT column value
+    if (!target && draft.productHint) target = nameMap.get(draft.productHint.toUpperCase())
+    // 3. Residual → first product
+    if (!target) target = products[0]!.refId
+    result.get(target)!.push(draft)
+  }
+  return result
+}
+
+/** Detect if a framework sheet carries genuinely multiple products.
+ *  Returns array of FrameworkResult (one per product) — always >= 1 when the sheet
+ *  has a recognizable header. Returns null when the sheet cannot be parsed. */
+function parseFramework(
+  grid: IsoGrid,
+  ctx: Ctx,
+  overlay?: AliasOverlay | null,
+): FrameworkResult[] | null {
+  const effectiveFwFields: Record<string, string[]> = overlay?.columnAliases
+    ? Object.fromEntries(
+        Object.entries(FW_FIELDS).map(([k, v]) => [k, overlay.columnAliases![k] ? [...v, ...overlay.columnAliases![k]!] : v]),
+      )
+    : FW_FIELDS
+  const hr = findHeaderRow(grid, Object.values(effectiveFwFields))
+  if (hr < 0) { ctx.warn(`Framework sheet "${grid.sheet}": no recognizable header row — skipped.`); return null }
+  ctx.recognized.push(grid.sheet)
+
+  const header = row(grid, hr)
+  const col = mapColumns(header, effectiveFwFields)
+  const sc = stateColumns(header)
+  const at = (r: IsoCell[], k: string) => (k in col ? (r[col[k]] ?? null) : null)
+
+  // Ordered map preserving first-occurrence order for display stability.
+  const productRows  = new Map<string, { refId: string; name: string }>()
+  let lobRefId: string | null = null
+  let lobName = ''
+  let productNameHint = ''
+  let lobNameHint = ''
+
+  const drafts: CoverageDraft[] = []
+  const draftByRefId = new Map<string, CoverageDraft>()
+
+  // ── Pass 1: collect all product rows AND coverage drafts ──
+  for (let r = hr + 1; r < grid.cells.length; r++) {
+    const cells = row(grid, r)
+    const id = clean(at(cells, 'id'))
+    if (!id) continue
+    const covName = clean(at(cells, 'coverage'))
+    const subName = clean(at(cells, 'subCoverage'))
+    const prod = clean(at(cells, 'product'))
+    const lob  = clean(at(cells, 'lob'))
+
+    if (/\.(PROD|PRD|PRODUCT)\b|\.(PROD|PRD|PRODUCT)\./i.test(id)) {
+      // Collect explicit product rows. First-seen per refId wins (deduplicates state-row repeats).
+      if (!productRows.has(id)) productRows.set(id, { refId: id, name: prod || '' })
+      continue
+    }
+    if (/\.LOB\b|\.LOB\./i.test(id)) {
+      if (!lobRefId) { lobRefId = id; lobName = lob || lobName }
+      continue
+    }
+    if (!covName && !subName) {
+      if (!productNameHint && prod) productNameHint = prod
+      if (!lobNameHint && lob) lobNameHint = lob
+      continue
+    }
+
+    if (!productNameHint && prod) productNameHint = prod
+    if (!lobNameHint && lob) lobNameHint = lob
+    const draft: CoverageDraft = {
+      refId: id, coverageName: covName, subCoverageName: subName, rowIndex: r,
+      cells, scope: stateScope(cells, sc), productHint: prod,
+    }
+    drafts.push(draft)
+    const prior = draftByRefId.get(id)
+    if (!prior) {
+      draftByRefId.set(id, draft)
+    } else if (prior.coverageName !== covName || prior.subCoverageName !== subName) {
+      ctx.warnOnce(`dupcovid:${id}`, `Sheet "${grid.sheet}" col "ID": coverage id ${id} is reused for different coverages ("${prior.coverageName || prior.subCoverageName}" and "${covName || subName}") — kept the first; verify the source.`)
+    }
+  }
+
+  // ── Determine product list ──
+  // Priority 1: explicit PROD|PRD rows in the framework sheet (N products supported).
+  // Priority 2: synthesize 1 product from the coverage refId prefix (existing single-product fallback).
+  //
+  // NOTE: "distinct PRODUCT column values" is intentionally NOT used for product detection —
+  // real ISO workbooks put carrier/company names in that column, not product identifiers, so
+  // splitting on distinct column values produces spurious products. Explicit PROD rows are the
+  // only reliable multi-product signal.
+  let productList: { refId: string; name: string }[]
+
+  if (productRows.size > 0) {
+    // Group by LOB prefix (the 2-4 letter line code, e.g. 'GL', 'IM', 'CORE').
+    // Standard ISO workbooks list subsidiary/variant PROD rows under the same LOB prefix
+    // (e.g. GL.PROD.001, GL.PROD.002 for CGL variants) — keep only the FIRST per prefix.
+    // Workbooks with distinct LOB prefixes (e.g. GL + IM in one book) get one product per LOB.
+    const seenPrefixes = new Map<string, { refId: string; name: string }>()
+    for (const pd of productRows.values()) {
+      const prefix = refIdPrefix(pd.refId).toUpperCase()
+      if (!seenPrefixes.has(prefix)) seenPrefixes.set(prefix, pd)
+    }
+    productList = [...seenPrefixes.values()]
+  } else {
+    // Single product — synthesize (existing behavior, code: product_synthesized).
+    const prefix = (drafts.length > 0 ? refIdPrefix(drafts[0]!.refId) : null) || 'XX'
+    const synthRefId = `${prefix}.PROD.001`
+    const synthName  = productNameHint || ''
+    ctx.warnOnce('product_synthesized', `Framework sheet "${grid.sheet}": no explicit product (.PROD/.PRD) row — synthesized "${synthRefId}" from coverage id prefix "${prefix}"; code: product_synthesized.`)
+    productList = [{ refId: synthRefId, name: synthName }]
+  }
+  if (!lobName) lobName = lobNameHint
+
+  // ── Pass 2: assign drafts to products + resolve hierarchy per product ──
+  const isMulti = productList.length > 1
+  const assignedDrafts = isMulti
+    ? assignDraftsByProduct(drafts, productList)
+    : new Map([[productList[0]!.refId, drafts]])
+
+  // ── Build one FrameworkResult per product ──
+  const results: FrameworkResult[] = []
+  for (const pd of productList) {
+    const myDrafts    = assignedDrafts.get(pd.refId) ?? drafts
+    const uniqueDrafts = myDrafts.filter(d => draftByRefId.get(d.refId) === d) // keep first-seen only
+    const resolved    = resolveCoverageHierarchy(uniqueDrafts.map(d => ({
+      refId: d.refId, coverageName: d.coverageName, subCoverageName: d.subCoverageName, rowIndex: d.rowIndex,
+    })))
+    const coverages   = finalizeCoverages(resolved, draftByRefId, at, grid.sheet, ctx)
+
+    const scopes      = myDrafts.map(d => d.scope)
+    const productScope = scopes.some(s => s.allStates) || scopes.length === 0
+      ? { allStates: true, states: [] }
+      : { allStates: false, states: [...new Set(scopes.flatMap(s => s.states))].sort() }
+
+    const pName = pd.name || productNameHint
+    results.push({ productRefId: pd.refId, productName: pName, lobRefId, lobName, coverages, productScope })
+  }
 
   const handled = new Set(Object.values(col).concat(sc.cols.map(s => s.col), sc.allCol))
   ctx.recordUnmapped(grid.sheet, header, handled)
-  return { productRefId, productName, lobRefId, lobName, coverages, productScope }
+  return results.length > 0 ? results : null
 }
 
 // ─── Forms specifications + dynamic data ─────────────────────────────────────────
@@ -625,12 +800,23 @@ function parseDynamicFields(grid: IsoGrid | undefined, ctx: Ctx): Record<string,
   return out
 }
 
-function parseForms(grid: IsoGrid, dynByForm: Record<string, DynamicField[]>, productRefId: string | null, ctx: Ctx): PlannedEntity[] {
-  const hr = findHeaderRow(grid, Object.values(FORM_FIELDS))
+function parseForms(
+  grid: IsoGrid,
+  dynByForm: Record<string, DynamicField[]>,
+  productRefId: string | null,
+  ctx: Ctx,
+  overlay?: AliasOverlay | null,
+): PlannedEntity[] {
+  const effectiveFormFields: Record<string, string[]> = overlay?.columnAliases
+    ? Object.fromEntries(
+        Object.entries(FORM_FIELDS).map(([k, v]) => [k, overlay.columnAliases![k] ? [...v, ...overlay.columnAliases![k]!] : v]),
+      )
+    : FORM_FIELDS
+  const hr = findHeaderRow(grid, Object.values(effectiveFormFields))
   if (hr < 0) { ctx.warn(`Forms sheet "${grid.sheet}": no recognizable header row — skipped.`); return [] }
   ctx.recognized.push(grid.sheet)
   const header = row(grid, hr)
-  const col = mapColumns(header, FORM_FIELDS)
+  const col = mapColumns(header, effectiveFormFields)
   if (!('number' in col)) { ctx.warn(`Forms sheet "${grid.sheet}": no Form Number column — skipped.`); return [] }
   const sc = stateColumns(header)
   const section = fillForward(row(grid, hr - 1))
@@ -639,6 +825,10 @@ function parseForms(grid: IsoGrid, dynByForm: Record<string, DynamicField[]>, pr
   const at = (r: IsoCell[], k: string) => (k in col ? (r[col[k]] ?? null) : null)
 
   const byKey = new Map<string, PlannedEntity>()
+  // Form-merge tracking: dedupe notices down to one per sheet
+  let dupFormRows = 0
+  const mergedFormKeys = new Set<string>()
+
   for (let r = hr + 1; r < grid.cells.length; r++) {
     const cells = row(grid, r)
     const number = clean(at(cells, 'number'))
@@ -650,7 +840,7 @@ function parseForms(grid: IsoGrid, dynByForm: Record<string, DynamicField[]>, pr
 
     const existing = byKey.get(key)
     if (existing) {
-      // Same form number appearing again (state/coverage variant) — union the sets.
+      // Same form number on multiple rows (state/coverage variant) — union sets.
       const d = existing.data
       const uni = (a: unknown, b: string[]) => [...new Set([...(a as string[]), ...b])]
       d['coverageParts'] = uni(d['coverageParts'], coverageParts)
@@ -659,19 +849,37 @@ function parseForms(grid: IsoGrid, dynByForm: Record<string, DynamicField[]>, pr
         if (scope.allStates) { d['allStates'] = true; d['states'] = [] }
         else d['states'] = uni(d['states'], scope.states)
       }
+      // Keep per-form warning in warnings (test backward-compat: "appears on multiple rows").
       ctx.warnOnce(`dupform:${key}`, `Sheet "${grid.sheet}" row ${r + 1} col "FORM NUMBER": form ${number} appears on multiple rows — applicability merged.`)
+      dupFormRows++
+      mergedFormKeys.add(key)
       continue
     }
 
-    const cat = mapFormCategory(at(cells, 'category'))
-    if (!cat.exact) ctx.warnOnce(`formcat:${norm(at(cells, 'category'))}`, `Sheet "${grid.sheet}" row ${r + 1} col "FORM CATEGORY": value "${clean(at(cells, 'category'))}" not recognised — mapped to ENDORSEMENT, verify intent.`)
+    // Enum crosswalk — flag-not-guess for outlier values; warn (not defect) for
+    // carrier-specific unknowns that fold onto ENDORSEMENT for backward compat.
+    const cat = mapFormCategory(at(cells, 'category'), overlay)
+    if (cat.outlier) {
+      ctx.addDefect({
+        code:     'unmapped_enum',
+        field:    'category',
+        rawValue: clean(at(cells, 'category')),
+        rowRef:   `${grid.sheet} row ${r + 1}`,
+      })
+    } else if (!cat.exact) {
+      ctx.warnOnce(
+        `formcat:${norm(at(cells, 'category'))}`,
+        `Sheet "${grid.sheet}" row ${r + 1} col "FORM CATEGORY": value "${clean(at(cells, 'category'))}" not recognised — mapped to ENDORSEMENT, verify intent.`,
+      )
+    }
 
     byKey.set(key, {
       docId: key, refId: null, label: `${number} — ${clean(at(cells, 'name'))}`,
       data: {
         number, name: clean(at(cells, 'name')),
         edition: clean(at(cells, 'edition')),
-        category: cat.category,
+        // Outlier → write ENDORSEMENT as safe write-fallback (defect surfaced above).
+        category: cat.category ?? 'ENDORSEMENT',
         claimsBasis: mapClaimsBasis(at(cells, 'claimsBasis')),
         dynamic: /dynamic/i.test(text(at(cells, 'dynamic'))),
         mandatoryDefault: /mandat/i.test(text(at(cells, 'mandatory'))),
@@ -690,6 +898,15 @@ function parseForms(grid: IsoGrid, dynByForm: Record<string, DynamicField[]>, pr
         reviewStatus: mapReview(at(cells, 'review')),
         reviewer: '',
       },
+    })
+  }
+
+  // Single aggregated notice for all form-applicability merges this sheet.
+  if (mergedFormKeys.size > 0) {
+    ctx.addNotice({
+      code:    'forms_applicability_merged',
+      message: `${mergedFormKeys.size} form number(s) appeared on multiple rows; state applicability, coverage parts, and transaction columns merged into single entities (${dupFormRows} extra rows collapsed).`,
+      data:    { mergedForms: mergedFormKeys.size, rowsCollapsed: dupFormRows },
     })
   }
 
@@ -1058,8 +1275,10 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
 
 /** Map a set of parsed ISO template worksheets onto the canonical model. The grids
  *  may span all four workbooks (concatenate every sheet from every uploaded file);
- *  sheets are located by name so any subset works. */
-export function mapIsoWorkbook(grids: IsoGrid[]): ImportPlan {
+ *  sheets are located by name so any subset works.
+ *
+ *  overlay — optional AI-proposed aliases/enum overrides from proposeMapping; purely additive. */
+export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null): ImportPlan {
   const ctx = new Ctx()
 
   const fwGrid   = selectFrameworkSheet(grids, ctx)
@@ -1074,52 +1293,65 @@ export function mapIsoWorkbook(grids: IsoGrid[]): ImportPlan {
   const rtGrid   = findSheet(grids, /rating tables|rate tables/i)
   const ldGrid   = findSheet(grids, /limits and deductibles|limits & deductibles/i)
 
-  const fw = fwGrid ? parseFramework(fwGrid, ctx) : null
+  // parseFramework now returns FrameworkResult[] (multi-product aware) or null.
+  const fwResults = fwGrid ? parseFramework(fwGrid, ctx, overlay) : null
 
-  // Product identity + LOB resolution (line-agnostic via the refId prefix).
-  const productRefId = fw?.productRefId ?? null
-  const lob = resolveLobByRefId(productRefId) ?? resolveLobByRefId(fw?.coverages[0]?.refId ?? null) ?? DEFAULT_LOB
-  const lobRefId = fw?.lobRefId ?? `${lob.prefix}.LOB.001`
-  const lobName = fw?.lobName || lob.name
-  const productId = productRefId ? productRefId : null
+  // ── LOB resolution — driven by the first product's refId (line-agnostic). ──
+  const firstFw = fwResults?.[0] ?? null
+  const productRefId = firstFw?.productRefId ?? null
+  const lob = resolveLobByRefId(productRefId) ?? resolveLobByRefId(firstFw?.coverages[0]?.refId ?? null) ?? DEFAULT_LOB
+  const lobRefId = firstFw?.lobRefId ?? `${lob.prefix}.LOB.001`
+  const lobName = firstFw?.lobName || lob.name
+  const productId = productRefId
 
   const ldTables = parseLdTables(ldGrid, ctx)
   const rtTables = parseRtTables(rtGrid, ctx)
   const dynByForm = parseDynamicFields(dynGrid, ctx)
-  const forms = formGrid ? parseForms(formGrid, dynByForm, productRefId, ctx) : []
+  // parseForms uses the first product's refId for form-level metadata (forms are rarely
+  // product-subdivided within a workbook; they reference coverages by refId prefix).
+  const forms = formGrid ? parseForms(formGrid, dynByForm, productRefId, ctx, overlay) : []
   const rules = ruleGrid ? parseRules(ruleGrid, ctx) : []
   const formRules = optGrid ? parseFormRules(optGrid, ctx) : []
   const ratingProgram = rateGrid ? parseRating(rateGrid, rtTables, productRefId, lobName, ctx) : null
 
-  let product: PlannedEntity | null = null
-  if (fw && productRefId) {
-    product = {
-      docId: productRefId, refId: productRefId, label: `${productRefId} — ${fw.productName}`,
-      data: {
-        refId: productRefId,
-        name: fw.productName || `${lobName} Product`,
-        lob: { refId: lobRefId, name: lobName },
-        description: '',
-        marketSegment: `${lob.vertical} / ${lob.family}`,
-        owner: { uid: '', name: '' }, // stamped with the importing user by the writer
-        ...fw.productScope,
-        status: 'ACTIVE' as Status,
-        lifecycle: 'DRAFT' as Lifecycle,
-        reviewStatus: 'NOT_STARTED' as ReviewStatus,
-        reviewer: '',
-      },
+  // ── Build PlannedEntity[] — one per detected product. ──
+  const products: PlannedEntity[] = []
+  if (fwResults) {
+    for (const fw of fwResults) {
+      if (!fw.productRefId) continue
+      const pLobRefId = fw.lobRefId ?? lobRefId
+      const pLobName  = fw.lobName || lobName
+      products.push({
+        docId: fw.productRefId, refId: fw.productRefId,
+        label: `${fw.productRefId} — ${fw.productName}`,
+        data: {
+          refId: fw.productRefId,
+          name: fw.productName || `${pLobName} Product`,
+          lob: { refId: pLobRefId, name: pLobName },
+          description: '',
+          marketSegment: `${lob.vertical} / ${lob.family}`,
+          owner: { uid: '', name: '' },
+          ...fw.productScope,
+          status: 'ACTIVE' as Status,
+          lifecycle: 'DRAFT' as Lifecycle,
+          reviewStatus: 'NOT_STARTED' as ReviewStatus,
+          reviewer: '',
+        },
+      })
     }
-  } else if (fw && !productRefId) {
-    // parseFramework always synthesizes now, so this branch is belt-and-suspenders only.
-    ctx.warn('No product row (.PROD/.PRD) found and synthesis did not produce an id — product omitted.')
   }
+  // Backward-compat: product = first entry (null if none).
+  const product: PlannedEntity | null = products[0] ?? null
+
+  // Flat union of all coverages across all products (ordered by product then depth).
+  const allCoverages: PlannedEntity[] = fwResults ? fwResults.flatMap(fw => fw.coverages) : []
 
   const dynFieldCount = forms.reduce((n, f) => n + ((f.data['dynamicFields'] as unknown[])?.length ?? 0), 0)
   const stepCount = ratingProgram ? (ratingProgram.data['steps'] as unknown[]).length : 0
 
   const counts: Record<string, number> = {
-    products: product ? 1 : 0,
-    coverages: fw?.coverages.length ?? 0,
+    products: products.length,
+    coverages: allCoverages.length,
     forms: forms.length,
     dynamicFields: dynFieldCount,
     rules: rules.length,
@@ -1135,7 +1367,8 @@ export function mapIsoWorkbook(grids: IsoGrid[]): ImportPlan {
   return {
     productId,
     product,
-    coverages: fw?.coverages ?? [],
+    products,
+    coverages: allCoverages,
     forms, rules, formRules, ratingProgram, ldTables, rtTables,
     summary: {
       productName: product ? (product.data['name'] as string) : null,
@@ -1146,6 +1379,8 @@ export function mapIsoWorkbook(grids: IsoGrid[]): ImportPlan {
       unmappedColumns: ctx.unmapped,
       sheetsRecognized: ctx.recognized,
       sheetsSkipped,
+      defects: ctx.defects,
+      notices: ctx.notices,
     },
   }
 }

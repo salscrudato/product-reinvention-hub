@@ -237,15 +237,18 @@ describe('UnifiedProposalBundle invariants', () => {
     const fp = fingerprintUpload([ISO_WORKBOOK_GL_DOC])
     const plan = planExtraction(fp)
     // Build a minimal importPlan shell (mapIsoWorkbook would populate this in production)
+    const minimalProduct = { docId: 'gl-prod-test', refId: 'GL.PROD.TEST', label: 'GL Test', data: {} }
     const minimalPlan = {
       productId: 'GL.PROD.TEST',
-      product: { docId: 'gl-prod-test', refId: 'GL.PROD.TEST', label: 'GL Test', data: {} },
+      product: minimalProduct,
+      products: [minimalProduct],
       coverages: [], forms: [], rules: [], formRules: [],
       ratingProgram: null, ldTables: [], rtTables: [],
       summary: {
         productName: 'GL Test', productRefId: 'GL.PROD.TEST', lobName: 'General Liability',
         counts: { coverages: 3, forms: 2 },
         warnings: [], unmappedColumns: [], sheetsRecognized: ['GL Product Framework'], sheetsSkipped: [],
+        defects: [], notices: [],
       },
     }
     const bundle = wrapWorkbookBundle(minimalPlan, fp, plan, [], [])

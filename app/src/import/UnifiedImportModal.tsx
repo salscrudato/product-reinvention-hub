@@ -20,6 +20,7 @@ import { toast } from 'sonner'
 import type {
   UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan,
   FormatCard, FormatFingerprint, SplitProductProposal, SampledVerification, UnresolvedItem,
+  IsoGrid, AliasOverlay, ReviewDefect, ImportNotice,
 } from '@pf/shared'
 import { mapIsoWorkbook } from '@pf/shared'
 import { DisagreementHeatmap } from './DisagreementHeatmap'
@@ -39,6 +40,30 @@ import { newDraftId, filingLineage, importLineage } from '../lib/draft/draft'
 
 interface Props { onClose: () => void; onImported: (productId: string) => void }
 type Phase = 'select' | 'streaming' | 'review' | 'xlsx-plan' | 'importing' | 'done' | 'error'
+
+interface AISuggestions {
+  aliasOverlay:     AliasOverlay
+  enumOverlay:      Record<string, string>
+  confidences:      Record<string, number>
+  citations:        Record<string, string>
+  droppedProposals: { kind: string; index: number; item: unknown }[]
+  meta:             { proposerModel: string; validatorModel: string; columnAliases: number; enumCrosswalk: number; sheetRoleHints: number; dropped: number }
+}
+
+/** Extract first-row headers and up to 15 data rows per sheet for the proposeMapping payload. */
+function buildSheetSamples(grids: IsoGrid[]): {
+  headers: Record<string, string[]>
+  samples: Record<string, string[][]>
+} {
+  const headers: Record<string, string[]> = {}
+  const samples: Record<string, string[][]> = {}
+  for (const g of grids) {
+    const head = (g.cells[0] ?? []).map(c => c == null ? '' : String(c))
+    headers[g.sheet] = head
+    samples[g.sheet] = g.cells.slice(1, 16).map(row => row.map(c => c == null ? '' : String(c)))
+  }
+  return { headers, samples }
+}
 
 // Sniff format by magic bytes: ZIP (XLSX/XLSM) = PK\x03\x04, PDF = %PDF.
 // Extension alone is not trusted (rename-safe).
@@ -104,6 +129,10 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const [stages, setStages]     = useState<UnifiedStageEvent[]>([])
   const [bundle, setBundle]     = useState<UnifiedProposalBundle | null>(null)
   const [localPlan, setLocalPlan] = useState<ImportPlan | null>(null)
+  const [localGrids, setLocalGrids] = useState<IsoGrid[]>([])
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestions | null>(null)
+  const [aiAssistLoading, setAiAssistLoading] = useState(false)
+  const [acceptedSuggestions, setAcceptedSuggestions] = useState<Set<string>>(new Set())
   const [accepted, setAccepted] = useState<Set<FilingReviewSectionKey>>(new Set())
   const [cardStatus, setCardStatus] = useState<'PROPOSED' | 'APPROVED' | 'REJECTED'>('PROPOSED')
   const [progress, setProgress] = useState<ImportProgress>({ done: 0, total: 0, label: '' })
@@ -129,7 +158,10 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       try {
         const grids = await readWorkbooks(docs)
         const plan  = mapIsoWorkbook(grids)
+        setLocalGrids(grids)
         setLocalPlan(plan)
+        setAiSuggestions(null)
+        setAcceptedSuggestions(new Set())
         setPhase('xlsx-plan')
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to read workbook.')
@@ -206,6 +238,72 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
 
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
 
+  async function handleAiAssist() {
+    if (!localPlan || !localGrids.length) return
+    setAiAssistLoading(true)
+    setAiSuggestions(null)
+    try {
+      const { headers, samples } = buildSheetSamples(localGrids)
+      const body = {
+        unmappedColumns:     localPlan.summary.unmappedColumns,
+        sheetsSkipped:       localPlan.summary.sheetsSkipped,
+        headers,
+        samples,
+        dataValidationVocab: {},
+      }
+      const resp = await fetch('/api/ai/proposeMapping', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+      })
+      if (!resp.ok) throw new Error(`proposeMapping ${resp.status}`)
+      const data = await resp.json() as AISuggestions
+      setAiSuggestions(data)
+      setAcceptedSuggestions(new Set()) // start with all suggestions unaccepted
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'AI Assist failed')
+    } finally {
+      setAiAssistLoading(false)
+    }
+  }
+
+  function handleApplyOverlay() {
+    if (!aiSuggestions || !localGrids.length) return
+    // Build overlay from accepted suggestions only.
+    const overlay: AliasOverlay = { columnAliases: {}, enumOverrides: {}, sheetRoleHints: {}, confidences: {}, citations: {} }
+    const { aliasOverlay, confidences, citations } = aiSuggestions
+    for (const [field, aliases] of Object.entries(aliasOverlay.columnAliases ?? {})) {
+      for (const alias of aliases) {
+        const key = `col:${field}:${alias}`
+        if (acceptedSuggestions.has(key)) {
+          if (!overlay.columnAliases![field]) overlay.columnAliases![field] = []
+          overlay.columnAliases![field]!.push(alias)
+          overlay.confidences![key] = confidences[key] ?? 1
+          overlay.citations![key]   = citations[key]  ?? ''
+        }
+      }
+    }
+    for (const [raw, cat] of Object.entries(aliasOverlay.enumOverrides ?? {})) {
+      const key = `enum:${raw}`
+      if (acceptedSuggestions.has(key)) {
+        overlay.enumOverrides![raw] = cat as import('@pf/shared').FormCategory
+        overlay.confidences![key] = confidences[key] ?? 1
+        overlay.citations![key]   = citations[key]  ?? ''
+      }
+    }
+    for (const [sheet, role] of Object.entries(aliasOverlay.sheetRoleHints ?? {})) {
+      const key = `sheet:${sheet}`
+      if (acceptedSuggestions.has(key)) {
+        overlay.sheetRoleHints![sheet] = role
+      }
+    }
+    const newPlan = mapIsoWorkbook(localGrids, overlay)
+    setLocalPlan(newPlan)
+    setAiSuggestions(null)
+    setAcceptedSuggestions(new Set())
+    toast.success('Applied accepted suggestions — plan updated.')
+  }
+
   return (
     <Dialog open title="Import product data" onClose={onClose} width="max-w-2xl">
       {!canEdit ? (
@@ -218,7 +316,22 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       ) : phase === 'streaming' ? (
         <StreamingPane fileNames={fileNames} stages={stages} />
       ) : phase === 'xlsx-plan' && localPlan ? (
-        <XlsxPlanPane plan={localPlan} onImport={runImportXlsx} onCancel={onClose} />
+        <XlsxPlanPane
+          plan={localPlan}
+          onImport={runImportXlsx}
+          onCancel={onClose}
+          aiSuggestions={aiSuggestions}
+          aiAssistLoading={aiAssistLoading}
+          acceptedSuggestions={acceptedSuggestions}
+          onAiAssist={handleAiAssist}
+          onToggleSuggestion={key => setAcceptedSuggestions(prev => {
+            const s = new Set(prev)
+            if (s.has(key)) s.delete(key); else s.add(key)
+            return s
+          })}
+          onApplyOverlay={handleApplyOverlay}
+          hasUnmapped={localPlan.summary.unmappedColumns.length > 0 || localPlan.summary.sheetsSkipped.length > 0 || (localPlan.summary.defects ?? []).length > 0}
+        />
       ) : phase === 'review' && bundle ? (
         <ReviewPane
           bundle={bundle} accepted={accepted} toggle={toggle} cardStatus={cardStatus}
@@ -718,10 +831,23 @@ function SplitProductsSection({ proposals }: { proposals: SplitProductProposal[]
 // Mirrors the Section 1 entity-group layout from ImportWorkbookModal, rendered inline
 // in this modal when all uploaded files are XLSX (magic-byte routed to local mapper).
 
-function XlsxPlanPane({ plan, onImport, onCancel }: {
-  plan: ImportPlan; onImport: () => void; onCancel: () => void
+function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading, acceptedSuggestions, onAiAssist, onToggleSuggestion, onApplyOverlay, hasUnmapped }: {
+  plan: ImportPlan
+  onImport: () => void
+  onCancel: () => void
+  aiSuggestions: AISuggestions | null
+  aiAssistLoading: boolean
+  acceptedSuggestions: Set<string>
+  onAiAssist: () => void
+  onToggleSuggestion: (key: string) => void
+  onApplyOverlay: () => void
+  hasUnmapped: boolean
 }) {
   const count = countPlan(plan)
+  const products = plan.products ?? (plan.product ? [plan.product] : [])
+  const defects  = (plan.summary as { defects?: ReviewDefect[] }).defects ?? []
+  const notices  = (plan.summary as { notices?: ImportNotice[] }).notices ?? []
+
   const GROUPS: { label: string; Icon: typeof IconCoverage; items: typeof plan.coverages }[] = [
     { label: 'Coverages', Icon: IconCoverage, items: plan.coverages ?? [] },
     { label: 'Forms',     Icon: IconFile,     items: plan.forms     ?? [] },
@@ -730,36 +856,87 @@ function XlsxPlanPane({ plan, onImport, onCancel }: {
     { label: 'RT tables', Icon: IconTable,    items: plan.rtTables  ?? [] },
   ]
 
+  // Flatten AI suggestions into keyed items for display.
+  const aiItems: { key: string; label: string; detail: string; confidence: number; citation: string }[] = []
+  if (aiSuggestions) {
+    for (const [field, aliases] of Object.entries(aiSuggestions.aliasOverlay.columnAliases ?? {})) {
+      for (const alias of aliases) {
+        const key = `col:${field}:${alias}`
+        aiItems.push({ key, label: `Column alias`, detail: `"${alias}" → ${field}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
+      }
+    }
+    for (const [raw, cat] of Object.entries(aiSuggestions.aliasOverlay.enumOverrides ?? {})) {
+      const key = `enum:${raw}`
+      aiItems.push({ key, label: `Enum crosswalk`, detail: `"${raw}" → ${cat}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
+    }
+    for (const [sheet, role] of Object.entries(aiSuggestions.aliasOverlay.sheetRoleHints ?? {})) {
+      const key = `sheet:${sheet}`
+      aiItems.push({ key, label: `Sheet role`, detail: `"${sheet}" → ${role}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 max-h-[52vh] overflow-y-auto -mx-1 px-1">
+      <div className="flex flex-col gap-3 max-h-[56vh] overflow-y-auto -mx-1 px-1">
 
-        {/* Product identity */}
-        <div className="flex items-center gap-3 rounded-[12px] p-3.5"
-          style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
-          <span className="flex items-center justify-center w-9 h-9 rounded-[10px] shrink-0"
-            style={{ background: 'var(--gradient-accent)' }}>
-            <IconFile size={18} className="text-white" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-text truncate">
-              {plan.product
-                ? (plan.product.data['name'] as string || plan.product.refId)
-                : 'No product detected'}
+        {/* N-product identity cards */}
+        {products.length > 1 ? (
+          <div className="flex flex-col gap-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[.07em] text-dim px-0.5">
+              {products.length} products detected
             </div>
-            <div className="text-xs text-dim flex items-center gap-1.5 flex-wrap">
-              {plan.product?.refId && (
-                <span className="font-mono text-accent">{plan.product.refId}</span>
-              )}
-              <span className="text-faint">·</span>
-              <span className="tnum text-faint">{count} entities</span>
-              {plan.summary.warnings.length > 0 && (
-                <><span className="text-faint">·</span>
-                  <span className="text-warn">{plan.summary.warnings.length} warnings</span></>
-              )}
+            {products.map(pd => {
+              const pdCoverages = (plan.coverages ?? []).filter(c =>
+                (c.refId ?? '').toUpperCase().startsWith((pd.refId ?? '').slice(0, 2).toUpperCase()),
+              )
+              return (
+                <div key={pd.refId} className="flex items-center gap-3 rounded-[12px] p-3"
+                  style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
+                  <span className="flex items-center justify-center w-8 h-8 rounded-[9px] shrink-0"
+                    style={{ background: 'var(--gradient-accent)' }}>
+                    <IconFile size={15} className="text-white" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-text truncate">
+                      {pd.data['name'] as string || pd.refId}
+                    </div>
+                    <div className="text-xs text-dim flex items-center gap-1.5">
+                      <span className="font-mono text-accent">{pd.refId}</span>
+                      <span className="text-faint">·</span>
+                      <span className="tnum text-faint">{pdCoverages.length} coverages</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-[12px] p-3.5"
+            style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
+            <span className="flex items-center justify-center w-9 h-9 rounded-[10px] shrink-0"
+              style={{ background: 'var(--gradient-accent)' }}>
+              <IconFile size={18} className="text-white" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-text truncate">
+                {plan.product
+                  ? (plan.product.data['name'] as string || plan.product.refId)
+                  : 'No product detected'}
+              </div>
+              <div className="text-xs text-dim flex items-center gap-1.5 flex-wrap">
+                {plan.product?.refId && (
+                  <span className="font-mono text-accent">{plan.product.refId}</span>
+                )}
+                <span className="text-faint">·</span>
+                <span className="tnum text-faint">{count} entities</span>
+                {plan.summary.warnings.length > 0 && (
+                  <><span className="text-faint">·</span>
+                    <span className="text-warn">{plan.summary.warnings.length} warnings</span></>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Entity groups */}
         <div className="flex flex-col gap-2">
@@ -791,6 +968,49 @@ function XlsxPlanPane({ plan, onImport, onCancel }: {
           ))}
         </div>
 
+        {/* Review defects (unmapped enums) */}
+        {defects.length > 0 && (
+          <section className="rounded-[12px] overflow-hidden"
+            style={{ border: '1px solid var(--color-warn-line, var(--color-border))' }}>
+            <div className="flex items-center gap-2 px-3.5 py-2.5"
+              style={{ background: 'var(--color-warn-soft, var(--color-raised))' }}>
+              <IconWarning size={15} className="text-warn" />
+              <h4 className="text-[12px] font-semibold uppercase tracking-[.07em] text-text flex-1">
+                Review defects
+              </h4>
+              <span className="text-[11px] text-warn tnum">{defects.length}</span>
+            </div>
+            <ul className="flex flex-col gap-1 px-3.5 py-2.5">
+              {defects.slice(0, 8).map((d, i) => (
+                <li key={i} className="text-xs text-dim flex items-start gap-1.5">
+                  <span className="shrink-0 mt-0.5 px-1 py-px rounded text-[10px] font-mono"
+                    style={{ background: 'var(--color-warn-soft)', color: 'var(--color-warn)' }}>
+                    {d.code}
+                  </span>
+                  <span>
+                    {d.field && <><span className="font-medium">{d.field}</span> · </>}
+                    {d.rawValue && <span className="font-mono">"{d.rawValue}"</span>}
+                    {d.rowRef && <span className="text-faint"> @ {d.rowRef}</span>}
+                  </span>
+                </li>
+              ))}
+              {defects.length > 8 && (
+                <li className="text-xs text-faint">+{defects.length - 8} more defects</li>
+              )}
+            </ul>
+          </section>
+        )}
+
+        {/* Notices (e.g. forms_applicability_merged) */}
+        {notices.length > 0 && (
+          <section className="rounded-[12px] p-3"
+            style={{ background: 'var(--color-raised)', border: '1px solid var(--color-border)' }}>
+            {notices.map((n, i) => (
+              <p key={i} className="text-xs text-dim">{n.message}</p>
+            ))}
+          </section>
+        )}
+
         {/* Warnings */}
         {plan.summary.warnings.length > 0 && (
           <section className="rounded-[12px] overflow-hidden"
@@ -813,12 +1033,85 @@ function XlsxPlanPane({ plan, onImport, onCancel }: {
             </ul>
           </section>
         )}
+
+        {/* AI Assist suggestions */}
+        {aiSuggestions && aiItems.length > 0 && (
+          <section className="rounded-[12px] overflow-hidden"
+            style={{ border: '1px solid var(--color-accent)', background: 'var(--color-accent-soft)' }}>
+            <div className="flex items-center gap-2 px-3.5 py-2.5">
+              <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-accent flex-1">
+                AI suggestions ({aiItems.length}) — accept to apply
+              </span>
+              {aiSuggestions.meta.dropped > 0 && (
+                <span className="text-[10px] text-faint">{aiSuggestions.meta.dropped} dropped by validator</span>
+              )}
+            </div>
+            <ul className="flex flex-col divide-y" style={{ borderColor: 'var(--color-border)' }}>
+              {aiItems.map(item => {
+                const isAccepted = acceptedSuggestions.has(item.key)
+                const pct = Math.round(item.confidence * 100)
+                return (
+                  <li key={item.key} className="flex items-start gap-3 px-3.5 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-semibold uppercase tracking-[.06em] text-dim">{item.label}</span>
+                        <span className="text-[10px] px-1.5 py-px rounded font-mono"
+                          style={{
+                            background: pct >= 80 ? 'var(--color-good-soft)' : 'var(--color-warn-soft)',
+                            color:      pct >= 80 ? 'var(--color-good)'      : 'var(--color-warn)',
+                          }}>
+                          {pct}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-text mt-0.5">{item.detail}</p>
+                      {item.citation && (
+                        <p className="text-[10px] text-faint font-mono mt-0.5">{item.citation}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onToggleSuggestion(item.key)}
+                      className="shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-[8px]"
+                      style={{
+                        background: isAccepted ? 'var(--color-accent)' : 'var(--color-raised)',
+                        color:      isAccepted ? 'white'               : 'var(--color-dim)',
+                        border:     '1px solid var(--color-border)',
+                      }}>
+                      {isAccepted ? 'Accepted' : 'Accept'}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+            {acceptedSuggestions.size > 0 && (
+              <div className="px-3.5 py-2.5 flex justify-end"
+                style={{ borderTop: '1px solid var(--color-border)' }}>
+                <Button variant="primary" onClick={onApplyOverlay}>
+                  Apply {acceptedSuggestions.size} accepted <IconArrowRight size={13} />
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {aiSuggestions && aiItems.length === 0 && (
+          <p className="text-xs text-dim px-1">
+            AI found no additional mappings — the workbook appears fully deterministic.
+          </p>
+        )}
       </div>
 
       {/* Footer */}
       <div className="flex items-center justify-between gap-2 pt-1"
         style={{ borderTop: '1px solid var(--color-border)' }}>
-        <span className="text-xs text-faint">{count} item{count !== 1 ? 's' : ''} will be written</span>
+        <div className="flex items-center gap-2">
+          {hasUnmapped && !aiSuggestions && (
+            <Button variant="ghost" onClick={onAiAssist} disabled={aiAssistLoading}>
+              {aiAssistLoading ? <><IconSpinner size={14} className="animate-spin" /> Analyzing…</> : 'AI Assist'}
+            </Button>
+          )}
+          <span className="text-xs text-faint">{count} item{count !== 1 ? 's' : ''} will be written</span>
+        </div>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onCancel}>Cancel</Button>
           <Button variant="primary" onClick={onImport} disabled={count === 0 || !plan.product}>

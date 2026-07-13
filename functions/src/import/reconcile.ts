@@ -114,11 +114,14 @@ export function buildEmptyBundle(
     unmappedColumns:  [],
     sheetsRecognized: [],
     sheetsSkipped:    [],
+    defects:          [],
+    notices:          [],
   }
 
   const emptyPlan: ImportPlan = {
     productId:     null,
     product:       null,
+    products:      [],
     coverages:     [],
     forms:         [],
     rules:         [],

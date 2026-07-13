@@ -289,7 +289,7 @@ export interface RTTableDimension {
 
 // ─── Forms ───────────────────────────────────────────────────────────────────
 
-export type FormCategory        = 'BASE_COVERAGE' | 'DECLARATIONS' | 'ENDORSEMENT' | 'EXCLUSION' | 'AMENDATORY' | 'POLICY_NOTICE'
+export type FormCategory        = 'BASE_COVERAGE' | 'DECLARATIONS' | 'ENDORSEMENT' | 'EXCLUSION' | 'AMENDATORY' | 'POLICY_NOTICE' | 'SCHEDULE' | 'POLICY_CONDITIONS' | 'OTHER' | 'MARKETING'
 export type AttachmentCondition = 'RULE' | 'NONE'
 export type DynamicFieldType    = 'TEXT' | 'CURRENCY' | 'DATE' | 'LIST' | 'PERCENT'
 

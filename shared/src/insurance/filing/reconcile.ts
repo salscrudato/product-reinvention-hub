@@ -285,10 +285,12 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
     unmappedColumns: [],
     sheetsRecognized: [`rate order · ${ex.rateOrder.variables.length} variables`, `manual · ${ex.manual.rules.length} rules`, `policy form · ${ex.baseFormNumber}`],
     sheetsSkipped: [],
+    defects: [],
+    notices: [],
   }
 
   const plan: ImportPlan = {
-    productId, product, coverages, forms, rules, formRules: [],
+    productId, product, products: [product], coverages, forms, rules, formRules: [],
     ratingProgram, ldTables, rtTables, summary,
   }
 
