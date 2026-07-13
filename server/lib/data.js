@@ -21,7 +21,12 @@ const router = express.Router()
 // (pooled today; a promoted tenant gets its own container with no change here). Every
 // tenant-scoped read/write below goes through this, so isolation follows the seam.
 const storeFor = (tid) => resolveTenantStore(tid).docs
-const MAX_LIST = 1000
+// Upper bound on rows returned by /db/list. The app subscribes to whole collections
+// (e.g. 'forms') and filters client-side, so this cap also bounds what a product view
+// can see. A single imported product can carry a large forms catalogue (the CORE spec
+// has ~1359 forms), so 1000 silently truncated them. 6000 comfortably covers a realistic
+// single-tenant forms library while still guarding the heap/RU budget.
+const MAX_LIST = 6000
 const BATCH_OPS = 96
 const FIELD_RE = /^[A-Za-z0-9_.]+$/ // property-name allow-list; prevents SQL structure-injection via where/orderBy fields
 

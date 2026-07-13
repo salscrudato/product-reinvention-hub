@@ -951,10 +951,24 @@ function parseRules(grid: IsoGrid, ctx: Ctx): PlannedEntity[] {
   const at = (r: IsoCell[], k: string) => (k in col ? (r[col[k]] ?? null) : null)
 
   const byId = new Map<string, PlannedEntity>()
+  let synthSeq = 0
   for (let r = hr + 1; r < grid.cells.length; r++) {
     const cells = row(grid, r)
-    const id = clean(at(cells, 'id'))
-    if (!id) continue
+    let id = clean(at(cells, 'id'))
+    if (!id) {
+      // Some workbooks (e.g. the Hagerty CORE spec) declare a RULE ID column but never
+      // populate it — every rule is instead identified by its framework id + category +
+      // condition/outcome. Rather than drop all of them (parseRules would return 0),
+      // synthesize a stable id from the framework/coverage id and a running sequence,
+      // but ONLY for rows that actually carry rule content (a category, sub-category,
+      // condition or outcome). Blank/spacer rows are still skipped.
+      const hasContent = !!(clean(at(cells, 'category')) || clean(at(cells, 'subCategory')) ||
+        clean(at(cells, 'condition')) || clean(at(cells, 'outcome')))
+      if (!hasContent) continue
+      synthSeq += 1
+      const fwBase = (clean(at(cells, 'ids')) || 'RULE').split(/[\s,;]+/)[0]
+      id = `${fwBase}.RULE.${String(synthSeq).padStart(3, '0')}`
+    }
     const forms = splitList(at(cells, 'forms'))
     const existing = byId.get(id)
     if (existing) {
