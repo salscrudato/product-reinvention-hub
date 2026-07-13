@@ -311,7 +311,6 @@ async function verifyPackage(pkg, resolvedItems) {
     body:    JSON.stringify({
       model:       deployment,
       max_tokens:  4096,
-      temperature: 0,
       system:      [{ type: 'text', text: VERIFIER_SYSTEM, cache_control: { type: 'ephemeral' } }],
       tools:       [EXTRACTION_VERDICT_TOOL],
       tool_choice: { type: 'tool', name: 'extraction_verdict' },

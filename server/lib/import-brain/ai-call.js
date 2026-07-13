@@ -2,7 +2,7 @@
 // server/lib/import-brain/ai-call.js — shared AI call helpers for the brain stages.
 // Wraps the Anthropic Messages API and OpenAI Chat API (via Foundry) with:
 //   - fleet cost guard (guard before, record after)
-//   - temperature: 0 on all Claude calls (OpenAI o-series does not support temperature)
+//   - temperature omitted (deprecated on claude-opus-4-8/haiku-4-5; o-series never accepts it)
 //   - 90s timeout (brain calls can be longer than the chat 120s timeout)
 //   - Honest throw on budget ceiling or upstream error (no fabricated answers)
 
@@ -29,7 +29,7 @@ function resolveOpenAI(deploymentConst, budget) {
 }
 
 // ─── Anthropic Messages API call ──────────────────────────────────────────────
-// For Claude models (haiku, opus). Sets temperature: 0 on every structured call.
+// For Claude models (haiku, opus). temperature is deprecated on these models — omit it.
 // If tools + toolName are provided, uses forced tool_choice and returns the tool input.
 // Otherwise returns the first text block raw.
 
@@ -37,7 +37,6 @@ async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, 
   const body = {
     model: deployment,
     max_tokens: maxTokens,
-    temperature: 0,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
   }

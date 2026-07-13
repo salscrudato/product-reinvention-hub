@@ -45,7 +45,6 @@ async function fetchWithRetry(url, opts, { maxAttempts = 3, timeoutMs = 90_000 }
 // system — string (auto-wrapped with ephemeral cache_control) or block array.
 async function _forcedToolCall(deployment, system, tools, toolName, blocks, instruction, maxTokens, opts = {}) {
   const { thinking = null } = opts
-  const temperature = thinking ? 1 : 0
   const headers = { ...fleet.anthropicHeaders() }
   if (thinking) headers['anthropic-beta'] = 'interleaved-thinking-2025-05-14'
   const systemBlocks = Array.isArray(system)
@@ -54,12 +53,13 @@ async function _forcedToolCall(deployment, system, tools, toolName, blocks, inst
   const body = {
     model: deployment,
     max_tokens: maxTokens,
-    temperature,
     system: systemBlocks,
     tools,
     tool_choice: { type: 'tool', name: toolName },
     messages: [{ role: 'user', content: [...blocks, { type: 'text', text: instruction }] }],
   }
+  // temperature is deprecated on claude-opus-4-8 and claude-haiku-4-5.
+  // Do not include it — omitting it gives deterministic behavior by default.
   if (thinking) body.thinking = thinking
   const upstream = await fetchWithRetry(fleet.anthropicMessagesUrl(), {
     method: 'POST', headers, body: JSON.stringify(body),

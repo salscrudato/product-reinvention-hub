@@ -152,7 +152,6 @@ async function forcedTool(deployment, systemPrompt, tools, toolName, contentBloc
   const body = {
     model:      deployment,
     max_tokens: maxTokens,
-    temperature: 0,
     system:     systemPrompt,
     tools,
     tool_choice: { type: 'tool', name: toolName },

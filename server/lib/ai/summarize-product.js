@@ -86,7 +86,6 @@ async function summarizeProduct(req, res) {
       body: JSON.stringify({
         model: deployment,
         max_tokens: 4096,
-        temperature: 0,
         system: [{ type: 'text', text: SUMMARY_SYSTEM, cache_control: { type: 'ephemeral' } }],
         tools: [SUMMARY_TOOL],
         tool_choice: { type: 'tool', name: 'product_summary' },
