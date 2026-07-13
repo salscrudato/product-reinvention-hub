@@ -236,7 +236,23 @@ async function login(): Promise<string> {
 
 interface LiveResult { bundle: unknown; errors: string[]; spend: unknown }
 
+// Dev is a shared, continuously-deployed environment: a deploy restarts the app and
+// severs in-flight SSE ("fetch: terminated"). Retry the whole import a few times,
+// pausing so the restarted app warms up.
 async function postImport(token: string, files: string[], lobHint?: string, timeoutMs = 900_000): Promise<LiveResult> {
+  let last: LiveResult = { bundle: null, errors: ['not attempted'], spend: null }
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    last = await postImportOnce(token, files, lobHint, timeoutMs)
+    if (last.bundle || last.errors.length === 0) return last
+    const transient = last.errors.some(e => /terminated|fetch failed|ECONNRESET|socket|other side closed/i.test(e))
+    if (!transient) return last
+    log(`    transient stream failure (attempt ${attempt}/3): ${last.errors[0]} — retrying in 45s`)
+    await new Promise(r => setTimeout(r, 45_000))
+  }
+  return last
+}
+
+async function postImportOnce(token: string, files: string[], lobHint?: string, timeoutMs = 900_000): Promise<LiveResult> {
   const documents = files.map(f => ({
     name: basename(f),
     base64: readFileSync(f).toString('base64'),

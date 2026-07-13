@@ -103,7 +103,23 @@ function coveragesFromTokens(tokens: string[]): Array<{ refId?: string; name?: s
   } catch { return [] }
 }
 
+// Dev deploys restart the app mid-stream ("fetch: terminated"); retry transient
+// stream failures with a warm-up pause so shared-environment churn doesn't read
+// as an import failure.
 async function readSse(path: string, bodyData: unknown, token: string, timeoutMs = 60_000): Promise<SseResult> {
+  let last: SseResult | null = null
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    last = await readSseOnce(path, bodyData, token, timeoutMs)
+    if (last.ok || last.bundle) return last
+    const transient = last.errors.some(e => /terminated|fetch failed|ECONNRESET|socket|other side closed/i.test(e))
+    if (!transient) return last
+    log(`    transient stream failure (attempt ${attempt}/3) — retrying in 45s`)
+    await new Promise(r => setTimeout(r, 45_000))
+  }
+  return last!
+}
+
+async function readSseOnce(path: string, bodyData: unknown, token: string, timeoutMs = 60_000): Promise<SseResult> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   const out: SseResult = { status: 0, ok: false, bundle: null, tokens: [], errors: [], notices: [], tools: [], tokenCoverages: [] }
