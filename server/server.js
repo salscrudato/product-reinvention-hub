@@ -56,7 +56,13 @@ const tenantsRateLimit = authRateLimit('tenants', 60, 60 / 3600)
 try { require('./lib/sys-diag').init() } catch (_) { /* non-fatal; host still boots */ }
 
 app.disable('x-powered-by')
-app.use(compression())
+// Compression buffers streamed responses — SSE (text/event-stream) must bypass it
+// or stage-by-stage import/chat progress arrives as one burst at stream end.
+app.use(compression({ filter: (req, res) => {
+  if (String(res.getHeader('Content-Type') || '').includes('text/event-stream')) return false
+  if (req.headers.accept === 'text/event-stream') return false
+  return compression.filter(req, res)
+} }))
 app.use(express.json({ limit: '25mb' }))
 app.use(auth.attachUser)
 

@@ -119,7 +119,7 @@ async function validateEntities(entities, classified, budget, review) {
         deployment:   deployGpt,
         systemPrompt: STAGE5_VALIDATE_SYSTEM,
         userPrompt,
-        maxTokens:    2048,
+        maxTokens:    4096,
         budget,
       }).catch(() => ({ raw: '' }))
 

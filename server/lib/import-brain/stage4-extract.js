@@ -448,6 +448,7 @@ function sheetIsDeterministic(fp, colMap) {
 
 function deterministicExtract(fp, colMap, headerRow, rows, sheetName) {
   const mapped = (colMap.mappings || []).filter(m => m.canonicalField !== null && m.confidence >= DET_MAP_CONFIDENCE)
+  const stateColumns = Array.isArray(colMap.stateColumns) ? colMap.stateColumns : []
   const dominant = dominantEntityKind(colMap)
   const entities = []
 
@@ -464,6 +465,21 @@ function deterministicExtract(fp, colMap, headerRow, rows, sheetName) {
         citation:   { sheet: sheetName, cell: `${colLetter(m.colIndex)}${i + headerRow + 2}`, verbatim: String(v) },
         deterministic: true,
       })
+    }
+    // State-applicability matrix → states[] derived from X-marked columns (the
+    // cross-cutting dimension from first principles — data, not an entity).
+    if (stateColumns.length > 0 && fields.length > 0) {
+      const states = stateColumns
+        .filter(sc => String(cells[sc.colIndex] ?? '').trim().toUpperCase() === 'X')
+        .map(sc => sc.stateCode)
+      if (states.length > 0) {
+        const first = stateColumns.find(sc => String(cells[sc.colIndex] ?? '').trim().toUpperCase() === 'X')
+        fields.push({
+          fieldName: 'states', value: states, confidence: 0.98,
+          citation: { sheet: sheetName, cell: `${colLetter(first.colIndex)}${i + headerRow + 2}`, verbatim: 'X' },
+          deterministic: true,
+        })
+      }
     }
     if (fields.length === 0) continue
 
@@ -592,6 +608,15 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
 
     const rows = gatherRows(fp, lock.headerRowIndex)
     if (rows.length === 0) continue
+
+    // A sheet with ZERO mapped columns cannot be extracted meaningfully — skip it
+    // with an importWarning instead of asking models to extract from nothing
+    // (which produces junk entities that all discard).
+    const mappedColumnCount = (colMap.mappings || []).filter(m => m.canonicalField !== null).length
+    if (mappedColumnCount === 0) {
+      review.push({ kind: 'unmapped-sheet', sheetName: fp.sheetName, detail: `No columns could be mapped on "${fp.sheetName}" (${(colMap.mappings || []).length} columns examined) — sheet skipped; map the columns manually or check the canonical dictionary.` })
+      continue
+    }
 
     const sheetEntities = []
 

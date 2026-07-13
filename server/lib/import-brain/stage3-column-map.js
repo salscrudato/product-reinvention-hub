@@ -188,36 +188,88 @@ async function mapColumns(classified, locks, fpByName, budget, review) {
 
     const entityKinds = DOMAIN_ENTITY_KINDS[sheet.domain] || []
     const dictionary  = buildDomainDictionary(entityKinds)
-    const colMeta     = serialiseColumns(fp, lock.headerRowIndex)
+
+    // ── State-matrix columns are handled DETERMINISTICALLY, never sent to the
+    // mapper: a 51-state X-mark block would dwarf the real columns and blow the
+    // response budget. They surface on the map as stateColumns for stage 4.
+    const stateColumns = []
+    const stateIdxSet  = new Set()
+    if (fp.wideMatrix) {
+      for (const [code, idx] of Object.entries(fp.wideMatrix.stateColIndices || {})) {
+        stateColumns.push({ colIndex: idx, stateCode: code })
+        stateIdxSet.add(idx)
+      }
+      if (fp.wideMatrix.allStatesColIndex != null) stateIdxSet.add(fp.wideMatrix.allStatesColIndex)
+    }
+    // Fallback detection when the layout detector did not flag WIDE_MATRIX but the
+    // sheet still carries a state block: 2-letter-code headers whose cells are X/blank.
+    if (stateColumns.length === 0) {
+      for (const col of fp.columnProfiles || []) {
+        const h = String(col.headerLabel ?? '').trim().toUpperCase()
+        if (/^[A-Z]{2}$/.test(h) && US_STATE_CODES.has(h)) {
+          const sample = (col.distinctSample || []).map(v => String(v ?? '').trim().toUpperCase())
+          if (sample.every(v => v === '' || v === 'X' || v === 'N/A')) {
+            stateColumns.push({ colIndex: col.colIndex, stateCode: h })
+            stateIdxSet.add(col.colIndex)
+          }
+        }
+      }
+    }
+
+    const mappableCols = (fp.columnProfiles || []).filter(c => !stateIdxSet.has(c.colIndex))
 
     const defNames = Object.entries(fp.definitions ?? [])
       .slice(0, 10)
       .map(([, d]) => d.columnName)
       .join(', ') || '(none)'
 
-    const userPrompt = [
-      `Sheet: "${fp.sheetName}" | Domain: "${sheet.domain}"`,
-      `Definitions from this workbook:\n${defNames}`,
-      `\nCanonical field dictionary for this domain:\n${dictionary}`,
-      `\nColumns to map:\n${colMeta}`,
-    ].join('\n')
+    // ── Batch columns so responses never truncate (o-series reasoning tokens
+    // share the completion budget; a 68-column single response cannot fit).
+    const aAll = []
+    const bAll = []
+    let parseFailures = 0
+    for (let start = 0; start < mappableCols.length; start += MAP_BATCH_COLS) {
+      const chunk = mappableCols.slice(start, start + MAP_BATCH_COLS)
+      const colMeta = serialiseColumns({ ...fp, columnProfiles: chunk }, lock.headerRowIndex)
+      const userPrompt = [
+        `Sheet: "${fp.sheetName}" | Domain: "${sheet.domain}"`,
+        `Definitions from this workbook:\n${defNames}`,
+        `\nCanonical field dictionary for this domain:\n${dictionary}`,
+        `\nColumns to map (respond ONLY for columns you can map or that need review — omit the rest):\n${colMeta}`,
+      ].join('\n')
 
-    // REASONER_A (opus) + REASONER_B (gpt-5.1) map independently in parallel.
-    const [rAResult, rBResult] = await Promise.all([
-      callAnthropic({ deployment: deployOpus, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 2048, budget }).catch(() => ({ raw: '' })),
-      callOpenAI({ deployment: deployGpt, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 2048, budget }).catch(() => ({ raw: '' })),
-    ])
+      // REASONER_A (opus) + REASONER_B (gpt-5.1) map independently in parallel.
+      const [rAResult, rBResult] = await Promise.all([
+        callAnthropic({ deployment: deployOpus, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
+        callOpenAI({ deployment: deployGpt, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
+      ])
 
-    const aArr = parseMappings(rAResult.raw)
-    const bArr = parseMappings(rBResult.raw)
+      const aArr = parseMappings(rAResult.raw)
+      const bArr = parseMappings(rBResult.raw)
+      if (!aArr && !bArr) parseFailures++
+      if (aArr) aAll.push(...aArr)
+      if (bArr) bAll.push(...bArr)
+    }
 
-    const mappings    = reconcileMappings(fp.columnProfiles, aArr, bArr, fp.sheetName, review)
+    if (parseFailures > 0) {
+      review.push({ kind: 'low-confidence-map', sheetName: fp.sheetName, detail: `${parseFailures} column-map batch(es) failed to parse from both reasoners — affected columns are unmapped.` })
+    }
+
+    const mappings    = reconcileMappings(mappableCols, aAll.length ? aAll : null, bAll.length ? bAll : null, fp.sheetName, review)
     const unmappedIdx = mappings.filter(m => m.canonicalField === null).map(m => m.colIndex)
 
-    maps.push({ sheetName: fp.sheetName, mappings, unmappedIndices: unmappedIdx })
+    maps.push({ sheetName: fp.sheetName, mappings, unmappedIndices: unmappedIdx, stateColumns })
   }
 
   return maps
 }
+
+const MAP_BATCH_COLS = 24
+
+const US_STATE_CODES = new Set([
+  'AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY',
+  'LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH',
+  'OK','OR','PA','PR','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
+])
 
 module.exports = { mapColumns }
