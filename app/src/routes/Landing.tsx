@@ -5,7 +5,7 @@
 // out from their node. The hero's call-to-action is an inline sign-in form beneath
 // the copy — OTP flow for email users, password flow for bootstrap admins.
 // Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
 import type { TenantInfo } from '../lib/backend'
@@ -317,9 +317,9 @@ function HeroSignIn() {
   const [tenantPinned, setTenantPinned] = useState(false)
   const [error,        setError]        = useState('')
   const [loading,      setLoading]      = useState(false)
-  // adminDetected: UI-only hint that 'admin' username was typed (auth remains server-validated).
-  const [adminDetected, setAdminDetected] = useState(false)
-  const adminTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  // adminDetected: derived synchronously so clicking immediately after typing 'admin' works.
+  // Auth remains server-validated — this only controls which UI branch to show.
+  const adminDetected = identifier.trim().toLowerCase() === 'admin' && !identifier.includes('@')
 
   useEffect(() => {
     adapter.auth.listTenants().then(list => {
@@ -334,12 +334,6 @@ function HeroSignIn() {
 
   function handleIdentifierChange(value: string) {
     setIdentifier(value)
-    setAdminDetected(false)
-    clearTimeout(adminTimer.current)
-    // Detect 'admin' username to show password drop-down (UI only — server validates)
-    if (value.trim().toLowerCase() === 'admin' && !value.includes('@')) {
-      adminTimer.current = setTimeout(() => setAdminDetected(true), 400)
-    }
   }
 
   function inferTenant(username: string) {
