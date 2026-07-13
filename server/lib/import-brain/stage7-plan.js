@@ -47,6 +47,26 @@ function citationString(cit) {
   return `${cit.sheet ?? ''}!${cit.cell ?? ''}`.replace(/^!/, '')
 }
 
+// Enum folding: deterministic extraction copies cell bytes; the canonical model
+// stores normalized enum tokens. Values fold to the canonical token when the source
+// is a faithful synonym — citations keep the verbatim source text.
+const ENUM_FOLD = {
+  requirement: [[/^(m|mand|mandatory|required|req)$/i, 'MANDATORY'], [/^(o|opt|optional)$/i, 'OPTIONAL']],
+  source:      [[/^(bureau|iso|aais|ncci|acord)$/i, 'BUREAU'], [/^(proprietary|prop|carrier)$/i, 'PROPRIETARY']],
+  status:      [[/^active$/i, 'ACTIVE'], [/^inactive$/i, 'INACTIVE'], [/^future$/i, 'FUTURE']],
+  claimsBasis: [[/^occ(urrence)?$/i, 'OCCURRENCE'], [/^claims[- ]?made$/i, 'CLAIMS_MADE']],
+}
+
+function foldEnums(data) {
+  for (const [field, rules] of Object.entries(ENUM_FOLD)) {
+    const v = data[field]
+    if (typeof v !== 'string') continue
+    for (const [re, canonical] of rules) {
+      if (re.test(v.trim())) { data[field] = canonical; break }
+    }
+  }
+}
+
 /** Convert a BrainEntity into a PlannedEntity ({docId, refId, label, data}). */
 function toPlanned(entity, extraData) {
   const refId = entityRefId(entity)
@@ -56,6 +76,13 @@ function toPlanned(entity, extraData) {
     data[f.fieldName] = f.value
   }
   if (refId && !data.refId && entity.kind !== 'form') data.refId = refId
+  // PCM sheets carry separate product / coverage / sub-coverage name columns per
+  // row; the entity's OWN name is the most specific one present (canonicalMap's
+  // coverageName/subCoverageName → name semantics).
+  const ownName = [data.subCoverageName, data.coverageName, data.name]
+    .find(v => typeof v === 'string' && v.trim() !== '')
+  if (ownName) data.name = ownName
+  foldEnums(data)
   // Provenance summary mirrors the filing path's coverage shape (confidence + citation
   // live in data so the review UI can render them without a side lookup).
   data.confidence = entity.overallConfidence
@@ -65,7 +92,7 @@ function toPlanned(entity, extraData) {
   return {
     docId: toDocId(refId, `${entity.kind}-${entity.sourceRowIndex}`),
     refId,
-    label: entityLabel(entity),
+    label: (typeof data.name === 'string' && data.name.trim()) ? data.name : entityLabel(entity),
     data,
   }
 }
