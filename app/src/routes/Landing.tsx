@@ -284,9 +284,11 @@ function SalLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
           <button
             type="submit"
             disabled={loading || !pass}
-            className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[11px] text-white text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn-wave-shine inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[11px] text-white text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 4px 14px var(--glow-accent)' }}
           >
+            <span aria-hidden="true" className="wave-shine-span pointer-events-none absolute inset-0"
+              style={{ background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,.18) 50%,transparent 100%)', transform: 'translateX(-180%) skewX(-20deg)' }} />
             {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
@@ -497,9 +499,11 @@ function HeroSignIn() {
       <button
         type="submit"
         disabled={buttonDisabled}
-        className="group inline-flex items-center justify-center gap-2 h-12 px-7 rounded-[13px] text-white text-[15px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+        className="btn-wave-shine group inline-flex items-center justify-center gap-2 h-12 px-7 rounded-[13px] text-white text-[15px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
         style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 8px 24px var(--glow-accent)' }}
       >
+        <span aria-hidden="true" className="wave-shine-span pointer-events-none absolute inset-0"
+          style={{ background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,.18) 50%,transparent 100%)', transform: 'translateX(-180%) skewX(-20deg)' }} />
         {loading && <IconSpinner size={18} className="animate-spin" aria-hidden="true" />}
         {loading ? (step === 'otp-sent' ? 'Verifying…' : step === 'admin-pass' ? 'Signing in…' : 'Sending…') : buttonLabel}
         {!loading && <IconArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />}

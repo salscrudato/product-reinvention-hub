@@ -16,7 +16,7 @@
 // Story cards render the shaped user story: canonical title, type chip, affected surface +
 // refId chip (monospace), collapsible acceptance criteria, a vote button + count, the live
 // WSJF priorityScore, and the heat bar. Inbox sorts by priorityScore (desc), then heat.
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
@@ -26,7 +26,7 @@ import {
 import {
   IconArrowUp, IconLink, IconCheckCircle, IconCheck, IconTrash, IconCamera, IconExpand, IconCopy,
   IconDrag, IconChevronLeft, IconChevronRight, IconChevronDown, IconSearch, IconClose, IconArchive,
-  IconRestore, IconActivity, IconIdea, IconBug, IconHeart, type IconType,
+  IconRestore, IconActivity, IconIdea, IconBug, IconHeart, IconDownload, type IconType,
 } from '../components/ui/icons'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { conflictToast } from '../lib/conflict'
@@ -190,6 +190,110 @@ function buildCardPrompt(fb: FeedbackDoc): string {
   return lines.join('\n')
 }
 
+// ─── CSV export ───────────────────────────────────────────────────────────────
+
+function exportCsv(items: FeedbackDoc[]) {
+  const header = ['ID', 'Title', 'Type', 'Status', 'Impact', 'Effort', 'Votes', 'Priority', 'Surface', 'Created']
+  const rows = items.map(fb => {
+    const ctx = fb.context as { label?: string } | undefined
+    return [
+      fb.id,
+      `"${(fb.title ?? '').replace(/"/g, '""')}"`,
+      fb.type,
+      fb.status,
+      fb.impact ?? '',
+      fb.effort ?? '',
+      fb.votes?.count ?? 0,
+      priorityOf(fb).toFixed(1),
+      `"${(ctx?.label ?? '').replace(/"/g, '""')}"`,
+      new Date(toMillis(fb.createdAt)).toISOString().split('T')[0],
+    ].join(',')
+  })
+  const csv = [header.join(','), ...rows].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `feedback-${new Date().toISOString().split('T')[0]}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+// ─── Insights bar ─────────────────────────────────────────────────────────────
+// A compact stats strip: active item count, by-type breakdown with colour dots,
+// shipped-this-month count, and CSV export. Visible only once items load.
+
+function InsightsBar({ allItems, visible, isAdmin, onExport }: {
+  allItems: FeedbackDoc[]
+  visible: FeedbackDoc[]
+  isAdmin: boolean
+  onExport: () => void
+}) {
+  const active   = visible.filter(f => f.status !== 'DECLINED')
+  const ideas    = active.filter(f => f.type === 'IDEA').length
+  const issues   = active.filter(f => f.type === 'ISSUE').length
+  const praise   = active.filter(f => f.type === 'PRAISE').length
+  const avgPri   = active.length > 0
+    ? (active.reduce((s, f) => s + priorityOf(f), 0) / active.length).toFixed(1)
+    : null
+
+  const cutoff = Date.now() - 30 * 86_400_000
+  const shippedThisMonth = allItems.filter(f => f.status === 'SHIPPED' && toMillis(f.updatedAt) >= cutoff).length
+
+  return (
+    <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap text-[12px] px-3 py-2 rounded-[10px] bg-raised"
+      style={{ border: '1px solid var(--color-border)' }}>
+      <span className="text-faint">
+        <span className="font-semibold text-text tabular-nums">{active.length}</span> active
+      </span>
+
+      {ideas > 0 && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-accent)' }} aria-hidden="true" />
+          <span className="tabular-nums font-semibold text-text">{ideas}</span>
+          <span className="text-faint">idea{ideas !== 1 ? 's' : ''}</span>
+        </span>
+      )}
+      {issues > 0 && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-danger)' }} aria-hidden="true" />
+          <span className="tabular-nums font-semibold text-text">{issues}</span>
+          <span className="text-faint">issue{issues !== 1 ? 's' : ''}</span>
+        </span>
+      )}
+      {praise > 0 && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--color-good)' }} aria-hidden="true" />
+          <span className="tabular-nums font-semibold text-text">{praise}</span>
+          <span className="text-faint">praise</span>
+        </span>
+      )}
+
+      {avgPri !== null && (
+        <span className="text-faint">avg priority <span className="font-semibold text-text tabular-nums">{avgPri}</span></span>
+      )}
+
+      {shippedThisMonth > 0 && (
+        <span className="text-faint">
+          <span className="font-semibold text-good tabular-nums">{shippedThisMonth}</span> shipped this month
+        </span>
+      )}
+
+      <span className="flex-1" />
+
+      {isAdmin && (
+        <button type="button" onClick={onExport}
+          className="inline-flex items-center gap-1.5 h-6 px-2 rounded-[7px] text-[11px] font-medium text-dim hover:text-accent hover:bg-accent-soft transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+          title="Export all feedback to CSV">
+          <IconDownload size={12} aria-hidden="true" /> Export CSV
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Board ────────────────────────────────────────────────────────────────────
 
 export default function Feedback() {
@@ -218,6 +322,7 @@ export default function Feedback() {
   const [completing, setCompleting] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setItems(null); setLoadError(false)
@@ -227,6 +332,19 @@ export default function Feedback() {
     } catch { setLoadError(true) }
     return () => unsub()
   }, [reloadKey])
+
+  // "/" or Cmd+F focuses the search field when no input is active.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === '/' || (e.key === 'f' && (e.metaKey || e.ctrlKey))) {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
 
   // Prune optimistic-hide ids once the deletion is confirmed by the live snapshot.
   useEffect(() => {
@@ -366,18 +484,24 @@ export default function Feedback() {
         <div>
           <h1 className="text-xl font-bold text-text">Feedback</h1>
           <p className="text-sm text-dim">
-            Capture with ⌘. · {canEdit ? 'Drag or use ← → to move cards · ' : ''}Vote to surface priorities.
+            Capture with ⌘. · {canEdit ? 'Drag or use ← → to move cards · ' : ''}Vote to surface priorities. Press <kbd className="font-mono text-[11px] px-1 py-px rounded-[4px] bg-raised" style={{ border: '1px solid var(--color-border)' }}>/</kbd> to search.
           </p>
         </div>
       </div>
+
+      {/* Insights bar — stats strip shown once items load */}
+      {items !== null && items.length > 0 && (
+        <InsightsBar allItems={items} visible={visible} isAdmin={isAdmin} onExport={() => exportCsv(items)} />
+      )}
 
       {/* Toolbar — instant typeahead + type + archived */}
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Feedback filters">
         <div className="relative flex-1 min-w-[220px] max-w-sm">
           <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint pointer-events-none" aria-hidden="true" />
           <input
+            ref={searchRef}
             type="text" value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Filter cards…" aria-label="Filter feedback cards"
+            placeholder="Filter cards… (press /)" aria-label="Filter feedback cards"
             className="w-full h-8 pl-8 pr-8 rounded-[9px] bg-surface text-sm text-text placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
             style={{ border: '1px solid var(--color-border)' }}
           />
@@ -762,7 +886,7 @@ function Card({ fb, lane, canEdit, isAdmin, uid, maxHeat, onVote, onMove, onDele
             <button
               type="button"
               onClick={handleCopyPrompt}
-              title="Copy a Claude Code prompt scoped to this story (ADMIN only)"
+              title="Copy a Claude Code prompt scoped to this story (SUPER ADMIN)"
               aria-label={copied ? 'Prompt copied to clipboard' : 'Copy prompt for Claude Code'}
               className={`h-7 inline-flex items-center gap-1 px-2 rounded-[7px] text-[11px] font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${copied ? 'text-good bg-[var(--color-good-soft)]' : 'bg-raised text-dim hover:text-accent hover:bg-accent-soft'}`}
             >

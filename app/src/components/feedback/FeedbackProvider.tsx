@@ -149,7 +149,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const { viewed } = useCapture()
   const location = useLocation()
   const canEdit = canI(user, 'product:write')
-  const isMaintainer = MAINTAINER_EMAIL !== '' && (user?.email ?? '').toLowerCase() === MAINTAINER_EMAIL
+  const isMaintainer = (MAINTAINER_EMAIL !== '' && (user?.email ?? '').toLowerCase() === MAINTAINER_EMAIL) || user?.role === 'SUPER_ADMIN'
 
   // A programmatic prefill (Claims coverage-gap → "Create product feedback"). When set, its
   // context overrides the auto-detected view context for this capture.

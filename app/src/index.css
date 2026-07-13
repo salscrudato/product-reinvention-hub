@@ -504,6 +504,23 @@ h1, h2 { text-wrap: balance; }
 }
 .slide-in-right { animation: slide-in-right .32s var(--ease-spring) both; }
 
+/* ─── Wave-shine for CTA / login buttons ─────────────────────────────────────
+   A light-sweep passes through the button on hover, giving the Mercury-style
+   "wavy" liquid feel. The button needs overflow:hidden (provided by the class)
+   and a .wave-shine-span child that carries the gradient.
+   Only fires when the button is not disabled so the effect stays meaningful. */
+@keyframes wave-shine {
+  0%   { transform: translateX(-180%) skewX(-20deg); }
+  100% { transform: translateX(280%)  skewX(-20deg); }
+}
+.btn-wave-shine {
+  position: relative;
+  overflow: hidden;
+}
+.btn-wave-shine:not(:disabled):hover .wave-shine-span {
+  animation: wave-shine 0.65s ease-out forwards;
+}
+
 /* ─── Search — filter chip add + facet children reveal ───────────────────────────
    Spring pop on chip add/remove and count changes; a shallow slide as a facet's
    children expand. Both neutralised by the global reduced-motion block below. */
