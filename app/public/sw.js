@@ -142,5 +142,5 @@ self.addEventListener('fetch', (event) => {
 //    CACHE_NAME, so the new SW's activate wipes every prior cache. VersionWatcher additionally
 //    prompts a reload. (2) Authenticated data: the ONLY cached /api path is /api/auth/tenants
 //    (public, unauthenticated by design); every other /api/* — including /api/db/*, /api/serff/*,
-//    /api/duckcreek/*, /api/storage/*, and /api/homecheck/v1/inventory/:id session PII — is passed
+//    /api/storage/*, and /api/homecheck/v1/inventory/:id session PII — is passed
 //    straight through and never enters a cache. On logout the page also posts CLEAR_ALL_CACHES.

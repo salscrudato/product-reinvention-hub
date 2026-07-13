@@ -50,12 +50,3 @@ export * from './changeset/diff'
 export * from './registry/stateFilingMatrix'
 // SERFF filing bundle assembler + Texas DOI reviewer lens (pure, deterministic).
 export * from './serff'
-// Product Data Model (neutral, lossless) + deterministic Duck Creek export.
-export * from './pdm/types'
-export * from './pdm/build'
-export * from './pdm/source'
-export * from './duckcreek/guid'
-export * from './duckcreek/xml'
-export * from './duckcreek/mapping'
-export * from './duckcreek/serialize'
-export * from './duckcreek/validate'

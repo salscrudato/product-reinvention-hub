@@ -5,5 +5,5 @@
 // names, and pricing as the rest of the monorepo. This keeps `fleet.ts` the SINGLE SOURCE OF
 // TRUTH for Foundry deployment names in production — no hardcoded model strings in server/lib.
 //
-// Mirrors the shared/src/{duckcreek,serff}/api-server.ts bridge convention.
+// Mirrors the shared/src/serff/api-server.ts bridge convention.
 export * from './fleet'

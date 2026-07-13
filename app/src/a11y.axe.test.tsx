@@ -2,7 +2,6 @@
 // Accessibility (axe) checks for the surfaces added/updated in recent work:
 //   • DisagreementHeatmap  — ensemble divergence table (th scope fix)
 //   • UnifiedImportModal    — the import-review surface
-//   • DuckCreekExportModal  — the Duck Creek "Author" export UI
 //   • HomeCheck             — the guest /home-check consumer surface
 //   • CommandPalette        — ⌘K fuzzy search + actions palette
 //   • PromoteDraftDialog    — typed-confirmation promotion gate
@@ -49,13 +48,11 @@ vi.mock('./context/useUser', () => ({
 
 import { DisagreementHeatmap } from './import/DisagreementHeatmap'
 import { UnifiedImportModal } from './import/UnifiedImportModal'
-import { DuckCreekExportModal } from './components/product/DuckCreekExportModal'
 import HomeCheck from './routes/HomeCheck'
 import { CommandPalette } from './components/palette/CommandPalette'
 import { PromoteDraftDialog } from './components/product/PromoteDraftDialog'
 import { ConflictDiffDialog } from './components/product/ConflictDiffDialog'
-import { PERSONAL_HOME_BUNDLE } from '@pf/shared'
-import type { DuckCreekExportData } from './lib/export/duckcreek'
+import { PH_PRODUCT } from '@pf/shared'
 import type { FieldDisagreement } from '@pf/shared'
 
 const AXE_OPTS = { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } }
@@ -65,11 +62,6 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }))
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
-
-function phExportData(): DuckCreekExportData {
-  const { product, coverages, forms, rules, formRules, ratingProgram, rtTables, ldTables } = PERSONAL_HOME_BUNDLE
-  return { product: { ...product, id: 'ph-id' }, coverages, forms, rules, formRules, ratingProgram, rtTables, ldTables }
-}
 
 const DISAGREEMENTS: FieldDisagreement[] = [
   { fieldPath: 'baseLossCost', fieldLabel: 'Base loss cost', opusValue: '456.93', gptValue: '456.90', adjudicatedValue: '456.93', calibratedConfidence: 0.62 },
@@ -86,12 +78,6 @@ describe('a11y (axe) — new/updated surfaces', () => {
 
   it('UnifiedImportModal (import review) has no accessibility violations', async () => {
     render(<UnifiedImportModal onClose={() => {}} onImported={() => {}} />)
-    await screen.findByRole('dialog')
-    expect(await axeViolations(document.body)).toEqual([])
-  })
-
-  it('DuckCreekExportModal (Author export) has no accessibility violations', async () => {
-    render(<DuckCreekExportModal data={phExportData()} onClose={() => {}} />)
     await screen.findByRole('dialog')
     expect(await axeViolations(document.body)).toEqual([])
   })
@@ -113,7 +99,7 @@ describe('a11y (axe) — new/updated surfaces', () => {
   })
 
   it('PromoteDraftDialog has no accessibility violations', async () => {
-    const ph = PERSONAL_HOME_BUNDLE.product
+    const ph = PH_PRODUCT
     render(
       <PromoteDraftDialog
         product={{ ...ph, id: 'PH.PROD.001', lifecycle: 'DRAFT', rev: 1 } as unknown as Parameters<typeof PromoteDraftDialog>[0]['product']}

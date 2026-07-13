@@ -40,8 +40,6 @@ const SMOKE_TENANT = process.env.SMOKE_TENANT || 'smoke-test'
 
 // ─── fixture manifest (must all exist before any probe runs) ──────────────────
 const FIXTURES = [
-  'samples/duckcreek/DuckCreekXML.xml',
-  'samples/duckcreek/PolicyXML.xml',
   'samples/filings/nj-lemonade-ho/LEM 03 05 23 Lemonade Homeowners_FINAL.pdf',
   'samples/filings/nj-lemonade-ho/NJ HO Manual 02.27.24.pdf',
   'samples/filings/nj-lemonade-ho/NJ HO Rate Order of Calculations.pdf',

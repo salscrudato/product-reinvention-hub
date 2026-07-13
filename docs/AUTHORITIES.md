@@ -18,7 +18,7 @@ Inquiry-only personas (`UNDERWRITING`, `COMPLIANCE`, `CLAIMS`, `ACTUARIAL`, `ANA
 | `product:read` | Read products, coverages, rules, forms, pricing, states |
 | `product:write` | Create / update / delete products and sub-entities (via `mutate()`) |
 | `ai:invoke` | Invoke AI endpoints (chat, summarize, scaffold, draft-rule, etc.) |
-| `filing:generate` | Generate DuckCreek or SERFF filing artifacts |
+| `filing:generate` | Generate SERFF / regulatory filing artifacts |
 | `changeset:approve` | Approve changesets (wired; approval workflow deferred) |
 | `member:manage` | Invite and remove members within own tenant |
 | `role:assign` | Change member roles within own tenant |
@@ -73,7 +73,6 @@ Inquiry-only personas (`UNDERWRITING`, `COMPLIANCE`, `CLAIMS`, `ACTUARIAL`, `ANA
 | `POST /api/ai/reindexProduct` | `product:write` + tenantId | EDITOR+, TENANT_ADMIN+, SUPER_ADMIN |
 | `POST /api/ai/:name (draftRule, scaffoldProduct, unifiedImport)` | `product:write` (inline) | EDITOR+, TENANT_ADMIN+, SUPER_ADMIN |
 | `POST /api/storage/upload` | `EDITOR+` (rank) | No capability migration yet; rank check still correct |
-| `/api/duckcreek/v1/*` | `EDITOR+` (rank) | No capability migration yet; rank check still correct |
 | `/api/serff/v1/bundle` | `EDITOR+` (rank) | No capability migration yet; rank check still correct |
 | `GET /api/tenant-admin/members` | `member:manage` + same-tenant | TENANT_ADMIN only |
 | `POST /api/tenant-admin/members` | `member:manage` + `role:assign` + same-tenant | TENANT_ADMIN only |

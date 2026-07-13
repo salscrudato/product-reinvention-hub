@@ -122,7 +122,6 @@ The following server state is held **in-process** and is NOT shared across App S
 | AI cost guard (spend window) | `server/lib/fleet.js` `windowSpendUsd` | Each instance has its own $25/h ceiling; horizontal scale multiplies effective spend cap |
 | HomeCheck rate limiter buckets | `server/lib/homecheck.js` `_ipBuckets` | IP limits reset on instance restart; different instances track independently |
 | HomeCheck session store | `server/lib/homecheck.js` `_sessions` | Sessions are lost on restart; GET/DELETE after failover to new instance returns 404 |
-| DuckCreek bundle store | `server/lib/duckcreek.js` (Map) | Bundle download after failover returns 404 |
 | JWT revocation cache | `server/lib/auth.js` `_revokedCache` | Cache is per-instance; revocations from Cosmos are re-loaded on first access |
 
 **Action required for scale-out:** Configure the App Service plan to **max 1 instance** (no auto-scale)
