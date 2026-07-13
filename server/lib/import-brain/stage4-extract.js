@@ -585,7 +585,8 @@ function gatherRows(fp, headerRowIndex) {
  * @param {string|undefined}   lobRefIdHint  e.g. 'GL.LOB.001'
  * @returns {Promise<object[]>} BrainEntity[]
  */
-async function extractRows(classified, locks, colMaps, fpByName, budget, review, lobRefIdHint) {
+async function extractRows(classified, locks, colMaps, fpByName, budget, review, lobRefIdHint, onProgress) {
+  const progress = typeof onProgress === 'function' ? onProgress : () => {}
   const allEntities = []
   const lockMap  = new Map()
   const colMapOf = new Map()
@@ -622,6 +623,7 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
 
     // ── Deterministic fast path: confident map + real grid → code extracts ────
     if (sheetIsDeterministic(fp, colMap)) {
+      progress(`${fp.sheetName}: deterministic extraction (${rows.length} rows)`)
       const detEntities = deterministicExtract(fp, colMap, lock.headerRowIndex, rows, fp.sheetName)
       await sampleVerifyMap({ fp, colMap, headerRow: lock.headerRowIndex, rows, detEntities, deployBulk, deployGptMini, budget, review })
       for (const entity of detEntities) {
@@ -689,6 +691,7 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
         sheetName: fp.sheetName, budget, review, deployJudge,
       })
 
+      progress(`${fp.sheetName}: rows ${batchStart}-${batchStart + batch.length - 1} of ${rows.length} extracted`)
       return entities
     }, 3)
 

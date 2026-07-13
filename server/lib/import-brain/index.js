@@ -98,7 +98,8 @@ async function runAdaptiveImportBrain(opts) {
   // ── Stage 4: Row extraction + normalization ────────────────────────────────
   emitStage(emit, 4, 'extract', 'start', 'Extracting rows')
 
-  const entities = await extractRows(classifiedSheets, headerLocks, columnMaps, fpMap, budget, review, lobRefIdHint)
+  const entities = await extractRows(classifiedSheets, headerLocks, columnMaps, fpMap, budget, review, lobRefIdHint,
+    (detail) => emitStage(emit, 4, 'extract', 'progress', detail))
 
   const flagged = entities.filter(e => e.reviewFlag).length
   emitStage(emit, 4, 'extract', 'end', `${entities.length} entities extracted, ${flagged} flagged`)

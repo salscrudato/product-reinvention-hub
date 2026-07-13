@@ -35,6 +35,8 @@ const AUDIT   = resolve(REPO, 'docs/audit')
 
 const MODE_WRITE = process.argv.includes('--write-golden')
 const MODE_LIVE  = process.argv.includes('--live')
+// IMPORT_EVAL_ONLY=GL,IM limits the run to specific format ids (CI slicing).
+const ONLY = (process.env.IMPORT_EVAL_ONLY || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
 
 const F1_TARGET       = 0.95
 const NUMERIC_TARGET  = 0.98
@@ -343,9 +345,11 @@ if (MODE_WRITE) {
   process.exit(0)
 }
 
+const ACTIVE_FORMATS = ONLY.length ? FORMATS.filter(f => ONLY.includes(f.id)) : FORMATS
+
 if (!MODE_LIVE) {
   section('OFFLINE: parse-stability diff vs golden')
-  for (const fmt of FORMATS) {
+  for (const fmt of ACTIVE_FORMATS) {
     const goldenPath = join(GOLDEN, `${fmt.id}.golden.json`)
     if (!existsSync(goldenPath)) { log(`  ⚠ ${fmt.id}: no golden (run --write-golden)`); continue }
     const files = fmt.files.map(f => join(SAMPLES, f)).filter(f => existsSync(f))
@@ -365,7 +369,7 @@ if (!MODE_LIVE) {
   try { token = await login(); log(`  ✓ authenticated (tenant=${IMPORT_TENANT})`) }
   catch (e) { log(`  ✗ ${(e as Error).message}`); process.exit(2) }
 
-  for (const fmt of FORMATS) {
+  for (const fmt of ACTIVE_FORMATS) {
     const goldenPath = join(GOLDEN, `${fmt.id}.golden.json`)
     if (!existsSync(goldenPath)) { log(`  ⚠ ${fmt.id}: no golden — skipped`); continue }
     const files = fmt.files.map(f => join(SAMPLES, f)).filter(f => existsSync(f))

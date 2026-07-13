@@ -119,6 +119,12 @@ async function unifiedImport(req, res) {
   const body = req.body || {}
   sse(res)
 
+  // SSE keepalive: Azure App Service closes connections idle >~230s; long stage-4
+  // extractions can be silent longer than that. Comment lines (":hb") are protocol
+  // no-ops every client ignores. Cleared on end/close.
+  const heartbeat = setInterval(() => { try { res.write(':hb\n\n') } catch { /* closed */ } }, 15_000)
+  res.on('close', () => clearInterval(heartbeat))
+
   // Import path runs with the EXPLICIT no-cap budget: never denied, never degraded,
   // spend fully recorded (fleet.record on every call + per-run brain:spend event).
   const brainMod = getImportBrain()
