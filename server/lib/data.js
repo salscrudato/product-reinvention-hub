@@ -174,11 +174,22 @@ function envelope(tid, payload, actor) {
     const current = await readEntity(tid, path)
     const curRev = current?.rev ?? 0
     if (payload.expectedRev !== undefined && curRev !== payload.expectedRev) { const e = new Error('conflict'); e.code = 'CONFLICT'; throw e }
-    // parentId validation: must resolve to an existing same-tenant entity (DEF-0003)
+    // parentId validation: must resolve to an existing same-tenant entity (DEF-0003).
+    // parentId is a refId (dots, e.g. "GL.COV.001") but coverage docIds are the
+    // dot->dash form of the refId (e.g. "GL-COV-001"; see migrate-to-cosmos.ts and
+    // isoImport dashId). The seed bypasses this envelope so the mismatch never bit it,
+    // but the import path runs through here — so resolve the parent trying the
+    // parentId verbatim AND its dot->dash form. Additive: a genuinely missing parent
+    // still fails (neither candidate resolves).
     if (data.parentId && op !== 'delete') {
-      const s = segs(path)
-      const parentPath = [...s.slice(0, -1), String(data.parentId)].join('/')
-      const parent = await readEntity(tid, parentPath)
+      const base = segs(path).slice(0, -1)
+      const raw = String(data.parentId)
+      const candidates = raw.includes('.') ? [raw, raw.replace(/\./g, '-')] : [raw]
+      let parent = null
+      for (const cand of candidates) {
+        parent = await readEntity(tid, [...base, cand].join('/'))
+        if (parent) break
+      }
       if (!parent) { const e = new Error('invalid_parent'); e.code = 'INVALID_PARENT'; throw e }
     }
     const rev = curRev + 1
