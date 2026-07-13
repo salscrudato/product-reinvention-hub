@@ -24,10 +24,10 @@ export default function AppShell() {
   // (Home → Products → Explorer) but not on product-tab sub-navigation.
   const topSegment = pathname.split('/')[2] ?? 'home'
 
-  // âŒ˜K / Ctrl+K global shortcut
+  // ⌘F / Ctrl+F global shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault()
         setPaletteOpen(p => !p)
       }

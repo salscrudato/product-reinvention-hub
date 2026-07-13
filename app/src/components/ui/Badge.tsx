@@ -38,7 +38,7 @@ export function Badge({ label, color = 'default', mono = false, className = '' }
 // ─── StatusPill ───────────────────────────────────────────────────────────────
 
 const statusColors: Record<Status, BadgeColor>        = { ACTIVE: 'good', INACTIVE: 'default', FUTURE: 'blue' }
-const lifecycleColors: Record<Lifecycle, BadgeColor>  = { LAUNCHED: 'good', APPROVED: 'purple', IN_REVIEW: 'warn', DRAFT: 'default' }
+const lifecycleColors: Record<Lifecycle, BadgeColor>  = { LAUNCHED: 'good', APPROVED: 'purple', IN_REVIEW: 'warn', DRAFT: 'default', RETIRED: 'default' }
 const reviewColors: Record<ReviewStatus, BadgeColor>  = {
   APPROVED: 'good', BUSINESS_REVIEW: 'warn', IN_PROGRESS: 'blue',
   NOT_STARTED: 'default', REJECTED: 'danger',
@@ -57,6 +57,7 @@ const productStatusMeta: Record<Lifecycle, { label: string; color: BadgeColor }>
   IN_REVIEW: { label: 'In review', color: 'warn' },
   APPROVED:  { label: 'Approved',  color: 'purple' },
   LAUNCHED:  { label: 'Live',      color: 'good' },
+  RETIRED:   { label: 'Retired',   color: 'default' },
 }
 export function ProductStatusPill({ lifecycle }: { lifecycle: Lifecycle }) {
   const m = productStatusMeta[lifecycle] ?? productStatusMeta.DRAFT

@@ -72,7 +72,7 @@ function Breadcrumb() {
   )
 }
 
-// Detect Mac so the shortcut badge reads ⌘K instead of Ctrl+K.
+// Detect Mac so the shortcut badge reads ⌘F instead of Ctrl+F.
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 function SuperAdminTenantSwitcher({ currentTenantId }: { currentTenantId: string | null | undefined }) {
@@ -147,12 +147,12 @@ export function Topbar({ onOpenPalette, onOpenMobileSidebar }: TopbarProps) {
         onClick={onOpenPalette}
         className="hidden sm:flex items-center gap-2 px-3 h-8 rounded-[8px] text-sm text-faint bg-raised hover:bg-hover transition-colors"
         style={{ border: '1px solid var(--color-border)', minWidth: 200 }}
-        aria-label={`Search (${isMac ? '⌘K' : 'Ctrl+K'})`}
+        aria-label={`Search (${isMac ? '⌘F' : 'Ctrl+F'})`}
       >
         <IconSearch size={14} aria-hidden="true" />
         <span>Search…</span>
         <kbd className="ml-auto text-xs bg-surface rounded px-1 py-0.5 font-mono text-faint" style={{ border: '1px solid var(--color-border)' }}>
-          {isMac ? '⌘K' : 'Ctrl+K'}
+          {isMac ? '⌘F' : 'Ctrl+F'}
         </kbd>
       </button>
 

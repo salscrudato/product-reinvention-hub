@@ -110,6 +110,8 @@ function TenantsTab() {
   const [creating, setCreating] = useState(false)
   const [draft, setDraft] = useState({ name: '', id: '' })
   const [busy, setBusy] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState<TenantInfo | null>(null)
+  const [removing, setRemoving] = useState(false)
   const load = () => adapter.tenancy.listTenants().then(setTenants).catch(() => setTenants([]))
   useEffect(() => { load() }, [])
 
@@ -119,9 +121,11 @@ function TenantsTab() {
     try { await adapter.tenancy.createTenant(draft.id || draft.name, draft.name); toast.success('Tenant created'); setCreating(false); setDraft({ name: '', id: '' }); load() }
     catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') } finally { setBusy(false) }
   }
-  async function remove(id: string) {
-    if (!window.confirm(`Remove tenant "${id}"? Its data stays partitioned but becomes inaccessible.`)) return
-    try { await adapter.tenancy.deleteTenant(id); toast.success('Tenant removed'); load() } catch { toast.error('Failed') }
+  async function confirmAndRemove() {
+    if (!confirmRemove) return
+    setRemoving(true)
+    try { await adapter.tenancy.deleteTenant(confirmRemove.id); toast.success('Tenant removed'); setConfirmRemove(null); load() }
+    catch { toast.error('Failed') } finally { setRemoving(false) }
   }
 
   if (tenants === null) return <Skeleton className="h-24" />
@@ -134,12 +138,22 @@ function TenantsTab() {
         <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
           {tenants.map(t => (
             <div key={t.id} className="flex items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
-              <div className="flex-1"><div className="text-sm font-medium text-text">{t.name}</div><div className="text-xs text-faint font-mono">{t.id}</div></div>
-              <Button variant="ghost" size="sm" onClick={() => remove(t.id)}><IconUserX size={13} /> Remove</Button>
+              <span className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[11px] font-bold text-white shrink-0" style={{ background: 'var(--gradient-accent)' }}>
+                {t.name.slice(0, 2).toUpperCase()}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-text">{t.name}</div>
+                <div className="text-xs text-faint font-mono">{t.id}</div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(t)}>
+                <IconUserX size={13} /> Remove
+              </Button>
             </div>
           ))}
         </div>
       )}
+
+      {/* New tenant dialog */}
       <Dialog open={creating} onClose={() => setCreating(false)} title="New tenant">
         <div className="flex flex-col gap-4">
           <Input label="Company name" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Acme Insurance" autoFocus />
@@ -147,6 +161,26 @@ function TenantsTab() {
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" size="sm" onClick={() => setCreating(false)} disabled={busy}>Cancel</Button>
             <Button variant="primary" size="sm" onClick={create} disabled={busy || !draft.name}>{busy ? 'Creating…' : 'Create tenant'}</Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Remove confirmation dialog */}
+      <Dialog open={!!confirmRemove} onClose={() => setConfirmRemove(null)} title="Remove tenant" width="max-w-md">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-2.5 rounded-[12px] p-3.5" style={{ background: 'var(--color-danger-badge)', border: '1px solid var(--color-danger)' }}>
+            <IconWarning size={16} className="text-danger shrink-0 mt-0.5" aria-hidden="true" />
+            <p className="text-sm text-dim leading-relaxed">
+              Remove <span className="font-semibold text-text">{confirmRemove?.name}</span> (<span className="font-mono text-xs">{confirmRemove?.id}</span>)?
+              Its data remains partitioned but users will lose access immediately.
+            </p>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={() => setConfirmRemove(null)} disabled={removing}>Cancel</Button>
+            <Button variant="ghost" onClick={() => void confirmAndRemove()} disabled={removing}
+              className="text-danger border-danger/40 hover:bg-danger/10">
+              {removing ? 'Removing…' : 'Remove tenant'}
+            </Button>
           </div>
         </div>
       </Dialog>
@@ -164,12 +198,27 @@ function UsersTab() {
   const [creating, setCreating] = useState(false)
   const [draft, setDraft] = useState<{ username: string; password: string; role: Tier; tenant: string }>({ username: '', password: '', role: 'VIEWER', tenant: '' })
   const [busy, setBusy] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<ManagedUser | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [userSearch, setUserSearch] = useState('')
+
   async function load(after?: string) {
     const result = await adapter.tenancy.listUsers({ limit: USER_PAGE, after }).catch(() => ({ users: [], hasMore: false }))
     if (after) setUsers(prev => [...(prev ?? []), ...result.users])
     else { setUsers(result.users); setHasMore(result.hasMore) }
   }
   useEffect(() => { load(); adapter.tenancy.listTenants().then(setTenants).catch(() => {}) }, [])
+
+  const visibleUsers = useMemo(() => {
+    if (!users) return []
+    const q = userSearch.trim().toLowerCase()
+    if (!q) return users
+    return users.filter(u =>
+      u.username.toLowerCase().includes(q) ||
+      u.role.toLowerCase().includes(q) ||
+      (u.tenants !== '*' && (u.tenants || []).some(t => t.toLowerCase().includes(q)))
+    )
+  }, [users, userSearch])
 
   async function create() {
     if (!draft.username || !draft.password) { toast.error('Username and password required'); return }
@@ -179,28 +228,50 @@ function UsersTab() {
       toast.success('User created'); setCreating(false); setDraft({ username: '', password: '', role: 'VIEWER', tenant: '' }); load()
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') } finally { setBusy(false) }
   }
-  async function remove(u: string) {
-    if (!window.confirm(`Delete user "${u}"?`)) return
-    try { await adapter.tenancy.deleteUser(u); toast.success('User deleted'); load() } catch { toast.error('Failed') }
+  async function confirmAndDelete() {
+    if (!confirmDelete) return
+    setDeleting(true)
+    try { await adapter.tenancy.deleteUser(confirmDelete.username); toast.success('User deleted'); setConfirmDelete(null); load() }
+    catch { toast.error('Failed') } finally { setDeleting(false) }
   }
 
   if (users === null) return <Skeleton className="h-24" />
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center"><Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New user</Button></div>
+      {/* Toolbar: search + new user */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-xs">
+          <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
+          <input
+            value={userSearch}
+            onChange={e => setUserSearch(e.target.value)}
+            placeholder="Search users…"
+            aria-label="Search users"
+            className="w-full h-8 pl-8 pr-3 rounded-[8px] bg-surface border text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25"
+            style={{ borderColor: 'var(--color-border)' }}
+          />
+        </div>
+        <Button variant="primary" size="sm" onClick={() => setCreating(true)} className="ml-auto"><IconPlus size={14} /> New user</Button>
+      </div>
+
       {users.length === 0 ? (
         <EmptyState icon={<IconShield size={26} />} title="No gated users yet" description="No tenant-gated users yet. Create them here — each with a username, password, role and company." />
+      ) : visibleUsers.length === 0 ? (
+        <EmptyState icon={<IconSearch size={24} />} title="No users match" description={`No users match "${userSearch}".`} />
       ) : (
         <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-          {users.map(u => (
-            <div key={u.username} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface" style={{ borderBottom: '1px solid var(--color-border)' }}>
+          {visibleUsers.map(u => (
+            <div key={u.username} className="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface hover:bg-raised transition-colors" style={{ borderBottom: '1px solid var(--color-border)' }}>
               <span className="w-8 h-8 rounded-full text-[11px] font-semibold text-white flex items-center justify-center shrink-0" style={{ background: 'var(--gradient-accent)' }}>{u.username.slice(0, 2).toUpperCase()}</span>
               <div className="flex-1 min-w-[140px]">
                 <div className="text-sm font-medium text-text">{u.username}</div>
                 <div className="text-xs text-faint font-mono">{u.tenants === '*' ? 'all tenants' : ((u.tenants || []).join(', ') || '— no tenant —')}</div>
               </div>
               <Badge label={u.role} color={tierColor[u.role] ?? 'default'} />
-              <Button variant="ghost" size="sm" onClick={() => remove(u.username)}><IconUserX size={13} /> Delete</Button>
+              <button onClick={() => setConfirmDelete(u)} aria-label={`Delete ${u.username}`} title="Delete user"
+                className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-[7px] text-faint hover:text-danger hover:bg-danger/10 transition-colors">
+                <IconUserX size={14} aria-hidden="true" />
+              </button>
             </div>
           ))}
         </div>
@@ -210,10 +281,12 @@ function UsersTab() {
           <button className="text-xs text-accent hover:underline" onClick={() => load(users.at(-1)?.username)}>Load more</button>
         </div>
       )}
+
+      {/* New user dialog */}
       <Dialog open={creating} onClose={() => setCreating(false)} title="New user">
         <div className="flex flex-col gap-4">
           <Input label="Username" value={draft.username} onChange={e => setDraft({ ...draft, username: e.target.value })} placeholder="jane.doe" autoFocus />
-          <Input label="Password" type="text" value={draft.password} onChange={e => setDraft({ ...draft, password: e.target.value })} placeholder="set a password" />
+          <Input label="Password" type="password" value={draft.password} onChange={e => setDraft({ ...draft, password: e.target.value })} placeholder="set a strong password" />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-text" htmlFor="new-role">Role</label>
             <select id="new-role" value={draft.role} onChange={e => setDraft({ ...draft, role: e.target.value as Tier })}
@@ -233,6 +306,26 @@ function UsersTab() {
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" size="sm" onClick={() => setCreating(false)} disabled={busy}>Cancel</Button>
             <Button variant="primary" size="sm" onClick={create} disabled={busy || !draft.username || !draft.password}>{busy ? 'Creating…' : 'Create user'}</Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete user" width="max-w-md">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-2.5 rounded-[12px] p-3.5" style={{ background: 'var(--color-danger-badge)', border: '1px solid var(--color-danger)' }}>
+            <IconWarning size={16} className="text-danger shrink-0 mt-0.5" aria-hidden="true" />
+            <p className="text-sm text-dim leading-relaxed">
+              Permanently delete <span className="font-semibold text-text">{confirmDelete?.username}</span>?
+              This cannot be undone. The user will immediately lose access to all tenants.
+            </p>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)} disabled={deleting}>Cancel</Button>
+            <Button variant="ghost" onClick={() => void confirmAndDelete()} disabled={deleting}
+              className="text-danger border-danger/40 hover:bg-danger/10">
+              {deleting ? 'Deleting…' : 'Delete user'}
+            </Button>
           </div>
         </div>
       </Dialog>

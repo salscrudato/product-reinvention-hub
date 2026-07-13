@@ -4,7 +4,7 @@
 // ─── Governance ─────────────────────────────────────────────────────────────
 
 export type Status       = 'ACTIVE' | 'INACTIVE' | 'FUTURE'
-export type Lifecycle    = 'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'LAUNCHED'
+export type Lifecycle    = 'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'LAUNCHED' | 'RETIRED'
 export type ReviewStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'BUSINESS_REVIEW' | 'APPROVED' | 'REJECTED'
 // Full role set (two-plane model). See docs/AUTHORITIES.md for the capability matrix.
 // Tenant plane: VIEWER, inquiry personas, EDITOR, TENANT_ADMIN.

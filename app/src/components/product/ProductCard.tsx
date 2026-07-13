@@ -6,7 +6,7 @@
 // self-labelled (icon + word), so no native `title` tooltips are used.
 import { useNavigate } from 'react-router-dom'
 import { ProductStatusPill, Badge } from '../ui'
-import { IconCoverage, IconPricing, IconForm, IconStates, IconRule, IconSparkle, IconChevronRight, IconTrash } from '../ui/icons'
+import { IconCoverage, IconPricing, IconForm, IconStates, IconRule, IconSparkle, IconChevronRight, IconTrash, IconArchive } from '../ui/icons'
 import type { Product } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
@@ -18,10 +18,11 @@ const TILES = [
   { key: 'rules',     label: 'Rules',     Icon: IconRule     },
 ] as const
 
-export function ProductCard({ p, canEdit, onDelete }: {
+export function ProductCard({ p, canEdit, onDelete, onRetire }: {
   p: WithId<Product>
   canEdit?: boolean
   onDelete?: () => void
+  onRetire?: () => void
 }) {
   const navigate = useNavigate()
   const go = (sub = 'overview') => navigate(`/app/products/${p.id}/${sub}`)
@@ -67,17 +68,27 @@ export function ProductCard({ p, canEdit, onDelete }: {
           ))}
         </div>
 
-        {/* Footer — AI summary + (optional) delete */}
+        {/* Footer — AI summary + (optional) retire + delete */}
         <div className="flex items-center justify-between gap-2 text-xs pt-3 mt-auto" style={{ borderTop: '1px solid var(--color-border)' }}>
           <button onClick={() => go('overview')} aria-label={`${p.name} — AI summary`}
             className="shrink-0 inline-flex items-center gap-1 pl-1.5 pr-2 py-1 rounded-[7px] text-[11px] font-medium text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
             <IconSparkle size={13} />Summary
           </button>
-          {canEdit && onDelete && (
-            <button onClick={onDelete} aria-label={`Delete ${p.name}`} title={`Delete ${p.name}`}
-              className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-[7px] text-faint hover:text-danger hover:bg-danger/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-danger">
-              <IconTrash size={14} aria-hidden="true" />
-            </button>
+          {canEdit && (onRetire || onDelete) && (
+            <div className="flex items-center gap-1">
+              {onRetire && p.lifecycle !== 'RETIRED' && (
+                <button onClick={onRetire} aria-label={`Retire ${p.name}`} title="Retire product"
+                  className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-[7px] text-faint hover:text-warn hover:bg-warn/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-warn">
+                  <IconArchive size={14} aria-hidden="true" />
+                </button>
+              )}
+              {onDelete && (
+                <button onClick={onDelete} aria-label={`Delete ${p.name}`} title="Delete product"
+                  className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-[7px] text-faint hover:text-danger hover:bg-danger/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-danger">
+                  <IconTrash size={14} aria-hidden="true" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -20,6 +20,7 @@ import { Button, Skeleton, EmptyState } from '../components/ui'
 import { IconPlus, IconDownload, IconProduct, IconSearch, IconCards, IconLayers, IconRefresh } from '../components/ui/icons'
 import { ProductCard } from '../components/product/ProductCard'
 import { DeleteProductDialog } from '../components/product/DeleteProductDialog'
+import { RetireProductDialog } from '../components/product/RetireProductDialog'
 import { PageHero } from '../components/ui/PageHero'
 import { ProductHierarchy } from '../components/product/ProductHierarchy'
 import { exportPortfolioExcel, type ProductExport } from '../lib/export/excel'
@@ -70,7 +71,9 @@ export default function Products() {
   const [seg,      setSeg]      = useState<SegmentSelection>({})
   const [exporting, setExporting] = useState(false)
   const [view, setView] = useState<ProductView>(readView)
-  const [deleteFor, setDeleteFor] = useState<WithId<Product> | null>(null)
+  const [deleteFor,  setDeleteFor]  = useState<WithId<Product> | null>(null)
+  const [retireFor,  setRetireFor]  = useState<WithId<Product> | null>(null)
+  const [showRetired, setShowRetired] = useState(false)
 
   const setViewPersist = (m: ProductView) => { setView(m); localStorage.setItem(VIEW_KEY, m) }
 
@@ -113,6 +116,7 @@ export default function Products() {
 
   // Published portfolio only (LAUNCHED); drafts are authored + promoted in the Builder.
   const launched = useMemo(() => products.filter(p => p.lifecycle === 'LAUNCHED'), [products])
+  const retired  = useMemo(() => products.filter(p => p.lifecycle === 'RETIRED'),  [products])
 
   // Registry-driven facet axes — drive both the search haystack and the facet-chip rows.
   const axes = useMemo(() => deriveSegmentAxes(), [])
@@ -254,12 +258,37 @@ export default function Products() {
               one motion language. Capped + reduced-motion-neutralised (see index.css). */}
           {visible.map((p, i) => (
             <div key={p.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(i, 8) * 40}ms` } as React.CSSProperties}>
-              <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} />
+              <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} onRetire={() => setRetireFor(p)} />
             </div>
           ))}
         </div>
       ) : (
         <ProductHierarchy products={visible} byProduct={inventory.byProduct} loading={inventory.loading} error={inventory.error} groupBy="none" />
+      )}
+
+      {/* Retired products — shown when the toggle is open and at least one exists */}
+      {canEdit && retired.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => setShowRetired(r => !r)}
+            className="inline-flex items-center gap-2 self-start text-xs text-dim hover:text-text transition-colors"
+          >
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+              style={{ transform: showRetired ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+            {showRetired ? 'Hide' : 'Show'} retired ({retired.length})
+          </button>
+          {showRetired && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 opacity-60">
+              {retired.map(p => (
+                <div key={p.id} className="h-full">
+                  <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {deleteFor && user && (
@@ -268,6 +297,14 @@ export default function Products() {
           actor={{ uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }}
           onClose={() => setDeleteFor(null)}
           onDeleted={() => setDeleteFor(null)}
+        />
+      )}
+      {retireFor && user && (
+        <RetireProductDialog
+          product={retireFor}
+          actor={{ uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }}
+          onClose={() => setRetireFor(null)}
+          onRetired={() => setRetireFor(null)}
         />
       )}
     </div>

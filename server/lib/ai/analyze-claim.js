@@ -73,7 +73,7 @@ async function analyzeClaim(req, res) {
     const userInstruction = lastUser || 'Analyze claim coverage for the attached form.'
     emit(res, { t: 'tool', name: 'emit_determination', phase: 'start', summary: 'Analyzing claim coverage' })
     const raw = await _forcedToolCall(deployment, systemBlocks, [_EMIT_DETERMINATION], 'emit_determination',
-      [sandboxNote, contentBlock], userInstruction, 4096, { thinking: { type: 'enabled', budget_tokens: 2048 } })
+      [sandboxNote, contentBlock], userInstruction, 4096)
     const citedReasoning = (Array.isArray(raw.reasoning) ? raw.reasoning : []).filter((r) => r && /\[/.test(r))
     if (citedReasoning.length === 0 && (raw.verdict === 'COVERED' || raw.verdict === 'NOT_COVERED' || raw.verdict === 'PARTIAL')) {
       raw.verdict = 'NOT_ADDRESSED'
