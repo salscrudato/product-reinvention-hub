@@ -1,10 +1,11 @@
 // Topbar — breadcrumb, global search (opens palette), presence slot, user menu.
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { IconSearch, IconSignOut, IconChevronDown, IconHome, IconKey } from '../ui/icons'
+import { IconSearch, IconSignOut, IconChevronDown, IconHome, IconKey, IconLayers } from '../ui/icons'
 import { ThemeToggle } from './ThemeToggle'
 import { useUser } from '../../context/useUser'
-import { adapter } from '../../lib/backend'
+import { adapter, setSuperAdminTenant } from '../../lib/backend'
+import type { TenantInfo } from '../../lib/backend'
 import type { Product } from '@pf/shared'
 
 interface TopbarProps { onOpenPalette: () => void; onOpenMobileSidebar?: () => void }
@@ -74,6 +75,44 @@ function Breadcrumb() {
 // Detect Mac so the shortcut badge reads ⌘K instead of Ctrl+K.
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
+function SuperAdminTenantSwitcher({ currentTenantId }: { currentTenantId: string | null | undefined }) {
+  const [tenants, setTenants] = useState<TenantInfo[]>([])
+  const [active, setActive] = useState<string>(currentTenantId ?? '')
+
+  useEffect(() => {
+    adapter.auth.listTenants().then(list => {
+      setTenants(list)
+      if (!currentTenantId && list.length > 0) {
+        const first = list[0]!
+        setActive(first.id)
+        setSuperAdminTenant(first.id)
+      }
+    }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const id = e.target.value
+    setActive(id)
+    setSuperAdminTenant(id || null)
+  }
+
+  if (tenants.length === 0) return null
+  return (
+    <div className="hidden sm:flex items-center gap-1.5 px-2 h-8 rounded-[8px] bg-raised text-sm text-dim" style={{ border: '1px solid var(--color-border)' }}>
+      <IconLayers size={13} aria-hidden="true" className="text-accent shrink-0" />
+      <select
+        value={active}
+        onChange={handleChange}
+        aria-label="Active tenant (super admin)"
+        className="bg-transparent text-sm text-text focus:outline-none cursor-pointer"
+      >
+        {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+      </select>
+    </div>
+  )
+}
+
 export function Topbar({ onOpenPalette, onOpenMobileSidebar }: TopbarProps) {
   const { user } = useUser()
   const navigate  = useNavigate()
@@ -116,6 +155,9 @@ export function Topbar({ onOpenPalette, onOpenMobileSidebar }: TopbarProps) {
           {isMac ? '⌘K' : 'Ctrl+K'}
         </kbd>
       </button>
+
+      {/* Tenant switcher — visible only to SUPER_ADMIN */}
+      {user?.role === 'SUPER_ADMIN' && <SuperAdminTenantSwitcher currentTenantId={user.tenantId} />}
 
       {/* Theme toggle — light ⇄ dark, persisted */}
       <ThemeToggle />

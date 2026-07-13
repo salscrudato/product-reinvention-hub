@@ -341,7 +341,14 @@ async function attachUser(req, _res, next) {
     if (p.jti && await isRevoked(p.jti)) {
       req.user = null
     } else {
-      req.user = { uid: p.sub, name: p.name, email: p.email, role: p.role, tenantId: p.tenantId || null, _jti: p.jti || null }
+      let tenantId = p.tenantId || null
+      // SUPER_ADMIN: allow per-request tenant override via X-Tenant-Id header.
+      // This lets admin/sal switch between any tenant without re-authenticating.
+      if (p.role === 'SUPER_ADMIN') {
+        const override = String(req.headers['x-tenant-id'] || '').trim()
+        if (override) tenantId = override
+      }
+      req.user = { uid: p.sub, name: p.name, email: p.email, role: p.role, tenantId, _jti: p.jti || null }
     }
   } else {
     req.user = null
@@ -376,6 +383,8 @@ function requireRole(min) {
 }
 function requireTenant(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'unauthenticated' })
+  // SUPER_ADMIN can work across all tenants; if no tenantId is set they default to 'default'.
+  if (req.user.role === 'SUPER_ADMIN') return next()
   if (!req.user.tenantId) return res.status(409).json({ error: 'no_tenant_selected' })
   next()
 }

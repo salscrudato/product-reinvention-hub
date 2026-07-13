@@ -24,7 +24,7 @@ function decode(tok: string): AuthUser | null {
   try {
     const p = JSON.parse(atob(tok.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')))
     if (typeof p.exp === 'number' && p.exp * 1000 < Date.now()) return null
-    return { uid: p.sub, email: p.email ?? null, name: p.name ?? null, role: p.role ?? null }
+    return { uid: p.sub, email: p.email ?? null, name: p.name ?? null, role: p.role ?? null, tenantId: p.tenantId ?? null }
   } catch { return null }
 }
 
@@ -32,12 +32,20 @@ let currentUser: AuthUser | null = token ? decode(token) : null
 const userListeners = new Set<(u: AuthUser | null) => void>()
 function setUser(u: AuthUser | null) { currentUser = u; userListeners.forEach((cb) => cb(u)) }
 
+// Active tenant override for SUPER_ADMIN: sent as X-Tenant-Id on every request.
+let activeTenantOverride: string | null = null
+
 async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const extraHeaders: Record<string, string> = {}
+  if (activeTenantOverride && currentUser?.role === 'SUPER_ADMIN') {
+    extraHeaders['X-Tenant-Id'] = activeTenantOverride
+  }
   const res = await fetch(`${API}/api${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...extraHeaders,
       ...(init.headers || {}),
     },
   })
@@ -54,6 +62,15 @@ function setToken(t: string | null) {
     if (t) localStorage.setItem(TOKEN_KEY, t)
     else localStorage.removeItem(TOKEN_KEY)
   }
+}
+
+/** Set or clear the active tenant for a SUPER_ADMIN session.
+ *  Clears all cached data so the next poll loads from the new tenant. */
+export function setSuperAdminTenant(id: string | null): void {
+  activeTenantOverride = id
+  snapshotCache.clear()
+  dataCache.clear()
+  for (const p of pollers) { p.reset(); p.tick() }
 }
 
 const isDoc = (path: string) => path.split('/').filter(Boolean).length % 2 === 0
