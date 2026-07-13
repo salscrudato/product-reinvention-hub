@@ -1,0 +1,1 @@
+<!-- ORCHESTRATE-PLACEHOLDER: Prompt 06 (ops). Replace this file's contents (or paste below this line) with the full product prompt text. The runner reads this file VERBATIM as the Claude Code prompt body. A file that is empty apart from this comment is treated as unfilled and the runner refuses to launch it. -->

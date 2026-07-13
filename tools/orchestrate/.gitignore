@@ -1,0 +1,4 @@
+# Runtime artifacts from orchestration runs: per-prompt logs and SUMMARY.md.
+# Never committed. Session logs (stream-json) can contain command output, so
+# keeping them out of git is also a secret-hygiene measure.
+run/
