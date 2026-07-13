@@ -8,19 +8,20 @@
  *   04 filing | build  (headless, push-blocked)
  *   05 portal | build  (headless, push-blocked)
  *   06 ops    | build  (headless, push-blocked)
- *   07 ship   | ship   (headless, FULLY UNATTENDED, allowed to push + deploy)
+ *   07 proof  | build  (headless, push-blocked)  adversarial isolation proof
  *
  * Each prompt runs in its OWN fresh `claude -p` process (context isolation lives
- * in git + files, never in a resumed conversation). After every session the
- * harness runs the full quality gate, then only the rating canary, then asserts
- * HEAD advanced and the tree is clean. Any failure halts the chain and exits
- * non-zero, leaving the pre-<name> checkpoint tag in place.
+ * in git + files, never in a resumed conversation) at --effort xhigh. After
+ * every session the harness runs the full quality gate, then only the rating
+ * canary, then a live GET /api/health against a freshly booted server, then
+ * asserts HEAD advanced and the tree is clean. Any failure halts the chain and
+ * exits non-zero, leaving the pre-<name> checkpoint tag in place.
  *
  * This harness ORCHESTRATES only. It never edits product code, never touches a
  * canary, and its own code never runs git push / git remote / gh / a deploy
- * (enforced by RUNNER_FORBIDDEN below). The ONLY push + deploy happens inside
- * the 07 SHIP session, which Claude drives; see README.md for the reconciliation
- * of why 07 is allowed to push while 03-06 are not.
+ * (enforced by RUNNER_FORBIDDEN below). All 7 prompts commit locally only; NONE
+ * push or deploy (prompt 07's own text says "commit locally, hand back to the
+ * human"). Deploy stays a separate, deliberate human step after the go/no-go.
  *
  * One cross-platform Node ESM script. Runs under PowerShell and bash alike.
  */
@@ -57,12 +58,17 @@ const GATE_STEPS = [
   { name: 'build', cmd: 'pnpm build' },
 ]
 
+// NOTE: prompt 07 (adversarial isolation proof + go/no-go) is a BUILD prompt:
+// its own text says "commit locally only, do NOT push or deploy, hand back to
+// the human". None of the 7 prompts deploy. The earlier "unattended ship"
+// framing did not match the actual prompt content, so 07 is push-blocked like
+// the rest and there is no ship/deploy step in this harness.
 const STEPS = [
   { id: '03', name: 'authz', file: '03-authz.md', kind: 'build' },
   { id: '04', name: 'filing', file: '04-filing.md', kind: 'build' },
   { id: '05', name: 'portal', file: '05-portal.md', kind: 'build' },
   { id: '06', name: 'ops', file: '06-ops.md', kind: 'build' },
-  { id: '07', name: 'ship', file: '07-ship.md', kind: 'ship' },
+  { id: '07', name: 'proof', file: '07-ship.md', kind: 'build' },
 ]
 
 // Tools pre-authorized for the BUILD prompts. Mirrors .claude/settings.json.
@@ -228,6 +234,7 @@ function claudeFlags(step, args) {
   const f = [
     '-p',
     '--model', MODEL,
+    '--effort', 'xhigh',
     '--permission-mode', 'dontAsk',
     '--output-format', 'stream-json',
     '--verbose',
@@ -368,6 +375,63 @@ function observedStr(observed) {
   return CANARIES.map((c) => c.line + '=$' + (observed[c.line] ?? '?')).join(' ')
 }
 
+// --- live endpoint check ---------------------------------------------------
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+function killTree(child) {
+  if (!child || child.killed || child.pid == null) return
+  try {
+    if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
+    else child.kill('SIGTERM')
+  } catch { /* best effort */ }
+}
+
+// Boot the Express host and assert GET /api/health returns { status: "ok" }.
+// This proves the built server actually starts and serves live traffic after a
+// prompt. It intentionally exercises only the liveness route: the data-plane
+// endpoints need Cosmos, which is IP-firewalled for local dev, so a full
+// data-plane smoke belongs against a deployed environment (set ORCH_SMOKE_URL).
+async function liveEndpointCheck(logDir, tag) {
+  const serverPath = path.join(REPO_ROOT, 'server', 'server.js')
+  if (!fs.existsSync(serverPath)) return { ok: false, url: null, status: null, detail: 'server/server.js not found' }
+  const port = process.env.ORCH_HEALTH_PORT || '8099'
+  const url = 'http://127.0.0.1:' + port + '/api/health'
+  const logStream = fs.createWriteStream(path.join(logDir, tag + '.health.log'), { flags: 'a' })
+  logStream.write('# booting: node server/server.js on PORT=' + port + '\n')
+  const child = spawn('node server/server.js', {
+    shell: true,
+    cwd: REPO_ROOT,
+    env: { ...process.env, PORT: port, NODE_ENV: 'production' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  let serr = ''
+  child.stdout.on('data', (d) => logStream.write(d))
+  child.stderr.on('data', (d) => { serr += d; logStream.write('[stderr] ' + d) })
+
+  const deadline = Date.now() + 40000
+  let ok = false
+  let status = null
+  try {
+    while (Date.now() < deadline && child.exitCode == null) {
+      await sleep(1200)
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(3000) })
+        status = r.status
+        if (r.ok) {
+          const body = await r.json().catch(() => ({}))
+          if (body && body.status === 'ok') { ok = true; break }
+        }
+      } catch { /* server not up yet; keep polling */ }
+    }
+  } finally {
+    killTree(child)
+    logStream.end()
+  }
+  const detail = ok ? '' : ('no 200 {status:ok} from ' + url + ' within 40s' + (serr ? '; stderr tail: ' + tailOf(serr, 6) : ''))
+  return { ok, url, status, detail }
+}
+
 // --- pause -----------------------------------------------------------------
 
 function pause(q) {
@@ -450,10 +514,13 @@ function printPlan(steps, args, ctx) {
   banner('DRY RUN - the following would run; nothing is executed')
   print('  range        : ' + args.from + '..' + args.to)
   print('  pausing      : ' + (args.auto ? 'NO (--auto: chained without pauses)' : 'YES (Enter between prompts)'))
+  print('  effort       : xhigh (--effort xhigh), model ' + MODEL)
   print('  gate (each)  : ' + GATE_STEPS.map((s) => s.cmd).join(' && '))
   print('  canary (each): pnpm exec vitest run ' + CANARY_FILE)
   print('                 expect ' + CANARIES.map((c) => c.line + ' $' + c.value).join(' / '))
+  print('  live (each)  : boot `node server/server.js` and assert GET /api/health => {status:ok}')
   print('  checkpoints  : git tag orchestrate/pre-<name>-' + ctx.stamp + '  (before each prompt)')
+  print('  deploy       : NONE. All 7 prompts commit locally only; deploy stays a separate human step.')
 
   for (const step of steps) {
     const body = readPrompt(step)
@@ -468,12 +535,11 @@ function printPlan(steps, args, ctx) {
     }
     print('  fresh session : ' + claudeCommand(step, args))
     print('  prompt body   : < prompts/' + step.file + '  (' + filled + ', piped via stdin)')
-    print('  then gate + canary; assert HEAD advanced by >= 1 commit and tree clean')
-    if (step.kind === 'ship') print('  (07 legitimately pushes: no "nothing pushed" assertion; push/deploy recorded from the session log)')
+    print('  then gate + canary + live /api/health; assert HEAD advanced by >= 1 commit and tree clean')
   }
 
   banner('FINAL VERIFICATION (after the last prompt that ran)')
-  print('  re-run gate + canary once more')
+  print('  re-run gate + canary + live /api/health once more')
   print('  startup sanity: app/dist build output + `node --check server/server.js`')
   print('  smoke: `node hardening/smoke.mjs` only if ORCH_SMOKE_URL is set (else skipped)')
   print('  write run/' + ctx.stamp + '/SUMMARY.md and print GREEN/RED verdict')
@@ -518,8 +584,8 @@ function writeSummary(ctx) {
   L.push('')
   L.push('## Per-prompt')
   L.push('')
-  L.push('| # | name | kind | session | is_error | cost USD | SHA before -> after | gate | canary | HEAD adv | tree clean | verdict |')
-  L.push('|---|------|------|---------|----------|----------|---------------------|------|--------|----------|------------|---------|')
+  L.push('| # | name | kind | session | is_error | cost USD | SHA before -> after | gate | canary | live | HEAD adv | tree clean | verdict |')
+  L.push('|---|------|------|---------|----------|----------|---------------------|------|--------|------|----------|------------|---------|')
   for (const r of rows) {
     const s = r.session || {}
     L.push('| ' + [
@@ -530,6 +596,7 @@ function writeSummary(ctx) {
       short(r.before) + ' -> ' + short(r.after),
       r.gate ? (r.gate.ok ? 'pass' : 'FAIL@' + r.gate.failed) : '-',
       r.canary ? (r.canary.ok ? observedStr(r.canary.observed) : 'FAIL ' + observedStr(r.canary.observed)) : '-',
+      r.live ? (r.live.ok ? 'ok' : 'FAIL') : '-',
       r.headAdvanced == null ? '-' : (r.headAdvanced ? 'yes' : 'NO'),
       r.treeClean == null ? '-' : (r.treeClean ? 'yes' : 'NO'),
       r.verdict || '-',
@@ -557,6 +624,7 @@ function writeSummary(ctx) {
     L.push('')
     if (ctx.finalGate) L.push('- gate: ' + (ctx.finalGate.ok ? 'pass' : 'FAIL@' + ctx.finalGate.failed))
     if (ctx.finalCanary) L.push('- canary: ' + (ctx.finalCanary.ok ? 'pass ' : 'FAIL ') + observedStr(ctx.finalCanary.observed))
+    if (ctx.finalLive) L.push('- live /api/health: ' + (ctx.finalLive.ok ? 'ok' : 'FAIL ' + ctx.finalLive.detail))
     if (ctx.startup) {
       L.push('- startup sanity: dist=' + ctx.startup.dist + ', server-syntax=' + ctx.startup.serverSyntax)
       L.push('- smoke: ' + ctx.startup.smoke)
@@ -590,7 +658,7 @@ function startupSanity(ctx) {
   return { dist: distOk ? 'present' : 'MISSING', serverSyntax, smoke }
 }
 
-function finalVerification(ctx) {
+async function finalVerification(ctx) {
   banner('FINAL VERIFICATION')
   const g = runGate(ctx.logDir, 'final')
   ctx.finalGate = g
@@ -598,8 +666,11 @@ function finalVerification(ctx) {
   const c = runCanary(ctx.logDir, 'final')
   ctx.finalCanary = c
   if (!c.ok) halt(ctx, 'Final canary failed (observed ' + observedStr(c.observed) + ').', c.tail)
+  const live = await liveEndpointCheck(ctx.logDir, 'final')
+  ctx.finalLive = live
+  if (!live.ok) halt(ctx, 'Final live endpoint check failed: ' + live.detail)
   ctx.startup = startupSanity(ctx)
-  print('  gate: pass | canary: ' + observedStr(c.observed) + ' | dist: ' + ctx.startup.dist +
+  print('  gate: pass | canary: ' + observedStr(c.observed) + ' | live: ok | dist: ' + ctx.startup.dist +
     ' | server-syntax: ' + ctx.startup.serverSyntax + ' | smoke: ' + ctx.startup.smoke)
 }
 
@@ -625,7 +696,7 @@ async function runStep(step, args, ctx) {
   const rec = {
     id: step.id, name: step.name, kind: step.kind, reached: true,
     tag: null, before: null, after: null, session: null,
-    gate: null, canary: null, headAdvanced: null, treeClean: null,
+    gate: null, canary: null, live: null, headAdvanced: null, treeClean: null,
     shipActions: null, verdict: 'FAIL',
   }
   ctx.records[step.id] = rec
@@ -673,6 +744,13 @@ async function runStep(step, args, ctx) {
   }
   print('  canary: ' + observedStr(rec.canary.observed))
 
+  print('  live check: booting server + GET /api/health')
+  rec.live = await liveEndpointCheck(ctx.logDir, step.id + '-' + step.name)
+  if (!rec.live.ok) {
+    halt(ctx, 'Live endpoint check failed after prompt ' + step.id + ': ' + rec.live.detail)
+  }
+  print('  live: /api/health ok (' + rec.live.url + ')')
+
   rec.after = headSha()
   rec.headAdvanced = rec.after !== rec.before
   rec.treeClean = treeClean()
@@ -712,6 +790,7 @@ async function main() {
     haltReason: null,
     finalGate: null,
     finalCanary: null,
+    finalLive: null,
     startup: null,
   }
   const steps = selectSteps(args.from, args.to)
@@ -735,7 +814,7 @@ async function main() {
     }
   }
 
-  finalVerification(ctx)
+  await finalVerification(ctx)
   const p = writeSummary(ctx)
   banner('DONE')
   print('  SUMMARY: ' + p)
