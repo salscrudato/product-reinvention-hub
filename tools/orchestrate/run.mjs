@@ -241,8 +241,18 @@ function claudeFlags(step, args) {
     '--max-turns', String(args.maxTurns),
     '--max-budget-usd', String(args.maxBudget),
   ]
-  if (step.kind === 'ship') f.push('--allowedTools', quote(SHIP_ALLOW.join(',')))
-  else f.push('--disallowedTools', quote(BUILD_DENY.join(',')))
+  if (step.kind === 'ship') {
+    f.push('--allowedTools', quote(SHIP_ALLOW.join(',')))
+  } else {
+    // Pass the base allowlist on the CLI (not only via .claude/settings.json). An
+    // untrusted workspace ignores the project settings file's allow entries, so
+    // relying on the file alone leaves dontAsk with nothing allowed. The CLI list
+    // is invoker-provided and honored regardless of trust; it grants the exact same
+    // scoped toolset and does NOT enable the project settings file or any hooks.
+    // --disallowedTools still blocks push/remote/gh (deny beats allow).
+    f.push('--allowedTools', quote(BASE_ALLOW.join(',')))
+    f.push('--disallowedTools', quote(BUILD_DENY.join(',')))
+  }
   return f
 }
 
