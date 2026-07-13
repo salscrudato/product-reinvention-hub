@@ -75,15 +75,16 @@ function toMillis(v: unknown): number {
 
 // Faithful text rendering of a determination so multi-turn follow-ups keep context.
 function determinationToText(d: Determination): string {
-  const cov = d.coverages.map(c => `${c.name}${c.refId ? ` [${c.refId}]` : ''}${c.formNumber ? ` [${c.formNumber}]` : ''} — ${c.definition}`).join('; ')
+  const cov = (d.coverages ?? []).map(c => `${c.name}${c.refId ? ` [${c.refId}]` : ''}${c.formNumber ? ` [${c.formNumber}]` : ''} — ${c.definition}`).join('; ')
   const exc = (d.exclusions ?? []).map(e => `${e.name}${e.refId ? ` [${e.refId}]` : ''}${e.formNumber ? ` [${e.formNumber}]` : ''}${e.note ? ` — ${e.note}` : ''}`).join('; ')
-  const lim = d.limits.map(l => `${l.label}: ${l.value}${l.source ? ` [${l.source}]` : ''}${l.note ? ` (${l.note})` : ''}`).join('; ')
+  const lim = (d.limits ?? []).map(l => `${l.label}: ${l.value}${l.source ? ` [${l.source}]` : ''}${l.note ? ` (${l.note})` : ''}`).join('; ')
+  const reasoning = d.reasoning ?? []
   return [
     `Determination: ${d.verdict.replace('_', ' ')}. ${d.summary}`,
     cov && `Coverages that apply: ${cov}`,
     exc && `What's not covered: ${exc}`,
     lim && `Limits & deductibles: ${lim}`,
-    d.reasoning.length ? `Reasoning: ${d.reasoning.join(' ')}` : '',
+    reasoning.length ? `Reasoning: ${reasoning.join(' ')}` : '',
     d.considerations?.length ? `Things to consider: ${d.considerations.join('; ')}` : '',
     d.openItems?.length ? `Not determined by the form: ${d.openItems.join('; ')}` : '',
     d.coverageGap?.note ? `Coverage gap: ${d.coverageGap.note}${d.coverageGap.sources?.length ? ` [${d.coverageGap.sources.join('] [')}]` : ''}` : '',
