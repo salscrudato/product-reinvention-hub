@@ -279,8 +279,57 @@ function groupColumns(section: string[], header: IsoCell[], re: RegExp): { col: 
 // ─── Sheet resolution (line-agnostic name matching) ─────────────────────────────
 
 const IGNORE_SHEET = /revision history|definition|data validation|categories/i
+// Sheets that look like templates but carry no authoritative data: architect copies,
+// before-50-states snapshots, scratch tabs, question helpers, and review-only sheets.
+const DECOY_SHEET = /(_|\b)arch\b|before\s*50|scratch|question|review$/i
+// Trailing version suffix like " (2)" or "  (3)" marks a copy, never the source.
+const VERSION_SUFFIX = /\s*\(\s*\d+\s*\)\s*$/
+
+// Count rows that contain at least one real refId (carrier.token.digits pattern).
+// Used to score competing framework-sheet candidates.
+const REAL_REF_ID = /^[A-Z][A-Z0-9]*\.[A-Z]{2,6}\.\d/i
+function countRefIdRows(grid: IsoGrid): number {
+  let n = 0
+  for (const r of grid.cells) {
+    if (r.some(c => typeof c === 'string' && REAL_REF_ID.test(c.trim()))) n++
+  }
+  return n
+}
+
+// Authoritative framework-sheet selector. Broader than the former product-framework-only
+// regex so "Core Framework" is a candidate alongside "GL Product Framework". Decoys and
+// version copies are excluded first; then the candidate with the most real-refId rows wins.
+// Ties are warned with code ambiguous_sheet and the first candidate is returned.
+function selectFrameworkSheet(grids: IsoGrid[], ctx: Ctx): IsoGrid | undefined {
+  const FW_RE = /framework|product component model|component model/i
+  const candidates = grids.filter(g =>
+    FW_RE.test(g.sheet) &&
+    !IGNORE_SHEET.test(g.sheet) &&
+    !DECOY_SHEET.test(g.sheet) &&
+    !VERSION_SUFFIX.test(g.sheet)
+  )
+  if (!candidates.length) return undefined
+  if (candidates.length === 1) return candidates[0]
+  let best = candidates[0]!
+  let bestScore = countRefIdRows(best)
+  for (let i = 1; i < candidates.length; i++) {
+    const score = countRefIdRows(candidates[i]!)
+    if (score > bestScore) { best = candidates[i]!; bestScore = score }
+    else if (score === bestScore) {
+      ctx.warnOnce('ambiguous_sheet', `Ambiguous framework sheet: "${best.sheet}" and "${candidates[i]!.sheet}" have equal refId scores (${bestScore}). Using "${best.sheet}".`)
+    }
+  }
+  return best
+}
+
 function findSheet(grids: IsoGrid[], re: RegExp, exclude?: RegExp): IsoGrid | undefined {
-  return grids.find(g => re.test(g.sheet) && !IGNORE_SHEET.test(g.sheet) && (!exclude || !exclude.test(g.sheet)))
+  return grids.find(g =>
+    re.test(g.sheet) &&
+    !IGNORE_SHEET.test(g.sheet) &&
+    !DECOY_SHEET.test(g.sheet) &&
+    !VERSION_SUFFIX.test(g.sheet) &&
+    (!exclude || !exclude.test(g.sheet))
+  )
 }
 
 // ─── Summary accumulator ─────────────────────────────────────────────────────────
@@ -386,8 +435,8 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
     const lob = clean(at(cells, 'lob'))
     if (prod) distinctProducts.add(prod)
 
-    // Explicit product / LOB rows (ISO carries .PROD / .LOB tokens in the id column).
-    if (/\.PROD\b|\.PROD\./i.test(id)) {
+    // Explicit product / LOB rows (ISO carries .PROD / .PRD / .PRODUCT / .LOB tokens in the id column).
+    if (/\.(PROD|PRD|PRODUCT)\b|\.(PROD|PRD|PRODUCT)\./i.test(id)) {
       if (!productRefId) { productRefId = id; productName = prod || productName }
       continue
     }
@@ -453,12 +502,14 @@ function parseFramework(grid: IsoGrid, ctx: Ctx): FrameworkResult | null {
     }
   })
 
-  // ── Product identity: synthesize when the sheet has no explicit .PROD row ──
-  if (!productRefId && coverages.length) {
-    const prefix = refIdPrefix(coverages[0]!.refId!) || 'XX'
+  // ── Product identity: synthesize when the sheet has no explicit .PROD/.PRD row ──
+  // Always synthesize (even 0 coverages) so the plan always carries >= 1 product when
+  // a framework sheet is present. Code: product_synthesized.
+  if (!productRefId) {
+    const prefix = (coverages.length > 0 ? refIdPrefix(coverages[0]!.refId!) : null) || 'XX'
     productRefId = `${prefix}.PROD.001`
     productName = productName || productNameHint
-    ctx.warn(`Framework sheet "${grid.sheet}": no explicit product (.PROD) row — synthesized product id "${productRefId}" from the coverage id prefix "${prefix}".`)
+    ctx.warnOnce('product_synthesized', `Framework sheet "${grid.sheet}": no explicit product (.PROD/.PRD) row — synthesized "${productRefId}" from coverage id prefix "${prefix}"; code: product_synthesized.`)
   } else if (!productName) {
     productName = productNameHint
   }
@@ -1011,7 +1062,7 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
 export function mapIsoWorkbook(grids: IsoGrid[]): ImportPlan {
   const ctx = new Ctx()
 
-  const fwGrid   = findSheet(grids, /product framework|product component model|component model/i)
+  const fwGrid   = selectFrameworkSheet(grids, ctx)
   // "Forms Library" is the IM/PR component-model template's name for the forms sheet.
   const formGrid = findSheet(grids, /forms specifications?|forms library/i, /dynamic/i)
   const dynGrid  = findSheet(grids, /forms dynamic|dynamic data/i)
@@ -1059,7 +1110,8 @@ export function mapIsoWorkbook(grids: IsoGrid[]): ImportPlan {
       },
     }
   } else if (fw && !productRefId) {
-    ctx.warn('No product row (…​.PROD.*) found in the framework sheet — cannot create a product.')
+    // parseFramework always synthesizes now, so this branch is belt-and-suspenders only.
+    ctx.warn('No product row (.PROD/.PRD) found and synthesis did not produce an id — product omitted.')
   }
 
   const dynFieldCount = forms.reduce((n, f) => n + ((f.data['dynamicFields'] as unknown[])?.length ?? 0), 0)

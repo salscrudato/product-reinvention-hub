@@ -1,10 +1,9 @@
 // Builder — the Drafts workbench. This is where products are AUTHORED: draft products
 // live here (lifecycle ≠ LAUNCHED) and only leave for the published Products portfolio
 // via an explicit, typed-confirmation promotion. Four grounded ways to start a draft —
-// AI scaffold, import an ISO workbook, clone an existing product, or a blank shell —
-// each captures provenance (lineage) that every draft then shows. A draft can never
-// reach Products without promotion: Products renders only LAUNCHED, and the promote
-// dialog is the sole surface that writes lifecycle:'LAUNCHED'.
+// AI scaffold, import (any format: XLSX, PDF, SERFF auto-detected by magic bytes),
+// clone an existing product, or a blank shell — each captures provenance (lineage) that
+// every draft then shows. A draft can never reach Products without promotion.
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
@@ -13,10 +12,9 @@ import { usePortfolioInventory } from '../lib/usePortfolioInventory'
 import { Skeleton, EmptyState, RefChip, LifecyclePill } from '../components/ui'
 import {
   IconSparkle, IconUpload, IconCopy, IconPlus, IconArrowUp, IconArrowRight,
-  IconWand, IconCoverage, IconForm, IconTrash, IconFile, type IconType,
+  IconWand, IconCoverage, IconForm, IconTrash, type IconType,
 } from '../components/ui/icons'
 import { NewProductModal } from '../components/product/NewProductModal'
-import { ImportWorkbookModal } from '../components/product/ImportWorkbookModal'
 import { UnifiedImportModal } from '../import/UnifiedImportModal'
 import { CloneProductModal } from '../components/product/CloneProductModal'
 import { ScaffoldProductModal } from '../components/product/ScaffoldProductModal'
@@ -27,7 +25,7 @@ import { canI } from '../lib/canI'
 import type { Product } from '@pf/shared'
 import type { WithId } from '../context/ProductContext'
 
-type Modal = 'new' | 'import' | 'unified' | 'clone' | 'scaffold' | null
+type Modal = 'new' | 'unified' | 'clone' | 'scaffold' | null
 
 export default function Builder() {
   const navigate = useNavigate()
@@ -69,13 +67,11 @@ export default function Builder() {
 
       {/* Start a draft — four grounded entry points (author-only) */}
       {canEdit && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <StartCard featured Icon={IconSparkle} title="Scaffold with AI"
             desc="Describe it — grounded in your real portfolio, never invented." onClick={() => setModal('scaffold')} />
-          <StartCard Icon={IconFile} title="Unified import"
-            desc="Any format — ISO workbook, filing PDFs, SERFF, ERC, or unknown." onClick={() => setModal('unified')} />
-          <StartCard Icon={IconUpload} title="Import workbook"
-            desc="Upload the ISO framework/forms/rating/rules workbooks." onClick={() => setModal('import')} />
+          <StartCard Icon={IconUpload} title="Import"
+            desc="ISO workbook (XLSX), filing PDF, SERFF, or ERC — auto-detected by content." onClick={() => setModal('unified')} />
           <StartCard Icon={IconCopy} title="Clone a product"
             desc="Start from an existing product's structure." onClick={() => setModal('clone')} />
           <StartCard Icon={IconPlus} title="Blank draft"
@@ -111,7 +107,6 @@ export default function Builder() {
       </div>
 
       {modal === 'new'      && <NewProductModal onClose={() => setModal(null)} onCreated={openDraft} />}
-      {modal === 'import'   && <ImportWorkbookModal onClose={() => setModal(null)} onImported={openDraft} />}
       {modal === 'unified'  && <UnifiedImportModal onClose={() => setModal(null)} onImported={openDraft} />}
       {modal === 'clone'    && <CloneProductModal onClose={() => setModal(null)} onCloned={openDraft} />}
       {modal === 'scaffold' && <ScaffoldProductModal onClose={() => setModal(null)} onCreated={openDraft} />}

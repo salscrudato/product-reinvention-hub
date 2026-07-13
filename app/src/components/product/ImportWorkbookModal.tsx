@@ -26,8 +26,8 @@ type Phase = 'select' | 'parsing' | 'preview' | 'importing' | 'done' | 'error'
 // Total items that will be written by importPlan() for a given plan.
 function planItemCount(p: ImportPlan): number {
   return (p.product ? 1 : 0) +
-    p.coverages.length + p.forms.length + p.rules.length + p.formRules.length +
-    (p.ratingProgram ? 1 : 0) + p.rtTables.length + p.ldTables.length
+    (p.coverages ?? []).length + (p.forms ?? []).length + (p.rules ?? []).length + (p.formRules ?? []).length +
+    (p.ratingProgram ? 1 : 0) + (p.rtTables ?? []).length + (p.ldTables ?? []).length
 }
 
 const ENTITY_SHOW = 6

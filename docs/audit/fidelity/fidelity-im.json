@@ -42,7 +42,7 @@
     "Sheet \"Product Component Model\" coverage IM.COV087.22 (\"Debris Removal\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
     "Sheet \"Product Component Model\" coverage IM.COV087.31 (\"Debris Removal\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
     "Sheet \"Product Component Model\" coverage IM.COV095.02 (\"Additional Acquired Or Replacement Property\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
-    "Framework sheet \"Product Component Model\": no explicit product (.PROD) row — synthesized product id \"IM.PROD.001\" from the coverage id prefix \"IM\".",
+    "Framework sheet \"Product Component Model\": no explicit product (.PROD/.PRD) row — synthesized \"IM.PROD.001\" from coverage id prefix \"IM\"; code: product_synthesized.",
     "Framework sheet \"Product Component Model\": 48 distinct product names detected — imported under a single product IM.PROD.001. Split into separate products if the source is a multi-product book."
   ],
   "warningCount": 12,

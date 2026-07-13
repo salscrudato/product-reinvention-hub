@@ -21,6 +21,7 @@ import type {
   UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan,
   FormatCard, FormatFingerprint, SplitProductProposal, SampledVerification, UnresolvedItem,
 } from '@pf/shared'
+import { mapIsoWorkbook } from '@pf/shared'
 import { DisagreementHeatmap } from './DisagreementHeatmap'
 import { useUser } from '../context/useUser'
 import { Dialog } from '../components/ui/Dialog'
@@ -30,13 +31,24 @@ import {
   IconUpload, IconFile, IconCheckCircle, IconWarning, IconSpinner,
   IconCoverage, IconRule, IconPricing, IconTable, IconArrowRight, IconClose,
 } from '../components/ui/icons'
+import { readWorkbooks } from '../lib/import/readWorkbook'
 import { readUploadFiles, runUnifiedImport, type UnifiedStageEvent } from './unifiedImportClient'
 import { canI } from '../lib/canI'
 import { importPlan, type ImportProgress, type ImportResult } from '../lib/import/importProduct'
 import { newDraftId, filingLineage, importLineage } from '../lib/draft/draft'
 
 interface Props { onClose: () => void; onImported: (productId: string) => void }
-type Phase = 'select' | 'streaming' | 'review' | 'importing' | 'done' | 'error'
+type Phase = 'select' | 'streaming' | 'review' | 'xlsx-plan' | 'importing' | 'done' | 'error'
+
+// Sniff format by magic bytes: ZIP (XLSX/XLSM) = PK\x03\x04, PDF = %PDF.
+// Extension alone is not trusted (rename-safe).
+async function sniffFormat(file: File): Promise<'xlsx' | 'pdf' | 'other'> {
+  const buf = await file.slice(0, 4).arrayBuffer()
+  const b = new Uint8Array(buf)
+  if (b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04) return 'xlsx'
+  if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) return 'pdf'
+  return 'other'
+}
 
 const SECTION_META: { key: FilingReviewSectionKey; label: string; Icon: typeof IconCoverage }[] = [
   { key: 'coverages', label: 'Coverages',          Icon: IconCoverage },
@@ -51,10 +63,11 @@ function confidenceColor(c: number): string {
 }
 
 // Count writable items for a given plan (matches importPlan()'s `total` computation).
+// ?? [] guards against a malformed server response missing an array field.
 function countPlan(p: ImportPlan): number {
-  return (p.product ? 1 : 0) + p.coverages.length + p.forms.length +
-    p.rules.length + p.formRules.length + (p.ratingProgram ? 1 : 0) +
-    p.ldTables.length + p.rtTables.length
+  return (p.product ? 1 : 0) + (p.coverages ?? []).length + (p.forms ?? []).length +
+    (p.rules ?? []).length + (p.formRules ?? []).length + (p.ratingProgram ? 1 : 0) +
+    (p.ldTables ?? []).length + (p.rtTables ?? []).length
 }
 
 function acceptedPlan(bundle: UnifiedProposalBundle, accepted: Set<FilingReviewSectionKey>): ImportPlan {
@@ -62,11 +75,11 @@ function acceptedPlan(bundle: UnifiedProposalBundle, accepted: Set<FilingReviewS
   const keepTables = accepted.has('tables') || accepted.has('rating')
   return {
     ...p,
-    coverages:     accepted.has('coverages') ? p.coverages : [],
-    forms:         accepted.has('coverages') ? p.forms     : [],
-    rtTables:      keepTables ? p.rtTables : [],
-    ldTables:      keepTables ? p.ldTables : [],
-    rules:         accepted.has('rules')    ? p.rules      : [],
+    coverages:     accepted.has('coverages') ? (p.coverages ?? []) : [],
+    forms:         accepted.has('coverages') ? (p.forms ?? [])     : [],
+    rtTables:      keepTables ? (p.rtTables ?? []) : [],
+    ldTables:      keepTables ? (p.ldTables ?? []) : [],
+    rules:         accepted.has('rules')    ? (p.rules ?? [])      : [],
     ratingProgram: accepted.has('rating')   ? p.ratingProgram : null,
   }
 }
@@ -90,6 +103,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const [fileNames, setFiles]   = useState<string[]>([])
   const [stages, setStages]     = useState<UnifiedStageEvent[]>([])
   const [bundle, setBundle]     = useState<UnifiedProposalBundle | null>(null)
+  const [localPlan, setLocalPlan] = useState<ImportPlan | null>(null)
   const [accepted, setAccepted] = useState<Set<FilingReviewSectionKey>>(new Set())
   const [cardStatus, setCardStatus] = useState<'PROPOSED' | 'APPROVED' | 'REJECTED'>('PROPOSED')
   const [progress, setProgress] = useState<ImportProgress>({ done: 0, total: 0, label: '' })
@@ -105,7 +119,26 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       setPhase('error')
       return
     }
-    setFiles(docs.map(f => f.name)); setStages([]); setError(''); setPhase('streaming')
+    setFiles(docs.map(f => f.name)); setStages([]); setError(''); setLocalPlan(null); setBundle(null)
+
+    // Magic-byte sniff: all XLSX/XLSM (ZIP signature PK\x03\x04) → local ISO mapper.
+    // Anything else (PDF, ZIP SERFF, mixed) → server pipeline.
+    const formats = await Promise.all(docs.map(sniffFormat))
+    if (formats.every(f => f === 'xlsx')) {
+      setPhase('streaming')
+      try {
+        const grids = await readWorkbooks(docs)
+        const plan  = mapIsoWorkbook(grids)
+        setLocalPlan(plan)
+        setPhase('xlsx-plan')
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to read workbook.')
+        setPhase('error')
+      }
+      return
+    }
+
+    setPhase('streaming')
     try {
       const documents = await readUploadFiles(docs)
       const b = await runUnifiedImport(documents, {
@@ -148,6 +181,29 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
     }
   }
 
+  async function runImportXlsx() {
+    if (!localPlan || !user) return
+    if (!localPlan.productId) {
+      setError('No product identified in the workbook — check the product row and try again.')
+      setPhase('error')
+      return
+    }
+    setPhase('importing')
+    setProgress({ done: 0, total: 0, label: 'Starting…' })
+    try {
+      const actor   = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
+      const draftId = newDraftId(localPlan.productId)
+      const lineage = importLineage(fileNames, localPlan.product?.refId ?? null, actor)
+      const res = await importPlan(localPlan, actor, setProgress, { productId: draftId, lineage })
+      setResult(res); setPhase('done')
+      if (res.failed) toast.warning(`Imported ${res.written} items, ${res.failed} skipped`)
+      else            toast.success(`Imported ${res.written} items`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Import failed.')
+      setPhase('error')
+    }
+  }
+
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
 
   return (
@@ -161,6 +217,8 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
         />
       ) : phase === 'streaming' ? (
         <StreamingPane fileNames={fileNames} stages={stages} />
+      ) : phase === 'xlsx-plan' && localPlan ? (
+        <XlsxPlanPane plan={localPlan} onImport={runImportXlsx} onCancel={onClose} />
       ) : phase === 'review' && bundle ? (
         <ReviewPane
           bundle={bundle} accepted={accepted} toggle={toggle} cardStatus={cardStatus}
@@ -653,6 +711,122 @@ function SplitProductsSection({ proposals }: { proposals: SplitProductProposal[]
         </p>
       </div>
     </section>
+  )
+}
+
+// ─── XLSX-plan review pane (ISO workbook local path) ─────────────────────────────
+// Mirrors the Section 1 entity-group layout from ImportWorkbookModal, rendered inline
+// in this modal when all uploaded files are XLSX (magic-byte routed to local mapper).
+
+function XlsxPlanPane({ plan, onImport, onCancel }: {
+  plan: ImportPlan; onImport: () => void; onCancel: () => void
+}) {
+  const count = countPlan(plan)
+  const GROUPS: { label: string; Icon: typeof IconCoverage; items: typeof plan.coverages }[] = [
+    { label: 'Coverages', Icon: IconCoverage, items: plan.coverages ?? [] },
+    { label: 'Forms',     Icon: IconFile,     items: plan.forms     ?? [] },
+    { label: 'Rules',     Icon: IconRule,     items: plan.rules     ?? [] },
+    { label: 'L&D tables',Icon: IconTable,    items: plan.ldTables  ?? [] },
+    { label: 'RT tables', Icon: IconTable,    items: plan.rtTables  ?? [] },
+  ]
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 max-h-[52vh] overflow-y-auto -mx-1 px-1">
+
+        {/* Product identity */}
+        <div className="flex items-center gap-3 rounded-[12px] p-3.5"
+          style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
+          <span className="flex items-center justify-center w-9 h-9 rounded-[10px] shrink-0"
+            style={{ background: 'var(--gradient-accent)' }}>
+            <IconFile size={18} className="text-white" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-text truncate">
+              {plan.product
+                ? (plan.product.data['name'] as string || plan.product.refId)
+                : 'No product detected'}
+            </div>
+            <div className="text-xs text-dim flex items-center gap-1.5 flex-wrap">
+              {plan.product?.refId && (
+                <span className="font-mono text-accent">{plan.product.refId}</span>
+              )}
+              <span className="text-faint">·</span>
+              <span className="tnum text-faint">{count} entities</span>
+              {plan.summary.warnings.length > 0 && (
+                <><span className="text-faint">·</span>
+                  <span className="text-warn">{plan.summary.warnings.length} warnings</span></>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Entity groups */}
+        <div className="flex flex-col gap-2">
+          {GROUPS.map(({ label, Icon, items }) => items.length > 0 && (
+            <div key={label} className="rounded-[12px] overflow-hidden"
+              style={{ border: '1px solid var(--color-border)' }}>
+              <div className="flex items-center gap-2 px-3.5 py-2 bg-raised">
+                <Icon size={13} className="text-dim" aria-hidden />
+                <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-dim">{label}</span>
+                <span className="text-[11px] text-faint tnum ml-auto">{items.length}</span>
+              </div>
+              <ul className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                {items.slice(0, 6).map((e, i) => (
+                  <li key={e.docId || i} className="flex items-center gap-2 px-3.5 py-1.5">
+                    {e.refId && (
+                      <span className="text-[11px] font-mono text-accent shrink-0 px-1.5 py-0.5 rounded"
+                        style={{ background: 'var(--color-accent-soft)' }}>{e.refId}</span>
+                    )}
+                    <span className="text-xs text-text truncate">{e.label}</span>
+                  </li>
+                ))}
+                {items.length > 6 && (
+                  <li className="px-3.5 py-1.5 text-[11px] text-faint text-center">
+                    +{items.length - 6} more
+                  </li>
+                )}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Warnings */}
+        {plan.summary.warnings.length > 0 && (
+          <section className="rounded-[12px] overflow-hidden"
+            style={{ border: '1px solid var(--color-warn-line, var(--color-border))' }}>
+            <div className="flex items-center gap-2 px-3.5 py-2.5"
+              style={{ background: 'var(--color-warn-soft, var(--color-raised))' }}>
+              <IconWarning size={15} className="text-warn" />
+              <h4 className="text-[12px] font-semibold uppercase tracking-[.07em] text-text flex-1">
+                Warnings
+              </h4>
+              <span className="text-[11px] text-faint tnum">{plan.summary.warnings.length}</span>
+            </div>
+            <ul className="flex flex-col gap-1 px-3.5 py-2.5">
+              {plan.summary.warnings.slice(0, 6).map((w, i) => (
+                <li key={i} className="text-xs text-dim">{w}</li>
+              ))}
+              {plan.summary.warnings.length > 6 && (
+                <li className="text-xs text-faint">+{plan.summary.warnings.length - 6} more</li>
+              )}
+            </ul>
+          </section>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-2 pt-1"
+        style={{ borderTop: '1px solid var(--color-border)' }}>
+        <span className="text-xs text-faint">{count} item{count !== 1 ? 's' : ''} will be written</span>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button variant="primary" onClick={onImport} disabled={count === 0 || !plan.product}>
+            Import {count} item{count !== 1 ? 's' : ''} <IconArrowRight size={14} />
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }
 
