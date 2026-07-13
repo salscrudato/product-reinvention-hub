@@ -118,3 +118,106 @@ describe('POST /api/ai/chat', () => {
     expect(res.body.error).toBe('ai_not_configured')
   })
 })
+
+// ─── /api/filing/generate — SCOPE gate ───────────────────────────────────────
+// Tests verify: VIEWER is blocked server-side (not just UI), EDITOR passes the gate,
+// and input validation fires before any Cosmos I/O.
+
+describe('POST /api/filing/generate — authority gate and input validation', () => {
+  const viewerToken  = makeToken('VIEWER')
+  const analystToken = makeToken('ANALYST')        // inquiry persona — no filing:generate
+  const editorToken  = makeToken('EDITOR')
+
+  it('returns 403 for VIEWER — filing:generate capability not held', async () => {
+    const res = await request(app)
+      .post('/api/filing/generate')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ productId: 'PH.PROD.001', stateCode: 'TX', asOf: '2026-01-01T00:00:00.000Z' })
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe('forbidden')
+    expect(res.body.need).toBe('filing:generate')
+  })
+
+  it('returns 403 for ANALYST — inquiry persona does not hold filing:generate', async () => {
+    const res = await request(app)
+      .post('/api/filing/generate')
+      .set('Authorization', `Bearer ${analystToken}`)
+      .send({ productId: 'PH.PROD.001', stateCode: 'TX', asOf: '2026-01-01T00:00:00.000Z' })
+    expect(res.status).toBe(403)
+    expect(res.body.need).toBe('filing:generate')
+  })
+
+  it('returns 401 for unauthenticated request', async () => {
+    const res = await request(app)
+      .post('/api/filing/generate')
+      .send({ productId: 'PH.PROD.001', stateCode: 'TX' })
+    expect(res.status).toBe(401)
+  })
+
+  it('EDITOR passes the authority gate — non-403/401 response (Cosmos unavailable in test env)', async () => {
+    // The capability check passes. Cosmos is unavailable so we expect 4xx (input/cosmos error),
+    // 5xx (server error), or 503 (storage/AI not configured) — but NOT 401 or 403.
+    const res = await request(app)
+      .post('/api/filing/generate')
+      .set('Authorization', `Bearer ${editorToken}`)
+      .send({ productId: 'PH.PROD.001', stateCode: 'TX', asOf: '2026-01-01T00:00:00.000Z' })
+    expect(res.status).not.toBe(401)
+    expect(res.status).not.toBe(403)
+  })
+
+  it('returns 400 when productId is missing', async () => {
+    const res = await request(app)
+      .post('/api/filing/generate')
+      .set('Authorization', `Bearer ${editorToken}`)
+      .send({ stateCode: 'TX', asOf: '2026-01-01T00:00:00.000Z' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('productId_required')
+  })
+
+  it('returns 400 when stateCode is invalid', async () => {
+    const res = await request(app)
+      .post('/api/filing/generate')
+      .set('Authorization', `Bearer ${editorToken}`)
+      .send({ productId: 'PH.PROD.001', stateCode: 'INVALID', asOf: '2026-01-01T00:00:00.000Z' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('stateCode_required')
+  })
+
+  it('returns 400 when asOf is in the future', async () => {
+    const futureDate = new Date(Date.now() + 86_400_000).toISOString()
+    const res = await request(app)
+      .post('/api/filing/generate')
+      .set('Authorization', `Bearer ${editorToken}`)
+      .send({ productId: 'PH.PROD.001', stateCode: 'TX', asOf: futureDate })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('asOf_future')
+  })
+
+  it('returns 400 when asOf is not a valid date', async () => {
+    const res = await request(app)
+      .post('/api/filing/generate')
+      .set('Authorization', `Bearer ${editorToken}`)
+      .send({ productId: 'PH.PROD.001', stateCode: 'TX', asOf: 'not-a-date' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('asOf_invalid')
+  })
+})
+
+// ─── /api/filing — read endpoints gate ───────────────────────────────────────
+
+describe('GET /api/filing — read endpoints require product:read', () => {
+  it('returns 401 for unauthenticated list request', async () => {
+    const res = await request(app).get('/api/filing')
+    expect(res.status).toBe(401)
+  })
+
+  it('VIEWER can list filings (product:read capability held)', async () => {
+    const viewerToken = makeToken('VIEWER')
+    const res = await request(app)
+      .get('/api/filing')
+      .set('Authorization', `Bearer ${viewerToken}`)
+    // product:read passes; Cosmos unavailable → 500 or empty success — not 403.
+    expect(res.status).not.toBe(403)
+    expect(res.status).not.toBe(401)
+  })
+})

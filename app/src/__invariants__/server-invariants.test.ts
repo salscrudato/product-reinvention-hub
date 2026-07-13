@@ -15,8 +15,9 @@ import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const dir = dirname(fileURLToPath(import.meta.url))
-const dataJs  = readFileSync(resolve(dir, '../../../server/lib/data.js'),       'utf8')
-const aiJs    = readFileSync(resolve(dir, '../../../server/lib/ai/chat.js'), 'utf8')
+const dataJs   = readFileSync(resolve(dir, '../../../server/lib/data.js'),       'utf8')
+const aiJs     = readFileSync(resolve(dir, '../../../server/lib/ai/chat.js'),    'utf8')
+const filingJs = readFileSync(resolve(dir, '../../../server/lib/filing.js'),     'utf8')
 
 // ─── DEF-0043 / DEF-0046 ─────────────────────────────────────────────────────
 // Mutation sweep FAULT-003 dropped the audit ops.push from envelope(); FAULT-B dropped
@@ -76,5 +77,64 @@ describe('DEF-0045 — AI SYSTEM prompt must contain the citation instruction', 
 
   it("SYSTEM constant forbids fabricating reference tags", () => {
     expect(aiJs).toContain('Do not fabricate reference tags')
+  })
+})
+
+// ─── Filing generation invariants ────────────────────────────────────────────
+// filing.js must: (1) gate on filing:generate capability to block VIEWER, (2) use
+// items.create() exclusively for filing records (never upsert/replace), and (3) have
+// the independent verifier gated to reject before freeze.
+describe('filing.js — authority gate + create-only + verifier-before-freeze invariants', () => {
+  it("POST /generate is gated by requireCapability('filing:generate') not a raw role check", () => {
+    // filing:generate grants only EDITOR+, TENANT_ADMIN, SUPER_ADMIN (see authz.js).
+    // VIEWER is excluded. A mutation swapping to product:read would allow viewers to file.
+    expect(filingJs).toMatch(/requireCapability\(['"]filing:generate['"]\)/)
+  })
+
+  it('freezeFiling uses items.create() for the filing record (never upsert — CREATE-ONLY)', () => {
+    // items.upsert() would allow silent overwrite of an existing filing record.
+    // Only items.create() enforces immutability at the storage layer.
+    expect(filingJs).toMatch(/items\.create\(filingRecord\)/)
+  })
+
+  it('freezeFiling uses items.create() for the audit event (never upsert — append-only)', () => {
+    expect(filingJs).toMatch(/items\.create\(auditRecord\)/)
+  })
+
+  it('filing.js contains NO items.upsert() or items.replace() calls (no update path for filing records)', () => {
+    // This is the authoritative proof that no code path can update a filing record after creation.
+    // The regex catches both upsert and replace on the items object.
+    expect(filingJs).not.toMatch(/items\.(upsert|replace)\(/)
+  })
+
+  it('verifyPackage is called before freezeFiling (verifier gates freeze)', () => {
+    // The verifier must block fabricated fields before the record is made immutable.
+    // We check that verifyPackage appears before freezeFiling in the source order.
+    const verifyIdx = filingJs.indexOf('verifyPackage(')
+    const freezeIdx = filingJs.indexOf('freezeFiling(')
+    expect(verifyIdx).toBeGreaterThan(0)
+    expect(freezeIdx).toBeGreaterThan(0)
+    expect(verifyIdx).toBeLessThan(freezeIdx)
+  })
+
+  it('actor is derived from req.user, not from req.body (server-stamped identity)', () => {
+    // The actor object must be built from req.user fields. It must not read actor from
+    // req.body, which would let a client forge the identity in the audit trail.
+    expect(filingJs).toMatch(/actor\s*=\s*\{[^}]*req\.user\.uid/)
+    expect(filingJs).not.toMatch(/req\.body\.actor/)
+  })
+
+  it('rejection path writes a filing.verify_rejected audit event (discrepancy is logged)', () => {
+    expect(filingJs).toContain("'filing.verify_rejected'")
+  })
+
+  it('VERIFIER_SYSTEM instructs the model to verify fields verbatim (no fabrication)', () => {
+    expect(filingJs).toContain('verbatim')
+    expect(filingJs).toContain('extraction_verdict')
+  })
+
+  it('packageHash is computed over per-item contentHashes (tamper evidence covers all filed content)', () => {
+    expect(filingJs).toContain('packageHash')
+    expect(filingJs).toContain('contentHash')
   })
 })

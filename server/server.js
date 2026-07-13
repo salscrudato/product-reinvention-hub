@@ -138,6 +138,18 @@ try {
   console.warn('[prodhub-host] /api/serff/v1 NOT mounted:', err.message)
 }
 
+// ─── Regulatory filing generation API ───────────────────────────────────────
+// POST /api/filing/generate  — authority-gated 5-step filing: SCOPE/RESOLVE/BUILD/VERIFY/FREEZE
+// GET  /api/filing           — list frozen filings for the authenticated tenant
+// GET  /api/filing/:filingId — retrieve one immutable filing record
+// Requires filing:generate capability (EDITOR+); read endpoints require product:read (VIEWER+).
+try {
+  app.use('/api/filing', require('./lib/filing'))
+  console.log('[prodhub-host] /api/filing mounted (regulatory filing generation)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/filing NOT mounted:', err.message)
+}
+
 // ─── HomeCheck consumer surface (guest-accessible, rate-limited, zero portfolio access) ──
 // POST /api/homecheck/v1/risk               — address risk report (Census+FEMA+USGS+NOAA+WHP)
 // POST /api/homecheck/v1/report-html        — saveable single-file HTML risk report
