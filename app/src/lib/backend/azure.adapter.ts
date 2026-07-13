@@ -111,9 +111,22 @@ if (typeof document !== 'undefined') {
 
 export const adapter: BackendAdapter = {
   auth: {
-    async signIn(email: string, password: string, tenant?: string): Promise<Session> {
-      const { user, token: tok } = await api<{ user: AuthUser; token: string }>('/auth/login', {
-        method: 'POST', body: JSON.stringify({ email, username: email, password, tenant }),
+    async requestOtp(email: string): Promise<void> {
+      await api('/auth/otp/request', { method: 'POST', body: JSON.stringify({ email }) })
+    },
+
+    async verifyOtp(email: string, code: string, tenant?: string): Promise<Session> {
+      const { user, token: tok } = await api<{ user: AuthUser; token: string }>('/auth/otp/verify', {
+        method: 'POST', body: JSON.stringify({ email, code, tenant }),
+      })
+      setToken(tok)
+      setUser(user)
+      return { user, token: tok }
+    },
+
+    async loginBootstrap(username: string, password: string, tenant?: string): Promise<Session> {
+      const { user, token: tok } = await api<{ user: AuthUser; token: string }>('/auth/bootstrap', {
+        method: 'POST', body: JSON.stringify({ username, password, tenant }),
       })
       setToken(tok)
       setUser(user)

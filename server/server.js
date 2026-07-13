@@ -66,7 +66,11 @@ app.get('/api/health', (_req, res) => {
 })
 
 // ─── auth ─────────────────────────────────────────────────────────────────
-app.post('/api/auth/login', loginRateLimit, auth.login)
+// OTP flow: request → verify (regular email users)
+app.post('/api/auth/otp/request', loginRateLimit, auth.requestOtp)
+app.post('/api/auth/otp/verify',  loginRateLimit, auth.verifyOtp)
+// Bootstrap login: username+password for SUPER_ADMIN break-glass accounts only
+app.post('/api/auth/bootstrap',   loginRateLimit, auth.loginBootstrap)
 app.get('/api/auth/tenants', tenantsRateLimit, auth.publicTenants) // login-page dropdown (ids + names only)
 app.get('/api/auth/me', auth.requireAuth, auth.me)
 app.post('/api/auth/logout', auth.revokeToken, (_req, res) => res.json({ ok: true })) // RISK-006: revoke jti before responding

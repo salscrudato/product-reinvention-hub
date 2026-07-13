@@ -1,57 +1,84 @@
 'use strict'
-// auth.js — username/password + TENANT → JWT auth with a 4-tier role model.
+// auth.js — email OTP + SUPER_ADMIN bootstrap auth with a 5-tier role model.
 //
-// Roles (rank): VIEWER < ANALYST < EDITOR < ADMIN
-//   VIEWER  — read only
-//   ANALYST — read + AI (chat/claims)
-//   EDITOR  — read + write + AI
-//   ADMIN   — everything, incl. creating/managing tenants, users and roles
+// Tiers (rank): VIEWER < ANALYST < EDITOR < ADMIN < SUPER_ADMIN
+//   VIEWER      — read only
+//   ANALYST     — read + AI
+//   EDITOR      — read + write + AI
+//   ADMIN       — everything incl. tenant/user management
+//   SUPER_ADMIN — platform-level, OTP-exempt, break-glass only; every use is audited
 //
-// Tenancy: every session is bound to a tenantId (carried in the JWT). The data
-// layer scopes ALL reads/writes to that tenant, so companies are isolated.
-// Bootstrap admins (admin / sal.scrudato) are on by default; set BOOTSTRAP_USERS_ENABLED=false to disable.
-// Additional users live in Cosmos (kind:'user', pk:'__system__'), managed via /api/admin/users.
+// Auth paths:
+//   1. Email OTP  — POST /api/auth/otp/request + POST /api/auth/otp/verify
+//                   Allowed domains: ALLOWED_EMAIL_DOMAINS (comma-separated env, server-side only)
+//                   Tenant derived from domain via TENANT_DOMAIN_MAP (JSON env, server-side only)
+//   2. Bootstrap  — POST /api/auth/bootstrap (username+password, SUPER_ADMIN only)
+//                   NOTE: seed admins should migrate to normal admin management after the pilot.
+//
+// SSO seam: discoverHomeRealm(email) — unimplemented. See docs/IDENTITY.md.
 
 const crypto = require('crypto')
+const otpModule = require('./otp')
+const emailAdapter = require('./email')
 
-// AUTH_JWT_SECRET — fail-closed: no insecure default; server refuses to start without it.
+// AUTH_JWT_SECRET — fail-closed: server refuses to start without it.
 const _secret = process.env.AUTH_JWT_SECRET
 if (!_secret) throw new Error('[auth] AUTH_JWT_SECRET is required — set it in App Service config (production) or local env (dev/smoke)')
 const SECRET = _secret
 const TTL_SECONDS = 12 * 60 * 60
 
-const RANK = { VIEWER: 0, ANALYST: 1, EDITOR: 2, ADMIN: 3 }
+const RANK = { VIEWER: 0, ANALYST: 1, EDITOR: 2, ADMIN: 3, SUPER_ADMIN: 4 }
 
-// DEFAULT_TENANT_ID: mirror of shared/src/types.ts DEFAULT_TENANT_ID (this CJS module
-// cannot import the TS shared package). The backfill/demo tenant + the floor for a
-// principal with no explicit binding. Keep the two literals in sync.
+// DEFAULT_TENANT_ID: mirror of shared/src/types.ts DEFAULT_TENANT_ID.
+// Floor for a principal with no explicit binding (pre-multi-tenant / seed actor).
 const DEFAULT_TENANT_ID = 'default'
 
-// Bootstrap accounts — enabled by default; set BOOTSTRAP_USERS_ENABLED=false to disable in hardened prod.
-// Passwords sourced from env; defaults preserve hardening/smoke.mjs's admin/admin authentication.
-const BOOTSTRAP_ENABLED = process.env.BOOTSTRAP_USERS_ENABLED !== 'false'
-const BOOTSTRAP = BOOTSTRAP_ENABLED ? {
-  admin: { password: process.env.BOOTSTRAP_ADMIN_PASSWORD || 'admin', role: 'ADMIN', name: 'Admin', email: 'admin@prodhub.local', tenants: '*' },
-  'sal.scrudato': { password: process.env.BOOTSTRAP_SAL_PASSWORD || 'sal.scrudato', role: 'ADMIN', name: 'Sal Scrudato', email: 'salvatore.scrudato@accenture.com', tenants: '*' },
-} : {}
+// ─── Domain allowlist + tenant mapping (server-side only) ────────────────────
+// ALLOWED_EMAIL_DOMAINS: comma-separated permitted domains, e.g. "accenture.com,testco.com"
+// TENANT_DOMAIN_MAP: JSON mapping domain → tenantId, e.g. {"accenture.com":"accenture"}
+const _allowedDomains = (process.env.ALLOWED_EMAIL_DOMAINS || '')
+  .split(',').map(d => d.trim().toLowerCase()).filter(Boolean)
+const _domainMap = (() => {
+  try { return JSON.parse(process.env.TENANT_DOMAIN_MAP || '{}') } catch { return {} }
+})()
 
-// RISK-002: warn loudly when bootstrap accounts are live with default passwords.
-// Set BOOTSTRAP_USERS_ENABLED=false in App Service config to disable entirely.
-if (BOOTSTRAP_ENABLED && (!process.env.BOOTSTRAP_ADMIN_PASSWORD || !process.env.BOOTSTRAP_SAL_PASSWORD)) {
-  console.warn('[auth] SECURITY: bootstrap accounts are enabled with default passwords. Set BOOTSTRAP_USERS_ENABLED=false in App Service config for production, or set BOOTSTRAP_ADMIN_PASSWORD and BOOTSTRAP_SAL_PASSWORD to strong values.')
+function getDomainOf(email) {
+  return String(email || '').toLowerCase().split('@')[1] || ''
+}
+function isAllowedDomain(email) {
+  const domain = getDomainOf(email)
+  return _allowedDomains.length > 0 && (_allowedDomains.includes(domain) || _allowedDomains.includes('*'))
+}
+function resolveTenantFromDomain(email) {
+  const domain = getDomainOf(email)
+  return _domainMap[domain] || domain.split('.').slice(0, -1).join('.') || domain
 }
 
-const overrides = new Map() // in-process password cache for same-session after changePassword
+// ─── Bootstrap admins (config/env only, never in the client bundle) ──────────
+// RISK-002: warn loudly when defaults are live.
+// NOTE: seed admins should migrate to normal admin management after the pilot.
+const BOOTSTRAP_ADMINS = {
+  admin: {
+    password: process.env.BOOTSTRAP_ADMIN_PASSWORD || 'admin',
+    name: 'Admin',
+    email: 'admin@prodhub.local',
+  },
+  sal: {
+    password: process.env.BOOTSTRAP_SAL_PASSWORD || 'scrudato',
+    name: 'Sal Scrudato',
+    email: 'salvatore.scrudato@accenture.com',
+  },
+}
+if (!process.env.BOOTSTRAP_ADMIN_PASSWORD || !process.env.BOOTSTRAP_SAL_PASSWORD) {
+  console.warn('[auth] SECURITY: bootstrap admins are using default passwords. Set BOOTSTRAP_ADMIN_PASSWORD and BOOTSTRAP_SAL_PASSWORD in App Service config.')
+}
 
-// ─── base64url HS256 JWT ─────────────────────────────────────────────────────
+// ─── base64url HS256 JWT ──────────────────────────────────────────────────────
 const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 const fromB64url = (s) => Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
 
 function sign(payload) {
   const now = Math.floor(Date.now() / 1000)
-  // RISK-006: jti (JWT ID) enables server-side revocation. Adding jti is additive
-  // and backward-compatible -- tokens without jti (issued before this change) still
-  // verify correctly; they are simply not revocable (they expire at 12h TTL).
   const jti = crypto.randomUUID()
   const head = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
   const data = `${head}.${b64url(JSON.stringify({ ...payload, jti, iat: now, exp: now + TTL_SECONDS }))}`
@@ -68,12 +95,9 @@ function verify(token) {
   return payload
 }
 
-// ─── JWT revocation (RISK-006) ───────────────────────────────────────────────
-// Revoked JTIs are stored in Cosmos (kind:'revokedToken', pk:'__system__') and
-// cached locally for REVOKE_CACHE_TTL ms to avoid a Cosmos round-trip per request.
-// Fail-open on Cosmos error to prevent a storage outage from locking everyone out.
-const _revokedCache = new Map() // jti -> { revoked: bool, cachedAt: ms }
-const REVOKE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+// ─── JWT revocation (RISK-006) ────────────────────────────────────────────────
+const _revokedCache = new Map()
+const REVOKE_CACHE_TTL = 5 * 60 * 1000
 
 async function isRevoked(jti) {
   const cached = _revokedCache.get(jti)
@@ -91,13 +115,39 @@ async function isRevoked(jti) {
   } catch { return false }
 }
 
-// ─── user + tenant lookups (Cosmos overlay on bootstrap) ─────────────────────
+// ─── Cosmos helpers ───────────────────────────────────────────────────────────
 function systemContainer() {
   try { return require('./cosmos').docs } catch { return null }
 }
+
+// ─── Immutable login audit trail ──────────────────────────────────────────────
+// Every auth event writes an append-only Cosmos record (Create, not Upsert).
+// Fail-open: a Cosmos outage does not block authentication.
+function getIp(req) {
+  const fwd = req.headers['x-forwarded-for'] || ''
+  return (fwd ? fwd.split(',')[0] : (req.socket?.remoteAddress || '')).trim() || null
+}
+async function writeLoginAudit(event, actor, tenantId, ip, ua) {
+  const docs = systemContainer()
+  if (!docs) return
+  try {
+    await docs.items.create({
+      id: `loginAudit:${Date.now().toString(36)}-${crypto.randomUUID()}`,
+      pk: '__system__',
+      kind: 'loginAudit',
+      tenantId: tenantId || '__unknown__',
+      event,
+      actor: actor || null,
+      at: new Date().toISOString(),
+      ip: ip || null,
+      userAgent: ua || null,
+    })
+  } catch { /* fail-open: auth proceeds even if audit write fails */ }
+}
+
+// ─── User lookup + JIT provisioning ──────────────────────────────────────────
 async function findUser(identifier) {
   const id = String(identifier || '').trim().toLowerCase()
-  // Cosmos users first (admin-created), then bootstrap.
   const docs = systemContainer()
   if (docs) {
     try {
@@ -106,12 +156,43 @@ async function findUser(identifier) {
         parameters: [{ name: '@id', value: id }],
       }).fetchAll()
       if (resources[0]) return { source: 'cosmos', ...resources[0].data }
-    } catch { /* fall through to bootstrap */ }
+    } catch { /* fall through */ }
   }
-  if (BOOTSTRAP[id]) return { source: 'bootstrap', username: id, ...BOOTSTRAP[id] }
-  for (const [u, v] of Object.entries(BOOTSTRAP)) if (v.email.toLowerCase() === id) return { source: 'bootstrap', username: u, ...v }
   return null
 }
+
+async function jitProvisionUser(email, tenantId) {
+  const username = email.toLowerCase().split('@')[0].replace(/[^a-z0-9._-]/g, '_').slice(0, 64)
+  const existing = await findUser(email)
+  if (existing) {
+    // Ensure the resolved tenantId is in the user's tenants list
+    const docs = systemContainer()
+    if (docs && tenantId && Array.isArray(existing.tenants) && !existing.tenants.includes(tenantId)) {
+      try {
+        await docs.items.upsert({
+          id: `user:${existing.username}`, pk: '__system__', kind: 'user',
+          data: { ...existing, tenants: [...existing.tenants, tenantId], source: undefined },
+        })
+      } catch { /* best-effort */ }
+    }
+    return existing
+  }
+  // JIT-create at the lowest role (VIEWER)
+  const newUser = {
+    username, email, name: username,
+    role: 'VIEWER',
+    tenants: tenantId ? [tenantId] : [],
+    createdAt: new Date().toISOString(),
+  }
+  const docs = systemContainer()
+  if (docs) {
+    try {
+      await docs.items.upsert({ id: `user:${username}`, pk: '__system__', kind: 'user', data: newUser })
+    } catch { /* best-effort: in-memory fallback */ }
+  }
+  return newUser
+}
+
 async function listTenants() {
   const docs = systemContainer()
   if (!docs) return []
@@ -121,44 +202,123 @@ async function listTenants() {
   } catch { return [] }
 }
 
-function allowedTenant(user, tenant) {
-  if (user.tenants === '*') return true
-  if (!tenant) return false
-  return Array.isArray(user.tenants) && user.tenants.includes(tenant)
-}
-const currentPassword = (u) => (overrides.has(u.username) ? overrides.get(u.username) : u.password)
-const toAuthUser = (u, tenantId) => ({ uid: u.username, email: u.email || null, name: u.name || u.username, role: u.role, tenantId: tenantId || null })
+// ─── OTP request handler ──────────────────────────────────────────────────────
+async function requestOtp(req, res) {
+  const { email } = req.body || {}
+  if (!email || typeof email !== 'string') return res.status(400).json({ error: 'email_required' })
+  const normalized = email.trim().toLowerCase()
+  const ip = getIp(req); const ua = req.headers['user-agent'] || null
 
-// ─── express handlers + middleware ──────────────────────────────────────────
-async function login(req, res) {
-  const { email, username, password, tenant } = req.body || {}
-  const u = await findUser(email || username)
-  if (!u || currentPassword(u) !== String(password ?? '')) return res.status(401).json({ error: 'invalid_credentials' })
-  // Non-admins must select a tenant they belong to. Admins may sign in tenant-less to manage.
-  const tid = tenant || null
-  if (tid && !allowedTenant(u, tid)) return res.status(403).json({ error: 'tenant_forbidden' })
-  if (!tid && u.role !== 'ADMIN') return res.status(400).json({ error: 'tenant_required' })
-  const token = sign({ sub: u.username, name: u.name || u.username, email: u.email || null, role: u.role, tenantId: tid })
-  return res.json({ user: toAuthUser(u, tid), token })
+  if (!isAllowedDomain(normalized)) {
+    await writeLoginAudit('otp_domain_rejected', normalized, null, ip, ua)
+    // Return generic success to prevent email enumeration
+    return res.json({ ok: true })
+  }
+
+  const tenantId = resolveTenantFromDomain(normalized)
+  const code = otpModule.generate6Digit()
+  otpModule.store(normalized, code, tenantId)
+  await writeLoginAudit('otp_requested', normalized, tenantId, ip, ua)
+
+  try {
+    await emailAdapter.sendOtp(normalized, code)
+  } catch (err) {
+    console.error('[auth] OTP send failed:', err.message)  // log the error, NOT the code
+    return res.status(500).json({ error: 'otp_send_failed' })
+  }
+
+  return res.json({ ok: true })
 }
 
+// ─── OTP verify handler ───────────────────────────────────────────────────────
+async function verifyOtp(req, res) {
+  const { email, code, tenant } = req.body || {}
+  if (!email || !code) return res.status(400).json({ error: 'email_and_code_required' })
+  const normalized = email.trim().toLowerCase()
+  const ip = getIp(req); const ua = req.headers['user-agent'] || null
+
+  const result = otpModule.verify(normalized, String(code).trim())
+
+  if (!result.ok) {
+    const event = result.lockout ? 'otp_locked_out'
+      : result.reason === 'expired'   ? 'otp_expired'
+      : result.reason === 'not_found' ? 'otp_not_found'
+      : 'otp_failed'
+    await writeLoginAudit(event, normalized, null, ip, ua)
+    if (result.reason === 'locked')    return res.status(429).json({ error: 'otp_locked' })
+    if (result.reason === 'expired')   return res.status(400).json({ error: 'otp_expired' })
+    if (result.reason === 'not_found') return res.status(400).json({ error: 'otp_not_found' })
+    return res.status(400).json({ error: 'otp_invalid', attemptsLeft: result.attemptsLeft })
+  }
+
+  const resolvedTenant = result.tenantId || (tenant ? String(tenant) : null)
+  const user = await jitProvisionUser(normalized, resolvedTenant)
+  const effectiveTenant = resolvedTenant || DEFAULT_TENANT_ID
+
+  const token = sign({
+    sub: user.username, name: user.name || user.username,
+    email: normalized, role: user.role || 'VIEWER',
+    tenantId: effectiveTenant, method: 'otp',
+  })
+
+  await writeLoginAudit('otp_success', normalized, effectiveTenant, ip, ua)
+  return res.json({
+    user: { uid: user.username, email: normalized, name: user.name || user.username, role: user.role || 'VIEWER', tenantId: effectiveTenant },
+    token,
+  })
+}
+
+// ─── Bootstrap admin login handler ───────────────────────────────────────────
+// Server-validated only. A client can never assert BOOTSTRAP_ADMINS membership.
+// Every attempt (success or failure) is audit-logged. Bootstrap grant is audited separately.
+async function loginBootstrap(req, res) {
+  const { username, password, tenant } = req.body || {}
+  if (!username || !password) return res.status(400).json({ error: 'username_and_password_required' })
+  const ip = getIp(req); const ua = req.headers['user-agent'] || null
+  const uKey = String(username).trim().toLowerCase()
+
+  const admin = BOOTSTRAP_ADMINS[uKey]
+  // Timing-safe compare via SHA-256 hashes (equal-length buffers always)
+  const expectedHash = crypto.createHash('sha256').update(admin ? admin.password : crypto.randomUUID()).digest()
+  const actualHash   = crypto.createHash('sha256').update(String(password)).digest()
+  const match = admin && crypto.timingSafeEqual(expectedHash, actualHash)
+
+  if (!match) {
+    await writeLoginAudit('bootstrap_failed', uKey, null, ip, ua)
+    return res.status(401).json({ error: 'invalid_credentials' })
+  }
+
+  const tid = tenant ? String(tenant) : null
+  const token = sign({ sub: uKey, name: admin.name, email: admin.email, role: 'SUPER_ADMIN', tenantId: tid, method: 'bootstrap' })
+
+  await writeLoginAudit('bootstrap_success', uKey, tid, ip, ua)
+  await writeLoginAudit('bootstrap_super_admin_granted', uKey, tid, ip, ua)
+
+  return res.json({ user: { uid: uKey, email: admin.email, name: admin.name, role: 'SUPER_ADMIN', tenantId: tid }, token })
+}
+
+// ─── SSO seam (unimplemented) — see docs/IDENTITY.md ─────────────────────────
+// eslint-disable-next-line no-unused-vars
+function discoverHomeRealm(_email) {
+  // TODO: implement home-realm discovery for enterprise SSO (docs/IDENTITY.md).
+  // Return: { provider: 'oidc'|'saml', entityId: string, redirectUrl: string } | null
+  return null
+}
+
+// ─── Misc handlers ────────────────────────────────────────────────────────────
 function me(req, res) { return res.json({ user: req.user }) }
 
 async function changePassword(req, res) {
   const next = String((req.body || {}).password ?? '')
   if (next.length < 12) return res.status(400).json({ error: 'password_too_short', detail: 'Password must be at least 12 characters.' })
-  // Persist to Cosmos so the change survives server restart.
   const docs = systemContainer()
   if (docs) {
     try {
       const u = await findUser(req.user.uid)
       await docs.items.upsert({
-        id: `user:${req.user.uid}`,
-        pk: '__system__',
-        kind: 'user',
+        id: `user:${req.user.uid}`, pk: '__system__', kind: 'user',
         data: {
-          username: req.user.uid,
-          email: u?.email || req.user.email || null,
+          username: req.user.uid, email: u?.email || req.user.email || null,
           name: u?.name || req.user.name || req.user.uid,
           role: u?.role || req.user.role,
           tenants: u?.tenants ?? (req.user.tenantId ? [req.user.tenantId] : []),
@@ -167,19 +327,17 @@ async function changePassword(req, res) {
       })
     } catch { return res.status(500).json({ error: 'persist_failed' }) }
   }
-  overrides.set(req.user.uid, next) // same-session cache
   return res.json({ ok: true })
 }
 
-// Public tenant list for the login dropdown (ids + names only — no data).
 async function publicTenants(_req, res) { res.json({ tenants: await listTenants() }) }
 
+// ─── Per-request middleware ───────────────────────────────────────────────────
 async function attachUser(req, _res, next) {
   const h = req.headers.authorization || ''
   const token = h.startsWith('Bearer ') ? h.slice(7) : null
   const p = token ? verify(token) : null
   if (p) {
-    // RISK-006: skip revocation check for tokens without jti (issued before this change)
     if (p.jti && await isRevoked(p.jti)) {
       req.user = null
     } else {
@@ -191,8 +349,6 @@ async function attachUser(req, _res, next) {
   next()
 }
 
-// Revoke the token carried by req.user (called from the logout route).
-// Best-effort: local cache is always updated; Cosmos write may fail silently.
 async function revokeToken(req, _res, next) {
   const jti = req.user?._jti
   if (jti) {
@@ -201,16 +357,15 @@ async function revokeToken(req, _res, next) {
     if (docs) {
       try {
         await docs.items.upsert({
-          id: `revokedToken:${jti}`,
-          pk: '__system__',
-          kind: 'revokedToken',
+          id: `revokedToken:${jti}`, pk: '__system__', kind: 'revokedToken',
           data: { jti, uid: req.user.uid, revokedAt: Date.now() },
         })
-      } catch { /* best-effort; token is already invalidated in local cache */ }
+      } catch { /* best-effort */ }
     }
   }
   next()
 }
+
 function requireAuth(req, res, next) { if (!req.user) return res.status(401).json({ error: 'unauthenticated' }); next() }
 function requireRole(min) {
   return (req, res, next) => {
@@ -219,30 +374,23 @@ function requireRole(min) {
     next()
   }
 }
-// A tenant-scoped operation needs a tenant bound to the session.
 function requireTenant(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'unauthenticated' })
   if (!req.user.tenantId) return res.status(409).json({ error: 'no_tenant_selected' })
   next()
 }
 
-// resolveTenantForPrincipal(principal): THE server-side seam that maps an authenticated
-// principal to the tenant it operates in. Every tenant-scoped read/write derives its
-// tenantId through here, NEVER from anything a client can set. Today a principal's tenant
-// is bound at login (validated against the user's allowed tenants) and carried in the
-// verified JWT, so this returns that server-derived tenantId; DEFAULT_TENANT_ID is the
-// floor for a principal with no explicit binding (a pre-multi-tenant / seed actor) so
-// legacy data still resolves. requireTenant remains the authorization gate for interactive
-// sessions (a tenant-less session is rejected before it reaches a handler); this seam is
-// the resolution step. Prompt 2 will EXTEND it (org-membership lookup / default-org
-// provisioning); the signature and the server-derived guarantee stay stable.
+// resolveTenantForPrincipal: maps an authenticated principal to its working tenant.
+// tenantId is domain-derived at OTP verify time and baked into the signed JWT; this seam
+// reads it server-side. DEFAULT_TENANT_ID is the floor for non-interactive / seed actors.
+// requireTenant is the interactive gate (session without tenantId → 409 before this is called).
 function resolveTenantForPrincipal(principal) {
   return (principal && principal.tenantId) || DEFAULT_TENANT_ID
 }
 
 module.exports = {
-  RANK, DEFAULT_TENANT_ID, BOOTSTRAP, listTenants, findUser,
+  RANK, DEFAULT_TENANT_ID, BOOTSTRAP_ADMINS, listTenants, findUser,
   sign, verify,
-  login, me, changePassword, publicTenants,
+  requestOtp, verifyOtp, loginBootstrap, me, changePassword, publicTenants, discoverHomeRealm,
   attachUser, requireAuth, requireRole, requireTenant, resolveTenantForPrincipal, revokeToken,
 }

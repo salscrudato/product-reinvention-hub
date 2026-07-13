@@ -4,7 +4,7 @@
 // adapter (azure.adapter.ts) — JWT auth, Cosmos data, and Foundry AI over /api/*.
 import type { Unsubscribe } from '@pf/shared'
 
-export type Tier = 'VIEWER' | 'ANALYST' | 'EDITOR' | 'ADMIN'
+export type Tier = 'VIEWER' | 'ANALYST' | 'EDITOR' | 'ADMIN' | 'SUPER_ADMIN'
 
 export interface AuthUser {
   uid: string
@@ -56,7 +56,12 @@ export class MutationConflictError extends Error {
 
 export interface BackendAdapter {
   auth: {
-    signIn(email: string, password: string, tenant?: string): Promise<Session>
+    /** Step 1 of OTP flow: request a one-time code for an email address. */
+    requestOtp(email: string): Promise<void>
+    /** Step 2 of OTP flow: submit the code to get a session. */
+    verifyOtp(email: string, code: string, tenant?: string): Promise<Session>
+    /** Bootstrap admin login: username + password, server-validated only (never trust client). */
+    loginBootstrap(username: string, password: string, tenant?: string): Promise<Session>
     /** Tenants offered on the login screen (ids + names only; safe pre-auth). */
     listTenants(): Promise<TenantInfo[]>
     signOut(): Promise<void>

@@ -2,10 +2,10 @@
 // a bespoke "insight graph": an insurance product manager at the focal point,
 // informed by inward-flowing streams from the app's capabilities (live news,
 // coverages & forms, an AI copilot, rating, intelligent tasks). Coverages branch
-// out from their node. The hero's call-to-action is an inline username/password
-// form beneath the copy - there is no separate sign-in page.
+// out from their node. The hero's call-to-action is an inline sign-in form beneath
+// the copy — OTP flow for email users, password flow for bootstrap admins.
 // Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
 import type { TenantInfo } from '../lib/backend'
@@ -188,20 +188,139 @@ function InsightGraph() {
   )
 }
 
-// ─── Hero call-to-action - an inline username / password sign-in form ─────────
+// ─── Sal bootstrap modal (top-right "Sign in" path) ──────────────────────────
+// This is the break-glass path for the 'sal' seed admin. Auth is server-validated;
+// showing this modal does not grant any access — only a correct password does.
+
+function SalLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [pass, setPass]       = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [tenant, setTenant]   = useState('')
+  const [tenants, setTenants] = useState<TenantInfo[]>([])
+  const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    adapter.auth.listTenants().then(list => {
+      setTenants(list)
+      const def = list.find(t => t.id === 'testco') ?? list[0]
+      if (def) setTenant(def.id)
+    }).catch(() => {})
+  }, [])
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await adapter.auth.loginBootstrap('sal', pass, tenant || undefined)
+      onSuccess()
+    } catch (err) {
+      setError(err instanceof Error && err.message.includes('401') ? 'Incorrect password.' : (err instanceof Error ? err.message : 'Sign-in failed'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: 'var(--color-overlay)' }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-surface rounded-[18px] p-6 w-full max-w-xs flex flex-col gap-4 rise-in"
+        style={{ boxShadow: 'var(--shadow-card)', border: '1px solid var(--color-border)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-text text-sm">Sign in</span>
+          <button type="button" onClick={onClose} className="text-faint hover:text-dim text-lg leading-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[4px]" aria-label="Close">&#x2715;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
+          <div className="relative">
+            <Input
+              label="Password"
+              type={showPass ? 'text' : 'password'}
+              value={pass}
+              onChange={e => setPass(e.target.value)}
+              placeholder="Enter password"
+              autoComplete="current-password"
+              required
+              disabled={loading}
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass(s => !s)}
+              aria-label={showPass ? 'Hide password' : 'Show password'}
+              aria-pressed={showPass}
+              tabIndex={-1}
+              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              {showPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+            </button>
+          </div>
+
+          {tenants.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text" htmlFor="sal-tenant">Company</label>
+              <select
+                id="sal-tenant" value={tenant}
+                onChange={e => setTenant(e.target.value)}
+                disabled={loading}
+                className="h-11 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                style={{ borderColor: 'var(--color-border-strong)' }}
+              >
+                <option value="">No company (admin mode)</option>
+                {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {error && <p role="alert" className="text-sm text-danger bg-[var(--color-danger-soft)] rounded-[8px] px-3 py-2">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading || !pass}
+            className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[11px] text-white text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 4px 14px var(--glow-accent)' }}
+          >
+            {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
+            {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── Hero sign-in form ────────────────────────────────────────────────────────
+// Three paths:
+//   1. Email (contains @): OTP flow — send code → verify code
+//   2. "admin" username (UI hint only; auth is server-validated): password drop-down → bootstrap
+//   3. "sal" break-glass: top-right "Sign in" button → SalLoginModal
+
+type SignInStep = 'identifier' | 'admin-pass' | 'otp-sent'
 
 function HeroSignIn() {
   const navigate = useNavigate()
-  const [email,        setEmail]        = useState('')
-  const [pass,         setPass]         = useState('')
+
+  const [step,         setStep]         = useState<SignInStep>('identifier')
+  const [identifier,   setIdentifier]   = useState('')
+  const [adminPass,    setAdminPass]    = useState('')
+  const [showAdminPass, setShowAdminPass] = useState(false)
+  const [otpCode,      setOtpCode]      = useState('')
   const [tenant,       setTenant]       = useState('')
   const [tenants,      setTenants]      = useState<TenantInfo[]>([])
   const [tenantPinned, setTenantPinned] = useState(false)
-  const [showPass,     setShowPass]     = useState(false)
   const [error,        setError]        = useState('')
   const [loading,      setLoading]      = useState(false)
+  // adminDetected: UI-only hint that 'admin' username was typed (auth remains server-validated).
+  const [adminDetected, setAdminDetected] = useState(false)
+  const adminTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Populate the tenant dropdown and pre-select the testco default (seeded content).
   useEffect(() => {
     adapter.auth.listTenants().then(list => {
       setTenants(list)
@@ -213,9 +332,16 @@ function HeroSignIn() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // When the username field is blurred, try to infer the company from the typed name.
-  // Matches on: exact tenant-id, username contains tenant-id, or tenant name words.
-  // Won't override a company the user has already explicitly chosen.
+  function handleIdentifierChange(value: string) {
+    setIdentifier(value)
+    setAdminDetected(false)
+    clearTimeout(adminTimer.current)
+    // Detect 'admin' username to show password drop-down (UI only — server validates)
+    if (value.trim().toLowerCase() === 'admin' && !value.includes('@')) {
+      adminTimer.current = setTimeout(() => setAdminDetected(true), 400)
+    }
+  }
+
   function inferTenant(username: string) {
     if (!username || tenantPinned || tenants.length === 0) return
     const u = username.toLowerCase()
@@ -227,66 +353,132 @@ function HeroSignIn() {
     if (match) setTenant(match.id)
   }
 
+  function mapError(err: unknown): string {
+    const msg = err instanceof Error ? err.message : 'Sign-in failed'
+    if (msg.includes('401') || msg.includes('invalid_credentials') || msg.includes('unauthenticated')) return 'Incorrect password.'
+    if (msg.includes('otp_invalid')) return 'Incorrect code. Check and try again.'
+    if (msg.includes('otp_expired')) return 'Code has expired. Request a new one.'
+    if (msg.includes('otp_locked') || msg.includes('429')) return 'Too many attempts. Try again in 15 minutes.'
+    if (msg.includes('otp_not_found')) return 'No code found. Request a new one below.'
+    if (msg.includes('400')) return 'Please fill in all required fields.'
+    if (msg.includes('403')) return "You don't have access to that company."
+    return msg
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await adapter.auth.signIn(email.trim(), pass, tenant || undefined)
-      navigate('/app', { replace: true })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Sign-in failed'
-      if (msg.includes('unauthenticated') || msg.includes('401') || msg.includes('invalid-credential')) {
-        setError('Invalid username or password.')
-      } else if (msg.includes('400')) {
-        setError('Select your company to sign in.')
-      } else if (msg.includes('403')) {
-        setError("You don't have access to that company.")
-      } else if (msg.includes('too-many-requests')) {
-        setError('Too many attempts - try again in a moment.')
-      } else {
-        setError(msg)
+      if (step === 'identifier') {
+        if (adminDetected) {
+          // Show the admin password field — next click will authenticate
+          setStep('admin-pass')
+          setLoading(false)
+          return
+        }
+        // OTP request for email users
+        await adapter.auth.requestOtp(identifier.trim())
+        setStep('otp-sent')
+      } else if (step === 'admin-pass') {
+        await adapter.auth.loginBootstrap('admin', adminPass, tenant || undefined)
+        navigate('/app', { replace: true })
+      } else if (step === 'otp-sent') {
+        await adapter.auth.verifyOtp(identifier.trim(), otpCode.trim(), tenant || undefined)
+        navigate('/app', { replace: true })
       }
+    } catch (err) {
+      setError(mapError(err))
+    } finally {
       setLoading(false)
     }
   }
 
+  const isEmail = identifier.includes('@')
+  const buttonLabel = step === 'otp-sent'    ? 'Verify code'
+    : step === 'admin-pass'                  ? 'Sign in'
+    : (adminDetected && !isEmail)            ? 'Continue'
+    : 'Send code'
+
+  const buttonDisabled = loading
+    || (step === 'identifier' && !identifier)
+    || (step === 'admin-pass' && !adminPass)
+    || (step === 'otp-sent'   && !otpCode)
+
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 w-full max-w-sm mx-auto lg:mx-0">
-      <Input
-        id="signin-username"
-        label="Username" type="text" value={email}
-        onChange={e => setEmail(e.target.value)}
-        onBlur={() => inferTenant(email)}
-        placeholder="first name" autoComplete="username" required disabled={loading}
-      />
-
-      {/* Password with show/hide toggle */}
-      <div className="relative">
+      {step !== 'otp-sent' && (
         <Input
-          label="Password"
-          type={showPass ? 'text' : 'password'}
-          value={pass}
-          onChange={e => setPass(e.target.value)}
-          placeholder="last name"
-          autoComplete="current-password"
+          id="signin-username"
+          label={isEmail ? 'Email' : 'Email or username'}
+          type={isEmail ? 'email' : 'text'}
+          value={identifier}
+          onChange={e => handleIdentifierChange(e.target.value)}
+          onBlur={() => inferTenant(identifier)}
+          placeholder="email@company.com"
+          autoComplete="username email"
           required
-          disabled={loading}
+          disabled={loading || step === 'admin-pass'}
         />
-        <button
-          type="button"
-          onClick={() => setShowPass(s => !s)}
-          aria-label={showPass ? 'Hide password' : 'Show password'}
-          aria-pressed={showPass}
-          tabIndex={-1}
-          className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        >
-          {showPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
-        </button>
-      </div>
+      )}
 
-      {/* Company - below password; pre-selected to testco (seeded content default) */}
-      {tenants.length > 0 && (
+      {/* Admin password drop-down: appears after 'admin' is detected */}
+      {(step === 'admin-pass') && (
+        <div className="relative rise-in">
+          <Input
+            label="Password"
+            type={showAdminPass ? 'text' : 'password'}
+            value={adminPass}
+            onChange={e => setAdminPass(e.target.value)}
+            placeholder="Password"
+            autoComplete="current-password"
+            required
+            disabled={loading}
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={() => setShowAdminPass(s => !s)}
+            aria-label={showAdminPass ? 'Hide password' : 'Show password'}
+            aria-pressed={showAdminPass}
+            tabIndex={-1}
+            className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            {showAdminPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+          </button>
+        </div>
+      )}
+
+      {/* OTP code input: shown after code is sent */}
+      {step === 'otp-sent' && (
+        <div className="flex flex-col gap-1 rise-in">
+          <p className="text-sm text-dim">A code was sent to <strong className="text-text">{identifier.trim()}</strong>. Enter it below.</p>
+          <Input
+            label="One-time code"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            value={otpCode}
+            onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+            placeholder="000000"
+            autoComplete="one-time-code"
+            required
+            disabled={loading}
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={() => { setStep('identifier'); setOtpCode(''); setError('') }}
+            className="text-xs text-faint hover:text-dim underline self-start mt-1"
+          >
+            Use a different email
+          </button>
+        </div>
+      )}
+
+      {/* Company - below credential; pre-selected to testco (seeded content default) */}
+      {tenants.length > 0 && step !== 'otp-sent' && (
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-text" htmlFor="signin-tenant">Company</label>
           <select
@@ -310,12 +502,12 @@ function HeroSignIn() {
 
       <button
         type="submit"
-        disabled={loading || !email || !pass}
+        disabled={buttonDisabled}
         className="group inline-flex items-center justify-center gap-2 h-12 px-7 rounded-[13px] text-white text-[15px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
         style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 8px 24px var(--glow-accent)' }}
       >
         {loading && <IconSpinner size={18} className="animate-spin" aria-hidden="true" />}
-        {loading ? 'Signing in…' : 'Sign in'}
+        {loading ? (step === 'otp-sent' ? 'Verifying…' : step === 'admin-pass' ? 'Signing in…' : 'Sending…') : buttonLabel}
         {!loading && <IconArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />}
       </button>
 
@@ -365,18 +557,18 @@ function FeatureCard({ icon: Icon, title, body, delay }: { icon: Glyph; title: s
   )
 }
 
-// ─── Landing ────────────────────────────────────────────────────────────────
+// ─── Landing ─────────────────────────────────────────────────────────────────
 
 export default function Landing() {
   const { user } = useUser()
+  const navigate = useNavigate()
+  const [salModalOpen, setSalModalOpen] = useState(false)
 
   // Route-level paint diagnostic (must run before the early return below to keep
   // hook order stable across renders).
   useEffect(() => { reportWebVitals('landing') }, [])
 
   // A real (credentialed) session belongs in the app, not on the marketing page.
-  // The adapter auto-connects an ANONYMOUS session on load (email === null); those
-  // visitors stay here so the landing - and its sign-in form - remain reachable.
   if (user?.email) return <Navigate to="/app" replace />
 
   return (
@@ -389,16 +581,13 @@ export default function Landing() {
           <Logo size={32} />
           <span className="font-semibold text-text text-[15px] tracking-tight">Product Reinvention Hub</span>
         </div>
+        {/* Top-right sign-in: quick-access for the 'sal' seed admin (server-validated). */}
         <button
           type="button"
-          onClick={() => {
-            const el = document.getElementById('signin-username')
-            el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            el?.focus({ preventScroll: true })
-          }}
+          onClick={() => setSalModalOpen(true)}
           className="text-sm font-medium text-dim hover:text-text transition-colors px-4 py-2 rounded-[9px] hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
-          Sign in →
+          Sign in
         </button>
       </header>
 
@@ -440,6 +629,14 @@ export default function Landing() {
       <footer className="relative z-10 flex items-center justify-center py-6 text-xs text-faint" style={{ borderTop: '1px solid var(--color-border)' }}>
         Product Reinvention Hub · P&amp;C Insurance Product Management · {new Date().getFullYear()}
       </footer>
+
+      {/* Sal bootstrap modal (mounted when top-right "Sign in" is clicked) */}
+      {salModalOpen && (
+        <SalLoginModal
+          onClose={() => setSalModalOpen(false)}
+          onSuccess={() => navigate('/app', { replace: true })}
+        />
+      )}
     </div>
   )
 }

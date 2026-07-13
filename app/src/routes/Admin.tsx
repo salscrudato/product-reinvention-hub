@@ -93,7 +93,7 @@ export default function Admin() {
 // ─── Users ──────────────────────────────────────────────────────────────────
 
 const TIERS: Tier[] = ['VIEWER', 'ANALYST', 'EDITOR', 'ADMIN']
-const tierColor: Record<Tier, 'purple' | 'blue' | 'good' | 'default'> = { ADMIN: 'purple', EDITOR: 'blue', ANALYST: 'good', VIEWER: 'default' }
+const tierColor: Record<Tier, 'purple' | 'blue' | 'good' | 'default'> = { SUPER_ADMIN: 'purple', ADMIN: 'purple', EDITOR: 'blue', ANALYST: 'good', VIEWER: 'default' }
 const TIER_HELP = 'VIEWER = read · ANALYST = read + AI · EDITOR = edit + AI · ADMIN = full (tenants + users)'
 
 // ─── Tenants ──────────────────────────────────────────────────────────────

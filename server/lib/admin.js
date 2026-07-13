@@ -12,6 +12,8 @@ const { requireRole, RANK } = require('./auth')
 const router = express.Router()
 router.use(requireRole('ADMIN'))
 const MAX_ADMIN = 1000 // bound admin list reads; __system__ partition won't approach this in practice
+// SUPER_ADMIN can only be granted by the bootstrap mechanism, not through admin user management.
+const MANAGED_ROLES = Object.keys(RANK).filter(r => r !== 'SUPER_ADMIN')
 
 const slug = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
 // Usernames preserve dots/underscores (e.g. sal.scrudato) so the login identifier
@@ -53,7 +55,7 @@ router.post('/users', async (req, res) => {
   const { username, password, role, tenants, email, name } = req.body || {}
   const u = userId(username)
   if (!u) return res.status(400).json({ error: 'username_required' })
-  if (RANK[role] === undefined) return res.status(400).json({ error: 'invalid_role', valid: Object.keys(RANK) })
+  if (!MANAGED_ROLES.includes(role)) return res.status(400).json({ error: 'invalid_role', valid: MANAGED_ROLES })
   if (tenants !== '*' && !Array.isArray(tenants)) return res.status(400).json({ error: 'tenants_must_be_array_or_star' })
   const existing = (await docs.item(`user:${u}`, '__system__').read().catch(() => ({ resource: null }))).resource
   const data = {

@@ -5,7 +5,7 @@
 // real Express app responds correctly to HTTP requests.
 //
 // What is tested:
-//   POST /api/auth/login  — 401 bad creds, 200 valid, 429 rate limit
+//   POST /api/auth/bootstrap — 401 bad creds, 200 valid, 429 rate limit
 //   POST /api/db/mutate   — 403 VIEWER, non-403 EDITOR (role enforcement)
 //   POST /api/ai/chat     — 503 when fleet unconfigured
 //
@@ -32,12 +32,12 @@ function makeToken(role: string, tenantId = 'testco') {
   return sign({ sub: `test-${role.toLowerCase()}`, email: `${role.toLowerCase()}@test`, name: role, role, tenantId })
 }
 
-// ─── /api/auth/login ──────────────────────────────────────────────────────────
+// ─── /api/auth/bootstrap ─────────────────────────────────────────────────────
 
-describe('POST /api/auth/login', () => {
+describe('POST /api/auth/bootstrap', () => {
   it('returns 401 on bad credentials', async () => {
     const res = await request(app)
-      .post('/api/auth/login')
+      .post('/api/auth/bootstrap')
       .send({ username: 'admin', password: 'wrong', tenant: 'testco' })
     expect(res.status).toBe(401)
     expect(res.body.error).toBe('invalid_credentials')
@@ -45,7 +45,7 @@ describe('POST /api/auth/login', () => {
 
   it('returns 200 with token on valid credentials', async () => {
     const res = await request(app)
-      .post('/api/auth/login')
+      .post('/api/auth/bootstrap')
       .send({ username: 'admin', password: 'admin', tenant: null })
     // admin has no tenant requirement; any 200 or 400/tenant_required is acceptable
     // depending on the bootstrap config. Accept either non-401/non-429 response.
@@ -55,13 +55,13 @@ describe('POST /api/auth/login', () => {
 
   it('returns 429 after the rate-limit cap is exhausted', async () => {
     // Use a unique X-Forwarded-For IP so this test does not interfere with others.
-    const rateLimitIp = '10.99.99.1'
+    const rateLimitIp = '10.99.99.2'
     // The bucket cap is 10; first request initialises at cap-1=9 tokens. After 10
     // total requests the bucket is at 0; the 11th gets 429.
     let lastStatus = 0
     for (let i = 0; i < 11; i++) {
       const r = await request(app)
-        .post('/api/auth/login')
+        .post('/api/auth/bootstrap')
         .set('X-Forwarded-For', rateLimitIp)
         .send({ username: 'nobody', password: 'wrong', tenant: 'testco' })
       lastStatus = r.status

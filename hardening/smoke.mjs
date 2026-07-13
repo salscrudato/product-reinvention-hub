@@ -199,20 +199,20 @@ try {
 
 // ─── authentication ───────────────────────────────────────────────────────────
 
-section('Auth: sign in as bootstrap admin')
-const loginRes = await apiJson('/auth/login', {
+section('Auth: sign in as bootstrap admin (SUPER_ADMIN)')
+const loginRes = await apiJson('/auth/bootstrap', {
   method: 'POST',
   body: JSON.stringify({ username: SMOKE_USER, password: SMOKE_PASS, tenant: SMOKE_TENANT }),
 })
-if (!loginRes.ok) fail(`login failed: HTTP ${loginRes.status} — ${JSON.stringify(loginRes.body)}`)
+if (!loginRes.ok) fail(`bootstrap login failed: HTTP ${loginRes.status} — ${JSON.stringify(loginRes.body)}`)
 const TOKEN = loginRes.body?.token
-if (!TOKEN) fail('login response missing token field')
+if (!TOKEN) fail('bootstrap login response missing token field')
 pass(`authenticated as ${SMOKE_USER} / tenant=${SMOKE_TENANT}`)
 
 // Verify the me endpoint honours the token
 const meRes = await apiJson('/auth/me', {}, TOKEN)
 if (!meRes.ok) fail(`/auth/me failed: HTTP ${meRes.status}`)
-if (meRes.body?.user?.role !== 'ADMIN') fail(`expected ADMIN role from /auth/me, got: ${meRes.body?.user?.role}`)
+if (meRes.body?.user?.role !== 'SUPER_ADMIN') fail(`expected SUPER_ADMIN role from /auth/me, got: ${meRes.body?.user?.role}`)
 pass(`/auth/me → role=${meRes.body.user.role}`)
 
 // ─── ROLE ENFORCEMENT: VIEWER cannot mutate ───────────────────────────────────
