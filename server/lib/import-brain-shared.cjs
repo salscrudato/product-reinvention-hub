@@ -21,9 +21,18 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var brain_server_entry_exports = {};
 __export(brain_server_entry_exports, {
   CANONICAL_MAP: () => CANONICAL_MAP,
+  LOB_REGISTRY: () => LOB_REGISTRY,
+  MAX_EMBED_COLS: () => MAX_EMBED_COLS,
+  MAX_EMBED_ROWS: () => MAX_EMBED_ROWS,
   SURFACED_COLUMNS: () => SURFACED_COLUMNS,
+  buildStructuralModel: () => buildStructuralModel,
+  fingerprintGrid: () => fingerprintGrid,
+  inferLob: () => inferLob,
+  normalizeCellValue: () => normalizeCellValue,
   pickBestHeaderRow: () => pickBestHeaderRow,
-  scoreHeaderCandidates: () => scoreHeaderCandidates
+  resolveLobByRefId: () => resolveLobByRefId,
+  scoreHeaderCandidates: () => scoreHeaderCandidates,
+  synthesizeRefId: () => synthesizeRefId
 });
 module.exports = __toCommonJS(brain_server_entry_exports);
 
@@ -929,10 +938,1090 @@ var SURFACED_COLUMNS = [
   { column: "DATE REVIEW COMPLETED", note: "Review completion date; workflow metadata." }
 ];
 var CANONICAL_ENTITY_KINDS = Object.keys(CANONICAL_MAP);
+
+// shared/src/import/structure/sentinels.ts
+var NULL_STRINGS = /* @__PURE__ */ new Set([
+  "<placeholder>",
+  "<intentionally left blank>",
+  "n/a",
+  "na",
+  "tbd",
+  "(none)",
+  "none",
+  "-",
+  "--",
+  ""
+]);
+function normalizeCellValue(value) {
+  if (value === null || value === void 0) return null;
+  if (value instanceof Date) {
+    if (value.getFullYear() >= 9999) return "NO_EXPIRY";
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed === "9999-12-31") return "NO_EXPIRY";
+    if (NULL_STRINGS.has(trimmed.toLowerCase())) return null;
+    return trimmed || null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  if (typeof value === "object") {
+    const o = value;
+    if (Array.isArray(o["richText"])) {
+      const text = o["richText"].map((t) => t.text ?? "").join("");
+      return normalizeCellValue(text);
+    }
+    if ("result" in o) return normalizeCellValue(o["result"]);
+    if ("text" in o && o["text"] !== void 0) return normalizeCellValue(String(o["text"]));
+    if ("hyperlink" in o) return normalizeCellValue(String(o["text"] ?? o["hyperlink"] ?? ""));
+    if ("error" in o) return null;
+  }
+  return null;
+}
+
+// shared/src/import/structure/layoutDetector.ts
+var US_STATE_CODES = /* @__PURE__ */ new Set([
+  "AL",
+  "AK",
+  "AZ",
+  "AR",
+  "CA",
+  "CO",
+  "CT",
+  "DC",
+  "DE",
+  "FL",
+  "GA",
+  "HI",
+  "ID",
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MA",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NJ",
+  "NM",
+  "NY",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY"
+]);
+var ALL_STATES_LABELS = /* @__PURE__ */ new Set([
+  "ALL ACTIVE STATES",
+  "ALL STATES",
+  "STATE APPLICABILITY",
+  "ALL"
+]);
+var STACKED_MARKER_PATTERNS = [
+  /RATE\s+TABLE\s+ID\s*:/i,
+  /^(RTTable)\.\d+$/i,
+  /^LD\s*TABLE\s+ID\s*:/i,
+  /^(LDTable)\.\d+$/i
+];
+function rowMatchesStackedMarker(row) {
+  for (let c = 0; c < Math.min(row.length, 3); c++) {
+    const v = row[c];
+    if (typeof v === "string" && v.trim().length > 0) {
+      if (STACKED_MARKER_PATTERNS.some((p) => p.test(v.trim()))) return true;
+    }
+  }
+  return false;
+}
+function hasStackedTableMarkers(cells) {
+  let count = 0;
+  for (const row of cells) {
+    if (rowMatchesStackedMarker(row)) {
+      if (++count >= 2) return true;
+    }
+  }
+  return false;
+}
+function hasWideStateColumns(headerRow) {
+  let count = 0;
+  for (const v of headerRow) {
+    if (typeof v !== "string") continue;
+    const upper = v.trim().toUpperCase();
+    if (US_STATE_CODES.has(upper) || ALL_STATES_LABELS.has(upper)) {
+      if (++count >= 3) return true;
+    }
+  }
+  return false;
+}
+function hasIndentedHierarchy(cells, bestHeaderRow) {
+  const startRow = Math.max(0, bestHeaderRow + 1);
+  let total = 0;
+  let indented = 0;
+  for (let r = startRow; r < cells.length; r++) {
+    const row = cells[r] ?? [];
+    const hasAny = row.some((v) => v !== null && v !== "" && v !== void 0);
+    if (!hasAny) continue;
+    total++;
+    const col0Empty = row[0] === null || row[0] === "" || row[0] === void 0;
+    const col1Filled = typeof row[1] === "string" && (row[1]?.trim().length ?? 0) > 0;
+    if (col0Empty && col1Filled) indented++;
+  }
+  return total >= 4 && indented / total >= 0.2;
+}
+function detectLayoutShape(cells, bestHeaderRow) {
+  if (hasStackedTableMarkers(cells)) return "STACKED_TABLES";
+  const headerRow = bestHeaderRow >= 0 ? cells[bestHeaderRow] ?? [] : [];
+  if (hasWideStateColumns(headerRow)) return "WIDE_MATRIX";
+  if (hasIndentedHierarchy(cells, bestHeaderRow)) return "INDENTED_HIERARCHY";
+  return "FLAT_TABLE";
+}
+
+// shared/src/import/structure/columnProfiler.ts
+var DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$|^\d{1,2}\/\d{1,2}\/\d{2,4}$|^\d{2}\s+\d{2}$|^\d{1,2}-\d{1,2}-\d{2,4}$/;
+var DOLLAR_PATTERN = /^\$[\d,]+(\.\d{0,2})?$|^[\d]{1,3}(,\d{3})+$/;
+var MAX_DISTINCT_SAMPLE = 20;
+var ENUM_MAX_DISTINCT = 20;
+var ENUM_RATIO_CAP = 0.35;
+function profileColumns(cells, bestHeaderRow) {
+  if (cells.length === 0) return [];
+  const headerRow = bestHeaderRow >= 0 ? cells[bestHeaderRow] ?? [] : [];
+  const dataStart = bestHeaderRow >= 0 ? bestHeaderRow + 1 : 0;
+  const dataRows = cells.slice(dataStart);
+  if (dataRows.length === 0) return [];
+  const colCount = cells.reduce((m, r) => Math.max(m, r.length), 0);
+  const profiles = [];
+  for (let c = 0; c < colCount; c++) {
+    const headerLabel = typeof headerRow[c] === "string" ? headerRow[c].trim() || null : null;
+    const typeMix = {
+      text: 0,
+      number: 0,
+      date: 0,
+      boolean: 0,
+      empty: 0,
+      sentinel: 0
+    };
+    const distinctSet = /* @__PURE__ */ new Set();
+    const sample = [];
+    let totalDataCells = 0;
+    for (const row of dataRows) {
+      const v = row[c];
+      totalDataCells++;
+      if (v === null || v === void 0 || v === "") {
+        typeMix.empty++;
+        continue;
+      }
+      if (v === "NO_EXPIRY") {
+        typeMix.sentinel++;
+        continue;
+      }
+      if (typeof v === "boolean") {
+        typeMix.boolean++;
+      } else if (typeof v === "number") {
+        typeMix.number++;
+      } else if (typeof v === "string") {
+        if (DATE_PATTERN.test(v)) typeMix.date++;
+        else typeMix.text++;
+      }
+      if (!distinctSet.has(v)) {
+        distinctSet.add(v);
+        if (sample.length < MAX_DISTINCT_SAMPLE) sample.push(v);
+      }
+    }
+    const nonEmpty = totalDataCells - typeMix.empty;
+    const isEnumLike = distinctSet.size <= ENUM_MAX_DISTINCT && nonEmpty > 0 && (distinctSet.size <= 5 || distinctSet.size / nonEmpty <= ENUM_RATIO_CAP);
+    const hasDatePattern = typeMix.date > 0 || sample.some((v) => typeof v === "string" && DATE_PATTERN.test(v));
+    const hasDollarPattern = sample.some((v) => typeof v === "string" && DOLLAR_PATTERN.test(v)) || typeMix.number > 0 && sample.some((v) => typeof v === "number" && v >= 100 && v % 1 === 0);
+    profiles.push({
+      colIndex: c,
+      headerLabel,
+      typeMix,
+      totalDataCells,
+      distinctSample: sample,
+      isEnumLike,
+      hasDatePattern,
+      hasDollarPattern
+    });
+  }
+  return profiles;
+}
+
+// shared/src/import/structure/definitionsParser.ts
+function isDefinitionsSheetName(name) {
+  return /definition|glossary/i.test(name);
+}
+var TERM_LABELS = /* @__PURE__ */ new Set([
+  "COLUMN NAME",
+  "COLUMN HEADER",
+  "FIELD NAME",
+  "DATA ELEMENT",
+  "TERM",
+  "FIELD",
+  "COLUMN",
+  "NAME",
+  "ITEM",
+  "ATTRIBUTE"
+]);
+var DESC_LABELS = /* @__PURE__ */ new Set([
+  "DEFINITION",
+  "DESCRIPTION",
+  "MEANING",
+  "NOTES",
+  "NOTE",
+  "EXPLANATION",
+  "COLUMN DESCRIPTION"
+]);
+var EXAMPLE_LABELS = /* @__PURE__ */ new Set([
+  "EXAMPLE",
+  "EXAMPLES",
+  "SAMPLE",
+  "SAMPLE VALUES",
+  "POSSIBLE VALUES",
+  "VALUES"
+]);
+function parseDefinitionsSheet(cells) {
+  if (cells.length === 0) return [];
+  let termCol = -1;
+  let descCol = -1;
+  let exampleCol = -1;
+  let headerRow = -1;
+  for (let r = 0; r < Math.min(10, cells.length); r++) {
+    const row = cells[r] ?? [];
+    let ft = -1, fd = -1, fe = -1;
+    for (let c = 0; c < row.length; c++) {
+      const v = row[c];
+      if (typeof v !== "string") continue;
+      const upper = v.trim().toUpperCase();
+      if (TERM_LABELS.has(upper) && ft < 0) ft = c;
+      if (DESC_LABELS.has(upper) && fd < 0) fd = c;
+      if (EXAMPLE_LABELS.has(upper) && fe < 0) fe = c;
+    }
+    if (ft >= 0 && fd < 0 && fe >= 0) {
+      for (let c = 0; c < row.length; c++) {
+        if (c !== ft && c !== fe) {
+          fd = c;
+          break;
+        }
+      }
+    }
+    if (ft >= 0 && fd >= 0) {
+      headerRow = r;
+      termCol = ft;
+      descCol = fd;
+      exampleCol = fe;
+      break;
+    }
+  }
+  if (headerRow < 0) return [];
+  const entries = [];
+  for (let r = headerRow + 1; r < cells.length; r++) {
+    const row = cells[r] ?? [];
+    const term = row[termCol];
+    const desc = row[descCol];
+    if (typeof term !== "string" || !term.trim()) continue;
+    if (typeof desc !== "string" || !desc.trim()) continue;
+    const entry = {
+      columnName: term.trim(),
+      description: desc.trim()
+    };
+    if (exampleCol >= 0) {
+      const ex = row[exampleCol];
+      if (typeof ex === "string" && ex.trim()) {
+        entry.example = ex.trim();
+      } else if (typeof ex === "number") {
+        entry.example = String(ex);
+      }
+    }
+    entries.push(entry);
+  }
+  return entries;
+}
+
+// shared/src/import/structure/stackedSegmenter.ts
+var REF_ID_PATTERNS = [
+  /RATE\s+TABLE\s+ID\s*:\s*(RTTable\.\d+)/i,
+  /LD\s*TABLE\s+ID\s*:\s*(LDTable\.\d+)/i,
+  /^(RTTable\.\d+)$/i,
+  /^(LDTable\.\d+)$/i
+];
+var TABLE_NAME_PATTERN = /TABLE\s+NAME\s*:\s*(.+)/i;
+var META_KEY_VALUE_PATTERN = /^([^:]{1,60}):\s*(.*)$/;
+function extractRefId(row) {
+  for (let c = 0; c < Math.min(row.length, 3); c++) {
+    const v = row[c];
+    if (typeof v !== "string") continue;
+    const trimmed = v.trim();
+    for (const p of REF_ID_PATTERNS) {
+      const m = trimmed.match(p);
+      if (m?.[1]) return m[1];
+    }
+  }
+  return void 0;
+}
+function extractTableName(row) {
+  for (const v of row) {
+    if (typeof v !== "string") continue;
+    const m = v.trim().match(TABLE_NAME_PATTERN);
+    if (m?.[1]) return m[1].trim();
+  }
+  return void 0;
+}
+function parseMetaBlock(rows) {
+  const meta = {};
+  for (const row of rows) {
+    for (const v of row) {
+      if (typeof v !== "string") continue;
+      const m = v.trim().match(META_KEY_VALUE_PATTERN);
+      if (m?.[1] && m[2]?.trim()) {
+        meta[m[1].trim().toUpperCase()] = m[2].trim();
+      }
+    }
+    for (let c = 0; c < row.length - 1; c++) {
+      const keyCell = row[c];
+      if (typeof keyCell !== "string") continue;
+      if (!/:\s*$/.test(keyCell.trim())) continue;
+      const key = keyCell.trim().replace(/:\s*$/, "").trim().toUpperCase();
+      if (!key) continue;
+      const valCell = row[c + 1];
+      if (typeof valCell === "string" && valCell.trim()) {
+        meta[key] = valCell.trim();
+      } else if (typeof valCell === "number") {
+        meta[key] = String(valCell);
+      }
+    }
+  }
+  return meta;
+}
+function segmentStackedTables(cells) {
+  const markerRows = [];
+  for (let r = 0; r < cells.length; r++) {
+    if (rowMatchesStackedMarker(cells[r] ?? [])) markerRows.push(r);
+  }
+  if (markerRows.length === 0) return [];
+  const subTables = [];
+  for (let i = 0; i < markerRows.length; i++) {
+    const blockStart = markerRows[i];
+    const blockEnd = i + 1 < markerRows.length ? markerRows[i + 1] - 1 : cells.length - 1;
+    const metaRows = [];
+    let refId = extractRefId(cells[blockStart] ?? []);
+    let name;
+    metaRows.push(cells[blockStart] ?? []);
+    let dataStart = blockStart + 1;
+    for (let r = blockStart + 1; r <= blockEnd; r++) {
+      const row = cells[r] ?? [];
+      const rowIsEmpty = row.every((v) => v === null || v === "" || v === void 0);
+      if (rowIsEmpty) continue;
+      const tName = extractTableName(row);
+      if (tName) {
+        name = tName;
+        metaRows.push(row);
+        dataStart = r + 1;
+        continue;
+      }
+      const firstCell = row[0];
+      if (typeof firstCell === "string" && META_KEY_VALUE_PATTERN.test(firstCell.trim())) {
+        metaRows.push(row);
+        dataStart = r + 1;
+        continue;
+      }
+      dataStart = r;
+      break;
+    }
+    const metaBlock = parseMetaBlock(metaRows);
+    name = name ?? metaBlock["TABLE NAME"] ?? metaBlock["RATE TABLE NAME"] ?? metaBlock["LD TABLE NAME"];
+    const dataSlice = cells.slice(dataStart, blockEnd + 1);
+    const candidates = scoreHeaderCandidates(dataSlice);
+    const subHdrOff = pickBestHeaderRow(candidates);
+    const subHdrRow = subHdrOff >= 0 ? dataStart + subHdrOff : dataStart;
+    const subCells = cells.slice(subHdrRow, blockEnd + 1);
+    const colProfiles = profileColumns(subCells, 0);
+    subTables.push({
+      name: (name || void 0) ?? (refId || void 0) ?? `Table ${i + 1}`,
+      refId,
+      startRow: blockStart,
+      endRow: blockEnd,
+      headerRowIndex: subHdrRow,
+      cells: subCells,
+      columnProfiles: colProfiles,
+      metaBlock
+    });
+  }
+  return subTables;
+}
+
+// shared/src/import/structure/wideMatrixFolder.ts
+function foldWideMatrix(headerRow) {
+  let allStatesColIndex = null;
+  const stateColIndices = {};
+  let nonStateColCount = 0;
+  for (let c = 0; c < headerRow.length; c++) {
+    const v = headerRow[c];
+    if (typeof v !== "string") {
+      nonStateColCount++;
+      continue;
+    }
+    const upper = v.trim().toUpperCase();
+    if (ALL_STATES_LABELS.has(upper)) {
+      allStatesColIndex = c;
+    } else if (US_STATE_CODES.has(upper)) {
+      stateColIndices[upper] = c;
+    } else if (v.trim().length > 0) {
+      nonStateColCount++;
+    }
+  }
+  return { allStatesColIndex, stateColIndices, nonStateColCount };
+}
+
+// shared/src/import/structure/modelBuilder.ts
+var MAX_EMBED_ROWS = 2e3;
+var MAX_EMBED_COLS = 128;
+function fingerprintGrid(grid) {
+  const rawRowCount = grid.cells.length;
+  const rawColCount = grid.cells.reduce((m, r) => Math.max(m, r?.length ?? 0), 0);
+  const normalized = grid.cells.map(
+    (row) => (row ?? []).map((v) => normalizeCellValue(v))
+  );
+  let lastRow = -1;
+  let lastCol = -1;
+  for (let r = 0; r < normalized.length; r++) {
+    const row = normalized[r];
+    for (let c = 0; c < row.length; c++) {
+      if (row[c] !== null) {
+        if (r > lastRow) lastRow = r;
+        if (c > lastCol) lastCol = c;
+      }
+    }
+  }
+  if (lastRow < 0) {
+    return {
+      sheetName: grid.sheet,
+      rawRowCount,
+      rawColCount,
+      dataRowCount: 0,
+      dataColCount: 0,
+      mergedCells: grid.mergedCells ?? [],
+      headerCandidates: [],
+      bestHeaderRow: -1,
+      layoutShape: "FLAT_TABLE",
+      columnProfiles: [],
+      isDefinitionsSheet: false,
+      cells: [],
+      cellsTruncated: false
+    };
+  }
+  const cellsTruncated = lastRow + 1 > MAX_EMBED_ROWS || lastCol + 1 > MAX_EMBED_COLS;
+  const rowLimit = Math.min(lastRow + 1, MAX_EMBED_ROWS);
+  const colLimit = Math.min(lastCol + 1, MAX_EMBED_COLS);
+  const cells = [];
+  for (let r = 0; r < rowLimit; r++) {
+    const src = normalized[r] ?? [];
+    const row = new Array(colLimit).fill(null);
+    for (let c = 0; c < colLimit; c++) row[c] = src[c] ?? null;
+    cells.push(row);
+  }
+  const headerCandidates = scoreHeaderCandidates(cells);
+  const bhr = pickBestHeaderRow(headerCandidates);
+  const layoutShape = detectLayoutShape(cells, bhr);
+  const columnProfiles = profileColumns(cells, bhr);
+  let subTables;
+  if (layoutShape === "STACKED_TABLES") subTables = segmentStackedTables(cells);
+  let wideMatrix;
+  if (layoutShape === "WIDE_MATRIX") {
+    const headerRow = bhr >= 0 ? cells[bhr] ?? [] : [];
+    wideMatrix = foldWideMatrix(headerRow);
+  }
+  const isDefinitionsSheet = isDefinitionsSheetName(grid.sheet);
+  const definitions = isDefinitionsSheet ? parseDefinitionsSheet(cells) : void 0;
+  return {
+    sheetName: grid.sheet,
+    rawRowCount,
+    rawColCount,
+    dataRowCount: lastRow + 1,
+    dataColCount: lastCol + 1,
+    mergedCells: grid.mergedCells ?? [],
+    headerCandidates: headerCandidates.slice(0, 5),
+    bestHeaderRow: bhr,
+    layoutShape,
+    columnProfiles,
+    subTables,
+    wideMatrix,
+    definitions,
+    isDefinitionsSheet,
+    cells,
+    cellsTruncated
+  };
+}
+function buildStructuralModel(grids, sourceName, sourceType) {
+  const sheets = [];
+  const definitionsBySheet = {};
+  for (const grid of grids) {
+    const fp = fingerprintGrid(grid);
+    sheets.push(fp);
+    if (fp.definitions && fp.definitions.length > 0) {
+      definitionsBySheet[fp.sheetName] = fp.definitions;
+    }
+  }
+  return { sourceName, sourceType, sheets, definitionsBySheet };
+}
+
+// shared/src/insurance/lobRegistry.ts
+var pad = (n, w) => String(Math.trunc(Math.abs(n))).padStart(w, "0");
+function dottedScheme(code, nameSignals) {
+  return {
+    shapes: {
+      product: `${code}.PROD.###`,
+      lob: `${code}.LOB.###`,
+      coverage: `${code}.COV.###`,
+      subCoverage: `${code}.COV.###.###`,
+      rule: `${code}.RU.###`,
+      formRule: `${code}.FORM.RU.###`,
+      ratingProgram: `${code}.RAT.#`,
+      ratingStep: `${code}.RAT.#.##`
+    },
+    pattern: new RegExp(`^${code}\\.(PROD|LOB|COV|RU|FORM|RAT)`, "i"),
+    nameSignals,
+    synthesize(kind, seq, parentSeq = 1) {
+      switch (kind) {
+        case "product":
+          return `${code}.PROD.${pad(seq, 3)}`;
+        case "lob":
+          return `${code}.LOB.${pad(seq, 3)}`;
+        case "coverage":
+          return `${code}.COV.${pad(seq, 3)}`;
+        case "subCoverage":
+          return `${code}.COV.${pad(parentSeq, 3)}.${pad(seq, 3)}`;
+        case "rule":
+          return `${code}.RU.${pad(seq, 3)}`;
+        case "formRule":
+          return `${code}.FORM.RU.${pad(seq, 3)}`;
+        case "ratingProgram":
+          return `${code}.RAT.${Math.trunc(seq) || 1}`;
+        case "ratingStep":
+          return `${code}.RAT.1.${pad(seq, 2)}`;
+        default:
+          return `${code}.${pad(seq, 3)}`;
+      }
+    }
+  };
+}
+var PH_REFIDS = dottedScheme("PH", [/homeowners?/i, /personal home/i, /\bHO-?[2-8]\b/i, /dwelling/i]);
+var PA_REFIDS = dottedScheme("PA", [/personal auto/i, /\bauto(mobile)?\b/i, /\bPAP\b/i, /\bPP 00 01\b/i]);
+var GL_REFIDS = dottedScheme("GL", [/general liability/i, /\bC\.?G\.?L\b/i, /commercial general/i, /\bCG 00 0[12]\b/i]);
+var IM_REFIDS = {
+  shapes: {
+    product: "IM.PROD###",
+    lob: "IM.LOB###",
+    coverage: "IM.COV###.##",
+    subCoverage: "IM.COV###.##",
+    rule: "IM.RL.###",
+    formRule: "IM.FORM.RL.###",
+    ratingProgram: "IM.RAT.###",
+    ratingStep: "IM.RAT.###"
+  },
+  pattern: /^IM\.(PROD|LOB|COV|RL|RU|FORM|RAT)/i,
+  nameSignals: [/inland marine/i, /scheduled (personal )?property/i, /contractors?.?equipment/i, /\bfloater\b/i],
+  synthesize(kind, seq, parentSeq = seq) {
+    switch (kind) {
+      case "product":
+        return `IM.PROD${pad(seq, 3)}`;
+      case "lob":
+        return `IM.LOB${pad(seq, 3)}`;
+      case "coverage":
+        return `IM.COV${pad(seq, 3)}.00`;
+      case "subCoverage":
+        return `IM.COV${pad(parentSeq, 3)}.${pad(seq, 2)}`;
+      case "rule":
+        return `IM.RL.${pad(seq, 3)}`;
+      case "formRule":
+        return `IM.FORM.RL.${pad(seq, 3)}`;
+      case "ratingProgram":
+        return `IM.RAT.${pad(seq, 3)}`;
+      case "ratingStep":
+        return `IM.RAT.${pad(seq, 3)}`;
+      default:
+        return `IM.${pad(seq, 3)}`;
+    }
+  }
+};
+var PR_REFIDS = {
+  shapes: {
+    product: "PR.PROD###",
+    lob: "PR.LOB###",
+    coverage: "PR.COV###.#",
+    subCoverage: "PR.COV###.#",
+    rule: "PR.RU.###",
+    formRule: "PR.FORM.RU.###",
+    ratingProgram: "PR.ROC",
+    ratingStep: "PR.ROC.###"
+  },
+  pattern: /^PR\.(PROD|LOB|COV|RU|ROC|FORM|RAT)/i,
+  nameSignals: [/commercial property/i, /property (framework|component|coverage part|roc|rating)/i, /building and (business )?personal property/i, /\bCP 00 10\b/i],
+  synthesize(kind, seq, parentSeq = seq) {
+    switch (kind) {
+      case "product":
+        return `PR.PROD${pad(seq, 3)}`;
+      case "lob":
+        return `PR.LOB${pad(seq, 3)}`;
+      case "coverage":
+        return `PR.COV${pad(seq, 3)}.0`;
+      case "subCoverage":
+        return `PR.COV${pad(parentSeq, 3)}.${Math.trunc(seq)}`;
+      case "rule":
+        return `PR.RU.${pad(seq, 3)}`;
+      case "formRule":
+        return `PR.FORM.RU.${pad(seq, 3)}`;
+      case "ratingProgram":
+        return "PR.ROC";
+      case "ratingStep":
+        return `PR.ROC.${pad(seq, 3)}`;
+      default:
+        return `PR.${pad(seq, 3)}`;
+    }
+  }
+};
+var isPHLiability = (name) => /liabilit|medical/i.test(name);
+var PH_SECTIONS = [
+  { label: "Section I \u2014 Property", shortName: "Section I", match: (n) => !isPHLiability(n) },
+  { label: "Section II \u2014 Liability", shortName: "Section II", match: isPHLiability }
+];
+var PH_PERIL = {
+  kind: "COASTAL_WIND_HAIL",
+  eligibleStates: ["FL", "GA", "NC", "SC", "TX"],
+  label: "Coastal wind/hail"
+};
+var PH_LOB = {
+  refId: "PH.LOB.001",
+  prefix: "PH",
+  name: "Personal Home",
+  vertical: "Personal Lines",
+  family: "Property",
+  sections: PH_SECTIONS,
+  peril: PH_PERIL,
+  footprintStates: ["AZ", "CA", "CO", "FL", "GA", "IL", "IN", "MI", "NC", "OH", "PA", "SC", "TN", "TX", "VA"],
+  // canonical additive fields
+  code: "PH",
+  displayName: "Personal Home",
+  refIdPrefix: "PH",
+  lineCategory: "PROPERTY",
+  personalOrCommercial: "Personal",
+  sectionTaxonomy: PH_SECTIONS,
+  perilModel: PH_PERIL,
+  supportsRulesSimulation: true,
+  refIdScheme: PH_REFIDS,
+  marketSegments: ["Personal Lines"]
+};
+var PA_SECTIONS = [
+  { label: "Part A \u2014 Liability Coverage", shortName: "Part A", match: (n) => /liabilit/i.test(n) },
+  { label: "Part B \u2014 Medical Payments Coverage", shortName: "Part B", match: (n) => /medical/i.test(n) },
+  { label: "Part C \u2014 Uninsured Motorists Coverage", shortName: "Part C", match: (n) => /uninsured|underinsured|motorist/i.test(n) },
+  { label: "Part D \u2014 Coverage for Damage to Your Auto", shortName: "Part D", match: () => true }
+];
+var PA_PERIL = {
+  kind: "TERRITORY",
+  eligibleStates: [],
+  label: "Rating territory"
+};
+var PA_LOB = {
+  refId: "PA.LOB.001",
+  prefix: "PA",
+  name: "Personal Auto",
+  vertical: "Personal Lines",
+  family: "Automobile",
+  sections: PA_SECTIONS,
+  peril: PA_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NC",
+    "ND",
+    "OH",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI"
+  ],
+  // canonical additive fields
+  code: "PA",
+  displayName: "Personal Auto",
+  refIdPrefix: "PA",
+  lineCategory: "CASUALTY",
+  personalOrCommercial: "Personal",
+  sectionTaxonomy: PA_SECTIONS,
+  perilModel: PA_PERIL,
+  supportsRulesSimulation: true,
+  refIdScheme: PA_REFIDS,
+  marketSegments: ["Personal Lines"]
+};
+var GL_SECTIONS = [
+  {
+    label: "Coverage A \u2014 Bodily Injury & Property Damage Liability",
+    shortName: "Coverage A",
+    match: (n) => /bodily.injury|property.damage|BI.?PD|Coverage A/i.test(n)
+  },
+  {
+    label: "Coverage B \u2014 Personal & Advertising Injury Liability",
+    shortName: "Coverage B",
+    match: (n) => /personal.*advertis|advertis.*injur|Coverage B/i.test(n)
+  },
+  {
+    label: "Coverage C \u2014 Medical Payments",
+    shortName: "Coverage C",
+    match: () => true
+  }
+  // catch-all for Coverage C and unclassified
+];
+var GL_PERIL = {
+  // Commercial casualty — no coastal peril deductible. Rate variation is by class
+  // code and exposure base, not by territory in the base occurrence form.
+  kind: "NONE",
+  eligibleStates: [],
+  label: "None"
+};
+var GL_LOB = {
+  refId: "GL.LOB.001",
+  prefix: "GL",
+  name: "General Liability",
+  vertical: "Commercial Lines",
+  family: "Casualty",
+  sections: GL_SECTIONS,
+  peril: GL_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  // canonical additive fields
+  code: "GL",
+  displayName: "General Liability",
+  refIdPrefix: "GL",
+  lineCategory: "CASUALTY",
+  personalOrCommercial: "Commercial",
+  sectionTaxonomy: GL_SECTIONS,
+  perilModel: GL_PERIL,
+  supportsRulesSimulation: true,
+  refIdScheme: GL_REFIDS,
+  marketSegments: ["Commercial Lines", "Small Commercial", "Middle Market"]
+};
+var IM_SECTIONS = [
+  { label: "Scheduled Property", shortName: "Scheduled", match: (n) => /schedul|itemized|valued|floater/i.test(n) },
+  { label: "Blanket & Equipment Coverage", shortName: "Blanket", match: (n) => /blanket|equipment|installation|tool/i.test(n) },
+  { label: "Coverage Extensions", shortName: "Extensions", match: () => true }
+  // catch-all
+];
+var IM_PERIL = { kind: "NONE", eligibleStates: [], label: "None" };
+var IM_LOB = {
+  refId: "IM.LOB.001",
+  prefix: "IM",
+  name: "Inland Marine",
+  vertical: "Commercial Lines",
+  family: "Property",
+  sections: IM_SECTIONS,
+  peril: IM_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  code: "IM",
+  displayName: "Inland Marine",
+  refIdPrefix: "IM",
+  lineCategory: "PROPERTY",
+  personalOrCommercial: "Commercial",
+  sectionTaxonomy: IM_SECTIONS,
+  perilModel: IM_PERIL,
+  supportsRulesSimulation: false,
+  refIdScheme: IM_REFIDS,
+  // Segments drawn from the existing registry set so the portfolio facets are unchanged.
+  marketSegments: ["Commercial Lines", "Small Commercial"]
+};
+var PR_SECTIONS = [
+  { label: "Building & Business Personal Property", shortName: "Property", match: (n) => /building|business personal|contents|stock/i.test(n) },
+  { label: "Time Element", shortName: "Time Element", match: (n) => /business income|extra expense|rental value|time element/i.test(n) },
+  { label: "Additional Coverages", shortName: "Additional", match: () => true }
+  // catch-all (incl. causes of loss)
+];
+var PR_PERIL = {
+  kind: "COASTAL_WIND_HAIL",
+  eligibleStates: ["AL", "FL", "GA", "LA", "MS", "NC", "SC", "TX", "VA"],
+  label: "Coastal wind/hail"
+};
+var PR_LOB = {
+  refId: "PR.LOB.001",
+  prefix: "PR",
+  name: "Commercial Property",
+  vertical: "Commercial Lines",
+  family: "Property",
+  sections: PR_SECTIONS,
+  peril: PR_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  code: "PR",
+  displayName: "Commercial Property",
+  refIdPrefix: "PR",
+  lineCategory: "PROPERTY",
+  personalOrCommercial: "Commercial",
+  sectionTaxonomy: PR_SECTIONS,
+  perilModel: PR_PERIL,
+  supportsRulesSimulation: false,
+  refIdScheme: PR_REFIDS,
+  // Segments drawn from the existing registry set so the portfolio facets are unchanged.
+  marketSegments: ["Commercial Lines", "Middle Market"]
+};
+var LOB_REGISTRY = {
+  [PH_LOB.refId]: PH_LOB,
+  [PA_LOB.refId]: PA_LOB,
+  [GL_LOB.refId]: GL_LOB,
+  [IM_LOB.refId]: IM_LOB,
+  [PR_LOB.refId]: PR_LOB
+};
+function lobByPrefix(refId) {
+  if (!refId) return void 0;
+  const prefix = refId.split(".")[0];
+  return Object.values(LOB_REGISTRY).find((l) => l.prefix === prefix);
+}
+function resolveLobByRefId(refId) {
+  return lobByPrefix(refId);
+}
+function usableRefId(v) {
+  if (!v) return null;
+  const s = v.trim();
+  if (!s || /^(tbd|n\/?a|none|<.*>)$/i.test(s)) return null;
+  return s;
+}
+function inferLob(signals) {
+  const tally = /* @__PURE__ */ new Map();
+  for (const raw of signals.refIds ?? []) {
+    const lob = lobByPrefix(usableRefId(raw));
+    if (lob) tally.set(lob.refId, (tally.get(lob.refId) ?? 0) + 1);
+  }
+  if (tally.size) {
+    let bestRefId = "";
+    let bestCount = -1;
+    for (const [refId, count] of tally) if (count > bestCount) {
+      bestCount = count;
+      bestRefId = refId;
+    }
+    return LOB_REGISTRY[bestRefId];
+  }
+  const hay = [signals.productName, signals.lobName, ...signals.sheetNames ?? []].filter(Boolean).join("  ");
+  if (hay.trim()) {
+    for (const lob of Object.values(LOB_REGISTRY)) {
+      if (lob.refIdScheme.nameSignals.some((re) => re.test(hay))) return lob;
+    }
+  }
+  return void 0;
+}
+function synthesizeRefId(lob, kind, seq, parentSeq) {
+  return lob.refIdScheme.synthesize(kind, seq, parentSeq);
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   CANONICAL_MAP,
+  LOB_REGISTRY,
+  MAX_EMBED_COLS,
+  MAX_EMBED_ROWS,
   SURFACED_COLUMNS,
+  buildStructuralModel,
+  fingerprintGrid,
+  inferLob,
+  normalizeCellValue,
   pickBestHeaderRow,
-  scoreHeaderCandidates
+  resolveLobByRefId,
+  scoreHeaderCandidates,
+  synthesizeRefId
 });

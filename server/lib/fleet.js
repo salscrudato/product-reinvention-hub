@@ -45,12 +45,30 @@ function openaiChatBody(deployment, messages, maxTokens, extra = {}) {
 }
 
 // ─── Role → deployment ────────────────────────────────────────────────────────
-/** Resolve the Foundry deployment name for a fleet role. When `degrade` is true, route to the
- *  cheaper same-family deployment (the cost guard sets this under budget pressure). */
-function resolveModel(role, degrade = false) {
+/** Resolve the Foundry deployment name for a fleet role.
+ *
+ *  Second argument is either the legacy boolean `degrade` (route to the cheaper same-family
+ *  deployment under budget pressure) or an options object:
+ *    resolveModel(role, { degrade, bypassDegrade })
+ *  `bypassDegrade: true` is the EXPLICIT, NAMED no-downgrade switch for the import path
+ *  (see IMPORT_CONTEXT below): the role always resolves to its full-strength deployment
+ *  even when the cost guard is signalling degrade. Scoped per call site — never global. */
+function resolveModel(role, degradeOrOpts = false) {
+  const opts = (degradeOrOpts && typeof degradeOrOpts === 'object')
+    ? degradeOrOpts
+    : { degrade: Boolean(degradeOrOpts) }
+  const degrade = Boolean(opts.degrade) && !opts.bypassDegrade
   const effectiveRole = degrade ? bridge.degradedRole(role) : role
   return bridge.resolveDeployment(effectiveRole).deploymentName
 }
+
+// ─── Import context (no cost cap on the import path) ─────────────────────────
+// Named, scoped switch: pass to guard() to exempt a call from BOTH the hard spend
+// ceiling and the soft degrade signal. Import accuracy is prioritised over spend by
+// product decision — but telemetry is NEVER bypassed: every import call still goes
+// through record(), so windowSpendUsd/callCount reflect true spend and other roles
+// see (and pay for) the pressure import creates. Only the import pipeline may use this.
+const IMPORT_CONTEXT = 'import-no-cap'
 
 // ─── In-process cost guard ──────────────────────────────────────────────────
 const WINDOW_MS     = Number(process.env.AI_SPEND_WINDOW_MS) || 60 * 60 * 1000  // 1h fixed window
@@ -69,9 +87,12 @@ function rollWindow() {
 /** Pre-call gate. Returns { allow, degrade, reason }:
  *   • allow=false once the window spend meets/exceeds the ceiling → caller must return an honest
  *     503 rather than dispatch (no runaway spend, no fabricated answer).
- *   • degrade=true past the soft threshold → caller may route to the cheaper same-family model. */
-function guard() {
+ *   • degrade=true past the soft threshold → caller may route to the cheaper same-family model.
+ *   • guard(IMPORT_CONTEXT) — the import path's named exemption: never denies, never degrades.
+ *     Spend telemetry is unaffected (record() still runs after every call). */
+function guard(context) {
   rollWindow()
+  if (context === IMPORT_CONTEXT) return { allow: true, degrade: false, reason: 'import_no_cap' }
   if (windowSpendUsd >= CEILING_USD) return { allow: false, degrade: false, reason: 'ai_budget_ceiling' }
   const degrade = windowSpendUsd >= CEILING_USD * SOFT_FRACTION
   return { allow: true, degrade, reason: degrade ? 'ai_budget_soft' : 'ok' }
@@ -101,10 +122,12 @@ module.exports = {
   openaiMaxTokensKey, openaiChatBody,
   // routing
   resolveModel,
-  DEPLOY_OPUS: bridge.DEPLOY_OPUS, DEPLOY_HAIKU: bridge.DEPLOY_HAIKU,
+  DEPLOY_OPUS: bridge.DEPLOY_OPUS, DEPLOY_SONNET: bridge.DEPLOY_SONNET, DEPLOY_HAIKU: bridge.DEPLOY_HAIKU,
   DEPLOY_GPT: bridge.DEPLOY_GPT,   DEPLOY_GPT_MINI: bridge.DEPLOY_GPT_MINI,
   DEPLOY_EMBED: bridge.DEPLOY_EMBED,
+  ESCALATION_LADDER: bridge.ESCALATION_LADDER,
   // cost guard
   guard, record, snapshot,
+  IMPORT_CONTEXT,
   estimateCostUsd: bridge.estimateCostUsd,
 }

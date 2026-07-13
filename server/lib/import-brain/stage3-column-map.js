@@ -204,8 +204,8 @@ async function mapColumns(classified, locks, fpByName, budget, review) {
 
     // REASONER_A (opus) + REASONER_B (gpt-5.1) map independently in parallel.
     const [rAResult, rBResult] = await Promise.all([
-      callAnthropic({ deployment: deployOpus, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 2048 }).catch(() => ({ raw: '' })),
-      callOpenAI({ deployment: deployGpt, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 2048 }).catch(() => ({ raw: '' })),
+      callAnthropic({ deployment: deployOpus, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 2048, budget }).catch(() => ({ raw: '' })),
+      callOpenAI({ deployment: deployGpt, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 2048, budget }).catch(() => ({ raw: '' })),
     ])
 
     const aArr = parseMappings(rAResult.raw)

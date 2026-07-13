@@ -23,6 +23,9 @@ vi.mock('../../server/lib/fleet', () => ({
   DEPLOY_OPUS:           'stub-opus',
   DEPLOY_HAIKU:          'stub-haiku',
   isConfigured:          () => false,
+  estimateCostUsd:       () => 0,
+  IMPORT_CONTEXT:        'import-no-cap',
+  ESCALATION_LADDER:     ['BULK_VERIFY', 'MID_REASONER', 'GROUNDED_CITED'],
 }))
 
 // Stub the shared CJS bundle (import-brain-shared.cjs)

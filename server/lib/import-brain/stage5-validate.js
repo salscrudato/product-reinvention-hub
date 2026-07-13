@@ -98,7 +98,18 @@ async function validateEntities(entities, classified, budget, review) {
     classified.filter(c => c.domain !== 'ignore').map(c => [c.sheetName, 0]),
   )
 
-  for (const [sheetName, sheetEntities] of bySheet) {
+  for (const [sheetName, allSheetEntities] of bySheet) {
+    // Deterministic entities are grounded by construction (values copied from cells
+    // by code) — adversarially validate a SAMPLE of them; AI-extracted entities are
+    // always validated in full. Keeps the third-family check without paying for a
+    // full pass over thousands of code-copied rows.
+    const aiEntities  = allSheetEntities.filter(e => !e.deterministic)
+    const detEntities = allSheetEntities.filter(e => e.deterministic)
+    const detSample   = detEntities.length > MAX_ENTITIES_PER_CALL * 2
+      ? [...detEntities.slice(0, MAX_ENTITIES_PER_CALL), ...detEntities.slice(-MAX_ENTITIES_PER_CALL)]
+      : detEntities
+    const sheetEntities = [...aiEntities, ...detSample]
+
     for (let start = 0; start < sheetEntities.length; start += MAX_ENTITIES_PER_CALL) {
       const batch      = sheetEntities.slice(start, start + MAX_ENTITIES_PER_CALL)
       const sourceRows = rowCounts.get(sheetName) ?? batch.length
@@ -109,6 +120,7 @@ async function validateEntities(entities, classified, budget, review) {
         systemPrompt: STAGE5_VALIDATE_SYSTEM,
         userPrompt,
         maxTokens:    2048,
+        budget,
       }).catch(() => ({ raw: '' }))
 
       const parsed = parseValidatorResponse(result.raw)

@@ -120,8 +120,8 @@ async function classifySheets(sheets, budget, review) {
 
     // ── Step a: BULK + BULK_ALT prefilter (parallel) ────────────────────────
     const [pfA, pfB] = await Promise.all([
-      callAnthropic({ deployment: deployBulk, systemPrompt: STAGE1_PREFILTER_SYSTEM, userPrompt: meta, maxTokens: 128 }).catch(() => ({ raw: '' })),
-      callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE1_PREFILTER_SYSTEM, userPrompt: meta, maxTokens: 128 }).catch(() => ({ raw: '' })),
+      callAnthropic({ deployment: deployBulk, systemPrompt: STAGE1_PREFILTER_SYSTEM, userPrompt: meta, maxTokens: 128, budget }).catch(() => ({ raw: '' })),
+      callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE1_PREFILTER_SYSTEM, userPrompt: meta, maxTokens: 128, budget }).catch(() => ({ raw: '' })),
     ])
 
     const pA = parsePrefilter(pfA.raw)
@@ -142,8 +142,8 @@ async function classifySheets(sheets, budget, review) {
 
     // ── Step b: REASONER_A (opus) + REASONER_B (gpt-5.1) classify in parallel ─
     const [rARes, rBRes] = await Promise.all([
-      callAnthropic({ deployment: deployOpus, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256 }).catch(() => ({ raw: '' })),
-      callOpenAI({ deployment: deployGpt, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256 }).catch(() => ({ raw: '' })),
+      callAnthropic({ deployment: deployOpus, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256, budget }).catch(() => ({ raw: '' })),
+      callOpenAI({ deployment: deployGpt, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256, budget }).catch(() => ({ raw: '' })),
     ])
 
     const rA = parseClassify(rARes.raw)
@@ -202,7 +202,8 @@ async function classifySheets(sheets, budget, review) {
     ].join('\n')
 
     const adjRes = await callAnthropic({
-      deployment: deployOpus, systemPrompt: STAGE1_ADJUDICATE_SYSTEM, userPrompt: adjUser, maxTokens: 256,
+      deployment: deployOpus, systemPrompt: STAGE1_ADJUDICATE_SYSTEM, userPrompt: adjUser, maxTokens: 256, budget,
+      budget,
     }).catch(() => ({ raw: '' }))
 
     const adj = parseAdjudicate(adjRes.raw)

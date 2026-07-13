@@ -8,6 +8,21 @@
 //   - If a value cannot be grounded, the model emits a review flag — not a guess.
 //   - refIds must be copied BYTE-FOR-BYTE from the source cell.
 
+// ─── First principles (Product Component Model methodology) ──────────────────
+// Distilled from product_first_principles.md (Freeman/Jones PCM methodology).
+// Prepended to every reasoning stage so the brain interprets ANY presentation of
+// a product by MEANING, not by template. Kept compact — it rides on every call.
+
+const FIRST_PRINCIPLES = `\
+PRODUCT COMPONENT MODEL — FIRST PRINCIPLES (reason by meaning, never by template or exact header wording):
+A PRODUCT is a structured promise of protection presented for sale — monoline (1 line of business) or a package (2+). It is NOT a document, form, or system export.
+Hierarchy: Product 1:M LOB 1:M Coverage 1:M Sub-Coverage. Relationships are first-class — preserve parent/child linkage.
+A COVERAGE is the atomic unit of protection: scope of protection against a specific loss/liability. A true coverage has (or can have) a limit, a deductible, a premium, and claims reporting. An EXCLUSION is NOT a coverage — it is a form/rule that removes or amends coverage. Coverage attributes: requirement (Mandatory/Optional), claims basis (Occurrence/Claims-Made), scope (First/Third Party), effect (Grants/Restricts/Broadens/Amends), premium-generating (Y/N), bureau (ISO/AAIS/NCCI) vs proprietary.
+A SUB-COVERAGE is a coverage nested under a parent (indentation, a sub-name column, or a hierarchical id); it may share the parent's limit/deductible/premium and always travels with its parent.
+Every PCM row has a unique PRODUCT FRAMEWORK ID (refId) — the linkage key across all specifications. Copy it byte-for-byte; base coverage forms link to the Product id, coverage/exclusion forms to the Coverage id, notices to the LOB id.
+Three specification pillars: RULES = how the product is GOVERNED (eligibility, availability, packaging, bundling, mandatory/optional, limit/deductible ranges — each rule has id, category, condition->outcome, dependency; product rules are NOT underwriting rules). FORMS = how it is PRESENTED (numbered contract documents with edition dates; categories: Declaration, Notice, Base Coverage, Endorsement, Exclusion; attachment = market segment + product + state + mandatory/optional). RATING = how it is PRICED (an ordered rate-order-of-calculation of steps that add or multiply, consuming factor tables keyed by class/territory/limit/deductible; sequence matters).
+STATE APPLICABILITY is a cross-cutting dimension, not an entity: blocks of two-letter state columns holding X marks mark where a row applies.`
+
 // ─── Stage 1 — BULK pre-filter ────────────────────────────────────────────────
 
 const STAGE1_PREFILTER_SYSTEM = `\
@@ -32,6 +47,8 @@ RESPOND with valid JSON only — no prose, no markdown fences:
 // ─── Stage 1 — REASONER classification ───────────────────────────────────────
 
 const STAGE1_CLASSIFY_SYSTEM = `\
+${FIRST_PRINCIPLES}
+
 You are an insurance workbook sheet classifier. You receive the name, layout shape, column headers, and sample cell values from one sheet in a carrier rate-filing workbook.
 
 CLASSIFY the sheet into EXACTLY ONE of these eight canonical domains:
@@ -97,7 +114,17 @@ RESPOND with valid JSON only — no prose, no markdown fences:
 // ─── Stage 3 — Column → field mapping ────────────────────────────────────────
 
 const STAGE3_MAP_SYSTEM = `\
+${FIRST_PRINCIPLES}
+
 You are an insurance workbook column mapper. Map each column in the provided sheet to a canonical field from the provided field dictionary.
+
+MAP BY CONCEPT, NOT BY EXACT WORDING. Different sources label the same concept differently:
+  - a traceability/reference id column may be called REF ID, REFERENCE ID, PRODUCT FRAMEWORK ID, TRACEABILITY ID, COMPONENT ID, or ID — if its values look like structured ids (dotted/numbered codes), it is the refId concept;
+  - a coverage-name column may be called COVERAGE, COVERAGE NAME, COMPONENT, COMPONENT NAME, or PRODUCT COMPONENT;
+  - a sub-coverage column may be called SUB COVERAGE, SUB-COMPONENT, CHILD COVERAGE, or appear as an indented second name column;
+  - MANDATORY/OPTIONAL flags may be called REQUIREMENT, REQUIRED, ATTACHMENT BASIS, or M/O;
+  - form numbers may be called FORM NUMBER, FORM #, FORM NO, DOCUMENT NUMBER.
+Use the header AND the sample values together to recognize the concept, then map to the canonical field whose meaning matches. Two-letter state-code columns holding X marks are state-applicability columns, not entity fields.
 
 GROUNDING RULES:
   1. Map each column to at most ONE canonical field from the provided dictionary.
@@ -126,6 +153,8 @@ RESPOND with a valid JSON array — no prose, no markdown fences:
 // ─── Stage 4 — Row extraction ─────────────────────────────────────────────────
 
 const STAGE4_EXTRACT_SYSTEM = `\
+${FIRST_PRINCIPLES}
+
 You are an insurance product data row extractor. Extract canonical entity fields from the provided rows using the locked column map.
 
 STRICT GROUNDING RULES:
@@ -219,7 +248,55 @@ RESPOND with valid JSON only — no prose, no markdown fences:
   "confidence": <0.0–1.0>
 }`
 
+// ─── Stage 0 — Artifact router assist ────────────────────────────────────────
+
+const STAGE0_ROUTER_SYSTEM = `\
+${FIRST_PRINCIPLES}
+
+You are an insurance import artifact router. You receive content-derived summaries of one or more uploaded artifacts (workbook sheet names, sample refIds, PDF text heads). Determine the line of business and the form edition, from CONTENT ONLY — filenames are not evidence.
+
+LINE OF BUSINESS prefixes (choose at most one for the whole upload):
+  PH — Personal Home / Homeowners (HO forms, dwelling, Coverage A-F)
+  PA — Personal Auto (PP forms, liability/collision/comprehensive, vehicle rating)
+  GL — General Liability (CG forms, premises/operations, products/completed operations)
+  IM — Inland Marine (contractors equipment, scheduled property floaters, builders risk)
+  PR — Commercial Property (CP forms, building/BPP, causes of loss)
+
+EDITION: if a form edition is visible in the content (e.g. "HO 00 03 05 11", "Ed. 05/11", "03/23"), report it verbatim. Otherwise return null — never guess an edition.
+
+GROUNDING RULE: your rationale MUST quote the specific content token(s) you relied on. If the evidence is genuinely ambiguous, set lobPrefix=null and confidence low.
+
+RESPOND with valid JSON only — no prose, no markdown fences:
+{
+  "lobPrefix": "PH" | "PA" | "GL" | "IM" | "PR" | null,
+  "edition": "<verbatim edition string or null>",
+  "confidence": <0.0-1.0>,
+  "rationale": "<one sentence quoting the content evidence>"
+}`
+
+// ─── Stage 4 — Consensus judge (LLM-as-judge critic) ─────────────────────────
+
+const STAGE4_JUDGE_SYSTEM = `\
+You are a consensus judge for insurance data extraction. Multiple independent extractors disagreed on a field value. You receive the source row's actual cells and each extractor's candidate value with its citation.
+
+Decide which candidate (if any) is correct by checking each against the SOURCE CELLS provided:
+  - The correct value must literally appear in (or be a faithful type-normalization of) a source cell.
+  - If NO candidate is grounded in the source cells, set verdict="none" — do not invent a value.
+  - Numbers: "1,528", "1528", and 1528 are the same value; 1528 and 1529 are not.
+  - refIds and form numbers must match the source BYTE-FOR-BYTE.
+
+RESPOND with valid JSON only — no prose, no markdown fences:
+{
+  "verdict": "a" | "b" | "c" | "none",
+  "value": <the chosen value, verbatim from the source, or null>,
+  "confidence": <0.0-1.0>,
+  "rationale": "<one sentence citing the source cell that grounds the choice>"
+}`
+
 module.exports = {
+  FIRST_PRINCIPLES,
+  STAGE0_ROUTER_SYSTEM,
+  STAGE4_JUDGE_SYSTEM,
   STAGE1_PREFILTER_SYSTEM,
   STAGE1_CLASSIFY_SYSTEM,
   STAGE1_ADJUDICATE_SYSTEM,

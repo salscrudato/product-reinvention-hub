@@ -1,4 +1,21 @@
 'use strict'
+// server/lib/ai/unified-import.js — POST /api/ai/unifiedImport (SSE).
+//
+// Flow (import path — NO COST CAP, telemetry always recorded):
+//   Stage 0 router (server-side, magic-byte sniff — never filename):
+//     * XLSX / XLSM / CSV  → parse with ExcelJS server-side, build StructuralModel
+//                            with REAL cells → 6-stage adaptive brain → ImportPlan bundle
+//     * text PDF           → filing pipeline (whole-document text in context)
+//     * scanned/encrypted/CID-font PDF → filing pipeline with NATIVE PDF document
+//                            blocks (vision-capable models read pages directly)
+//   Legacy back-compat:
+//     * body.structural    → brain directly (harness / older clients)
+//     * stage-filing absent → single-pass forced-tool fallback
+//
+// Every produced field carries a source citation + confidence; validator findings
+// become importWarnings — nothing is silently dropped. The bundle's plan persists
+// through the app's standard adapter.db.mutate path (importPlan()).
+
 const { hasCapability } = require('../authz')
 const fleet = require('../fleet')
 const { sse, emit, _forcedToolCall, _extractPdfText, _findSampleFile, getImportBrain, getStageFiling } = require('./_shared')
@@ -40,6 +57,60 @@ const _IMPORT_SYSTEM =
   'Cite each item by section or heading. Include form numbers only if they literally appear in the document. ' +
   'Call propose_coverages exactly once with ALL coverages the form defines.'
 
+// ─── Merge multiple workbook structural models into one brain input ───────────
+// Sheet names must stay citable: kept verbatim when unique across workbooks; a
+// collision gets " (workbook name)" appended so citations remain unambiguous.
+
+function mergeStructurals(workbooks) {
+  if (workbooks.length === 1) return workbooks[0].structural
+  const seen = new Set()
+  const sheets = []
+  const definitionsBySheet = {}
+  for (const wb of workbooks) {
+    for (const fp of wb.structural.sheets || []) {
+      let name = fp.sheetName
+      if (seen.has(name)) name = `${fp.sheetName} (${wb.name})`
+      seen.add(name)
+      const renamed = name === fp.sheetName ? fp : { ...fp, sheetName: name }
+      sheets.push(renamed)
+      if (renamed.definitions && renamed.definitions.length > 0) definitionsBySheet[name] = renamed.definitions
+    }
+  }
+  return {
+    sourceName: workbooks.map(w => w.name).join(' + '),
+    sourceType: workbooks[0].structural.sourceType,
+    sheets,
+    definitionsBySheet,
+  }
+}
+
+// ─── Run the brain over a structural model and emit the plan bundle ───────────
+
+async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, res }) {
+  const brain = getImportBrain()
+  if (typeof brain.runAdaptiveImportBrain !== 'function') {
+    throw new Error('Import brain not available (build:import-brain may not have run).')
+  }
+  const brainOutput = await brain.runAdaptiveImportBrain({
+    structural,
+    lobRefIdHint: lobRefIdHint || undefined,
+    budget,
+    emit: (ev) => emit(res, ev),
+  })
+
+  const { buildImportPlan } = require('../import-brain/stage7-plan')
+  const bundle = buildImportPlan(brainOutput, {
+    lobRefIdHint: lobRefIdHint || undefined,
+    sourceName:   structural.sourceName,
+    edition:      edition || undefined,
+    routerWarnings: routerWarnings || [],
+  })
+
+  emit(res, { t: 'json', key: 'bundle', value: bundle })
+  emit(res, { t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
+  return bundle
+}
+
 async function unifiedImport(req, res) {
   if (!hasCapability(req.user, 'product:write')) {
     return res.status(403).json({ error: 'forbidden', need: 'product:write', have: req.user.role })
@@ -48,33 +119,21 @@ async function unifiedImport(req, res) {
   const body = req.body || {}
   sse(res)
 
-  const g = fleet.guard()
-  if (!g.allow) {
-    emit(res, { t: 'error', message: 'AI budget ceiling reached — try again shortly.' })
-    emit(res, { t: 'done' }); return res.end()
-  }
-  const deployment = HAIKU_OVERRIDE || fleet.resolveModel('BULK_VERIFY', g.degrade)
+  // Import path runs with the EXPLICIT no-cap budget: never denied, never degraded,
+  // spend fully recorded (fleet.record on every call + per-run brain:spend event).
+  const brainMod = getImportBrain()
+  const budget = typeof brainMod.createBudget === 'function'
+    ? brainMod.createBudget({ noCap: true })
+    : { degraded: false, noCap: true, spendUsd: 0, calls: 0, byDeployment: {} }
 
   try {
+    // ── Legacy/back-compat: pre-built structural model (harness, older clients) ──
     if (body.structural && typeof body.structural === 'object') {
-      const brain = getImportBrain()
-      if (typeof brain.runAdaptiveImportBrain !== 'function') {
-        emit(res, { t: 'error', message: 'Import brain not available (build:import-brain may not have run).' })
-        emit(res, { t: 'done' }); return res.end()
-      }
-      const brainOutput = await brain.runAdaptiveImportBrain({
+      await runBrainToBundle({
         structural:   body.structural,
-        lobRefIdHint: body.lobRefIdHint || undefined,
-        emit:         (ev) => emit(res, ev),
+        lobRefIdHint: body.lobRefIdHint,
+        budget, res,
       })
-      const brainCoverages = (brainOutput.entities || [])
-        .filter((e) => e.kind === 'coverage' || e.kind === 'product')
-        .map((e) => {
-          const refIdF = e.fields.find(f => f.fieldName === 'refId' || f.fieldName === 'number')
-          const nameF  = e.fields.find(f => f.fieldName === 'name' || f.fieldName === 'label')
-          return { refId: String(refIdF?.value ?? ''), name: String(nameF?.value ?? e.kind), kind: e.kind }
-        })
-      emit(res, { t: 'token', v: JSON.stringify({ coverages: brainCoverages }) })
       emit(res, { t: 'done' }); return res.end()
     }
 
@@ -97,15 +156,44 @@ async function unifiedImport(req, res) {
       emit(res, { t: 'done' }); return res.end()
     }
 
+    // ── Stage 0: artifact router (magic bytes; LOB/edition from content) ──────
+    const { routeArtifacts } = require('../import-brain/stage0-router')
+    const routed = await routeArtifacts({
+      documents: docs,
+      extractPdfText: _extractPdfText,
+      budget,
+      emit: (ev) => emit(res, ev),
+    })
+
+    // ── Workbook path: adaptive brain over the merged structural model ────────
+    if (routed.workbooks.length > 0) {
+      if (routed.filingDocs.length > 0) {
+        routed.warnings.push({ kind: 'mixed-upload', detail: `Upload mixes workbooks and PDFs; the workbook plan was produced — re-upload the ${routed.filingDocs.length} PDF(s) separately for filing extraction.` })
+        emit(res, { t: 'notice', level: 'warn', message: 'Mixed upload: workbooks imported; PDFs skipped — upload them separately.', kind: 'mixed-upload' })
+      }
+      const structural = mergeStructurals(routed.workbooks)
+      await runBrainToBundle({
+        structural,
+        lobRefIdHint: body.lobRefIdHint || routed.lobRefIdHint,
+        edition:      routed.edition,
+        routerWarnings: routed.warnings,
+        budget, res,
+      })
+      emitSpend(res, budget)
+      emit(res, { t: 'done' }); return res.end()
+    }
+
+    // ── Filing path: PDFs (text or native-PDF vision blocks) ──────────────────
     const filingState = String(body.filingState || 'XX').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 2)
     const productName = String(body.productName || docs[0].name.replace(/\.[^.]+$/, '') || 'Imported Filing').slice(0, 200)
 
     const stageFiling = getStageFiling()
-    if (typeof stageFiling.runFilingPipeline === 'function') {
-      const { bundle, extraction } = await stageFiling.runFilingPipeline({
-        documents:        docs,
+    if (routed.filingDocs.length > 0 && typeof stageFiling.runFilingPipeline === 'function') {
+      const { bundle } = await stageFiling.runFilingPipeline({
+        documents:        routed.filingDocs.map(d => ({ name: d.name, base64: d.base64, text: d.text })),
         productNameHint:  productName,
         filingStateHint:  filingState,
+        budget,
         extractPdfText:   _extractPdfText,
         emit:             (ev) => emit(res, ev),
       })
@@ -113,13 +201,20 @@ async function unifiedImport(req, res) {
         .map((e) => ({ refId: e.data?.refId ?? e.refId ?? '', name: e.data?.name ?? e.label ?? '', formNumbers: e.data?.formNumbers ?? [] }))
       emit(res, { t: 'json', key: 'bundle', value: bundle })
       emit(res, { t: 'token', v: JSON.stringify({ coverages: planCoverages }) })
+      emitSpend(res, budget)
       emit(res, { t: 'done' }); return res.end()
     }
 
-    // Fallback: single-pass extraction (legacy robustness path)
+    if (routed.workbooks.length === 0 && routed.filingDocs.length === 0) {
+      emit(res, { t: 'error', message: `No importable artifacts detected: ${routed.unknown.map(u => `${u.name} (${u.reason})`).join('; ') || 'unknown content'}` })
+      emit(res, { t: 'done' }); return res.end()
+    }
+
+    // ── Fallback: single-pass extraction (legacy robustness path) ─────────────
     const doc = docs[0]
     emit(res, { t: 'tool', name: 'extract:coverages', phase: 'start', summary: doc.name })
 
+    const deployment = HAIKU_OVERRIDE || fleet.resolveModel('BULK_VERIFY', { bypassDegrade: true })
     const pdfText = doc.base64 ? _extractPdfText(doc.base64) : null
     let contentBlock
     if (pdfText && pdfText.length > 100) {
@@ -205,6 +300,7 @@ async function unifiedImport(req, res) {
 
     emit(res, { t: 'json', key: 'bundle', value: bundle })
     emit(res, { t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
+    emitSpend(res, budget)
     emit(res, { t: 'done' })
     res.end()
   } catch (err) {
@@ -212,6 +308,19 @@ async function unifiedImport(req, res) {
     emit(res, { t: 'done' })
     res.end()
   }
+}
+
+// Per-run spend telemetry for the non-brain paths (the brain emits its own
+// brain:spend event; this covers filing/fallback and is harmless to repeat).
+function emitSpend(res, budget) {
+  const spend = {
+    spendUsd:     Math.round((budget.spendUsd || 0) * 1e4) / 1e4,
+    calls:        budget.calls || 0,
+    noCap:        Boolean(budget.noCap),
+    byDeployment: budget.byDeployment || {},
+  }
+  console.log(`[unifiedImport] run spend: $${spend.spendUsd} across ${spend.calls} call(s)`)
+  emit(res, { t: 'json', key: 'import:spend', value: spend })
 }
 
 module.exports = { unifiedImport }

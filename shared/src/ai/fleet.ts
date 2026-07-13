@@ -13,6 +13,7 @@
  *  the router maps role → Foundry deployment. */
 export type ModelRole =
   | 'GROUNDED_CITED'  // claude-opus-4-8:        deep reasoning + grounded cited generation
+  | 'MID_REASONER'    // claude-sonnet-5:        mid-tier escalation between haiku and opus
   | 'BULK_VERIFY'     // claude-haiku-4-5:       bulk verification, cheap cascade passes
   | 'VISION'          // gpt-5.1:                general reasoning, vision-heavy extraction
   | 'CHEAP_GENERAL'   // gpt-5-mini:             cheap fast general-purpose calls
@@ -41,6 +42,12 @@ const FLEET_REGISTRY: Readonly<Record<ModelRole, FleetDeployment>> = {
     deploymentName: 'claude-opus-4-8',
     sdkFamily:      'anthropic',
     roleLabel:      'Grounded cited reasoning — Opus 4.8',
+  },
+  MID_REASONER: {
+    role:           'MID_REASONER',
+    deploymentName: 'claude-sonnet-5',
+    sdkFamily:      'anthropic',
+    roleLabel:      'Mid-tier escalation reasoning — Sonnet 5',
   },
   BULK_VERIFY: {
     role:           'BULK_VERIFY',
@@ -89,6 +96,7 @@ export function allDeployments(): FleetDeployment[] {
 // full FleetDeployment object.
 
 export const DEPLOY_OPUS     = FLEET_REGISTRY.GROUNDED_CITED.deploymentName  // 'claude-opus-4-8'
+export const DEPLOY_SONNET   = FLEET_REGISTRY.MID_REASONER.deploymentName     // 'claude-sonnet-5'
 export const DEPLOY_HAIKU    = FLEET_REGISTRY.BULK_VERIFY.deploymentName      // 'claude-haiku-4-5'
 export const DEPLOY_GPT      = FLEET_REGISTRY.VISION.deploymentName           // 'gpt-5.1'
 export const DEPLOY_GPT_MINI = FLEET_REGISTRY.CHEAP_GENERAL.deploymentName   // 'gpt-5-mini'
@@ -105,6 +113,7 @@ export interface FleetPricing {
 
 export const FLEET_PRICING: Readonly<Record<string, FleetPricing>> = {
   [DEPLOY_OPUS]:     { inputPerMTok: 15.00, outputPerMTok: 75.00 },
+  [DEPLOY_SONNET]:   { inputPerMTok:  3.00, outputPerMTok: 15.00 },
   [DEPLOY_HAIKU]:    { inputPerMTok:  0.80, outputPerMTok:  4.00 },
   [DEPLOY_GPT]:      { inputPerMTok:  3.00, outputPerMTok: 12.00 },
   [DEPLOY_GPT_MINI]: { inputPerMTok:  0.30, outputPerMTok:  1.60 },
@@ -126,7 +135,14 @@ export function estimateCostUsd(deploymentName: string, inputTokens: number, out
 export function degradedRole(role: ModelRole): ModelRole {
   switch (role) {
     case 'GROUNDED_CITED': return 'BULK_VERIFY'
+    case 'MID_REASONER':   return 'BULK_VERIFY'
     case 'VISION':         return 'CHEAP_GENERAL'
     default:               return role
   }
 }
+
+// ─── Escalation ladder (import path) ─────────────────────────────────────────
+// Ordered cheap → strong Anthropic tiers for consensus-failure escalation:
+// haiku → sonnet → opus. Callers walk the ladder one rung at a time and must
+// tolerate a missing mid-tier deployment (skip to the next rung on upstream 4xx).
+export const ESCALATION_LADDER: readonly ModelRole[] = ['BULK_VERIFY', 'MID_REASONER', 'GROUNDED_CITED'] as const

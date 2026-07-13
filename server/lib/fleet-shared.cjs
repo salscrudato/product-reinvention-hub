@@ -25,6 +25,8 @@ __export(api_server_exports, {
   DEPLOY_GPT_MINI: () => DEPLOY_GPT_MINI,
   DEPLOY_HAIKU: () => DEPLOY_HAIKU,
   DEPLOY_OPUS: () => DEPLOY_OPUS,
+  DEPLOY_SONNET: () => DEPLOY_SONNET,
+  ESCALATION_LADDER: () => ESCALATION_LADDER,
   FLEET_PRICING: () => FLEET_PRICING,
   allDeployments: () => allDeployments,
   degradedRole: () => degradedRole,
@@ -40,6 +42,12 @@ var FLEET_REGISTRY = {
     deploymentName: "claude-opus-4-8",
     sdkFamily: "anthropic",
     roleLabel: "Grounded cited reasoning \u2014 Opus 4.8"
+  },
+  MID_REASONER: {
+    role: "MID_REASONER",
+    deploymentName: "claude-sonnet-5",
+    sdkFamily: "anthropic",
+    roleLabel: "Mid-tier escalation reasoning \u2014 Sonnet 5"
   },
   BULK_VERIFY: {
     role: "BULK_VERIFY",
@@ -75,12 +83,14 @@ function allDeployments() {
   return Object.values(FLEET_REGISTRY);
 }
 var DEPLOY_OPUS = FLEET_REGISTRY.GROUNDED_CITED.deploymentName;
+var DEPLOY_SONNET = FLEET_REGISTRY.MID_REASONER.deploymentName;
 var DEPLOY_HAIKU = FLEET_REGISTRY.BULK_VERIFY.deploymentName;
 var DEPLOY_GPT = FLEET_REGISTRY.VISION.deploymentName;
 var DEPLOY_GPT_MINI = FLEET_REGISTRY.CHEAP_GENERAL.deploymentName;
 var DEPLOY_EMBED = FLEET_REGISTRY.EMBED.deploymentName;
 var FLEET_PRICING = {
   [DEPLOY_OPUS]: { inputPerMTok: 15, outputPerMTok: 75 },
+  [DEPLOY_SONNET]: { inputPerMTok: 3, outputPerMTok: 15 },
   [DEPLOY_HAIKU]: { inputPerMTok: 0.8, outputPerMTok: 4 },
   [DEPLOY_GPT]: { inputPerMTok: 3, outputPerMTok: 12 },
   [DEPLOY_GPT_MINI]: { inputPerMTok: 0.3, outputPerMTok: 1.6 },
@@ -96,12 +106,15 @@ function degradedRole(role) {
   switch (role) {
     case "GROUNDED_CITED":
       return "BULK_VERIFY";
+    case "MID_REASONER":
+      return "BULK_VERIFY";
     case "VISION":
       return "CHEAP_GENERAL";
     default:
       return role;
   }
 }
+var ESCALATION_LADDER = ["BULK_VERIFY", "MID_REASONER", "GROUNDED_CITED"];
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   DEPLOY_EMBED,
@@ -109,6 +122,8 @@ function degradedRole(role) {
   DEPLOY_GPT_MINI,
   DEPLOY_HAIKU,
   DEPLOY_OPUS,
+  DEPLOY_SONNET,
+  ESCALATION_LADDER,
   FLEET_PRICING,
   allDeployments,
   degradedRole,

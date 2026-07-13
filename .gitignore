@@ -67,3 +67,6 @@ docs/review/*
 !docs/review/COST_REPORT.md
 docs/audit/import_live_results.json
 docs/audit/import_ledger.json
+
+# Client-proprietary sample workbooks used for local import eval only (never commit)
+additional_samples/

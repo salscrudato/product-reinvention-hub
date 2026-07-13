@@ -371,6 +371,33 @@ async function buildAdversarialWorkbooks(): Promise<Map<string, Buffer>> {
     out.set('adv-unmapped-enum', Buffer.from(buf))
   }
 
+  // ADV-9: Mixed-language headers — same concepts, Spanish/German labels
+  {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Modelo de Componentes')
+    ws.getCell(1,1).value = 'ID DE REFERENCIA'; ws.getCell(1,2).value = 'NOMBRE DE COBERTURA'
+    ws.getCell(1,3).value = 'OBLIGATORIO'; ws.getCell(1,4).value = 'FUENTE'
+    ws.getCell(2,1).value = 'GL.COV.ML.001'; ws.getCell(2,2).value = 'Responsabilidad de Locales'
+    ws.getCell(2,3).value = 'MANDATORY'; ws.getCell(2,4).value = 'BUREAU'
+    ws.getCell(3,1).value = 'GL.COV.ML.002'; ws.getCell(3,2).value = 'Haftpflichtdeckung Produkte'
+    ws.getCell(3,3).value = 'OPTIONAL'; ws.getCell(3,4).value = 'PROPRIETARY'
+    const buf = await wb.xlsx.writeBuffer()
+    out.set('adv-mixed-language', Buffer.from(buf))
+  }
+
+  // ADV-10: Blank template — headers/banners only, ZERO data rows. A correct
+  // importer returns an EMPTY plan (no hallucinated coverages).
+  {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Product Component Model')
+    ws.getCell(1,1).value = 'PRODUCT SPECIFICATIONS'
+    ws.getCell(4,1).value = 'PRODUCT HIERARCHY'
+    ws.getCell(5,1).value = 'REF ID'; ws.getCell(5,2).value = 'COVERAGE NAME'
+    ws.getCell(5,3).value = 'REQUIREMENT'; ws.getCell(5,4).value = 'SOURCE'
+    const buf = await wb.xlsx.writeBuffer()
+    out.set('adv-blank-template', Buffer.from(buf))
+  }
+
   // ADV-8: Garbage PDF — valid %PDF magic but otherwise random bytes
   // (not an XLSX — tests the PDF path with bad content; must not crash)
   // We generate a tiny structurally-invalid PDF
@@ -421,13 +448,24 @@ async function runXlsx(
 
     result.planValid = localProducts > 0 && localCoverages > 0 && orphanSubs.length === 0
 
-    // Server structural pass is an OPTIONAL adaptive-AI enrichment, not the app's persist
-    // path (the app persists the deterministic plan above). It is informational here:
-    // a slow/failed brain call is noted but never fails the format. Coverages come back
-    // as a token, not a bundle.
-    const sseResult = await readSse('/ai/unifiedImport', { structural: plan, lobRefIdHint: lobHint }, token, 360_000)
+    // Server pass: post the RAW workbook bytes as base64 documents — the stage-0
+    // router sniffs, parses server-side, and runs the full 6-stage brain, returning
+    // a persistable plan bundle. Informational here (never fails the format), but
+    // bundle presence + citation coverage are noted.
+    const documents = files.map(f => ({
+      name: f.split(/[\\/]/).pop() ?? 'wb.xlsx',
+      base64: readFileSync(f).toString('base64'),
+      mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    }))
+    const sseResult = await readSse('/ai/unifiedImport', { documents, lobRefIdHint: lobHint }, token, 900_000)
     if (!sseResult.ok) notes.push(`server brain (non-fatal): ${sseResult.errors.join('; ')}`)
-    else notes.push(`server brain returned ${sseResult.tokenCoverages.length} entit(y|ies)`)
+    else {
+      const b = sseResult.bundle as { plan?: { coverages?: unknown[] }; provenance?: { sheet?: string; cell?: string; verbatim?: string }[] } | null
+      const serverCovs = Array.isArray(b?.plan?.coverages) ? b!.plan!.coverages!.length : 0
+      const prov = Array.isArray(b?.provenance) ? b!.provenance! : []
+      const cited = prov.filter(p => (p.sheet && p.cell) || p.verbatim).length
+      notes.push(`server brain bundle: ${serverCovs} coverages, provenance ${cited}/${prov.length} cited`)
+    }
     if (sseResult.notices.length) notes.push(...sseResult.notices.map(n => `notice: ${n}`))
   } catch (err) {
     result.crashed = true
@@ -452,26 +490,11 @@ async function runAdversarialXlsx(
   }
 
   try {
-    // Parse locally (deterministic, no AI)
-    const wb = new ExcelJS.Workbook()
-    await wb.xlsx.load(buffer)
-    const grids: IsoGrid[] = []
-    const ROW_CAP = 100_000
-    wb.eachSheet(ws => {
-      const cells: IsoCell[][] = []
-      const limit = Math.min(ws.rowCount, ROW_CAP)
-      for (let r = 1; r <= limit; r++) {
-        const rowObj = ws.getRow(r)
-        const arr: IsoCell[] = []
-        for (let c = 1; c <= ws.columnCount; c++) arr[c - 1] = flatten(rowObj.getCell(c).value)
-        cells[r - 1] = arr
-      }
-      grids.push({ sheet: ws.name, file: id, cells })
-    })
-    const plan = mapIsoWorkbook(grids)
-
-    // For adversarial cases, send to server and expect no crash (outcome may be empty)
-    const sseResult = await readSse('/ai/unifiedImport', { structural: plan }, token, 90_000)
+    // Post the raw adversarial bytes — the server's stage-0 router must sniff,
+    // parse, and survive (outcome may be an empty plan, never a crash/fabrication).
+    const sseResult = await readSse('/ai/unifiedImport', {
+      documents: [{ name: `${id}.xlsx`, base64: buffer.toString('base64'), mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }],
+    }, token, 300_000)
 
     if (!sseResult.ok && !expectEmpty) {
       result.crashed = true
@@ -487,6 +510,28 @@ async function runAdversarialXlsx(
       const fab = detectFabrication(sseResult.bundle)
       result.fabrication = fab.fabricated
       if (fab.evidence.length) notes.push(...fab.evidence.map(e => `fabrication: ${e}`))
+      const b = sseResult.bundle as { plan?: Record<string, unknown> } | null
+      const plan = b?.plan
+      result.coverageCount = Array.isArray(plan?.coverages) ? (plan!.coverages as unknown[]).length : 0
+      let totalEntities = 0
+      for (const key of ['coverages', 'forms', 'rules', 'formRules', 'ldTables', 'rtTables']) {
+        const list = plan?.[key]
+        if (Array.isArray(list)) totalEntities += list.length
+      }
+      result.productCount = plan?.product ? 1 : 0
+      notes.push(`plan entities: ${totalEntities} across groups`)
+      // A blank template / empty workbook that yields entities IS a fabrication.
+      if (expectEmpty && totalEntities > 0) {
+        result.fabrication = true
+        notes.push(`fabrication: ${totalEntities} entit(y|ies) produced from an empty/blank source`)
+      }
+      if (!expectEmpty && totalEntities === 0) {
+        notes.push('no entities extracted from a non-empty source (source-gap)')
+        result.status = 'source-gap'
+        result.durationMs = Date.now() - t0
+        return result
+      }
+      result.planValid = totalEntities > 0 || expectEmpty
     }
   } catch (err) {
     result.crashed = true
@@ -675,6 +720,47 @@ section('Filing PDFs — Lemonade NJ HO')
   }
 }
 
+// ─── additional_samples: same concepts, different presentations ───────────────
+// Gitignored client corpus (repo root). Each file is a differently-presented
+// version of the same product/coverage/forms/rules/rating concepts — the brain
+// must translate them WITHOUT template-specific code. BLANK templates must yield
+// an EMPTY plan (coverages from a blank template = fabrication).
+
+section('additional_samples (differently-presented corpus; skipped when absent)')
+{
+  const ADDL = join(REPO, 'additional_samples')
+  const addlCases: Array<[string, string, boolean]> = [
+    ['ADDL-GL-FRAMEWORK',       'Product Framework_General Liability.xlsx',                              false],
+    ['ADDL-GL-FRAMEWORK-2026',  'Product Framework_General Liability_2026 Example.xlsx',                 false],
+    ['ADDL-GL-RATING',          'Product_Rating Specifications_General Liability.xlsx',                  false],
+    ['ADDL-GL-FORMS-LIB-2025',  'Product_Forms Library_General Liability Example_2025.xlsx',             false],
+    ['ADDL-HAGERTY-RATING',     'Product_Rating Specifications_Hagerty.xlsx',                            false],
+    ['ADDL-HAGERTY-FORMS',      'Product_Forms Specifications_Hagerty.xlsx',                             false],
+    ['ADDL-HAGERTY-RULES',      'Product_Rules Specifications_Hagerty.xlsx',                             false],
+    ['ADDL-FY26-FORMS',         'Product_Forms Specifications_INSERT PRODUCT NAME_FY26 Example.xlsx',    false],
+    ['ADDL-FY26-RULES-INDEX',   'Product_Rules Classification Index_INSERT PRODUCT NAME_FY26 Example.xlsx', false],
+    ['ADDL-FY25-RULES',         'Product_Rules Specifications_INSERT PRODUCT NAME_FY25 Example.xlsx',    false],
+    ['ADDL-RULES-TAXONOMY',     'Sample Rules Taxonomy.xlsx',                                            false],
+    ['ADDL-XLSM-FRAMEWORK',     'Product Framework.xlsm',                                                false],
+    ['ADDL-HAGERTY-RATING-BLANK', 'Product_Rating Specifications_Hagerty_BLANK.xlsx',                    true],
+    ['ADDL-HAGERTY-FORMS-BLANK',  'Product_Forms Specifications_Hagerty_BLANK.xlsx',                     true],
+  ]
+  for (const [id, file, expectEmpty] of addlCases) {
+    const p = join(ADDL, file)
+    if (!existsSync(p)) {
+      warn(`${id}: not on disk — skipped`)
+      continue
+    }
+    const buf = readFileSync(p)
+    const r = await runAdversarialXlsx(id, buf, TOKEN, expectEmpty)
+    r.format = 'ADDL_SAMPLE'
+    r.file = file
+    results.push(r)
+    ;(r.status === 'pass' || r.status === 'source-gap' ? ok : fail)(`${id}: ${r.status} — ${r.coverageCount} coverages, ${r.durationMs}ms`)
+    if (r.notes.length) r.notes.forEach(n => log(`    ${n}`))
+  }
+}
+
 // ─── Adversarial corpus ───────────────────────────────────────────────────────
 
 section('Adversarial corpus')
@@ -686,7 +772,7 @@ for (const [id, buf] of advBuffers) {
     ;(r.status === 'pass' || r.status === 'source-gap' ? ok : fail)(`${id}: ${r.status}`)
     if (r.notes.length) r.notes.forEach(n => log(`    ${n}`))
   } else {
-    const expectEmpty = id === 'adv-empty' || id === 'adv-decoy-sheets' || id === 'adv-all-placeholder'
+    const expectEmpty = id === 'adv-empty' || id === 'adv-decoy-sheets' || id === 'adv-all-placeholder' || id === 'adv-blank-template'
     const t0 = Date.now()
     const r = await runAdversarialXlsx(id, buf, TOKEN, expectEmpty)
     r.durationMs = Date.now() - t0

@@ -1,61 +1,130 @@
 'use strict'
 // server/lib/import-brain/ai-call.js — shared AI call helpers for the brain stages.
 // Wraps the Anthropic Messages API and OpenAI Chat API (via Foundry) with:
-//   - fleet cost guard (guard before, record after)
+//   - fleet cost guard (guard before, record after) — EXCEPT on no-cap import budgets,
+//     where the guard never denies or degrades but telemetry is still recorded
 //   - temperature omitted (deprecated on claude-opus-4-8/haiku-4-5; o-series never accepts it)
-//   - 90s timeout (brain calls can be longer than the chat 120s timeout)
+//   - retry with exponential backoff + jitter on 408/429/5xx (import calls must be robust)
+//   - 120s timeout (brain calls can be longer than the chat timeout)
 //   - Honest throw on budget ceiling or upstream error (no fabricated answers)
 
 const fleet = require('../fleet')
 
 // ─── Deployment resolvers ──────────────────────────────────────────────────────
-// Both resolvers call fleet.guard() before each stage's AI calls so the $25/hour
-// budget ceiling is enforced on ALL brain stage calls, Anthropic and OpenAI alike.
+// Default path: fleet.guard() enforces the $25/hour ceiling on ALL brain stage calls.
+// No-cap path (budget.noCap === true, the IMPORT context): guard never denies or
+// degrades — import always runs the full-strength model — but every call still flows
+// through fleet.record() so spend telemetry stays truthful.
 
 function resolveAnthropic(role, budget) {
+  if (budget && budget.noCap) {
+    fleet.guard(fleet.IMPORT_CONTEXT)   // rolls the window; never denies/degrades
+    return fleet.resolveModel(role, { bypassDegrade: true })
+  }
   const g = fleet.guard()
   if (!g.allow) throw new Error('ai_budget_ceiling')
   budget.degraded = g.degrade
   return fleet.resolveModel(role, g.degrade)
 }
 
-// resolveOpenAI mirrors resolveAnthropic: enforces the cost guard then returns
-// the raw Foundry deployment name from the fleet constants.
+// resolveOpenAI mirrors resolveAnthropic: enforces the cost guard (or the no-cap
+// import context) then returns the raw Foundry deployment name from the fleet constants.
 function resolveOpenAI(deploymentConst, budget) {
+  if (budget && budget.noCap) {
+    fleet.guard(fleet.IMPORT_CONTEXT)
+    return deploymentConst
+  }
   const g = fleet.guard()
   if (!g.allow) throw new Error('ai_budget_ceiling')
   budget.degraded = g.degrade
   return deploymentConst
 }
 
+// ─── Retry helper ─────────────────────────────────────────────────────────────
+// Exponential backoff + jitter on 408/429/5xx and network errors. Import-path calls
+// must survive transient Foundry hiccups rather than silently losing a whole batch.
+
+async function fetchWithRetry(url, opts, { maxAttempts = 3, timeoutMs = 120_000 } = {}) {
+  let lastErr = null
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      const base   = Math.min(1000 * Math.pow(2, attempt - 1), 8000)
+      const jitter = Math.floor(Math.random() * 500)
+      await new Promise(r => setTimeout(r, base + jitter))
+    }
+    let resp
+    try {
+      resp = await fetch(url, { ...opts, signal: AbortSignal.timeout(timeoutMs) })
+    } catch (e) {
+      lastErr = e
+      continue
+    }
+    const status = typeof resp.status === 'number' ? resp.status : (resp.ok ? 200 : 500)
+    if (status !== 408 && status !== 429 && status < 500) return resp
+    if (attempt === maxAttempts - 1) return resp
+    try { await resp.arrayBuffer() } catch { /* drain */ }
+    const ra = Number(resp.headers?.get?.('Retry-After') || 0)
+    if (ra > 0) await new Promise(r => setTimeout(r, Math.min(ra * 1000, 30_000)))
+  }
+  throw lastErr ?? new Error('fetch failed after retries')
+}
+
+// ─── Per-run spend telemetry ──────────────────────────────────────────────────
+// Accumulates real token cost into the budget object so the pipeline can log and
+// emit per-run spend (the no-cap switch removes the CAP, never the TELEMETRY).
+
+function recordSpend(budget, deployment, inputTokens, outputTokens) {
+  fleet.record(deployment, inputTokens, outputTokens)
+  if (!budget) return
+  const usd = fleet.estimateCostUsd(deployment, inputTokens || 0, outputTokens || 0)
+  budget.spendUsd = (budget.spendUsd || 0) + usd
+  budget.calls    = (budget.calls || 0) + 1
+  if (!budget.byDeployment) budget.byDeployment = {}
+  const d = budget.byDeployment[deployment] || { calls: 0, inputTokens: 0, outputTokens: 0, usd: 0 }
+  d.calls        += 1
+  d.inputTokens  += inputTokens || 0
+  d.outputTokens += outputTokens || 0
+  d.usd          += usd
+  budget.byDeployment[deployment] = d
+}
+
 // ─── Anthropic Messages API call ──────────────────────────────────────────────
-// For Claude models (haiku, opus). temperature is deprecated on these models — omit it.
+// For Claude models (haiku, sonnet, opus). temperature is deprecated on these models — omit it.
 // If tools + toolName are provided, uses forced tool_choice and returns the tool input.
 // Otherwise returns the first text block raw.
+// `contentBlocks` (optional) replaces the plain userPrompt with rich blocks — used by
+// the vision fallback to pass a base64 PDF document block for scanned documents.
 
-async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, tools, toolName }) {
+async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, tools, toolName, contentBlocks, budget }) {
+  const content = Array.isArray(contentBlocks) && contentBlocks.length > 0
+    ? contentBlocks
+    : userPrompt
+  // System prompt as a cache-controlled block: brain stages reuse the same (long,
+  // first-principles-bearing) system text across many batch calls — the ephemeral
+  // cache cuts input cost and latency on every call after the first.
   const body = {
     model: deployment,
     max_tokens: maxTokens,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
+    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content }],
   }
   if (tools && toolName) {
     body.tools = tools
     body.tool_choice = { type: 'tool', name: toolName }
   }
-  const upstream = await fetch(fleet.anthropicMessagesUrl(), {
+  const upstream = await fetchWithRetry(fleet.anthropicMessagesUrl(), {
     method: 'POST',
     headers: fleet.anthropicHeaders(),
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(90_000),
   })
   if (!upstream.ok) {
     const detail = (await upstream.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
-    throw new Error(`Foundry Anthropic ${upstream.status}: ${detail}`)
+    const err = new Error(`Foundry Anthropic ${upstream.status}: ${detail}`)
+    err.status = upstream.status
+    throw err
   }
   const json = await upstream.json()
-  fleet.record(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
+  recordSpend(budget, deployment, json.usage?.input_tokens, json.usage?.output_tokens)
   if (tools && toolName) {
     const tu = Array.isArray(json.content) ? json.content.find(b => b.type === 'tool_use') : null
     return { raw: JSON.stringify(tu?.input ?? {}), usage: json.usage }
@@ -69,7 +138,7 @@ async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, 
 // o-series models reject `temperature` — never set it here.
 // Converts Anthropic-style tools to OpenAI function-calling format.
 
-async function callOpenAI({ deployment, systemPrompt, userPrompt, maxTokens, tools, toolName }) {
+async function callOpenAI({ deployment, systemPrompt, userPrompt, maxTokens, tools, toolName, budget }) {
   const messages = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userPrompt },
@@ -82,18 +151,19 @@ async function callOpenAI({ deployment, systemPrompt, userPrompt, maxTokens, too
     }))
     if (toolName) body.tool_choice = { type: 'function', function: { name: toolName } }
   }
-  const upstream = await fetch(fleet.openaiChatUrl(), {
+  const upstream = await fetchWithRetry(fleet.openaiChatUrl(), {
     method: 'POST',
     headers: fleet.openaiHeaders(),
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(90_000),
   })
   if (!upstream.ok) {
     const detail = (await upstream.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
-    throw new Error(`Foundry OpenAI ${upstream.status}: ${detail}`)
+    const err = new Error(`Foundry OpenAI ${upstream.status}: ${detail}`)
+    err.status = upstream.status
+    throw err
   }
   const json = await upstream.json()
-  fleet.record(deployment, json.usage?.prompt_tokens, json.usage?.completion_tokens)
+  recordSpend(budget, deployment, json.usage?.prompt_tokens, json.usage?.completion_tokens)
   if (tools && toolName) {
     const tc = json.choices?.[0]?.message?.tool_calls?.[0]
     return { raw: tc?.function?.arguments ?? '{}', usage: json.usage }
@@ -102,12 +172,49 @@ async function callOpenAI({ deployment, systemPrompt, userPrompt, maxTokens, too
   return { raw: text, usage: json.usage }
 }
 
-// ─── Budget factory ───────────────────────────────────────────────────────────
-// Creates a budget object passed through the brain pipeline. `degraded` is
-// updated before every AI call; callers check it to route to cheaper models.
+// ─── Escalation ladder (haiku → sonnet → opus) ────────────────────────────────
+// Walks the Anthropic tiers above `fromRole`, calling each until one parses.
+// A missing mid-tier deployment (Foundry 4xx, e.g. sonnet not deployed) is skipped —
+// the ladder degrades gracefully to the next rung rather than failing the field.
+// `parse(raw)` must return null/undefined for an unusable response.
 
-function createBudget() {
-  return { degraded: false }
+async function escalateAnthropic({ fromRole, systemPrompt, userPrompt, maxTokens, budget, parse }) {
+  const ladder = fleet.ESCALATION_LADDER
+  const start  = Math.max(0, ladder.indexOf(fromRole) + 1)
+  for (let i = start; i < ladder.length; i++) {
+    const role = ladder[i]
+    let deployment
+    try { deployment = resolveAnthropic(role, budget) } catch { continue }
+    try {
+      const res    = await callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, budget })
+      const parsed = parse(res.raw)
+      if (parsed != null) return { role, deployment, parsed }
+    } catch (e) {
+      // 4xx (deployment absent / bad request) → try the next rung; rethrow nothing.
+      if (e && e.status && e.status >= 500) continue
+      continue
+    }
+  }
+  return null
 }
 
-module.exports = { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI, createBudget }
+// ─── Budget factory ───────────────────────────────────────────────────────────
+// Creates a budget object passed through the brain pipeline.
+//   degraded — updated before every guarded AI call; callers check it to route cheaper.
+//   noCap    — the EXPLICIT import switch: never deny, never degrade, keep telemetry.
+//   spendUsd/calls/byDeployment — per-run spend telemetry (always recorded).
+
+function createBudget(opts = {}) {
+  return {
+    degraded:     false,
+    noCap:        Boolean(opts.noCap),
+    spendUsd:     0,
+    calls:        0,
+    byDeployment: {},
+  }
+}
+
+module.exports = {
+  callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI,
+  escalateAnthropic, fetchWithRetry, createBudget,
+}

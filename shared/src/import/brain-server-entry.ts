@@ -9,3 +9,10 @@
 // Zero platform imports; esbuild bundles this tree-shake safe.
 export { scoreHeaderCandidates, pickBestHeaderRow } from './structure/headerScore'
 export { CANONICAL_MAP, SURFACED_COLUMNS } from './canonicalMap'
+// Server-side structural fingerprinting (stage 0 router): grid → StructuralModel
+// with the real normalized cell grid embedded (SheetFingerprint.cells).
+export { buildStructuralModel, fingerprintGrid, MAX_EMBED_ROWS, MAX_EMBED_COLS } from './structure/modelBuilder'
+export { normalizeCellValue } from './structure/sentinels'
+// LOB inference for the router's line-of-business hint: refIds are DERIVED from the
+// registry (prefix match / signal inference) — never invented by a model.
+export { LOB_REGISTRY, resolveLobByRefId, inferLob, synthesizeRefId } from '../insurance/lobRegistry'

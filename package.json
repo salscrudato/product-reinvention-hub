@@ -24,6 +24,7 @@
     "harden:smoke:live": "node hardening/smoke.mjs",
     "live:smoke": "tsx scripts/live-smoke.mts",
     "import:live": "tsx scripts/import-live.mts",
+    "import:eval": "tsx scripts/import-eval.mts",
     "import:loop": "tsx scripts/import-loop.mts"
   },
   "devDependencies": {

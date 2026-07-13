@@ -18,7 +18,6 @@
 //   * RECONCILE is pure and deterministic (no model call).
 //   * All AI calls pass through resolveAnthropic() which enforces the fleet cost guard.
 
-const fleet = require('../fleet')
 const { callAnthropic, resolveAnthropic, createBudget } = require('./ai-call')
 const { FILING_CLASSIFY_SYSTEM } = require('./prompts')
 
@@ -134,43 +133,59 @@ const EXTRACT_SYSTEM =
   'tables, return a SCHEMA + the verbatim region; deterministic code parses the rows. Call the ' +
   'forced tool exactly once.'
 
-// ─── Build text content block from a filing document ─────────────────────────
+// ─── Build content block from a filing document ───────────────────────────────
+// TEXT FIRST: extracted text goes whole-document-in-context (up to 180k chars) so
+// page traceability survives. When text extraction yields too little — encrypted
+// PDFs, Identity-H CID fonts, remapped TrueType encodings, or true scans (the entire
+// NJ/Lemonade/HO3 corpus falls in these classes) — fall back to a NATIVE PDF document
+// block: the vision-capable Claude models read the pages directly, preserving
+// page-level citations. Never converts Excel to PDF; this path is PDF-only.
+
+const PDF_TEXT_MIN = 400
 
 function buildContentBlock(doc, pdfText) {
   const name = String(doc.name || 'document')
-  if (pdfText && pdfText.length > 100) {
+  if (pdfText && pdfText.length >= PDF_TEXT_MIN) {
     return { type: 'text', text: `FILING DOCUMENT (${name}):\n\n${pdfText.slice(0, 180_000)}` }
+  }
+  if (doc.text && String(doc.text).length >= PDF_TEXT_MIN) {
+    return { type: 'text', text: `FILING DOCUMENT (${name}):\n\n${String(doc.text).slice(0, 180_000)}` }
+  }
+  if (doc.base64) {
+    return { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: doc.base64 } }
   }
   return { type: 'text', text: `FILING DOCUMENT (${name}):\n\n${String(doc.text || '').slice(0, 180_000)}` }
 }
 
-// ─── One forced-tool Anthropic call (without using callAnthropic helper) ──────
-// This goes directly through the Anthropic Messages API on Foundry with a deployment
-// already resolved through the cost guard (via resolveAnthropic). Records usage after.
+// ─── One forced-tool Anthropic call (via the shared ai-call helper) ───────────
+// callAnthropic provides retry with backoff, the cost guard / no-cap import context,
+// and per-run spend telemetry. Returns the parsed tool input object.
 
-async function forcedTool(deployment, systemPrompt, tools, toolName, contentBlock, instruction, maxTokens) {
-  const body = {
-    model:      deployment,
-    max_tokens: maxTokens,
-    system:     systemPrompt,
-    tools,
-    tool_choice: { type: 'tool', name: toolName },
-    messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: instruction }] }],
-  }
-  const upstream = await fetch(fleet.anthropicMessagesUrl(), {
-    method:  'POST',
-    headers: fleet.anthropicHeaders(),
-    body:    JSON.stringify(body),
-    signal:  AbortSignal.timeout(120_000),
+async function forcedTool(deployment, systemPrompt, tools, toolName, contentBlock, instruction, maxTokens, budget) {
+  const res = await callAnthropic({
+    deployment, systemPrompt, tools, toolName, maxTokens, budget,
+    contentBlocks: [contentBlock, { type: 'text', text: instruction }],
   })
-  if (!upstream.ok) {
-    const detail = (await upstream.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
-    throw new Error(`Foundry ${upstream.status}: ${detail}`)
+  try { return JSON.parse(res.raw) } catch { return {} }
+}
+
+// ─── Escalation: haiku → sonnet → opus until the parse yields content ─────────
+// A missing sonnet deployment (Foundry 4xx) is skipped; ladder degrades gracefully.
+
+async function extractWithLadder({ systemPrompt, tool, block, instruction, maxTokens, budget, sanitize, isEmpty }) {
+  let result = null
+  let escalated = false
+  for (const role of ['BULK_VERIFY', 'MID_REASONER', 'GROUNDED_CITED']) {
+    let deployment
+    try { deployment = resolveAnthropic(role, budget) } catch { continue }
+    let raw
+    try { raw = await forcedTool(deployment, systemPrompt, [tool], tool.name, block, instruction, maxTokens, budget) } catch { raw = {} }
+    const sanitized = sanitize(raw)
+    if (!isEmpty(sanitized)) return { result: sanitized, escalated }
+    result = result ?? sanitized
+    escalated = true
   }
-  const json = await upstream.json()
-  fleet.record(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
-  const tu = Array.isArray(json.content) ? json.content.find(b => b.type === 'tool_use') : null
-  return (tu && tu.input) ?? {}
+  return { result, escalated }
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -208,7 +223,7 @@ async function runFilingPipeline(opts) {
   for (const doc of documents) {
     const pdfText = doc.base64 ? extractText(doc.base64) : null
     const block   = buildContentBlock(doc, pdfText)
-    const input   = await forcedTool(deployBulk, FILING_CLASSIFY_SYSTEM, [CLASSIFY_TOOL], CLASSIFY_TOOL.name, block, `Classify this document (filename: "${doc.name}").`, 500)
+    const input   = await forcedTool(deployBulk, FILING_CLASSIFY_SYSTEM, [CLASSIFY_TOOL], CLASSIFY_TOOL.name, block, `Classify this document (filename: "${doc.name}").`, 500, budget)
       .catch(() => ({}))
     classifications.push(sanitizeCls(doc.name, input))
   }
@@ -223,37 +238,37 @@ async function runFilingPipeline(opts) {
   const manualDoc     = roleOf('manual')
   const policyFormDoc = roleOf('policyForm')
 
-  // ── EXTRACT: rate order ──
+  // ── EXTRACT: rate order (haiku → sonnet → opus until non-empty) ──
   let rateOrder = { variables: [] }
   if (rateOrderDoc) {
     emit({ t: 'tool', name: 'filing:extract:rateOrder', phase: 'start' })
     const pdfText = rateOrderDoc.base64 ? extractText(rateOrderDoc.base64) : null
     const block   = buildContentBlock(rateOrderDoc, pdfText)
-    let raw = await forcedTool(deployBulk, EXTRACT_SYSTEM, [RATE_ORDER_TOOL], RATE_ORDER_TOOL.name, block, 'Extract the rate order of calculations, in order.', 4000).catch(() => ({}))
-    rateOrder = sanitizeRO(raw)
-    if (!budget.degraded && rateOrder.variables.length === 0) {
-      escalated = true
-      const deployOpus = resolveAnthropic('GROUNDED_CITED', budget)
-      raw = await forcedTool(deployOpus, EXTRACT_SYSTEM, [RATE_ORDER_TOOL], RATE_ORDER_TOOL.name, block, 'Extract the rate order of calculations, in order.', 4000).catch(() => ({}))
-      rateOrder = sanitizeRO(raw)
-    }
+    const ladder  = await extractWithLadder({
+      systemPrompt: EXTRACT_SYSTEM, tool: RATE_ORDER_TOOL, block,
+      instruction: 'Extract the rate order of calculations, in order.',
+      maxTokens: 4000, budget,
+      sanitize: sanitizeRO, isEmpty: (r) => !r || r.variables.length === 0,
+    })
+    rateOrder = ladder.result ?? { variables: [] }
+    escalated = escalated || ladder.escalated
     emit({ t: 'tool', name: 'filing:extract:rateOrder', phase: 'end', summary: `${rateOrder.variables.length} variable(s)` })
   }
 
-  // ── EXTRACT: manual ──
+  // ── EXTRACT: manual (haiku → sonnet → opus until non-empty) ──
   let manual = { rules: [] }
   if (manualDoc) {
     emit({ t: 'tool', name: 'filing:extract:manual', phase: 'start' })
     const pdfText = manualDoc.base64 ? extractText(manualDoc.base64) : null
     const block   = buildContentBlock(manualDoc, pdfText)
-    let raw = await forcedTool(deployBulk, EXTRACT_SYSTEM, [MANUAL_TOOL], MANUAL_TOOL.name, block, "Extract the manual's numbered rules — schemas + verbatim regions for tables, scalars for single facts.", 8000).catch(() => ({}))
-    manual = sanitizeMnl(raw)
-    if (!budget.degraded && manual.rules.length === 0) {
-      escalated = true
-      const deployOpus = resolveAnthropic('GROUNDED_CITED', budget)
-      raw = await forcedTool(deployOpus, EXTRACT_SYSTEM, [MANUAL_TOOL], MANUAL_TOOL.name, block, "Extract the manual's numbered rules — schemas + verbatim regions for tables, scalars for single facts.", 8000).catch(() => ({}))
-      manual = sanitizeMnl(raw)
-    }
+    const ladder  = await extractWithLadder({
+      systemPrompt: EXTRACT_SYSTEM, tool: MANUAL_TOOL, block,
+      instruction: "Extract the manual's numbered rules — schemas + verbatim regions for tables, scalars for single facts.",
+      maxTokens: 8000, budget,
+      sanitize: sanitizeMnl, isEmpty: (r) => !r || r.rules.length === 0,
+    })
+    manual = ladder.result ?? { rules: [] }
+    escalated = escalated || ladder.escalated
     emit({ t: 'tool', name: 'filing:extract:manual', phase: 'end', summary: `${manual.rules.length} rule(s)` })
   }
 
@@ -297,8 +312,15 @@ async function runFilingPipeline(opts) {
     emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'start' })
     const pdfText = policyFormDoc.base64 ? extractText(policyFormDoc.base64) : null
     const block   = buildContentBlock(policyFormDoc, pdfText)
-    const raw = await forcedTool(deployBulk, COVERAGE_SYSTEM, [PROPOSE_COVERAGES_TOOL], PROPOSE_COVERAGES_TOOL.name, block, `Extract ALL coverages this policy form defines. Filing state: ${filingState}.`, 4096).catch(() => ({}))
-    const rawCovs = (Array.isArray(raw.coverages) ? raw.coverages : []).filter(c => c && c.name && c.citation)
+    const ladder  = await extractWithLadder({
+      systemPrompt: COVERAGE_SYSTEM, tool: PROPOSE_COVERAGES_TOOL, block,
+      instruction: `Extract ALL coverages this policy form defines. Filing state: ${filingState}.`,
+      maxTokens: 4096, budget,
+      sanitize: (raw) => (Array.isArray(raw?.coverages) ? raw.coverages : []).filter(c => c && c.name && c.citation),
+      isEmpty: (r) => !r || r.length === 0,
+    })
+    const rawCovs = ladder.result ?? []
+    escalated = escalated || ladder.escalated
     policyFormCoverageItems = rawCovs.map(c => ({ name: c.name, requirement: c.requirement, premiumGenerating: c.premiumGenerating !== false, confidence: Number(c.confidence ?? 0.7), citation: c.citation }))
     if (rawCovs[0]?.formNumbers?.[0]) baseFormNumber = rawCovs[0].formNumbers[0]
     emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'end', summary: `${rawCovs.length} coverage(s)` })

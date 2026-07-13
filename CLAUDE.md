@@ -37,7 +37,8 @@ Break any of these and the PR is blocked.
 | **refId / form chips** | `refId` and form-number chips are load-bearing display elements. Never strip them. |
 | **HO-3 $1,528 canary** | `shared/src/rating/evaluator.test.ts` must produce exactly $1,528. |
 | **Design tokens** | No hard-coded hex outside `app/src/index.css`. Use `var(--color-*)` in browser-rendered code. SVG files exported to disk are the only exception. |
-| **Model IDs** | `claude-opus-4-8` (reasoning/GROUNDED_CITED) and `claude-haiku-4-5` (bulk/BULK_VERIFY), defined in `shared/src/ai/fleet.ts` (deployed) and `server/lib/fleet.js`. Never `claude-fable-5`. `functions/src/runtime.ts` is reference-only and NOT deployed. |
+| **Model IDs** | `claude-opus-4-8` (reasoning/GROUNDED_CITED), `claude-sonnet-5` (import escalation/MID_REASONER), and `claude-haiku-4-5` (bulk/BULK_VERIFY), defined in `shared/src/ai/fleet.ts` (deployed) and `server/lib/fleet.js`. Never `claude-fable-5`. `functions/src/runtime.ts` is reference-only and NOT deployed. |
+| **Import no-cap** | The import path (`/api/ai/unifiedImport` → import-brain) runs under the named `IMPORT_CONTEXT` guard exemption: never budget-denied, never model-degraded. Telemetry (`fleet.record`, per-run `brain:spend`) is NEVER bypassed. Scope is import-only; every other AI role keeps the cost guard. |
 
 ## Environment safety
 

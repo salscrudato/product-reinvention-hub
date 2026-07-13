@@ -88,6 +88,15 @@ export interface SheetFingerprint {
   // Present only when isDefinitionsSheet === true
   definitions?: DefinitionsEntry[]
   isDefinitionsSheet: boolean
+  // Full normalized cell grid (row-major, 0-based), capped at MAX_EMBED_ROWS x
+  // MAX_EMBED_COLS by the model builder. When present, extraction stages read REAL
+  // rows from here instead of reconstructing synthetic rows from distinctSample
+  // (which is lossy and not row-aligned). Optional for backward compatibility with
+  // fingerprints built by older clients.
+  cells?: NormalizedCell[][]
+  // True when the grid was truncated to the embed caps (extraction must surface
+  // an importWarning rather than silently dropping the tail).
+  cellsTruncated?: boolean
 }
 
 export interface StructuralModel {

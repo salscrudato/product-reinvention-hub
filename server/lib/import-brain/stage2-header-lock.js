@@ -140,6 +140,7 @@ async function lockHeaders(classified, fpByName, budget, review) {
       systemPrompt: STAGE2_HEADER_SYSTEM,
       userPrompt:   buildHeaderUser(fp),
       maxTokens:    256,
+      budget,
     }).catch(() => ({ raw: '' }))
 
     const parsed = parseHeaderResponse(result.raw)

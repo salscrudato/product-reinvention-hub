@@ -124,6 +124,17 @@ async function runAdaptiveImportBrain(opts) {
   emitStage(emit, 6, 'reconcile', 'end', `${output.summaryCounts.entitiesProduced} entities, ${output.reviewQueue.length} review items`)
   emit({ t: 'json', key: 'brain:output', value: output.summaryCounts })
 
+  // Per-run spend telemetry — the no-cap import switch removes the CAP, never the
+  // TELEMETRY. Logged server-side and streamed so operators see true import cost.
+  const spend = {
+    spendUsd:     Math.round((budget.spendUsd || 0) * 1e4) / 1e4,
+    calls:        budget.calls || 0,
+    noCap:        Boolean(budget.noCap),
+    byDeployment: budget.byDeployment || {},
+  }
+  console.log(`[import-brain] run spend: $${spend.spendUsd} across ${spend.calls} call(s)`, JSON.stringify(spend.byDeployment))
+  emit({ t: 'json', key: 'brain:spend', value: spend })
+
   return output
 }
 

@@ -1,0 +1,80 @@
+{
+  "runAt": "2026-07-13T22:32:16.819Z",
+  "mode": "offline",
+  "baseUrl": null,
+  "targets": {
+    "f1": 0.95,
+    "numericExact": 0.98,
+    "citation": 1
+  },
+  "results": [
+    {
+      "id": "GL",
+      "mode": "offline",
+      "goldenFields": 5466,
+      "extractedFields": 5466,
+      "tp": 5466,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "numericTotal": 116,
+      "numericExact": 116,
+      "numericExactRate": 1,
+      "entityRecall": 1,
+      "pass": true
+    },
+    {
+      "id": "IM",
+      "mode": "offline",
+      "goldenFields": 19427,
+      "extractedFields": 19427,
+      "tp": 19427,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "numericTotal": 832,
+      "numericExact": 832,
+      "numericExactRate": 1,
+      "entityRecall": 1,
+      "pass": true
+    },
+    {
+      "id": "PR",
+      "mode": "offline",
+      "goldenFields": 26053,
+      "extractedFields": 26053,
+      "tp": 26053,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "numericTotal": 603,
+      "numericExact": 603,
+      "numericExactRate": 1,
+      "entityRecall": 1,
+      "pass": true
+    },
+    {
+      "id": "CORE",
+      "mode": "offline",
+      "goldenFields": 4132,
+      "extractedFields": 4132,
+      "tp": 4132,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "numericTotal": 112,
+      "numericExact": 112,
+      "numericExactRate": 1,
+      "entityRecall": 1,
+      "pass": true
+    }
+  ]
+}

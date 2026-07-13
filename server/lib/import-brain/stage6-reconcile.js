@@ -42,6 +42,26 @@ function reconcileOutput(entities, classifiedSheets, headerLocks, columnMaps, re
     entitiesProduced:       entities.length,
   }
 
+  // importWarnings: one human-readable warning per review item + validator
+  // discrepancy. NOTHING the pipeline flagged is silently dropped — everything
+  // surfaces here (and from here into the ImportPlan summary).
+  const importWarnings = [
+    ...reviewQueue.map(r => ({
+      kind:   r.kind,
+      sheet:  r.sheetName ?? null,
+      row:    r.rowIndex ?? null,
+      field:  r.fieldPath ?? r.colLabel ?? null,
+      detail: r.detail ?? '',
+    })),
+    ...validationDiscrepancies.map(d => ({
+      kind:   `validator:${d.kind}`,
+      sheet:  null,
+      row:    null,
+      field:  d.fieldName ?? null,
+      detail: d.detail ?? '',
+    })),
+  ]
+
   return {
     entities,
     perEntityConfidence,
@@ -51,6 +71,7 @@ function reconcileOutput(entities, classifiedSheets, headerLocks, columnMaps, re
     headerLocks,
     columnMaps,
     validationDiscrepancies,
+    importWarnings,
   }
 }
 
