@@ -1,0 +1,69 @@
+{
+  "line": "IM",
+  "files": [
+    "sample-IM-framework.xlsx",
+    "sample-IM-rules.xlsx"
+  ],
+  "sheetsRecognized": [
+    "Product Component Model",
+    "Limits and Deductibles Tables"
+  ],
+  "sheetsSkipped": [
+    "Revision History",
+    "Definitions",
+    "Coverage Summary",
+    "Data Validation",
+    "Revision History",
+    "Definitions",
+    "Rules Categories",
+    "Rules Repository",
+    "Class Codes Tables",
+    "Data Validation"
+  ],
+  "counts": {
+    "products": 1,
+    "coverages": 798,
+    "forms": 0,
+    "dynamicFields": 0,
+    "rules": 0,
+    "formRules": 0,
+    "ratingSteps": 0,
+    "rtTables": 0,
+    "ldTables": 0
+  },
+  "warnings": [
+    "Sheet \"Product Component Model\" col \"ID\": coverage id IM.COV044.09 is reused for different coverages (\"Signs\" and \"Signs\") — kept the first; verify the source.",
+    "Sheet \"Product Component Model\" col \"ID\": coverage id IM.COV068.26 is reused for different coverages (\"Job Site - Existing Building or Structure\" and \"Property Held at any Temporary Storage Location\") — kept the first; verify the source.",
+    "Sheet \"Product Component Model\" col \"ID\": coverage id IM.COV087.12 is reused for different coverages (\"Processors\" and \"Property At Unnamed Processors\") — kept the first; verify the source.",
+    "Sheet \"Product Component Model\" col \"ID\": coverage id IM.COV087.13 is reused for different coverages (\"Property in Processor's Care, Custody or Control\" and \"Property In Transit\") — kept the first; verify the source.",
+    "Sheet \"Product Component Model\" coverage IM.COV068.126 (\"Below Ground Water and Backup of Sewer and Drain\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
+    "Sheet \"Product Component Model\" coverage IM.COV079.02 (\"Debris Removal\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
+    "Sheet \"Product Component Model\" coverage IM.COV080.02 (\"Debris Removal\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
+    "Sheet \"Product Component Model\" coverage IM.COV087.22 (\"Debris Removal\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
+    "Sheet \"Product Component Model\" coverage IM.COV087.31 (\"Debris Removal\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
+    "Sheet \"Product Component Model\" coverage IM.COV095.02 (\"Additional Acquired Or Replacement Property\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
+    "Framework sheet \"Product Component Model\": no explicit product (.PROD) row — synthesized product id \"IM.PROD.001\" from the coverage id prefix \"IM\".",
+    "Framework sheet \"Product Component Model\": 48 distinct product names detected — imported under a single product IM.PROD.001. Split into separate products if the source is a multi-product book."
+  ],
+  "warningCount": 12,
+  "unmappedColumns": [
+    {
+      "sheet": "Product Component Model",
+      "columns": [
+        "COVERAGE FORM",
+        "COVERAGE\nSCOPE",
+        "COVERAGE\nEFFECT",
+        "CLAIMS EXPENSE W/I LIMIT?",
+        "SPECIALTY IMPLEMENTATION BUSINESS PRIORITY",
+        "CONFIRMED RELEASE"
+      ]
+    }
+  ],
+  "orphanedParents": [],
+  "badRequirement": [],
+  "badSource": [],
+  "spotChecks": {
+    "IM.COV044.00": false,
+    "IM.RL.001": false
+  }
+}

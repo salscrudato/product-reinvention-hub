@@ -1,0 +1,11 @@
+{
+  "note": "These PDF files are not processed by the Excel importer. The filing pipeline (server/lib/import-brain/stage-filing.js) handles them separately.",
+  "isoPdfs": [
+    "samples/iso/sample-PH-baseform-HO3.pdf"
+  ],
+  "filingPdfs": [
+    "samples/filings/nj-lemonade-ho/LEM 03 05 23 Lemonade Homeowners_FINAL.pdf",
+    "samples/filings/nj-lemonade-ho/NJ HO Manual 02.27.24.pdf",
+    "samples/filings/nj-lemonade-ho/NJ HO Rate Order of Calculations.pdf"
+  ]
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "DEF-001",
+    "sourceFile": "samples/iso/sample-IM-rules.xlsx",
+    "sheet": "Rules Repository",
+    "locus": "mapIsoWorkbook() ruleGrid findSheet regex",
+    "category": "unmapped-sheet",
+    "severity": "blocking",
+    "expected": "Rules Repository sheet parsed as rules → IM.RL.001 and siblings produced",
+    "actual": "Sheet skipped; rules count = 0; regex /rules specifications?/i does not match 'Rules Repository'",
+    "status": "open",
+    "rootCauseWave": 1
+  },
+  {
+    "id": "DEF-002",
+    "sourceFile": "samples/iso/sample-PR-framework.xlsx",
+    "sheet": "Forms Library",
+    "locus": "mapIsoWorkbook() formGrid findSheet regex",
+    "category": "unmapped-sheet",
+    "severity": "blocking",
+    "expected": "Forms Library sheet parsed as forms → CP form entities produced",
+    "actual": "Sheet skipped; forms count = 0; regex /forms specifications?/i does not match 'Forms Library'",
+    "status": "open",
+    "rootCauseWave": 1
+  },
+  {
+    "id": "DEF-003",
+    "sourceFile": "samples/iso/sample-PR-framework.xlsx",
+    "sheet": "Rules Repository",
+    "locus": "mapIsoWorkbook() ruleGrid findSheet regex",
+    "category": "unmapped-sheet",
+    "severity": "blocking",
+    "expected": "Rules Repository sheet parsed as rules → PR rule entities produced",
+    "actual": "Sheet skipped; rules count = 0 for PR line",
+    "status": "open",
+    "rootCauseWave": 1
+  },
+  {
+    "id": "DEF-004",
+    "sourceFile": "samples/iso/sample-PR-framework.xlsx",
+    "sheet": "ROC",
+    "locus": "mapIsoWorkbook() rateGrid findSheet regex",
+    "category": "unmapped-sheet",
+    "severity": "blocking",
+    "expected": "ROC sheet parsed as rating program → rating steps produced",
+    "actual": "Sheet skipped; ratingSteps count = 0; regex /rating specifications?/i does not match 'ROC'",
+    "status": "open",
+    "rootCauseWave": 1
+  },
+  {
+    "id": "DEF-005",
+    "sourceFile": "samples/iso/sample-PR-rating.xlsx",
+    "sheet": "PROPERTY ROC",
+    "locus": "mapIsoWorkbook() rateGrid findSheet regex",
+    "category": "unmapped-sheet",
+    "severity": "blocking",
+    "expected": "PROPERTY ROC sheet parsed as rating program → rating steps produced",
+    "actual": "Sheet skipped; ratingSteps count = 0; regex /rating specifications?/i does not match 'PROPERTY ROC'",
+    "status": "open",
+    "rootCauseWave": 1
+  },
+  {
+    "id": "DEF-006",
+    "sourceFile": "samples/iso/sample-IM-framework.xlsx",
+    "sheet": "Limits and Deductibles Tables",
+    "locus": "parseLdTables() LD_MARKER pattern /^LD ?TABLE\\.\\s*\\w+/i",
+    "category": "dropped-row",
+    "severity": "blocking",
+    "expected": "LD rows parsed → LD table entities produced",
+    "actual": "Sheet recognized but 0 LD tables produced; IM sheet rows do not contain 'LDTable.NNN' marker in column 0",
+    "status": "open",
+    "rootCauseWave": 2
+  },
+  {
+    "id": "DEF-007",
+    "sourceFile": "samples/iso/sample-IM-framework.xlsx",
+    "sheet": "Product Component Model",
+    "locus": "coverage refId IM.COV044.00",
+    "category": "value-mismatch",
+    "severity": "cosmetic",
+    "expected": "authored fixture expected.im.ts has refId IM.COV044.00 for Contractors Equipment parent",
+    "actual": "Actual workbook produces 798 coverages but IM.COV044.00 is not among them; authored fixture was speculative (groundedInRepo: false)",
+    "status": "open",
+    "rootCauseWave": null
+  },
+  {
+    "id": "DEF-008",
+    "sourceFile": "samples/iso/sample-IM-framework.xlsx",
+    "sheet": "Product Component Model",
+    "locus": "IM product refId synthesis",
+    "category": "fabrication",
+    "severity": "cosmetic",
+    "expected": "product refId derived from a .PROD row in the source",
+    "actual": "No .PROD row in 'Product Component Model' sheet; importer synthesizes IM.PROD.001 from coverage prefix; correct behavior but warnable",
+    "status": "open",
+    "rootCauseWave": null
+  },
+  {
+    "id": "DEF-009",
+    "sourceFile": "samples/iso/sample-PR-framework.xlsx",
+    "sheet": "Product Component Model",
+    "locus": "PR product refId synthesis",
+    "category": "fabrication",
+    "severity": "cosmetic",
+    "expected": "product refId derived from a .PROD row in the source",
+    "actual": "No .PROD row; importer synthesizes PR.PROD.001 from coverage prefix; same as DEF-008",
+    "status": "open",
+    "rootCauseWave": null
+  },
+  {
+    "id": "DEF-010",
+    "sourceFile": "samples/iso/sample-PR-rating.xlsx",
+    "sheet": "ISO TABLES",
+    "locus": "mapIsoWorkbook() rtGrid findSheet regex",
+    "category": "unmapped-sheet",
+    "severity": "blocking",
+    "expected": "ISO TABLES sheet may contain RT/LD rate tables used by the PR ROC program",
+    "actual": "Sheet skipped; regex /rating tables|rate tables/i does not match 'ISO TABLES'; content unknown until Wave 2 investigation",
+    "status": "open",
+    "rootCauseWave": 2
+  }
+]

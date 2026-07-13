@@ -1,0 +1,63 @@
+{
+  "line": "PR",
+  "files": [
+    "sample-PR-framework.xlsx",
+    "sample-PR-rating.xlsx"
+  ],
+  "sheetsRecognized": [
+    "Product Component Model"
+  ],
+  "sheetsSkipped": [
+    "Revision History",
+    "Definitions",
+    "ROC",
+    "Forms Library",
+    "Rules Repository",
+    "Coverage Summary",
+    "Data Validation",
+    "Sheet2",
+    "Sheet1",
+    "Version History",
+    "Definitions",
+    "PROPERTY ROC",
+    "ISO TABLES",
+    "Data Validation"
+  ],
+  "counts": {
+    "products": 1,
+    "coverages": 603,
+    "forms": 0,
+    "dynamicFields": 0,
+    "rules": 0,
+    "formRules": 0,
+    "ratingSteps": 0,
+    "rtTables": 0,
+    "ldTables": 0
+  },
+  "warnings": [
+    "Sheet \"Product Component Model\" col \"ID\": coverage id PR.COV001.20 is reused for different coverages (\"Building\" and \"Building\") — kept the first; verify the source.",
+    "Framework sheet \"Product Component Model\": no explicit product (.PROD) row — synthesized product id \"PR.PROD.001\" from the coverage id prefix \"PR\".",
+    "Framework sheet \"Product Component Model\": 10 distinct product names detected — imported under a single product PR.PROD.001. Split into separate products if the source is a multi-product book."
+  ],
+  "warningCount": 3,
+  "unmappedColumns": [
+    {
+      "sheet": "Product Component Model",
+      "columns": [
+        "COVERAGE FORM(S)",
+        "COVERAGE\nSCOPE",
+        "COVERAGE\nEFFECT",
+        "CLAIMS EXPENSE W/I LIMIT?",
+        "SPECIALTY IMPLEMENTATION BUSINESS PRIORITY",
+        "CONFIRMED RELEASE"
+      ]
+    }
+  ],
+  "orphanedParents": [],
+  "badRequirement": [],
+  "badSource": [],
+  "spotChecks": {
+    "PR.COV001.0": true,
+    "form:CP 00 10": false
+  }
+}

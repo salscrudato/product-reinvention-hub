@@ -1,0 +1,115 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`fidelity — GL (4 workbooks) > all 8 GL sheets recognized 1`] = `
+[
+  "GL Product Framework",
+  "Limits and Deductibles",
+  "GL Rating Tables",
+  "GL Forms Dynamic Data",
+  "GL Forms Specifications",
+  "GL Rules Specifications",
+  "GL Optional Forms Rules",
+  "GL Rating Specifications",
+]
+`;
+
+exports[`fidelity — GL (4 workbooks) > counts snapshot 1`] = `
+{
+  "coverages": 105,
+  "dynamicFields": 200,
+  "formRules": 259,
+  "forms": 795,
+  "ldTables": 37,
+  "products": 1,
+  "ratingSteps": 55,
+  "rtTables": 4,
+  "rules": 146,
+}
+`;
+
+exports[`fidelity — IM (2 workbooks) > IM forms spot-check (present when Forms Library sheet found) 1`] = `0`;
+
+exports[`fidelity — IM (2 workbooks) > IM.COV044.00 spot-check (present when framework sheet found) 1`] = `false`;
+
+exports[`fidelity — IM (2 workbooks) > IM.RL.001 spot-check (present when rules sheet found) 1`] = `false`;
+
+exports[`fidelity — IM (2 workbooks) > counts snapshot (regression anchor) 1`] = `
+{
+  "coverages": 798,
+  "dynamicFields": 0,
+  "formRules": 0,
+  "forms": 0,
+  "ldTables": 0,
+  "products": 1,
+  "ratingSteps": 0,
+  "rtTables": 0,
+  "rules": 0,
+}
+`;
+
+exports[`fidelity — IM (2 workbooks) > recognized + skipped sheets snapshot 1`] = `
+{
+  "recognized": [
+    "Product Component Model",
+    "Limits and Deductibles Tables",
+  ],
+  "skipped": [
+    "Revision History",
+    "Definitions",
+    "Coverage Summary",
+    "Data Validation",
+    "Revision History",
+    "Definitions",
+    "Rules Categories",
+    "Rules Repository",
+    "Class Codes Tables",
+    "Data Validation",
+  ],
+}
+`;
+
+exports[`fidelity — PR (2 workbooks) > CP 00 10 form spot-check (present when Forms Library sheet found) 1`] = `false`;
+
+exports[`fidelity — PR (2 workbooks) > PR rules present (present when Rules Repository sheet found) 1`] = `0`;
+
+exports[`fidelity — PR (2 workbooks) > PR.COV001.0 spot-check (present when framework sheet found) 1`] = `true`;
+
+exports[`fidelity — PR (2 workbooks) > counts snapshot (regression anchor) 1`] = `
+{
+  "coverages": 603,
+  "dynamicFields": 0,
+  "formRules": 0,
+  "forms": 0,
+  "ldTables": 0,
+  "products": 1,
+  "ratingSteps": 0,
+  "rtTables": 0,
+  "rules": 0,
+}
+`;
+
+exports[`fidelity — PR (2 workbooks) > rating steps present (present when ROC sheet found) 1`] = `0`;
+
+exports[`fidelity — PR (2 workbooks) > recognized + skipped sheets snapshot 1`] = `
+{
+  "recognized": [
+    "Product Component Model",
+  ],
+  "skipped": [
+    "Revision History",
+    "Definitions",
+    "ROC",
+    "Forms Library",
+    "Rules Repository",
+    "Coverage Summary",
+    "Data Validation",
+    "Sheet2",
+    "Sheet1",
+    "Version History",
+    "Definitions",
+    "PROPERTY ROC",
+    "ISO TABLES",
+    "Data Validation",
+  ],
+}
+`;
