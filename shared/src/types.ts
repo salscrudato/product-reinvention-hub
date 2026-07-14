@@ -204,6 +204,9 @@ export interface Rule extends GovernanceBlock, StateScope {
   condition:       string
   outcome:         string
   ldTableRef?:     string
+  /** Verbatim reference-cell text, kept when ldTableRef was extracted — the
+   *  recovery channel for stale numeric table refs (PCM-A term fold). */
+  ldTableRefText?: string
   coverageRefIds:  string[]
   formNumbers:     string[]
 }
@@ -264,6 +267,9 @@ export interface LDTable {
   name:          string
   defaultValue?: number
   rows:          LDRow[]
+  /** Source value-column header ("AVAILABLE LIMITS" / "AVAILABLE DEDUCTIBLES") —
+   *  explicit evidence of what the table enumerates (PCM-A term-kind inference). */
+  valueHeader?:  string
 }
 
 // rows layout is preserved as-is; lookup logic lives in the concrete getter

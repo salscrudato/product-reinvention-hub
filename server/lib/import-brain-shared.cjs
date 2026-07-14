@@ -3057,6 +3057,11 @@ function parseRules(grid, ctx) {
         condition: clean(at(cells, "condition")),
         outcome: clean(at(cells, "outcome")),
         ldTableRef: extractTableRef(at(cells, "reference")),
+        // The raw reference cell, kept only when a table ref was extracted: real
+        // workbooks carry stale numeric refs ("Policy Deductible Type (LDTable.122)"
+        // where the parsed table is LDTABLE.119) — the same cell's NAME is the
+        // authoritative recovery channel for the term fold (PCM-A).
+        ldTableRefText: extractTableRef(at(cells, "reference")) ? clean(at(cells, "reference")) : void 0,
         coverageRefIds: splitList(at(cells, "ids")),
         formNumbers: forms,
         ...stateScope(cells, sc),
@@ -3126,6 +3131,97 @@ function parseFormRules(grid, ctx) {
   ctx.recordUnmapped(grid.sheet, header, handled);
   return [...byId.values()];
 }
+function foldLdTermsIntoCoverages(coverages, rules, ldTables, ctx) {
+  if (coverages.length === 0 || ldTables.length === 0) return;
+  const covByRefId = new Map(coverages.map((c) => [c.refId, c]));
+  const tableByRefId = new Map(ldTables.map((t) => [t.refId, t]));
+  const foldKey = (s) => String(s ?? "").toLowerCase().replace(/\bcoverage\b/g, "").replace(/[^a-z0-9]+/g, "");
+  const tablesByNameKey = /* @__PURE__ */ new Map();
+  for (const t of ldTables) {
+    const k = foldKey(t.data.name);
+    if (!k) continue;
+    const list = tablesByNameKey.get(k) ?? [];
+    list.push(t);
+    tablesByNameKey.set(k, list);
+  }
+  const attached = /* @__PURE__ */ new Set();
+  const consumedTables = /* @__PURE__ */ new Set();
+  let unknownCoverageRefs = 0;
+  let danglingTableRefs = 0;
+  let recoveredStaleRefs = 0;
+  const attach = (cov, tableEntity, evidence) => {
+    const tableRefId = tableEntity.refId;
+    const dedupeKey = `${cov.refId}|${tableRefId}`;
+    if (attached.has(dedupeKey)) return;
+    attached.add(dedupeKey);
+    consumedTables.add(tableRefId);
+    const table = tableEntity.data;
+    const hay = `${table.name ?? ""} ${table.valueHeader ?? ""} ${evidence}`;
+    const kind = /deductible/i.test(hay) ? "DEDUCTIBLE" : /limit/i.test(hay) ? "LIMIT" : "OPTION";
+    const term = {
+      id: tableRefId.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      kind,
+      label: table.name && String(table.name) || tableRefId,
+      ldTableRef: tableRefId,
+      // Default precedence: the row the source marks "Default", else the first
+      // available value (the same fallback the UI's resolveTermOptions applies).
+      default: table.defaultValue ?? table.rows?.[0]?.value ?? 0,
+      basis: ""
+    };
+    cov.data["terms"].push(term);
+  };
+  for (const rule of rules) {
+    const ref = rule.data["ldTableRef"];
+    if (typeof ref !== "string" || !/^LD ?TABLE\./i.test(ref)) continue;
+    let tableEntity = tableByRefId.get(ref);
+    if (!tableEntity) {
+      const cellText = String(rule.data["ldTableRefText"] ?? "");
+      const nameKey2 = foldKey(cellText.replace(/\([^)]*\)/g, " "));
+      const matches = nameKey2 ? tablesByNameKey.get(nameKey2) ?? [] : [];
+      if (matches.length === 1) {
+        tableEntity = matches[0];
+        recoveredStaleRefs++;
+      } else {
+        danglingTableRefs++;
+        continue;
+      }
+    }
+    const covRefIds = Array.isArray(rule.data["coverageRefIds"]) ? rule.data["coverageRefIds"] : [];
+    for (const covRefId of covRefIds) {
+      const cov = covByRefId.get(covRefId);
+      if (!cov) {
+        unknownCoverageRefs++;
+        continue;
+      }
+      attach(cov, tableEntity, `${String(rule.data["outcome"] ?? "")} ${String(rule.data["subCategory"] ?? "")}`);
+    }
+  }
+  const covByName = /* @__PURE__ */ new Map();
+  for (const c of coverages) {
+    const k = foldKey(c.data["name"]);
+    if (!k) continue;
+    const list = covByName.get(k) ?? [];
+    list.push(c);
+    covByName.set(k, list);
+  }
+  for (const t of ldTables) {
+    const refId = t.refId;
+    if (consumedTables.has(refId)) continue;
+    const k = foldKey(t.data.name);
+    if (!k) continue;
+    const matches = covByName.get(k);
+    if (!matches || matches.length !== 1) continue;
+    attach(matches[0], t, "");
+  }
+  if (attached.size > 0 || unknownCoverageRefs > 0 || danglingTableRefs > 0) {
+    const unattachedCount = ldTables.filter((t) => !consumedTables.has(t.refId)).length;
+    ctx.addNotice({
+      code: "ld_terms_folded",
+      message: `${attached.size} coverage term(s) assembled from ${consumedTables.size} LD table(s); ${unattachedCount} table(s) unattached${recoveredStaleRefs ? `; ${recoveredStaleRefs} stale table ref(s) recovered by name` : ""}${danglingTableRefs ? `; ${danglingTableRefs} table ref(s) resolve to no parsed table (no term emitted)` : ""}${unknownCoverageRefs ? `; ${unknownCoverageRefs} rule coverage ref(s) not in this workbook` : ""}.`,
+      data: { termsAttached: attached.size, tablesConsumed: consumedTables.size, tablesUnattached: unattachedCount, recoveredStaleRefs, danglingTableRefs, unknownCoverageRefs }
+    });
+  }
+}
 var LD_MARKER_GL = /^LD ?TABLE\.\s*\w+/i;
 var LD_MARKER_IM = /^LD\d+$/i;
 var LD_MARKER = /^LD ?TABLE\.\s*\w+|^LD\d+$/i;
@@ -3152,12 +3248,14 @@ function parseLdTables(grid, ctx) {
     if (nameIdx >= 0) name = clean(markerRow.slice(nameIdx + 1).find((c) => clean(c)) ?? null);
     if (!name) name = clean(markerRow.slice(markerCol + 1).find((c) => clean(c) && !/TABLE NAME/i.test(text(c))) ?? null);
     let valueCol = -1, commentCol = -1, headerR = r;
+    let valueHeader;
     for (let hr = r; hr <= r + 2 && hr < rows.length; hr++) {
       const hrow = row(grid, hr);
       const vi = hrow.findIndex((c) => /^AVAILABLE\b|^LIMITS?$|^DEDUCTIBLES?$|^TYPE$/i.test(text(c).trim()));
       if (vi >= 0) {
         valueCol = vi;
         headerR = hr;
+        valueHeader = text(hrow[vi] ?? null).trim() || void 0;
         commentCol = hrow.findIndex((c) => /COMMENT/i.test(text(c)));
         break;
       }
@@ -3167,9 +3265,10 @@ function parseLdTables(grid, ctx) {
       commentCol = markerCol + 4;
       headerR = r;
     }
-    const entry = tables.get(refId) ?? { name, rows: [], defaultValue: void 0 };
+    const entry = tables.get(refId) ?? { name, rows: [], defaultValue: void 0, valueHeader };
     if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} (LD marker): table ${refId} appears more than once \u2014 rows merged.`);
     if (!entry.name) entry.name = name;
+    if (!entry.valueHeader) entry.valueHeader = valueHeader;
     for (let dr = headerR + 1; dr < rows.length; dr++) {
       if (LD_MARKER.test(norm(cell(grid, dr, markerCol)))) break;
       const raw = cell(grid, dr, valueCol);
@@ -3186,7 +3285,7 @@ function parseLdTables(grid, ctx) {
     docId: refId,
     refId,
     label: `${refId} \u2014 ${t.name}`,
-    data: { name: t.name, defaultValue: t.defaultValue, rows: t.rows }
+    data: { name: t.name, defaultValue: t.defaultValue, rows: t.rows, valueHeader: t.valueHeader }
   }));
 }
 var RT_ID_MARKER = /^RATE TABLE ID/i;
@@ -3449,6 +3548,7 @@ function mapIsoWorkbook(grids, overlay) {
   }
   const product = products[0] ?? null;
   const allCoverages = fwResults ? fwResults.flatMap((fw) => fw.coverages) : [];
+  foldLdTermsIntoCoverages(allCoverages, rules, ldTables, ctx);
   const dynFieldCount = forms.reduce((n, f) => n + (f.data["dynamicFields"]?.length ?? 0), 0);
   const stepCount = ratingProgram ? ratingProgram.data["steps"].length : 0;
   const counts = {

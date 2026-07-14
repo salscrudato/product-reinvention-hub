@@ -218,11 +218,11 @@
       "severity": "HIGH",
       "confidence": 1.0,
       "cost": "M",
-      "status": "OPEN",
-      "priority": 2,
-      "evidence": "stage7-plan.js:449-454 (remap applied to provenance rows only); refIdRemap populated at :167/:381/:406. Partially masked because join order remaps parents before orphan-check runs, but any brain-cited relation to a remapped id goes stale.",
-      "fixture": "none yet — IH2: join fixture where a child's parentId references a remapped refId",
-      "lesson": "An identity remap is a graph operation; renaming the node without rewriting its edges corrupts the graph."
+      "status": "FIXED_IH2",
+      "priority": null,
+      "evidence": "Edge-rewrite pass in stage7-plan.js immediately after the iso join, before plan-integrity checks (so the orphan check sees rewritten parents): coverage.parentId, coverage.terms[].ldTableRef, rule/formRule.coverageRefIds + ldTableRef (ld and rt kinds), ratingProgram.steps[].source.ref. Falsy remap targets never rewrite (iso forms carry refId null — the 'form|<num>'→null entries are inert by the same guard the provenance loop uses). formNumbers deliberately NOT rewritten: they are form NUMBERS, not refIds. Corpus enumeration count-identical pre/post.",
+      "fixture": "tests/import-brain/hardening-f17-remap-edges.test.ts — three structurally different edge classes (child parentId incl. no-false-orphan-promotion, rule coverageRefIds+ldTableRef, rating-step source.ref), red 3/4 pre-fix (two-fixture rule)",
+      "lesson": "An identity remap is a graph operation; renaming the node without rewriting its edges corrupts the graph. Place the rewrite BEFORE any integrity check that reasons about those edges."
     },
     {
       "id": "F18",
@@ -270,11 +270,11 @@
       "severity": "BLOCKING",
       "confidence": 0.95,
       "cost": "L",
-      "status": "OPEN",
-      "priority": 1,
-      "evidence": "isoImport.ts:541 terms:[] always; stage7-plan.js ldTables carry productId but no coverageRefId (:336); UI counts (cov.terms??[]) (app coverageAspects.ts:41-42) and pricing via linkCoverageToPricing over termRefs built from cov.terms — structurally 0 for imports; seeded products carry terms with ldTableRef (shared/src/seed/personalHome.ts:393+). canonicalMap.ts:250 documents terms as 'derived/assembled from LD tables' — the assembly DOES NOT EXIST anywhere.",
-      "fixture": "none yet — IH2: post-import persisted-doc assertion (coverage.terms non-empty when source defines L&D)",
-      "lesson": "The PCM handoff's screenshot problem is a missing fold (ldTables → coverage.terms) at stage-7/persist, not a linkage-key typo; the app model is the contract."
+      "status": "FIXED_IH2",
+      "priority": null,
+      "evidence": "foldLdTermsIntoCoverages at the MAPPER layer (isoImport.ts, pre-assembly) — one change point covers both paths: deterministic client import directly, unified brain import via joinGroupWithIso's ISO_IDENTITY_FIELDS gap-fill ('terms' was already in the list). Two source-evidenced channels: (1) rules join — rule.ldTableRef (LDTable.* only; RTTable filtered) × rule.coverageRefIds; (2) name join — unconsumed tables matching a coverage name modulo a trailing 'Coverage' token, exact+unambiguous only. Term kind from source evidence (table name + NEW LDTable.valueHeader ['AVAILABLE LIMITS'/'AVAILABLE DEDUCTIBLES'] + citing rule words). JUDGE REJECT #1 (verified on corpus): stale numeric refs ('Policy Deductible Type (LDTable.122)' with real table LDTABLE.119) minted 10/45 phantom GL terms with fabricated default:0 — REVISED: terms only for tables that parsed; stale refs recover via the NAME in the same reference cell (parseRules keeps ldTableRefText); unresolvable refs counted (danglingTableRefs), never guessed. Re-check: GL 45 terms 0 phantoms (32 LIMIT/13 DEDUCTIBLE, 3 stale refs recovered = LDTABLE.119/120/061), IM 5 name-join terms; unattached tables (22 GL / 29 IM) are honest — the source defines no association channel for them (flagged in ld_terms_folded notice, tables conserved in plan.ldTables). Goldens byte-identical (terms non-scalar); snapshots stable (notice, not warning); bundle rebuilt+committed. BRAIN-ONLY coverages (no iso match) still get no terms — no deterministic evidence exists; honest scope.",
+      "fixture": "shared/src/insurance/isoImport.test.ts 'LD term fold (PCM-A)' — 9 cases: rules join+dedupe, DEDUCTIBLE kind, RTTable negative, name join, unmatched conservation, notice shape, stale-ref recovery + unresolvable abstention (judge-demanded), CoverageTerm contract. Two channels = two structurally different fixtures (two-fixture rule). Red 4/8 at F20-close sha.",
+      "lesson": "The missing fold was at the mapper, and the fix surfaced a second defect class the fixture never imagined: REAL workbooks carry stale table refs — a citation that doesn't resolve must abstain, and the same source cell usually carries the recovery channel (the name)."
     },
     {
       "id": "PCM-B",

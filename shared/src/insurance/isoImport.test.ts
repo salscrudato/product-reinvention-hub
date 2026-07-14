@@ -234,6 +234,161 @@ describe('mapIsoWorkbook — real-template column fidelity', () => {
   })
 })
 
+// ─── LD term fold (ledger PCM-A) ───────────────────────────────────────────────
+// The canonical model says coverage.terms are "assembled from the coverage row plus
+// the LD tables and rules that reference it" (canonicalMap). Pre-fix, every imported
+// coverage persisted terms:[] — the assembly did not exist — so the UI's Limits /
+// Deductibles / Pricing counts read 0 ('–' dashes). Two association channels, two
+// structurally different fixtures (two-fixture rule):
+//   1. rules join — a rule carries ldTableRef + coverageRefIds (GL convention);
+//   2. name join  — an LD table's name matches a coverage name modulo a trailing
+//      'Coverage' token (IM convention; IM rules carry no LDTable.* refs).
+describe('mapIsoWorkbook — LD term fold (PCM-A)', () => {
+  const fw = g('GL Product Framework', [
+    ['PRODUCT FRAMEWORK - GENERAL LIABILITY'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE',
+     'FORM NUMBER(S)', 'CLAIMS BASIS', 'COVERAGE REQUIREMENT', 'PREMIUM GENERATING', 'BUREAU', 'PROPRIETARY', 'ALL ACTIVE STATES'],
+    ['Active', 'GL.PROD.001', 'GL Product', '', '', '', '', '', '', '', '', '', 'X'],
+    ['Active', 'GL.COV.002', 'GL Product', 'CGL', 'Bodily Injury Liability', '', 'CG 00 01', 'Occurrence', 'Mandatory', 'Yes', 'Yes', 'No', 'X'],
+    ['Active', 'GL.COV.003', 'GL Product', 'CGL', 'Property Damage Liability', '', 'CG 00 01', 'Occurrence', 'Mandatory', 'Yes', 'Yes', 'No', 'X'],
+    ['Active', 'GL.COV.004', 'GL Product', 'CGL', 'Debris Removal', '', '', 'Occurrence', 'Optional', 'Yes', 'Yes', 'No', 'X'],
+    ['Active', 'GL.COV.005', 'GL Product', 'CGL', 'Lonely Coverage', '', '', 'Occurrence', 'Optional', 'No', 'Yes', 'No', 'X'],
+  ])
+  const foldRules = g('GL Rules Specifications', [
+    ['RULES SPECIFICATIONS'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RULE ID', 'RULE CATEGORY', 'RULE SUB-CATEGORY', 'RULE CONDITION', 'RULE OUTCOME', 'RULE REFERENCE', 'ALL ACTIVE STATES'],
+    // Two rules citing the SAME table for the same coverage → ONE term (dedupe).
+    ['Active', 'GL.COV.002\nGL.COV.003', 'GL.RU.004', 'Product', 'Limit Ranges and Defaults', 'If CGL', 'Then an Occurrence Limit is available and mandatory (See Table)', 'Occurrence Limits (LDTable.001)', 'X'],
+    ['Active', 'GL.COV.002', 'GL.RU.005', 'Product', 'Limit Ranges and Defaults', 'If CGL', 'Then an Occurrence Limit is optional (See Table)', 'Occurrence Limits (LDTable.001)', 'X'],
+    ['Active', 'GL.COV.002', 'GL.RU.006', 'Product', 'Deductible Ranges and Defaults', 'If CGL', 'Then a BI/PD Deductible is available (See Table)', 'BI/PD Deductibles (LDTable.002)', 'X'],
+    // RTTable references are RATING tables — they must NEVER fold into coverage terms.
+    ['Active', 'GL.COV.002', 'GL.RU.007', 'Rating', 'Minimum Premium', 'If CGL', 'Then apply the factor (RTTable.001)', 'Factor Table (RTTable.001)', 'X'],
+    // A rule citing a coverage that is not in this workbook — skipped, counted, never fabricated.
+    ['Active', 'GL.COV.999', 'GL.RU.008', 'Product', 'Limit Ranges and Defaults', 'If CGL', 'Then a limit is available (See Table)', 'Occurrence Limits (LDTable.001)', 'X'],
+  ])
+  const foldLd = g('Limits and Deductibles', [
+    ['RULES SPECIFICATIONS'],
+    ['LDTable.001', 'TABLE NAME:', 'Occurrence Limits', 'AVAILABLE LIMITS', 'COMMENTS'],
+    ['', '', '', 1000000, ''],
+    ['', '', '', 2000000, 'Default'],
+    ['LDTable.002', 'TABLE NAME:', 'BI/PD Deductibles'],
+    ['', '', '', 'AVAILABLE DEDUCTIBLES', 'COMMENTS'],
+    ['', '', '', 500, ''],
+    ['', '', '', 1000, ''],
+    // Name-join channel: table named "<coverage name> Coverage", cited by NO rule.
+    ['LDTable.003', 'TABLE NAME:', 'Debris Removal Coverage'],
+    ['', '', '', 'AVAILABLE LIMITS', 'COMMENTS'],
+    ['', '', '', 25000, 'Default'],
+    // Unmatched by any channel: stays an ldTable entity, attaches to nothing.
+    ['LDTable.004', 'TABLE NAME:', 'Completely Unrelated Table'],
+    ['', '', '', 'AVAILABLE LIMITS', 'COMMENTS'],
+    ['', '', '', 99, ''],
+  ])
+  const foldPlan = mapIsoWorkbook([fw, foldRules, foldLd])
+  const fcov = (refId: string) => foldPlan.coverages.find(c => c.refId === refId)!
+  type Term = { id: string; kind: string; label: string; ldTableRef?: string; default: unknown; basis: string }
+  const termsOf = (refId: string) => (fcov(refId).data['terms'] as Term[]) ?? []
+
+  it('rules join: coverages cited by a rule with an LDTable ref gain a term (deduped)', () => {
+    const t2 = termsOf('GL.COV.002')
+    const limit = t2.find(t => t.ldTableRef === 'LDTable.001')!
+    expect(limit).toBeTruthy()
+    expect(limit.kind).toBe('LIMIT')
+    expect(limit.label).toBe('Occurrence Limits')
+    expect(limit.default).toBe(2000000) // the row marked Default
+    // Two rules cite LDTable.001 for GL.COV.002 — still exactly one term for it.
+    expect(t2.filter(t => t.ldTableRef === 'LDTable.001')).toHaveLength(1)
+    // The second coverage on the multi-refId rule gets its own term.
+    expect(termsOf('GL.COV.003').find(t => t.ldTableRef === 'LDTable.001')).toBeTruthy()
+  })
+
+  it('deductible tables fold with kind DEDUCTIBLE', () => {
+    const ded = termsOf('GL.COV.002').find(t => t.ldTableRef === 'LDTable.002')!
+    expect(ded).toBeTruthy()
+    expect(ded.kind).toBe('DEDUCTIBLE')
+    expect(ded.default).toBe(500) // no Default comment → first available value
+  })
+
+  it('RTTable references never fold into coverage terms', () => {
+    expect(termsOf('GL.COV.002').some(t => /^RTTable\./i.test(String(t.ldTableRef ?? '')))).toBe(false)
+  })
+
+  it('name join: an uncited LD table named after a coverage attaches to it', () => {
+    const t = termsOf('GL.COV.004').find(x => x.ldTableRef === 'LDTable.003')!
+    expect(t).toBeTruthy()
+    expect(t.kind).toBe('LIMIT')
+    expect(t.default).toBe(25000)
+  })
+
+  it('unmatched tables stay unattached; uninvolved coverages keep terms []', () => {
+    const allRefs = foldPlan.coverages.flatMap(c => ((c.data['terms'] as Term[]) ?? []).map(t => t.ldTableRef))
+    expect(allRefs).not.toContain('LDTable.004')
+    expect(termsOf('GL.COV.005')).toEqual([])
+    // Conservation: the ldTable entities themselves are all still in the plan.
+    expect(foldPlan.ldTables.map(t => t.refId).sort()).toEqual(['LDTable.001', 'LDTable.002', 'LDTable.003', 'LDTable.004'])
+  })
+
+  it('emits an aggregated fold notice (not a warning — snapshots stay stable)', () => {
+    const n = foldPlan.summary.notices.find(x => x.code === 'ld_terms_folded')
+    expect(n).toBeTruthy()
+    // Exactly 4: COV.002×LD.001 + COV.003×LD.001 + COV.002×LD.002 + COV.004×LD.003
+    // (the duplicate GL.RU.005 citation dedupes; the RTTable and unknown-coverage
+    // rules attach nothing).
+    expect((n!.data as { termsAttached: number; unknownCoverageRefs: number }).termsAttached).toBe(4)
+    expect((n!.data as { unknownCoverageRefs: number }).unknownCoverageRefs).toBe(1)
+  })
+
+  it('stale numeric refs recover via the NAME in the same reference cell; unresolvable refs emit NO term', () => {
+    // Real-corpus defect (judge-found): GL rules cite "Policy Deductible Type
+    // (LDTable.122)" while the parsed table is LDTABLE.119 with that exact name.
+    // Pre-revision the fold minted a phantom term (ldTableRef → nothing, default 0).
+    const staleFw = g('GL Product Framework', [
+      ['PRODUCT FRAMEWORK - GENERAL LIABILITY'],
+      ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'FORM NUMBER(S)', 'CLAIMS BASIS', 'COVERAGE REQUIREMENT', 'PREMIUM GENERATING', 'BUREAU', 'PROPRIETARY', 'ALL ACTIVE STATES'],
+      ['Active', 'GL.PROD.001', 'GL Product', '', '', '', '', '', '', '', '', '', 'X'],
+      ['Active', 'GL.COV.010', 'GL Product', 'CGL', 'Premises Liability', '', '', 'Occurrence', 'Mandatory', 'Yes', 'Yes', 'No', 'X'],
+    ])
+    const staleRules = g('GL Rules Specifications', [
+      ['RULES SPECIFICATIONS'],
+      ['STATUS', 'PRODUCT FRAMEWORK ID', 'RULE ID', 'RULE CATEGORY', 'RULE SUB-CATEGORY', 'RULE CONDITION', 'RULE OUTCOME', 'RULE REFERENCE', 'ALL ACTIVE STATES'],
+      ['Active', 'GL.COV.010', 'GL.RU.024', 'Product', 'Deductible Ranges and Defaults', 'If CGL', 'Then a deductible type applies', 'Policy Deductible Type (LDTable.122)', 'X'],
+      ['Active', 'GL.COV.010', 'GL.RU.025', 'Product', 'Limit Ranges and Defaults', 'If CGL', 'Then a limit applies', 'Mystery Table (LDTable.999)', 'X'],
+    ])
+    const staleLd = g('Limits and Deductibles', [
+      ['RULES SPECIFICATIONS'],
+      ['LDTABLE.119', 'TABLE NAME:', 'Policy Deductible Type', 'AVAILABLE DEDUCTIBLES', 'COMMENTS'],
+      ['', '', '', 250, 'Default'],
+      ['', '', '', 500, ''],
+    ])
+    const p = mapIsoWorkbook([staleFw, staleRules, staleLd])
+    const terms = (p.coverages.find(c => c.refId === 'GL.COV.010')!.data['terms'] as Term[])
+    // Recovered by the same-cell name → attaches to the REAL parsed table, verbatim refId.
+    expect(terms).toHaveLength(1)
+    expect(terms[0]!.ldTableRef).toBe('LDTABLE.119')
+    expect(terms[0]!.kind).toBe('DEDUCTIBLE')
+    expect(terms[0]!.default).toBe(250)
+    // The unresolvable ref minted NOTHING — no phantom ldTableRef, no fabricated 0.
+    expect(terms.some(t => /999/.test(String(t.ldTableRef)))).toBe(false)
+    const n = p.summary.notices.find(x => x.code === 'ld_terms_folded')!
+    expect((n.data as { recoveredStaleRefs: number }).recoveredStaleRefs).toBe(1)
+    expect((n.data as { danglingTableRefs: number }).danglingTableRefs).toBe(1)
+    expect((n.data as { tablesConsumed: number }).tablesConsumed).toBe(1) // only the REAL table
+  })
+
+  it("every folded term satisfies the CoverageTerm contract the UI counts on", () => {
+    for (const c of foldPlan.coverages) {
+      for (const t of (c.data['terms'] as Term[]) ?? []) {
+        expect(typeof t.id).toBe('string')
+        expect(['LIMIT', 'DEDUCTIBLE', 'OPTION']).toContain(t.kind)
+        expect(typeof t.label).toBe('string')
+        expect(t.label.length).toBeGreaterThan(0)
+        expect(t.default).not.toBeUndefined()
+        expect(typeof t.basis).toBe('string')
+      }
+    }
+  })
+})
+
 describe('mapIsoWorkbook — summary', () => {
   it('reports counts, recognized sheets and unmapped columns', () => {
     expect(plan.summary.counts).toMatchObject({
