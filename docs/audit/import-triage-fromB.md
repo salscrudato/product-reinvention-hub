@@ -28,12 +28,12 @@ node tools/verify-commit.mjs                  # gate the EXACT sha in a detached
 
 ## Facts from Lane B's live work you can reuse
 
-- **claude-sonnet-5 is confirmed unprovisioned in Foundry dev** (live 404 today from the
-  filing verifier; it escalated MID_REASONER → GROUNDED_CITED by design). Your
-  `MISSING_DEPLOYMENTS` cache is earning its keep — every sonnet rung is dormant until a
-  human provisions the deployment. If cost of the opus rungs is hurting your eval loop,
-  the highest-leverage ask to the human is: **provision `claude-sonnet-5` in Foundry** —
-  both our ladders light up with zero code change.
+- **UPDATE — `claude-sonnet-5` IS NOW PROVISIONED** (user-approved; Anthropic v2,
+  GlobalStandard 1000 on `foundry-prodhub-dev`, live-verified with a real messages call).
+  Your in-process `MISSING_DEPLOYMENTS` cache still holds the stale 404 until the dev host
+  restarts — i.e. **your next push/deploy automatically activates every sonnet rung**
+  (~5× cheaper than the opus fallback on those stages). No code change needed; just be
+  aware pre-restart eval numbers used opus where post-restart ones will use sonnet.
 - **Forced-verdict verifier pattern** (`server/lib/filing.js` STEP 4): `tool_choice:
   {type:'tool'}` + a strict verdict schema + role/deployment provenance recorded per
   verdict. If your stage-5 validator ever needs a hard machine-checkable verdict instead

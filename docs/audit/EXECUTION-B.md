@@ -96,9 +96,12 @@ The rejection is audit-logged (hash-chained `filing.verify_rejected`, `probe:tru
 
 ### Deviations / notes
 
-- Verifier ROLE is MID_REASONER by code; Foundry dev has no claude-sonnet-5 deployment, so live
-  verdicts currently come from the GROUNDED_CITED rung (recorded per verdict). This is the same
-  documented degrade-direction the import brain uses for the missing sonnet rung.
+- Verifier ROLE is MID_REASONER by code; at live-proof time Foundry dev had no claude-sonnet-5
+  deployment, so those verdicts came from the GROUNDED_CITED rung (recorded per verdict) — the
+  same documented degrade-direction the import brain uses for the missing sonnet rung.
+  **UPDATE (post-proof): `claude-sonnet-5` was provisioned with user approval** (Anthropic v2,
+  GlobalStandard 1000) and live-verified via the Foundry Anthropic endpoint; the filing verifier
+  retries the ladder per call, so it verifies on sonnet from the next filing onward.
 - Filing audit events for probe/rejection paths remain append-only (unique per-attempt chains);
   teardown removes seeded entities + probe user, filings/audits stay by design (append-only).
 - `/cost` is a CLI-side command this agent cannot invoke; spend stayed well inside the $20
