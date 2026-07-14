@@ -9,6 +9,7 @@
 // Zero new third-party dependencies. 175 kB gzip budget is enforced by the gate.
 import { useRef, useEffect, useState, memo, type ReactNode } from 'react'
 import { parseBlocks, type Block } from '../chat/markdownParser'
+import { WaveformLoader } from './WaveformLoader'
 import type { SearchIndexEntry } from '@pf/shared'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -271,7 +272,7 @@ function isCoverageTable(headers: string[]): boolean {
   return headers.length >= 2 && COVERAGE_TABLE_RE.test(headers[0] ?? '')
 }
 
-function renderBlock(b: Block, key: string, onCite: CiteFn | undefined, index: SearchIndexEntry[] | undefined, animate: boolean): ReactNode {
+function renderBlock(b: Block, key: string, onCite: CiteFn | undefined, index: SearchIndexEntry[] | undefined, animate: boolean, lead = false): ReactNode {
   const cls = animate ? 'para-in' : ''
 
   switch (b.type) {
@@ -297,8 +298,10 @@ function renderBlock(b: Block, key: string, onCite: CiteFn | undefined, index: S
     }
 
     case 'paragraph':
+      // The lead sentence — the answer's opening paragraph — reads a step larger
+      // and a shade stronger, so the eye lands on the conclusion first.
       return (
-        <p key={key} className={`whitespace-pre-wrap leading-[1.72] ${cls}`}>
+        <p key={key} className={`whitespace-pre-wrap ${lead ? 'text-[15px] leading-[1.62] font-medium text-text' : 'leading-[1.72]'} ${cls}`}>
           {inlineNodes(b.text, onCite, index, key)}
         </p>
       )
@@ -444,17 +447,26 @@ function CodeBlock({ text, animate }: { text: string; animate: boolean }) {
 
 // ─── Collapsible section ─────────────────────────────────────────────────────
 // Wraps a heading + its following blocks in a disclosure widget. Default open
-// (so streaming content is visible); toggles to collapsed after stream ends.
+// (so streaming content is visible); settles to collapsed once the stream ends,
+// unless the reader has toggled it themselves — depth stays one click away and
+// the finished answer reads short.
 
-function CollapsibleSection({ label, blocks, firstNewBlockIdx, blockStartIdx, onCite, index }: {
+function CollapsibleSection({ label, blocks, firstNewBlockIdx, blockStartIdx, streaming, onCite, index }: {
   label: string
   blocks: Block[]
   firstNewBlockIdx: number
   blockStartIdx: number
+  streaming: boolean
   onCite?: CiteFn
   index?: SearchIndexEntry[]
 }) {
   const [open, setOpen] = useState(true)
+  const touchedRef = useRef(false)
+  const wasStreamingRef = useRef(streaming)
+  useEffect(() => {
+    if (wasStreamingRef.current && !streaming && !touchedRef.current) setOpen(false)
+    wasStreamingRef.current = streaming
+  }, [streaming])
   const isNew = blockStartIdx >= firstNewBlockIdx
 
   return (
@@ -462,12 +474,15 @@ function CollapsibleSection({ label, blocks, firstNewBlockIdx, blockStartIdx, on
       style={{ border: '1px solid var(--color-border)' }}>
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => { touchedRef.current = true; setOpen(o => !o) }}
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-raised"
         style={{ background: 'var(--color-raised)' }}
         aria-expanded={open}
       >
         <span className="text-[12.5px] font-semibold text-text">{label}</span>
+        <span className="ml-auto text-[10px] font-mono text-faint" aria-hidden="true">
+          {open ? '' : `${blocks.length} block${blocks.length === 1 ? '' : 's'}`}
+        </span>
         <span
           className="shrink-0 transition-transform"
           style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', color: 'var(--color-faint)' }}
@@ -517,7 +532,8 @@ function StreamRendererImpl({ text, streaming, onCite, citationIndex }: StreamRe
       {sections.map((sec, si) => {
         if (sec.kind === 'block') {
           const animate = streaming && sec.idx >= firstNewBlockIdx
-          return renderBlock(sec.block, `sr-${si}`, onCite, citationIndex, animate)
+          const lead = si === 0 && sec.block.type === 'paragraph'
+          return renderBlock(sec.block, `sr-${si}`, onCite, citationIndex, animate, lead)
         }
         return (
           <CollapsibleSection
@@ -526,13 +542,14 @@ function StreamRendererImpl({ text, streaming, onCite, citationIndex }: StreamRe
             blocks={sec.blocks}
             firstNewBlockIdx={firstNewBlockIdx}
             blockStartIdx={sec.startIdx}
+            streaming={streaming}
             onCite={onCite}
             index={citationIndex}
           />
         )
       })}
       {streaming && blocks.length === 0 && (
-        <span className="inline-block text-accent animate-pulse select-none opacity-70" style={{ lineHeight: 1 }}>▍</span>
+        <WaveformLoader size="sm" label="Generating answer…" />
       )}
     </div>
   )

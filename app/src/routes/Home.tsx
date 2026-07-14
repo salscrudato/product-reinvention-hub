@@ -8,12 +8,13 @@
 // so a VIEWER sees exactly what everyone else does (no edit affordances to hide).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { IconCheck, IconSpinner, IconRecent, IconLayers, IconInfo } from '../components/ui/icons'
+import { IconCheck, IconRecent, IconLayers, IconInfo } from '../components/ui/icons'
 import { NoticeBanner, Tooltip, RefChip } from '../components/ui'
 import { isCacheNotice, type NoticeEvent, type NoticeKind } from '../lib/ai/notices'
 import { adapter } from '../lib/backend'
 import { ChatComposer } from '../components/chat/ChatComposer'
 import { StreamRenderer } from '../components/ai/StreamRenderer'
+import { WaveformLoader } from '../components/ai/WaveformLoader'
 import { HeroMark } from '../components/home/HeroMark'
 import { PriorityRail } from '../components/home/PriorityRail'
 import { PortfolioMetrics } from '../components/home/PortfolioMetrics'
@@ -269,12 +270,14 @@ export default function Home() {
                                 border: `1px solid ${t.done ? 'var(--color-good-line)' : 'var(--color-accent-line)'}`,
                                 color: t.done ? 'var(--color-good)' : 'var(--color-accent)',
                               }}>
-                              <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                                style={{ background: t.done ? 'var(--color-good-soft)' : 'var(--color-accent-line)' }}>
-                                {t.done
-                                  ? <IconCheck size={9} aria-hidden="true" />
-                                  : <IconSpinner size={9} className="animate-spin" aria-hidden="true" />}
-                              </span>
+                              {t.done ? (
+                                <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                                  style={{ background: 'var(--color-good-soft)' }}>
+                                  <IconCheck size={9} aria-hidden="true" />
+                                </span>
+                              ) : (
+                                <WaveformLoader size="xs" label="" className="text-accent" />
+                              )}
                               <span className="font-mono">{t.name}</span>
                               {t.done && t.summary && <span className="opacity-60 font-sans">· {t.summary}</span>}
                             </span>

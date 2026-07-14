@@ -83,13 +83,29 @@ export function CitedText({ text }: { text: string }) {
 
 // ─── Section primitives ─────────────────────────────────────────────────────────
 
-function Section({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
+function Section({ title, count, collapsible, children }: { title: string; count?: number; collapsible?: boolean; children: ReactNode }) {
+  const heading = (
+    <>
+      {title}
+      {count != null && <span className="tabular-nums text-faint/80 font-normal normal-case tracking-normal">· {count}</span>}
+    </>
+  )
+  // Depth sections (citations, limits, provenance) fold away by default so the
+  // finished verdict reads short — one click opens the full trail.
+  if (collapsible) {
+    return (
+      <details className="group flex flex-col gap-2.5">
+        <summary className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.07em] text-faint cursor-pointer list-none select-none rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
+          <IconChevronRight size={12} aria-hidden="true" className="shrink-0 transition-transform duration-200 group-open:rotate-90" />
+          {heading}
+        </summary>
+        <div className="pt-2.5">{children}</div>
+      </details>
+    )
+  }
   return (
     <section className="flex flex-col gap-2.5">
-      <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.07em] text-faint">
-        {title}
-        {count != null && <span className="tabular-nums text-faint/80 font-normal normal-case tracking-normal">· {count}</span>}
-      </h4>
+      <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.07em] text-faint">{heading}</h4>
       {children}
     </section>
   )
@@ -222,7 +238,7 @@ export function DeterminationCard({ d, onCreateFeedback, linked }: {
 
   if (coverages.length > 0 || exclusions.length > 0) {
     sections.push(
-      <Section key="doc" title="Document citations" count={coverages.length + exclusions.length}>
+      <Section key="doc" title="Document citations" count={coverages.length + exclusions.length} collapsible>
         <div className="flex flex-col gap-1.5">
           {coverages.map((c, i) => (
             <DocCitation key={`c${i}`} title={c.name} dotToken={v.token} formNumber={c.formNumber} refId={c.refId} body={c.definition} />
@@ -237,7 +253,7 @@ export function DeterminationCard({ d, onCreateFeedback, linked }: {
 
   if (limits.length > 0 || deductibles.length > 0) {
     sections.push(
-      <Section key="lim" title="Limits & deductibles">
+      <Section key="lim" title="Limits & deductibles" count={limits.length + deductibles.length} collapsible>
         <div className="flex flex-col">
           {limits.map((l, i) => <ValueRow key={`l${i}`} first={i === 0} label={l.label} value={l.value} source={l.source} note={l.note} />)}
           {deductibles.map((l, i) => <ValueRow key={`d${i}`} first={i === 0 && limits.length === 0} label={l.label} value={l.value} source={l.source} note={l.note} />)}
@@ -248,7 +264,7 @@ export function DeterminationCard({ d, onCreateFeedback, linked }: {
 
   if (dataCitations.length > 0) {
     sections.push(
-      <Section key="data" title="Data citations" count={dataCitations.length}>
+      <Section key="data" title="Data citations" count={dataCitations.length} collapsible>
         <div className="flex items-center gap-1.5 flex-wrap">
           {dataCitations.map((id, i) => <DataChip key={i} id={id} />)}
         </div>

@@ -3,7 +3,8 @@
 // results so text appears as the user speaks). Voice input is silently hidden on
 // browsers without SpeechRecognition support (Firefox, older Safari).
 import { useState, useRef, useEffect } from 'react'
-import { IconArrowUp, IconSpinner, IconSparkle, IconMic } from '../ui/icons'
+import { IconArrowUp, IconSparkle, IconMic } from '../ui/icons'
+import { WaveformLoader } from '../ai/WaveformLoader'
 
 interface Props {
   value: string
@@ -174,7 +175,7 @@ export function ChatComposer({
         style={{ background: 'var(--gradient-accent)', boxShadow: canSend ? '0 1px 3px var(--glow-accent)' : 'none' }}
       >
         {streaming
-          ? <IconSpinner size={15} className="animate-spin" aria-hidden="true" />
+          ? <WaveformLoader size="xs" label="" className="text-white" />
           : <IconArrowUp size={16} strokeWidth={2.5} aria-hidden="true" />}
       </button>
     </form>

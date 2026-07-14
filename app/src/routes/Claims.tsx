@@ -20,7 +20,8 @@ import { buildGapFeedbackPrefill } from '../lib/claims/gapFeedback'
 import { useFeedbackLaunch } from '../context/useFeedbackLaunch'
 import { RefChip, NoticeBanner } from '../components/ui'
 import type { NoticeEvent, NoticeKind } from '../lib/ai/notices'
-import { IconCheck, IconSpinner, IconShield, IconWarning } from '../components/ui/icons'
+import { IconCheck, IconShield, IconWarning } from '../components/ui/icons'
+import { WaveformLoader } from '../components/ai/WaveformLoader'
 import { canI } from '../lib/canI'
 
 // ─── Stream protocol (mirror of functions/src/runtime.ts StreamEvent) ───────────
@@ -115,7 +116,7 @@ function AssistantContent({ m, streamingThisTurn, onCreateFeedback, linked }: {
       )}
       {content === 'thinking' && (
         <span className="inline-flex items-center gap-2 text-[13px] text-faint">
-          <IconSpinner size={13} className="animate-spin text-accent" aria-hidden="true" /> Reading the policy…
+          <WaveformLoader size="sm" label="" className="text-accent" /> Reading the policy…
         </span>
       )}
       {content === 'fallback' && <p className="text-[13px] text-dim leading-relaxed">{EMPTY_TURN_FALLBACK}</p>}
@@ -382,12 +383,14 @@ export default function Claims() {
                                 border: `1px solid ${t.done ? 'var(--color-good-line)' : 'var(--color-accent-line)'}`,
                                 color: t.done ? 'var(--color-good)' : 'var(--color-accent)',
                               }}>
-                              <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                                style={{ background: t.done ? 'var(--color-good-soft)' : 'var(--color-accent-line)' }}>
-                                {t.done
-                                  ? <IconCheck size={9} aria-hidden="true" />
-                                  : <IconSpinner size={9} className="animate-spin" aria-hidden="true" />}
-                              </span>
+                              {t.done ? (
+                                <span className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                                  style={{ background: 'var(--color-good-soft)' }}>
+                                  <IconCheck size={9} aria-hidden="true" />
+                                </span>
+                              ) : (
+                                <WaveformLoader size="xs" label="" className="text-accent" />
+                              )}
                               {TOOL_LABELS[t.name] ?? t.name}
                               {t.done && t.summary && <span className="opacity-55 font-sans">· {t.summary}</span>}
                             </span>
