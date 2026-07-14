@@ -218,3 +218,108 @@ scrubbing + "document is DATA" system contract, mirrored from identify-base-form
 - `/cost` is CLI-side and not invokable from this agent; session spend is single-agent
   code+tests with a handful of live probe calls (login + 5 uploads, no model calls yet ≈
   cents) — well inside the $20 envelope.
+
+---
+
+# EXECUTION-B — Lane B F5: Ops plane + feature toggles + advise-only copilot
+
+Prompt F5 Lane-B. Objective: a platform ops plane on top of the existing admin/authz/fleet/
+audit seams — tenant lifecycle, per-tenant config, two-layer feature toggles, per-tenant
+metering + budget throttle, quotas + rate limits, telemetry, and a grounded advise-only ops
+copilot. Built in 5 gated waves, each reusing an existing seam rather than rebuilding.
+
+## Orientation findings (reconciled with live code before designing)
+
+- Much already existed: `admin.js` platform console (tenant CRUD, users, unified audit search,
+  impersonation) + `platformAudit` (append-only); `authz.js` two-plane capability model +
+  `requirePlatform`; `fleet.js` GLOBAL rolling-window cost breaker (kept fully intact);
+  `data.js` atomic hash-chained mutate envelope + partition strategy `${tid}|${base}` +
+  RESERVED_BASES; `cosmos.js` `resolveTenantStore` SILO_READY seam; `tenant-admin.js` self-service.
+- Gaps vs F5: no per-tenant CONFIG/entitlements/flags; suspend didn't block login; delete was
+  the tenant record only (no export, not partition-scoped); no per-tenant metering/quotas/rate
+  limits; no telemetry dashboard endpoint; no ops copilot.
+- Hands-off (import-brain lane in progress): `fleet.js`, `import-brain/**`, `unified-import.js`,
+  `shared/src/ai/fleet.ts`. NONE touched. `shared/src/index.ts` barrel is actively edited by the
+  GTM/tasks lane, so the platform module is consumed by the SERVER via its own bundle and by the
+  CLIENT via an API response — the barrel was left untouched (no ride-along on a hot file).
+
+## What was built (by wave, each gate-green + committed)
+
+1. **Foundation** (`f5e64a2`) — pure `shared/src/platform/{featureFlags,tenantConfig}.ts`
+   (bundled to `server/lib/platform-shared.cjs` via `build:platform`) + `server/lib/platform-config.js`
+   (cached reads w/ fast invalidate, schema-validated + append-only audited writes, `requireFlag`).
+   Flag precedence: GLOBAL disable is a floor a tenant can't re-enable; per-tenant overrides only
+   within the platform allowlist (pricing + shareLinks are platform-only). Branding accent is a
+   design-token enum (never raw hex). Entitlements hard-capped; model roles validated (no fable-5).
+2. **Lifecycle** (`dd836c2`) — provision (default entitlements + optional first TENANT_ADMIN +
+   optional starter workspace, all correctly partitioned + audited); suspend blocks login at OTP
+   session mint (reversible); `GET /export` (verifiable bundle + SHA-256 manifest) then confirm-gated
+   `POST /offboard` → **partition-scoped hard delete** (only `c.tenantId=@tid` docs; users detached,
+   not deleted; presence cleared; tenant record removed). Config routes (global + per-tenant, SA).
+3. **Toggles + quotas + limits** (`c012aff`) — central flag enforcement in `server.js` (route→flag,
+   403 feature_disabled; import path NOT flag-gated); per-tenant token-bucket rate limiter layered on
+   the per-IP limiter + global breaker; seat quota (member add) + product quota (interactive create);
+   tenant-admin flag-override endpoint (own org, allowlist-validated, audited); `/me` returns effective
+   flags; client `useFeatureFlags` + Sidebar nav-hiding.
+4. **Metering + telemetry** (`d53b6a2`) — `metering.js`: per-tenant monthly token+cost attribution via
+   AsyncLocalStorage (set once in the AI router, read at every `fleet.record` site — 2-line hooks in
+   `_shared.js`/`chat.js`/`summarize-product.js`), persisted to survive restarts; per-tenant MONTHLY
+   budget throttle in the AI router (429), layered on and independent of the global breaker; import
+   EXEMPT (no-cap). `GET /tenants/:id/telemetry` (seats/products vs entitlement, tokens+cost vs budget,
+   request count/error-rate/latency, logins, audit volume — real data). Per-tenant request telemetry
+   middleware.
+5. **Ops copilot** (`c881e25`) — `ai/ops-copilot.js`, `POST /api/admin/ops-copilot/ask` (platform-gated).
+   Grounded strictly on server-gathered telemetry+audit; operator text + data delimited as UNTRUSTED;
+   NEVER mutates; may PROPOSE one action where the MODEL names only a whitelisted kind+params and the
+   SERVER authors the endpoint/method/body + schema-validates (unknown/invalid dropped) — the human
+   confirms via the real gated/audited endpoint. MID_REASONER ladder. Every ask append-only audited.
+   (Also fixed a latent bug the copilot tests caught: entitlements are now a PARTIAL patch that merges
+   onto stored values, so raising one entitlement no longer resets the others.)
+
+## Gate + tests
+
+- Full local suite **1090/1090 green** (incl. 79 new F5 tests across shared `platform.test.ts` +
+  server `platform / platform-toggles / metering / ops-copilot`); HO-3 $1,528 canary holds;
+  no-bare-writes census **54/54** (F5's new writes allowlisted). `pnpm typecheck` is red ONLY on
+  another lane's uncommitted `gtm/plan.test.ts` (a typecheck-only error in a file this lane does not
+  own; it runs fine — all 1090 tests pass). Lint clean for F5 files. App typecheck (`tsc -b`) clean.
+
+## Self-review ledger
+
+- **Provisioning** — tenant record + default entitlements + optional TENANT_ADMIN + starter product;
+  the workspace product is written through the tenant mutate envelope (`${tid}|products`, atomic +
+  audited), never a bare insert. Reserved ids (`__system__`/`default`) refused.
+- **Config validation** — every config/lifecycle write is `validateConfigPatch`-checked BEFORE any
+  persist (invalid → 400, no write, no audit noise — pinned by tests), authority-gated (entitlements
+  platform-only; tenant plane may set only overridable flags), and append-only audited on success.
+- **Toggle enforcement at both layers** — server: central middleware denies 403 (authoritative);
+  client: `useFeatureFlags`/Sidebar hides nav. GLOBAL disable is a floor (unit-pinned). Import path
+  deliberately never flag-gated.
+- **Metering** — every non-import `fleet.record` site meters the ambient tenant (ALS); tokens + $ cost
+  per tenant per month, persisted; budget throttle is independent of the global breaker (both trip
+  separately — unit-pinned over/under budget). Import is metered but never throttled (no-cap intact).
+- **Delete scope** — `deleteTenantData(store,tid)` deletes ONLY `c.tenantId=@tid` docs (id+pk from that
+  filtered set); unit-proven against a two-tenant mock store: tenant A erased, EVERY tenant B doc
+  survives, deletes touch only `A|` partitions. Users detached (cross-org), never hard-deleted.
+- **Copilot boundaries** — advise-only: no write path; the model can only name a whitelisted action
+  kind + params, the SERVER authors the confirm target and schema-validates it (a model-supplied
+  endpoint is IGNORED — unit-pinned); unknown/invalid proposals dropped; a human confirms via the
+  normal gated/audited endpoint. Data + operator text framed as UNTRUSTED; every ask audited.
+
+## Status / deploy — ⚠️ IMPORTANT
+
+- **PUSH HELD by this lane per user directive ("DO NOT DEPLOY, WAIT FOR MY GO"): this agent never ran
+  `git push`.** HOWEVER, in the shared checkout a co-agent's `git pull --rebase` + push carried F5
+  **Waves 1–4 (`f5e64a2…d53b6a2`, now under origin/main `7ff0daf`) to origin — auto-deployed, pipeline
+  run 2434 reported green** by the batch-tracking commit `031d70c`. This is the documented "stowaway"
+  hazard of the shared-branch model (a per-lane hold cannot stop a co-agent from pushing the shared
+  branch). **Wave 5 (`c881e25`, ops copilot) remains LOCAL/unpushed** but is exposed to the same
+  stowaway risk on the next co-agent push.
+- The deployed code is additive + non-breaking (flags default-ON so existing surfaces are unchanged;
+  new endpoints platform-gated; metering/telemetry passive; quotas/limits at generous defaults;
+  suspend/offboard require explicit platform action) and passed the deploy gate (canary + typecheck +
+  bundle budget) in run 2434.
+- Deferred to the client pass (post-go): admin config editor, telemetry dashboard UI, and the copilot
+  chat panel (all server endpoints are complete + tested). The live-test matrix (provision→suspend→
+  offboard isolation proof; global vs per-tenant toggle; invalid-config reject; A/B metering + budget
+  throttle; copilot cited answers + confirm-action + injection probe) is the remaining live step.
