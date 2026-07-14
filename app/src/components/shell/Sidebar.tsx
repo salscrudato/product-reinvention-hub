@@ -30,8 +30,12 @@ const INTELLIGENCE_ITEMS: NavItem[] = [
   { to: '/app/news',       label: 'News',            icon: IconNews, flag: 'page.news' },
   { to: '/app/claims',     label: 'Claims Analysis', icon: IconChart, flag: 'page.claims' },
   { to: '/app/dictionary', label: 'Data Dictionary', icon: IconBook, flag: 'page.dictionary' },
-  { to: '/app/feedback',   label: 'Feedback',        icon: IconChat, flag: 'page.feedback' },
 ]
+
+// Feedback is platform plumbing (talk to the makers), not portfolio intelligence —
+// it lives in the Platform panel at the sidebar bottom. Route unchanged, so every
+// existing /app/feedback deep link keeps working.
+const FEEDBACK_ITEM: NavItem = { to: '/app/feedback', label: 'Feedback', icon: IconChat, flag: 'page.feedback' }
 
 const SECTIONS = [
   { label: 'Workspace',    items: WORKSPACE_ITEMS   },
@@ -137,11 +141,15 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* Footer — the Platform panel: feedback to the makers + the role-appropriate console. */}
       <div className="py-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-        {/* Footer nav: platform roles → platform console; org admins → org admin; others → settings. */}
+        {!collapsed && <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-[.08em] text-faint select-none">Platform</p>}
+        {visible([FEEDBACK_ITEM]).map(item => (
+          <Item key={item.to} item={item} collapsed={collapsed} active={isActive(item.to)} />
+        ))}
+        {/* Role-based console: platform roles → platform console; org admins → org admin; others → settings. */}
         {onPlatform
-          ? <Item item={{ to: '/app/admin',        label: 'Platform', icon: IconShield }} collapsed={collapsed} active={isActive('/app/admin')} />
+          ? <Item item={{ to: '/app/admin',        label: 'Admin console', icon: IconShield }} collapsed={collapsed} active={isActive('/app/admin')} />
           : onTenantAdmin
             ? <Item item={{ to: '/app/tenant-admin', label: 'Org Admin', icon: IconShield }} collapsed={collapsed} active={isActive('/app/tenant-admin')} />
             : <Item item={{ to: '/app/admin',        label: 'Settings',  icon: IconSettings }} collapsed={collapsed} active={isActive('/app/admin')} />

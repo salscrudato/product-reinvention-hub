@@ -24,10 +24,11 @@ export default function AppShell() {
   // (Home → Products → Explorer) but not on product-tab sub-navigation.
   const topSegment = pathname.split('/')[2] ?? 'home'
 
-  // ⌘F / Ctrl+F global shortcut
+  // ⌘F / Ctrl+F opens the search overlay (⌘K / Ctrl+K kept as an alias). Intercepting
+  // browser find is a deliberate product choice — in-app search is the useful find here.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === 'k')) {
         e.preventDefault()
         setPaletteOpen(p => !p)
       }

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { IconSearch, IconSignOut, IconChevronDown, IconHome, IconKey, IconLayers } from '../ui/icons'
+import { Tooltip } from '../ui'
 import { ThemeToggle } from './ThemeToggle'
 import { useUser } from '../../context/useUser'
 import { adapter, setSuperAdminTenant } from '../../lib/backend'
@@ -139,19 +140,18 @@ export function Topbar({ onOpenPalette, onOpenMobileSidebar }: TopbarProps) {
       )}
       <div className="flex-1 min-w-0"><Breadcrumb /></div>
 
-      {/* Search field — opens palette */}
-      <button
-        onClick={onOpenPalette}
-        className="hidden sm:flex items-center gap-2 px-3 h-8 rounded-[8px] text-sm text-faint bg-raised hover:bg-hover transition-colors"
-        style={{ border: '1px solid var(--color-border)', minWidth: 200 }}
-        aria-label={`Search (${isMac ? '⌘F' : 'Ctrl+F'})`}
-      >
-        <IconSearch size={14} aria-hidden="true" />
-        <span>Search…</span>
-        <kbd className="ml-auto text-xs bg-surface rounded px-1 py-0.5 font-mono text-faint" style={{ border: '1px solid var(--color-border)' }}>
-          {isMac ? '⌘F' : 'Ctrl+F'}
-        </kbd>
-      </button>
+      {/* Search — the persistent input bar is gone by design: ⌘F/Ctrl+F (or ⌘K/Ctrl+K)
+          opens the centered search overlay. This compact affordance keeps mouse users
+          one click away without re-introducing a bar. */}
+      <Tooltip content={`Search — ${isMac ? '⌘F' : 'Ctrl+F'}`} side="bottom">
+        <button
+          onClick={onOpenPalette}
+          className="flex items-center justify-center w-8 h-8 rounded-[8px] text-dim hover:text-text hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent shrink-0"
+          aria-label={`Search (${isMac ? '⌘F' : 'Ctrl+F'})`}
+        >
+          <IconSearch size={16} aria-hidden="true" />
+        </button>
+      </Tooltip>
 
       {/* Tenant switcher — visible only to SUPER_ADMIN */}
       {user?.role === 'SUPER_ADMIN' && <SuperAdminTenantSwitcher currentTenantId={user.tenantId} />}

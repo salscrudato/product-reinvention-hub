@@ -16,6 +16,7 @@ const { identifyBaseForm } = require('./identify-base-form')
 const { proposeMapping }   = require('./propose-mapping')
 const { shapeFeedback }    = require('./shape-feedback')
 const { refreshNews }      = require('./refresh-news')
+const { taskSummary }      = require('./task-summary')
 
 console.log(`[prodhub-host] AI configured=${fleet.isConfigured()}`)
 
@@ -49,6 +50,7 @@ router.post('/:name', requireCapability('ai:invoke'), requireTenant, async (req,
     if (name === 'proposeMapping')   return proposeMapping(req, res)
     if (name === 'shapeFeedback')    return shapeFeedback(req, res)
     if (name === 'refreshNews')      return refreshNews(req, res)
+    if (name === 'taskSummary')      return taskSummary(req, res)
     return res.status(501).json({ error: 'ai_handler_not_ported', name })
   })
 })

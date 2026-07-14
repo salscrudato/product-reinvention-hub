@@ -16,6 +16,8 @@ import { ChatComposer } from '../components/chat/ChatComposer'
 import { StreamRenderer } from '../components/ai/StreamRenderer'
 import { WaveformLoader } from '../components/ai/WaveformLoader'
 import { HeroMark } from '../components/home/HeroMark'
+import { useUser } from '../context/useUser'
+import { IconChevronLeft, IconChevronRight } from '../components/ui/icons'
 import { PriorityRail } from '../components/home/PriorityRail'
 import { PortfolioMetrics } from '../components/home/PortfolioMetrics'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
@@ -78,6 +80,7 @@ function ChatResponseCard({ card, onCite }: { card: ChatCard; onCite: (cite: str
 
 export default function Home() {
   const navigate = useNavigate()
+  const { user } = useUser()
   const [messages, setMessages]   = useState<ChatMessage[]>([])
   const [input, setInput]         = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -99,6 +102,21 @@ export default function Home() {
   // G1: single "Response ready" polite announcement when streaming ends.
   // The log uses aria-live="off" to suppress per-token noise; this element announces once.
   const [srAnnounce, setSrAnnounce] = useState('')
+
+  // Cockpit rail collapse — COLLAPSED by default, persisted per user. The chat
+  // reflows into the freed width; an edge affordance reopens the rail.
+  const railKey = user?.uid ? `pf.home.rail.${user.uid}` : 'pf.home.rail'
+  const [railOpen, setRailOpen] = useState(false)
+  useEffect(() => {
+    try { setRailOpen(localStorage.getItem(railKey) === 'open') } catch { /* private mode */ }
+  }, [railKey])
+  function toggleRail() {
+    setRailOpen(o => {
+      const next = !o
+      try { localStorage.setItem(railKey, next ? 'open' : 'closed') } catch { /* private mode */ }
+      return next
+    })
+  }
 
   // Abort any in-flight chat on unmount so it doesn't keep consuming tokens/network.
   useEffect(() => () => abortRef.current?.abort(), [])
@@ -238,11 +256,16 @@ export default function Home() {
   const empty = messages.length === 0
 
   return (
-    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:h-full lg:min-h-0">
+    <div
+      className="flex flex-col gap-6 lg:grid lg:h-full lg:min-h-0"
+      // The rail column springs between full width and a slim edge affordance;
+      // the chat reflows into the freed space. Neutralised by reduced-motion.
+      style={{ gridTemplateColumns: railOpen ? 'minmax(0,1fr) 340px' : 'minmax(0,1fr) 30px', transition: 'grid-template-columns .3s var(--ease-spring)' }}
+    >
       {/* Assistant — grounded portfolio Q&A */}
       <section className="flex flex-col min-h-[60vh] lg:min-h-0" aria-label="Portfolio assistant">
         <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto pr-1">
-          <div className="max-w-3xl w-full mx-auto h-full">
+          <div className={`${railOpen ? 'max-w-3xl' : 'max-w-4xl'} w-full mx-auto h-full transition-all duration-300`}>
             {empty ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-6 py-10">
                 <HeroMark size={76} />
@@ -332,18 +355,61 @@ export default function Home() {
         <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">{srAnnounce}</div>
 
         {/* Composer */}
-        <div className="mt-3 max-w-3xl w-full mx-auto">
+        <div className={`mt-3 ${railOpen ? 'max-w-3xl' : 'max-w-4xl'} w-full mx-auto transition-all duration-300`}>
           <ChatComposer value={input} onChange={setInput} onSubmit={() => ask(input)} onAutoSubmit={ask} streaming={streaming} />
         </div>
       </section>
 
-      {/* Cockpit rail */}
-      <aside className="flex flex-col gap-4 lg:overflow-y-auto lg:min-h-0 pb-1" aria-label="Portfolio cockpit">
-        <PriorityRail
-          status={combineStatus(tasks.status, products.status)}
-          tasks={tasks.items} products={products.items} now={now}
-        />
-        <PortfolioMetrics products={products.items} />
+      {/* Cockpit rail — collapsible, collapsed by default, persisted per user */}
+      <aside className="relative lg:h-full lg:min-h-0" aria-label="Portfolio cockpit">
+        {railOpen ? (
+          <>
+            {/* Edge handle on the rail's seam — collapses it back */}
+            <button
+              onClick={toggleRail}
+              aria-expanded="true"
+              aria-label="Hide priorities & portfolio metrics"
+              className="hidden lg:flex absolute -left-3 top-5 z-10 w-6 h-6 items-center justify-center rounded-full bg-surface text-dim hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+            >
+              <IconChevronRight size={13} aria-hidden="true" />
+            </button>
+            <div className="flex flex-col gap-4 lg:h-full lg:overflow-y-auto lg:min-h-0 pb-1 slide-in-right">
+              <button
+                onClick={toggleRail}
+                aria-expanded="true"
+                className="lg:hidden self-end inline-flex items-center gap-1 text-xs text-dim hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[6px] px-1"
+              >
+                Hide panel <IconChevronRight size={12} aria-hidden="true" />
+              </button>
+              <PriorityRail
+                status={combineStatus(tasks.status, products.status)}
+                tasks={tasks.items} products={products.items} now={now}
+              />
+              <PortfolioMetrics products={products.items} />
+            </div>
+          </>
+        ) : (
+          // Collapsed → an elegant edge affordance: a slim full-height rail on
+          // desktop (vertical wordmark + chevron), a quiet row on mobile.
+          <button
+            onClick={toggleRail}
+            aria-expanded="false"
+            aria-label="Show priorities & portfolio metrics"
+            className="group flex w-full items-center justify-center gap-1.5 rounded-[12px] px-2 py-2 lg:h-full lg:w-[30px] lg:flex-col lg:px-0 lg:py-4 bg-surface hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            style={{ border: '1px solid var(--color-border)' }}
+          >
+            <IconChevronLeft size={13} className="text-faint group-hover:text-accent transition-colors shrink-0" aria-hidden="true" />
+            <span className="lg:hidden text-xs text-dim group-hover:text-text transition-colors">Priorities & metrics</span>
+            <span
+              className="hidden lg:block text-[9.5px] font-semibold uppercase tracking-[.14em] text-faint group-hover:text-accent transition-colors select-none"
+              style={{ writingMode: 'vertical-rl' }}
+              aria-hidden="true"
+            >
+              Priorities · Metrics
+            </span>
+          </button>
+        )}
       </aside>
     </div>
   )
