@@ -20,6 +20,7 @@
 
 const { callAnthropic, resolveAnthropic, createBudget } = require('./ai-call')
 const { FILING_CLASSIFY_SYSTEM } = require('./prompts')
+const { pMap } = require('./constants')
 
 // Lazy-load the shared filing sanitizers + reconciler (built by pnpm build:filing).
 let _filingShared = null
