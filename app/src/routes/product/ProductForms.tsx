@@ -1,6 +1,8 @@
-// Forms tab — a master-detail forms repository: a searchable, filterable list on the
-// left, a rich read panel on the right (identity, plain-English AI summary, editions,
-// attachment, states, and the coverages that reference it — "where used"). Two-way
+// Forms tab — a master-detail forms repository: ONE smart search (typeahead + tokens
+// + live filtering) over the list on the left, a rich read panel on the right
+// (identity, plain-English AI summary, editions, attachment, states, and the
+// coverages that reference it — "where used"). The filter rail is collapsible and
+// CLOSED by default; enum axes with only one distinct value are hidden. Two-way
 // linked with coverages: a coverage's form chip deep-links here (?form=), and each
 // form lists the coverages that reference it (clickable back). AI-generated plain-
 // English descriptions are cached on the form document; "Generate" fetches via the
@@ -11,7 +13,7 @@ import { toast } from 'sonner'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useCapture } from '../../context/useCapture'
 import { Badge, Skeleton, EmptyState, RefChip } from '../../components/ui'
-import { IconForm, IconClose, IconSparkle, IconSpinner, IconArrowRight, IconStates, IconLink } from '../../components/ui/icons'
+import { IconForm, IconClose, IconSparkle, IconSpinner, IconArrowRight, IconStates, IconLink, IconFilter } from '../../components/ui/icons'
 import { adapter } from '../../lib/backend'
 import { useUser } from '../../context/useUser'
 import { canI } from '../../lib/canI'
@@ -19,7 +21,6 @@ import { useEntityFilters } from '../../features/search/useEntityFilters'
 import { FacetPanel } from '../../features/search/FacetPanel'
 import { CommandBar } from '../../features/search/CommandBar'
 import { ActiveFilters } from '../../features/search/ActiveFilters'
-import { SavedViews } from '../../features/search/SavedViews'
 import { formsSchema } from '../../features/forms/formsSchema'
 import type { WithId } from '../../context/ProductContext'
 import type { Form, Coverage } from '@pf/shared'
@@ -197,7 +198,26 @@ export default function ProductForms() {
 
   // Coverage deep-link scopes the entity set first; facet counts reflect that scope.
   const entities = useMemo(() => (covForms ? forms.filter(f => covForms.has(f.number)) : forms), [forms, covForms])
-  const filters = useEntityFilters(entities, formsSchema)
+
+  // Only filter axes with a real choice: an enum axis where every form in scope
+  // shares one value is hidden (matches the Coverages tab's behavior).
+  const schema = useMemo(() => {
+    const facets = formsSchema.facets.filter((f) => {
+      if (f.kind !== 'enum') return true
+      const distinct = new Set<string>()
+      for (const e of entities) {
+        const v = f.accessor(e)
+        for (const one of Array.isArray(v) ? v : [v]) if (one != null && one !== '') distinct.add(String(one))
+      }
+      return distinct.size > 1
+    })
+    return { ...formsSchema, facets }
+  }, [entities])
+
+  // Filter rail is collapsible — CLOSED by default so the repository read leads.
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  const filters = useEntityFilters(entities, schema)
   const filtered = filters.results
   useEffect(() => {
     const n = filters.reconciliation.dropped.length
@@ -248,21 +268,47 @@ export default function ProductForms() {
           compact />
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex-1 min-w-[220px] max-w-lg">
-              <CommandBar schema={formsSchema} state={filters.state} applyState={filters.applyState}
-                placeholder="Search by number, name…" />
+          {/* Toolbar — mirrors Coverages: Filters toggle leads, then the ONE smart search. */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(o => !o)}
+              aria-pressed={filtersOpen}
+              aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
+              className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-[10px] text-[13px] font-medium border transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+                filtersOpen || filters.activeChips.length ? 'text-accent bg-accent-soft border-[color:var(--color-accent-line)]' : 'text-dim bg-surface border-[color:var(--color-border)] hover:text-text'
+              }`}
+            >
+              <IconFilter size={15} />
+              <span className="hidden sm:inline">Filters</span>
+              {filters.activeChips.length > 0 && (
+                <span className="tnum tabular-nums min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold text-white inline-flex items-center justify-center" style={{ background: 'var(--gradient-accent)' }}>
+                  {filters.activeChips.length}
+                </span>
+              )}
+            </button>
+            <div className="flex-1 min-w-[220px] max-w-2xl">
+              <CommandBar schema={schema} state={filters.state} applyState={filters.applyState}
+                placeholder="Search forms by number, name, category, or source…" />
             </div>
-            <SavedViews scope={`forms:${pid}`} state={filters.state} onApply={filters.applyState} />
           </div>
           <ActiveFilters chips={filters.activeChips} onRemove={filters.removeChip} onClearAll={filters.clearAll}
             resultCount={filtered.length} total={filters.total} />
-          <div className="grid lg:grid-cols-[200px_300px_1fr] gap-4 items-start">
-            <div className="lg:sticky lg:top-4">
-              <FacetPanel schema={formsSchema} counts={filters.counts} state={filters.state} unknownValues={filters.unknownValues}
-                onToggleEnum={filters.toggleEnum} onToggleParent={filters.toggleParent}
-                onToggleChild={filters.toggleChild} onSetDateRange={filters.setDateRange} />
-            </div>
+          <div className={`grid gap-4 items-start ${filtersOpen ? 'lg:grid-cols-[200px_300px_1fr]' : 'lg:grid-cols-[300px_1fr]'}`}>
+            {filtersOpen && (
+              <div className="lg:sticky lg:top-4 flex flex-col gap-2">
+                <div className="flex items-center justify-between px-0.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-faint">Refine</span>
+                  <button type="button" onClick={() => setFiltersOpen(false)} aria-label="Hide filters"
+                    className="w-6 h-6 rounded-[6px] flex items-center justify-center text-faint hover:text-text hover:bg-hover transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
+                    <IconClose size={13} />
+                  </button>
+                </div>
+                <FacetPanel schema={schema} counts={filters.counts} state={filters.state} unknownValues={filters.unknownValues}
+                  onToggleEnum={filters.toggleEnum} onToggleParent={filters.toggleParent}
+                  onToggleChild={filters.toggleChild} onSetDateRange={filters.setDateRange} />
+              </div>
+            )}
             <div className="flex flex-col gap-1.5 lg:max-h-[62vh] lg:overflow-y-auto -mx-1 px-1">
               {filtered.length === 0 ? (
                 <p className="text-sm text-faint italic px-1 py-6 text-center">No forms match.</p>
