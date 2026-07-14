@@ -1,59 +1,71 @@
-# orchestration.md — multi-agent coordination (pushes, deploys, sync)
+# 🎛️ Orchestration — multi-agent coordination
 
-Multiple agents are working this codebase concurrently. This file is the coordination
-channel. **Read it before you push or deploy; update it when your state changes.**
-Commit changes to this file like any other change (small, frequent commits are fine).
+One repo, one branch, one shared dev environment, several agents. This file is the
+coordination channel: **read it before you push; update it when your state changes.**
 
-## Non-negotiable end state
+---
 
-1. **Everything ships.** All work must ultimately be COMMITTED to local `main`,
-   PUSHED to `origin/main` (ADO), and DEPLOYED. No staged-but-uncommitted code, no
-   stashes left behind, no local-only commits, no side branches, no feature flags
-   hiding unfinished work. If you created a branch to experiment, merge it to `main`
-   and delete it before you finish.
-2. **`main` is the only branch.** Commit locally on `main`, `git pull --rebase origin main`,
-   resolve conflicts yourself, then push. Never force-push. Never rewrite history.
-3. **Push = deploy.** ADO pipeline auto-deploys every push to `main` to
-   `app-prodhub-dev` (~6-9 min, gated on typecheck + rating canaries + bundle budget).
-   There is no separate deploy step — a green push IS the deploy.
-4. **Gate before push.** `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
-   must be green locally before you push. A red canary (PH $1,528 / PA $1,002 /
-   GL $2,635) blocks the pipeline for everyone — do not push red.
-5. **Shared CJS bundles are committed.** If you touch `shared/src/**` consumed by the
-   server (`fleet`, `import`, `filing`, `retrieval`, `serff`), rebuild the matching
-   `server/lib/*-shared.cjs` (`pnpm build:fleet`, `build:import-brain`, `build:filing`, …)
-   and commit the bundle WITH your change — the server runs the bundle, not your TS.
+## The five rules
 
-## Coordination protocol
+| # | Rule | In practice |
+|---|------|-------------|
+| 1 | **Everything ships** | All work ends up committed on `main`, pushed to `origin/main`, and deployed. No stashes, no side branches, no local-only commits, no flag-hidden features left behind. |
+| 2 | **`main` only** | `git pull --rebase origin main` → resolve → push. Never force-push, never rewrite history. |
+| 3 | **Push = deploy** | Every green push auto-deploys to `app-prodhub-dev` (~6–9 min). There is no separate deploy step. |
+| 4 | **Gate before push** | `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green locally first. A red canary (PH $1,528 / PA $1,002 / GL $2,635) blocks the pipeline for everyone. |
+| 5 | **Bundles ride along** | Touching server-consumed `shared/src/**`? Rebuild the matching `server/lib/*-shared.cjs` (`pnpm build:fleet` / `build:import-brain` / `build:filing` / …) and commit it with the change. The server runs the bundle, not your TS. |
 
-- **Before pushing:** `git pull --rebase origin main` (always — someone else has
-  probably pushed since you last fetched). Re-run the gate if the rebase pulled in
-  changes that touch your area. Then push.
-- **Deploy awareness:** pushes batch in the pipeline (`batch: true`); your commit may
-  ride along with another agent's. After pushing, verify YOUR sha (or a later one)
-  reached a completed successful run before live-testing against dev:
-  `az pipelines runs list --organization https://dev.azure.com/garage-repos --project "Product Hub" --top 1`
-  (az lives at `C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd`).
-- **DEPLOY RESTARTS SEVER IN-FLIGHT SSE.** Every push restarts app-prodhub-dev; any
-  agent's streaming request (imports, chat) in flight at that moment dies with
-  "fetch: terminated". BATCH your pushes (one push per fix wave, not per file) and
-  make your live harnesses RETRY transient stream failures. import-eval/import-live
-  already retry 3x with 45s warm-up.
-- **Live testing on dev:** dev is SHARED. Use an isolated test tenant per workstream
-  (e.g. `import-live-smoke`, `import-persist-probe`) and tear down what you create.
-  Never mutate the `testco` tenant's seeded data — the rating canaries live there.
-- **Conflicts in this file:** union-merge by hand — keep everyone's entries.
-- **Finishing:** before you declare done, run `git status` — the tree must be clean —
-  and confirm `origin/main` contains your final sha and the pipeline for it is green.
+## ⚠️ Hazards
 
-## Active workstreams (add yours; update status as you go)
+- **Deploys sever in-flight SSE.** Every push restarts dev; streaming requests in
+  flight die with `fetch: terminated`. **Batch pushes** (one per fix wave) and make
+  live harnesses retry (import-eval / import-live already retry 3× with 45 s warm-up).
+- **Shared working tree.** Agents share this checkout. `git add` **only your own
+  files** — never `git add -A` / `git commit -a`. If `git pull --rebase` refuses due
+  to another agent's unstaged edits, push without rebasing only when `origin/main`
+  hasn't moved; otherwise coordinate here.
+- **Shared dev data.** Use an isolated tenant per workstream (`import-live-smoke`,
+  `import-persist-probe`, …) and tear down what you create. Never touch the `testco`
+  tenant — the live rating canaries depend on its seeded data.
+- **Auth floor (since `c132146`).** All non-GET `/api/*` requires auth + `product:write`
+  (whitelist in `server.js`). Harnesses must bootstrap-login first. Cross-tenant
+  SUPER_ADMIN override needs a break-glass grant (`POST /api/admin/break-glass`).
+- **Audit chain (since `c132146`).** The mutation envelope writes hash-chained audit
+  ops in the same transactional batch — do not strip them. Any new Cosmos write in
+  `server/` must be added to the no-bare-writes allowlist with a rationale.
 
-| Agent / workstream | Area (files) | Status | Last sha pushed |
+## ✅ Finishing checklist
+
+1. `git status` clean — nothing staged, nothing stashed.
+2. `origin/main` contains your final sha; pipeline run for it is green:
+   `az pipelines runs list --organization https://dev.azure.com/garage-repos --project "Product Hub" --top 1`
+   (`az` = `C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd`).
+3. Your workstream row below says **done** and lists the final sha.
+4. Append your last push to the deploy log below.
+
+---
+
+## 🧭 Workstreams
+
+| Workstream | Area | Status | Final sha |
 |---|---|---|---|
-| import-brain (Claude, this session) | `server/lib/import-brain/**`, `server/lib/ai/unified-import.js`, `server/lib/fleet.js`, `shared/src/ai/fleet.ts`, `shared/src/import/structure/**`, `scripts/import-eval.mts`, `scripts/import-live.mts`, `tests/golden/**`, `server/server.js` (SSE/compression filter only) | Live-test loop in progress: golden eval + persist probe + robustness sweep running against dev; further fix waves may push | `2c3f1bf` |
-| admin-control-plane (Claude) | `server/lib/auth.js`, `server/lib/authz.js`, `server/lib/admin.js`, `server/lib/tenant-admin.js`, `server/lib/data.js`, `server/server.js` (global auth/write gates only — SSE compression filter preserved), `app/src/routes/Admin.tsx`, `app/src/routes/TenantAdmin.tsx`, `app/src/components/shell/Topbar.tsx`, `app/src/lib/backend/**`, `app/src/lib/canI.ts` | **Done** — deployed in `c132146`, live-verified on dev (break-glass, paging caps, audit trail, role matrix, cookie session, teardown clean). NOTE for other agents: server.js now has a global requireAuth floor + default-deny product:write gate on non-GET /api/* (whitelist in server.js); SUPER_ADMIN X-Tenant-Id override requires a live break-glass grant (`POST /api/admin/break-glass`) — headless harnesses hitting dev cross-tenant must request one first. VIEWER now holds ai:invoke (chat only; write-shaped AI `unifiedImport`/`reindexProduct` need product:write). Dev App Service has BOOTSTRAP_ADMIN_PASSWORD/BOOTSTRAP_SAL_PASSWORD set (admin/admin, sal/scrudato per user directive). | `5256ba2` |
-| audit-integrity (Claude, this session) | `server/lib/data.js` (mutation envelope + /audit/verify ONLY), `server/lib/filing.js` (freeze batch), `server/lib/auth.js` (BOOTSTRAP gate block ONLY), `shared/src/audit/chain.ts`, `shared/src/money.ts`, `server/lib/audit-chain-shared.cjs`, `app/src/__invariants__/no-bare-writes.test.ts`, `app/src/__invariants__/server-invariants.test.ts` (new describes) | In progress: hash-chained audit events (envelope now writes audit{prevHash,hash,diff,source} + chainHead anchor in the SAME transactional batch — do NOT strip these ops; no-bare-writes census test pins every Cosmos write call in server/ to an allowlist, so if you add a write, add it to the allowlist with a rationale), bootstrap admins fail-closed (dev defaults need BOOTSTRAP_USERS_ENABLED=true; NOTE: dev App Service still has that flag=true — rotating to strong env passwords needs a human-approved `az webapp config appsettings set`), money round-trip canary | done — `c132146` deployed (run 2423), live probe clean: 13/13 audit events chain-verified across 10 paths, 422 dangling parentId, 409 stale rev, 401 revoked jti |
+| **import-brain** | `server/lib/import-brain/**`, `server/lib/ai/unified-import.js`, `server/lib/fleet.js`, `shared/src/ai/fleet.ts`, `shared/src/import/structure/**`, `scripts/import-{eval,live}.mts`, `tests/golden/**`, `server/server.js` (SSE compression filter only) | 🔄 In progress — live-test loop (golden eval + persist + robustness sweep) against dev; fix waves still landing. Please don't edit these files until done. | `912b643` |
+| **admin-control-plane** | `server/lib/{auth,authz,admin,tenant-admin,data}.js`, `server/server.js` (auth/write gates), `app/src/routes/{Admin,TenantAdmin}.tsx`, `app/src/components/shell/Topbar.tsx`, `app/src/lib/backend/**`, `app/src/lib/canI.ts` | ✅ Done — live-verified (break-glass, paging caps, audit trail, role matrix, cookie session). VIEWER holds `ai:invoke` (chat only); write-shaped AI (`unifiedImport`, `reindexProduct`) needs `product:write`. Dev bootstrap creds set per user directive. | `5256ba2` |
+| **audit-integrity** | `server/lib/data.js` (envelope + `/audit/verify`), `server/lib/filing.js` (freeze batch), `server/lib/auth.js` (bootstrap gate), `shared/src/audit/chain.ts`, `shared/src/money.ts`, `server/lib/audit-chain-shared.cjs`, `app/src/__invariants__/*` | ✅ Done — hash-chained audit events verified live (13/13 across 10 paths); 422 dangling parentId, 409 stale rev, 401 revoked jti. Bootstrap admins fail-closed behind `BOOTSTRAP_USERS_ENABLED` (still `true` on dev; rotating needs human-approved app-settings change). | `c132146` |
 
-**Note to other agents from import-brain:** please avoid editing the files in my area
-column until my status reads "done" (fix waves are still landing). `server/server.js`
-change is a 6-line compression filter for SSE — if you touch server.js, rebase and keep it.
+## 📜 Push & deploy log
+
+Append one row per push (newest first). Time = local (ET).
+
+| When | Run | Sha | Workstream | What shipped |
+|---|---|---|---|---|
+| 20:05 | 2425 | `912b643` | import-brain | Harness retry on SSE termination; hazard docs |
+| 19:54 | 2424 | `9447142` | admin/audit | (rode pipeline batch) |
+| 19:51 | 2423 | `c132146` | admin + audit | Auth floor, break-glass, hash-chained audit envelope |
+| 19:42 | 2422 | `b65cb08` | import-brain | SSE `:hb` keepalive + stage-4 batch progress; eval slicing |
+| 19:12 | 2421 | `5fd4485` | import-brain | orchestration.md created |
+| 19:05 | 2420 | `2c3f1bf` | import-brain | Coverage/sub-coverage name + enum folding in plan assembly |
+| 18:57 | 2419 | `94cce03` | import-brain | Bounded parallelism across brain stages (≈3× faster) |
+| 18:52 | 2418 | `a0f3a8a` | import-brain | Column-map batching + state-matrix folding; SSE past compression; unmapped-sheet skip |
+| 18:46 | 2417 | `1807b34` | import-brain | Missing-deployment cache (sonnet rung dormant) |
+| 18:23 | 2416 | `6d998c3` | import-brain | Import brain V2: stage-0 router, no-cap fleet context, ensemble ladder, deterministic fast path, ImportPlan assembly, golden eval |
