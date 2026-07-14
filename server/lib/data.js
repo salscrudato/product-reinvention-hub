@@ -209,8 +209,15 @@ async function attachEmbeddings(opsBatches) {
 // sole writer of tenantId: it is set from the pk/common envelope below, never from `data`.
 const RESERVED_ENVELOPE_KEYS = ['tenantId', 'pk', 'kind', 'coll', 'path']
 
+// Bases the mutation envelope may NEVER write into. `filings` holds the immutable
+// create-only filing records (server/lib/filing.js) — allowing envelope writes there
+// would let a client drop entity docs into the reserved partition and upsert a
+// chainHead that collides with a frozen filing's audit-chain anchor.
+const RESERVED_BASES = new Set(['filings'])
+
 function envelope(tid, payload, actor, source) {
   const { op, path, entityType } = payload
+  if (RESERVED_BASES.has(baseKey(path))) { const e = new Error('reserved_base'); e.code = 'RESERVED_BASE'; throw e }
   const data = { ...(payload.data || {}) }
   for (const k of RESERVED_ENVELOPE_KEYS) delete data[k]
   const pk = pkFor(tid, path)
@@ -317,6 +324,7 @@ router.post('/mutate', requireCapability('product:write'), requireTenant, async 
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
+    if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base' })
     res.status(500).json({ error: 'mutate_failed', detail: String(e.message || e) })
   }
 })
@@ -354,6 +362,7 @@ router.post('/mutateBatch', requireCapability('product:write'), requireTenant, a
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
+    if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base' })
     const partial = committedChunks > 0 && committedChunks < totalChunks
     res.status(500).json({ error: partial ? 'batch_partial' : 'batch_failed', committedChunks, totalChunks, detail: String(e.message || e) })
   }

@@ -107,6 +107,41 @@ describe('POST /api/db/mutate', () => {
   })
 })
 
+// ─── /api/db/mutate — reserved 'filings' base ──────────────────────────────────
+// Filing records are create-only (server/lib/filing.js). The mutation envelope must
+// reject any write into the reserved `filings` base BEFORE any Cosmos I/O, so this
+// asserts a real 403 even in the Cosmos-less test environment.
+
+describe('POST /api/db/mutate — filings base is reserved (immutability proof)', () => {
+  const editorToken = makeToken('EDITOR')
+  const filingWrite = {
+    payload: {
+      op: 'update',
+      path: 'filings/TX-PH.PROD.001-1234567890',
+      data: { packageHash: 'tampered' },
+      entityType: 'filing',
+    },
+  }
+
+  it('mutate into filings/ returns 403 reserved_base even for EDITOR', async () => {
+    const res = await request(app)
+      .post('/api/db/mutate')
+      .set('Authorization', `Bearer ${editorToken}`)
+      .send(filingWrite)
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe('reserved_base')
+  })
+
+  it('mutateBatch containing a filings/ path returns 403 reserved_base', async () => {
+    const res = await request(app)
+      .post('/api/db/mutateBatch')
+      .set('Authorization', `Bearer ${editorToken}`)
+      .send({ payloads: [filingWrite.payload] })
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe('reserved_base')
+  })
+})
+
 // ─── /api/ai/chat ─────────────────────────────────────────────────────────────
 
 describe('POST /api/ai/chat', () => {

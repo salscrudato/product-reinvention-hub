@@ -205,3 +205,42 @@ describe('filing.js — authority gate + create-only + verifier-before-freeze in
     expect(filingJs).toContain('contentHash')
   })
 })
+
+// ─── Filing verifier role + tamper probe + reserved-base immutability ─────────
+// Lane B (EXECUTION-B): the independent verifier runs on the MID_REASONER fleet role,
+// escalating the ladder ONLY when the deployment is unprovisioned; the tamper probe can
+// never freeze; the mutation envelope can never write into the reserved filings base.
+describe('filing verifier — MID_REASONER role + tamper probe + filings base reserved', () => {
+  it('verifier ladder starts at MID_REASONER and escalates only to GROUNDED_CITED', () => {
+    expect(filingJs).toMatch(/VERIFIER_LADDER\s*=\s*\['MID_REASONER',\s*'GROUNDED_CITED'\]/)
+    // The verdict records which role/deployment produced it (audit provenance).
+    expect(filingJs).toContain('verifierRole')
+    expect(filingJs).toContain('verifierDeployment')
+  })
+
+  it('ladder escalation is gated on a missing deployment, not on any error', () => {
+    expect(filingJs).toMatch(/isMissingDeployment\(resp\.status,\s*detail\)/)
+  })
+
+  it('tamper probe branch returns before STORE and FREEZE (a probe can never freeze)', () => {
+    const probeIdx  = filingJs.indexOf('tamperProbe')
+    const storeIdx  = filingJs.indexOf('storagePath = await storePackage')
+    const freezeIdx = filingJs.indexOf('await freezeFiling(')
+    expect(probeIdx).toBeGreaterThan(0)
+    expect(storeIdx).toBeGreaterThan(0)
+    expect(freezeIdx).toBeGreaterThan(0)
+    expect(probeIdx).toBeLessThan(storeIdx)
+    expect(probeIdx).toBeLessThan(freezeIdx)
+    // Even a wrongly-approving verdict on a tampered package must NOT freeze.
+    expect(filingJs).toContain("'tamper_probe_not_detected'")
+  })
+
+  it("data.js reserves the 'filings' base — the mutation envelope rejects it with RESERVED_BASE", () => {
+    expect(dataJs).toMatch(/RESERVED_BASES\s*=\s*new Set\(\['filings'\]\)/)
+    expect(dataJs).toMatch(/RESERVED_BASES\.has\(baseKey\(path\)\)/)
+    expect(dataJs).toMatch(/e\.code\s*=\s*'RESERVED_BASE'/)
+    // Both mutate routes surface it as 403 (matched twice: /mutate and /mutateBatch).
+    const matches = dataJs.match(/RESERVED_BASE'\)\s*return res\.status\(403\)/g) || []
+    expect(matches.length).toBeGreaterThanOrEqual(2)
+  })
+})

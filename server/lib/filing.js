@@ -8,10 +8,14 @@
 //                 history. No live AI guessing of values; every field comes from a real version doc.
 //   3. BUILD   -- Assemble a DETERMINISTIC package: sorted keys + sorted items → same inputs
 //                 produce byte-identical JSON. SHA-256 contentHash per item; packageHash over all.
-//   4. VERIFY  -- Independent extraction check via GROUNDED_CITED model (claude-opus-4-8).
+//   4. VERIFY  -- Independent extraction check via the MID_REASONER role (claude-sonnet-5).
 //                 Separate AI call; verifier confirms every field value in the package is present
 //                 verbatim in a cited source version. refIds and form numbers are verified
 //                 character-for-character. ANY discrepancy → REJECT (not freeze); issues logged.
+//                 If the MID_REASONER deployment is not provisioned in this Foundry project
+//                 (404 model-not-found), the verifier climbs the fleet ladder to GROUNDED_CITED
+//                 rather than silently skipping verification. The role + deployment that issued
+//                 the verdict are recorded in the filing record and its audit event.
 //   5. FREEZE  -- On clean verdict: write the IMMUTABLE filing record + a hash-chained
 //                 append-only auditEvent + its chainHead anchor in ONE Cosmos
 //                 transactional batch of Create operations (never upsert/replace —
@@ -250,7 +254,10 @@ async function storePackage(tenantId, filingId, pkg) {
 // ─── STEP 4: VERIFY ──────────────────────────────────────────────────────────
 // Independent extraction check — a SEPARATE AI call acting as a pure verifier.
 //
-// Role: GROUNDED_CITED (claude-opus-4-8) acting as independent verifier only.
+// Role: MID_REASONER (claude-sonnet-5) acting as independent verifier only — a different
+// model family tier from the entities' authoring path, so the check is independent.
+// If the MID_REASONER deployment is not provisioned in this Foundry project the call
+// escalates up the fleet ladder (GROUNDED_CITED) instead of skipping verification.
 // The verifier receives:
 //   - filedItems: what we are about to file (entityPath, versionId, fieldValues)
 //   - sourceEntities: the resolved source data keyed by entityPath
@@ -305,15 +312,20 @@ const EXTRACTION_VERDICT_TOOL = {
   },
 }
 
+// Verifier ladder: MID_REASONER (claude-sonnet-5) is the designated verifier role.
+// GROUNDED_CITED is the escalation rung used ONLY when the sonnet deployment is not
+// provisioned in this Foundry project (404 model-not-found) — verification is never skipped.
+const VERIFIER_LADDER = ['MID_REASONER', 'GROUNDED_CITED']
+
+function isMissingDeployment(status, detail) {
+  return status === 404 || /model.+not.+(found|exist)|no deployment/i.test(String(detail || ''))
+}
+
 async function verifyPackage(pkg, resolvedItems) {
-  if (!fleet.isConfigured()) throw new Error('AI not configured — filing verification requires GROUNDED_CITED model')
+  if (!fleet.isConfigured()) throw new Error('AI not configured — filing verification requires the MID_REASONER model')
 
   const g = fleet.guard()
   if (!g.allow) throw new Error('AI budget ceiling reached — filing verification unavailable')
-
-  // Route to GROUNDED_CITED (claude-opus-4-8) for the verification pass.
-  // This is the same role used by the portfolio copilot and scaffoldProduct — deep, grounded reasoning.
-  const deployment = fleet.resolveModel('GROUNDED_CITED', g.degrade)
 
   // Build the verification payload. The verifier gets the filed items AND the source entity states.
   // The source entity states are keyed by entityPath and contain the raw reconstructed data.
@@ -334,34 +346,48 @@ async function verifyPackage(pkg, resolvedItems) {
     sourceEntities,
   })
 
-  const resp = await fetchWithRetry(fleet.anthropicMessagesUrl(), {
-    method:  'POST',
-    headers: fleet.anthropicHeaders(),
-    body:    JSON.stringify({
-      model:       deployment,
-      max_tokens:  4096,
-      system:      [{ type: 'text', text: VERIFIER_SYSTEM, cache_control: { type: 'ephemeral' } }],
-      tools:       [EXTRACTION_VERDICT_TOOL],
-      tool_choice: { type: 'tool', name: 'extraction_verdict' },
-      messages:    [{ role: 'user', content: verificationPayload }],
-    }),
-  }, { timeoutMs: 120_000 })
+  let lastError = null
+  for (const role of VERIFIER_LADDER) {
+    const deployment = fleet.resolveModel(role, g.degrade)
+    const resp = await fetchWithRetry(fleet.anthropicMessagesUrl(), {
+      method:  'POST',
+      headers: fleet.anthropicHeaders(),
+      body:    JSON.stringify({
+        model:       deployment,
+        max_tokens:  4096,
+        system:      [{ type: 'text', text: VERIFIER_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        tools:       [EXTRACTION_VERDICT_TOOL],
+        tool_choice: { type: 'tool', name: 'extraction_verdict' },
+        messages:    [{ role: 'user', content: verificationPayload }],
+      }),
+    }, { timeoutMs: 120_000 })
 
-  if (!resp.ok) {
-    const detail = (await resp.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
-    throw new Error(`Verifier AI call failed ${resp.status}: ${detail}`)
+    if (!resp.ok) {
+      const detail = (await resp.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
+      if (isMissingDeployment(resp.status, detail)) {
+        // Deployment not provisioned — climb the ladder; NEVER skip verification.
+        console.warn(`[filing] verifier deployment ${deployment} (${role}) not provisioned — escalating`)
+        lastError = new Error(`Verifier deployment ${deployment} not provisioned (${resp.status})`)
+        continue
+      }
+      throw new Error(`Verifier AI call failed ${resp.status}: ${detail}`)
+    }
+
+    const json = await resp.json()
+    fleet.record(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
+
+    const toolUse = Array.isArray(json.content) ? json.content.find((b) => b.type === 'tool_use') : null
+    if (!toolUse || !toolUse.input) throw new Error('Verifier did not return an extraction_verdict tool call')
+
+    const verdict = toolUse.input
+    if (typeof verdict.approved !== 'boolean') throw new Error('Verifier returned invalid extraction_verdict (approved must be boolean)')
+    if (!Array.isArray(verdict.issues)) verdict.issues = []
+    // Provenance: which fleet role/deployment issued this verdict (recorded in audit + record).
+    verdict.verifierRole       = role
+    verdict.verifierDeployment = deployment
+    return verdict
   }
-
-  const json = await resp.json()
-  fleet.record(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
-
-  const toolUse = Array.isArray(json.content) ? json.content.find((b) => b.type === 'tool_use') : null
-  if (!toolUse || !toolUse.input) throw new Error('Verifier did not return an extraction_verdict tool call')
-
-  const verdict = toolUse.input
-  if (typeof verdict.approved !== 'boolean') throw new Error('Verifier returned invalid extraction_verdict (approved must be boolean)')
-  if (!Array.isArray(verdict.issues)) verdict.issues = []
-  return verdict
+  throw lastError || new Error('No verifier deployment available')
 }
 
 // ─── STEP 5: FREEZE ──────────────────────────────────────────────────────────
@@ -408,7 +434,12 @@ async function freezeFiling(tenantId, filingId, pkg, verifierVerdict, scope, act
     })),
     packageHash:     pkg.packageHash,
     storagePath,
-    verifierVerdict: { approved: verifierVerdict.approved, issueCount: (verifierVerdict.issues || []).length },
+    verifierVerdict: {
+      approved:   verifierVerdict.approved,
+      issueCount: (verifierVerdict.issues || []).length,
+      role:       verifierVerdict.verifierRole || null,
+      deployment: verifierVerdict.verifierDeployment || null,
+    },
     actor:     { uid: actor.uid, name: actor.name },
     createdAt: now,
   }
@@ -424,6 +455,8 @@ async function freezeFiling(tenantId, filingId, pkg, verifierVerdict, scope, act
       packageHash:      pkg.packageHash,
       storagePath,
       verifierApproved: verifierVerdict.approved,
+      verifierRole:       verifierVerdict.verifierRole || null,
+      verifierDeployment: verifierVerdict.verifierDeployment || null,
       itemCount:        pkg.items.length,
     },
     { productId: scope.productId },
@@ -487,6 +520,61 @@ router.post('/generate',
       // ── STEP 3: BUILD + STORE ─────────────────────────────────────────────
       const pkg = buildPackage(resolvedItems, scope)
 
+      // ── TAMPER PROBE (rejection-path proof) ───────────────────────────────
+      // tamperProbe:true deliberately corrupts a COPY of the built package before
+      // VERIFY so the independent verifier's rejection path is provable end-to-end
+      // against the live stack. A probe run can NEVER freeze: this branch returns
+      // unconditionally before STORE and FREEZE — even a (wrongly) approving
+      // verdict only produces an audit event and an error response.
+      if (req.body?.tamperProbe === true) {
+        const probePkg = JSON.parse(JSON.stringify(pkg))
+        const target   = probePkg.items[0]
+        // Invent a field present in no source version, and alter a refId if one exists.
+        target.fieldValues.__inventedLimit = '$9,999,999 special aggregate (fabricated by tamper probe)'
+        if (typeof target.fieldValues.refId === 'string') target.fieldValues.refId = `${target.fieldValues.refId}-TAMPERED`
+
+        let probeVerdict
+        try {
+          probeVerdict = await verifyPackage(probePkg, resolvedItems)
+        } catch (e) {
+          return res.status(503).json({ error: 'verifier_unavailable', probe: true, detail: String(e.message || e).slice(0, 300) })
+        }
+
+        // Log the probe outcome as a hash-chained audit event, then ALWAYS stop.
+        try {
+          const docs = cosmosFor(tenantId)
+          const op   = probeVerdict.approved ? 'filing.tamper_probe_missed' : 'filing.verify_rejected'
+          const { auditRecord, chainHead } = chainedAudit(
+            tenantId, `filings/${filingId}`, op, actor, new Date().toISOString(),
+            {
+              filingId, stateCode: scope.stateCode, asOf: scope.asOf, probe: true,
+              packageHash:        pkg.packageHash,
+              verifierRole:       probeVerdict.verifierRole || null,
+              verifierDeployment: probeVerdict.verifierDeployment || null,
+              issues:             probeVerdict.issues,
+            },
+            { productId: scope.productId },
+          )
+          await createBatch(docs, pkFor(tenantId, 'filings'), [auditRecord, chainHead])
+        } catch { /* best-effort audit; probe result still returned */ }
+
+        if (probeVerdict.approved) {
+          return res.status(500).json({
+            error:  'tamper_probe_not_detected',
+            probe:  true,
+            detail: 'Verifier approved a deliberately tampered package. No filing was frozen (probe runs never freeze), but the verifier failed to catch the fabrication.',
+          })
+        }
+        return res.status(422).json({
+          error:    'filing_rejected_by_verifier',
+          probe:    true,
+          filingId,
+          issues:   probeVerdict.issues,
+          verifier: { approved: false, role: probeVerdict.verifierRole || null, deployment: probeVerdict.verifierDeployment || null },
+          detail:   'Tamper probe: fabricated/altered fields correctly rejected by the independent verifier. No blob written, no filing record frozen.',
+        })
+      }
+
       let storagePath
       try {
         storagePath = await storePackage(tenantId, filingId, pkg)
@@ -520,7 +608,12 @@ router.post('/generate',
           const docs = cosmosFor(tenantId)
           const { auditRecord, chainHead } = chainedAudit(
             tenantId, `filings/${filingId}`, 'filing.verify_rejected', actor, new Date().toISOString(),
-            { filingId, stateCode: scope.stateCode, asOf: scope.asOf, packageHash: pkg.packageHash, issues },
+            {
+              filingId, stateCode: scope.stateCode, asOf: scope.asOf, packageHash: pkg.packageHash,
+              verifierRole:       verifierVerdict.verifierRole || null,
+              verifierDeployment: verifierVerdict.verifierDeployment || null,
+              issues,
+            },
             { productId: scope.productId },
           )
           await createBatch(docs, pkFor(tenantId, 'filings'), [auditRecord, chainHead])
@@ -543,7 +636,12 @@ router.post('/generate',
         storagePath,
         itemCount:    pkg.items.length,
         createdAt:    result.createdAt,
-        verifier:     { approved: true, issueCount: 0 },
+        verifier:     {
+          approved:   true,
+          issueCount: 0,
+          role:       verifierVerdict.verifierRole || null,
+          deployment: verifierVerdict.verifierDeployment || null,
+        },
       })
 
     } catch (e) {
