@@ -47,6 +47,8 @@ vi.mock('./context/useUser', () => ({
 }))
 
 import { DisagreementHeatmap } from './import/DisagreementHeatmap'
+import { AgentVisualizer } from './import/AgentVisualizer'
+import type { UnifiedStageEvent } from './import/unifiedImportClient'
 import { UnifiedImportModal } from './import/UnifiedImportModal'
 import HomeCheck from './routes/HomeCheck'
 import { CommandPalette } from './components/palette/CommandPalette'
@@ -109,6 +111,29 @@ describe('a11y (axe) — new/updated surfaces', () => {
       />,
     )
     await screen.findByRole('dialog')
+    expect(await axeViolations(document.body)).toEqual([])
+  })
+
+  it('AgentVisualizer (mid-run, inline) has no accessibility violations', async () => {
+    const events: UnifiedStageEvent[] = [
+      { kind: 'tool', name: 'brain:stage0:route', phase: 'end', summary: '1 workbook', at: 1 },
+      { kind: 'json', key: 'brain:input', value: { sourceName: 'GL.xlsx', sheetCount: 2, sheetNames: ['A', 'B'] }, at: 2 },
+      { kind: 'tool', name: 'brain:stage1:classify', phase: 'start', summary: 'Classifying 2 sheet(s)', at: 3 },
+      { kind: 'tool', name: 'brain:stage1:classify', phase: 'end', summary: '2 content sheet(s)', at: 4 },
+      { kind: 'tool', name: 'brain:stage4:extract', phase: 'progress', summary: 'batch 1/2', at: 5 },
+      { kind: 'json', key: 'brain:spend', value: { spendUsd: 0.5, calls: 3, noCap: true, byDeployment: { 'claude-haiku-4-5': { calls: 3, inputTokens: 1000, outputTokens: 200, usd: 0.5 } } }, at: 6 },
+    ]
+    const { container } = render(
+      <AgentVisualizer events={events} streaming expanded={false} onToggleExpand={() => {}} />,
+    )
+    expect(await axeViolations(container)).toEqual([])
+  })
+
+  it('AgentVisualizer (expanded overlay dialog) has no accessibility violations', async () => {
+    render(
+      <AgentVisualizer events={[]} streaming expanded={true} onToggleExpand={() => {}} />,
+    )
+    await screen.findByRole('dialog', { name: /agent pipeline/i })
     expect(await axeViolations(document.body)).toEqual([])
   })
 

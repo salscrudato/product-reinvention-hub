@@ -15,7 +15,7 @@
 //   • Nothing is written to Cosmos until the reviewer clicks "Import N items."
 //   • Writes go through importPlan() → adapter.db.mutate() — the mutation invariant holds.
 //   • VIEWER sees no write action (canEdit = false → modal body is read-only text).
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type {
   UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan,
@@ -34,6 +34,12 @@ import {
 } from '../components/ui/icons'
 import { readWorkbooks } from '../lib/import/readWorkbook'
 import { readUploadFiles, runUnifiedImport, type UnifiedStageEvent } from './unifiedImportClient'
+import { IconAgent } from '../components/icons'
+
+// The visualizer is opt-in, so its code loads only when someone actually watches —
+// keeps the Builder/Products route chunks inside the 25 kB per-chunk budget.
+const AgentVisualizer = lazy(() =>
+  import('./AgentVisualizer').then(m => ({ default: m.AgentVisualizer })))
 import { adapter } from '../lib/backend'
 import { canI } from '../lib/canI'
 import { importPlan, type ImportProgress, type ImportResult } from '../lib/import/importProduct'
@@ -139,6 +145,9 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const [progress, setProgress] = useState<ImportProgress>({ done: 0, total: 0, label: '' })
   const [result, setResult]     = useState<ImportResult | null>(null)
   const [error, setError]       = useState('')
+  // "Watch the agents" — opt-in live pipeline visualizer (renders only real SSE events).
+  const [watchAgents, setWatch] = useState(false)
+  const [vizExpanded, setVizExpanded] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFiles = useCallback(async (files: File[]) => {
@@ -309,7 +318,11 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
           onBrowse={() => inputRef.current?.click()} inputRef={inputRef} onFiles={handleFiles}
         />
       ) : phase === 'streaming' ? (
-        <StreamingPane fileNames={fileNames} stages={stages} />
+        <StreamingPane
+          fileNames={fileNames} stages={stages}
+          watchAgents={watchAgents} onToggleWatch={() => setWatch(w => !w)}
+          vizExpanded={vizExpanded} onToggleExpand={() => setVizExpanded(e => !e)}
+        />
       ) : phase === 'xlsx-plan' && localPlan ? (
         <XlsxPlanPane
           plan={localPlan}
@@ -373,6 +386,18 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
             <IconClose size={16} className="text-danger shrink-0 mt-0.5" />
             <div className="text-sm text-dim">{error || 'Something went wrong.'}</div>
           </div>
+          {/* If the user was watching the agents, keep the pipeline visible so the
+              failure point is evident (real events up to the disconnect). */}
+          {watchAgents && stages.length > 0 && (
+            <div className="max-h-[40vh] overflow-y-auto -mx-1 px-1">
+              <Suspense fallback={null}>
+                <AgentVisualizer
+                  events={stages} streaming={false} streamError={error || 'stream ended unexpectedly'}
+                  expanded={vizExpanded} onToggleExpand={() => setVizExpanded(e => !e)}
+                />
+              </Suspense>
+            </div>
+          )}
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={onClose}>Close</Button>
             <Button variant="primary" onClick={() => { setPhase('select'); setError(''); setBundle(null) }}>
@@ -427,26 +452,66 @@ function SelectPane({ dragOver, setDrag, onDrop, onBrowse, inputRef, onFiles }: 
   )
 }
 
-function StreamingPane({ fileNames, stages }: { fileNames: string[]; stages: UnifiedStageEvent[] }) {
+function StreamingPane({ fileNames, stages, watchAgents, onToggleWatch, vizExpanded, onToggleExpand }: {
+  fileNames: string[]; stages: UnifiedStageEvent[]
+  watchAgents: boolean; onToggleWatch: () => void
+  vizExpanded: boolean; onToggleExpand: () => void
+}) {
   const rows    = stages.filter(s => s.kind === 'tool')
   const notices = stages.filter(s => s.kind === 'notice' && s.notice)
   return (
-    <div className="flex flex-col gap-4 py-2" role="status" aria-live="polite" aria-label="Import progress">
+    // aria-live lives on the plain event list below (or inside the visualizer, which has
+    // its own polite announcer) — never on this whole pane, to avoid double announcements.
+    <div className="flex flex-col gap-4 py-2" aria-label="Import progress">
       <div className="flex items-center gap-2 text-sm text-text">
         <IconSpinner size={16} className="animate-spin text-accent" aria-hidden="true" />
-        Reading {fileNames.length} document{fileNames.length !== 1 ? 's' : ''} — fingerprint · plan · extract · reconcile…
+        <span className="flex-1">
+          Reading {fileNames.length} document{fileNames.length !== 1 ? 's' : ''} — fingerprint · plan · extract · reconcile…
+        </span>
+        {/* Opt-in agent visualizer toggle */}
+        <button
+          type="button"
+          onClick={onToggleWatch}
+          aria-pressed={watchAgents}
+          className="inline-flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          style={{
+            border: `1px solid ${watchAgents ? 'var(--color-accent)' : 'var(--color-border-strong)'}`,
+            color: watchAgents ? 'var(--color-accent)' : 'var(--color-dim)',
+            background: watchAgents ? 'var(--color-accent-soft)' : 'var(--color-surface)',
+          }}
+        >
+          <IconAgent size={12} aria-hidden="true" />
+          {watchAgents ? 'Watching the agents' : 'Watch the agents'}
+        </button>
       </div>
-      <div className="flex flex-col gap-1.5 max-h-[46vh] overflow-y-auto">
-        {rows.map((s, i) => (
-          <div key={i} className="flex items-center gap-2 text-xs">
-            {s.phase === 'end'
-              ? <IconCheckCircle size={13} className="text-good shrink-0" />
-              : <IconSpinner size={13} className="animate-spin text-accent shrink-0" aria-hidden="true" />}
-            <span className="font-mono text-dim">{s.name}</span>
-            {s.summary && <span className="text-faint truncate">· {s.summary}</span>}
-          </div>
-        ))}
-      </div>
+
+      {watchAgents ? (
+        <div className="max-h-[56vh] overflow-y-auto -mx-1 px-1">
+          <Suspense fallback={
+            <div className="flex items-center gap-2 text-xs text-dim py-2">
+              <IconSpinner size={13} className="animate-spin text-accent" aria-hidden="true" />
+              Loading the agent view…
+            </div>
+          }>
+            <AgentVisualizer
+              events={stages} streaming
+              expanded={vizExpanded} onToggleExpand={onToggleExpand}
+            />
+          </Suspense>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5 max-h-[46vh] overflow-y-auto" role="status" aria-live="polite">
+          {rows.map((s, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs">
+              {s.phase === 'end'
+                ? <IconCheckCircle size={13} className="text-good shrink-0" />
+                : <IconSpinner size={13} className="animate-spin text-accent shrink-0" aria-hidden="true" />}
+              <span className="font-mono text-dim">{s.name}</span>
+              {s.summary && <span className="text-faint truncate">· {s.summary}</span>}
+            </div>
+          ))}
+        </div>
+      )}
       {notices.map((s, i) => (
         <NoticeBanner key={`n${i}`} notice={s.notice!} />
       ))}

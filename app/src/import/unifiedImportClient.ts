@@ -9,12 +9,18 @@ import type { NoticeEvent, NoticeKind } from '../lib/ai/notices'
 // ─── Stage event ──────────────────────────────────────────────────────────────
 
 export interface UnifiedStageEvent {
-  kind:     'tool' | 'notice'
+  kind:     'tool' | 'notice' | 'json'
   name?:    string
-  phase?:   'start' | 'end'
+  phase?:   'start' | 'progress' | 'end'
   summary?: string
   message?: string
   notice?:  NoticeEvent
+  /** json events: the server's `key` (e.g. brain:stage1, brain:spend, filing:bundle). */
+  key?:     string
+  /** json events: the server payload, verbatim. */
+  value?:   unknown
+  /** Client receipt time (ms epoch) — powers real elapsed tickers; never server-invented. */
+  at:       number
 }
 
 // ─── File readers ─────────────────────────────────────────────────────────────
@@ -100,21 +106,25 @@ export async function runUnifiedImport(
     { documents, productName: opts.productName, filingState: opts.filingState },
     (chunk) => {
       let ev: {
-        t: string; name?: string; phase?: 'start' | 'end'; summary?: string;
+        t: string; name?: string; phase?: 'start' | 'progress' | 'end'; summary?: string;
         key?: string; value?: unknown; message?: string;
         level?: 'info' | 'warn'; kind?: NoticeKind; refs?: string[]
       }
       try { ev = JSON.parse(chunk) } catch { return }
+      const at = Date.now()
 
       if (ev.t === 'tool') {
-        opts.onStage?.({ kind: 'tool', name: ev.name, phase: ev.phase, summary: ev.summary })
+        opts.onStage?.({ kind: 'tool', name: ev.name, phase: ev.phase, summary: ev.summary, at })
       } else if (ev.t === 'notice') {
         opts.onStage?.({
-          kind: 'notice', message: ev.message,
+          kind: 'notice', message: ev.message, at,
           notice: { level: ev.level ?? 'info', message: ev.message ?? '', kind: ev.kind, refs: ev.refs },
         })
       } else if (ev.t === 'json') {
         if (ev.key === 'bundle') bundle = ev.value as UnifiedProposalBundle
+        // Forward every json event (brain:stage*, brain:spend, filing:*, import:spend …)
+        // so the agent visualizer can render real stage payloads + run telemetry.
+        opts.onStage?.({ kind: 'json', key: ev.key, value: ev.value, at })
       } else if (ev.t === 'error') {
         streamErr = ev.message ?? 'Unified import failed.'
       }

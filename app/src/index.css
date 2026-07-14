@@ -532,6 +532,16 @@ h1, h2 { text-wrap: balance; }
 @keyframes para-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .para-in { animation: para-in .28s var(--ease-spring) both; }
 
+/* ── Agent visualizer (import pipeline) — event-driven pulses only ────────────
+   viz-pulse travels a rail segment once per REAL received event (re-keyed by the
+   event count); viz-ring breathes on the active stage node. Both are neutralised
+   by the global reduced-motion block below, and the component additionally swaps
+   to a static stepper when the user prefers reduced motion. */
+@keyframes viz-pulse { from { top: 0; opacity: .9; } to { top: 100%; opacity: 0; } }
+.viz-pulse { animation: viz-pulse .6s ease-in both; }
+@keyframes viz-ring { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(1.35); opacity: 0; } }
+.viz-ring { animation: viz-ring 1.6s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+
 /* Glassmorphism surface for the facet panel + command-bar dropdown. */
 .glass {
   background: var(--glass-panel);
