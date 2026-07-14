@@ -273,7 +273,8 @@ function WorkspaceInner() {
           product={product}
           actor={{ uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }}
           onClose={() => setPromoteOpen(false)}
-          onPromoted={() => setPromoteOpen(false)}
+          // Promotion lands on the portfolio CARD view with the new card highlighted.
+          onPromoted={(id) => { setPromoteOpen(false); navigate(`/app/products?view=cards&promoted=${encodeURIComponent(id)}`) }}
         />
       )}
     </div>

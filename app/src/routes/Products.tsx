@@ -8,7 +8,7 @@
 // value sets come from deriveSegmentAxes(), so registering a new line in the LOB registry
 // extends the facets automatically; nothing here is hard-coded.
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import Fuse from 'fuse.js'
 import { toast } from 'sonner'
 import { adapter } from '../lib/backend'
@@ -77,6 +77,23 @@ export default function Products() {
   // Keyboard cursor over the visible results — driven from the search field
   // (↑/↓ move, Enter opens, Esc clears). -1 = no card selected.
   const [focusIdx, setFocusIdx] = useState(-1)
+
+  // Deep-linkable view + post-promotion landing: /app/products?view=cards&promoted=<id>
+  // switches (and persists) the view and highlights the just-promoted card, so
+  // promotion always lands the reviewer on the portfolio cards with their product lit.
+  const [params, setParams] = useSearchParams()
+  const promotedId = params.get('promoted')
+  useEffect(() => {
+    const v = params.get('view')
+    if (v === 'cards' || v === 'tree') setViewPersist(v)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params])
+  useEffect(() => {
+    if (!promotedId) return
+    // Clear the one-shot highlight after the entrance settles.
+    const t = setTimeout(() => setParams(p => { const n = new URLSearchParams(p); n.delete('promoted'); return n }, { replace: true }), 3500)
+    return () => clearTimeout(t)
+  }, [promotedId, setParams])
 
   const setViewPersist = (m: ProductView) => { setView(m); localStorage.setItem(VIEW_KEY, m) }
 
@@ -148,6 +165,19 @@ export default function Products() {
       if (target) { e.preventDefault(); navigate(`/app/products/${target.id}/overview`) }
     } else if (e.key === 'Escape') { setQuery(''); setFocusIdx(-1) }
   }
+
+  // Card-view hierarchy: group the visible cards by line of business (stable name
+  // order), carrying each card's flat index so keyboard ↑/↓ still walks the grid.
+  const groupedCards = useMemo(() => {
+    const groups = new Map<string, { p: WithId<Product>; idx: number }[]>()
+    visible.forEach((p, idx) => {
+      const lobName = p.lob?.name || 'Other lines'
+      const list = groups.get(lobName) ?? []
+      list.push({ p, idx })
+      groups.set(lobName, list)
+    })
+    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [visible])
 
   // Portfolio at-a-glance KPIs for the hero stat line.
   const kpis = useMemo(() => {
@@ -273,14 +303,29 @@ export default function Products() {
           />
         )
       ) : view === 'cards' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Entrance stagger, matching the Coverage card grid so both surfaces share
-              one motion language. Capped + reduced-motion-neutralised (see index.css). */}
-          {visible.map((p, i) => (
-            <div key={p.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(i, 8) * 40}ms` } as React.CSSProperties}>
-              <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} onRetire={() => setRetireFor(p)}
-                highlight={debouncedQuery} focused={i === focusIdx} />
-            </div>
+        // Cards keep their hierarchy: grouped by line of business with quiet
+        // section headers + counts, so the portfolio reads structured, not flat.
+        <div className="flex flex-col gap-5">
+          {groupedCards.map(([lobName, group]) => (
+            <section key={lobName} aria-label={lobName} className="flex flex-col gap-3">
+              {groupedCards.length > 1 && (
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint">{lobName}</h2>
+                  <span className="text-[11px] text-faint tnum">{group.length}</span>
+                  <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} aria-hidden="true" />
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Entrance stagger, matching the Coverage card grid so both surfaces share
+                    one motion language. Capped + reduced-motion-neutralised (see index.css). */}
+                {group.map(({ p, idx }) => (
+                  <div key={p.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(idx, 8) * 40}ms` } as React.CSSProperties}>
+                    <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} onRetire={() => setRetireFor(p)}
+                      highlight={debouncedQuery} focused={idx === focusIdx || p.id === promotedId} />
+                  </div>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       ) : (

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { execSync } from 'node:child_process'
@@ -25,8 +25,21 @@ function resolveBuildId(): string {
 }
 const buildId = resolveBuildId()
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Optional dev-time API proxy: set VITE_DEV_PROXY_TARGET (gitignored
+  // .env.development.local) to a running /api host — e.g. the deployed dev App
+  // Service — and leave VITE_API_BASE empty. The browser then talks same-origin
+  // to Vite and Vite forwards /api/* (the server has no CORS by design).
+  const env = loadEnv(mode, process.cwd(), '')
+  const proxyTarget = env.VITE_DEV_PROXY_TARGET?.trim()
+
+  return {
   define: { __BUILD_ID__: JSON.stringify(buildId) },
+  server: proxyTarget ? {
+    proxy: {
+      '/api': { target: proxyTarget, changeOrigin: true, secure: true },
+    },
+  } : undefined,
   plugins: [
     react(),
     tailwindcss(),
@@ -61,4 +74,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })

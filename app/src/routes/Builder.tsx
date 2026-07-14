@@ -115,7 +115,8 @@ export default function Builder() {
           product={promoteFor}
           actor={{ uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }}
           onClose={() => setPromoteFor(null)}
-          onPromoted={id => navigate(`/app/products/${id}/overview`)}
+          // Promotion lands on the portfolio CARD view with the new card highlighted.
+          onPromoted={id => navigate(`/app/products?view=cards&promoted=${encodeURIComponent(id)}`)}
         />
       )}
       {deleteFor && user && (
