@@ -153,6 +153,12 @@ function joinGroupWithIso(brainGroup, isoGroup, kindLabel, importWarnings, refId
     for (const f of ISO_IDENTITY_FIELDS) {
       if (isoP.data[f] !== undefined) brainP.data[f] = isoP.data[f]
     }
+    // Gap-fill: any template field the brain did NOT extract comes from the
+    // deterministic parse (requirement, claimsBasis, source, …). The brain's
+    // cited value always wins when both sides carry the field.
+    for (const [k, v] of Object.entries(isoP.data)) {
+      if (brainP.data[k] === undefined && k !== 'confidence' && k !== 'citation') brainP.data[k] = v
+    }
     brainP.refId = isoP.refId
     brainP.docId = isoP.docId ?? toDocId(isoP.refId)
     brainP.data.refId = isoP.refId
@@ -281,7 +287,6 @@ function buildImportPlan(brainOutput, opts = {}) {
       data: {
         refId: productRefId,
         name:  sourceName ? sourceName.replace(/\.[^.]+$/, '') : 'Imported Product',
-        status: 'DRAFT',
         confidence: 0.5,
         citation: '(synthesized: source had no product row)',
       },
@@ -377,8 +382,14 @@ function buildImportPlan(brainOutput, opts = {}) {
         productPlanned.refId = isoProduct.refId
         productPlanned.docId = isoProduct.docId ?? toDocId(isoProduct.refId)
         productPlanned.data.refId = isoProduct.refId
-        for (const f of ISO_IDENTITY_FIELDS) if (isoProduct.data[f] !== undefined && productPlanned.data[f] === undefined) productPlanned.data[f] = isoProduct.data[f]
-        if (!productPlanned.data.name && isoProduct.data.name) { productPlanned.data.name = isoProduct.data.name; productPlanned.label = isoProduct.data.name }
+        for (const [k, v] of Object.entries(isoProduct.data)) {
+          if (productPlanned.data[k] === undefined && k !== 'confidence' && k !== 'citation') productPlanned.data[k] = v
+        }
+      }
+      // The template's own product name beats a filename-derived stub name.
+      if (typeof isoProduct.data.name === 'string' && isoProduct.data.name.trim()) {
+        productPlanned.data.name = isoProduct.data.name
+        productPlanned.label = isoProduct.data.name
       }
       productRefId = productPlanned.refId
       // Re-stamp product linkage on dependents after any identity change.
