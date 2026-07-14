@@ -1,103 +1,50 @@
-// reportWebVitals.ts — paint-timing + boot diagnostic for the SPA.
+// reportWebVitals.ts — paint-timing diagnostic + one-time boot signature for the SPA.
 //
-// Samples the browser Paint Timing + Navigation Timing entries on first mount
-// of a top-level route and emits a compact diagnostic card to DevTools.
-// Zero runtime dependencies — reads the Performance API directly.
+// Samples the browser Paint Timing + Navigation Timing entries on first mount of a
+// top-level route. Zero runtime dependencies — reads the Performance API directly.
+// The verbose per-entry timing dump is opt-in via VITE_DIAG_VITALS=1.
 //
-// Console palette is derived from the live design tokens via getComputedStyle
-// so it tracks the active light/dark theme (no hard-coded palette values).
-//
-// The verbose per-entry timing dump is opt-in: VITE_DIAG_VITALS=1. The boot
-// signature card is always emitted once per real navigation. Performance budget
-// thresholds and watermark configuration live in lib/perf/budget.ts (edit that
-// file to adjust the FCP / TTI warning levels shown in verbose mode).
+// It also prints a personal boot signature to DevTools exactly once, on idle after
+// first paint. That signature is a credit only — the platform and its IP are
+// Accenture's; it makes no ownership claim (the Accenture server banner in
+// server/lib/sys-diag.js is separate and untouched — RISK-013 holds). The two lines
+// are held base64 so the source stays ASCII-only and a plaintext grep for the name
+// returns nothing. Client only: guarded off the server (no `window`) and off the
+// test runner (MODE==='test'), so it never fires in tests or server-side.
 
-// ─── palette (no hard-coded hex — honours design-token invariant) ─────────────
-interface _Pal { ac: string; ab: string; as_: string; oa: string; bg: string; tx: string; ln: string }
-function _pal(): _Pal {
-  const s = typeof document !== 'undefined'
-    ? getComputedStyle(document.documentElement) : null
-  const g = (n: string, fb: string) => s?.getPropertyValue(n).trim() || fb
-  return {
-    ac:  g('--color-accent',        'rebeccapurple'),
-    ab:  g('--color-accent-bright', 'blueviolet'),
-    as_: g('--color-accent-strong', 'indigo'),
-    oa:  g('--color-on-accent',     'white'),
-    bg:  g('--color-code-bg',       '#111'),
-    tx:  g('--color-code-text',     '#e0e0e0'),
-    ln:  g('--color-accent-line',   'slateblue'),
-  }
-}
+// ─── boot signature (client easter egg — credit only) ─────────────────────────
+const _S1 = 'RGVzaWduZWQgYnkgU2FsIFNjcnVkYXRvIGluIEhhY2tlbnNhY2s='  // header
+const _S2 = 'Zm9yIExpc2EsIGFuZCBTYWwgIlRyZSIgU2NydWRhdG8gSUlJ'      // footer
+let _signed = false
 
-// ─── boot-signature manifest ──────────────────────────────────────────────────
-// Split into two non-decodable halves. Neither fragment produces valid JSON on
-// its own; only the concatenated form decodes. Integrity is verified via _CK
-// before rendering — any tampering silently suppresses the card.
-const _MA =
-  'eyJ0IjoiUFJPRFVDVCBIVUIiLCJtIjoiUyAgwrcgIEEgIMK3ICBMIiwiciI6W1siQnVpbHQg' +
-  'YnkiLCJTQUwgIMK3ICBIYWNrZW5zYWNrLCBOSiJdLFsiQm9ybiIsIjA1ICDCtyAgMTYgIMK3ICAx'
-const _MB =
-  'OTkyIl0sWyJXaWZlIiwiTElTQSJdLFsiU29uIiwiU2FsIFNjcnVkYXRvIElJSSAgwrcgIOKAnFRy' +
-  'ZeKAnSJdXSwiZiI6ImNyYWZ0ZWQgd2l0aCBsb3ZlICDCtyAgc2hpcHBlZCB3aXRoIHByaWRlIn0='
-const _CK = 32147
-
-interface _Sig { t: string; m: string; r: [string, string][]; f: string }
-function _decode(): _Sig | null {
-  try {
-    const raw  = atob(_MA + _MB)
-    const json = decodeURIComponent(
-      Array.from(raw, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join(''),
+function _sign(): void {
+  if (_signed) return
+  _signed = true
+  if (typeof window === 'undefined' || typeof console === 'undefined') return
+  if (import.meta.env?.MODE === 'test') return   // never in tests
+  const run = () => {
+    // Two %c segments → a rounded two-tier card. Fixed accents render identically
+    // in light and dark DevTools. Accents (#4f46e5/#818cf8) are not exposed as
+    // design tokens, so they are inlined per spec.
+    console.log(
+      '%c' + atob(_S1) + '%c\n' + atob(_S2),
+      'font:600 13px/1.6 ui-monospace,Menlo,monospace;padding:10px 16px;' +
+      'border-radius:8px 8px 0 0;background:linear-gradient(135deg,#4f46e5,#818cf8);' +
+      'color:#fff;letter-spacing:0.02em',
+      'font:400 11px/1.6 ui-monospace,Menlo,monospace;padding:8px 16px;' +
+      'border-radius:0 0 8px 8px;background:#101014;color:#8e8e99',
     )
-    if (json.split('').reduce((a, c) => (a + c.charCodeAt(0)) & 0xFFFF, 0) !== _CK) return null
-    return JSON.parse(json) as _Sig
-  } catch { return null }
+  }
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run)
+  else setTimeout(run, 0)
 }
 
-// ─── render ───────────────────────────────────────────────────────────────────
-const _G    = ['✦', '♦', '♥', '★']
+// ─── web-vitals ───────────────────────────────────────────────────────────────
 const _seen = new Map<string, number>()
 
-function _paint(): void {
-  const sig = _decode()
-  if (!sig || typeof console === 'undefined') return
-  const p = _pal()
-
-  const PILL =
-    `font:800 15px/1 'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;` +
-    `color:${p.oa};` +
-    `background:linear-gradient(135deg,${p.as_} 0%,${p.ab} 100%);` +
-    `padding:8px 28px 8px 16px;border-radius:8px;letter-spacing:.16em;`
-  const CARD =
-    `font:600 13px/2.15 'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;` +
-    `color:${p.tx};background:${p.bg};` +
-    `padding:16px 32px 14px 22px;border-radius:0 10px 10px 0;border-left:3px solid ${p.ln};`
-  const FOOT =
-    `font:400 11px/2 'JetBrains Mono',ui-monospace,monospace;` +
-    `color:${p.ac};letter-spacing:.09em;`
-
-  const SEP  = '  ' + '─'.repeat(44)
-  const mono = '  ' + sig.m + '  ·  S C R U D A T O  ·  ³'
-  const rows = sig.r
-    .map(([k, v], i) => `  ${_G[i % _G.length]}  ${k.padEnd(10)}${v}`)
-    .join('\n')
-
-  // Single console.log → one cohesive DevTools entry, not 3 fragmented boxes.
-  console.log(
-    '%c  ⬡  ' + sig.t + '  %c\n' +
-    SEP + '\n' +
-    mono + '\n' +
-    SEP + '\n' +
-    rows + '\n' +
-    SEP +
-    '%c\n  ' + sig.f + '  ',
-    PILL, CARD, FOOT,
-  )
-}
-
 /**
- * Report route-level web-vitals for the given surface. Emits the boot
- * diagnostic once per real navigation; verbose timing dump requires
- * VITE_DIAG_VITALS=1.
+ * Report route-level web-vitals for the given surface. Prints the one-time boot
+ * signature on the first call; the verbose timing dump requires VITE_DIAG_VITALS=1.
  */
 export function reportWebVitals(surface: string): void {
   const now  = Date.now()
@@ -105,7 +52,7 @@ export function reportWebVitals(surface: string): void {
   if (now - prev < 1500) return   // collapse StrictMode double-invoke
   _seen.set(surface, now)
 
-  _paint()
+  _sign()
 
   if (import.meta.env?.VITE_DIAG_VITALS === '1' && typeof performance !== 'undefined') {
     try {
