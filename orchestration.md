@@ -85,7 +85,7 @@ Append one row per push (newest first). Time = local (ET).
 
 | When | Run | Sha | Workstream | What shipped |
 |---|---|---|---|---|
-| 02:3x | — | `3414225`+ | filing-verifier (Lane B) | Lane B done: live proof 15/15 (tamper 422, VIEWER 403, reserved_base 403) + EXECUTION-B ledger + stowaway/verify tools note + run-2432 triage for import-brain. Batch also carries other lanes' committed work (F5 `dd836c2`, …). |
+| 03:00 | 2434 ✅ | `7ff0daf` | filing-verifier (Lane B) batch | Full 4-hour batch: Lane B docs/proof (`3414225`,`6cb50f7`) + F5 lifecycle/toggles/metering (`dd836c2`,`c012aff`,`d53b6a2`) + GTM Task Seeding v2 (`96b94f4`,`2827dbc`) + census heals (`612424a`,`7ff0daf`) that kept CI green for all of it. Gate at push sha: 1075+186 tests, canaries ✅. |
 | 01:31 | 2427 | `9be28d0` | filing-verifier (Lane B) | MID_REASONER verifier + ladder + tamper probe + filings-base 403 guard + tests + live harness |
 | 01:40 | 2428 | `677d748` | public-surfaces (F1·A) | Icon registry → `components/icons/` (+7 F3 glyphs + IconShare); public `/pricing` page + hand-rolled-SVG ROI calc + `lib/pricing.ts` (ILLUSTRATIVE). Carried admin/auth `8c17381` on the fast-forward. |
 | 20:05 | 2425 | `912b643` | import-brain | Harness retry on SSE termination; hazard docs |
