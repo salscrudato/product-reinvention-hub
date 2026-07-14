@@ -72,6 +72,24 @@ describe('SeedReviewSheet — walk the flow', () => {
     expect(onSeeded).toHaveBeenCalledWith(expect.any(String), remaining)
   })
 
+  it('never greys out silently: a missing launch deadline shows why + a one-click fix (R0 regression)', () => {
+    // Root cause of the reported "greyed-out Seed": a project with no
+    // targetLaunchDate made plan.fits false with no explanation rendered.
+    const undated = { ...project, targetLaunchDate: '' } as unknown as ProjectDoc
+    render(<SeedReviewSheet project={undated} priorSeeded={[]} actor={actor} onClose={() => {}} onSeeded={() => {}} />)
+
+    const btn = screen.getByRole('button', { name: /^Seed \d+ tasks$/ }) as HTMLButtonElement
+    expect(btn.disabled).toBe(true)
+    // The reason is stated inline (footer status) AND as a banner with a fix.
+    expect(screen.getByText('Set a launch deadline above to schedule the plan.')).toBeTruthy()
+    const fix = screen.getByRole('button', { name: /Use earliest launch/ })
+
+    // One click resolves it: deadline snaps to the earliest launch and Seed enables.
+    fireEvent.click(fix)
+    expect((screen.getByRole('button', { name: /^Seed \d+ tasks$/ }) as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.queryByText('Set a launch deadline above to schedule the plan.')).toBeNull()
+  })
+
   it('blocks seeding when nothing new is selectable and shows why', () => {
     // Re-seed an already-complete board: everything is present → nothing to add.
     const prior = GTM_PROCESS_TEMPLATE.map((t, i) =>

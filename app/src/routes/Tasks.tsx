@@ -7,9 +7,13 @@
 // Every write (project + task creates/edits/completes + the whole seed batch) goes through
 // the adapter's atomic mutate()/mutateBatch(). VIEWER (or any role-less session) sees a
 // read-only board: no create/seed/complete controls, enforced here AND in firestore.rules.
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import {
+  DndContext, PointerSensor, useSensor, useSensors, useDroppable, useDraggable,
+  type DragEndEvent,
+} from '@dnd-kit/core'
 import { adapter, MutationConflictError } from '../lib/backend'
 import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
@@ -17,10 +21,10 @@ import { canI } from '../lib/canI'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
 import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
 import {
-  IconPlus, IconChart, IconChevronDown, IconTasks, IconWarning, IconCheck,
+  IconPlus, IconChart, IconChevronDown, IconTasks, IconWarning, IconCheck, IconDrag,
 } from '../components/ui/icons'
 import { businessDaysBetween } from '@pf/shared'
-import type { Product, TypeOfWork } from '@pf/shared'
+import type { Product, TypeOfWork, TaskColumn } from '@pf/shared'
 import {
   GTM_COLUMNS, GTM_PHASES, WORK_TYPES, DISPOSITIONS, DISPOSITION_META, byDueThenOrder,
   isOverdue, startOfTodayMs, todayISO, fmtShort, toMillis, doneFields,
@@ -190,6 +194,30 @@ export default function Tasks() {
       if (err instanceof MutationConflictError) conflictToast({})
       else toast.error('Update failed')
     }
+  }
+
+  // Drag a card between columns — same optimistic overlay + atomic mutate as the
+  // done-toggle; a failed write rolls the card back and toasts honestly.
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  async function moveTask(task: TaskDoc, toColumn: TaskColumn) {
+    if (!actor || task.column === toColumn) return
+    setDoneOverride(prev => ({ ...prev, [task.id]: { ...prev[task.id], column: toColumn } }))
+    try {
+      await adapter.db.mutate({
+        op: 'update', path: `tasks/${task.id}`, data: { column: toColumn },
+        entityType: 'task', productId: task.productId, actor, expectedRev: task.rev,
+      })
+    } catch (err) {
+      setDoneOverride(prev => { const next = { ...prev }; delete next[task.id]; return next })
+      if (err instanceof MutationConflictError) conflictToast({})
+      else toast.error('Could not move the task')
+    }
+  }
+  function onDragEnd(e: DragEndEvent) {
+    const toColumn = e.over?.id as TaskColumn | undefined
+    if (!toColumn || !GTM_COLUMNS.some(c => c.id === toColumn)) return
+    const task = (tasks ?? []).find(t => t.id === e.active.id)
+    if (task) void moveTask(task, toColumn)
   }
 
   const activeFilters = [mine, overdue, !!typeFilter, !!phaseFilter, !!dispFilter].filter(Boolean).length
@@ -396,31 +424,30 @@ export default function Tasks() {
             )}
           </div>
 
-          {/* Board */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 items-start">
-            {GTM_COLUMNS.map(col => {
-              const items = byColumn[col.id]!
-              return (
-                <section key={col.id} className="rounded-[14px] p-1.5 min-h-[120px]"
-                  style={{ background: 'var(--color-raised)', border: '1px solid var(--color-border)' }}
-                  aria-label={col.label}>
-                  <div className="flex items-center gap-2 px-2.5 py-2">
-                    <span className="w-5 h-[3px] rounded-full" style={{ background: col.bar }} aria-hidden="true" />
-                    <span className="text-[11px] font-semibold uppercase tracking-[.05em] text-dim">{col.label}</span>
-                    <span className="ml-auto text-[11px] font-semibold text-faint tabular-nums px-1.5 rounded-[7px] bg-surface"
-                      style={{ border: '1px solid var(--color-border)' }}>{items.length}</span>
-                  </div>
-                  <div className="flex flex-col gap-2 px-1.5 pb-1.5">
+          {/* Board — drag a card between columns (EDITOR+); each move is one atomic mutate. */}
+          <DndContext sensors={dndSensors} onDragEnd={onDragEnd}>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 items-start">
+              {GTM_COLUMNS.map(col => {
+                const items = byColumn[col.id]!
+                return (
+                  <DroppableColumn key={col.id} id={col.id} label={col.label} bar={col.bar} count={items.length}>
                     {items.length > 0
-                      ? items.map(t => <TaskCard key={t.id} task={t} canEdit={canEdit} todayIso={today}
-                          arriving={!!arrivedBatch && t.seedBatchId === arrivedBatch}
-                          onToggle={toggleDone} onOpen={t => setDetailId(t.id)} />)
+                      ? items.map(t => (
+                          <DraggableCard key={t.id} task={t} canEdit={canEdit}>
+                            {handle => (
+                              <TaskCard task={t} canEdit={canEdit} todayIso={today}
+                                arriving={!!arrivedBatch && t.seedBatchId === arrivedBatch}
+                                dragHandle={handle}
+                                onToggle={toggleDone} onOpen={t => setDetailId(t.id)} />
+                            )}
+                          </DraggableCard>
+                        ))
                       : <div className="text-xs text-faint text-center italic py-4">Nothing here</div>}
-                  </div>
-                </section>
-              )
-            })}
-          </div>
+                  </DroppableColumn>
+                )
+              })}
+            </div>
+          </DndContext>
 
           {/* Completed */}
           <div className="mt-2 pt-4" style={{ borderTop: '1px dashed var(--color-border)' }}>
@@ -462,6 +489,63 @@ export default function Tasks() {
         <TaskDetailDrawer key={detailTask.id} task={detailTask} project={current}
           canEdit={canEdit} actor={actor} onClose={() => setDetailId(null)} />
       )}
+    </div>
+  )
+}
+
+// ─── Board DnD wrappers ─────────────────────────────────────────────────────────
+
+/** A droppable board column: header (tint bar · label · count) + card stack.
+ *  The whole column glows softly while a card hovers over it. */
+function DroppableColumn({ id, label, bar, count, children }: {
+  id: string; label: string; bar: string; count: number; children: ReactNode
+}) {
+  const { isOver, setNodeRef } = useDroppable({ id })
+  return (
+    <section ref={setNodeRef} aria-label={label}
+      className="rounded-[14px] p-1.5 min-h-[120px] transition-shadow"
+      style={{
+        background: isOver ? 'var(--color-accent-soft)' : 'var(--color-raised)',
+        border: `1px solid ${isOver ? 'var(--color-accent-line)' : 'var(--color-border)'}`,
+      }}>
+      <div className="flex items-center gap-2 px-2.5 py-2">
+        <span className="w-5 h-[3px] rounded-full" style={{ background: bar }} aria-hidden="true" />
+        <span className="text-[11px] font-semibold uppercase tracking-[.05em] text-dim">{label}</span>
+        <span className="ml-auto text-[11px] font-semibold text-faint tabular-nums px-1.5 rounded-[7px] bg-surface"
+          style={{ border: '1px solid var(--color-border)' }}>{count}</span>
+      </div>
+      <div className="flex flex-col gap-2 px-1.5 pb-1.5">{children}</div>
+    </section>
+  )
+}
+
+/** Draggable wrapper for one card. Render-prop hands the grip handle to TaskCard so
+ *  the card's open/complete buttons stay plain buttons (drag never hijacks a click). */
+function DraggableCard({ task, canEdit, children }: {
+  task: TaskDoc; canEdit: boolean; children: (handle: ReactNode) => ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id, disabled: !canEdit })
+  const handle = canEdit ? (
+    <button
+      type="button"
+      {...attributes}
+      {...listeners}
+      aria-label={`Move task: ${task.title}`}
+      title="Drag to another column"
+      className="self-start shrink-0 -mr-1 p-1 rounded-[6px] text-faint opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-dim cursor-grab active:cursor-grabbing touch-none transition-opacity focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+    >
+      <IconDrag size={13} aria-hidden="true" />
+    </button>
+  ) : undefined
+  return (
+    <div ref={setNodeRef}
+      style={{
+        transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
+        zIndex: isDragging ? 30 : undefined,
+        position: 'relative',
+        opacity: isDragging ? 0.92 : undefined,
+      }}>
+      {children(handle)}
     </div>
   )
 }

@@ -57,13 +57,27 @@ export function AdhocTaskDialog({ project, actor, onClose }: Props) {
   }
 
   return (
-    <Dialog open onClose={onClose} title="New task">
-      <p className="text-[12.5px] text-dim -mt-2 mb-4">A one-off task in this project, outside the seeded process.</p>
-      <div className="flex flex-col gap-3.5">
+    <Dialog
+      open
+      onClose={onClose}
+      title="New task"
+      footer={
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="primary" size="sm" type="submit" form="adhoc-task-form" disabled={busy}>
+            {busy ? 'Adding…' : 'Add task'}
+          </Button>
+        </div>
+      }
+    >
+      {/* Form semantics: Enter in any field submits; Esc (Dialog) closes. The pinned
+          footer's submit button targets this form by id since it renders outside it. */}
+      <form id="adhoc-task-form" onSubmit={e => { e.preventDefault(); void create() }} className="flex flex-col gap-4">
+        <p className="text-[12.5px] text-dim">A one-off task in this project, outside the seeded process.</p>
         <Input label="Task" value={title} onChange={e => setTitle(e.target.value)}
           placeholder="e.g. Align pricing with reinsurance treaty" autoFocus />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-text">Column</span>
             <select className={selectCls} style={{ borderColor: 'var(--color-border-strong)' }}
@@ -74,7 +88,7 @@ export function AdhocTaskDialog({ project, actor, onClose }: Props) {
           <Input label="Due date" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <Input label="Owner" value={owner} onChange={e => setOwner(e.target.value)} placeholder="Owner role" />
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-text">Type of work</span>
@@ -84,12 +98,7 @@ export function AdhocTaskDialog({ project, actor, onClose }: Props) {
             </select>
           </label>
         </div>
-
-        <div className="flex items-center justify-end gap-2 pt-1">
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancel</Button>
-          <Button variant="primary" size="sm" onClick={() => void create()} disabled={busy}>Add task</Button>
-        </div>
-      </div>
+      </form>
     </Dialog>
   )
 }

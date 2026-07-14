@@ -38,8 +38,10 @@ function CheckBox({ done, onToggle, size = 19, label }: { done: boolean; onToggl
   )
 }
 
-export function TaskCard({ task, canEdit, todayIso, arriving, onToggle, onOpen }: {
+export function TaskCard({ task, canEdit, todayIso, arriving, dragHandle, onToggle, onOpen }: {
   task: TaskDoc; canEdit: boolean; todayIso: string; arriving?: boolean
+  /** Optional drag affordance (grip) rendered top-right — supplied by the board's DnD wrapper. */
+  dragHandle?: React.ReactNode
   onToggle: (t: TaskDoc) => void; onOpen: (t: TaskDoc) => void
 }) {
   const overdue = isOverdue(task, todayIso)
@@ -68,7 +70,9 @@ export function TaskCard({ task, canEdit, todayIso, arriving, onToggle, onOpen }
           focus-visible work for free; VIEWER opens the identical (read-only) panel. */}
       <button type="button" onClick={() => onOpen(task)} aria-label={`Open task: ${task.title}`}
         className="flex-1 min-w-0 text-left rounded-[8px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-        <div className="text-[13px] font-medium leading-snug text-text">{task.title}</div>
+        <div className="flex items-start gap-1.5">
+          <div className="flex-1 min-w-0 text-[13px] font-medium leading-snug text-text">{task.title}</div>
+        </div>
 
         {task.origin === 'adhoc'
           ? <span className="inline-block mt-1.5 text-[9.5px] font-bold uppercase tracking-[.05em] text-faint rounded-[5px] px-1.5 py-0.5"
@@ -86,8 +90,10 @@ export function TaskCard({ task, canEdit, todayIso, arriving, onToggle, onOpen }
           {task.ongoing ? (
             <span className="text-[11px] font-semibold rounded-[6px] px-1.5 py-0.5 bg-accent-soft text-accent">Ongoing</span>
           ) : task.dueAt ? (
-            <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${overdue ? 'text-danger' : 'text-dim'}`}>
-              <CalendarGlyph />{fmtShort(task.dueAt)}
+            // Overdue reads calm: a soft danger pill, not shouting red text.
+            <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${overdue ? 'text-danger rounded-[6px] px-1.5 py-0.5' : 'text-dim'}`}
+              style={overdue ? { background: 'var(--color-danger-soft)' } : undefined}>
+              <CalendarGlyph />{fmtShort(task.dueAt)}{overdue ? ' · overdue' : ''}
             </span>
           ) : null}
           <span className="ml-auto flex items-center gap-1.5">
@@ -103,6 +109,9 @@ export function TaskCard({ task, canEdit, todayIso, arriving, onToggle, onOpen }
           </span>
         </div>
       </button>
+
+      {/* Drag affordance — visible on hover/focus so the card invites moving. */}
+      {dragHandle}
     </div>
   )
 }

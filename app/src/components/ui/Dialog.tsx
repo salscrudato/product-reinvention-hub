@@ -13,12 +13,17 @@ interface DialogProps {
   title?:     string
   children:   ReactNode
   width?:     string
+  /** Optional pinned footer (actions). Providing it switches the panel to the
+   *  structured layout: pinned header + ONE interior scroll region + pinned
+   *  footer — body content can never bleed past either. Omit it and the panel
+   *  keeps the classic single-flow layout (overflow visible, dropdown-safe). */
+  footer?:    ReactNode
 }
 
 // Selector for the elements Tab can reach inside the panel.
 const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-export function Dialog({ open, onClose, title, children, width = 'max-w-lg' }: DialogProps) {
+export function Dialog({ open, onClose, title, children, width = 'max-w-lg', footer }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId  = useId()
 
@@ -87,18 +92,40 @@ export function Dialog({ open, onClose, title, children, width = 'max-w-lg' }: D
           aria-labelledby={title ? titleId : undefined}
           tabIndex={-1}
           onClick={(e) => e.stopPropagation()}
-          className={`relative w-full ${width} bg-surface rounded-[16px] p-4 sm:p-6 shadow-2xl rise-in outline-none`}
+          className={`relative w-full ${width} bg-surface rounded-[16px] ${footer ? 'flex flex-col max-h-[calc(100svh-4rem)] overflow-hidden' : 'p-4 sm:p-6'} shadow-2xl rise-in outline-none`}
           style={{ border: '1px solid var(--color-border)' }}
         >
-          {title && (
-            <div className="flex items-center justify-between mb-4">
-              <h2 id={titleId} className="text-base font-semibold text-text">{title}</h2>
-              <button onClick={onClose} className="text-faint hover:text-text rounded-[6px] p-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Close">
-                <IconClose size={16} aria-hidden="true" />
-              </button>
-            </div>
+          {footer ? (
+            <>
+              {/* Structured layout: pinned header · one interior scroll region · pinned footer. */}
+              {title && (
+                <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-3.5 shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <h2 id={titleId} className="text-base font-semibold text-text">{title}</h2>
+                  <button onClick={onClose} className="text-faint hover:text-text rounded-[6px] p-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Close">
+                    <IconClose size={16} aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-4">
+                {children}
+              </div>
+              <div className="px-5 sm:px-6 py-3.5 shrink-0 bg-surface" style={{ borderTop: '1px solid var(--color-border)' }}>
+                {footer}
+              </div>
+            </>
+          ) : (
+            <>
+              {title && (
+                <div className="flex items-center justify-between mb-4">
+                  <h2 id={titleId} className="text-base font-semibold text-text">{title}</h2>
+                  <button onClick={onClose} className="text-faint hover:text-text rounded-[6px] p-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" aria-label="Close">
+                    <IconClose size={16} aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+              {children}
+            </>
           )}
-          {children}
         </div>
       </div>
     </div>,

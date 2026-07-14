@@ -52,8 +52,20 @@ export function SeedReviewSheet({ project, priorSeeded, actor, onClose, onSeeded
     [selectedKey, present, deadline, businessDays, overridesKey],
   )
   const { plan } = review
-  const tooTight = !plan.fits && plan.warnings.length > 0
+  const missingDeadline = !deadline
+  const tooTight = !plan.fits && !missingDeadline
   const canSeed = review.newCount > 0 && plan.fits && !busy
+  // Why Seed is disabled, in plain language — ALWAYS shown inline beside the button
+  // (root cause of the "silently greyed-out Seed": a missing deadline, or a fits
+  // failure with no pre-launch warning row, used to render no explanation at all).
+  const seedBlockReason = busy ? null
+    : review.newCount === 0
+      ? (present.size > 0 ? 'Everything is already on the board.' : 'Select at least one task to seed.')
+      : missingDeadline
+        ? 'Set a launch deadline above to schedule the plan.'
+        : !plan.fits
+          ? `Deadline too tight — needs ${plan.warnings[0]?.neededDays ?? plan.criticalPathDays} ${businessDays ? 'business' : 'calendar'} days (earliest launch ${fmtShort(plan.earliestLaunch)}).`
+          : null
 
   // Row lookup for computed dates (only selected rows are in the plan).
   const planByRef = useMemo(() => new Map(plan.tasks.map(t => [t.seedRefId, t])), [plan])
@@ -214,27 +226,30 @@ export function SeedReviewSheet({ project, priorSeeded, actor, onClose, onSeeded
 
       {/* ── Sticky footer: resolution + actions ── */}
       <div className="sticky bottom-0 z-10 -mx-6 -mb-6 px-6 py-4 bg-surface" style={{ borderTop: '1px solid var(--color-border)' }}>
-        {tooTight && (
+        {(tooTight || (missingDeadline && review.newCount > 0)) && (
           <div className="flex flex-wrap items-center gap-2.5 mb-3 px-3 py-2.5 rounded-[11px] text-[12.5px]"
             style={{ background: 'var(--color-danger-soft)', border: '1px solid var(--color-danger-line)' }}>
             <IconWarning size={16} className="shrink-0 text-danger" aria-hidden="true" />
             <span className="text-danger font-medium flex-1 min-w-[220px]">
-              This plan needs {plan.warnings[0]!.neededDays} {businessDays ? 'business' : 'calendar'} days. The earliest
-              you can launch is <b>{fmtShort(plan.earliestLaunch)}</b>.
+              {missingDeadline
+                ? <>This project has no launch deadline yet — set one above to schedule the plan.</>
+                : <>This plan needs {plan.warnings[0]?.neededDays ?? plan.criticalPathDays} {businessDays ? 'business' : 'calendar'} days. The earliest
+                  you can launch is <b>{fmtShort(plan.earliestLaunch)}</b>.</>}
             </span>
             <Button variant="default" size="sm" onClick={moveDeadlineToEarliest}>
-              Move deadline to {fmtShort(plan.earliestLaunch)}
+              {missingDeadline ? `Use earliest launch (${fmtShort(plan.earliestLaunch)})` : `Move deadline to ${fmtShort(plan.earliestLaunch)}`}
             </Button>
-            <span className="text-[11.5px] text-dim">or deselect phases to fit</span>
+            {!missingDeadline && <span className="text-[11.5px] text-dim">or deselect phases to fit</span>}
           </div>
         )}
         <div className="flex items-center gap-3">
-          <span className="text-[12px] text-faint">
-            {review.newCount === 0
-              ? (present.size > 0 ? 'Everything is already on the board.' : 'Select at least one task.')
-              : present.size > 0
-                ? `${review.newCount} new task${review.newCount === 1 ? '' : 's'} · ${review.presentCount} kept`
-                : `${review.newCount} task${review.newCount === 1 ? '' : 's'} ready to seed`}
+          <span
+            className={`text-[12px] ${seedBlockReason && review.newCount > 0 ? 'text-danger font-medium' : 'text-faint'}`}
+            role={seedBlockReason ? 'status' : undefined}
+          >
+            {seedBlockReason ?? (present.size > 0
+              ? `${review.newCount} new task${review.newCount === 1 ? '' : 's'} · ${review.presentCount} kept`
+              : `${review.newCount} task${review.newCount === 1 ? '' : 's'} ready to seed`)}
           </span>
           <div className="flex items-center gap-2 ml-auto">
             <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancel</Button>
