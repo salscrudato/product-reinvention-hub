@@ -221,6 +221,14 @@ try {
   console.warn('[prodhub-host] /api/ai NOT mounted:', err.message)
 }
 
+// ─── News images — cacheable thumbnail stream from Blob (auth via /api floor) ─
+try {
+  app.get('/api/news/image/:hash', require('./lib/news-image').newsImage)
+  console.log('[prodhub-host] /api/news/image mounted (Blob thumbnails)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/news/image NOT mounted:', err.message)
+}
+
 // ─── Storage (Azure Blob) — mounted if the module loads ─────────────────────
 try {
   app.use('/api/storage', require('./lib/storage'))

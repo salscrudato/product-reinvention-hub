@@ -18,7 +18,7 @@ import {
   IconForm, IconPeril, IconLayers, IconHome, IconRule, IconEndorsement,
   type IconType,
 } from '../components/ui/icons'
-import { adapter, MutationConflictError } from '../lib/backend'
+import { adapter, MutationConflictError, resolveApiUrl } from '../lib/backend'
 import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
 import { canI } from '../lib/canI'
@@ -245,8 +245,11 @@ function ArticleImage({
   const image = item.image
   const alt   = image?.alt ?? item.imageAlt ?? item.title
 
-  // Real image (og:image, twitter:image, inline) — attempt to load unless already failed.
-  const imageUrl = image?.url ?? (!image && item.imageUrl ? item.imageUrl : null)
+  // Real image (og:image, twitter:image, inline) — attempt to load unless already
+  // failed. Server-persisted thumbnails are stored as /api/news/image/<hash> and
+  // resolved against the configured API base (dev may point at a remote host).
+  const rawUrl = image?.url ?? (!image && item.imageUrl ? item.imageUrl : null)
+  const imageUrl = rawUrl ? resolveApiUrl(rawUrl) : null
 
   if (imageUrl && !failed) {
     return (

@@ -74,6 +74,13 @@ function setToken(t: string | null) {
   }
 }
 
+/** Resolve a server-relative `/api/...` asset path against the configured API base
+ *  (dev points the SPA at a remote host via VITE_API_BASE; prod is same-origin).
+ *  Used for browser-native loads that bypass fetch — e.g. <img> news thumbnails. */
+export function resolveApiUrl(path: string): string {
+  return path.startsWith('/api/') ? `${API}${path}` : path
+}
+
 /** The active SUPER_ADMIN tenant override, if any (see setSuperAdminTenant). */
 export function getSuperAdminTenant(): string | null { return activeTenantOverride }
 
