@@ -17,9 +17,10 @@
 
 const express = require('express')
 const crypto = require('crypto')
-const { docs, resolveTenantStore } = require('./cosmos')
+const { docs, presence, resolveTenantStore } = require('./cosmos')
 const { MANAGED_TENANT_ROLES, findUser, signImpersonation, normalizeRole } = require('./auth')
 const { requirePlatform, CAP_PLATFORM_TENANTS, CAP_PLATFORM_USERS, CAP_PLATFORM_IMPERSONATE, CAP_PLATFORM_AUDIT } = require('./authz')
+const platformConfig = require('./platform-config')
 
 const router = express.Router()
 
@@ -62,16 +63,84 @@ router.get('/tenants', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) =
   res.json({ tenants: resources.map((r) => r.data), hasMore: resources.length === limit })
 })
 
+// Lazy mutateInternal (data.js) — deferred to avoid a require cycle at module init
+// (data.js and admin.js are both loaded by server.js). Used only to seed a provisioned
+// tenant's starter workspace through the SAME atomic, audited, correctly-partitioned envelope.
+function getMutateInternal() { return require('./data').mutateInternal }
+
+// A minimal, correctly-partitioned starter workspace: one draft product so a freshly
+// provisioned tenant is non-empty and demonstrable. Written through the tenant's mutate
+// envelope (pk = `${tid}|products`), so it is atomic + audited + tenant-isolated like any
+// other write — never a bare data-store insert.
+async function seedStarterWorkspace(tid, actor) {
+  const mutateInternal = getMutateInternal()
+  await mutateInternal(tid, {
+    op: 'create',
+    path: 'products/getting-started',
+    entityType: 'product',
+    data: {
+      refId: `${tid.toUpperCase()}.PROD.001`,
+      name: 'Getting Started',
+      lob: { refId: 'PH', name: 'Personal Home' },
+      description: 'Starter product created at provisioning. Edit or delete it once your first real product is imported.',
+      lifecycleState: 'draft',
+      states: [], allStates: false,
+    },
+  }, actor, '/api/admin/tenants:provision')
+}
+
+// Provision a new tenant (SUPER_ADMIN). Creates the tenant record with default
+// entitlements, optionally the first TENANT_ADMIN, and optionally a starter workspace.
+// Everything is correctly partitioned (the workspace goes through the tenant's mutate
+// envelope) and every step is append-only audited.
 router.post('/tenants', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
-  const { id, name } = req.body || {}
+  const { id, name, adminEmail, adminUsername, adminPassword, workspace } = req.body || {}
   const tid = slug(id || name)
   if (!tid) return res.status(400).json({ error: 'tenant_id_required' })
+  if (tid === '__system__' || tid === 'default') return res.status(400).json({ error: 'reserved_tenant_id', tenantId: tid })
+  const seedMode = workspace === 'blank' ? 'blank' : 'starter'
   const existing = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
   if (existing) return res.status(409).json({ error: 'tenant_exists', tenantId: tid })
-  const data = { tenantId: tid, name: name || tid, status: 'active', createdAt: new Date().toISOString(), createdBy: req.user.uid }
+
+  const data = {
+    tenantId: tid, name: name || tid, status: 'active',
+    createdAt: new Date().toISOString(), createdBy: req.user.uid,
+    // Default entitlements at provision time so quotas/budget apply from t0.
+    config: { entitlements: platformConfig.DEFAULT_ENTITLEMENTS },
+  }
   await docs.items.upsert({ id: `tenant:${tid}`, pk: '__system__', kind: 'tenant', data })
-  await platformAudit('tenant:create', req.user, { tenantId: tid, name: data.name })
-  res.json({ ok: true, tenant: data })
+  await platformAudit('tenant:provision', req.user, { tenantId: tid, name: data.name, workspace: seedMode })
+
+  // First TENANT_ADMIN (optional). A platform record in __system__; role is fixed to
+  // TENANT_ADMIN so the first admin can immediately manage their own org.
+  let admin = null
+  const uRaw = adminUsername || (adminEmail ? String(adminEmail).split('@')[0] : '')
+  const u = userId(uRaw)
+  if (u) {
+    const existingUser = (await docs.item(`user:${u}`, '__system__').read().catch(() => ({ resource: null }))).resource
+    const tenants = existingUser?.data?.tenants
+    const tenantList = Array.isArray(tenants) ? (tenants.includes(tid) ? tenants : [...tenants, tid]) : [tid]
+    const adminData = {
+      username: u, role: 'TENANT_ADMIN', tenants: tenantList,
+      email: adminEmail || existingUser?.data?.email || `${u}@${tid}.local`,
+      name: existingUser?.data?.name || u,
+      disabled: false,
+      password: adminPassword || existingUser?.data?.password || u,
+    }
+    await docs.items.upsert({ id: `user:${u}`, pk: '__system__', kind: 'user', data: adminData })
+    await platformAudit('tenant:admin_provision', req.user, { tenantId: tid, username: u, role: 'TENANT_ADMIN' })
+    const { password: _p, ...safe } = adminData
+    admin = safe
+  }
+
+  // Starter workspace (default) — one draft product, correctly partitioned + audited.
+  let seeded = false
+  if (seedMode === 'starter') {
+    try { await seedStarterWorkspace(tid, { uid: req.user.uid, name: req.user.name }); seeded = true }
+    catch (e) { console.warn('[admin] starter workspace seed failed:', e.message) }
+  }
+
+  res.json({ ok: true, tenant: data, admin, workspace: seedMode, seeded })
 })
 
 // Configure a tenant: rename and/or suspend/reactivate.
@@ -131,6 +200,183 @@ router.get('/tenants/:id/summary', requirePlatform(CAP_PLATFORM_TENANTS), async 
     entityCounts,
     recentActivity: activityRes.resources,
   })
+})
+
+// ─── offboarding: export bundle + partition-scoped hard delete ───────────────
+// A tenant's domain data lives in `${tid}|<base>` partitions of the pooled docs
+// container. Every such doc carries a top-level `tenantId` (defense-in-depth), so a
+// single `c.tenantId = @tid` query returns EXACTLY this tenant's docs and NOTHING from
+// any other partition. Deletes target (id, pk) drawn from that filtered set, so the
+// blast radius is provably one tenant. The tenant __system__ record + presence rows are
+// handled explicitly; users are DETACHED (not deleted — they may belong to other orgs).
+const OFFBOARD_PAGE = 1000
+const OFFBOARD_MAX = 200_000 // safety backstop; logged if hit
+
+// Partition-scoped hard delete of a tenant's data store. The ONLY docs it can ever touch
+// are those returned by `WHERE c.tenantId = @tid` — Cosmos applies that filter, so no other
+// tenant's partition is reachable — and each delete targets the (id, pk) OF A ROW IN THAT
+// FILTERED SET. Re-queries from the start each sweep (deletes invalidate continuation
+// tokens) until a query returns nothing. Injectable `store` so the isolation invariant is
+// unit-testable without Cosmos. Returns the number of docs deleted.
+async function deleteTenantData(store, tid) {
+  let deleted = 0
+  let guard = 0
+  for (;;) {
+    const it = store.items.query(
+      { query: 'SELECT c.id, c.pk FROM c WHERE c.tenantId = @tid', parameters: [{ name: '@tid', value: tid }] },
+      { maxItemCount: OFFBOARD_PAGE },
+    )
+    const page = await it.fetchNext()
+    const rows = page.resources || []
+    if (rows.length === 0) break
+    for (const row of rows) {
+      try { await store.item(row.id, row.pk).delete(); deleted++ }
+      catch (e) { if (Number(e?.code) !== 404) throw e }
+    }
+    if (++guard > OFFBOARD_MAX / OFFBOARD_PAGE + 5) { console.warn('[admin] offboard guard hit for', tid); break }
+  }
+  return deleted
+}
+
+// Build a complete export bundle (all tenant docs + the tenant record + member list) and
+// a SHA-256 content hash over a canonical serialization, so an offboard can name exactly
+// what it exported before deleting. Read-only.
+async function buildExportBundle(tid) {
+  const store = resolveTenantStore(tid).docs
+  const tenantDoc = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  const all = []
+  let cursor = null
+  do {
+    const it = store.items.query(
+      { query: 'SELECT * FROM c WHERE c.tenantId = @tid', parameters: [{ name: '@tid', value: tid }] },
+      { maxItemCount: OFFBOARD_PAGE, continuationToken: cursor || undefined },
+    )
+    const page = await it.fetchNext()
+    for (const r of page.resources) all.push(r)
+    cursor = page.continuationToken || null
+    if (all.length > OFFBOARD_MAX) break
+  } while (cursor)
+  const { resources: members } = await docs.items.query({
+    query: "SELECT c.data FROM c WHERE c.pk='__system__' AND c.kind='user' AND ARRAY_CONTAINS(c.data.tenants, @tid)",
+    parameters: [{ name: '@tid', value: tid }],
+  }).fetchAll()
+  const byKind = {}
+  for (const d of all) byKind[d.kind] = (byKind[d.kind] || 0) + 1
+  const bundle = {
+    tenantId: tid,
+    exportedAt: new Date().toISOString(),
+    tenant: tenantDoc ? tenantDoc.data : null,
+    members: members.map((m) => { const { password, ...safe } = m.data; return safe }),
+    docs: all,
+    manifest: { totalDocs: all.length, byKind, memberCount: members.length },
+  }
+  const hash = crypto.createHash('sha256')
+    .update(JSON.stringify({ tid, manifest: bundle.manifest, ids: all.map((d) => d.id).sort() }))
+    .digest('hex')
+  bundle.manifest.contentHash = hash
+  return bundle
+}
+
+// GET the export bundle so an operator can VERIFY it before offboarding. Read-only, no delete.
+router.get('/tenants/:id/export', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const tid = slug(req.params.id)
+  const tenantDoc = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  if (!tenantDoc) return res.status(404).json({ error: 'tenant_not_found' })
+  const bundle = await buildExportBundle(tid)
+  await platformAudit('tenant:export', req.user, { tenantId: tid, manifest: bundle.manifest })
+  // Return the manifest always; the full doc payload only when explicitly requested
+  // (?full=1) — a large tenant's bundle should stream to blob in production.
+  if (String(req.query.full || '') === '1') return res.json({ ok: true, bundle })
+  const { docs: _omit, ...manifestOnly } = bundle
+  res.json({ ok: true, bundle: { ...manifestOnly, docsIncluded: false } })
+})
+
+// Offboard: confirmation-gated. Builds the export manifest, then partition-scoped hard
+// delete. Requires body.confirm === tenantId (a typo can never erase the wrong tenant).
+router.post('/tenants/:id/offboard', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const tid = slug(req.params.id)
+  const confirm = String((req.body || {}).confirm || '')
+  const tenantDoc = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  if (!tenantDoc) return res.status(404).json({ error: 'tenant_not_found' })
+  if (confirm !== tid) {
+    return res.status(400).json({ error: 'confirmation_required', detail: `POST { "confirm": "${tid}" } to offboard this tenant.` })
+  }
+
+  // 1) Export manifest (the accountable record of what is being deleted).
+  const bundle = await buildExportBundle(tid)
+
+  // 2) Partition-scoped hard delete of the tenant's data store (id, pk both drawn from a
+  //    c.tenantId=@tid filtered set — no other partition can be touched).
+  const store = resolveTenantStore(tid).docs
+  const deletedDocs = await deleteTenantData(store, tid)
+
+  // 3) Presence rows (separate container, keyed by `${tid}:${pid}:${uid}`).
+  let deletedPresence = 0
+  try {
+    const { resources: pres } = await presence.items.query(
+      { query: 'SELECT c.id, c.pid FROM c WHERE STARTSWITH(c.pid, @prefix)', parameters: [{ name: '@prefix', value: `${tid}:` }] },
+    ).fetchAll()
+    for (const p of pres) { try { await presence.item(p.id, p.pid).delete(); deletedPresence++ } catch { /* idempotent */ } }
+  } catch { /* presence is best-effort */ }
+
+  // 4) Detach members (users are cross-org platform records — never hard-delete a user who
+  //    still belongs to another tenant; a now-orphaned user is disabled).
+  let detached = 0
+  for (const m of bundle.members) {
+    try {
+      const u = (await docs.item(`user:${m.username}`, '__system__').read()).resource
+      if (!u || !Array.isArray(u.data.tenants)) continue
+      const tenants = u.data.tenants.filter((t) => t !== tid)
+      await docs.items.upsert({ id: `user:${m.username}`, pk: '__system__', kind: 'user', data: { ...u.data, tenants, disabled: tenants.length === 0 ? true : !!u.data.disabled } })
+      detached++
+    } catch { /* best-effort */ }
+  }
+
+  // 5) The tenant __system__ record itself.
+  try { await docs.item(`tenant:${tid}`, '__system__').delete() } catch { /* idempotent */ }
+
+  const result = { tenantId: tid, deletedDocs, deletedPresence, membersDetached: detached, exportManifest: bundle.manifest }
+  await platformAudit('tenant:offboard', req.user, result)
+  res.json({ ok: true, ...result })
+})
+
+// ─── per-tenant + global config (SUPER_ADMIN plane) ──────────────────────────
+router.get('/config/global', requirePlatform(CAP_PLATFORM_TENANTS), async (_req, res) => {
+  const global = await platformConfig.getGlobalConfig()
+  res.json({ ok: true, global, registry: platformConfig.FEATURE_FLAGS })
+})
+
+router.put('/config/global', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  try {
+    const merged = await platformConfig.setGlobalConfig({ flags: (req.body || {}).flags }, req.user)
+    res.json({ ok: true, global: merged })
+  } catch (e) {
+    if (e.code === 'INVALID_CONFIG') return res.status(400).json({ error: 'invalid_config', detail: e.errors })
+    res.status(500).json({ error: 'config_write_failed', detail: String(e.message || e) })
+  }
+})
+
+router.get('/tenants/:id/config', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const tid = slug(req.params.id)
+  const tenantDoc = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  if (!tenantDoc) return res.status(404).json({ error: 'tenant_not_found' })
+  const [config, effectiveFlags] = await Promise.all([
+    platformConfig.getTenantConfig(tid),
+    platformConfig.getEffectiveFlags(tid),
+  ])
+  res.json({ ok: true, config, effectiveFlags, registry: platformConfig.FEATURE_FLAGS })
+})
+
+router.put('/tenants/:id/config', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const tid = slug(req.params.id)
+  try {
+    const merged = await platformConfig.setTenantConfig(tid, req.body || {}, 'platform', req.user)
+    res.json({ ok: true, config: merged })
+  } catch (e) {
+    if (e.code === 'INVALID_CONFIG') return res.status(400).json({ error: 'invalid_config', detail: e.errors })
+    if (e.code === 'TENANT_NOT_FOUND') return res.status(404).json({ error: 'tenant_not_found' })
+    res.status(500).json({ error: 'config_write_failed', detail: String(e.message || e) })
+  }
 })
 
 // ─── users (SUPER_ADMIN only) ─────────────────────────────────────────────────
@@ -302,4 +548,6 @@ router.post('/impersonate', requirePlatform(CAP_PLATFORM_IMPERSONATE), async (re
   }
 })
 
-module.exports = router
+// _internals exposed for deployment-independent unit tests (mirrors portal.js). The
+// partition-scoped delete's isolation invariant is proven against an injected mock store.
+module.exports = Object.assign(router, { _internals: { deleteTenantData, buildExportBundle } })

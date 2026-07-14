@@ -265,6 +265,20 @@ async function listTenants() {
   } catch { return [] }
 }
 
+// isTenantSuspended: platform lifecycle enforcement at session mint. A suspended tenant
+// blocks NEW tenant-plane logins (reversibly — reactivate restores it). Existing JWTs run
+// out at the 8 h TTL (same semantics as a disabled member). Fail-OPEN on a read error so a
+// Cosmos blip never locks everyone out; an explicit status:'suspended' always blocks.
+async function isTenantSuspended(tenantId) {
+  if (!tenantId || tenantId === DEFAULT_TENANT_ID) return false
+  const docs = systemContainer()
+  if (!docs) return false
+  try {
+    const r = (await docs.item(`tenant:${tenantId}`, '__system__').read().catch(() => ({ resource: null }))).resource
+    return !!(r && r.data && r.data.status === 'suspended')
+  } catch { return false }
+}
+
 // ─── OTP request handler ──────────────────────────────────────────────────────
 async function requestOtp(req, res) {
   const { email } = req.body || {}
@@ -321,6 +335,11 @@ async function verifyOtp(req, res) {
     return res.status(403).json({ error: 'account_disabled' })
   }
   const effectiveTenant = resolvedTenant || DEFAULT_TENANT_ID
+  // Platform lifecycle: a SUSPENDED tenant blocks login at session mint (reversible).
+  if (await isTenantSuspended(effectiveTenant)) {
+    await writeLoginAudit('login_tenant_suspended', normalized, effectiveTenant, ip, ua)
+    return res.status(403).json({ error: 'tenant_suspended', detail: 'This workspace is suspended. Contact your platform administrator.' })
+  }
 
   const token = sign({
     sub: user.username, name: user.name || user.username,
@@ -517,6 +536,7 @@ function resolveTenantForPrincipal(principal) {
 
 module.exports = {
   RANK, DEFAULT_TENANT_ID, BOOTSTRAP_ADMINS, MANAGED_TENANT_ROLES, listTenants, findUser,
+  isTenantSuspended,
   normalizeRole, sign, verify, signImpersonation,
   requestOtp, verifyOtp, loginBootstrap, me, changePassword, publicTenants, discoverHomeRealm,
   attachUser, requireAuth, requireRole, requireTenant, resolveTenantForPrincipal, revokeToken,
