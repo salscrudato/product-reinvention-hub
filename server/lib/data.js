@@ -76,14 +76,18 @@ async function readChainHead(tid, path) {
 }
 
 // ─── reads (any authenticated role, tenant-scoped) ───────────────────────────
-router.get('/get', requireAuth, requireTenant, async (req, res) => {
+// Reads require product:read, not just auth (persona isolation): the POLICYHOLDER
+// portal persona is authenticated and tenant-bound but must never read the tenant's
+// catalog — or another policyholder's record — through the generic data surface. Every
+// staff role (VIEWER and up) holds product:read, so this tightens nothing for them.
+router.get('/get', requireCapability('product:read'), requireTenant, async (req, res) => {
   const ent = await readEntity(resolveTenantForPrincipal(req.user), req.query.path)
   // Inject the entity's natural id (last path segment) so the client has a stable identifier.
   const id = ent ? segs(ent.path).at(-1) : null
   res.json({ data: ent ? { id, ...ent.data } : null })
 })
 
-router.post('/list', requireAuth, requireTenant, async (req, res) => {
+router.post('/list', requireCapability('product:read'), requireTenant, async (req, res) => {
   const { path, query } = req.body || {}
   const tid = resolveTenantForPrincipal(req.user)
   const params = [{ name: '@coll', value: String(path || '') }, { name: '@tid', value: tid }]

@@ -20,6 +20,7 @@ const ROLE_CAPS: Record<string, Capability[]> = {
   TENANT_ADMIN: ['product:read', 'product:write', 'ai:invoke', 'filing:generate', 'changeset:approve', 'member:manage', 'role:assign', 'audit:read'],
   ADMIN:        ['product:read', 'product:write', 'ai:invoke', 'filing:generate', 'changeset:approve', 'member:manage', 'role:assign', 'audit:read'],
   SUPPORT:      ['product:read', 'audit:read', 'platform:impersonate'],
+  POLICYHOLDER: ['portal:read', 'portal:upload'],
   SUPER_ADMIN:  ['product:read', 'product:write', 'ai:invoke', 'filing:generate', 'changeset:approve', 'member:manage', 'role:assign', 'audit:read', 'platform:tenants', 'platform:users', 'platform:audit', 'platform:impersonate'],
 }
 

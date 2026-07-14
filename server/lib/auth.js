@@ -37,6 +37,7 @@ const TTL_SECONDS = 8 * 60 * 60
 // in authz.js are the authoritative gate for what SUPPORT is allowed to do.
 const RANK = {
   VIEWER: 0,
+  POLICYHOLDER: 0,             // consumer persona; rank 0 so every rank-gated staff route rejects it
   UNDERWRITING: 1, COMPLIANCE: 1, CLAIMS: 1, ACTUARIAL: 1, ANALYST: 1,
   EDITOR: 2,
   TENANT_ADMIN: 3, ADMIN: 3,  // ADMIN is the legacy name; normalizeRole() maps it to TENANT_ADMIN
@@ -45,7 +46,8 @@ const RANK = {
 }
 
 // Roles that a TENANT_ADMIN may assign. Never SUPER_ADMIN, SUPPORT, or legacy ADMIN.
-const MANAGED_TENANT_ROLES = ['VIEWER', 'UNDERWRITING', 'COMPLIANCE', 'CLAIMS', 'ACTUARIAL', 'ANALYST', 'EDITOR', 'TENANT_ADMIN']
+// POLICYHOLDER is assignable so a carrier can provision its own end customers' portal accounts.
+const MANAGED_TENANT_ROLES = ['VIEWER', 'UNDERWRITING', 'COMPLIANCE', 'CLAIMS', 'ACTUARIAL', 'ANALYST', 'EDITOR', 'TENANT_ADMIN', 'POLICYHOLDER']
 
 // normalizeRole: transparently migrates legacy 'ADMIN' JWTs to 'TENANT_ADMIN' at decode
 // time so downstream capability checks always see the canonical role name.

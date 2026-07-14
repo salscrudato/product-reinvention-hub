@@ -39,16 +39,43 @@ function sanitizeBlobPath(p) {
   return s
 }
 
+// Server-side upload limits (upload root-cause fix): a decoded-size ceiling that fits
+// under the host's 25 MB JSON body cap after base64 inflation (~4/3), and a content-type
+// allowlist that blocks browser-active types (text/html, image/svg+xml, anything
+// script-capable) from ever landing in blob storage. Callers today upload PDFs, plain
+// text/markdown/CSV/JSON and raster screenshots (claims base forms, feedback attachments).
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+const ALLOWED_CONTENT = [
+  /^application\/pdf$/i,
+  /^application\/json$/i,
+  /^text\/(plain|markdown|csv)$/i,
+  /^image\/(png|jpe?g|gif|webp)$/i,
+  /^application\/octet-stream$/i,   // extension-less text files (e.g. .md pickers report '')
+]
+
 // Upload (EDITOR+): base64 body -> blob -> returns a URL.
 router.post('/upload', requireRole('EDITOR'), async (req, res) => {
-  if (!guard(res)) return
   const { path, contentType, dataBase64 } = req.body || {}
   const safePath = sanitizeBlobPath(path)
   if (!safePath) return res.status(400).json({ error: 'invalid_path', detail: 'path must not contain .., \\, or begin with /.' })
+  const type = String(contentType || 'application/octet-stream')
+  if (!ALLOWED_CONTENT.some((re) => re.test(type))) {
+    return res.status(415).json({ error: 'unsupported_type', detail: `Content type "${type}" is not accepted. Upload a PDF, text, or image file.` })
+  }
+  let buf
+  try { buf = Buffer.from(String(dataBase64 || ''), 'base64') } catch { buf = null }
+  if (!buf || buf.length === 0) return res.status(400).json({ error: 'missing_file', detail: 'Provide the file content as dataBase64.' })
+  if (buf.length > MAX_UPLOAD_BYTES) {
+    return res.status(413).json({
+      error: 'payload_too_large',
+      detail: `File is ${(buf.length / 1024 / 1024).toFixed(1)} MB — the upload limit is ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`,
+      maxBytes: MAX_UPLOAD_BYTES,
+    })
+  }
+  if (!guard(res)) return
   try {
     const blob = containerClient.getBlockBlobClient(safePath)
-    const buf = Buffer.from(dataBase64, 'base64')
-    await blob.upload(buf, buf.length, { blobHTTPHeaders: { blobContentType: contentType || 'application/octet-stream' } })
+    await blob.upload(buf, buf.length, { blobHTTPHeaders: { blobContentType: type } })
     res.json({ url: blob.url })
   } catch (e) { res.status(500).json({ error: 'upload_failed', detail: String(e.message || e) }) }
 })

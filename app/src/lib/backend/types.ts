@@ -15,6 +15,7 @@ export type Tier =
   | 'TENANT_ADMIN' | 'ADMIN'
   | 'SUPPORT'
   | 'SUPER_ADMIN'
+  | 'POLICYHOLDER'   // consumer persona: own policy + own carrier tenant only, portal:* caps only
 
 // Capabilities that can be checked client-side (supplementary UI gating only;
 // server is always the authoritative gate).
@@ -24,6 +25,7 @@ export type Capability =
   | 'filing:generate' | 'changeset:approve'
   | 'member:manage' | 'role:assign' | 'audit:read'
   | 'platform:tenants' | 'platform:users' | 'platform:audit' | 'platform:impersonate'
+  | 'portal:read' | 'portal:upload'
 
 export interface AuthUser {
   uid: string
@@ -70,6 +72,33 @@ export interface AuditSearchFilters {
 export interface Session {
   user: AuthUser
   token: string
+}
+
+// ─── Policyholder portal (POLICYHOLDER persona; server-scoped to own uid + tenant) ───
+export interface PortalPolicy {
+  fileName: string | null
+  uploadedAt: string | null
+  insuredName: string
+  insuredAddress: { line1?: string; city?: string; state?: string; zip?: string }
+  carrierName: string
+  policyNumber: string
+  lob: string
+  effectiveDate: string
+  expirationDate: string
+  coverages: Array<{ name: string; limit?: string; deductible?: string }>
+  endorsements: Array<{ name: string; formNumber?: string }>
+  extraction: { role: string; deployment: string; at: string } | null
+  summary: PortalSummary | null
+}
+
+export interface PortalSummary {
+  /** Server-sanitized HTML fragment — the client MUST sanitize again before render. */
+  html: string
+  /** 'model' = judge-approved generation; 'fallback' = deterministic non-model summary. */
+  source: 'model' | 'fallback'
+  attempts: number
+  generatedAt: string
+  scores: Record<string, number> | null
 }
 
 export interface Query {
@@ -178,6 +207,17 @@ export interface BackendAdapter {
     impersonate(targetUid: string, tenantId: string, reason: string): Promise<{ token: string; expiresAt: string; subject: string; tenantId: string }>
     /** Platform audit viewer: server-filtered, cursor-paginated, read-only. */
     searchAudit(filters: AuditSearchFilters): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }>
+  }
+  /** Policyholder portal (POLICYHOLDER persona only; every call is server-scoped to the
+   *  JWT's uid + tenant — no identifiers cross the wire, so cross-policy/cross-tenant
+   *  reach is impossible from the client by construction). */
+  portal: {
+    /** Own policy record, or null before the one-time upload. */
+    me(): Promise<{ policy: PortalPolicy | null }>
+    /** One-time PDF upload (server enforces PDF magic bytes + 15 MB cap + one-per-account). */
+    upload(file: File): Promise<{ ok: boolean; policy: PortalPolicy }>
+    /** Generate (or fetch the stored) judged coverage summary for the own policy. */
+    generateSummary(): Promise<{ ok: boolean; summary: PortalSummary; cached?: boolean }>
   }
   /** Self-service org admin (TENANT_ADMIN only, same-tenant enforced). */
   orgAdmin: {

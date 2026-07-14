@@ -22,6 +22,12 @@ const CAP_CHANGESET_APPROVE = 'changeset:approve'  // wired; approval workflow d
 const CAP_MEMBER_MANAGE     = 'member:manage'
 const CAP_ROLE_ASSIGN       = 'role:assign'
 const CAP_AUDIT_READ        = 'audit:read'
+// Policyholder portal capabilities — held ONLY by the POLICYHOLDER persona. Deliberately
+// disjoint from every staff capability: portal:* grants nothing outside /api/portal, and
+// no staff role is granted portal:*, so the portal surface and the product surface can
+// never bleed into each other through a shared role.
+const CAP_PORTAL_READ       = 'portal:read'
+const CAP_PORTAL_UPLOAD     = 'portal:upload'
 // Platform-plane capabilities
 const CAP_PLATFORM_TENANTS     = 'platform:tenants'
 const CAP_PLATFORM_USERS       = 'platform:users'
@@ -43,6 +49,11 @@ const ROLE_CAPS = {
   CLAIMS:       [CAP_PRODUCT_READ, CAP_AI_INVOKE],
   ACTUARIAL:    [CAP_PRODUCT_READ, CAP_AI_INVOKE],
   ANALYST:      [CAP_PRODUCT_READ, CAP_AI_INVOKE],  // legacy; maps to inquiry persona set
+  // Consumer persona — a carrier's END CUSTOMER, scoped to one org and their own policy.
+  // Minimal set: read own portal record, upload own policy document. NO product:read
+  // (cannot read the tenant's catalog or other policyholders via /api/db), NO ai:invoke
+  // (portal AI runs server-orchestrated behind portal:* gates), NO write capability.
+  POLICYHOLDER: [CAP_PORTAL_READ, CAP_PORTAL_UPLOAD],
   // Tenant plane — editors
   EDITOR:       [CAP_PRODUCT_READ, CAP_PRODUCT_WRITE, CAP_AI_INVOKE, CAP_FILING_GENERATE, CAP_CHANGESET_APPROVE],
   // Tenant plane — admin (manages own org)
@@ -59,7 +70,7 @@ const PLATFORM_ROLES = new Set(['SUPER_ADMIN', 'SUPPORT'])
 
 // Managed roles: roles that a TENANT_ADMIN may assign to members of their org.
 // Never includes platform roles; never includes ADMIN (legacy) or SUPER_ADMIN.
-const TENANT_MANAGED_ROLES = ['VIEWER', 'UNDERWRITING', 'COMPLIANCE', 'CLAIMS', 'ACTUARIAL', 'ANALYST', 'EDITOR', 'TENANT_ADMIN']
+const TENANT_MANAGED_ROLES = ['VIEWER', 'UNDERWRITING', 'COMPLIANCE', 'CLAIMS', 'ACTUARIAL', 'ANALYST', 'EDITOR', 'TENANT_ADMIN', 'POLICYHOLDER']
 
 // ─── Core capability check ───────────────────────────────────────────────────
 function hasCapability(user, cap) {
@@ -126,6 +137,7 @@ module.exports = {
   CAP_PRODUCT_READ, CAP_PRODUCT_WRITE, CAP_AI_INVOKE,
   CAP_FILING_GENERATE, CAP_CHANGESET_APPROVE,
   CAP_MEMBER_MANAGE, CAP_ROLE_ASSIGN, CAP_AUDIT_READ,
+  CAP_PORTAL_READ, CAP_PORTAL_UPLOAD,
   CAP_PLATFORM_TENANTS, CAP_PLATFORM_USERS, CAP_PLATFORM_AUDIT, CAP_PLATFORM_IMPERSONATE,
   // Role sets + matrix
   ROLE_CAPS, PLATFORM_ROLES, TENANT_MANAGED_ROLES,

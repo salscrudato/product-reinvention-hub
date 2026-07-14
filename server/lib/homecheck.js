@@ -1126,4 +1126,8 @@ router.post('/twin-diff', (req, res) => {
   })
 })
 
-module.exports = router
+// buildRiskPayload is exported for the policyholder portal (server/lib/portal.js), which
+// grounds "risks in your area" on the same federal sources. The portal passes an address
+// string only — HomeCheck's zero-portfolio-access property is unchanged (this module still
+// never imports ./cosmos or ./data).
+module.exports = Object.assign(router, { buildRiskPayload })

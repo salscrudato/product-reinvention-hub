@@ -86,6 +86,12 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
   async function upload(file: File) {
     if (!actor) return
     if (!isSupported(file)) { toast.error('Upload a PDF or text form.'); return }
+    // Fast client pre-check (the server independently enforces a 15 MB decoded cap): a
+    // larger file previously died in the transport layer as an opaque "Upload failed".
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error(`That file is ${(file.size / 1024 / 1024).toFixed(1)} MB — the upload limit is 15 MB.`)
+      return
+    }
     setBusy(true)
     const id = `bf-${Date.now()}`
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
@@ -164,7 +170,11 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
       if (err instanceof MutationConflictError) {
         conflictToast({})
       } else {
-        toast.error(err instanceof Error && /bypass/i.test(err.message) ? err.message : 'Upload failed')
+        // The adapter now surfaces the server's honest error detail (size limit, type
+        // rejection, storage outage) — show it when we have one; the generic transport
+        // form ("… failed: NNN") stays behind the plain "Upload failed" toast.
+        const msg = err instanceof Error ? err.message : ''
+        toast.error(msg && !/failed: \d+/.test(msg) && msg !== 'unauthenticated' ? msg : 'Upload failed')
       }
     } finally {
       setBusy(false)

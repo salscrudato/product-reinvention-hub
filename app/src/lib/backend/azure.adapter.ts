@@ -11,7 +11,7 @@
 // document, odd = collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
-import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, ManagedUser, TenantMember, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
+import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, ManagedUser, PortalPolicy, PortalSummary, TenantMember, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
 import { MutationConflictError } from './types'
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -51,7 +51,17 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   })
   if (res.status === 409) throw new MutationConflictError()
   if (res.status === 401) { setToken(null); throw new Error('unauthenticated') }
-  if (!res.ok) throw new Error(`${path} failed: ${res.status}`)
+  if (!res.ok) {
+    // Surface the server's honest error detail when it sent one (e.g. payload_too_large
+    // with the actual size limit) instead of an opaque "<path> failed: <status>" — the
+    // opaque form previously reduced every upload failure to a generic toast.
+    let detail: string | null = null
+    try {
+      const body = (await res.json()) as { detail?: string; error?: string }
+      detail = body?.detail || body?.error || null
+    } catch { /* non-JSON body — keep the generic message */ }
+    throw new Error(detail ? String(detail) : `${path} failed: ${res.status}`)
+  }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
@@ -415,6 +425,28 @@ export const adapter: BackendAdapter = {
     },
     async searchAudit(filters: AuditSearchFilters): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }> {
       return api('/admin/audit/search', { method: 'POST', body: JSON.stringify(filters) })
+    },
+  },
+
+  portal: {
+    async me(): Promise<{ policy: PortalPolicy | null }> {
+      return api<{ policy: PortalPolicy | null }>('/portal/me')
+    },
+    async upload(file: File): Promise<{ ok: boolean; policy: PortalPolicy }> {
+      const buf = await file.arrayBuffer()
+      // Chunked base64 — avoids call-stack overflow on large PDFs (spread limit ~32k args).
+      const bytes = new Uint8Array(buf)
+      let bin = ''
+      const CH = 0x8000
+      for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode(...bytes.subarray(i, i + CH))
+      return api<{ ok: boolean; policy: PortalPolicy }>('/portal/upload', {
+        method: 'POST', body: JSON.stringify({ fileName: file.name, dataBase64: btoa(bin) }),
+      })
+    },
+    async generateSummary(): Promise<{ ok: boolean; summary: PortalSummary; cached?: boolean }> {
+      return api<{ ok: boolean; summary: PortalSummary; cached?: boolean }>('/portal/summary', {
+        method: 'POST', body: JSON.stringify({}),
+      })
     },
   },
 

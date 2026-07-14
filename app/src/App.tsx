@@ -29,6 +29,7 @@ const TenantAdmin        = lazy(() => import('./routes/TenantAdmin'))
 const Feedback           = lazy(() => import('./routes/Feedback'))
 const News               = lazy(() => import('./routes/News'))
 const HomeCheck          = lazy(() => import('./routes/HomeCheck'))
+const Portal             = lazy(() => import('./routes/portal/Portal'))
 
 function PageLoader() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/pricing"               element={<Pricing />} />
             <Route path="/must-change-password"  element={<MustChangePassword />} />
             <Route path="/home-check"            element={<HomeCheck />} />
+            <Route path="/portal"                element={<Portal />} />
 
             <Route path="/app" element={<AppShell />}>
               <Route index                element={<Home />} />

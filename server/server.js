@@ -83,7 +83,7 @@ const isPublicApi = (p) => PUBLIC_API.some((pub) => (pub.endsWith('/') ? p.start
 // Routers that enforce their own capability gates with pinned error contracts
 // (platform gates, member:manage, filing:generate) — exempt from the generic
 // product:write check so their specific `need` codes keep reaching clients.
-const WRITE_EXEMPT_PREFIX = ['/api/auth/', '/api/admin', '/api/tenant-admin', '/api/filing', '/api/serff']
+const WRITE_EXEMPT_PREFIX = ['/api/auth/', '/api/admin', '/api/tenant-admin', '/api/filing', '/api/serff', '/api/portal']
 const WRITE_EXEMPT_EXACT = ['/api/db/list', '/api/db/presence/watch']  // read-shaped POSTs
 const AI_WRITE = new Set(['unifiedImport', 'reindexProduct'])          // write-shaped AI calls
 
@@ -182,6 +182,21 @@ try {
   console.warn('[prodhub-host] /api/filing NOT mounted:', err.message)
 }
 
+// ─── Policyholder portal (POLICYHOLDER persona only — portal:read / portal:upload) ──
+// POST /api/portal/upload  — one-time PDF upload → grounded extraction → audited record
+// POST /api/portal/summary — judged, catalog-grounded HTML summary (deterministic fallback)
+// GET  /api/portal/me      — own policy record only (uid + tenant from the JWT, never params)
+// In WRITE_EXEMPT_PREFIX because every route enforces its own portal:* capability gate
+// (a capability no staff role holds) — the generic product:write check would mask that
+// pinned error contract. POLICYHOLDER holds NO other capability, so /api/db, /api/ai and
+// every staff surface still reject it.
+try {
+  app.use('/api/portal', require('./lib/portal'))
+  console.log('[prodhub-host] /api/portal mounted (policyholder portal)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/portal NOT mounted:', err.message)
+}
+
 // ─── HomeCheck consumer surface (guest-accessible, rate-limited, zero portfolio access) ──
 // POST /api/homecheck/v1/risk               — address risk report (Census+FEMA+USGS+NOAA+WHP)
 // POST /api/homecheck/v1/report-html        — saveable single-file HTML risk report
@@ -236,6 +251,20 @@ app.get('*', (req, res) => {
 app.use(function (err, req, res, next) {
   console.error('[prodhub-host] unhandled error:', err?.message || String(err))
   if (res.headersSent) return
+  // Honest status for body-parser failures (upload root-cause fix): an oversized JSON
+  // body (413 entity.too.large — e.g. a base64 PDF past the 25 MB cap) or malformed
+  // JSON (400 entity.parse.failed) previously surfaced as an opaque 500, so the client
+  // could only say "upload failed". Preserve the parser's status + a actionable detail.
+  const status = Number(err?.status || err?.statusCode)
+  if (status === 413) {
+    return res.status(413).json({
+      error: 'payload_too_large',
+      detail: 'Request body exceeds the 25 MB transport limit. Uploaded files must be under ~15 MB (base64 encoding adds ~33%).',
+    })
+  }
+  if (status >= 400 && status < 500) {
+    return res.status(status).json({ error: err?.type || 'bad_request' })
+  }
   res.status(500).json({ error: 'internal_server_error' })
 })
 

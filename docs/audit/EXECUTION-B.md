@@ -103,3 +103,118 @@ The rejection is audit-logged (hash-chained `filing.verify_rejected`, `probe:tru
   teardown removes seeded entities + probe user, filings/audits stay by design (append-only).
 - `/cost` is a CLI-side command this agent cannot invoke; spend stayed well inside the $20
   envelope (single-session, two live AI verifier calls ≈ cents).
+
+---
+
+# EXECUTION-B — Lane B F4: PDF upload fix + policyholder portal
+
+Prompt F4 Lane-B. Objective: fix the "upload failed" root cause; add a strictly isolated
+POLICYHOLDER persona with a one-time PDF upload, grounded extraction, a judged
+catalog-grounded mobile summary, injection defense, and a deterministic fallback.
+
+## Root cause (reproduced live BEFORE any change)
+
+Probed dev directly: uploads of 2/8/15 MB PDFs → 200; a 20 MB PDF → **HTTP 500
+`internal_server_error`** (not 413). The chain, cause → symptom:
+
+1. The storage seam ships files as base64 inside JSON (~4/3 inflation), so any PDF
+   over ~18.7 MB exceeds `express.json({ limit:'25mb' })` in `server/server.js`.
+2. Express raises `PayloadTooLargeError` (status 413, `entity.too.large`) — but the
+   RISK-012 global error handler returned an unconditional **500**, erasing the status.
+3. `azure.adapter.ts` reduced every non-OK response to `"<path> failed: <status>"`, and
+   the claims UI mapped that to a bare "Upload failed" toast.
+4. `/api/storage/upload` itself enforced **no size or content-type limit at all**.
+
+Fixes (cause, not symptom): the error handler now preserves body-parser statuses (413 →
+`payload_too_large` with the limit named; 400 for malformed JSON); `/api/storage/upload`
+enforces a 15 MB decoded cap + a content-type allowlist (pdf / text / json / raster
+images — blocks text/html and svg, the stored-XSS-capable types) with honest 413/415;
+the adapter surfaces the server's `detail`; the claims library pre-checks 15 MB
+client-side and shows the real message. Portal uploads additionally enforce **PDF magic
+bytes** (`%PDF-`), not extension.
+
+## Orientation findings
+
+- Blob container is private (unauthenticated blob GET → 404; verified live).
+- `/api/db/get` + `/api/db/list` were `requireAuth`-only — ANY authenticated same-tenant
+  principal could read every collection. Fine while all roles were staff; fatal for a
+  policyholder persona (could read the catalog AND other policyholders' records).
+  Tightened to `requireCapability('product:read')` — a no-op for every staff role.
+- MID_REASONER (claude-sonnet-5) may be unprovisioned in Foundry dev — reused filing.js's
+  documented ladder (MID_REASONER → GROUNDED_CITED on 404 model-not-found only), with
+  role+deployment provenance recorded on extraction, generation and judgment.
+- homecheck.js has the real federal risk stack (Census/FEMA NRI/NFHL/USGS/NOAA/USDA);
+  exported `buildRiskPayload` additively (the portal passes an address string only — the
+  zero-portfolio-access property is unchanged).
+
+## What was built
+
+- **POLICYHOLDER persona** (`authz.js` / `auth.js`): rank 0; capabilities exactly
+  `portal:read` + `portal:upload`; no staff role holds a portal capability (test-pinned).
+  Assignable by TENANT_ADMIN / SUPER_ADMIN (MANAGED_TENANT_ROLES).
+- **`server/lib/portal.js`** (`/api/portal/*`, in WRITE_EXEMPT_PREFIX because every route
+  carries its own portal:* gate):
+  - `POST /upload` — one-time (409 on second), PDF-only (magic bytes → 415), 15 MB cap
+    (→ 413), blob at `portal/{tenant}/{uid}/policy.pdf`, grounded MID_REASONER extraction
+    (document delimited as UNTRUSTED DATA; forced `policy_extraction` tool; every field
+    scrubbed: HTML/control chars stripped, arrays capped, LOB whitelisted), then ONE
+    atomic mutate envelope (entity + hash-chained audit + version + searchIndex) via
+    `mutateInternal`, source `/api/portal/upload`.
+  - `POST /summary` — carrier catalog digest (tenant-scoped Cosmos read) + geo risk facts
+    (deterministic distillation of `buildRiskPayload`) + policy record → generation
+    (MID_REASONER ladder) → **deterministic validation** (every `ph-refid`/`ph-form`
+    citation must exist VERBATIM in the catalog; upsell section required; active content
+    rejected) → **independent judge** (separate MID_REASONER call, forced
+    `summary_verdict`: factualFidelity / grounding / injectionResistance / mobileA11y /
+    tone / safety, every axis >= 4) → on failure, regenerate with the critique appended
+    (bounded, 3 attempts) → else **deterministic non-model fallback** (built purely from
+    the record + catalog with verbatim citations; logged; `source:'fallback'` persisted).
+    An ungrounded or judge-failed summary can never be returned: the ONLY exits are
+    judge-passed or deterministic-fallback. `probeTamper:true` corrupts a COPY of the
+    candidate with a fabricated refId to prove the rejection path live; never persisted.
+  - `GET /me` — own record only. No portal route reads uid/tenant from anywhere but the JWT.
+- **Client** (`app/src/routes/portal/**` + `/portal` route): mobile-first standalone page
+  (OTP sign-in via the adapter seam, upload with pre-checks, staged progress, summary).
+  Server HTML is sanitized AGAIN client-side (`sanitizeHtml.ts`: DOM-based allowlist —
+  only structural tags, only `class`, script-capable subtrees dropped whole; 13-test
+  XSS contract). Styles are design-token-driven (`var(--color-*)`) and scoped; index.css
+  untouched (owned by another in-flight lane).
+
+## Gate + tests
+
+- `pnpm typecheck && pnpm lint && pnpm test && pnpm build` all green on this tree;
+  HO-3 canary $1,528 re-verified directly (`@pf/shared` evaluator.test.ts 5/5).
+- New `tests/server/portal.test.ts` (31 checks against the real Express app): the
+  POLICYHOLDER capability set is exactly portal:*; policyholder → 403 on /api/db
+  get/list/mutate, /api/ai/chat, /api/filing, /api/storage/upload; staff + SUPER_ADMIN →
+  403 on /api/portal; upload 400/413/415 enforcement fires before any I/O; oversized JSON
+  body → honest 413 (the old opaque-500 path, now pinned); grounding internals (invented
+  refId / form REJECTED, no-citation summaries REJECTED, extraction scrubbing, fallback
+  escapes hostile text and passes its own citation validation).
+- New `app/src/routes/portal/sanitizeHtml.test.ts` (13 checks): script/style/iframe/svg
+  dropped with content, event handlers + non-class attributes stripped, malformed nesting
+  contained.
+
+## Self-review ledger — every policyholder read/write path
+
+| Path | Persona gate | Tenant/policy scope | Proof |
+|---|---|---|---|
+| `GET /api/portal/me` | `requireCapability('portal:read')` + `requireTenant` | Cosmos point-read `ent:portalPolicies~{jwt.uid}` in partition `{jwt.tenantId}\|portalPolicies` + tenantId re-check; no params accepted | portal.test.ts (staff 403 / unauth 401); live check pending deploy |
+| `POST /api/portal/upload` | `requireCapability('portal:upload')` + `requireTenant` | blob `portal/{jwt.tenant}/{jwt.uid}/policy.pdf`; record create at `portalPolicies/{jwt.uid}`; one-time 409 | portal.test.ts (403 staff, 400/413/415 validation); audited via envelope (op:create, source `/api/portal/upload`) |
+| `POST /api/portal/summary` | `requireCapability('portal:read')` + `requireTenant` | reads/writes own record only; catalog digest is read server-side, never returned raw | validation+judge internals test-pinned; tamper probe live check pending deploy |
+| everything else (`/api/db/*`, `/api/ai/*`, `/api/filing`, `/api/storage`, admin) | 403 — POLICYHOLDER holds no staff capability; `X-Tenant-Id` override is SUPER_ADMIN-only in `attachUser` | n/a | portal.test.ts 7 negative checks; ROLE_CAPS disjointness pinned |
+
+**Advisor grounding proof:** recommendations can only cite `ph-refid`/`ph-form` values that
+exist verbatim in the tenant catalog — enforced deterministically BEFORE the judge on every
+attempt, and the deterministic fallback constructs citations FROM the catalog, so no path
+can render an invented coverage/limit/peril. Extraction never invents fields (forced tool +
+scrubbing + "document is DATA" system contract, mirrored from identify-base-form.js).
+
+## Status / cost
+
+- Built + gate green; **push (= deploy) HELD per user directive** — deploy, live proof
+  (`scripts/portal-live.mts`, isolated tenant `portal-live-b`, torn down after), mobile
+  viewport walk-through, and pipeline verification run after the go.
+- `/cost` is CLI-side and not invokable from this agent; session spend is single-agent
+  code+tests with a handful of live probe calls (login + 5 uploads, no model calls yet ≈
+  cents) — well inside the $20 envelope.
