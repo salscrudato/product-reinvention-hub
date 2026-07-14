@@ -20,7 +20,7 @@
 const fleet = require('../fleet')
 const { callOpenAI, resolveOpenAI } = require('./ai-call')
 const { STAGE5_VALIDATE_SYSTEM } = require('./prompts')
-const { extractJson, pMap } = require('./constants')
+const { extractJson, pMap, parseWithRetry } = require('./constants')
 
 const MAX_ENTITIES_PER_CALL = 50
 
@@ -30,6 +30,135 @@ const VALID_KINDS = new Set([
   'ungrounded-field', 'refId-mismatch', 'enum-out-of-range',
   'orphan-coverage', 'dropped-row', 'form-number-mismatch',
 ])
+
+// ─── Deterministic citation resolver (P0-6 / ledger F07 + F08) ─────────────────
+// Every cited field resolves against the AUTHORITATIVE normalized grid — code, not
+// a model. Strict fields (refId / number / parentId) byte-compare against the cited
+// cell (containment allowed: a multi-refId cell legitimately contains each id).
+// Findings carry a severity; BLOCKING findings (invalid pointer on a strict field,
+// fabricated strict id, fabricated relation target) mark the entity so stage 7
+// routes it to unresolved instead of auto-accepting. The LLM validator below stays
+// semantics-only. Importer-derived citations ('(synthesized)', '(derived from row
+// context)', '(deterministic ISO-family parse)') have no source cell — skipped.
+
+const STRICT_FIELDS = new Set(['refId', 'number', 'parentId'])
+const DERIVED_VERBATIM = /^\(.*\)$/
+
+function parseCellRef(cell) {
+  const m = /^([A-Za-z]{1,3})([0-9]{1,7})$/.exec(String(cell ?? '').trim())
+  if (!m) return null
+  let col = 0
+  for (const ch of m[1].toUpperCase()) col = col * 26 + (ch.charCodeAt(0) - 64)
+  return { row: Number(m[2]) - 1, col: col - 1 }
+}
+
+// Loose canon for non-strict comparisons: numeric formatting and case fold away.
+function canonLoose(v) {
+  if (v === null || v === undefined) return ''
+  const s = String(v).trim()
+  const numericish = s.replace(/[$,\s]/g, '')
+  if (numericish !== '' && /^-?\d+(\.\d+)?$/.test(numericish)) return String(Number(numericish))
+  return s.toLowerCase()
+}
+
+function blockEntity(entity, reason) {
+  entity.blocked = true
+  entity.reviewFlag = true
+  if (!Array.isArray(entity.blockReasons)) entity.blockReasons = []
+  entity.blockReasons.push(reason)
+}
+
+function resolveCitationsDeterministic(entities, fpByName, review) {
+  const findings = []
+  if (!fpByName || typeof fpByName.get !== 'function') return findings
+
+  // Every extracted strict id (for relation-target resolution).
+  const refIdSet = new Set()
+  for (const e of entities) {
+    for (const f of e.fields ?? []) {
+      if ((f.fieldName === 'refId' || f.fieldName === 'number') && typeof f.value === 'string' && f.value.trim()) refIdSet.add(f.value.trim())
+    }
+  }
+
+  // Lazy per-sheet string-value index (only built when a relation target misses).
+  const sheetValues = new Map()
+  const sheetHasToken = (fp, token) => {
+    if (!fp || !Array.isArray(fp.cells)) return true  // no grid → cannot judge; benefit of the doubt
+    let vals = sheetValues.get(fp)
+    if (!vals) {
+      vals = []
+      for (const row of fp.cells) for (const c of row ?? []) { if (typeof c === 'string' && c) vals.push(c) }
+      sheetValues.set(fp, vals)
+    }
+    return vals.some(s => s === token || s.includes(token))
+  }
+
+  const push = (kind, severity, e, fieldName, detail) => {
+    findings.push({ kind, severity, sheetName: e.sourceSheet, sourceRowIndex: e.sourceRowIndex, fieldName, detail })
+    review.push({ kind: severity === 'BLOCKING' ? 'citation-blocked' : 'citation-mismatch', sheetName: e.sourceSheet, rowIndex: e.sourceRowIndex, fieldPath: fieldName, detail: `[${kind}] ${detail}` })
+  }
+
+  for (const e of entities) {
+    // Stacked-table layouts have no absolute grid rows — row labels are approximate,
+    // so mismatches there warn instead of block.
+    const entityFp = fpByName.get(e.sourceSheet)
+    const stacked = entityFp?.layoutShape === 'STACKED_TABLES'
+    const blockSeverity = stacked ? 'WARN' : 'BLOCKING'
+
+    for (const f of e.fields ?? []) {
+      const cit = f.citation
+      const strict = STRICT_FIELDS.has(f.fieldName)
+      if (cit && DERIVED_VERBATIM.test(String(cit.verbatim ?? ''))) continue
+      if (!cit || !cit.cell) continue  // no pointer to verify (synthesis handles blank strict ids upstream)
+      const citFp = (cit.sheet && fpByName.get(cit.sheet)) || entityFp
+      if (!citFp || !Array.isArray(citFp.cells) || citFp.cells.length === 0) continue  // legacy fingerprint — nothing authoritative to resolve against
+      const ref = parseCellRef(cit.cell)
+      if (!ref || ref.row < 0 || ref.row >= citFp.cells.length || ref.col < 0) {
+        const sev = strict ? blockSeverity : 'WARN'
+        push('invalid-citation-pointer', sev, e, f.fieldName, `citation "${cit.sheet}!${cit.cell}" does not resolve to a cell in the source grid (${citFp.cells.length} rows)`)
+        if (sev === 'BLOCKING') blockEntity(e, `invalid citation pointer on ${f.fieldName} (${cit.sheet}!${cit.cell})`)
+        else e.reviewFlag = true
+        continue
+      }
+      const actual = citFp.cells[ref.row]?.[ref.col]
+      const actualStr = actual === null || actual === undefined ? '' : String(actual)
+      if (strict) {
+        const vs = String(f.value ?? '').trim()
+        if (vs && actualStr !== vs && !actualStr.includes(vs)) {
+          const sev = blockSeverity
+          push('fabricated-strict-id', sev, e, f.fieldName, `cited cell ${cit.sheet}!${cit.cell} contains "${actualStr.slice(0, 80)}", not "${vs}" — strict ids must be byte-for-byte from the source`)
+          if (sev === 'BLOCKING') blockEntity(e, `fabricated strict id on ${f.fieldName}: "${vs}" not in cited cell ${cit.sheet}!${cit.cell}`)
+          else e.reviewFlag = true
+        }
+      } else if (String(cit.verbatim ?? '').trim() !== '' && actualStr !== '') {
+        if (canonLoose(actualStr) !== canonLoose(cit.verbatim)) {
+          push('ungrounded-field', 'WARN', e, f.fieldName, `verbatim "${String(cit.verbatim).slice(0, 60)}" does not match cited cell ${cit.sheet}!${cit.cell} ("${actualStr.slice(0, 60)}")`)
+          e.reviewFlag = true
+        }
+      }
+    }
+
+    // Relation target: a model-cited parentId must exist among extracted ids, or at
+    // least appear somewhere in the source sheet (extraction gap the ISO join /
+    // orphan promotion can still repair → WARN). Absent from both → fabricated.
+    const pf = (e.fields ?? []).find(f => f.fieldName === 'parentId')
+    if (pf && typeof pf.value === 'string' && pf.value.trim() && pf.citation && pf.citation.cell && !DERIVED_VERBATIM.test(String(pf.citation.verbatim ?? ''))) {
+      const target = pf.value.trim()
+      if (!refIdSet.has(target)) {
+        const fpp = (pf.citation.sheet && fpByName.get(pf.citation.sheet)) || entityFp
+        if (!sheetHasToken(fpp, target)) {
+          push('unresolvable-relation-target', blockSeverity, e, 'parentId', `parentId "${target}" matches no extracted entity and appears nowhere in the source sheet — fabricated relation target`)
+          if (blockSeverity === 'BLOCKING') blockEntity(e, `unresolvable relation target parentId="${target}"`)
+          else e.reviewFlag = true
+        } else {
+          push('unresolvable-relation-target', 'WARN', e, 'parentId', `parentId "${target}" matches no extracted entity (present in the source sheet — may resolve via the deterministic join)`)
+          e.reviewFlag = true
+        }
+      }
+    }
+  }
+  return findings
+}
 
 // ─── Parse validator response ─────────────────────────────────────────────────
 
@@ -77,10 +206,15 @@ function buildValidatorPrompt(sheetName, entities, sourceRowCount) {
  * @param {object[]} classified  ClassifiedSheet[] (for row counts)
  * @param {object}   budget      { degraded: boolean }
  * @param {object[]} review      ReviewItem[] (mutated)
+ * @param {Map<string,object>} [fpByName]  sheetName → SheetFingerprint (authoritative grids)
  * @returns {Promise<object[]>}  ValidationDiscrepancy[]
  */
-async function validateEntities(entities, classified, budget, review) {
+async function validateEntities(entities, classified, budget, review, fpByName) {
   const allDiscrepancies = []
+
+  // Deterministic pass FIRST (P0-6): resolve citations against the real grids;
+  // BLOCKING findings mark entities so stage 7 cannot auto-accept them.
+  allDiscrepancies.push(...resolveCitationsDeterministic(entities, fpByName, review))
 
   // VALIDATOR is gpt-5.1 (VISION / OpenAI). The call goes through resolveOpenAI
   // so the fleet cost guard is enforced before dispatch.
@@ -93,9 +227,13 @@ async function validateEntities(entities, classified, budget, review) {
     bySheet.get(e.sourceSheet).push(e)
   }
 
-  // Estimate source row counts from classified sheets.
+  // Real source row counts from the fingerprints (ledger F07: these initialized to
+  // zero and never updated, so the dropped-row check could never fire).
   const rowCounts = new Map(
-    classified.filter(c => c.domain !== 'ignore').map(c => [c.sheetName, 0]),
+    classified.filter(c => c.domain !== 'ignore').map(c => {
+      const fp = fpByName && typeof fpByName.get === 'function' ? fpByName.get(c.sheetName) : null
+      return [c.sheetName, Number(fp?.dataRowCount ?? 0)]
+    }),
   )
 
   // Sheet groups validate independently — 3 in flight (batches inside stay serial).
@@ -116,23 +254,27 @@ async function validateEntities(entities, classified, budget, review) {
       const sourceRows = rowCounts.get(sheetName) ?? batch.length
       const userPrompt = buildValidatorPrompt(sheetName, batch, sourceRows)
 
-      const result = await callOpenAI({
-        deployment:   deployGpt,
-        systemPrompt: STAGE5_VALIDATE_SYSTEM,
-        userPrompt,
-        maxTokens:    4096,
-        budget,
-      }).catch(() => ({ raw: '' }))
-
-      const parsed = parseValidatorResponse(result.raw)
+      const parsed = await parseWithRetry({
+        call: () => callOpenAI({
+          deployment:   deployGpt,
+          systemPrompt: STAGE5_VALIDATE_SYSTEM,
+          userPrompt,
+          maxTokens:    4096,
+          budget,
+        }),
+        parse: parseValidatorResponse, review, stage: 'stage5', sheetName, what: `validator batch @${start}`,
+      })
       if (!parsed) {
-        review.push({ kind: 'validator-discrepancy', sheetName, detail: 'Validator returned an unparseable response; manual review recommended.' })
+        review.push({ kind: 'validator-discrepancy', sheetName, detail: 'Validator returned an unparseable response (after one retry); manual review recommended.' })
         continue
       }
 
       for (const disc of parsed.discrepancies) {
         const d = {
           kind:        disc.kind,
+          // LLM findings are semantic advisories — WARN only (P0-6/F08); the
+          // deterministic resolver above owns the BLOCKING severities.
+          severity:    'WARN',
           entityIndex: disc.entityIndex,
           fieldName:   disc.fieldName,
           expected:    disc.expected,
@@ -159,4 +301,4 @@ async function validateEntities(entities, classified, budget, review) {
   return allDiscrepancies
 }
 
-module.exports = { validateEntities }
+module.exports = { validateEntities, resolveCitationsDeterministic }

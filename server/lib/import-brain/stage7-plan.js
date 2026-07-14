@@ -251,6 +251,20 @@ function buildImportPlan(brainOutput, opts = {}) {
       })
       continue
     }
+    // BLOCKING grounding failures from the stage-5 deterministic citation resolver
+    // (P0-6 / ledger F08): the entity is NOT auto-accepted — it moves to unresolved
+    // with its evidence and reasons, never silently planned, never dropped.
+    if (e.blocked) {
+      unresolved.push({
+        section: e.kind,
+        label:   entityLabel(e),
+        refId:   entityRefId(e),
+        severity: 'BLOCKING',
+        reason:  `blocked by deterministic citation verification: ${(Array.isArray(e.blockReasons) ? e.blockReasons : []).join('; ') || 'grounding check failed'}`,
+        citation: citationString(e.fields[0]?.citation),
+      })
+      continue
+    }
     if (e.overallConfidence < CONFIDENCE_DISCARD) {
       unresolved.push({
         section: e.kind,
@@ -271,6 +285,21 @@ function buildImportPlan(brainOutput, opts = {}) {
   let productPlanned = productEntities.length > 0 ? toPlanned(productEntities[0]) : null
   let productRefId   = productPlanned?.refId ?? null
   const planWarnings = []
+
+  // Conservation (P0-5 / ledger F06): the plan carries ONE product and ONE rating
+  // program — every extra ACCEPTED entity of those kinds becomes a BLOCKING
+  // unresolved item with its evidence, never a silent drop.
+  for (const extra of productEntities.slice(1)) {
+    unresolved.push({
+      section: 'product', label: entityLabel(extra), refId: entityRefId(extra),
+      severity: 'BLOCKING',
+      reason: `multiple product rows extracted — the plan carries one product ("${productPlanned?.label ?? ''}"); this row was NOT imported. Split the workbook or import it separately.`,
+      citation: citationString(extra.fields[0]?.citation),
+    })
+  }
+  if (productEntities.length > 1) {
+    planWarnings.push({ kind: 'multiple-products', sheet: null, row: null, field: 'refId', detail: `${productEntities.length} product rows extracted — kept "${productPlanned?.refId ?? productPlanned?.label ?? ''}"; ${productEntities.length - 1} moved to unresolved (BLOCKING review).` })
+  }
 
   // A product stub is only justified when the source yielded real content — a
   // blank template must produce an EMPTY plan, not a synthesized product.
@@ -304,6 +333,17 @@ function buildImportPlan(brainOutput, opts = {}) {
   const programs = byKind('ratingProgram')
   const steps    = byKind('ratingStep').map(e => toPlanned(e))
   let ratingProgram = programs.length > 0 ? toPlanned(programs[0]) : null
+  for (const extra of programs.slice(1)) {
+    unresolved.push({
+      section: 'rating', label: entityLabel(extra), refId: entityRefId(extra),
+      severity: 'BLOCKING',
+      reason: 'multiple rating-program rows extracted — the plan carries one program; this row was NOT imported (conservation).',
+      citation: citationString(extra.fields[0]?.citation),
+    })
+  }
+  if (programs.length > 1) {
+    planWarnings.push({ kind: 'multiple-rating-programs', sheet: null, row: null, field: 'refId', detail: `${programs.length} rating-program rows extracted — kept the first; ${programs.length - 1} moved to unresolved (BLOCKING review).` })
+  }
   if (!ratingProgram && steps.length > 0) {
     const prefix = lob ? (lob.refIdPrefix || lob.code) : 'XX'
     const refId = `${prefix}.PROG.SYNTH001`

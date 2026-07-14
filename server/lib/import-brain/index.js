@@ -112,7 +112,7 @@ async function runAdaptiveImportBrain(opts) {
   // ── Stage 5: Adversarial validation (gpt-5.1 / OpenAI, decorr. from BULK) ──
   emitStage(emit, 5, 'validate', 'start', `Validating ${entities.length} entities`)
 
-  const discrepancies = await validateEntities(entities, classifiedSheets, budget, review)
+  const discrepancies = await validateEntities(entities, classifiedSheets, budget, review, fpMap)
 
   emitStage(emit, 5, 'validate', 'end', `${discrepancies.length} discrepancy(ies) found`)
   emit({ t: 'json', key: 'brain:stage5', value: discrepancies })

@@ -13,7 +13,7 @@
 
 const { callAnthropic, resolveAnthropic } = require('./ai-call')
 const { STAGE2_HEADER_SYSTEM } = require('./prompts')
-const { extractJson } = require('./constants')
+const { extractJson, parseWithRetry } = require('./constants')
 
 // Load the deterministic header-scoring functions from the pre-built CJS bundle.
 const brainShared = require('../import-brain-shared.cjs')
@@ -26,6 +26,9 @@ const CONFIDENCE_FAST = 0.80
 function parseHeaderResponse(raw) {
   try {
     const obj = extractJson(raw)
+    // Shape validation (P0-7 / ledger F16): a non-numeric headerRowIndex is a
+    // malformed response, not a lock at row NaN.
+    if (!Number.isFinite(Number(obj.headerRowIndex ?? -1))) return null
     return {
       headerRowIndex: Number(obj.headerRowIndex ?? -1),
       isConfirmed:    Boolean(obj.isConfirmed ?? false),
@@ -102,28 +105,23 @@ async function lockHeaders(classified, fpByName, budget, review) {
       continue
     }
 
-    // Re-score using the shared deterministic scorer when fingerprinter result is
-    // ambiguous. Build a synthetic 2-D cell grid from columnProfiles for scoring.
+    // Re-score using the shared deterministic scorer when the fingerprinter result
+    // is ambiguous — against the AUTHORITATIVE embedded grid (fp.cells), whose row
+    // indices are absolute by construction. (P0-3 / ledger F04: the previous
+    // synthetic rebuild from columnProfiles — headerLabel as row 0 + distinctSample
+    // as rows 1+ — has no stable relationship to real row numbers; preamble rows
+    // above the header shift everything, so its indices must never confirm a lock.)
     let bestRow = fp.bestHeaderRow
     if (existingCandidates.length === 0 || !topCandidate || topCandidate.score <= CONFIDENCE_FAST) {
       try {
-        // Rebuild top rows from headerLabel (row 0) + distinctSample values (rows 1+)
-        const colCount = (fp.columnProfiles || []).length
-        if (colCount > 0) {
-          const maxSampleLen = Math.max(...fp.columnProfiles.map(c => (c.distinctSample || []).length), 0)
-          const cells = []
-          // Row 0: column header labels
-          cells.push(fp.columnProfiles.map(c => c.headerLabel ?? null))
-          // Rows 1+: sample values
-          for (let r = 0; r < Math.min(maxSampleLen, 10); r++) {
-            cells.push(fp.columnProfiles.map(c => (c.distinctSample || [])[r] ?? null))
-          }
-          const reScoredCandidates = scoreHeaderCandidates(cells)
-          bestRow = pickBestHeaderRow(reScoredCandidates)
-          if (bestRow >= 0 && reScoredCandidates[0] && reScoredCandidates[0].score > CONFIDENCE_FAST) {
+        if (Array.isArray(fp.cells) && fp.cells.length > 0) {
+          const reScoredCandidates = scoreHeaderCandidates(fp.cells)
+          const picked = pickBestHeaderRow(reScoredCandidates)
+          if (picked != null && picked >= 0) bestRow = picked
+          if (picked != null && picked >= 0 && reScoredCandidates[0] && reScoredCandidates[0].score > CONFIDENCE_FAST) {
             locks.push({
               sheetName:      fp.sheetName,
-              headerRowIndex: bestRow,
+              headerRowIndex: picked,
               layoutShape:    fp.layoutShape,
               columnCount:    fp.dataColCount,
               isConfirmed:    true,
@@ -131,19 +129,23 @@ async function lockHeaders(classified, fpByName, budget, review) {
             continue
           }
         }
+        // Legacy fingerprints without an embedded grid have nothing trustworthy to
+        // re-score — fall through to the AI pick / unconfirmed path.
       } catch { /* fall through to AI */ }
     }
 
-    // ── AI fallback: REASONER_A (opus) picks the header ─────────────────────
-    const result = await callAnthropic({
-      deployment:   deployOpus,
-      systemPrompt: STAGE2_HEADER_SYSTEM,
-      userPrompt:   buildHeaderUser(fp),
-      maxTokens:    256,
-      budget,
-    }).catch(() => ({ raw: '' }))
-
-    const parsed = parseHeaderResponse(result.raw)
+    // ── AI fallback: REASONER_A (opus) picks the header. Malformed output =
+    // telemetry + one targeted retry (P0-7 / ledger F16). ─────────────────────
+    const parsed = await parseWithRetry({
+      call: () => callAnthropic({
+        deployment:   deployOpus,
+        systemPrompt: STAGE2_HEADER_SYSTEM,
+        userPrompt:   buildHeaderUser(fp),
+        maxTokens:    256,
+        budget,
+      }),
+      parse: parseHeaderResponse, review, stage: 'stage2', sheetName: fp.sheetName, what: 'AI header pick',
+    })
 
     if (!parsed || parsed.headerRowIndex < 0) {
       locks.push({
