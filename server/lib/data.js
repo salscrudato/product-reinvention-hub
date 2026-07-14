@@ -414,6 +414,33 @@ router.post('/presence/watch', requireAuth, requireTenant, async (req, res) => {
   res.json({ viewers: [...new Set(resources.map((r) => r.uid))] })
 })
 
+// ─── Versions read (PCM-B): one product's change history ─────────────────────
+// The WRITE side has always recorded kind:'version' docs atomically with each
+// mutation (envelope() above) — this is the dedicated READ. /db/list can never
+// return them (its WHERE is kind='entity' and its projection is entity-shaped).
+// The partition `${tid}|${productId}` contains exactly the product's subtree,
+// so productId scoping is free — no entityPath predicate needed. No ORDER BY:
+// the indexing policy of the provisioned container is not owned by this repo,
+// and the client sorts newest-first anyway. TOP cap mirrors filing.js's asOf
+// reader (2000); histories past the cap return an arbitrary subset — the cap
+// is generous for a review drawer, and paging can be added if it ever binds.
+router.get('/versions', requireCapability('product:read'), requireTenant, async (req, res) => {
+  const pid = String(req.query.productId || '')
+  if (!pid) return res.status(400).json({ error: 'productId_required' })
+  try {
+    const tid = resolveTenantForPrincipal(req.user)
+    const limit = Math.max(1, Math.min(parseInt(String(req.query.limit), 10) || 500, 2000))
+    const sql = `SELECT TOP ${limit} c.id, c.entityPath, c.rev, c.op, c.diff, c.actor, c.at FROM c WHERE c.kind = 'version' AND c.tenantId = @tid`
+    const { resources } = await storeFor(tid).items.query(
+      { query: sql, parameters: [{ name: '@tid', value: tid }] },
+      { partitionKey: pkFor(tid, `products/${pid}`), maxItemCount: limit },
+    ).fetchAll()
+    res.json({ data: resources })
+  } catch (e) {
+    res.status(500).json({ error: 'versions_read_failed', detail: String(e.message || e) })
+  }
+})
+
 // ─── PROBE endpoint: audit documents (ADMIN + PROBE_MODE=1 only) ─────────────
 // Added for Phase 3 fault-injection testing (FAULT-003). Returns raw kind=audit
 // documents for a path so the smoke harness can verify the audit write is present.

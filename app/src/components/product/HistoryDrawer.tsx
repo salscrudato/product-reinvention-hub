@@ -1,9 +1,10 @@
-// History drawer — a product-wide AUDIT TRAIL. Every recorded change to the product and
-// its child entities (coverages, rules, pricing, forms) shows as a timeline entry with
-// who · what · when and the exact field-level before → after diff. EDITOR/ADMIN can
-// restore any versioned entity to a prior snapshot. Entries are the `versions` written
-// atomically by adapter.db.mutate() (entity + audit + version, one transaction), scoped
-// to this product via productId.
+// History drawer — a product-wide AUDIT TRAIL. Every recorded change to the product
+// doc and its subtree (coverages, rules, form rules, rating programs — the entities in
+// the product's partition) shows as a timeline entry with who · what · when and the
+// exact field-level before → after diff. Entries are the version docs written
+// atomically by adapter.db.mutate() (entity + audit + version, one transaction), read
+// via /db/versions (PCM-B). Server version docs carry no snapshot, so the restore
+// action only appears for legacy rows that have one — never invented.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { IconRestore, IconChevronDown, IconChevronRight, IconSearch } from '../ui/icons'
@@ -17,6 +18,7 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import type { WithId } from '../../context/ProductContext'
 import type { Version } from '@pf/shared'
+import { versionAction } from '../../lib/backend/versionRead'
 
 interface Props { onClose: () => void; entityPath: string }
 
@@ -46,14 +48,8 @@ function exactTime(at: unknown): string {
   return Number.isNaN(ts.getTime()) ? '' : ts.toLocaleString()
 }
 
-// Version rows don't carry `action`, but it's inferable: a null snapshot is a delete; a
-// diff whose every `before` is null is a create; anything else is an update.
-function inferAction(v: WithId<Version>): 'create' | 'update' | 'delete' {
-  if (v.snapshot == null) return 'delete'
-  const diff = v.diff ?? []
-  if (diff.length > 0 && diff.every(d => d.before == null || d.before === undefined)) return 'create'
-  return 'update'
-}
+// Action comes from the recorded op (PCM-B) with the legacy snapshot heuristic
+// as fallback — see versionAction in lib/backend/versionRead.ts.
 const ACTION_META: Record<string, { label: string; color: 'good' | 'blue' | 'danger' }> = {
   create: { label: 'Created', color: 'good' },
   update: { label: 'Updated', color: 'blue' },
@@ -203,7 +199,7 @@ export function HistoryDrawer({ onClose }: Props) {
         ) : (
           <div className="flex flex-col gap-2">
             {shown.slice(0, limit).map(v => {
-              const action = inferAction(v)
+              const action = versionAction(v)
               const am = ACTION_META[action]
               const em = ENTITY_META[v.entityType] ?? { label: v.entityType, color: 'default' as const }
               const isOpen = expanded === v.id

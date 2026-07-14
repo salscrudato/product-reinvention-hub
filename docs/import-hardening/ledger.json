@@ -1,5 +1,5 @@
 {
-  "$schema": "ledger entry: {id, title, class(SILENT_LOSS|GROUNDING|MULTIPLICITY|EVAL_GAP|PDF|PERF|ARCH_ESCALATION), severity(BLOCKING|HIGH|MED|LOW), confidence 0-1, cost(S|M|L), status(FIXED_IH1|OPEN|RESOLVED_PRIOR|PARTIAL_OPEN), priority(1=do first, null=done), evidence, fixture, lesson}",
+  "$schema": "ledger entry: {id, title, class(SILENT_LOSS|GROUNDING|MULTIPLICITY|EVAL_GAP|PDF|PERF|ARCH_ESCALATION|GENERALIZATION), severity(BLOCKING|HIGH|MED|LOW), confidence 0-1, cost(S|M|L), status(FIXED_IH1|FIXED_IH2|OPEN|RESOLVED_PRIOR|PARTIAL_OPEN|PARKED|ESCALATE|NOT_REPRODUCIBLE), priority(1=do first, null=done), evidence, fixture, lesson}. Generalization amendment (2026-07-14): every fix obeys the TWO-FIXTURE RULE (original red fixture + one structurally different fixture green for the same reason) and the anti-overfit rules (no fixture/carrier/sheet-name/row-count branching in generic code); Phase G items get G-prefixed ids from the assumption audit.",
   "generatedBy": "IH1 baseline-and-triage, 2026-07-14",
   "baselineSha": "2b1f893febdfbc93152f5e5681836420954d5713",
   "entries": [
@@ -283,11 +283,11 @@
       "severity": "BLOCKING",
       "confidence": 0.95,
       "cost": "M",
-      "status": "OPEN",
-      "priority": 1,
-      "evidence": "ProductContext.tsx:101 subscribes 'versions' → azure.adapter.ts:248 → POST /api/db/list → data.js:94 WHERE c.kind='entity' → 0 rows forever. No dedicated versions endpoint exists (route census). Double defect: version docs carry no productId but ProductContext filters v.productId===pid; HistoryDrawer expects v.snapshot + array diff, server writes {before,changed} object diff.",
-      "fixture": "none yet — IH2: server test for a versions read endpoint + HistoryDrawer render test",
-      "lesson": "The write side was atomic and correct all along (F19); the Firebase-era Version read model never got ported in the Azure cutover."
+      "status": "FIXED_IH2",
+      "priority": null,
+      "evidence": "Fixed read-side only (write path untouched per F19): GET /api/db/versions (data.js, product:read + requireTenant, partition-scoped `${tid}|${pid}` + c.tenantId belt-and-braces, TOP cap 2000 mirroring filing.js asOf reader, no ORDER BY — client sorts); client bridge app/src/lib/backend/versionRead.ts maps {before,changed} object diff → VersionDiff[], derives productId/entityType from entityPath, snapshot stays null (restore hidden, never invented), versionAction trusts recorded op; adapter list() routes 'versions' to the endpoint; ProductContext passes the productId where-filter (per-product cache key). Judge ACCEPT (verified: TOP not injectable, cross-tenant impossible via JWT-derived pk, no other 'versions' caller, census 54/54). KNOWN SCOPE: top-level entities (forms/ldTables/rtTables) version into their own partitions and do not appear in a product's history — same as before the fix; add a cross-partition read if ever demanded.",
+      "fixture": "tests/server/versions-read.test.ts (3/4 red at 1c62d34) + app/src/lib/backend/versionRead.test.ts (module absent at 1c62d34) — two structurally different fixtures for the same defect (two-fixture rule)",
+      "lesson": "The write side was atomic and correct all along (F19); the Firebase-era Version read model never got ported in the Azure cutover. A read endpoint over an already-partition-scoped write needs no new filter — the partition IS the filter."
     },
     {
       "id": "PCM-C",

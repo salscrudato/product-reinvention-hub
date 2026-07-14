@@ -13,6 +13,7 @@
 import type { Unsubscribe } from '@pf/shared'
 import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, ManagedUser, PortalPolicy, PortalSummary, TenantMember, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
 import { MutationConflictError } from './types'
+import { mapServerVersionRow, type ServerVersionRow } from './versionRead'
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 const TOKEN_KEY = 'pf.azure.token'
@@ -208,6 +209,15 @@ export const adapter: BackendAdapter = {
     },
 
     async list<T>(path: string, q?: Query): Promise<T[]> {
+      // PCM-B: 'versions' is not an entity collection — kind:'version' docs sit
+      // outside /db/list's kind='entity' WHERE, so they get their own endpoint,
+      // scoped to the product named in the query filter.
+      if (path === 'versions') {
+        const pid = q?.where?.find(w => w.field === 'productId')?.value
+        if (!pid) return []
+        const { data } = await api<{ data: ServerVersionRow[] }>(`/db/versions?productId=${encodeURIComponent(String(pid))}`)
+        return data.map(mapServerVersionRow) as unknown as T[]
+      }
       const { data } = await api<{ data: T[] }>('/db/list', { method: 'POST', body: JSON.stringify({ path, query: q }) })
       return data
     },

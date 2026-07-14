@@ -98,6 +98,9 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
           setRtTables(rec); inc()
         }
       }),
+      // Versions are read from the dedicated /db/versions endpoint (PCM-B) —
+      // the where-filter names the product so the adapter can scope the read
+      // (and the subscribe cache key stays per-product).
       adapter.db.subscribe<WithId<Version>>('versions', (d) => {
         if (Array.isArray(d)) {
           // Newest-first. `at` is a Firestore Timestamp (has toDate/seconds) after commit,
@@ -115,7 +118,7 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
           setVersions(d.filter(v => v.productId === pid).sort((a, b) => ms(b.at) - ms(a.at)))
           inc()
         }
-      }),
+      }, undefined, { where: [{ field: 'productId', op: '==', value: pid }] }),
       adapter.db.subscribe<WithId<Comment>>('comments', (d) => {
         if (Array.isArray(d)) { setComments(d.filter(c => c.entityPath?.startsWith(`products/${pid}`))); inc() }
       }),

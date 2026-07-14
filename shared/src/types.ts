@@ -337,6 +337,10 @@ export interface Version {
   diff:       VersionDiff[]
   actor:      { uid: string; name: string }
   at:         unknown
+  // Recorded by the server's version documents (PCM-B read path); optional so
+  // legacy rows without them still satisfy the contract.
+  op?:        'create' | 'update' | 'delete'
+  rev?:       number
 }
 
 export interface AuditEvent {
