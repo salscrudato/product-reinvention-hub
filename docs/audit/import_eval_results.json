@@ -1,11 +1,14 @@
 {
-  "runAt": "2026-07-14T16:19:36.205Z",
+  "runAt": "2026-07-14T22:38:30.982Z",
   "mode": "offline",
   "baseUrl": null,
   "targets": {
     "f1": 0.95,
     "numericExact": 0.98,
-    "citation": 1
+    "citation": 1,
+    "extrasLive": 0.02,
+    "linkEdges": 0.98,
+    "citationResolve": 0.98
   },
   "results": [
     {
@@ -61,6 +64,46 @@
           "rtTable": 4
         }
       },
+      "extras": {
+        "extraEntities": 0,
+        "extraEntityRate": 0,
+        "extraByKind": {},
+        "sampleExtras": []
+      },
+      "linkage": {
+        "parentWithRef": 88,
+        "parentResolved": 88,
+        "parentResolutionRate": 1,
+        "goldenParentEdges": 88,
+        "parentEdgesReproduced": 88,
+        "parentEdgeRecall": 1,
+        "goldenFormEdges": 554,
+        "formEdgesReproduced": 554,
+        "formAttachmentRecall": 1,
+        "ldRefWithRef": 15,
+        "ldRefResolved": 12,
+        "ldTableRefResolutionRate": 0.8,
+        "sampleMisses": [
+          {
+            "metric": "ldTableRefResolution",
+            "kind": "rule",
+            "refId": "GL.RU.024",
+            "detail": "ldTableRef \"LDTable.122\" resolves to no extracted table"
+          },
+          {
+            "metric": "ldTableRefResolution",
+            "kind": "rule",
+            "refId": "GL.RU.025",
+            "detail": "ldTableRef \"LDTable.123\" resolves to no extracted table"
+          },
+          {
+            "metric": "ldTableRefResolution",
+            "kind": "rule",
+            "refId": "GL.RU.089",
+            "detail": "ldTableRef \"LDTable.058\" resolves to no extracted table"
+          }
+        ]
+      },
       "pass": true
     },
     {
@@ -106,6 +149,27 @@
           "ldTable": 34
         }
       },
+      "extras": {
+        "extraEntities": 0,
+        "extraEntityRate": 0,
+        "extraByKind": {},
+        "sampleExtras": []
+      },
+      "linkage": {
+        "parentWithRef": 704,
+        "parentResolved": 704,
+        "parentResolutionRate": 1,
+        "goldenParentEdges": 704,
+        "parentEdgesReproduced": 704,
+        "parentEdgeRecall": 1,
+        "goldenFormEdges": 1483,
+        "formEdgesReproduced": 1483,
+        "formAttachmentRecall": 1,
+        "ldRefWithRef": 0,
+        "ldRefResolved": 0,
+        "ldTableRefResolutionRate": null,
+        "sampleMisses": []
+      },
       "pass": true
     },
     {
@@ -146,6 +210,27 @@
           "rule": 1608
         }
       },
+      "extras": {
+        "extraEntities": 0,
+        "extraEntityRate": 0,
+        "extraByKind": {},
+        "sampleExtras": []
+      },
+      "linkage": {
+        "parentWithRef": 517,
+        "parentResolved": 517,
+        "parentResolutionRate": 1,
+        "goldenParentEdges": 517,
+        "parentEdgesReproduced": 517,
+        "parentEdgeRecall": 1,
+        "goldenFormEdges": 3072,
+        "formEdgesReproduced": 3072,
+        "formAttachmentRecall": 1,
+        "ldRefWithRef": 0,
+        "ldRefResolved": 0,
+        "ldTableRefResolutionRate": null,
+        "sampleMisses": []
+      },
       "pass": true
     },
     {
@@ -185,6 +270,27 @@
           "coverage": 112,
           "rule": 234
         }
+      },
+      "extras": {
+        "extraEntities": 0,
+        "extraEntityRate": 0,
+        "extraByKind": {},
+        "sampleExtras": []
+      },
+      "linkage": {
+        "parentWithRef": 93,
+        "parentResolved": 93,
+        "parentResolutionRate": 1,
+        "goldenParentEdges": 93,
+        "parentEdgesReproduced": 93,
+        "parentEdgeRecall": 1,
+        "goldenFormEdges": 726,
+        "formEdgesReproduced": 726,
+        "formAttachmentRecall": 1,
+        "ldRefWithRef": 0,
+        "ldRefResolved": 0,
+        "ldTableRefResolutionRate": null,
+        "sampleMisses": []
       },
       "pass": true
     }

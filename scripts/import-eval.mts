@@ -26,6 +26,12 @@ import { fileURLToPath } from 'url'
 import ExcelJS from 'exceljs'
 import { mapIsoWorkbook } from '@pf/shared'
 import type { IsoCell, IsoGrid, ImportPlan } from '@pf/shared'
+// F20: fabrication / linkage / conservation / citation-resolution metrics —
+// pure functions locked by tests/eval/import-eval-metrics.test.ts.
+import {
+  extrasMetrics, linkageMetrics, conservationMetrics, resolveProvenanceRows,
+  type ProvenanceRow,
+} from './lib/import-eval-metrics.mts'
 
 const __dir   = dirname(fileURLToPath(import.meta.url))
 const REPO    = resolve(__dir, '..')
@@ -46,6 +52,15 @@ const ONLY = (process.env.IMPORT_EVAL_ONLY || '').split(',').map(s => s.trim().t
 const F1_TARGET       = 0.95
 const NUMERIC_TARGET  = 0.98
 const CITATION_TARGET = 1.0
+// F20 targets. Extras: an entity the golden doesn't know is fabrication risk —
+// zero tolerance offline (same parser both sides), small live tolerance for
+// brain-only rows the ISO join legitimately flags. Linkage: dangling parents
+// in a returned plan are a defect (stage-7 orphan-promotion nulls them), and
+// source-defined edges must survive. Citation resolution: accepted verbatims
+// must match their cited cells.
+const EXTRA_TARGET_LIVE    = 0.02
+const LINK_EDGE_TARGET     = 0.98
+const CITATION_RESOLVE_TARGET = 0.98
 
 // ─── Formats under evaluation ─────────────────────────────────────────────────
 
@@ -260,13 +275,18 @@ async function login(): Promise<string> {
   return body.token
 }
 
-interface LiveResult { bundle: unknown; errors: string[]; spend: unknown; notices: string[] }
+interface LiveResult {
+  bundle: unknown; errors: string[]; spend: unknown; notices: string[]
+  // F20 conservation inputs: stage-4 candidate count + stage-6 summary counts.
+  stage4: { entityCount?: number; flagged?: number } | null
+  summaryCounts: Record<string, number> | null
+}
 
 // Dev is a shared, continuously-deployed environment: a deploy restarts the app and
 // severs in-flight SSE ("fetch: terminated"). Retry the whole import a few times,
 // pausing so the restarted app warms up.
 async function postImport(token: string, files: string[], lobHint?: string, timeoutMs = EVAL_TIMEOUT_MS): Promise<LiveResult> {
-  let last: LiveResult = { bundle: null, errors: ['not attempted'], spend: null, notices: [] }
+  let last: LiveResult = { bundle: null, errors: ['not attempted'], spend: null, notices: [], stage4: null, summaryCounts: null }
   for (let attempt = 1; attempt <= 3; attempt++) {
     last = await postImportOnce(token, files, lobHint, timeoutMs)
     if (last.bundle || last.errors.length === 0) return last
@@ -295,7 +315,7 @@ async function postImportOnce(token: string, files: string[], lobHint?: string, 
   const stallTimer = setInterval(() => {
     if (Date.now() - lastByteAt > 90_000) controller.abort(new Error('socket stalled (no SSE heartbeat for 90s)'))
   }, 15_000)
-  const out: LiveResult = { bundle: null, errors: [], spend: null, notices: [] }
+  const out: LiveResult = { bundle: null, errors: [], spend: null, notices: [], stage4: null, summaryCounts: null }
   const t0 = Date.now()
   const elapsed = () => `${Math.round((Date.now() - t0) / 1000)}s`
   try {
@@ -324,6 +344,9 @@ async function postImportOnce(token: string, files: string[], lobHint?: string, 
           }
           if (evt.t === 'json' && evt.key === 'bundle') out.bundle = evt.value
           if (evt.t === 'json' && (evt.key === 'brain:spend' || evt.key === 'import:spend')) out.spend = evt.value
+          // F20 conservation: stage-4 candidate count / stage-6 summary counts.
+          if (evt.t === 'json' && evt.key === 'brain:stage4') out.stage4 = evt.value as LiveResult['stage4']
+          if (evt.t === 'json' && evt.key === 'brain:output') out.summaryCounts = evt.value as LiveResult['summaryCounts']
           if (evt.t === 'error') out.errors.push(evt.message ?? 'unknown')
           // Server stage progress + notices: without these a 90-minute brain run is
           // 90 minutes of silence, and diagnostics like "Deterministic ISO mapper
@@ -421,28 +444,80 @@ if (MODE_RESCORE) {
     if (!existsSync(goldenPath)) { log(`  ⚠ ${fmt.id}: no golden — skipped`); continue }
     if (!existsSync(dumpPath))   { log(`  ⚠ ${fmt.id}: no extraction dump (run --live once) — skipped`); continue }
     const golden = JSON.parse(readFileSync(goldenPath, 'utf8')) as GoldenSet
-    const dump   = JSON.parse(readFileSync(dumpPath, 'utf8')) as { entities: GoldenEntity[] }
+    // Dumps written before the F20 shape carry only {entities, citations} —
+    // the newer keys degrade to null-metrics (reported, not failed).
+    const dump = JSON.parse(readFileSync(dumpPath, 'utf8')) as {
+      entities: GoldenEntity[]
+      counts?: { proposed?: number; accepted?: number; unresolved?: number }
+      unresolvedCount?: number
+      stage4?: { entityCount?: number }
+      provenance?: ProvenanceRow[]
+    }
     const m = score(golden.entities, dump.entities)
+    const extras = extrasMetrics(dump.entities, golden.entities)
+    const linkage = linkageMetrics(dump.entities, golden.entities)
+    const conservation = conservationMetrics({
+      stage4Count: dump.stage4?.entityCount ?? null,
+      planEntities: dump.entities.length,
+      unresolvedCount: dump.unresolvedCount ?? null,
+      counts: dump.counts ?? null,
+    })
+    // Citation resolution replays offline: the dump's provenance rows against
+    // the local source grids. Old dumps without provenance → null (reported).
+    let citRes: ReturnType<typeof resolveProvenanceRows> | null = null
+    if (Array.isArray(dump.provenance) && dump.provenance.length > 0) {
+      const files = fmt.files.map(f => join(SAMPLES, f)).filter(f => existsSync(f))
+      const grids = (await Promise.all(files.map(f => readWorkbookNode(f)))).flat()
+      citRes = resolveProvenanceRows(dump.provenance, grids)
+    }
     const pass = m.f1 >= F1_TARGET && m.numericExactRate >= NUMERIC_TARGET
+      && extras.extraEntityRate <= EXTRA_TARGET_LIVE
+      && linkage.parentResolutionRate === 1
+      && linkage.parentEdgeRecall >= LINK_EDGE_TARGET
+      && linkage.formAttachmentRecall >= LINK_EDGE_TARGET
+      && conservation.countsIdentityOk !== false
+      && (citRes?.citationResolvableRate == null || citRes.citationResolvableRate >= CITATION_RESOLVE_TARGET)
     if (!pass) anyFail = true
-    results.push({ id: fmt.id, mode: 'rescore', ...m, pass })
-    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | entityRecall ${m.entityRecall.toFixed(3)} (citations not re-checked)`)
+    results.push({ id: fmt.id, mode: 'rescore', ...m, extras, linkage, conservation, citationResolution: citRes, pass })
+    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | extras ${(extras.extraEntityRate * 100).toFixed(1)}% | link parent=${linkage.parentResolutionRate.toFixed(2)}/edges=${linkage.parentEdgeRecall.toFixed(2)}/forms=${linkage.formAttachmentRecall.toFixed(2)} | citRes ${citRes?.citationResolvableRate == null ? 'n/a' : citRes.citationResolvableRate.toFixed(3)} | loss ${conservation.lossDelta ?? 'n/a'}`)
   }
 } else if (!MODE_LIVE) {
   section('OFFLINE: parse-stability diff vs golden')
   for (const fmt of ACTIVE_FORMATS) {
     const goldenPath = join(GOLDEN, `${fmt.id}.golden.json`)
-    if (!existsSync(goldenPath)) { log(`  ⚠ ${fmt.id}: no golden (run --write-golden)`); continue }
+    // A format silently dropping out of the gate is a fail, not a skip (F20):
+    // a deleted golden or renamed sample must redden the run.
+    if (!existsSync(goldenPath)) {
+      anyFail = true
+      results.push({ id: fmt.id, mode: 'offline', pass: false, error: 'missing golden' })
+      log(`  ✗ ${fmt.id}: no golden (run --write-golden) — FAIL`)
+      continue
+    }
     const files = fmt.files.map(f => join(SAMPLES, f)).filter(f => existsSync(f))
-    if (files.length !== fmt.files.length) { log(`  ⚠ ${fmt.id}: missing sample file(s), skipped`); continue }
+    if (files.length !== fmt.files.length) {
+      anyFail = true
+      results.push({ id: fmt.id, mode: 'offline', pass: false, error: 'missing sample file(s)' })
+      log(`  ✗ ${fmt.id}: missing sample file(s) — FAIL`)
+      continue
+    }
     const golden = JSON.parse(readFileSync(goldenPath, 'utf8')) as GoldenSet
     const plan = await parseXlsx(files)
     const current = planToGolden(plan, fmt.id, files)
     const m = score(golden.entities, current.entities)
-    const pass = m.f1 >= 0.999 && m.numericExactRate >= 0.999
+    // Same parser on both sides: ANY extra entity is nondeterminism, and every
+    // source-defined edge must reproduce exactly.
+    const extras = extrasMetrics(current.entities, golden.entities)
+    const linkage = linkageMetrics(current.entities, golden.entities)
+    const degenerate = golden.entities.length === 0
+    if (degenerate) log(`  ✗ ${fmt.id}: golden has ZERO entities — degenerate golden (regenerated from a broken parse?)`)
+    const pass = !degenerate && m.f1 >= 0.999 && m.numericExactRate >= 0.999
+      && extras.extraEntityRate === 0
+      && linkage.parentResolutionRate === 1
+      && linkage.parentEdgeRecall >= 0.999
+      && linkage.formAttachmentRecall >= 0.999
     if (!pass) anyFail = true
-    results.push({ id: fmt.id, mode: 'offline', ...m, pass })
-    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(4)} | numeric ${m.numericExactRate.toFixed(4)} | ${m.goldenFields} golden fields`)
+    results.push({ id: fmt.id, mode: 'offline', ...m, extras, linkage, pass })
+    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(4)} | numeric ${m.numericExactRate.toFixed(4)} | extras ${extras.extraEntities} | link parent=${linkage.parentResolutionRate.toFixed(3)} edges=${linkage.parentEdgeRecall.toFixed(3)} forms=${linkage.formAttachmentRecall.toFixed(3)} | ${m.goldenFields} golden fields`)
   }
 } else {
   section(`LIVE: ${BASE_URL}`)
@@ -466,15 +541,46 @@ if (MODE_RESCORE) {
       continue
     }
     const extracted = bundleToEntities(live.bundle)
+    const b = live.bundle as { counts?: { proposed?: number; accepted?: number; unresolved?: number }; unresolved?: unknown[]; provenance?: ProvenanceRow[] } | null
     // Always dump: a live extraction costs real money and ~an hour — the dump makes
-    // it replayable through --rescore instead of disposable.
-    writeFileSync(join(AUDIT, `import_eval_extracted-${fmt.id}.json`), JSON.stringify({ entities: extracted, citations: citationCoverage(live.bundle) }, null, 2))
+    // it replayable through --rescore instead of disposable. F20 enriched shape:
+    // counts / unresolved / stage4 / provenance ride along so conservation and
+    // citation resolution replay offline.
+    writeFileSync(join(AUDIT, `import_eval_extracted-${fmt.id}.json`), JSON.stringify({
+      entities: extracted,
+      citations: citationCoverage(live.bundle),
+      counts: b?.counts ?? null,
+      unresolvedCount: Array.isArray(b?.unresolved) ? b!.unresolved!.length : null,
+      unresolved: Array.isArray(b?.unresolved) ? b!.unresolved : null,
+      stage4: live.stage4,
+      summaryCounts: live.summaryCounts,
+      provenance: Array.isArray(b?.provenance) ? b!.provenance : null,
+    }, null, 2))
     const m = score(golden.entities, extracted)
     const cit = citationCoverage(live.bundle)
+    const extras = extrasMetrics(extracted, golden.entities)
+    const linkage = linkageMetrics(extracted, golden.entities)
+    const conservation = conservationMetrics({
+      stage4Count: live.stage4?.entityCount ?? null,
+      planEntities: extracted.length,
+      unresolvedCount: Array.isArray(b?.unresolved) ? b!.unresolved!.length : null,
+      counts: b?.counts ?? null,
+    })
+    let citRes: ReturnType<typeof resolveProvenanceRows> | null = null
+    if (Array.isArray(b?.provenance) && b!.provenance!.length > 0) {
+      const grids = (await Promise.all(files.map(f => readWorkbookNode(f)))).flat()
+      citRes = resolveProvenanceRows(b!.provenance!, grids)
+    }
     const pass = m.f1 >= F1_TARGET && m.numericExactRate >= NUMERIC_TARGET && cit.entityCoverage >= CITATION_TARGET
+      && extras.extraEntityRate <= EXTRA_TARGET_LIVE
+      && linkage.parentResolutionRate === 1
+      && linkage.parentEdgeRecall >= LINK_EDGE_TARGET
+      && linkage.formAttachmentRecall >= LINK_EDGE_TARGET
+      && conservation.countsIdentityOk !== false
+      && (citRes?.citationResolvableRate == null || citRes.citationResolvableRate >= CITATION_RESOLVE_TARGET)
     if (!pass) anyFail = true
-    results.push({ id: fmt.id, mode: 'live', ...m, ...cit, spend: live.spend, durationMs, notices: live.notices, pass })
-    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | citations entity=${(cit.entityCoverage * 100).toFixed(0)}% prov=${(cit.provenanceCoverage * 100).toFixed(0)}% (${cit.provenanceRows} rows) | entityRecall ${m.entityRecall.toFixed(3)} | ${Math.round(durationMs / 1000)}s`)
+    results.push({ id: fmt.id, mode: 'live', ...m, ...cit, extras, linkage, conservation, citationResolution: citRes, spend: live.spend, durationMs, notices: live.notices, pass })
+    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | citations entity=${(cit.entityCoverage * 100).toFixed(0)}% prov=${(cit.provenanceCoverage * 100).toFixed(0)}% resolve=${citRes?.citationResolvableRate == null ? 'n/a' : (citRes.citationResolvableRate * 100).toFixed(1) + '%'} | extras ${(extras.extraEntityRate * 100).toFixed(1)}% | link parent=${linkage.parentResolutionRate.toFixed(2)} edges=${linkage.parentEdgeRecall.toFixed(2)} forms=${linkage.formAttachmentRecall.toFixed(2)} | loss ${conservation.lossDelta ?? 'n/a'} | ${Math.round(durationMs / 1000)}s`)
   }
 }
 
@@ -483,7 +589,7 @@ writeFileSync(join(AUDIT, `import_eval_results${evalSlice}.json`), JSON.stringif
   runAt: new Date().toISOString(),
   mode: MODE_RESCORE ? 'rescore' : MODE_LIVE ? 'live' : 'offline',
   baseUrl: MODE_LIVE ? BASE_URL : null,
-  targets: { f1: F1_TARGET, numericExact: NUMERIC_TARGET, citation: CITATION_TARGET },
+  targets: { f1: F1_TARGET, numericExact: NUMERIC_TARGET, citation: CITATION_TARGET, extrasLive: EXTRA_TARGET_LIVE, linkEdges: LINK_EDGE_TARGET, citationResolve: CITATION_RESOLVE_TARGET },
   results,
 }, null, 2))
 log(`\nResults → docs/audit/import_eval_results${evalSlice}.json`)
