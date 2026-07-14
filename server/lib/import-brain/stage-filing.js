@@ -199,6 +199,16 @@ async function extractWithLadder({ systemPrompt, tool, block, instruction, maxTo
     let raw
     let callError = null
     try { raw = await forcedTool(deployment, systemPrompt, [tool], tool.name, block, instruction, maxTokens, budget) } catch (e) { raw = {}; callError = String(e && e.message || e).slice(0, 180) }
+    // Models occasionally return an empty/under-filled tool call ({} or ancillary
+    // fields without the primary array) — one retry with an explicit reminder
+    // recovers most of these.
+    if (!callError && rawItems(raw) === 0) {
+      const retryInstruction = `${instruction}\n\nIMPORTANT: your previous attempt returned an empty tool call. You MUST populate the primary array field of the tool with EVERY item found in the document (with citations). Do not summarize in "note" — fill the array.`
+      try {
+        const retry = await forcedTool(deployment, systemPrompt, [tool], tool.name, block, retryInstruction, maxTokens, budget)
+        if (rawItems(retry) > 0) raw = retry
+      } catch { /* keep original */ }
+    }
     const sanitized = sanitize(raw)
     const before = rawItems(raw)
     const after = sizeOf(sanitized)
@@ -295,7 +305,7 @@ async function runFilingPipeline(opts) {
     const ladder  = await extractWithLadder({
       systemPrompt: EXTRACT_SYSTEM, tool: RATE_ORDER_TOOL, block,
       instruction: 'Extract the rate order of calculations, in order. Remember: every variable MUST carry a citation (page + table/heading).',
-      maxTokens: 4000, budget,
+      maxTokens: 16000, budget,
       sanitize: sanitizeRO, isEmpty: (r) => !r || r.variables.length === 0,
       count: (r) => r?.variables?.length ?? 0, emit, label: 'rate-order',
     })
@@ -314,7 +324,7 @@ async function runFilingPipeline(opts) {
     const ladder  = await extractWithLadder({
       systemPrompt: EXTRACT_SYSTEM, tool: MANUAL_TOOL, block,
       instruction: "Extract the manual's numbered rules — schemas + verbatim regions for tables, scalars for single facts. Remember: every rule MUST carry a citation (page + rule number).",
-      maxTokens: 8000, budget,
+      maxTokens: 16000, budget,
       sanitize: sanitizeMnl, isEmpty: (r) => !r || r.rules.length === 0,
       count: (r) => r?.rules?.length ?? 0, emit, label: 'manual-rules',
     })
@@ -369,7 +379,7 @@ async function runFilingPipeline(opts) {
     const ladder  = await extractWithLadder({
       systemPrompt: COVERAGE_SYSTEM, tool: PROPOSE_COVERAGES_TOOL, block,
       instruction: `Extract ALL coverages this policy form defines. Filing state: ${filingState}. Every coverage MUST carry a citation (page + section).`,
-      maxTokens: 4096, budget,
+      maxTokens: 8192, budget,
       sanitize: (raw) => (Array.isArray(raw?.coverages) ? raw.coverages : []).filter(c => c && c.name && c.citation),
       isEmpty: (r) => !r || r.length === 0,
       count: (r) => r?.length ?? 0, emit, label: 'policy-form',
