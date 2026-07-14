@@ -57,6 +57,8 @@ const ENUM_FOLD = {
   claimsBasis: [[/^occ(urrence)?$/i, 'OCCURRENCE'], [/^claims[- ]?made$/i, 'CLAIMS_MADE']],
 }
 
+const BOOLEANISH_FIELDS = ['premiumGenerating', 'dynamic', 'mandatoryDefault', 'admitted', 'displayOnSchedule', 'multiUse', 'allStates', 'bureauFlag', 'proprietaryFlag']
+
 function foldEnums(data) {
   for (const [field, rules] of Object.entries(ENUM_FOLD)) {
     const v = data[field]
@@ -64,6 +66,31 @@ function foldEnums(data) {
     for (const [re, canonical] of rules) {
       if (re.test(v.trim())) { data[field] = canonical; break }
     }
+  }
+  // Source workflow strings ("Approved - Completed") are NOT the canonical entity
+  // status — preserve them under sourceStatus and default the canonical field.
+  if (typeof data.status === 'string' && !/^(ACTIVE|INACTIVE|FUTURE)$/.test(data.status)) {
+    data.sourceStatus = data.status
+    delete data.status
+  }
+  // Yes/No cells → booleans on boolean-shaped canonical fields.
+  for (const f of BOOLEANISH_FIELDS) {
+    if (typeof data[f] === 'string') {
+      const v = data[f].trim().toLowerCase()
+      if (v === 'yes' || v === 'y' || v === 'true' || v === 'x') data[f] = true
+      else if (v === 'no' || v === 'n' || v === 'false' || v === '') data[f] = false
+    }
+  }
+  // Flag aliases fold into the canonical source enum.
+  if (data.source === undefined) {
+    if (data.proprietaryFlag === true) data.source = 'PROPRIETARY'
+    else if (data.proprietaryFlag === false || data.bureauFlag === true) data.source = 'BUREAU'
+  }
+  delete data.proprietaryFlag
+  delete data.bureauFlag
+  // Form numbers as arrays, always.
+  if (typeof data.formNumbers === 'string') {
+    data.formNumbers = data.formNumbers.split(/[\n;,]+/).map(s => s.trim()).filter(Boolean)
   }
 }
 
@@ -95,6 +122,91 @@ function toPlanned(entity, extraData) {
     label: (typeof data.name === 'string' && data.name.trim()) ? data.name : entityLabel(entity),
     data,
   }
+}
+
+// ─── Deterministic ISO-mapper join ────────────────────────────────────────────
+// When the raw grids parse under the battle-tested ISO-family mapper, its output
+// is the CANONICAL-IDENTITY ORACLE: registry-derived refIds (TBD sources), parent
+// linkage, sibling order, and cross-sheet formNumbers joins. The brain remains the
+// PROVENANCE source (citations + confidence per field). Join rules:
+//   * identity fields (refId, parentId, order, formNumbers, workflow defaults)
+//     come from the mapper when the entities correspond;
+//   * extracted value fields keep the brain's cited values;
+//   * mapper-only entities are appended (cited to the deterministic parse);
+//   * brain-only entities stay, flagged for review. Nothing is dropped silently.
+
+const ISO_IDENTITY_FIELDS = ['refId', 'parentId', 'order', 'formNumbers', 'allStates', 'states', 'status', 'lifecycle', 'reviewStatus', 'reviewer', 'terms']
+
+function nameKey(v) {
+  return String(v ?? '').toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
+function joinGroupWithIso(brainGroup, isoGroup, kindLabel, importWarnings, refIdRemap) {
+  if (!Array.isArray(isoGroup) || isoGroup.length === 0) return brainGroup
+  const out = []
+  const isoByRefId = new Map(isoGroup.map(p => [p.refId, p]))
+  const consumedIso = new Set()
+  const unmatchedBrain = []
+
+  const adoptIdentity = (brainP, isoP) => {
+    const oldRefId = brainP.refId
+    for (const f of ISO_IDENTITY_FIELDS) {
+      if (isoP.data[f] !== undefined) brainP.data[f] = isoP.data[f]
+    }
+    brainP.refId = isoP.refId
+    brainP.docId = isoP.docId ?? toDocId(isoP.refId)
+    brainP.data.refId = isoP.refId
+    brainP.label = (typeof brainP.data.name === 'string' && brainP.data.name) || isoP.label
+    brainP.data.consensus = 'iso-join'
+    if (oldRefId && oldRefId !== isoP.refId) refIdRemap.set(`${kindLabel}|${oldRefId}`, isoP.refId)
+  }
+
+  // Pass 1: exact refId correspondence (sources that ship real ids).
+  for (const brainP of brainGroup) {
+    const isoP = brainP.refId ? isoByRefId.get(brainP.refId) : undefined
+    if (isoP && !consumedIso.has(isoP.refId)) {
+      adoptIdentity(brainP, isoP)
+      consumedIso.add(isoP.refId)
+      out.push(brainP)
+    } else {
+      unmatchedBrain.push(brainP)
+    }
+  }
+
+  // Pass 2: sequence-aligned name matching for synthesized/mismatched ids.
+  const remainingIso = isoGroup.filter(p => !consumedIso.has(p.refId))
+  const brainQueue = [...unmatchedBrain]
+  for (const isoP of remainingIso) {
+    const key = nameKey(isoP.data?.name ?? isoP.label)
+    const idx = brainQueue.findIndex(b => nameKey(b.data?.name) === key)
+    if (idx >= 0) {
+      const brainP = brainQueue.splice(idx, 1)[0]
+      adoptIdentity(brainP, isoP)
+      consumedIso.add(isoP.refId)
+      out.push(brainP)
+    } else {
+      // Mapper-only entity: include it, cited to the deterministic parse.
+      const p = {
+        docId: isoP.docId ?? toDocId(isoP.refId),
+        refId: isoP.refId,
+        label: isoP.label,
+        data: { ...isoP.data, confidence: 0.95, citation: '(deterministic ISO-family parse)' },
+      }
+      out.push(p)
+    }
+  }
+
+  // Brain-only leftovers: kept, flagged — never silently dropped.
+  for (const brainP of brainQueue) {
+    brainP.data.needsReview = true
+    out.push(brainP)
+  }
+  const leftover = brainQueue.length
+  if (leftover > 0) {
+    importWarnings.push({ kind: 'not-in-deterministic-map', sheet: null, row: null, field: kindLabel, detail: `${leftover} extracted ${kindLabel} entit(y|ies) have no counterpart in the deterministic template parse — kept with review flags.` })
+  }
+
+  return out
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -191,12 +303,12 @@ function buildImportPlan(brainOutput, opts = {}) {
   }
 
   // ── Groups ─────────────────────────────────────────────────────────────────
-  const coverages = byKind('coverage').map(e => toPlanned(e))
-  const forms     = byKind('form').map(e => toPlanned(e, productRefId ? { productRefIds: [productRefId] } : {}))
-  const rules     = byKind('rule').map(e => toPlanned(e))
-  const formRules = byKind('formRule').map(e => toPlanned(e))
-  const ldTables  = byKind('ldTable').map(e => toPlanned(e, productRefId ? { productId: productRefId } : {}))
-  const rtTables  = byKind('rtTable').map(e => toPlanned(e, productRefId ? { productId: productRefId } : {}))
+  let coverages = byKind('coverage').map(e => toPlanned(e))
+  let forms     = byKind('form').map(e => toPlanned(e, productRefId ? { productRefIds: [productRefId] } : {}))
+  let rules     = byKind('rule').map(e => toPlanned(e))
+  let formRules = byKind('formRule').map(e => toPlanned(e))
+  let ldTables  = byKind('ldTable').map(e => toPlanned(e, productRefId ? { productId: productRefId } : {}))
+  let rtTables  = byKind('rtTable').map(e => toPlanned(e, productRefId ? { productId: productRefId } : {}))
 
   // Parent-before-child ordering for coverages (importPlan flushes batches on
   // forward-references; sorting parents first minimizes flushes and orphan risk).
@@ -222,6 +334,53 @@ function buildImportPlan(brainOutput, opts = {}) {
     }
   }
 
+  // ── Deterministic ISO-mapper join (canonical-identity oracle) ──────────────
+  const refIdRemap = new Map()
+  const joinWarnings = []
+  const iso = opts.isoPlan && typeof opts.isoPlan === 'object' ? opts.isoPlan : null
+  if (iso) {
+    coverages = joinGroupWithIso(coverages, iso.coverages, 'coverage', joinWarnings, refIdRemap)
+    forms     = joinGroupWithIso(forms, iso.forms, 'form', joinWarnings, refIdRemap)
+    rules     = joinGroupWithIso(rules, iso.rules, 'rule', joinWarnings, refIdRemap)
+    formRules = joinGroupWithIso(formRules, iso.formRules, 'formRule', joinWarnings, refIdRemap)
+    ldTables  = joinGroupWithIso(ldTables, iso.ldTables, 'ldTable', joinWarnings, refIdRemap)
+    rtTables  = joinGroupWithIso(rtTables, iso.rtTables, 'rtTable', joinWarnings, refIdRemap)
+
+    // Product identity from the mapper (registry-shaped id beats a SYNTH stub).
+    const isoProduct = iso.product ?? (Array.isArray(iso.products) ? iso.products[0] : null)
+    if (isoProduct && isoProduct.refId) {
+      if (!productPlanned) {
+        productPlanned = { docId: isoProduct.docId ?? toDocId(isoProduct.refId), refId: isoProduct.refId, label: isoProduct.label, data: { ...isoProduct.data, confidence: 0.95, citation: '(deterministic ISO-family parse)' } }
+      } else if (productPlanned.refId !== isoProduct.refId) {
+        if (productPlanned.refId) refIdRemap.set(`product|${productPlanned.refId}`, isoProduct.refId)
+        productPlanned.refId = isoProduct.refId
+        productPlanned.docId = isoProduct.docId ?? toDocId(isoProduct.refId)
+        productPlanned.data.refId = isoProduct.refId
+        for (const f of ISO_IDENTITY_FIELDS) if (isoProduct.data[f] !== undefined && productPlanned.data[f] === undefined) productPlanned.data[f] = isoProduct.data[f]
+        if (!productPlanned.data.name && isoProduct.data.name) { productPlanned.data.name = isoProduct.data.name; productPlanned.label = isoProduct.data.name }
+      }
+      productRefId = productPlanned.refId
+      // Re-stamp product linkage on dependents after any identity change.
+      for (const f of forms) f.data.productRefIds = [productRefId]
+      for (const t of [...ldTables, ...rtTables]) t.data.productId = productRefId
+    }
+
+    // Rating program: adopt the mapper's when the brain produced none.
+    if (!ratingProgram && iso.ratingProgram) {
+      const ip = iso.ratingProgram
+      ratingProgram = { docId: ip.docId ?? toDocId(ip.refId ?? 'rating-program'), refId: ip.refId ?? null, label: ip.label ?? 'Rating Program', data: { ...ip.data, confidence: 0.95, citation: '(deterministic ISO-family parse)' } }
+    } else if (ratingProgram && iso.ratingProgram) {
+      if (iso.ratingProgram.refId && ratingProgram.refId !== iso.ratingProgram.refId) {
+        if (ratingProgram.refId) refIdRemap.set(`ratingProgram|${ratingProgram.refId}`, iso.ratingProgram.refId)
+        ratingProgram.refId = iso.ratingProgram.refId
+        ratingProgram.data.refId = iso.ratingProgram.refId
+      }
+      if ((!Array.isArray(ratingProgram.data.steps) || ratingProgram.data.steps.length === 0) && Array.isArray(iso.ratingProgram.data?.steps)) {
+        ratingProgram.data.steps = iso.ratingProgram.data.steps
+      }
+    }
+  }
+
   // ── Provenance: every field of every accepted entity keeps its citation ────
   const provenance = []
   for (const e of accepted) {
@@ -241,9 +400,18 @@ function buildImportPlan(brainOutput, opts = {}) {
     }
   }
 
+  // refId identity adopted from the mapper → keep provenance rows addressable.
+  if (refIdRemap.size > 0) {
+    for (const row of provenance) {
+      const remapped = refIdRemap.get(`${row.kind}|${row.refId}`)
+      if (remapped) row.refId = remapped
+    }
+  }
+
   const importWarnings = [
     ...(opts.routerWarnings || []).map(w => ({ kind: w.kind, sheet: w.doc ?? null, row: null, field: null, detail: w.detail })),
     ...planWarnings,
+    ...joinWarnings,
     ...(brainOutput.importWarnings || []),
   ]
 
@@ -252,9 +420,11 @@ function buildImportPlan(brainOutput, opts = {}) {
     importWarnings.push({ kind: 'dynamic-fields-surfaced', sheet: null, row: null, field: null, detail: `${dynamicFieldCount} dynamic-field row(s) extracted; review them in provenance (not auto-attached to forms).` })
   }
 
+  const acceptedCount = coverages.length + forms.length + rules.length + formRules.length +
+    ldTables.length + rtTables.length + (productPlanned ? 1 : 0) + (ratingProgram ? 1 : 0)
   const counts = {
-    proposed:   (brainOutput.entities || []).length,
-    accepted:   accepted.length,
+    proposed:   acceptedCount + unresolved.length,
+    accepted:   acceptedCount,
     unresolved: unresolved.length,
   }
 

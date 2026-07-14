@@ -16,3 +16,7 @@ export { normalizeCellValue } from './structure/sentinels'
 // LOB inference for the router's line-of-business hint: refIds are DERIVED from the
 // registry (prefix match / signal inference) — never invented by a model.
 export { LOB_REGISTRY, resolveLobByRefId, inferLob, synthesizeRefId } from '../insurance/lobRegistry'
+// Deterministic ISO-family mapper: the canonical-identity oracle for recognized
+// template workbooks. Stage 7 joins its registry-derived refIds/order/hierarchy
+// with the brain's cited extraction (mapper = identity, brain = provenance).
+export { mapIsoWorkbook } from '../insurance/isoImport'

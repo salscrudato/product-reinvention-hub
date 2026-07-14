@@ -86,7 +86,7 @@ function mergeStructurals(workbooks) {
 
 // ─── Run the brain over a structural model and emit the plan bundle ───────────
 
-async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, res }) {
+async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, res, isoGrids }) {
   const brain = getImportBrain()
   if (typeof brain.runAdaptiveImportBrain !== 'function') {
     throw new Error('Import brain not available (build:import-brain may not have run).')
@@ -98,12 +98,30 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
     emit: (ev) => emit(res, ev),
   })
 
+  // Deterministic ISO-family mapper as canonical-identity oracle: when the raw
+  // grids parse into a recognizable plan, stage 7 joins its registry-derived
+  // refIds/hierarchy/order with the brain's cited fields.
+  let isoPlan = null
+  if (Array.isArray(isoGrids) && isoGrids.length > 0) {
+    try {
+      const brainShared = require('../import-brain-shared.cjs')
+      if (typeof brainShared.mapIsoWorkbook === 'function') {
+        isoPlan = brainShared.mapIsoWorkbook(isoGrids)
+        emit(res, { t: 'tool', name: 'brain:stage7:isoJoin', phase: 'start', summary: `deterministic mapper: ${isoPlan?.coverages?.length ?? 0} coverages, ${isoPlan?.rules?.length ?? 0} rules` })
+      }
+    } catch (e) {
+      emit(res, { t: 'notice', level: 'info', message: `Deterministic ISO mapper skipped: ${String(e.message).slice(0, 120)}`, kind: 'iso-mapper' })
+      isoPlan = null
+    }
+  }
+
   const { buildImportPlan } = require('../import-brain/stage7-plan')
   const bundle = buildImportPlan(brainOutput, {
     lobRefIdHint: lobRefIdHint || undefined,
     sourceName:   structural.sourceName,
     edition:      edition || undefined,
     routerWarnings: routerWarnings || [],
+    isoPlan,
   })
 
   emit(res, { t: 'json', key: 'bundle', value: bundle })
@@ -178,12 +196,13 @@ async function unifiedImport(req, res) {
         emit(res, { t: 'notice', level: 'warn', message: 'Mixed upload: workbooks imported; PDFs skipped — upload them separately.', kind: 'mixed-upload' })
       }
       const structural = mergeStructurals(routed.workbooks)
+      const isoGrids = routed.workbooks.flatMap(w => Array.isArray(w.isoGrids) ? w.isoGrids : [])
       await runBrainToBundle({
         structural,
         lobRefIdHint: body.lobRefIdHint || routed.lobRefIdHint,
         edition:      routed.edition,
         routerWarnings: routed.warnings,
-        budget, res,
+        budget, res, isoGrids,
       })
       emitSpend(res, budget)
       emit(res, { t: 'done' }); return res.end()

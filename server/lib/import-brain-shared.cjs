@@ -28,6 +28,7 @@ __export(brain_server_entry_exports, {
   buildStructuralModel: () => buildStructuralModel,
   fingerprintGrid: () => fingerprintGrid,
   inferLob: () => inferLob,
+  mapIsoWorkbook: () => mapIsoWorkbook,
   normalizeCellValue: () => normalizeCellValue,
   pickBestHeaderRow: () => pickBestHeaderRow,
   resolveLobByRefId: () => resolveLobByRefId,
@@ -45,10 +46,10 @@ function scoreHeaderCandidates(cells) {
   const candidates = [];
   const limit = Math.min(MAX_CANDIDATE_ROWS, cells.length);
   for (let r = 0; r < limit; r++) {
-    const row = cells[r] ?? [];
+    const row2 = cells[r] ?? [];
     const textCells = [];
     for (let c = 0; c < colCount; c++) {
-      const v = row[c];
+      const v = row2[c];
       if (typeof v === "string" && v.trim().length > 0) textCells.push(v.trim());
     }
     if (textCells.length === 0) continue;
@@ -82,10 +83,10 @@ function hasDataBelow(cells, headerRow, colCount) {
   let totalFill = 0;
   let checkedRows = 0;
   for (let r = headerRow + 1; r < Math.min(headerRow + 4, cells.length); r++) {
-    const row = cells[r] ?? [];
+    const row2 = cells[r] ?? [];
     let filled = 0;
     for (let c = 0; c < effective; c++) {
-      const v = row[c];
+      const v = row2[c];
       if (v !== null && v !== void 0 && v !== "") filled++;
     }
     totalFill += filled / effective;
@@ -968,8 +969,8 @@ function normalizeCellValue(value) {
   if (typeof value === "object") {
     const o = value;
     if (Array.isArray(o["richText"])) {
-      const text = o["richText"].map((t) => t.text ?? "").join("");
-      return normalizeCellValue(text);
+      const text2 = o["richText"].map((t) => t.text ?? "").join("");
+      return normalizeCellValue(text2);
     }
     if ("result" in o) return normalizeCellValue(o["result"]);
     if ("text" in o && o["text"] !== void 0) return normalizeCellValue(String(o["text"]));
@@ -1045,9 +1046,9 @@ var STACKED_MARKER_PATTERNS = [
   /^LD\s*TABLE\s+ID\s*:/i,
   /^(LDTable)\.\d+$/i
 ];
-function rowMatchesStackedMarker(row) {
-  for (let c = 0; c < Math.min(row.length, 3); c++) {
-    const v = row[c];
+function rowMatchesStackedMarker(row2) {
+  for (let c = 0; c < Math.min(row2.length, 3); c++) {
+    const v = row2[c];
     if (typeof v === "string" && v.trim().length > 0) {
       if (STACKED_MARKER_PATTERNS.some((p) => p.test(v.trim()))) return true;
     }
@@ -1056,8 +1057,8 @@ function rowMatchesStackedMarker(row) {
 }
 function hasStackedTableMarkers(cells) {
   let count = 0;
-  for (const row of cells) {
-    if (rowMatchesStackedMarker(row)) {
+  for (const row2 of cells) {
+    if (rowMatchesStackedMarker(row2)) {
       if (++count >= 2) return true;
     }
   }
@@ -1079,12 +1080,12 @@ function hasIndentedHierarchy(cells, bestHeaderRow) {
   let total = 0;
   let indented = 0;
   for (let r = startRow; r < cells.length; r++) {
-    const row = cells[r] ?? [];
-    const hasAny = row.some((v) => v !== null && v !== "" && v !== void 0);
+    const row2 = cells[r] ?? [];
+    const hasAny = row2.some((v) => v !== null && v !== "" && v !== void 0);
     if (!hasAny) continue;
     total++;
-    const col0Empty = row[0] === null || row[0] === "" || row[0] === void 0;
-    const col1Filled = typeof row[1] === "string" && (row[1]?.trim().length ?? 0) > 0;
+    const col0Empty = row2[0] === null || row2[0] === "" || row2[0] === void 0;
+    const col1Filled = typeof row2[1] === "string" && (row2[1]?.trim().length ?? 0) > 0;
     if (col0Empty && col1Filled) indented++;
   }
   return total >= 4 && indented / total >= 0.2;
@@ -1124,8 +1125,8 @@ function profileColumns(cells, bestHeaderRow) {
     const distinctSet = /* @__PURE__ */ new Set();
     const sample = [];
     let totalDataCells = 0;
-    for (const row of dataRows) {
-      const v = row[c];
+    for (const row2 of dataRows) {
+      const v = row2[c];
       totalDataCells++;
       if (v === null || v === void 0 || v === "") {
         typeMix.empty++;
@@ -1206,10 +1207,10 @@ function parseDefinitionsSheet(cells) {
   let exampleCol = -1;
   let headerRow = -1;
   for (let r = 0; r < Math.min(10, cells.length); r++) {
-    const row = cells[r] ?? [];
+    const row2 = cells[r] ?? [];
     let ft = -1, fd = -1, fe = -1;
-    for (let c = 0; c < row.length; c++) {
-      const v = row[c];
+    for (let c = 0; c < row2.length; c++) {
+      const v = row2[c];
       if (typeof v !== "string") continue;
       const upper = v.trim().toUpperCase();
       if (TERM_LABELS.has(upper) && ft < 0) ft = c;
@@ -1217,7 +1218,7 @@ function parseDefinitionsSheet(cells) {
       if (EXAMPLE_LABELS.has(upper) && fe < 0) fe = c;
     }
     if (ft >= 0 && fd < 0 && fe >= 0) {
-      for (let c = 0; c < row.length; c++) {
+      for (let c = 0; c < row2.length; c++) {
         if (c !== ft && c !== fe) {
           fd = c;
           break;
@@ -1235,9 +1236,9 @@ function parseDefinitionsSheet(cells) {
   if (headerRow < 0) return [];
   const entries = [];
   for (let r = headerRow + 1; r < cells.length; r++) {
-    const row = cells[r] ?? [];
-    const term = row[termCol];
-    const desc = row[descCol];
+    const row2 = cells[r] ?? [];
+    const term = row2[termCol];
+    const desc = row2[descCol];
     if (typeof term !== "string" || !term.trim()) continue;
     if (typeof desc !== "string" || !desc.trim()) continue;
     const entry = {
@@ -1245,7 +1246,7 @@ function parseDefinitionsSheet(cells) {
       description: desc.trim()
     };
     if (exampleCol >= 0) {
-      const ex = row[exampleCol];
+      const ex = row2[exampleCol];
       if (typeof ex === "string" && ex.trim()) {
         entry.example = ex.trim();
       } else if (typeof ex === "number") {
@@ -1266,9 +1267,9 @@ var REF_ID_PATTERNS = [
 ];
 var TABLE_NAME_PATTERN = /TABLE\s+NAME\s*:\s*(.+)/i;
 var META_KEY_VALUE_PATTERN = /^([^:]{1,60}):\s*(.*)$/;
-function extractRefId(row) {
-  for (let c = 0; c < Math.min(row.length, 3); c++) {
-    const v = row[c];
+function extractRefId(row2) {
+  for (let c = 0; c < Math.min(row2.length, 3); c++) {
+    const v = row2[c];
     if (typeof v !== "string") continue;
     const trimmed = v.trim();
     for (const p of REF_ID_PATTERNS) {
@@ -1278,8 +1279,8 @@ function extractRefId(row) {
   }
   return void 0;
 }
-function extractTableName(row) {
-  for (const v of row) {
+function extractTableName(row2) {
+  for (const v of row2) {
     if (typeof v !== "string") continue;
     const m = v.trim().match(TABLE_NAME_PATTERN);
     if (m?.[1]) return m[1].trim();
@@ -1288,21 +1289,21 @@ function extractTableName(row) {
 }
 function parseMetaBlock(rows) {
   const meta = {};
-  for (const row of rows) {
-    for (const v of row) {
+  for (const row2 of rows) {
+    for (const v of row2) {
       if (typeof v !== "string") continue;
       const m = v.trim().match(META_KEY_VALUE_PATTERN);
       if (m?.[1] && m[2]?.trim()) {
         meta[m[1].trim().toUpperCase()] = m[2].trim();
       }
     }
-    for (let c = 0; c < row.length - 1; c++) {
-      const keyCell = row[c];
+    for (let c = 0; c < row2.length - 1; c++) {
+      const keyCell = row2[c];
       if (typeof keyCell !== "string") continue;
       if (!/:\s*$/.test(keyCell.trim())) continue;
       const key = keyCell.trim().replace(/:\s*$/, "").trim().toUpperCase();
       if (!key) continue;
-      const valCell = row[c + 1];
+      const valCell = row2[c + 1];
       if (typeof valCell === "string" && valCell.trim()) {
         meta[key] = valCell.trim();
       } else if (typeof valCell === "number") {
@@ -1328,19 +1329,19 @@ function segmentStackedTables(cells) {
     metaRows.push(cells[blockStart] ?? []);
     let dataStart = blockStart + 1;
     for (let r = blockStart + 1; r <= blockEnd; r++) {
-      const row = cells[r] ?? [];
-      const rowIsEmpty = row.every((v) => v === null || v === "" || v === void 0);
+      const row2 = cells[r] ?? [];
+      const rowIsEmpty = row2.every((v) => v === null || v === "" || v === void 0);
       if (rowIsEmpty) continue;
-      const tName = extractTableName(row);
+      const tName = extractTableName(row2);
       if (tName) {
         name = tName;
-        metaRows.push(row);
+        metaRows.push(row2);
         dataStart = r + 1;
         continue;
       }
-      const firstCell = row[0];
+      const firstCell = row2[0];
       if (typeof firstCell === "string" && META_KEY_VALUE_PATTERN.test(firstCell.trim())) {
-        metaRows.push(row);
+        metaRows.push(row2);
         dataStart = r + 1;
         continue;
       }
@@ -1399,14 +1400,14 @@ function fingerprintGrid(grid) {
   const rawRowCount = grid.cells.length;
   const rawColCount = grid.cells.reduce((m, r) => Math.max(m, r?.length ?? 0), 0);
   const normalized = grid.cells.map(
-    (row) => (row ?? []).map((v) => normalizeCellValue(v))
+    (row2) => (row2 ?? []).map((v) => normalizeCellValue(v))
   );
   let lastRow = -1;
   let lastCol = -1;
   for (let r = 0; r < normalized.length; r++) {
-    const row = normalized[r];
-    for (let c = 0; c < row.length; c++) {
-      if (row[c] !== null) {
+    const row2 = normalized[r];
+    for (let c = 0; c < row2.length; c++) {
+      if (row2[c] !== null) {
         if (r > lastRow) lastRow = r;
         if (c > lastCol) lastCol = c;
       }
@@ -1435,9 +1436,9 @@ function fingerprintGrid(grid) {
   const cells = [];
   for (let r = 0; r < rowLimit; r++) {
     const src = normalized[r] ?? [];
-    const row = new Array(colLimit).fill(null);
-    for (let c = 0; c < colLimit; c++) row[c] = src[c] ?? null;
-    cells.push(row);
+    const row2 = new Array(colLimit).fill(null);
+    for (let c = 0; c < colLimit; c++) row2[c] = src[c] ?? null;
+    cells.push(row2);
   }
   const headerCandidates = scoreHeaderCandidates(cells);
   const bhr = pickBestHeaderRow(headerCandidates);
@@ -1969,6 +1970,7 @@ var LOB_REGISTRY = {
   [IM_LOB.refId]: IM_LOB,
   [PR_LOB.refId]: PR_LOB
 };
+var DEFAULT_LOB = PH_LOB;
 function lobByPrefix(refId) {
   if (!refId) return void 0;
   const prefix = refId.split(".")[0];
@@ -2009,6 +2011,1470 @@ function inferLob(signals) {
 function synthesizeRefId(lob, kind, seq, parentSeq) {
   return lob.refIdScheme.synthesize(kind, seq, parentSeq);
 }
+
+// shared/src/insurance/coverageHierarchy.ts
+function nameKey(s) {
+  return s.toUpperCase().replace(/\s+/g, " ").trim();
+}
+function segs(refId) {
+  return refId.split(".").filter(Boolean);
+}
+function isSegmentPrefix(prefix, candidate) {
+  if (prefix.length >= candidate.length) return false;
+  for (let i = 0; i < prefix.length; i++) if (prefix[i] !== candidate[i]) return false;
+  return true;
+}
+function resolveCoverageHierarchy(rows) {
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  const topLevelByName = /* @__PURE__ */ new Map();
+  const known = [];
+  let lastTopLevelRefId = null;
+  let lastCoverageName = "";
+  let topOrder = 0;
+  const childOrder = /* @__PURE__ */ new Map();
+  for (const raw of rows) {
+    const refId = raw.refId.trim();
+    if (!refId || seen.has(refId)) continue;
+    let coverageName = raw.coverageName.trim();
+    const subName = raw.subCoverageName.trim();
+    if (coverageName) lastCoverageName = coverageName;
+    else if (subName && lastCoverageName) coverageName = lastCoverageName;
+    if (!coverageName && !subName) {
+      const mySegs2 = segs(refId);
+      let nestFallback = null;
+      for (const k of known) {
+        if (k.segs.length >= 3 && isSegmentPrefix(k.segs, mySegs2)) {
+          if (!nestFallback || k.segs.length > segs(nestFallback).length) nestFallback = k.refId;
+        }
+      }
+      if (!nestFallback) continue;
+      coverageName = mySegs2[mySegs2.length - 1] ?? refId;
+    }
+    const mySegs = segs(refId);
+    let nestParent = null;
+    for (const k of known) {
+      if (isSegmentPrefix(k.segs, mySegs)) {
+        if (!nestParent || k.segs.length > segs(nestParent).length) nestParent = k.refId;
+      }
+    }
+    const explicitSub = subName !== "" && nameKey(subName) !== nameKey(coverageName);
+    const isSub = explicitSub || nestParent !== null;
+    if (!isSub) {
+      const name2 = coverageName || subName;
+      topOrder += 1;
+      out.push({ refId, name: name2, parentRefId: null, isSub: false, order: topOrder, parentSignal: "none" });
+      if (coverageName) topLevelByName.set(nameKey(coverageName), refId);
+      lastTopLevelRefId = refId;
+      known.push({ refId, segs: mySegs });
+      seen.add(refId);
+      continue;
+    }
+    let parentRefId = null;
+    let signal = "none";
+    if (nestParent) {
+      parentRefId = nestParent;
+      signal = "refid-nesting";
+    } else if (coverageName && topLevelByName.has(nameKey(coverageName))) {
+      parentRefId = topLevelByName.get(nameKey(coverageName));
+      signal = "group-name";
+    } else if (!coverageName && lastTopLevelRefId) {
+      parentRefId = lastTopLevelRefId;
+      signal = "nearest-preceding";
+    }
+    const name = subName || coverageName;
+    if (parentRefId) {
+      const n = (childOrder.get(parentRefId) ?? 0) + 1;
+      childOrder.set(parentRefId, n);
+      out.push({ refId, name, parentRefId, isSub: true, order: n, parentSignal: signal });
+    } else {
+      topOrder += 1;
+      out.push({ refId, name, parentRefId: null, isSub: false, order: topOrder, parentSignal: "orphan-promoted" });
+      if (coverageName) topLevelByName.set(nameKey(coverageName), refId);
+      lastTopLevelRefId = refId;
+    }
+    known.push({ refId, segs: mySegs });
+    seen.add(refId);
+  }
+  return out;
+}
+
+// shared/src/insurance/isoImport.ts
+function text(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v.trim();
+  return String(v);
+}
+function norm(v) {
+  return text(v).toUpperCase().replace(/\s+/g, " ").trim();
+}
+function squishStr(s) {
+  return s.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+function squish(v) {
+  return squishStr(text(v));
+}
+var PLACEHOLDER = /^<.*>$|^n\/?a$|^not applicable$|^intentionally left blank$/i;
+function isPlaceholder(s) {
+  return s === "" || PLACEHOLDER.test(s);
+}
+function clean(v) {
+  const s = text(v);
+  return isPlaceholder(s) ? "" : s;
+}
+function isX(v) {
+  const s = text(v).toUpperCase();
+  return s === "X" || s === "\u2713" || s === "YES" || s === "TRUE";
+}
+function isYes(v) {
+  return /^(y|yes|true|x)$/i.test(text(v));
+}
+function parseNum(v) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const s = text(v).replace(/[$,%\s]/g, "");
+  if (s === "") return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+function splitList(v) {
+  return text(v).split(/[\n;,]+/).map((s) => s.trim()).filter((s) => s && !isPlaceholder(s));
+}
+var US_STATES = /* @__PURE__ */ new Set([
+  "AL",
+  "AK",
+  "AZ",
+  "AR",
+  "CA",
+  "CO",
+  "CT",
+  "DE",
+  "DC",
+  "FL",
+  "GA",
+  "HI",
+  "ID",
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MA",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NJ",
+  "NM",
+  "NY",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY",
+  "PR",
+  "GU",
+  "VI"
+]);
+function mapStatus(v) {
+  const s = norm(v);
+  if (s.startsWith("INACTIVE")) return "INACTIVE";
+  if (s.startsWith("FUTURE")) return "FUTURE";
+  return "ACTIVE";
+}
+function mapReview(v) {
+  const s = norm(v);
+  if (s.startsWith("APPROV")) return "APPROVED";
+  if (s.startsWith("REJECT")) return "REJECTED";
+  if (s.startsWith("BUSINESS")) return "BUSINESS_REVIEW";
+  if (s.startsWith("IN PROGRESS") || s.startsWith("INITIAL") || s.startsWith("READY") || s.startsWith("TBD")) return "IN_PROGRESS";
+  return "NOT_STARTED";
+}
+function mapRequirement(v) {
+  return /optional/i.test(text(v)) ? "OPTIONAL" : "MANDATORY";
+}
+function mapClaimsBasis(v) {
+  const s = text(v);
+  if (/claim/i.test(s)) return "Claims-made";
+  if (/occur/i.test(s)) return "Occurrence";
+  return "";
+}
+function mapSource(bureau, prop) {
+  if (isYes(bureau)) return "BUREAU";
+  if (isYes(prop)) return "PROPRIETARY";
+  return "BUREAU";
+}
+function mapDynType(v) {
+  const s = norm(v);
+  if (s.startsWith("CURRENCY")) return "CURRENCY";
+  if (s.startsWith("DATE")) return "DATE";
+  if (s.startsWith("LIST")) return "LIST";
+  if (s.startsWith("PERCENT")) return "PERCENT";
+  return "TEXT";
+}
+function mapRuleCategory(v) {
+  const s = norm(v);
+  if (s.startsWith("RATING")) return "RATING";
+  if (s.startsWith("FORM")) return "FORMS";
+  return "PRODUCT";
+}
+var FORM_CATEGORY_CANONICAL = {
+  "BASE COVERAGE FORM": "BASE_COVERAGE",
+  "BASE COVERAGE": "BASE_COVERAGE",
+  "DECLARATIONS": "DECLARATIONS",
+  "DECLARATIONS - PRIMARY": "DECLARATIONS",
+  "DECLARATIONS - SUPPLEMENTAL": "DECLARATIONS",
+  "DECLARATIONS PRIMARY": "DECLARATIONS",
+  "DECLARATIONS SUPPLEMENTAL": "DECLARATIONS",
+  "ENDORSEMENT": "ENDORSEMENT",
+  "ENDORSEMENTS": "ENDORSEMENT",
+  "EXCLUSION": "EXCLUSION",
+  "EXCLUSIONS": "EXCLUSION",
+  "SCHEDULE": "SCHEDULE",
+  "POLICY NOTICE": "POLICY_NOTICE",
+  "POLICY NOTICES": "POLICY_NOTICE",
+  "NOTICE": "POLICY_NOTICE",
+  "POLICY CONDITIONS": "POLICY_CONDITIONS",
+  "AMENDATORY": "AMENDATORY",
+  "AMENDATORY ENDORSEMENT": "ENDORSEMENT",
+  "OTHER POLICY DOCUMENTS": "OTHER",
+  "MARKETING MATERIALS": "MARKETING",
+  "MARKETING": "MARKETING"
+};
+var FORM_CATEGORY_OUTLIERS = /* @__PURE__ */ new Set([
+  "ISO FILED",
+  "POLICY"
+]);
+function mapFormCategory(v, overlay) {
+  const s = norm(v);
+  if (overlay?.enumOverrides) {
+    const ov = overlay.enumOverrides[s];
+    if (ov) return { category: ov, exact: true, outlier: false };
+  }
+  if (s in FORM_CATEGORY_CANONICAL) {
+    return { category: FORM_CATEGORY_CANONICAL[s], exact: true, outlier: false };
+  }
+  if (FORM_CATEGORY_OUTLIERS.has(s)) {
+    return { category: null, exact: false, outlier: true };
+  }
+  if (s === "") return { category: "ENDORSEMENT", exact: true, outlier: false };
+  return { category: "ENDORSEMENT", exact: false, outlier: false };
+}
+function refIdPrefix(refId) {
+  const m = refId.match(/^([A-Za-z]{2,4})\.?(?:COV|PROD|LOB|RAT|RU|FORM)/i);
+  if (m) return m[1].toUpperCase();
+  return (refId.split(/[.\d]/).filter(Boolean)[0] ?? "").toUpperCase();
+}
+function dashId(refId) {
+  return refId.replace(/\./g, "-");
+}
+function extractTableRef(v) {
+  const m = text(v).match(/\b((?:LD|RT)Table\.\w+)/i);
+  return m ? m[1] : void 0;
+}
+function row(grid, r) {
+  return grid.cells[r] ?? [];
+}
+function cell(grid, r, c) {
+  return grid.cells[r]?.[c] ?? null;
+}
+function findHeaderRow(grid, aliasGroups, limit = 20) {
+  const groups = aliasGroups.map((a) => a.map(squishStr));
+  let best = -1, bestScore = 0;
+  for (let r = 0; r < Math.min(grid.cells.length, limit); r++) {
+    const heads = row(grid, r).map(squish);
+    let score = 0;
+    for (const g of groups) if (heads.some((h) => h !== "" && g.includes(h))) score++;
+    if (score > bestScore) {
+      bestScore = score;
+      best = r;
+    }
+  }
+  return bestScore >= 3 ? best : -1;
+}
+function mapColumns(header, fields) {
+  const heads = header.map(squish);
+  const map = {};
+  for (const [key, aliases] of Object.entries(fields)) {
+    const sq = aliases.map(squishStr);
+    const idx = heads.findIndex((h) => h !== "" && sq.includes(h));
+    if (idx >= 0) map[key] = idx;
+  }
+  const STOP = /* @__PURE__ */ new Set(["THE", "A", "AN", "OF", "OR", "AND", "TO", "IN", "IS", "FOR", "ON", "AT", "BY"]);
+  function sigWords(s) {
+    return s.replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length >= 2 && !STOP.has(w));
+  }
+  for (const [key, aliases] of Object.entries(fields)) {
+    if (key in map) continue;
+    let bestCol = -1, bestScore = 0;
+    for (let i = 0; i < heads.length; i++) {
+      if (!heads[i]) continue;
+      const hw = sigWords(heads[i]);
+      if (!hw.length) continue;
+      for (const alias of aliases) {
+        const aw = sigWords(squishStr(alias));
+        if (!aw.length) continue;
+        const shared = hw.filter((w) => aw.includes(w)).length;
+        const score = shared / Math.min(hw.length, aw.length);
+        if (score > bestScore && score >= 0.5) {
+          bestScore = score;
+          bestCol = i;
+        }
+      }
+    }
+    if (bestCol >= 0) map[key] = bestCol;
+  }
+  return map;
+}
+function stateColumns(header) {
+  const cols = [];
+  header.forEach((c, i) => {
+    const h = norm(c);
+    if (US_STATES.has(h)) cols.push({ col: i, code: h });
+  });
+  const allCol = header.findIndex((c) => /\bALL( ACTIVE)? STATES\b/.test(norm(c)));
+  return { cols, allCol };
+}
+function stateScope(r, sc) {
+  if (sc.allCol >= 0 && isX(r[sc.allCol] ?? null)) return { allStates: true, states: [] };
+  const states = sc.cols.filter((s) => isX(r[s.col] ?? null)).map((s) => s.code);
+  return states.length ? { allStates: false, states } : { allStates: true, states: [] };
+}
+function fillForward(r) {
+  const out = [];
+  let last = "";
+  for (let i = 0; i < r.length; i++) {
+    const t = text(r[i]);
+    if (t) last = t;
+    out[i] = last;
+  }
+  return out;
+}
+function groupColumns(section, header, re) {
+  const out = [];
+  header.forEach((c, i) => {
+    const name = clean(c);
+    if (name && re.test(section[i] ?? "")) out.push({ col: i, name });
+  });
+  return out;
+}
+var IGNORE_SHEET = /revision history|definition|data validation|categories/i;
+var DECOY_SHEET = /(_|\b)arch\b|before\s*50|scratch|question|review$/i;
+var VERSION_SUFFIX = /\s*\(\s*\d+\s*\)\s*$/;
+var REAL_REF_ID = /^[A-Z][A-Z0-9]*\.[A-Z]{2,6}\.\d/i;
+function countRefIdRows(grid) {
+  let n = 0;
+  for (const r of grid.cells) {
+    if (r.some((c) => typeof c === "string" && REAL_REF_ID.test(c.trim()))) n++;
+  }
+  return n;
+}
+function selectFrameworkSheet(grids, ctx) {
+  const FW_RE = /framework|product component model|component model/i;
+  const candidates = grids.filter(
+    (g) => FW_RE.test(g.sheet) && !IGNORE_SHEET.test(g.sheet) && !DECOY_SHEET.test(g.sheet) && !VERSION_SUFFIX.test(g.sheet)
+  );
+  if (!candidates.length) return void 0;
+  if (candidates.length === 1) return candidates[0];
+  let best = candidates[0];
+  let bestScore = countRefIdRows(best);
+  for (let i = 1; i < candidates.length; i++) {
+    const score = countRefIdRows(candidates[i]);
+    if (score > bestScore) {
+      best = candidates[i];
+      bestScore = score;
+    } else if (score === bestScore) {
+      ctx.warnOnce("ambiguous_sheet", `Ambiguous framework sheet: "${best.sheet}" and "${candidates[i].sheet}" have equal refId scores (${bestScore}). Using "${best.sheet}".`);
+    }
+  }
+  return best;
+}
+function findSheet(grids, re, exclude) {
+  return grids.find(
+    (g) => re.test(g.sheet) && !IGNORE_SHEET.test(g.sheet) && !DECOY_SHEET.test(g.sheet) && !VERSION_SUFFIX.test(g.sheet) && (!exclude || !exclude.test(g.sheet))
+  );
+}
+var Ctx = class {
+  warnings = [];
+  unmapped = [];
+  recognized = [];
+  defects = [];
+  notices = [];
+  warned = /* @__PURE__ */ new Set();
+  /** De-duplicated warning (keeps the summary readable when a value recurs on 100s of rows). */
+  warnOnce(key, msg) {
+    if (!this.warned.has(key)) {
+      this.warned.add(key);
+      this.warnings.push(msg);
+    }
+  }
+  warn(msg) {
+    this.warnings.push(msg);
+  }
+  addDefect(d) {
+    this.defects.push(d);
+  }
+  addNotice(n) {
+    this.notices.push(n);
+  }
+  recordUnmapped(sheet, header, handled) {
+    const labels = [];
+    header.forEach((c, i) => {
+      const name = clean(c);
+      if (name && !handled.has(i) && !US_STATES.has(norm(c)) && !labels.includes(name)) labels.push(name);
+    });
+    if (labels.length) this.unmapped.push({ sheet, columns: labels.slice(0, 24) });
+  }
+};
+var FW_FIELDS = {
+  status: ["STATUS", "ACTIVE STATUS", "ITEM STATUS", "ROW STATUS"],
+  id: [
+    "PRODUCT FRAMEWORK ID",
+    "FRAMEWORK ID",
+    "ID",
+    "REFERENCE ID",
+    "REF ID",
+    "ITEM ID",
+    "COMPONENT ID",
+    "COVERAGE ID",
+    "COV ID"
+  ],
+  product: ["PRODUCT", "PRODUCT NAME", "PROGRAM", "POLICY PROGRAM", "PRODUCT LINE"],
+  lob: [
+    "LINE OF BUSINESS",
+    "LOB",
+    "LINE",
+    "BUSINESS LINE",
+    "COVERAGE LINE",
+    "POLICY TYPE",
+    "COVERAGE TYPE"
+  ],
+  coverage: [
+    "COVERAGE",
+    "COVERAGE NAME",
+    "COVERAGE DESCRIPTION",
+    "PERIL",
+    "BENEFIT",
+    "INSURING AGREEMENT",
+    "RISK ITEM"
+  ],
+  subCoverage: [
+    "SUB-COVERAGE",
+    "SUB COVERAGE",
+    "SUBCOVERAGE",
+    "SUB-PERIL",
+    "SUB PERIL",
+    "COVERAGE OPTION",
+    "OPTION",
+    "SUBLIMIT ITEM",
+    "COVERAGE PART",
+    "ADDITIONAL COVERAGE",
+    "COVERAGE DETAIL",
+    "COVERAGE SPECIFICATION",
+    "SPECIFICATION",
+    "COMPONENT DETAIL",
+    "DETAIL",
+    "ITEM DETAIL",
+    "COVERAGE COMPONENT",
+    "ATTRIBUTE"
+  ],
+  forms: [
+    "FORM NUMBER(S)",
+    "FORM NUMBER",
+    "FORM NUMBERS",
+    "ASSOCIATED FORMS",
+    "POLICY FORM",
+    "FORM NO"
+  ],
+  edition: ["EDITION DATE", "EFFECTIVE DATE", "FORM EDITION"],
+  claimsBasis: ["CLAIMS BASIS", "TRIGGER", "LOSS TRIGGER", "REPORTING BASIS"],
+  requirement: [
+    "COVERAGE REQUIREMENT",
+    "REQUIREMENT",
+    "MANDATORY/ OPTIONAL",
+    "MANDATORY / OPTIONAL",
+    "REQUIRED/OPTIONAL",
+    "MANDATORY OR OPTIONAL",
+    "OPTIONAL OR MANDATORY"
+  ],
+  premiumGen: [
+    "PREMIUM GENERATING",
+    "PREMIUM GENERATING?",
+    "GENERATES PREMIUM",
+    "RATING",
+    "RATED",
+    "PREMIUM BEARING"
+  ],
+  bureau: [
+    "BUREAU",
+    "RATING BUREAU",
+    "RATING BUREAU?",
+    "ISO",
+    "BUREAU FORM",
+    "FILED",
+    "BUREAU FILED"
+  ],
+  proprietary: [
+    "PROPRIETARY",
+    "PROPRIETARY?",
+    "CARRIER PROPRIETARY",
+    "NON-BUREAU",
+    "COMPANY SPECIFIC",
+    "CARRIER SPECIFIC"
+  ],
+  review: [
+    "REVIEW STATUS",
+    "REVIEW",
+    "STATUS (REVIEW)",
+    "APPROVAL STATUS",
+    "CLIENT REVIEW STATUS"
+  ]
+};
+function finalizeCoverages(resolved, draftByRefId, at, sheetName, ctx) {
+  for (const rc of resolved) {
+    if (rc.parentSignal === "orphan-promoted") {
+      ctx.warn(`Sheet "${sheetName}" coverage ${rc.refId} ("${rc.name}"): named a sub-coverage but no parent coverage was found \u2014 imported as a top-level coverage.`);
+    }
+  }
+  const coverages = resolved.map((rc) => {
+    const draft = draftByRefId.get(rc.refId);
+    const cells = draft.cells;
+    return {
+      docId: dashId(rc.refId),
+      refId: rc.refId,
+      label: `${rc.refId} \u2014 ${rc.name}`,
+      data: {
+        refId: rc.refId,
+        name: rc.name,
+        parentId: rc.parentRefId,
+        order: rc.order,
+        requirement: mapRequirement(at(cells, "requirement")),
+        claimsBasis: mapClaimsBasis(at(cells, "claimsBasis")),
+        premiumGenerating: isYes(at(cells, "premiumGen")),
+        source: mapSource(at(cells, "bureau"), at(cells, "proprietary")),
+        formNumbers: splitList(at(cells, "forms")),
+        terms: [],
+        ...draft.scope,
+        status: mapStatus(at(cells, "status")),
+        lifecycle: "DRAFT",
+        reviewStatus: mapReview(at(cells, "review")),
+        reviewer: ""
+      }
+    };
+  });
+  const byRefId = new Set(coverages.map((c) => c.refId));
+  for (const cov of coverages) {
+    const pid = cov.data["parentId"];
+    if (pid && !byRefId.has(pid)) {
+      ctx.warn(`Sheet "${sheetName}" coverage ${cov.refId}: parent "${pid}" not found \u2014 imported as top-level.`);
+      cov.data["parentId"] = null;
+    }
+  }
+  const depthOf = (refId) => {
+    let d = 0;
+    let cur = refId;
+    const guard = /* @__PURE__ */ new Set();
+    while (cur && !guard.has(cur)) {
+      guard.add(cur);
+      const c = coverages.find((x) => x.refId === cur);
+      const pid = c ? c.data["parentId"] : null;
+      if (!pid) break;
+      d += 1;
+      cur = pid;
+    }
+    return d;
+  };
+  const depthCache = new Map(coverages.map((c) => [c.refId, depthOf(c.refId)]));
+  coverages.sort((a, b) => (depthCache.get(a.refId) ?? 0) - (depthCache.get(b.refId) ?? 0));
+  return coverages;
+}
+function assignDraftsByProduct(drafts, products) {
+  const result = new Map(products.map((p) => [p.refId, []]));
+  const prefixMap = new Map(products.map((p) => [refIdPrefix(p.refId).toUpperCase(), p.refId]));
+  const nameMap = new Map(products.map((p) => [p.name.toUpperCase(), p.refId]));
+  for (const draft of drafts) {
+    const covPrefix = refIdPrefix(draft.refId).toUpperCase();
+    let target = prefixMap.get(covPrefix);
+    if (!target && draft.productHint) target = nameMap.get(draft.productHint.toUpperCase());
+    if (!target) target = products[0].refId;
+    result.get(target).push(draft);
+  }
+  return result;
+}
+function parseFramework(grid, ctx, overlay) {
+  const effectiveFwFields = overlay?.columnAliases ? Object.fromEntries(
+    Object.entries(FW_FIELDS).map(([k, v]) => [k, overlay.columnAliases[k] ? [...v, ...overlay.columnAliases[k]] : v])
+  ) : FW_FIELDS;
+  const hr = findHeaderRow(grid, Object.values(effectiveFwFields));
+  if (hr < 0) {
+    ctx.warn(`Framework sheet "${grid.sheet}": no recognizable header row \u2014 skipped.`);
+    return null;
+  }
+  ctx.recognized.push(grid.sheet);
+  const header = row(grid, hr);
+  const col = mapColumns(header, effectiveFwFields);
+  const sc = stateColumns(header);
+  const at = (r, k) => k in col ? r[col[k]] ?? null : null;
+  const productRows = /* @__PURE__ */ new Map();
+  let lobRefId = null;
+  let lobName = "";
+  let productNameHint = "";
+  let lobNameHint = "";
+  const drafts = [];
+  const draftByRefId = /* @__PURE__ */ new Map();
+  for (let r = hr + 1; r < grid.cells.length; r++) {
+    const cells = row(grid, r);
+    const id = clean(at(cells, "id"));
+    if (!id) continue;
+    const covName = clean(at(cells, "coverage"));
+    const subName = clean(at(cells, "subCoverage"));
+    const prod = clean(at(cells, "product"));
+    const lob = clean(at(cells, "lob"));
+    if (/\.(PROD|PRD|PRODUCT)\b|\.(PROD|PRD|PRODUCT)\./i.test(id)) {
+      if (!productRows.has(id)) productRows.set(id, { refId: id, name: prod || "" });
+      continue;
+    }
+    if (/\.LOB\b|\.LOB\./i.test(id)) {
+      if (!lobRefId) {
+        lobRefId = id;
+        lobName = lob || lobName;
+      }
+      continue;
+    }
+    if (!covName && !subName) {
+      if (!productNameHint && prod) productNameHint = prod;
+      if (!lobNameHint && lob) lobNameHint = lob;
+      continue;
+    }
+    if (!productNameHint && prod) productNameHint = prod;
+    if (!lobNameHint && lob) lobNameHint = lob;
+    const draft = {
+      refId: id,
+      coverageName: covName,
+      subCoverageName: subName,
+      rowIndex: r,
+      cells,
+      scope: stateScope(cells, sc),
+      productHint: prod
+    };
+    drafts.push(draft);
+    const prior = draftByRefId.get(id);
+    if (!prior) {
+      draftByRefId.set(id, draft);
+    } else if (prior.coverageName !== covName || prior.subCoverageName !== subName) {
+      ctx.warnOnce(`dupcovid:${id}`, `Sheet "${grid.sheet}" col "ID": coverage id ${id} is reused for different coverages ("${prior.coverageName || prior.subCoverageName}" and "${covName || subName}") \u2014 kept the first; verify the source.`);
+    }
+  }
+  let productList;
+  if (productRows.size > 0) {
+    const seenPrefixes = /* @__PURE__ */ new Map();
+    for (const pd of productRows.values()) {
+      const prefix = refIdPrefix(pd.refId).toUpperCase();
+      if (!seenPrefixes.has(prefix)) seenPrefixes.set(prefix, pd);
+    }
+    productList = [...seenPrefixes.values()];
+  } else {
+    const prefix = (drafts.length > 0 ? refIdPrefix(drafts[0].refId) : null) || "XX";
+    const synthRefId = `${prefix}.PROD.001`;
+    const synthName = productNameHint || "";
+    ctx.warnOnce("product_synthesized", `Framework sheet "${grid.sheet}": no explicit product (.PROD/.PRD) row \u2014 synthesized "${synthRefId}" from coverage id prefix "${prefix}"; code: product_synthesized.`);
+    productList = [{ refId: synthRefId, name: synthName }];
+  }
+  if (!lobName) lobName = lobNameHint;
+  const isMulti = productList.length > 1;
+  const assignedDrafts = isMulti ? assignDraftsByProduct(drafts, productList) : /* @__PURE__ */ new Map([[productList[0].refId, drafts]]);
+  const results = [];
+  for (const pd of productList) {
+    const myDrafts = assignedDrafts.get(pd.refId) ?? drafts;
+    const uniqueDrafts = myDrafts.filter((d) => draftByRefId.get(d.refId) === d);
+    const resolved = resolveCoverageHierarchy(uniqueDrafts.map((d) => ({
+      refId: d.refId,
+      coverageName: d.coverageName,
+      subCoverageName: d.subCoverageName,
+      rowIndex: d.rowIndex
+    })));
+    const coverages = finalizeCoverages(resolved, draftByRefId, at, grid.sheet, ctx);
+    const scopes = myDrafts.map((d) => d.scope);
+    const productScope = scopes.some((s) => s.allStates) || scopes.length === 0 ? { allStates: true, states: [] } : { allStates: false, states: [...new Set(scopes.flatMap((s) => s.states))].sort() };
+    const pName = pd.name || productNameHint;
+    results.push({ productRefId: pd.refId, productName: pName, lobRefId, lobName, coverages, productScope });
+  }
+  const handled = new Set(Object.values(col).concat(sc.cols.map((s) => s.col), sc.allCol));
+  ctx.recordUnmapped(grid.sheet, header, handled);
+  return results.length > 0 ? results : null;
+}
+var FORM_FIELDS = {
+  ids: [
+    "PRODUCT FRAMEWORK ID",
+    "FRAMEWORK ID",
+    "COVERAGE ID",
+    "COVERAGE REF",
+    "APPLICABLE COVERAGE",
+    "COVERAGE"
+  ],
+  name: ["FORM NAME", "FORM TITLE", "DESCRIPTION", "FORM DESCRIPTION", "TITLE"],
+  number: ["FORM NUMBER", "FORM NO", "FORM NO.", "POLICY FORM", "FORM", "FORM #"],
+  edition: [
+    "FORM EDITION DATE (MM YY)",
+    "FORM EDITION DATE",
+    "EDITION DATE",
+    "EDITION",
+    "EFFECTIVE DATE",
+    "VERSION DATE"
+  ],
+  claimsBasis: ["CLAIMS BASIS", "TRIGGER", "LOSS TRIGGER"],
+  bureau: ["BUREAU", "RATING BUREAU", "ISO", "FILED", "BUREAU FILED"],
+  proprietary: ["PROPRIETARY", "CARRIER PROPRIETARY", "NON-BUREAU", "COMPANY SPECIFIC"],
+  // "ADMITTED/NOT ADMITTED" is the PR/Property template; "FILING STATUS" is a common carrier variant.
+  admitted: [
+    "ADMITTED / NON-ADMITTED",
+    "ADMITTED/NON-ADMITTED",
+    "ADMITTED",
+    "ADMITTED/NOT ADMITTED",
+    "ADMITTED / NOT ADMITTED",
+    "ADMITTED STATUS",
+    "FILING STATUS",
+    "ADMITTED NON-ADMITTED"
+  ],
+  category: ["FORM CATEGORY", "CATEGORY", "TYPE", "FORM TYPE", "DOCUMENT TYPE"],
+  dynamic: ["DYNAMIC / STATIC", "DYNAMIC/STATIC", "DYNAMIC", "VARIABLE", "VARIABLE CONTENT"],
+  mandatory: [
+    "MANDATORY/ OPTIONAL",
+    "MANDATORY / OPTIONAL",
+    "MANDATORY/OPTIONAL",
+    "REQUIRED",
+    "MANDATORY OR OPTIONAL",
+    "REQUIRED OR OPTIONAL",
+    "APPLICABILITY"
+  ],
+  // "ATTACHMENT CONDITIONS" (plural) is the PR/Property template variant.
+  attachment: [
+    "ATTACHMENT CONDITION",
+    "ATTACHMENT CONDITIONS",
+    "CONDITION",
+    "WHEN ATTACHED",
+    "ATTACH WHEN"
+  ],
+  display: [
+    "DISPLAY ON FORMS SCHEDULE",
+    "DISPLAY ON SCHEDULE",
+    "SCHEDULE DISPLAY",
+    "SHOW ON SCHEDULE",
+    "PRINT ON SCHEDULE"
+  ],
+  useCount: [
+    "SINGLE OR MULTI-USE",
+    "SINGLE OR MULTI USE",
+    "USE COUNT",
+    "USAGE",
+    "SINGLE/MULTI USE"
+  ],
+  review: ["REVIEW STATUS", "REVIEW", "APPROVAL STATUS", "CLIENT REVIEW STATUS"]
+};
+var DYN_FIELDS = {
+  number: ["FORM NUMBER"],
+  fieldName: ["DYNAMIC FIELD NAME", "FIELD NAME"],
+  dataType: ["DATA TYPE"],
+  repeating: ["REPEATING FIELD", "REPEATING"],
+  notes: ["NOTES"]
+};
+function parseDynamicFields(grid, ctx) {
+  const out = {};
+  if (!grid) return out;
+  const hr = findHeaderRow(grid, Object.values(DYN_FIELDS));
+  if (hr < 0) return out;
+  ctx.recognized.push(grid.sheet);
+  const header = row(grid, hr);
+  const col = mapColumns(header, DYN_FIELDS);
+  if (!("number" in col) || !("fieldName" in col)) return out;
+  for (let r = hr + 1; r < grid.cells.length; r++) {
+    const cells = row(grid, r);
+    const number = clean(cells[col["number"]] ?? null);
+    const fieldName = clean(cells[col["fieldName"]] ?? null);
+    if (!number || !fieldName) continue;
+    const key = number.replace(/\s+/g, "-");
+    (out[key] ??= []).push({
+      name: fieldName,
+      dataType: mapDynType("dataType" in col ? cells[col["dataType"]] ?? null : null),
+      repeating: isYes("repeating" in col ? cells[col["repeating"]] ?? null : null),
+      // The ISO GL template carries no LIST-type fields and no options column; a
+      // future template that does would map here. Empty ≠ dropped.
+      options: [],
+      notes: "notes" in col ? clean(cells[col["notes"]] ?? null) || void 0 : void 0
+    });
+  }
+  ctx.recordUnmapped(grid.sheet, header, new Set(Object.values(col)));
+  return out;
+}
+function parseForms(grid, dynByForm, productRefId, ctx, overlay) {
+  const effectiveFormFields = overlay?.columnAliases ? Object.fromEntries(
+    Object.entries(FORM_FIELDS).map(([k, v]) => [k, overlay.columnAliases[k] ? [...v, ...overlay.columnAliases[k]] : v])
+  ) : FORM_FIELDS;
+  const hr = findHeaderRow(grid, Object.values(effectiveFormFields));
+  if (hr < 0) {
+    ctx.warn(`Forms sheet "${grid.sheet}": no recognizable header row \u2014 skipped.`);
+    return [];
+  }
+  ctx.recognized.push(grid.sheet);
+  const header = row(grid, hr);
+  const col = mapColumns(header, effectiveFormFields);
+  if (!("number" in col)) {
+    ctx.warn(`Forms sheet "${grid.sheet}": no Form Number column \u2014 skipped.`);
+    return [];
+  }
+  const sc = stateColumns(header);
+  const section = fillForward(row(grid, hr - 1));
+  const partCols = groupColumns(section, header, /COVERAGE PART/i);
+  const txnCols = groupColumns(section, header, /TRANSACTION/i);
+  const at = (r, k) => k in col ? r[col[k]] ?? null : null;
+  const byKey = /* @__PURE__ */ new Map();
+  let dupFormRows = 0;
+  const mergedFormKeys = /* @__PURE__ */ new Set();
+  for (let r = hr + 1; r < grid.cells.length; r++) {
+    const cells = row(grid, r);
+    const number = clean(at(cells, "number"));
+    if (!number || /^form number/i.test(number)) continue;
+    const key = number.replace(/\s+/g, "-");
+    const scope = stateScope(cells, sc);
+    const coverageParts = partCols.filter((p) => isX(cells[p.col] ?? null)).map((p) => p.name);
+    const transactions = txnCols.filter((t) => isX(cells[t.col] ?? null)).map((t) => t.name);
+    const existing = byKey.get(key);
+    if (existing) {
+      const d = existing.data;
+      const uni = (a, b) => [.../* @__PURE__ */ new Set([...a, ...b])];
+      d["coverageParts"] = uni(d["coverageParts"], coverageParts);
+      d["transactions"] = uni(d["transactions"], transactions);
+      if (!d["allStates"]) {
+        if (scope.allStates) {
+          d["allStates"] = true;
+          d["states"] = [];
+        } else d["states"] = uni(d["states"], scope.states);
+      }
+      ctx.warnOnce(`dupform:${key}`, `Sheet "${grid.sheet}" row ${r + 1} col "FORM NUMBER": form ${number} appears on multiple rows \u2014 applicability merged.`);
+      dupFormRows++;
+      mergedFormKeys.add(key);
+      continue;
+    }
+    const cat = mapFormCategory(at(cells, "category"), overlay);
+    if (cat.outlier) {
+      ctx.addDefect({
+        code: "unmapped_enum",
+        field: "category",
+        rawValue: clean(at(cells, "category")),
+        rowRef: `${grid.sheet} row ${r + 1}`
+      });
+    } else if (!cat.exact) {
+      ctx.warnOnce(
+        `formcat:${norm(at(cells, "category"))}`,
+        `Sheet "${grid.sheet}" row ${r + 1} col "FORM CATEGORY": value "${clean(at(cells, "category"))}" not recognised \u2014 mapped to ENDORSEMENT, verify intent.`
+      );
+    }
+    byKey.set(key, {
+      docId: key,
+      refId: null,
+      label: `${number} \u2014 ${clean(at(cells, "name"))}`,
+      data: {
+        number,
+        name: clean(at(cells, "name")),
+        edition: clean(at(cells, "edition")),
+        // Outlier → write ENDORSEMENT as safe write-fallback (defect surfaced above).
+        category: cat.category ?? "ENDORSEMENT",
+        claimsBasis: mapClaimsBasis(at(cells, "claimsBasis")),
+        dynamic: /dynamic/i.test(text(at(cells, "dynamic"))),
+        mandatoryDefault: /mandat/i.test(text(at(cells, "mandatory"))),
+        attachmentCondition: /rule/i.test(text(at(cells, "attachment"))) ? "RULE" : "NONE",
+        source: mapSource(at(cells, "bureau"), at(cells, "proprietary")),
+        admitted: !/non-admitted/i.test(text(at(cells, "admitted"))),
+        displayOnSchedule: isYes(at(cells, "display")),
+        multiUse: /multi/i.test(text(at(cells, "useCount"))),
+        transactions,
+        coverageParts,
+        productRefIds: productRefId ? [productRefId] : [],
+        description: "",
+        dynamicFields: dynByForm[key] ?? [],
+        ...scope,
+        status: "ACTIVE",
+        lifecycle: "DRAFT",
+        reviewStatus: mapReview(at(cells, "review")),
+        reviewer: ""
+      }
+    });
+  }
+  if (mergedFormKeys.size > 0) {
+    ctx.addNotice({
+      code: "forms_applicability_merged",
+      message: `${mergedFormKeys.size} form number(s) appeared on multiple rows; state applicability, coverage parts, and transaction columns merged into single entities (${dupFormRows} extra rows collapsed).`,
+      data: { mergedForms: mergedFormKeys.size, rowsCollapsed: dupFormRows }
+    });
+  }
+  const handled = new Set(Object.values(col).concat(
+    sc.cols.map((s) => s.col),
+    sc.allCol,
+    partCols.map((p) => p.col),
+    txnCols.map((t) => t.col)
+  ));
+  ctx.recordUnmapped(grid.sheet, header, handled);
+  return [...byKey.values()];
+}
+var RULE_FIELDS = {
+  status: ["STATUS", "ACTIVE STATUS", "RULE STATUS"],
+  ids: ["PRODUCT FRAMEWORK ID", "FRAMEWORK ID", "COVERAGE ID", "COVERAGE REF", "COVERAGE"],
+  id: ["RULE ID", "ID", "RULE NO", "RULE NO.", "RULE #", "RULE NUMBER", "ITEM ID"],
+  category: ["RULE CATEGORY", "CATEGORY", "TYPE", "RULE TYPE", "RULE CLASS"],
+  subCategory: [
+    "RULE SUB-CATEGORY",
+    "RULE SUB CATEGORY",
+    "SUB CATEGORY",
+    "SUB-CATEGORY",
+    "SUBCATEGORY",
+    "TOPIC",
+    "SUBJECT",
+    "RULE TOPIC"
+  ],
+  forms: [
+    "FORM NUMBER",
+    "FORM NUMBER(S)",
+    "ASSOCIATED FORM",
+    "APPLICABLE FORM",
+    "FORM REFERENCE",
+    "RELATED FORM"
+  ],
+  condition: [
+    "RULE CONDITION",
+    "CONDITION",
+    "WHEN",
+    "APPLICABILITY",
+    "TRIGGER",
+    "IF",
+    "CRITERIA",
+    "RULE CRITERIA",
+    "ELIGIBILITY"
+  ],
+  outcome: [
+    "RULE OUTCOME",
+    "OUTCOME",
+    "RESULT",
+    "EFFECT",
+    "THEN",
+    "APPLIES",
+    "ACTION",
+    "RULE ACTION",
+    "APPLIES TO"
+  ],
+  reference: [
+    "RULE REFERENCE",
+    "REFERENCE",
+    "TABLE REF",
+    "LD TABLE",
+    "SEE ALSO",
+    "RATE TABLE",
+    "FACTOR TABLE",
+    "NOTES"
+  ],
+  review: [
+    "REVIEW STATUS (CLIENT TEAM)",
+    "REVIEW STATUS",
+    "REVIEW",
+    "APPROVAL STATUS",
+    "CLIENT REVIEW STATUS"
+  ]
+};
+function parseRules(grid, ctx) {
+  const hr = findHeaderRow(grid, Object.values(RULE_FIELDS));
+  if (hr < 0) {
+    ctx.warn(`Rules sheet "${grid.sheet}": no recognizable header row \u2014 skipped.`);
+    return [];
+  }
+  ctx.recognized.push(grid.sheet);
+  const header = row(grid, hr);
+  const col = mapColumns(header, RULE_FIELDS);
+  if (!("id" in col)) {
+    ctx.warn(`Rules sheet "${grid.sheet}": no Rule ID column \u2014 skipped.`);
+    return [];
+  }
+  const sc = stateColumns(header);
+  const at = (r, k) => k in col ? r[col[k]] ?? null : null;
+  const byId = /* @__PURE__ */ new Map();
+  let synthSeq = 0;
+  for (let r = hr + 1; r < grid.cells.length; r++) {
+    const cells = row(grid, r);
+    let id = clean(at(cells, "id"));
+    if (!id) {
+      const hasContent = !!(clean(at(cells, "category")) || clean(at(cells, "subCategory")) || clean(at(cells, "condition")) || clean(at(cells, "outcome")));
+      if (!hasContent) continue;
+      synthSeq += 1;
+      const fwBase = (clean(at(cells, "ids")) || "RULE").split(/[\s,;]+/)[0];
+      id = `${fwBase}.RULE.${String(synthSeq).padStart(3, "0")}`;
+    }
+    const forms = splitList(at(cells, "forms"));
+    const existing = byId.get(id);
+    if (existing) {
+      existing.data["formNumbers"] = [.../* @__PURE__ */ new Set([...existing.data["formNumbers"], ...forms])];
+      ctx.warnOnce(`duprule:${id}`, `Sheet "${grid.sheet}" row ${r + 1} col "RULE ID": rule ${id} appears on multiple rows \u2014 form numbers merged.`);
+      continue;
+    }
+    byId.set(id, {
+      docId: dashId(id),
+      refId: id,
+      label: `${id} \u2014 ${clean(at(cells, "subCategory"))}`,
+      data: {
+        refId: id,
+        category: mapRuleCategory(at(cells, "category")),
+        subCategory: clean(at(cells, "subCategory")),
+        condition: clean(at(cells, "condition")),
+        outcome: clean(at(cells, "outcome")),
+        ldTableRef: extractTableRef(at(cells, "reference")),
+        coverageRefIds: splitList(at(cells, "ids")),
+        formNumbers: forms,
+        ...stateScope(cells, sc),
+        status: mapStatus(at(cells, "status")),
+        lifecycle: "DRAFT",
+        reviewStatus: mapReview(at(cells, "review")),
+        reviewer: ""
+      }
+    });
+  }
+  const handled = new Set(Object.values(col).concat(sc.cols.map((s) => s.col), sc.allCol));
+  ctx.recordUnmapped(grid.sheet, header, handled);
+  return [...byId.values()];
+}
+var FORMRULE_FIELDS = {
+  id: ["FORM RULE ID", "RULE ID"],
+  forms: ["FORM NUMBER", "FORM NUMBER(S)"],
+  condition: ["RULE CONDITION"],
+  outcome: ["RULE OUTCOME"],
+  review: ["REVIEW STATUS (<CLIENT NAME>)", "REVIEW STATUS"]
+};
+function parseFormRules(grid, ctx) {
+  const hr = findHeaderRow(grid, Object.values(FORMRULE_FIELDS));
+  if (hr < 0) {
+    ctx.warn(`Optional forms rules sheet "${grid.sheet}": no recognizable header row \u2014 skipped.`);
+    return [];
+  }
+  ctx.recognized.push(grid.sheet);
+  const header = row(grid, hr);
+  const col = mapColumns(header, FORMRULE_FIELDS);
+  if (!("id" in col)) {
+    ctx.warn(`Optional forms rules sheet "${grid.sheet}": no Form Rule ID column \u2014 skipped.`);
+    return [];
+  }
+  const at = (r, k) => k in col ? r[col[k]] ?? null : null;
+  const byId = /* @__PURE__ */ new Map();
+  for (let r = hr + 1; r < grid.cells.length; r++) {
+    const cells = row(grid, r);
+    const id = clean(at(cells, "id"));
+    if (!id) continue;
+    const forms = splitList(at(cells, "forms"));
+    const outcome = clean(at(cells, "outcome"));
+    const existing = byId.get(id);
+    if (existing) {
+      existing.data["formNumbers"] = [.../* @__PURE__ */ new Set([...existing.data["formNumbers"], ...forms])];
+      ctx.warnOnce(`dupformrule:${id}`, `Sheet "${grid.sheet}" row ${r + 1} col "FORM RULE ID": form rule ${id} appears on multiple rows \u2014 form numbers merged.`);
+      continue;
+    }
+    byId.set(id, {
+      docId: dashId(id),
+      refId: id,
+      label: `${id} \u2014 ${clean(at(cells, "condition")).slice(0, 40)}`,
+      data: {
+        refId: id,
+        condition: clean(at(cells, "condition")),
+        outcome,
+        formNumbers: forms,
+        mandatory: /mandat/i.test(outcome),
+        status: "ACTIVE",
+        lifecycle: "DRAFT",
+        reviewStatus: mapReview(at(cells, "review")),
+        reviewer: ""
+      }
+    });
+  }
+  const handled = new Set(Object.values(col));
+  ctx.recordUnmapped(grid.sheet, header, handled);
+  return [...byId.values()];
+}
+var LD_MARKER_GL = /^LD ?TABLE\.\s*\w+/i;
+var LD_MARKER_IM = /^LD\d+$/i;
+var LD_MARKER = /^LD ?TABLE\.\s*\w+|^LD\d+$/i;
+function parseLdTables(grid, ctx) {
+  if (!grid) return [];
+  ctx.recognized.push(grid.sheet);
+  const tables = /* @__PURE__ */ new Map();
+  const rows = grid.cells;
+  let markerCol = 0;
+  for (let r = 0; r < Math.min(rows.length, 20); r++) {
+    if (LD_MARKER_GL.test(norm(cell(grid, r, 0)))) break;
+    if (LD_MARKER_IM.test(norm(cell(grid, r, 1)))) {
+      markerCol = 1;
+      break;
+    }
+  }
+  for (let r = 0; r < rows.length; r++) {
+    const first = norm(cell(grid, r, markerCol));
+    if (!LD_MARKER.test(first)) continue;
+    const refId = text(cell(grid, r, markerCol));
+    const markerRow = row(grid, r);
+    const nameIdx = markerRow.findIndex((c) => /TABLE NAME/i.test(text(c)));
+    let name = "";
+    if (nameIdx >= 0) name = clean(markerRow.slice(nameIdx + 1).find((c) => clean(c)) ?? null);
+    if (!name) name = clean(markerRow.slice(markerCol + 1).find((c) => clean(c) && !/TABLE NAME/i.test(text(c))) ?? null);
+    let valueCol = -1, commentCol = -1, headerR = r;
+    for (let hr = r; hr <= r + 2 && hr < rows.length; hr++) {
+      const hrow = row(grid, hr);
+      const vi = hrow.findIndex((c) => /^AVAILABLE\b|^LIMITS?$|^DEDUCTIBLES?$|^TYPE$/i.test(text(c).trim()));
+      if (vi >= 0) {
+        valueCol = vi;
+        headerR = hr;
+        commentCol = hrow.findIndex((c) => /COMMENT/i.test(text(c)));
+        break;
+      }
+    }
+    if (valueCol < 0) {
+      valueCol = markerCol + 3;
+      commentCol = markerCol + 4;
+      headerR = r;
+    }
+    const entry = tables.get(refId) ?? { name, rows: [], defaultValue: void 0 };
+    if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} (LD marker): table ${refId} appears more than once \u2014 rows merged.`);
+    if (!entry.name) entry.name = name;
+    for (let dr = headerR + 1; dr < rows.length; dr++) {
+      if (LD_MARKER.test(norm(cell(grid, dr, markerCol)))) break;
+      const raw = cell(grid, dr, valueCol);
+      const label = clean(raw);
+      if (!label || /^available|^comment|^limit$|^deductible/i.test(label)) continue;
+      const note = commentCol >= 0 ? clean(cell(grid, dr, commentCol)) : "";
+      const num = parseNum(raw) ?? 0;
+      entry.rows.push({ label, value: num, constraintNote: note || void 0 });
+      if (/default/i.test(note)) entry.defaultValue = num;
+    }
+    tables.set(refId, entry);
+  }
+  return [...tables.entries()].map(([refId, t]) => ({
+    docId: refId,
+    refId,
+    label: `${refId} \u2014 ${t.name}`,
+    data: { name: t.name, defaultValue: t.defaultValue, rows: t.rows }
+  }));
+}
+var RT_ID_MARKER = /^RATE TABLE ID/i;
+var RT_NAME_MARKER = /^RATE TABLE NAME/i;
+function parseRtTables(grid, ctx) {
+  if (!grid) return [];
+  ctx.recognized.push(grid.sheet);
+  const tables = /* @__PURE__ */ new Map();
+  const rows = grid.cells;
+  let pendingName = "";
+  for (let r = 0; r < rows.length; r++) {
+    const first = norm(cell(grid, r, 0));
+    if (RT_NAME_MARKER.test(first)) {
+      pendingName = clean(row(grid, r).slice(1).find((c) => clean(c)) ?? null);
+      continue;
+    }
+    if (!RT_ID_MARKER.test(first)) continue;
+    const refId = clean(row(grid, r).slice(1).find((c) => clean(c)) ?? null);
+    if (!refId) continue;
+    let headerR = -1;
+    for (let hr = r + 1; hr < rows.length && hr <= r + 3; hr++) {
+      if (RT_NAME_MARKER.test(norm(cell(grid, hr, 0))) || RT_ID_MARKER.test(norm(cell(grid, hr, 0)))) break;
+      if (row(grid, hr).filter((c) => clean(c)).length >= 2) {
+        headerR = hr;
+        break;
+      }
+    }
+    if (headerR < 0) continue;
+    const headerRow = row(grid, headerR);
+    const colIdx = [];
+    const columns = [];
+    headerRow.forEach((c, i) => {
+      const nm = clean(c);
+      if (nm) {
+        colIdx.push(i);
+        columns.push(nm);
+      }
+    });
+    const entry = tables.get(refId) ?? { name: pendingName, columns, rows: [], colIdx };
+    if (tables.has(refId)) ctx.warnOnce(`duprt:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} col "RATE TABLE ID": table ${refId} appears more than once \u2014 rows merged.`);
+    if (!entry.name) entry.name = pendingName;
+    for (let dr = headerR + 1; dr < rows.length; dr++) {
+      const f = norm(cell(grid, dr, 0));
+      if (RT_NAME_MARKER.test(f) || RT_ID_MARKER.test(f)) break;
+      const cells = row(grid, dr);
+      if (!entry.colIdx.some((ci) => clean(cells[ci] ?? null))) continue;
+      const rec = {};
+      entry.colIdx.forEach((ci, k) => {
+        const raw = cells[ci] ?? null;
+        const num = parseNum(raw);
+        rec[entry.columns[k] ?? `col${k}`] = num !== null ? num : clean(raw);
+      });
+      entry.rows.push(rec);
+    }
+    tables.set(refId, entry);
+  }
+  return [...tables.entries()].map(([refId, t]) => ({
+    docId: refId,
+    refId,
+    label: `${refId} \u2014 ${t.name}`,
+    data: { name: t.name, columns: t.columns, rows: t.rows }
+  }));
+}
+var RATE_FIELDS = {
+  status: ["STATUS", "ACTIVE STATUS", "STEP STATUS"],
+  ids: ["PRODUCT FRAMEWORK ID", "FRAMEWORK ID", "COVERAGE ID", "COVERAGE"],
+  stepId: [
+    "RATING STEP ID",
+    "STEP ID",
+    "STEP",
+    "STEP NUMBER",
+    "STEP NO",
+    "ITEM",
+    "ID",
+    "SEQUENCE",
+    "STEP #",
+    "LINE NO",
+    "LINE NUMBER"
+  ],
+  grouping: ["RATING GROUPING", "GROUPING", "GROUP", "SECTION", "ELEMENT", "CATEGORY"],
+  manualId: [
+    "RATING MANUAL RULE/ STEP ID",
+    "RATING MANUAL RULE/STEP ID",
+    "MANUAL RULE/ STEP ID",
+    "MANUAL STEP",
+    "MANUAL REF",
+    "MANUAL RULE"
+  ],
+  // "RULES" is the ROC-template short form; broader synonyms for novel formats.
+  rules: [
+    "RATING RULES",
+    "RULES",
+    "RULE",
+    "DESCRIPTION",
+    "STEP DESCRIPTION",
+    "LABEL",
+    "RATING ELEMENT",
+    "ELEMENT DESCRIPTION"
+  ],
+  algorithm: [
+    "ALGORITHM STEP",
+    "ALGORITHM",
+    "FORMULA",
+    "CALCULATION DESCRIPTION",
+    "STEP DETAIL",
+    "LOGIC"
+  ],
+  calc: ["CALCULATION", "OPERATOR", "OPERATION", "CALC", "MATH", "OP"],
+  rounding: [
+    "ROUNDING NUMBER OF DIGITS",
+    "ROUNDING",
+    "ROUND TO",
+    "ROUNDING RULE",
+    "DIGITS",
+    "DECIMAL PLACES"
+  ],
+  // "TABLE REFERENCE" is the ROC-template equivalent of "RATE REFERENCE".
+  reference: [
+    "RATE REFERENCE",
+    "TABLE REFERENCE",
+    "RT TABLE",
+    "RATE TABLE",
+    "TABLE",
+    "FACTOR TABLE",
+    "LOOKUP TABLE",
+    "RATE TABLE REFERENCE"
+  ],
+  review: ["REVIEW STATUS", "REVIEW", "APPROVAL STATUS"]
+};
+function mapOp(v) {
+  const s = text(v).trim();
+  if (s === "+" || s === "-") return "ADD";
+  if (s === "=") return "SET";
+  return "MUL";
+}
+function parseRating(grid, rtTables, productRefId, lobName, ctx) {
+  const hr = findHeaderRow(grid, Object.values(RATE_FIELDS));
+  if (hr < 0) {
+    ctx.warn(`Rating sheet "${grid.sheet}": no recognizable header row \u2014 skipped.`);
+    return null;
+  }
+  ctx.recognized.push(grid.sheet);
+  const header = row(grid, hr);
+  const col = mapColumns(header, RATE_FIELDS);
+  if (!("stepId" in col) && !("algorithm" in col)) {
+    ctx.warn(`Rating sheet "${grid.sheet}": no rating step columns \u2014 skipped.`);
+    return null;
+  }
+  const sc = stateColumns(header);
+  const at = (r, k) => k in col ? r[col[k]] ?? null : null;
+  const rtByName = new Map(rtTables.map((t) => [norm(t.data["name"] ?? ""), t.refId]));
+  const resolveRef = (v) => {
+    const s = norm(v).replace(/ TABLE$/, "");
+    if (!s) return void 0;
+    for (const [name, refId2] of rtByName) if (name && (name === s || name.includes(s) || s.includes(name))) return refId2;
+    return void 0;
+  };
+  const steps = [];
+  const scopes = [];
+  let programRefId = null;
+  let order = 0;
+  for (let r = hr + 1; r < grid.cells.length; r++) {
+    const cells = row(grid, r);
+    const stepId = clean(at(cells, "stepId"));
+    const label = clean(at(cells, "algorithm")) || clean(at(cells, "rules")) || clean(at(cells, "grouping"));
+    if (!stepId && !label) continue;
+    if (!programRefId) {
+      const full = [stepId, ...splitList(at(cells, "ids"))].find((s) => /\.RAT/i.test(s));
+      if (full) {
+        const m = full.match(/^(.*\.RAT\.\d+)/i);
+        programRefId = m ? m[1] : full;
+      }
+    }
+    const ref = resolveRef(at(cells, "reference"));
+    const rounding = at(cells, "rounding");
+    const roundTo = /nearest dollar/i.test(text(rounding)) ? 0 : parseNum(rounding) ?? void 0;
+    const rawRef = clean(at(cells, "reference"));
+    order += 1;
+    steps.push({
+      id: stepId || `step-${order}`,
+      order,
+      label: label || stepId,
+      op: mapOp(at(cells, "calc")),
+      source: ref ? { type: "RT", ref } : rawRef ? { type: "RT", ref: rawRef } : { type: "INPUT", ref: label || stepId },
+      ...roundTo !== void 0 ? { roundTo } : {}
+    });
+    scopes.push(stateScope(cells, sc));
+  }
+  if (!steps.length) return null;
+  const refId = programRefId ?? `${(productRefId ?? "PROD").split(".")[0]}.RAT.1`;
+  const scope = scopes.some((s) => s.allStates) || !scopes.length ? { allStates: true, states: [] } : { allStates: false, states: [...new Set(scopes.flatMap((s) => s.states))].sort() };
+  const handled = new Set(Object.values(col).concat(sc.cols.map((s) => s.col), sc.allCol));
+  ctx.recordUnmapped(grid.sheet, header, handled);
+  return {
+    docId: dashId(refId),
+    refId,
+    label: `${refId} \u2014 rating program`,
+    data: {
+      refId,
+      name: `${lobName || "Imported"} Rating Program`,
+      minimumPremium: 0,
+      steps,
+      ...scope,
+      status: "ACTIVE",
+      lifecycle: "DRAFT",
+      reviewStatus: "NOT_STARTED",
+      reviewer: ""
+    }
+  };
+}
+function mapIsoWorkbook(grids, overlay) {
+  const ctx = new Ctx();
+  const fwGrid = selectFrameworkSheet(grids, ctx);
+  const formGrid = findSheet(grids, /forms specifications?|forms library/i, /dynamic/i);
+  const dynGrid = findSheet(grids, /forms dynamic|dynamic data/i);
+  const ruleGrid = findSheet(grids, /rules specifications?|rules repository/i, /optional/i);
+  const optGrid = findSheet(grids, /optional forms rules/i);
+  const rateGrid = findSheet(grids, /rating specifications?|property roc|^roc$/i);
+  const rtGrid = findSheet(grids, /rating tables|rate tables/i);
+  const ldGrid = findSheet(grids, /limits and deductibles|limits & deductibles/i);
+  const fwResults = fwGrid ? parseFramework(fwGrid, ctx, overlay) : null;
+  const firstFw = fwResults?.[0] ?? null;
+  const productRefId = firstFw?.productRefId ?? null;
+  const lob = resolveLobByRefId(productRefId) ?? resolveLobByRefId(firstFw?.coverages[0]?.refId ?? null) ?? DEFAULT_LOB;
+  const lobRefId = firstFw?.lobRefId ?? `${lob.prefix}.LOB.001`;
+  const lobName = firstFw?.lobName || lob.name;
+  const productId = productRefId;
+  const ldTables = parseLdTables(ldGrid, ctx);
+  const rtTables = parseRtTables(rtGrid, ctx);
+  const dynByForm = parseDynamicFields(dynGrid, ctx);
+  const forms = formGrid ? parseForms(formGrid, dynByForm, productRefId, ctx, overlay) : [];
+  const rules = ruleGrid ? parseRules(ruleGrid, ctx) : [];
+  const formRules = optGrid ? parseFormRules(optGrid, ctx) : [];
+  const ratingProgram = rateGrid ? parseRating(rateGrid, rtTables, productRefId, lobName, ctx) : null;
+  const products = [];
+  if (fwResults) {
+    for (const fw of fwResults) {
+      if (!fw.productRefId) continue;
+      const pLobRefId = fw.lobRefId ?? lobRefId;
+      const pLobName = fw.lobName || lobName;
+      products.push({
+        docId: fw.productRefId,
+        refId: fw.productRefId,
+        label: `${fw.productRefId} \u2014 ${fw.productName}`,
+        data: {
+          refId: fw.productRefId,
+          name: fw.productName || `${pLobName} Product`,
+          lob: { refId: pLobRefId, name: pLobName },
+          description: "",
+          marketSegment: `${lob.vertical} / ${lob.family}`,
+          owner: { uid: "", name: "" },
+          ...fw.productScope,
+          status: "ACTIVE",
+          lifecycle: "DRAFT",
+          reviewStatus: "NOT_STARTED",
+          reviewer: ""
+        }
+      });
+    }
+  }
+  const product = products[0] ?? null;
+  const allCoverages = fwResults ? fwResults.flatMap((fw) => fw.coverages) : [];
+  const dynFieldCount = forms.reduce((n, f) => n + (f.data["dynamicFields"]?.length ?? 0), 0);
+  const stepCount = ratingProgram ? ratingProgram.data["steps"].length : 0;
+  const counts = {
+    products: products.length,
+    coverages: allCoverages.length,
+    forms: forms.length,
+    dynamicFields: dynFieldCount,
+    rules: rules.length,
+    formRules: formRules.length,
+    ratingSteps: stepCount,
+    rtTables: rtTables.length,
+    ldTables: ldTables.length
+  };
+  const knownSheets = new Set(ctx.recognized);
+  const sheetsSkipped = grids.map((g) => g.sheet).filter((s) => !knownSheets.has(s));
+  return {
+    productId,
+    product,
+    products,
+    coverages: allCoverages,
+    forms,
+    rules,
+    formRules,
+    ratingProgram,
+    ldTables,
+    rtTables,
+    summary: {
+      productName: product ? product.data["name"] : null,
+      productRefId,
+      lobName,
+      counts,
+      warnings: ctx.warnings,
+      unmappedColumns: ctx.unmapped,
+      sheetsRecognized: ctx.recognized,
+      sheetsSkipped,
+      defects: ctx.defects,
+      notices: ctx.notices
+    }
+  };
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   CANONICAL_MAP,
@@ -2019,6 +3485,7 @@ function synthesizeRefId(lob, kind, seq, parentSeq) {
   buildStructuralModel,
   fingerprintGrid,
   inferLob,
+  mapIsoWorkbook,
   normalizeCellValue,
   pickBestHeaderRow,
   resolveLobByRefId,

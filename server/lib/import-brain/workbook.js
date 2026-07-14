@@ -127,7 +127,10 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
   }
 
   const structural = brainShared.buildStructuralModel(grids, sourceName, kind)
-  return { structural, skippedHiddenSheets }
+  // Raw grids ride along for the deterministic ISO-family mapper (stage 7 joins
+  // its canonical identities with the brain's cited extraction).
+  const isoGrids = grids.map(g => ({ sheet: g.sheet, file: sourceName, cells: g.cells }))
+  return { structural, skippedHiddenSheets, isoGrids }
 }
 
 module.exports = { sniffContainer, readWorkbookToStructural }

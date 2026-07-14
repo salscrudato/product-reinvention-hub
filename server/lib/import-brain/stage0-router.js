@@ -144,8 +144,8 @@ async function routeArtifacts(opts) {
 
     if (sniff.container === 'ZIP' && sniff.workbookKind) {
       try {
-        const { structural, skippedHiddenSheets } = await readWorkbookToStructural(buf, doc.name, sniff.workbookKind)
-        out.workbooks.push({ name: doc.name, kind: sniff.workbookKind, structural, skippedHiddenSheets })
+        const { structural, skippedHiddenSheets, isoGrids } = await readWorkbookToStructural(buf, doc.name, sniff.workbookKind)
+        out.workbooks.push({ name: doc.name, kind: sniff.workbookKind, structural, skippedHiddenSheets, isoGrids })
         if (skippedHiddenSheets.length > 0) {
           out.warnings.push({ kind: 'hidden-sheets-skipped', doc: doc.name, detail: `Skipped ${skippedHiddenSheets.length} hidden sheet(s): ${skippedHiddenSheets.slice(0, 8).join(', ')}` })
         }
