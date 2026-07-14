@@ -600,15 +600,18 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
   const contentSheets = classified.filter(c => c.domain !== 'ignore' && c.domain !== 'definitions')
   const synthCounter  = new Map()
 
-  for (const sheet of contentSheets) {
-    if (sheet.sheetName.includes('::')) continue
+  // Sheets extract 2-wide (batches inside each run 3-wide). Workers return
+  // PRE-SYNTHESIS entities; the SYNTH pass runs afterwards over the ordered
+  // results so placeholder numbering stays deterministic across runs.
+  async function extractSheet(sheet) {
+    if (sheet.sheetName.includes('::')) return null
     const fp     = fpByName.get(sheet.sheetName)
     const lock   = lockMap.get(sheet.sheetName)
     const colMap = colMapOf.get(sheet.sheetName)
-    if (!fp || !lock || !colMap) continue
+    if (!fp || !lock || !colMap) return null
 
     const rows = gatherRows(fp, lock.headerRowIndex)
-    if (rows.length === 0) continue
+    if (rows.length === 0) return null
 
     // A sheet with ZERO mapped columns cannot be extracted meaningfully — skip it
     // with an importWarning instead of asking models to extract from nothing
@@ -616,27 +619,15 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     const mappedColumnCount = (colMap.mappings || []).filter(m => m.canonicalField !== null).length
     if (mappedColumnCount === 0) {
       review.push({ kind: 'unmapped-sheet', sheetName: fp.sheetName, detail: `No columns could be mapped on "${fp.sheetName}" (${(colMap.mappings || []).length} columns examined) — sheet skipped; map the columns manually or check the canonical dictionary.` })
-      continue
+      return null
     }
-
-    const sheetEntities = []
 
     // ── Deterministic fast path: confident map + real grid → code extracts ────
     if (sheetIsDeterministic(fp, colMap)) {
       progress(`${fp.sheetName}: deterministic extraction (${rows.length} rows)`)
       const detEntities = deterministicExtract(fp, colMap, lock.headerRowIndex, rows, fp.sheetName)
       await sampleVerifyMap({ fp, colMap, headerRow: lock.headerRowIndex, rows, detEntities, deployBulk, deployGptMini, budget, review })
-      for (const entity of detEntities) {
-        if (entity.needsRefIdSynthesis) {
-          synthesizeRefId(entity, lobRefIdHint, synthCounter)
-          review.push({ kind: 'refid-synthesis-needed', sheetName: fp.sheetName, rowIndex: entity.sourceRowIndex, detail: `Row ${entity.sourceRowIndex} had no refId; synthesized placeholder — human review required.` })
-        }
-        if (entity.overallConfidence < CONFIDENCE_REVIEW) entity.reviewFlag = true
-      }
-      sheetEntities.push(...expandMultiRefIds(detEntities, fp.sheetName))
-      deriveParentIds(sheetEntities)
-      allEntities.push(...sheetEntities)
-      continue
+      return { fp, entities: [detEntities] }
     }
 
     // Batches extract independently — up to 3 in flight (pMap keeps batch order;
@@ -695,8 +686,18 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
       return entities
     }, 3)
 
-    for (const entities of batchResults) {
-      // RefId synthesis for blank/TBD cells (sequential — stable SYNTH numbering).
+    return { fp, entities: batchResults }
+  }
+
+  const sheetResults = await pMap(contentSheets, extractSheet, 2)
+
+  // Sequential post-pass in sheet order: synthesis (stable SYNTH numbering),
+  // review flagging, multi-refId expansion, parent derivation.
+  for (const result of sheetResults) {
+    if (!result) continue
+    const { fp, entities: batches } = result
+    const sheetEntities = []
+    for (const entities of batches) {
       for (const entity of entities) {
         if (entity.needsRefIdSynthesis) {
           synthesizeRefId(entity, lobRefIdHint, synthCounter)
@@ -706,7 +707,6 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
       }
       sheetEntities.push(...expandMultiRefIds(entities, fp.sheetName))
     }
-
     // After all batches: derive parentId for sub-coverages from row context.
     deriveParentIds(sheetEntities)
     allEntities.push(...sheetEntities)

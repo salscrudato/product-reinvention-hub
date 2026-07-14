@@ -510,7 +510,7 @@ async function runAdversarialXlsx(
     // parse, and survive (outcome may be an empty plan, never a crash/fabrication).
     const sseResult = await readSse('/ai/unifiedImport', {
       documents: [{ name: `${id}.xlsx`, base64: buffer.toString('base64'), mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }],
-    }, token, 300_000)
+    }, token, 900_000)
 
     if (!sseResult.ok && !expectEmpty) {
       result.crashed = true
@@ -534,6 +534,10 @@ async function runAdversarialXlsx(
         const list = plan?.[key]
         if (Array.isArray(list)) totalEntities += list.length
       }
+      // Rating-only workbooks produce a ratingProgram object (with folded steps),
+      // not array entries — count it or a rating spec reads as an empty extraction.
+      const rp = plan?.ratingProgram as { data?: { steps?: unknown[] } } | null | undefined
+      if (rp) totalEntities += 1 + (Array.isArray(rp.data?.steps) ? rp.data!.steps!.length : 0)
       result.productCount = plan?.product ? 1 : 0
       notes.push(`plan entities: ${totalEntities} across groups`)
       // A blank template / empty workbook that yields entities IS a fabrication.

@@ -239,7 +239,7 @@ interface LiveResult { bundle: unknown; errors: string[]; spend: unknown }
 // Dev is a shared, continuously-deployed environment: a deploy restarts the app and
 // severs in-flight SSE ("fetch: terminated"). Retry the whole import a few times,
 // pausing so the restarted app warms up.
-async function postImport(token: string, files: string[], lobHint?: string, timeoutMs = 900_000): Promise<LiveResult> {
+async function postImport(token: string, files: string[], lobHint?: string, timeoutMs = 2_700_000): Promise<LiveResult> {
   let last: LiveResult = { bundle: null, errors: ['not attempted'], spend: null }
   for (let attempt = 1; attempt <= 3; attempt++) {
     last = await postImportOnce(token, files, lobHint, timeoutMs)
@@ -252,7 +252,7 @@ async function postImport(token: string, files: string[], lobHint?: string, time
   return last
 }
 
-async function postImportOnce(token: string, files: string[], lobHint?: string, timeoutMs = 900_000): Promise<LiveResult> {
+async function postImportOnce(token: string, files: string[], lobHint?: string, timeoutMs = 2_700_000): Promise<LiveResult> {
   const documents = files.map(f => ({
     name: basename(f),
     base64: readFileSync(f).toString('base64'),

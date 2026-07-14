@@ -20,7 +20,7 @@
 const fleet = require('../fleet')
 const { callOpenAI, resolveOpenAI } = require('./ai-call')
 const { STAGE5_VALIDATE_SYSTEM } = require('./prompts')
-const { extractJson } = require('./constants')
+const { extractJson, pMap } = require('./constants')
 
 const MAX_ENTITIES_PER_CALL = 50
 
@@ -98,7 +98,8 @@ async function validateEntities(entities, classified, budget, review) {
     classified.filter(c => c.domain !== 'ignore').map(c => [c.sheetName, 0]),
   )
 
-  for (const [sheetName, allSheetEntities] of bySheet) {
+  // Sheet groups validate independently — 3 in flight (batches inside stay serial).
+  await pMap([...bySheet.entries()], async ([sheetName, allSheetEntities]) => {
     // Deterministic entities are grounded by construction (values copied from cells
     // by code) — adversarially validate a SAMPLE of them; AI-extracted entities are
     // always validated in full. Keeps the third-family check without paying for a
@@ -153,7 +154,7 @@ async function validateEntities(entities, classified, budget, review) {
         }
       }
     }
-  }
+  }, 3)
 
   return allDiscrepancies
 }
