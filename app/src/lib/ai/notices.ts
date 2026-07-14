@@ -16,7 +16,10 @@ export type NoticeLevel = 'info' | 'warn'
 export interface NoticeEvent {
   level:   NoticeLevel
   message: string
-  kind?:   NoticeKind
+  /** Canonical kinds get client-owned copy; the server also emits surface-specific
+   *  kinds (e.g. `citations-dropped`, `extract-empty`, `iso-mapper`) that render
+   *  under the neutral fallback heading. */
+  kind?:   NoticeKind | (string & {})
   refs?:   string[]
 }
 
@@ -58,15 +61,20 @@ const CANONICAL: Record<Exclude<NoticeKind, 'unverified'>, ResolvedNotice> = {
   },
 }
 
-/** Resolve any notice frame to client-owned, drift-proof copy. */
-export function resolveNotice(ev: NoticeEvent): ResolvedNotice {
-  if (ev.kind && ev.kind !== 'unverified') return CANONICAL[ev.kind]
-  if (ev.kind === 'unverified') {
+/** Resolve any notice frame to client-owned, drift-proof copy. Total: every frame —
+ *  including kinds this client has never seen and malformed/undefined events — resolves
+ *  to a renderable notice (a `undefined` return here crashed the shell ErrorBoundary). */
+export function resolveNotice(ev: NoticeEvent | null | undefined): ResolvedNotice {
+  if (ev?.kind === 'unverified') {
     // Dynamic — the server message names the specific unverified refs; keep it as the detail.
-    return { level: 'warn', title: 'Unverified citation', detail: ev.message }
+    return { level: 'warn', title: 'Unverified citation', detail: ev.message ?? '' }
   }
-  // Unknown / untagged (older server): trust the server message under a neutral heading.
-  return { level: ev.level, title: ev.level === 'warn' ? 'Heads up' : 'Note', detail: ev.message }
+  const canonical = ev?.kind ? CANONICAL[ev.kind as keyof typeof CANONICAL] : undefined
+  if (canonical) return canonical
+  // Unknown / untagged kind (surface-specific or newer server): trust the server
+  // message under a neutral heading.
+  const level: NoticeLevel = ev?.level === 'warn' ? 'warn' : 'info'
+  return { level, title: level === 'warn' ? 'Heads up' : 'Note', detail: ev?.message ?? '' }
 }
 
 /** A cache-hit is surfaced as a quiet badge (not a banner) beside the Regenerate control. */
