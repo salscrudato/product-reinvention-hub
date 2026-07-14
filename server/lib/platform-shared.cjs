@@ -173,7 +173,7 @@ function validateEntitlements(input, errors) {
     errors.push("entitlements must be an object");
     return void 0;
   }
-  const out = { ...DEFAULT_ENTITLEMENTS };
+  const out = {};
   const numField = (key, min) => {
     if (input[key] === void 0) return;
     if (!isInt(input[key])) {
@@ -236,7 +236,7 @@ function mergeConfig(current, patch) {
   return {
     branding: patch.branding !== void 0 ? { ...base.branding, ...patch.branding } : base.branding,
     flags: patch.flags !== void 0 ? { ...base.flags, ...patch.flags } : base.flags,
-    entitlements: patch.entitlements !== void 0 ? patch.entitlements : base.entitlements
+    entitlements: patch.entitlements !== void 0 ? { ...base.entitlements, ...patch.entitlements } : base.entitlements
   };
 }
 function effectiveEntitlements(config) {

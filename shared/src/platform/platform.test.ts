@@ -135,6 +135,18 @@ describe('mergeConfig + effectiveEntitlements', () => {
     const merged = mergeConfig({ flags: { 'page.rating': false, 'page.claims': false } }, { flags: { 'page.claims': true } })
     expect(merged.flags).toEqual({ 'page.rating': false, 'page.claims': true })
   })
+  it('entitlements patch returns ONLY the provided fields (no silent default reset)', () => {
+    const r = validateConfigPatch({ entitlements: { maxSeats: 50 } }, 'platform')
+    expect(r.ok).toBe(true)
+    expect(r.value?.entitlements).toEqual({ maxSeats: 50 })
+  })
+  it('merges entitlements by field — raising one preserves the others', () => {
+    const merged = mergeConfig(
+      { entitlements: { maxSeats: 10, maxProducts: 5, monthlyAiTokenBudget: 1000, aiModelRoles: ['GROUNDED_CITED'] } },
+      { entitlements: { maxSeats: 50 } },
+    )
+    expect(merged.entitlements).toEqual({ maxSeats: 50, maxProducts: 5, monthlyAiTokenBudget: 1000, aiModelRoles: ['GROUNDED_CITED'] })
+  })
   it('falls back to platform defaults when unset', () => {
     expect(effectiveEntitlements(undefined)).toEqual(DEFAULT_ENTITLEMENTS)
     expect(effectiveEntitlements({}).maxSeats).toBe(DEFAULT_ENTITLEMENTS.maxSeats)

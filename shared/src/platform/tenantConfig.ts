@@ -60,8 +60,8 @@ export const DEFAULT_ENTITLEMENTS: Entitlements = {
 
 export interface TenantConfig {
   branding?: Branding
-  flags?: FlagMap          // per-tenant flag overrides
-  entitlements?: Entitlements
+  flags?: FlagMap                     // per-tenant flag overrides
+  entitlements?: Partial<Entitlements> // stored partial; effectiveEntitlements() fills defaults
 }
 
 export interface ValidationResult<T> {
@@ -103,10 +103,13 @@ function validateBranding(input: unknown, errors: string[]): Branding | undefine
   return out
 }
 
-function validateEntitlements(input: unknown, errors: string[]): Entitlements | undefined {
+// Returns ONLY the provided+validated fields (a partial patch), NOT merged onto defaults —
+// so updating one entitlement (e.g. maxSeats) never silently resets the others. The server
+// merges the partial onto the tenant's stored entitlements; effectiveEntitlements fills gaps.
+function validateEntitlements(input: unknown, errors: string[]): Partial<Entitlements> | undefined {
   if (input === undefined) return undefined
   if (!isPlainObject(input)) { errors.push('entitlements must be an object'); return undefined }
-  const out = { ...DEFAULT_ENTITLEMENTS }
+  const out: Partial<Entitlements> = {}
   const numField = (key: 'maxSeats' | 'maxProducts' | 'monthlyAiTokenBudget', min: number) => {
     if (input[key] === undefined) return
     if (!isInt(input[key])) { errors.push(`entitlements.${key} must be an integer`); return }
@@ -172,13 +175,14 @@ export function validateConfigPatch(
   return { ok: true, errors: [], value: out }
 }
 
-/** Merge a validated patch onto an existing stored config (shallow per section; flags merge by key). */
+/** Merge a validated patch onto an existing stored config. Flags AND entitlements merge by
+ *  key (a partial entitlements patch preserves the fields it did not touch). */
 export function mergeConfig(current: TenantConfig | undefined, patch: TenantConfig): TenantConfig {
   const base = current || {}
   return {
     branding: patch.branding !== undefined ? { ...base.branding, ...patch.branding } : base.branding,
     flags: patch.flags !== undefined ? { ...base.flags, ...patch.flags } : base.flags,
-    entitlements: patch.entitlements !== undefined ? patch.entitlements : base.entitlements,
+    entitlements: patch.entitlements !== undefined ? { ...base.entitlements, ...patch.entitlements } : base.entitlements,
   }
 }
 

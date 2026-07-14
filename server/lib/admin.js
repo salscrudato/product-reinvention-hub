@@ -417,6 +417,13 @@ router.get('/tenants/:id/telemetry', requirePlatform(CAP_PLATFORM_TENANTS), asyn
   })
 })
 
+// ─── ops copilot (grounded, advise-only, injection-hardened) ─────────────────
+// Answers operator questions strictly from real telemetry + audit; NEVER mutates; may
+// propose ONE server-authored, schema-validated confirmable action that a human applies via
+// the normal gated/audited endpoint. Platform-gated by the router-wide requirePlatform().
+// Lazy-required so a load hiccup in the AI stack can never break the whole /api/admin mount.
+router.post('/ops-copilot/ask', requirePlatform(), (req, res) => require('./ai/ops-copilot').ask(req, res))
+
 // ─── users (SUPER_ADMIN only) ─────────────────────────────────────────────────
 router.get('/users', requirePlatform(CAP_PLATFORM_USERS), async (req, res) => {
   const limit = clampInt(req.query.limit, PAGE_MAX, PAGE_MAX)
