@@ -28,7 +28,12 @@ Work autonomously, verify everything live, and leave nothing uncommitted or unde
 5. **No cost cap on import** (product decision): `fleet.guard(IMPORT_CONTEXT)` never
    denies/degrades; telemetry ALWAYS recorded (`brain:spend` / `import:spend` SSE events).
    Scope stays import-only.
-6. **Grounding:** every extracted field carries a `sheet!cell` or page citation +
+6. **ALL live testing runs in the ACCENTURE TEST tenant.** Set IMPORT_TENANT to the
+   ACCENTURE TEST tenant id for every harness/probe run (confirm the exact slug via
+   POST /api/auth/bootstrap or GET /api/auth/tenants — likely 'accenture-test'). Do
+   NOT scatter runs across ad-hoc tenants, and never touch testco (rating canaries).
+   Tear down what you create.
+7. **Grounding:** every extracted field carries a `sheet!cell` or page citation +
    confidence. refIds are byte-for-byte from cells or DERIVED from `lobRegistry`
    (never model-invented). Anything flagged becomes an `importWarning` — nothing is
    silently dropped. Blank/placeholder templates must yield EMPTY plans.
@@ -71,17 +76,30 @@ BULK_VERIFY=claude-haiku-4-5, VISION/judge=gpt-5.1, CHEAP=gpt-5-mini.
 ## 3. OPEN ITEMS (your job, priority order)
 
 1. **NJ filing rate-order + manual — ROOT CAUSE FOUND, fix deployed, VERIFY IT.** Debug notices caught it live: with maxTokens 4000/8000 the models UNDER-FILL the forced tool call (opus returned maxCreditRuleRef + note but NO variables array; haiku/sonnet returned {}). Fix in `3c1b93b`: output budgets 16000 (rate order, manual) / 8192 (policy form) + one explicit fill-the-array retry per rung when the primary array is empty. A solo rate-order probe already yielded **70 cited variables**. YOUR FIRST TASK: confirm run for `3c1b93b` succeeded, then replay all 3 samples/filings/nj-lemonade-ho PDFs in ONE request (scratch probe-live.mjs pattern or your own SSE client; tee output to a file — piping through head SIGPIPE-kills the probe). Expect: classify all 3 roles, three extractions concurrent (start together ~8s), rate-order ~70 variables, manual rules > 0 (raise its budget further if the extract-empty notice shows under-fill again — the manual is table-dense), policy form 22 coverages, normalized bundle, no UI crash. If manual still under-fills at 16k, split extraction per page-range or per rule-number block.
-2. **CORE rerun** after gap-fill: `IMPORT_EVAL_TIMEOUT_MS=7200000 IMPORT_EVAL_ONLY=CORE
+2. **UI ErrorBoundary crash — TRIAGE (user-reported on latest deploy):**
+   `TypeError: Cannot destructure property 'level' of 'Xt(...)' as it is undefined`
+   in the MAIN index chunk (index-*.js, i.e. shell/route level — NOT the Builder or
+   the import modal this time). 'level' strongly suggests a component destructuring
+   `{ level }` from an SSE notice event, a toast/notification store entry, or a
+   context hook that returned undefined. Triage: `grep -rn "level" app/src --include=*.tsx`
+   for destructures (`const { level` / `({ level`), check notification/toast stores and
+   any consumer of import SSE `t:'notice'` events (the server always sends `level`,
+   but `:hb` comment lines and non-notice events must not reach that code path), and
+   check newly-added shell components from other lanes (see orchestration.md deploy
+   log — several lanes shipped shell/route UI recently). Guard the destructure, add a
+   regression test, and reproduce via a filing upload in the ACCENTURE TEST tenant
+   before/after.
+3. **CORE rerun** after gap-fill: `IMPORT_EVAL_TIMEOUT_MS=7200000 IMPORT_EVAL_ONLY=CORE
    IMPORT_TENANT=eval-core10 npx tsx scripts/import-eval.mts --live` (~90 min; run solo,
    avoid pushes meanwhile). Expect F1 ≥0.95. Diagnostics land in
    `docs/audit/import_eval_results-CORE.json` (`missByField`, `sampleMisses`,
    `IMPORT_EVAL_DUMP=1` dumps extracted entities).
-3. **`Product_Forms Library_General Liability Example_2025.xlsx`** (additional_samples)
+4. **`Product_Forms Library_General Liability Example_2025.xlsx`** (additional_samples)
    is the slowest artifact (heavy text-column consensus churn; timed out at 900 s and
    30 min pre-sonnet). Retest at 1800 s on the current deploy; if still slow, profile
    which stage burns time (stage-4 conflict ladder likely) and consider batching
    conflicts per sheet into ONE ladder call.
-4. **Persist E2E via the real UI path** for a filing bundle (persist probe:
+5. **Persist E2E via the real UI path** for a filing bundle (persist probe:
    `<scratch>/persist-probe.mjs` pattern) and clean the leftover docs in
    `import-persist-probe`.
 5. Optional hardening: single-scheme grounding-chunk corpus (see memory

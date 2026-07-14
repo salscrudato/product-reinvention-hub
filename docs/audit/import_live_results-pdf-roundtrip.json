@@ -1,0 +1,60 @@
+{
+  "runAt": "2026-07-14T02:51:37.561Z",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "tenant": "live-pdf2",
+  "exit": {
+    "runs": 3,
+    "crashes": 0,
+    "fabrications": 0,
+    "sourceGaps": 0,
+    "formatsPassed": 3,
+    "formatsTotal": 3,
+    "roundTripOk": true,
+    "pass": true
+  },
+  "results": [
+    {
+      "id": "NJ-LEMONADE-1",
+      "format": "FILING_PDF",
+      "file": "C:\\Users\\salvatore.scrudato\\Desktop\\314358_InsurancePlatformsAI\\samples\\filings\\nj-lemonade-ho\\LEM 03 05 23 Lemonade Homeowners_FINAL.pdf",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 22,
+      "durationMs": 59309,
+      "notes": []
+    },
+    {
+      "id": "NJ-LEMONADE-2",
+      "format": "FILING_PDF",
+      "file": "C:\\Users\\salvatore.scrudato\\Desktop\\314358_InsurancePlatformsAI\\samples\\filings\\nj-lemonade-ho\\NJ HO Manual 02.27.24.pdf",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 0,
+      "durationMs": 152330,
+      "notes": [
+        "no coverages in plan"
+      ]
+    },
+    {
+      "id": "NJ-LEMONADE-3",
+      "format": "FILING_PDF",
+      "file": "C:\\Users\\salvatore.scrudato\\Desktop\\314358_InsurancePlatformsAI\\samples\\filings\\nj-lemonade-ho\\NJ HO Rate Order of Calculations.pdf",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 0,
+      "durationMs": 70848,
+      "notes": [
+        "no coverages in plan"
+      ]
+    }
+  ]
+}

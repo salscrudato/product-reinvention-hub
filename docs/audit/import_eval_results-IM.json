@@ -1,0 +1,168 @@
+{
+  "runAt": "2026-07-14T03:29:23.430Z",
+  "mode": "live",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "targets": {
+    "f1": 0.95,
+    "numericExact": 0.98,
+    "citation": 1
+  },
+  "results": [
+    {
+      "id": "IM",
+      "mode": "live",
+      "goldenFields": 19427,
+      "extractedFields": 27700,
+      "tp": 19417,
+      "fp": 8,
+      "fn": 10,
+      "precision": 0.9995881595881596,
+      "recall": 0.9994852524836567,
+      "f1": 0.999536703387213,
+      "numericTotal": 832,
+      "numericExact": 832,
+      "numericExactRate": 1,
+      "entityRecall": 1,
+      "diagnostics": {
+        "entityByKind": {
+          "product": {
+            "golden": 1,
+            "found": 1
+          },
+          "coverage": {
+            "golden": 798,
+            "found": 798
+          },
+          "rule": {
+            "golden": 752,
+            "found": 752
+          },
+          "ldTable": {
+            "golden": 34,
+            "found": 34
+          }
+        },
+        "missByField": {
+          "source": 4,
+          "requirement": 2,
+          "name": 1,
+          "description": 1,
+          "marketSegment": 1,
+          "status": 1
+        },
+        "sampleMisses": [
+          {
+            "kind": "product",
+            "refId": "IM.PROD.001",
+            "field": "name",
+            "golden": "Monoline Signs",
+            "extracted": "sample-IM-framework.xlsx + sample-IM-rules"
+          },
+          {
+            "kind": "product",
+            "refId": "IM.PROD.001",
+            "field": "description",
+            "golden": ""
+          },
+          {
+            "kind": "product",
+            "refId": "IM.PROD.001",
+            "field": "marketSegment",
+            "golden": "Commercial Lines / Property"
+          },
+          {
+            "kind": "product",
+            "refId": "IM.PROD.001",
+            "field": "status",
+            "golden": "ACTIVE",
+            "extracted": "DRAFT"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV079.02",
+            "field": "requirement",
+            "golden": "OPTIONAL",
+            "extracted": "MANDATORY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV044.03",
+            "field": "requirement",
+            "golden": "MANDATORY",
+            "extracted": "OPTIONAL"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV001.42",
+            "field": "source",
+            "golden": "BUREAU",
+            "extracted": "PROPRIETARY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV001.57",
+            "field": "source",
+            "golden": "BUREAU",
+            "extracted": "PROPRIETARY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV050.03",
+            "field": "source",
+            "golden": "PROPRIETARY",
+            "extracted": "BUREAU"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV050.18",
+            "field": "source",
+            "golden": "PROPRIETARY",
+            "extracted": "BUREAU"
+          }
+        ],
+        "extractedKinds": {
+          "product": 1,
+          "coverage": 1003,
+          "rule": 752,
+          "ldTable": 34
+        }
+      },
+      "provenanceCoverage": 1,
+      "entityCoverage": 1,
+      "provenanceRows": 18782,
+      "spend": {
+        "spendUsd": 3.0304,
+        "calls": 127,
+        "noCap": true,
+        "byDeployment": {
+          "claude-haiku-4-5": {
+            "calls": 42,
+            "inputTokens": 66076,
+            "outputTokens": 191881,
+            "usd": 0.8203847999999999
+          },
+          "gpt-5-mini": {
+            "calls": 41,
+            "inputTokens": 56768,
+            "outputTokens": 160055,
+            "usd": 0.2731184
+          },
+          "gpt-5.1": {
+            "calls": 28,
+            "inputTokens": 189000,
+            "outputTokens": 31233,
+            "usd": 0.941796
+          },
+          "claude-opus-4-8": {
+            "calls": 16,
+            "inputTokens": 39067,
+            "outputTokens": 5454,
+            "usd": 0.995055
+          }
+        }
+      },
+      "durationMs": 694659,
+      "pass": true
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "runAt": "2026-07-14T00:30:24.760Z",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "tenant": "live-adv",
+  "exit": {
+    "runs": 10,
+    "crashes": 0,
+    "fabrications": 0,
+    "sourceGaps": 1,
+    "formatsPassed": 9,
+    "formatsTotal": 9,
+    "roundTripOk": true,
+    "pass": true
+  },
+  "results": [
+    {
+      "id": "adv-empty",
+      "format": "ADVERSARIAL_XLSX",
+      "file": "adv-empty",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 0,
+      "coverageCount": 0,
+      "durationMs": 10717,
+      "notes": [
+        "plan entities: 0 across groups"
+      ]
+    },
+    {
+      "id": "adv-decoy-sheets",
+      "format": "ADVERSARIAL_XLSX",
+      "file": "adv-decoy-sheets",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 0,
+      "coverageCount": 0,
+      "durationMs": 11909,
+      "notes": [
+        "plan entities: 0 across groups"
+      ]
+    },
+    {
+      "id": "adv-dup-refids",
+      "format": "ADVERSARIAL_XLSX",
+      "file": "adv-dup-refids",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 2,
+      "durationMs": 23589,
+      "notes": [
+        "plan entities: 2 across groups"
+      ]
+    },
+    {
+      "id": "adv-all-placeholder",
+      "format": "ADVERSARIAL_XLSX",
+      "file": "adv-all-placeholder",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 0,
+      "coverageCount": 0,
+      "durationMs": 9871,
+      "notes": [
+        "plan entities: 0 across groups"
+      ]
+    },
+    {
+      "id": "adv-phantom-range",
+      "format": "ADVERSARIAL_XLSX",
+      "file": "adv-phantom-range",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 1,
+      "durationMs": 18850,
+      "notes": [
+        "plan entities: 1 across groups"
+      ]
+    },
+    {
+      "id": "adv-wrong-lob-prefix",
+      "format": "ADVERSARIAL_XLSX",
+      "file": "adv-wrong-lob-prefix",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 1,
+      "durationMs": 24977,
+      "notes": [
+        "plan entities: 1 across groups"
+      ]
+    },
+    {
+      "id": "adv-unmapped-enum",
+      "format": "ADVERSARIAL_XLSX",
+      "file": "adv-unmapped-enum",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 1,
+      "durationMs": 26200,
+      "notes": [
+        "plan entities: 1 across groups"
+      ]
+    },
+    {
+      "id": "adv-mixed-language",
+      "format": "ADVERSARIAL_XLSX",
+      "file": "adv-mixed-language",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 2,
+      "durationMs": 23460,
+      "notes": [
+        "plan entities: 2 across groups"
+      ]
+    },
+    {
+      "id": "adv-blank-template",
+      "format": "ADVERSARIAL_XLSX",
+      "file": "adv-blank-template",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 0,
+      "coverageCount": 0,
+      "durationMs": 10019,
+      "notes": [
+        "plan entities: 0 across groups"
+      ]
+    },
+    {
+      "id": "adv-garbage-pdf",
+      "format": "ADVERSARIAL_PDF",
+      "file": "",
+      "status": "source-gap",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": false,
+      "productCount": 0,
+      "coverageCount": 0,
+      "durationMs": 140,
+      "notes": [
+        "server error on adversarial PDF (acceptable): No documents or structural model supplied."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,257 @@
+{
+  "runAt": "2026-07-14T11:21:46.281Z",
+  "mode": "live",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "targets": {
+    "f1": 0.95,
+    "numericExact": 0.98,
+    "citation": 1
+  },
+  "results": [
+    {
+      "id": "CORE",
+      "mode": "live",
+      "goldenFields": 4132,
+      "extractedFields": 8205,
+      "tp": 3543,
+      "fp": 139,
+      "fn": 589,
+      "precision": 0.9622487778381315,
+      "recall": 0.8574540174249758,
+      "f1": 0.9068338878935245,
+      "numericTotal": 112,
+      "numericExact": 112,
+      "numericExactRate": 1,
+      "entityRecall": 1,
+      "diagnostics": {
+        "entityByKind": {
+          "product": {
+            "golden": 1,
+            "found": 1
+          },
+          "coverage": {
+            "golden": 112,
+            "found": 112
+          },
+          "rule": {
+            "golden": 234,
+            "found": 234
+          }
+        },
+        "missByField": {
+          "allStates": 137,
+          "requirement": 112,
+          "claimsBasis": 112,
+          "premiumGenerating": 112,
+          "source": 112,
+          "name": 1,
+          "description": 1,
+          "marketSegment": 1,
+          "status": 1
+        },
+        "sampleMisses": [
+          {
+            "kind": "product",
+            "refId": "CORE.PRD.001",
+            "field": "name",
+            "golden": "Core",
+            "extracted": "Product_Specifications_Core_07_13_2026"
+          },
+          {
+            "kind": "product",
+            "refId": "CORE.PRD.001",
+            "field": "description",
+            "golden": ""
+          },
+          {
+            "kind": "product",
+            "refId": "CORE.PRD.001",
+            "field": "marketSegment",
+            "golden": "Personal Lines / Property"
+          },
+          {
+            "kind": "product",
+            "refId": "CORE.PRD.001",
+            "field": "status",
+            "golden": "ACTIVE",
+            "extracted": "DRAFT"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.001",
+            "field": "requirement",
+            "golden": "MANDATORY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.001",
+            "field": "claimsBasis",
+            "golden": ""
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.001",
+            "field": "premiumGenerating",
+            "golden": false
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.001",
+            "field": "source",
+            "golden": "BUREAU"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.002",
+            "field": "requirement",
+            "golden": "MANDATORY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.002",
+            "field": "claimsBasis",
+            "golden": ""
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.002",
+            "field": "premiumGenerating",
+            "golden": false
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.002",
+            "field": "source",
+            "golden": "BUREAU"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.003",
+            "field": "requirement",
+            "golden": "MANDATORY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.003",
+            "field": "claimsBasis",
+            "golden": ""
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.003",
+            "field": "premiumGenerating",
+            "golden": false
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.003",
+            "field": "source",
+            "golden": "BUREAU"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.004",
+            "field": "requirement",
+            "golden": "MANDATORY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.004",
+            "field": "claimsBasis",
+            "golden": ""
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.004",
+            "field": "premiumGenerating",
+            "golden": false
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.004",
+            "field": "source",
+            "golden": "BUREAU"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.005",
+            "field": "requirement",
+            "golden": "MANDATORY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.005",
+            "field": "claimsBasis",
+            "golden": ""
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.005",
+            "field": "premiumGenerating",
+            "golden": false
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.005",
+            "field": "source",
+            "golden": "BUREAU"
+          },
+          {
+            "kind": "coverage",
+            "refId": "CORE.COV.006",
+            "field": "requirement",
+            "golden": "MANDATORY"
+          }
+        ],
+        "extractedKinds": {
+          "product": 1,
+          "coverage": 113,
+          "rule": 537,
+          "rtTable": 20
+        }
+      },
+      "provenanceCoverage": 1,
+      "entityCoverage": 1,
+      "provenanceRows": 14960,
+      "spend": {
+        "spendUsd": 69.8153,
+        "calls": 647,
+        "noCap": true,
+        "byDeployment": {
+          "claude-haiku-4-5": {
+            "calls": 189,
+            "inputTokens": 508392,
+            "outputTokens": 777409,
+            "usd": 3.5163496
+          },
+          "claude-opus-4-8": {
+            "calls": 106,
+            "inputTokens": 416123,
+            "outputTokens": 621771,
+            "usd": 52.87466999999997
+          },
+          "gpt-5-mini": {
+            "calls": 188,
+            "inputTokens": 448300,
+            "outputTokens": 987255,
+            "usd": 1.7140979999999992
+          },
+          "gpt-5.1": {
+            "calls": 74,
+            "inputTokens": 285622,
+            "outputTokens": 41864,
+            "usd": 1.3592339999999996
+          },
+          "claude-sonnet-5": {
+            "calls": 90,
+            "inputTokens": 352873,
+            "outputTokens": 619491,
+            "usd": 10.350984
+          }
+        }
+      },
+      "durationMs": 5695298,
+      "pass": false
+    }
+  ]
+}

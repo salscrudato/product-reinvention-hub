@@ -1,0 +1,67 @@
+{
+  "runAt": "2026-07-14T05:44:43.542Z",
+  "mode": "offline",
+  "baseUrl": null,
+  "targets": {
+    "f1": 0.95,
+    "numericExact": 0.98,
+    "citation": 1
+  },
+  "results": [
+    {
+      "id": "GL",
+      "mode": "offline",
+      "goldenFields": 5466,
+      "extractedFields": 5466,
+      "tp": 5466,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "numericTotal": 116,
+      "numericExact": 116,
+      "numericExactRate": 1,
+      "entityRecall": 1,
+      "diagnostics": {
+        "entityByKind": {
+          "product": {
+            "golden": 1,
+            "found": 1
+          },
+          "coverage": {
+            "golden": 105,
+            "found": 105
+          },
+          "rule": {
+            "golden": 146,
+            "found": 146
+          },
+          "formRule": {
+            "golden": 259,
+            "found": 259
+          },
+          "ldTable": {
+            "golden": 37,
+            "found": 37
+          },
+          "rtTable": {
+            "golden": 4,
+            "found": 4
+          }
+        },
+        "missByField": {},
+        "sampleMisses": [],
+        "extractedKinds": {
+          "product": 1,
+          "coverage": 105,
+          "rule": 146,
+          "formRule": 259,
+          "ldTable": 37,
+          "rtTable": 4
+        }
+      },
+      "pass": true
+    }
+  ]
+}
