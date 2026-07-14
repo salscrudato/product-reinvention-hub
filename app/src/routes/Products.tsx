@@ -32,18 +32,11 @@ import {
 import type { WithId } from '../context/ProductContext'
 
 type ProductView = 'cards' | 'tree'
-const VIEW_KEY = 'pf.products.view'
 
 const VIEWS: { id: ProductView; label: string; Icon: typeof IconCards }[] = [
-  { id: 'cards', label: 'Cards',     Icon: IconCards  },
   { id: 'tree',  label: 'Hierarchy', Icon: IconLayers },
+  { id: 'cards', label: 'Cards',     Icon: IconCards  },
 ]
-
-// Default to the Hierarchy view. Migrate any legacy value ('list'/'table') that isn't a
-// current view id to 'tree'; only an explicit 'cards' opts out of the framework tree.
-function readView(): ProductView {
-  return localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'tree'
-}
 
 // The searchable haystack for one product — everything a PM would actually type to find a
 // product: its name, id, line of business, market segment, and every registry-derived
@@ -70,7 +63,9 @@ export default function Products() {
   const debouncedQuery = useDebounce(query, 200)
   const [seg,      setSeg]      = useState<SegmentSelection>({})
   const [exporting, setExporting] = useState(false)
-  const [view, setView] = useState<ProductView>(readView)
+  // ALWAYS defaults to the Hierarchy view on load (per product direction);
+  // ?view= (e.g. the post-promotion landing) switches it for this visit only.
+  const [view, setView] = useState<ProductView>('tree')
   const [deleteFor,  setDeleteFor]  = useState<WithId<Product> | null>(null)
   const [retireFor,  setRetireFor]  = useState<WithId<Product> | null>(null)
   const [showRetired, setShowRetired] = useState(false)
@@ -78,15 +73,14 @@ export default function Products() {
   // (↑/↓ move, Enter opens, Esc clears). -1 = no card selected.
   const [focusIdx, setFocusIdx] = useState(-1)
 
-  // Deep-linkable view + post-promotion landing: /app/products?view=cards&promoted=<id>
-  // switches (and persists) the view and highlights the just-promoted card, so
-  // promotion always lands the reviewer on the portfolio cards with their product lit.
+  // Post-promotion landing: /app/products?view=cards&promoted=<id> switches the
+  // view FOR THIS VISIT (the page still defaults to Hierarchy on a fresh load)
+  // and highlights the just-promoted card.
   const [params, setParams] = useSearchParams()
   const promotedId = params.get('promoted')
   useEffect(() => {
     const v = params.get('view')
-    if (v === 'cards' || v === 'tree') setViewPersist(v)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (v === 'cards' || v === 'tree') setView(v)
   }, [params])
   useEffect(() => {
     if (!promotedId) return
@@ -94,8 +88,6 @@ export default function Products() {
     const t = setTimeout(() => setParams(p => { const n = new URLSearchParams(p); n.delete('promoted'); return n }, { replace: true }), 3500)
     return () => clearTimeout(t)
   }, [promotedId, setParams])
-
-  const setViewPersist = (m: ProductView) => { setView(m); localStorage.setItem(VIEW_KEY, m) }
 
   async function exportPortfolio() {
     const launchedProducts = products.filter(p => p.lifecycle === 'LAUNCHED')
@@ -166,19 +158,6 @@ export default function Products() {
     } else if (e.key === 'Escape') { setQuery(''); setFocusIdx(-1) }
   }
 
-  // Card-view hierarchy: group the visible cards by line of business (stable name
-  // order), carrying each card's flat index so keyboard ↑/↓ still walks the grid.
-  const groupedCards = useMemo(() => {
-    const groups = new Map<string, { p: WithId<Product>; idx: number }[]>()
-    visible.forEach((p, idx) => {
-      const lobName = p.lob?.name || 'Other lines'
-      const list = groups.get(lobName) ?? []
-      list.push({ p, idx })
-      groups.set(lobName, list)
-    })
-    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [visible])
-
   // Portfolio at-a-glance KPIs for the hero stat line.
   const kpis = useMemo(() => {
     const lines    = new Set(launched.map(p => p.lob?.name).filter(Boolean)).size
@@ -225,8 +204,9 @@ export default function Products() {
         }
       />
 
-      {/* Smart realtime search · view switch */}
+      {/* View switch (Hierarchy · Cards) · smart realtime search */}
       <div className="flex flex-wrap items-center gap-3">
+        <ViewSwitch view={view} onChange={setView} />
         <div className="relative flex-1 min-w-[220px]">
           <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
           <input
@@ -238,7 +218,6 @@ export default function Products() {
             onKeyDown={onSearchKeyDown}
           />
         </div>
-        <ViewSwitch view={view} onChange={setViewPersist} />
       </div>
 
       {/* Registry-driven segment facets — Personal/Commercial + Market segment. Rendered only
@@ -303,29 +282,14 @@ export default function Products() {
           />
         )
       ) : view === 'cards' ? (
-        // Cards keep their hierarchy: grouped by line of business with quiet
-        // section headers + counts, so the portfolio reads structured, not flat.
-        <div className="flex flex-col gap-5">
-          {groupedCards.map(([lobName, group]) => (
-            <section key={lobName} aria-label={lobName} className="flex flex-col gap-3">
-              {groupedCards.length > 1 && (
-                <div className="flex items-center gap-2.5">
-                  <h2 className="text-[11px] font-semibold uppercase tracking-[.08em] text-faint">{lobName}</h2>
-                  <span className="text-[11px] text-faint tnum">{group.length}</span>
-                  <span className="flex-1 h-px" style={{ background: 'var(--color-border)' }} aria-hidden="true" />
-                </div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Entrance stagger, matching the Coverage card grid so both surfaces share
-                    one motion language. Capped + reduced-motion-neutralised (see index.css). */}
-                {group.map(({ p, idx }) => (
-                  <div key={p.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(idx, 8) * 40}ms` } as React.CSSProperties}>
-                    <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} onRetire={() => setRetireFor(p)}
-                      highlight={debouncedQuery} focused={idx === focusIdx || p.id === promotedId} />
-                  </div>
-                ))}
-              </div>
-            </section>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Entrance stagger, matching the Coverage card grid so both surfaces share
+              one motion language. Capped + reduced-motion-neutralised (see index.css). */}
+          {visible.map((p, i) => (
+            <div key={p.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(i, 8) * 40}ms` } as React.CSSProperties}>
+              <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} onRetire={() => setRetireFor(p)}
+                highlight={debouncedQuery} focused={i === focusIdx || p.id === promotedId} />
+            </div>
           ))}
         </div>
       ) : (
