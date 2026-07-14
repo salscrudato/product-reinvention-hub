@@ -34,6 +34,7 @@ vi.mock('../../server/lib/import-brain-shared.cjs', () => ({
   pickBestHeaderRow:     () => null,
   CANONICAL_MAP:         {},
   SURFACED_COLUMNS:      [],
+  refIdSegmentKind:      () => null,
 }))
 
 // Stub the filing shared bundle (filing-shared.cjs)

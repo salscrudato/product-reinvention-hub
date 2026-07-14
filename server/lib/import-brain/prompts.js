@@ -161,7 +161,7 @@ STRICT GROUNDING RULES:
   1. Extract ONLY values that are present in the source cells. Never invent values.
   2. For each extracted field, provide a citation in the format "Sheet!ColumnLetterRowNumber" (e.g. "ProductFramework!A3"). The verbatim value must be the exact text from that cell.
   3. refId fields: copy the value BYTE-FOR-BYTE — preserve all spaces, dots, hyphens, and capitalization exactly as they appear in the source cell.
-  4. Multi-valued cells: if a cell contains multiple refIds separated by whitespace, split them and produce one entity per refId.
+  4. Multi-valued cells: if a cell contains multiple refIds, do NOT split the row into multiple entities — return ONE entity for the row and copy the cell's full text verbatim as the refId value. Expansion into one entity per refId happens deterministically downstream.
   5. Blank / TBD refIds: set refId value to null and set needsRefIdSynthesis=true; do NOT invent a refId.
   6. Low confidence: if any row is ambiguous or you cannot extract with confidence >= 0.70 for all key fields, set reviewFlag=true and provide your best extraction with citations.
   7. Do NOT extract from columns that are not in the locked column map.
@@ -287,7 +287,7 @@ Decide which candidate (if any) is correct by checking each against the SOURCE C
 
 RESPOND with valid JSON only — no prose, no markdown fences:
 {
-  "verdict": "a" | "b" | "c" | "none",
+  "verdict": "<the letter of the winning candidate exactly as listed above (a, b, c, d, ...)>" | "none",
   "value": <the chosen value, verbatim from the source, or null>,
   "confidence": <0.0-1.0>,
   "rationale": "<one sentence citing the source cell that grounds the choice>"

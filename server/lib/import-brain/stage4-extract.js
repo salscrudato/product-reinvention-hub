@@ -22,11 +22,13 @@
 // decorrelation comes from different model families and tiers, not sampling.
 
 const fleet = require('../fleet')
+const brainShared = require('../import-brain-shared.cjs')
 const { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI } = require('./ai-call')
 const { STAGE4_EXTRACT_SYSTEM, STAGE4_JUDGE_SYSTEM } = require('./prompts')
 const {
   extractJson, colLetter,
   BLANK_REFID, splitMultiRefId, CONFIDENCE_REVIEW, pMap,
+  parseWithRetry, sanitizeEntities,
 } = require('./constants')
 
 const BATCH_ROWS = 20
@@ -46,7 +48,12 @@ function parseExtraction(raw) {
   try {
     const obj = extractJson(raw)
     if (!Array.isArray(obj.entities)) return null
-    return { entities: obj.entities }
+    // Runtime shape validation (P0-7 / ledger F16): malformed entities/fields are
+    // dropped AND counted; a wholly-malformed payload reads as a parse failure so
+    // the caller's telemetry + targeted retry fire instead of a silent empty vote.
+    const { entities, dropped } = sanitizeEntities(obj.entities)
+    if (entities.length === 0 && obj.entities.length > 0) return null
+    return { entities, dropped }
   } catch { return null }
 }
 
@@ -104,19 +111,32 @@ function toEntityFields(rawEntity) {
 // Returns { entities, conflicts } — conflicts carry both candidates for the ladder.
 
 function reconcileEntities(aEntities, bEntities, sheetName, review) {
+  // Group each vote's entities per source row, PRESERVING same-row multiplicity.
+  // (P0-1 / ledger F01: keying a Map by sourceRowIndex alone let same-row entities
+  // overwrite each other whenever a model split a multi-refId cell; candidates now
+  // pair by occurrence within the row, and expansion is downstream-only.)
   const aByRow = new Map()
   const bByRow = new Map()
-  for (const e of (aEntities || [])) aByRow.set(e.sourceRowIndex, e)
-  for (const e of (bEntities || [])) bByRow.set(e.sourceRowIndex, e)
+  for (const e of (aEntities || [])) { const l = aByRow.get(e.sourceRowIndex) ?? []; l.push(e); aByRow.set(e.sourceRowIndex, l) }
+  for (const e of (bEntities || [])) { const l = bByRow.get(e.sourceRowIndex) ?? []; l.push(e); bByRow.set(e.sourceRowIndex, l) }
 
   const allRowIdxs = [...new Set([...aByRow.keys(), ...bByRow.keys()])].sort((x, y) => x - y)
   const result = []
   const conflicts = []
 
   for (const rowIdx of allRowIdxs) {
-    const ea = aByRow.get(rowIdx)
-    const eb = bByRow.get(rowIdx)
+    const aList = aByRow.get(rowIdx) ?? []
+    const bList = bByRow.get(rowIdx) ?? []
+    const multiplicity = Math.max(aList.length, bList.length)
+    if (multiplicity > 1) {
+      review.push({ kind: 'row-multiplicity', sheetName, rowIndex: rowIdx, detail: `Row ${rowIdx}: a model returned ${multiplicity} entities for one source row (multi-refId cells must stay unsplit) — occurrences kept separately and flagged.` })
+    }
+
+    for (let occ = 0; occ < multiplicity; occ++) {
+    const ea = aList[occ]
+    const eb = bList[occ]
     const primary = ea ?? eb
+    let rowConflicted = false
 
     const aFields = ea ? toEntityFields(ea) : []
     const bFields = eb ? toEntityFields(eb) : []
@@ -142,8 +162,9 @@ function reconcileEntities(aEntities, bEntities, sheetName, review) {
         // Conflict — keep the higher-confidence candidate for now; ladder resolves.
         const kept = fa.confidence >= fb.confidence ? fa : fb
         fields.push({ ...kept, conflicted: true })
+        rowConflicted = true
         conflicts.push({
-          rowIdx, fieldName: fa.fieldName,
+          rowIdx, occurrence: occ, fieldName: fa.fieldName,
           candidates: [
             { key: 'a', value: fa.value, confidence: fa.confidence, citation: fa.citation, source: 'BULK' },
             { key: 'b', value: fb.value, confidence: fb.confidence, citation: fb.citation, source: 'BULK_ALT' },
@@ -155,8 +176,24 @@ function reconcileEntities(aEntities, bEntities, sheetName, review) {
       if (!seen.has(fb.fieldName)) fields.push({ ...fb, confidence: fb.confidence * 0.9 })
     }
 
+    // Entity-kind disagreement is a conflict, not a silent adoption (P0-2 / ledger
+    // F02): it climbs the same ladder as field conflicts under the reserved
+    // '__kind' field name; the write-back sets entity.kind from the winner.
+    if (ea && eb && ea.kind !== eb.kind) {
+      const sideConf = (fs) => fs.length ? fs.reduce((s, f) => s + f.confidence, 0) / fs.length : 0.5
+      rowConflicted = true
+      conflicts.push({
+        rowIdx, occurrence: occ, fieldName: '__kind',
+        candidates: [
+          { key: 'a', value: ea.kind, confidence: sideConf(aFields), citation: aFields[0]?.citation ?? null, source: 'BULK' },
+          { key: 'b', value: eb.kind, confidence: sideConf(bFields), citation: bFields[0]?.citation ?? null, source: 'BULK_ALT' },
+        ],
+      })
+      review.push({ kind: 'kind-disagreement', sheetName, rowIndex: rowIdx, detail: `Row ${rowIdx}: extractors disagree on entity kind ("${ea.kind}" vs "${eb.kind}") — routed to the conflict ladder.` })
+    }
+
     const minConf = fields.length > 0 ? Math.min(...fields.map(f => f.confidence)) : 0
-    let reviewFlag = Boolean(primary.reviewFlag) || Boolean(ea && eb && conflicts.some(c => c.rowIdx === rowIdx))
+    let reviewFlag = Boolean(primary.reviewFlag) || rowConflicted || multiplicity > 1
     let needsSynth = Boolean(primary.needsRefIdSynthesis)
 
     // Detect blank/TBD refIds
@@ -170,7 +207,8 @@ function reconcileEntities(aEntities, bEntities, sheetName, review) {
       review.push({ kind: 'low-confidence-map', sheetName, rowIndex: rowIdx, detail: `Row ${rowIdx} entity has low min-field confidence (${minConf.toFixed(2)}).` })
     }
 
-    result.push({ kind: primary.kind, fields, overallConfidence: minConf, sourceSheet: sheetName, sourceRowIndex: rowIdx, reviewFlag, needsRefIdSynthesis: needsSynth })
+    result.push({ kind: primary.kind, fields, overallConfidence: minConf, sourceSheet: sheetName, sourceRowIndex: rowIdx, occurrence: occ, reviewFlag, needsRefIdSynthesis: needsSynth })
+    }
   }
 
   return { entities: result, conflicts }
@@ -202,9 +240,22 @@ function weightedMajority(candidates, strict) {
 
 // ─── Consensus ladder: sonnet → opus votes, then LLM judge ────────────────────
 
-function fieldsFromExtraction(payload, rowIdx) {
-  const ent = payload?.entities?.find(e => e.sourceRowIndex === rowIdx)
+// Occurrence-aware: ladder re-extractions return unsplit rows (one entity per row
+// under the P0-1 contract), so occurrence 0 is the norm; if a tier still splits,
+// occurrences pair positionally.
+function entityFromExtraction(payload, rowIdx, occurrence = 0) {
+  const ents = (payload?.entities ?? []).filter(e => e.sourceRowIndex === rowIdx)
+  return ents[occurrence] ?? ents[0] ?? null
+}
+
+function fieldsFromExtraction(payload, rowIdx, occurrence = 0) {
+  const ent = entityFromExtraction(payload, rowIdx, occurrence)
   return ent ? toEntityFields(ent) : []
+}
+
+// Stable per-entity key: source row + occurrence within the row (P0-1).
+function entityKey(rowIdx, occurrence) {
+  return `${rowIdx}#${occurrence ?? 0}`
 }
 
 // Called ONCE per sheet with every batch's conflicts pooled (was per-batch: each
@@ -215,7 +266,7 @@ function fieldsFromExtraction(payload, rowIdx) {
 // the same sonnet→opus ladder. Chunks stay ≤ BATCH_ROWS so the 4096-token escalation
 // output can hold every re-extracted row — oversized chunks under-fill silently
 // (the filing rate-order bug class).
-async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, rows, batchStart, sheetName, budget, review, deployJudge }) {
+async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, rows, gridRows, batchStart, sheetName, budget, review, deployJudge }) {
   if (conflicts.length === 0) return
 
   const conflictRowIdxs = [...new Set(conflicts.map(c => c.rowIdx))]
@@ -243,19 +294,26 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
       const targetIdxs = [...new Set(unresolved.map(c => c.rowIdx))]
       const target = chunk.filter(r => targetIdxs.includes(r.idx))
       const escUser = [
-        buildExtractionPrompt(fp, colMap, headerRow, target.map(r => r.cells), 0, target.map(r => r.idx)),
+        buildExtractionPrompt(fp, colMap, headerRow, target.map(r => r.cells), 0, target.map(r => r.idx), gridRows),
         `\nIndependent extractors disagreed on some fields in these rows. Re-extract every row above with maximum care and exact citations.`,
       ].join('\n')
-      let payload = null
-      try {
-        const res = await callAnthropic({ deployment, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt: escUser, maxTokens: 4096, budget })
-        payload = parseExtraction(res.raw)
-      } catch { payload = null }
+      const payload = await parseWithRetry({
+        call: () => callAnthropic({ deployment, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt: escUser, maxTokens: 4096, budget }),
+        parse: parseExtraction, review, stage: 'stage4', sheetName, what: `${role} conflict re-extraction`,
+      })
       if (!payload) continue
 
       for (const conflict of unresolved) {
-        const tierFields = fieldsFromExtraction(payload, conflict.rowIdx)
-        const tf = tierFields.find(f => f.fieldName === conflict.fieldName)
+        // '__kind' conflicts take the tier's entity KIND as its vote (P0-2/F02);
+        // ordinary conflicts take the re-extracted field.
+        let tf = null
+        if (conflict.fieldName === '__kind') {
+          const ent = entityFromExtraction(payload, conflict.rowIdx, conflict.occurrence)
+          if (ent && ent.kind) tf = { value: ent.kind, confidence: 0.85, citation: null }
+        } else {
+          const tierFields = fieldsFromExtraction(payload, conflict.rowIdx, conflict.occurrence)
+          tf = tierFields.find(f => f.fieldName === conflict.fieldName) ?? null
+        }
         if (tf) {
           conflict.candidates.push({ key: role === 'MID_REASONER' ? 'c' : 'd', value: tf.value, confidence: tf.confidence, citation: tf.citation, source: role })
         }
@@ -281,8 +339,10 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
   const rowByIdx = new Map(rowSlice.map(r => [r.idx, r]))
   await pMap(conflicts.filter(c => !c.resolved), async (conflict) => {
     const row = rowByIdx.get(conflict.rowIdx)
-    const rowCells = row ? row.cells.map((c, i) => `${colLetter(i)}${conflict.rowIdx + headerRow + 2}="${String(c ?? '')}"`).join(' | ') : '(row unavailable)'
-    const candLines = conflict.candidates.slice(0, 3).map((c, i) =>
+    const rowCells = row ? row.cells.map((c, i) => `${colLetter(i)}${excelRowOf(conflict.rowIdx, headerRow, gridRows)}="${String(c ?? '')}"`).join(' | ') : '(row unavailable)'
+    // EVERY live candidate reaches the judge (P0-2 / ledger F03) — the ladder can
+    // produce up to four (a=BULK, b=BULK_ALT, c=sonnet, d=opus).
+    const candLines = conflict.candidates.map((c, i) =>
       `Candidate ${String.fromCharCode(97 + i)} (${c.source}, confidence ${Number(c.confidence).toFixed(2)}): ${JSON.stringify(c.value)}`).join('\n')
     const judgeUser = [
       `Sheet: "${sheetName}" | Field: "${conflict.fieldName}" | Row (0-based data index ${conflict.rowIdx})`,
@@ -290,14 +350,18 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
       candLines,
     ].join('\n')
 
-    let judged = null
-    try {
-      const res = await callOpenAI({ deployment: deployJudge, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: 400, budget })
-      judged = extractJson(res.raw)
-    } catch { judged = null }
+    const parseJudge = (raw) => {
+      try { const j = extractJson(raw); return j && typeof j.verdict === 'string' ? j : null } catch { return null }
+    }
+    const judged = await parseWithRetry({
+      call: () => callOpenAI({ deployment: deployJudge, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: 400, budget }),
+      parse: parseJudge, review, stage: 'stage4', sheetName, what: `judge verdict for "${conflict.fieldName}" row ${conflict.rowIdx}`,
+    })
 
     if (judged && judged.verdict && judged.verdict !== 'none') {
-      const pick = conflict.candidates['abc'.indexOf(judged.verdict)] ?? null
+      // Any candidate letter is reachable (P0-2/F03) — not just a/b/c.
+      const letterIdx = String(judged.verdict).trim().toLowerCase().charCodeAt(0) - 97
+      const pick = (letterIdx >= 0 && letterIdx < conflict.candidates.length) ? conflict.candidates[letterIdx] : null
       if (pick) {
         conflict.resolved = { ...pick, confidence: Math.min(Number(judged.confidence ?? pick.confidence), 1), method: 'judge' }
         return
@@ -311,10 +375,23 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
   }, 4)
 
   // ── Write resolved values back into the entities ──────────────────────────
-  const byRow = new Map(entities.map(e => [e.sourceRowIndex, e]))
+  // Keyed by row + occurrence (P0-1): a row-only Map silently collided whenever
+  // one row produced more than one entity.
+  const byRow = new Map(entities.map(e => [entityKey(e.sourceRowIndex, e.occurrence), e]))
   for (const conflict of conflicts) {
-    const entity = byRow.get(conflict.rowIdx)
+    const entity = byRow.get(entityKey(conflict.rowIdx, conflict.occurrence))
     if (!entity) continue
+    if (conflict.fieldName === '__kind') {
+      // Kind conflicts resolve onto the entity itself (P0-2/F02) — there is no
+      // '__kind' entry in entity.fields, so this runs before the field lookup.
+      if (conflict.resolved && typeof conflict.resolved.value === 'string') {
+        entity.kind = conflict.resolved.value
+        entity.kindConsensus = conflict.resolved.method
+      } else {
+        entity.reviewFlag = true
+      }
+      continue
+    }
     const field = entity.fields.find(f => f.fieldName === conflict.fieldName)
     if (!field) continue
     if (conflict.resolved) {
@@ -382,6 +459,10 @@ function deriveParentIds(entities) {
 
 // ─── Multi-refId expansion + blank detection (post-consensus) ─────────────────
 
+// The ONE place multi-refId cells expand (P0-1 / ledger F01): models return the
+// unsplit cell; expansion happens here, exactly once, post-consensus. Each expanded
+// entity carries an occurrence key and PRESERVES the original cell text as its
+// citation verbatim — the evidence is the real cell, never a fabricated fragment.
 function expandMultiRefIds(entities, sheetName) {
   const out = []
   for (const entity of entities) {
@@ -389,14 +470,14 @@ function expandMultiRefIds(entities, sheetName) {
     if (refField && typeof refField.value === 'string' && !entity.needsRefIdSynthesis) {
       const refIds = splitMultiRefId(refField.value)
       if (refIds.length > 1) {
-        for (const rid of refIds) {
+        refIds.forEach((rid, i) => {
           const updatedFields = entity.fields.map(f =>
             f.fieldName === refField.fieldName
-              ? { ...f, value: rid, citation: { ...f.citation, verbatim: rid } }
+              ? { ...f, value: rid, citation: { ...f.citation } }
               : f,
           )
-          out.push({ ...entity, fields: updatedFields, sourceSheet: sheetName })
-        }
+          out.push({ ...entity, fields: updatedFields, sourceSheet: sheetName, occurrence: i, expandedFrom: refField.value })
+        })
         continue
       }
     }
@@ -409,7 +490,7 @@ function expandMultiRefIds(entities, sheetName) {
 // `rowIdxOverride` lets ladder calls present non-contiguous conflict rows with
 // their ORIGINAL 0-based data indices so citations stay stable.
 
-function buildExtractionPrompt(fp, colMap, headerRow, rows, startIdx, rowIdxOverride) {
+function buildExtractionPrompt(fp, colMap, headerRow, rows, startIdx, rowIdxOverride, gridRows) {
   const legend = (colMap.mappings || [])
     .filter(m => m.canonicalField !== null)
     .map(m => `  ${colLetter(m.colIndex)} -> ${m.entityKind ?? '?'}.${m.canonicalField} (confidence ${m.confidence.toFixed(2)})`)
@@ -422,7 +503,7 @@ function buildExtractionPrompt(fp, colMap, headerRow, rows, startIdx, rowIdxOver
       if (!mapped || mapped.canonicalField === null) return null
       return `${colLetter(ci)}="${String(cell ?? '')}"`
     }).filter(Boolean).join(' | ')
-    return `Row ${rowIdx + headerRow + 2} (0-based ${rowIdx}): ${cellStr}`
+    return `Row ${excelRowOf(rowIdx, headerRow, gridRows)} (0-based ${rowIdx}): ${cellStr}`
   }).join('\n')
 
   return [
@@ -438,10 +519,13 @@ function buildExtractionPrompt(fp, colMap, headerRow, rows, startIdx, rowIdxOver
 // is registry-derived, not a plan entity), else the sheet's dominant mapped kind.
 
 function rowKind(refIdValue, dominantKind) {
-  if (typeof refIdValue === 'string') {
-    if (/\.PROD\b|\.PROD\./i.test(refIdValue)) return 'product'
-    if (/\.LOB\b|\.LOB\./i.test(refIdValue)) return null   // registry-owned; skip row
-  }
+  // Routed through the shared LOB-registry identifier parser (P0-4 / ledger F05):
+  // the old /\.PROD\./ regex missed real scheme variants like "PR.PROD001",
+  // "IM.PROD044" and "CORE.PRD.001", misclassifying product rows as the sheet's
+  // dominant kind.
+  const kind = typeof brainShared.refIdSegmentKind === 'function' ? brainShared.refIdSegmentKind(refIdValue) : null
+  if (kind === 'product') return 'product'
+  if (kind === 'lob') return null   // registry-owned; skip row
   return dominantKind
 }
 
@@ -465,7 +549,7 @@ function sheetIsDeterministic(fp, colMap) {
   return confident.length / mapped.length >= DET_SHEET_FRACTION
 }
 
-function deterministicExtract(fp, colMap, headerRow, rows, sheetName) {
+function deterministicExtract(fp, colMap, headerRow, rows, sheetName, gridRows) {
   const mapped = (colMap.mappings || []).filter(m => m.canonicalField !== null && m.confidence >= DET_MAP_CONFIDENCE)
   const stateColumns = Array.isArray(colMap.stateColumns) ? colMap.stateColumns : []
   const dominant = dominantEntityKind(colMap)
@@ -473,6 +557,7 @@ function deterministicExtract(fp, colMap, headerRow, rows, sheetName) {
 
   for (let i = 0; i < rows.length; i++) {
     const cells = rows[i]
+    const excelRow = excelRowOf(i, headerRow, gridRows)
     const fields = []
     for (const m of mapped) {
       const v = cells[m.colIndex]
@@ -481,7 +566,7 @@ function deterministicExtract(fp, colMap, headerRow, rows, sheetName) {
         fieldName:  m.canonicalField,
         value:      v,
         confidence: m.confidence,
-        citation:   { sheet: sheetName, cell: `${colLetter(m.colIndex)}${i + headerRow + 2}`, verbatim: String(v) },
+        citation:   { sheet: sheetName, cell: `${colLetter(m.colIndex)}${excelRow}`, verbatim: String(v) },
         deterministic: true,
       })
     }
@@ -493,7 +578,7 @@ function deterministicExtract(fp, colMap, headerRow, rows, sheetName) {
       if (allIdx != null) {
         fields.push({
           fieldName: 'allStates', value: allMarked, confidence: 0.98,
-          citation: { sheet: sheetName, cell: `${colLetter(allIdx)}${i + headerRow + 2}`, verbatim: String(cells[allIdx] ?? '') },
+          citation: { sheet: sheetName, cell: `${colLetter(allIdx)}${excelRow}`, verbatim: String(cells[allIdx] ?? '') },
           deterministic: true,
         })
       }
@@ -505,7 +590,7 @@ function deterministicExtract(fp, colMap, headerRow, rows, sheetName) {
           const first = stateColumns.find(sc => String(cells[sc.colIndex] ?? '').trim().toUpperCase() === 'X')
           fields.push({
             fieldName: 'states', value: states, confidence: 0.98,
-            citation: { sheet: sheetName, cell: `${colLetter(first.colIndex)}${i + headerRow + 2}`, verbatim: 'X' },
+            citation: { sheet: sheetName, cell: `${colLetter(first.colIndex)}${excelRow}`, verbatim: 'X' },
             deterministic: true,
           })
         }
@@ -537,7 +622,7 @@ function deterministicExtract(fp, colMap, headerRow, rows, sheetName) {
 // (the deterministic VALUES are ground truth by construction — only the MAP can be
 // wrong, so disagreement indicts columns, not cells).
 
-async function sampleVerifyMap({ fp, colMap, headerRow, rows, detEntities, deployBulk, deployGptMini, budget, review }) {
+async function sampleVerifyMap({ fp, colMap, headerRow, rows, gridRows, detEntities, deployBulk, deployGptMini, budget, review }) {
   const batches = []
   if (rows.length > 0) batches.push(0)
   if (rows.length > BATCH_ROWS * 2) batches.push(Math.floor(rows.length / (2 * BATCH_ROWS)) * BATCH_ROWS)
@@ -547,7 +632,7 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, detEntities, deplo
 
   for (const batchStart of batches.slice(0, DET_SAMPLE_BATCHES)) {
     const batch = rows.slice(batchStart, batchStart + BATCH_ROWS)
-    const userPrompt = buildExtractionPrompt(fp, colMap, headerRow, batch, batchStart)
+    const userPrompt = buildExtractionPrompt(fp, colMap, headerRow, batch, batchStart, null, gridRows)
     const [aRes, bRes] = await Promise.all([
       callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
       callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
@@ -585,22 +670,42 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, detEntities, deplo
 // Legacy fallback reconstructs synthetic rows from distinctSample (lossy — only
 // used for fingerprints from older clients that carry no cells).
 
+// Returns { rows, gridRows }: gridRows[i] is row i's ABSOLUTE 0-based index in the
+// embedded grid (P0-6 / ledger F07 adjunct): blank interior rows are filtered out
+// of `rows`, so the old `i + headerRow + 2` cell references drifted below the first
+// gap — every citation after it pointed at the wrong row. gridRows is null for
+// stacked/legacy shapes where no absolute grid exists.
 function gatherRows(fp, headerRowIndex) {
   if (fp.layoutShape === 'STACKED_TABLES' && fp.subTables && fp.subTables.length > 0) {
-    return fp.subTables.flatMap(sub => (sub.cells || []).slice(1))  // skip sub-header row
+    return { rows: fp.subTables.flatMap(sub => (sub.cells || []).slice(1)), gridRows: null }  // skip sub-header row
   }
   if (Array.isArray(fp.cells) && fp.cells.length > 0) {
     const start = Math.max(0, (headerRowIndex ?? fp.bestHeaderRow ?? -1) + 1)
-    return fp.cells.slice(start).filter(row => row.some(c => c !== null))
+    const rows = []
+    const gridRows = []
+    for (let r = start; r < fp.cells.length; r++) {
+      const row = fp.cells[r]
+      if (!row || !row.some(c => c !== null)) continue
+      rows.push(row)
+      gridRows.push(r)
+    }
+    return { rows, gridRows }
   }
   // Legacy fallback: column-major distinctSample → row-major synthetic rows.
   const maxRows = Math.max(...(fp.columnProfiles || []).map(c => (c.distinctSample || []).length), 0)
-  if (maxRows === 0) return []
+  if (maxRows === 0) return { rows: [], gridRows: null }
   const rows = []
   for (let r = 0; r < maxRows; r++) {
     rows.push((fp.columnProfiles || []).map(c => (c.distinctSample || [])[r] ?? null))
   }
-  return rows
+  return { rows, gridRows: null }
+}
+
+// 1-based Excel row for data row `rowIdx` (0-based data index): absolute from the
+// grid when known, else the contiguous-rows fallback formula.
+function excelRowOf(rowIdx, headerRow, gridRows) {
+  if (Array.isArray(gridRows) && gridRows[rowIdx] != null) return gridRows[rowIdx] + 1
+  return rowIdx + headerRow + 2
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -640,7 +745,7 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     const colMap = colMapOf.get(sheet.sheetName)
     if (!fp || !lock || !colMap) return null
 
-    const rows = gatherRows(fp, lock.headerRowIndex)
+    const { rows, gridRows } = gatherRows(fp, lock.headerRowIndex)
     if (rows.length === 0) return null
 
     // A sheet with ZERO mapped columns cannot be extracted meaningfully — skip it
@@ -655,8 +760,8 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     // ── Deterministic fast path: confident map + real grid → code extracts ────
     if (sheetIsDeterministic(fp, colMap)) {
       progress(`${fp.sheetName}: deterministic extraction (${rows.length} rows)`)
-      const detEntities = deterministicExtract(fp, colMap, lock.headerRowIndex, rows, fp.sheetName)
-      await sampleVerifyMap({ fp, colMap, headerRow: lock.headerRowIndex, rows, detEntities, deployBulk, deployGptMini, budget, review })
+      const detEntities = deterministicExtract(fp, colMap, lock.headerRowIndex, rows, fp.sheetName, gridRows)
+      await sampleVerifyMap({ fp, colMap, headerRow: lock.headerRowIndex, rows, gridRows, detEntities, deployBulk, deployGptMini, budget, review })
       return { fp, entities: [detEntities] }
     }
 
@@ -667,16 +772,21 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
 
     const batchResults = await pMap(batchStarts, async (batchStart) => {
       const batch      = rows.slice(batchStart, batchStart + BATCH_ROWS)
-      const userPrompt = buildExtractionPrompt(fp, colMap, lock.headerRowIndex, batch, batchStart)
+      const userPrompt = buildExtractionPrompt(fp, colMap, lock.headerRowIndex, batch, batchStart, null, gridRows)
 
-      // Two decorrelated extraction votes in parallel: BULK (haiku) + BULK_ALT (gpt-mini).
-      const [bulkRes, bulkAltRes] = await Promise.all([
-        callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
-        callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
+      // Two decorrelated extraction votes in parallel: BULK (haiku) + BULK_ALT
+      // (gpt-mini). Malformed output = structured telemetry + one targeted retry
+      // per side (P0-7 / ledger F16) — never a silent missing vote.
+      const rowsWhat = `rows ${batchStart}-${batchStart + batch.length - 1}`
+      const [aPayload, bPayload] = await Promise.all([
+        parseWithRetry({ call: () => callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK extraction ${rowsWhat}` }),
+        parseWithRetry({ call: () => callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK_ALT extraction ${rowsWhat}` }),
       ])
-
-      const aPayload = parseExtraction(bulkRes.raw)
-      const bPayload = parseExtraction(bulkAltRes.raw)
+      for (const [side, payload] of [['BULK', aPayload], ['BULK_ALT', bPayload]]) {
+        if (payload && payload.dropped > 0) {
+          review.push({ kind: 'malformed-model-output', sheetName: fp.sheetName, detail: `stage4: ${side} ${rowsWhat} — ${payload.dropped} malformed entit(y|ies)/field(s) dropped by shape validation.` })
+        }
+      }
 
       // Both extractors failed → escalate the whole batch up the ladder instead of dropping.
       if (!aPayload && !bPayload) {
@@ -717,7 +827,7 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
       progress(`${fp.sheetName}: resolving ${sheetConflicts.length} conflicted field(s) across ${new Set(sheetConflicts.map(c => c.rowIdx)).size} row(s)`)
       await resolveConflicts({
         conflicts: sheetConflicts, entities: sheetEntities, fp, colMap,
-        headerRow: lock.headerRowIndex, rows, batchStart: 0,
+        headerRow: lock.headerRowIndex, rows, gridRows, batchStart: 0,
         sheetName: fp.sheetName, budget, review, deployJudge,
       })
     }
@@ -751,4 +861,8 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
   return allEntities
 }
 
-module.exports = { extractRows }
+module.exports = {
+  extractRows,
+  // Test seams (hardening fixtures — pure helpers, no AI):
+  reconcileEntities, expandMultiRefIds, resolveConflicts, rowKind, parseExtraction,
+}
