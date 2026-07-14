@@ -766,7 +766,9 @@ section('additional_samples (differently-presented corpus; skipped when absent)'
     ['ADDL-FY25-RULES',         'Product_Rules Specifications_INSERT PRODUCT NAME_FY25 Example.xlsx',    false],
     ['ADDL-RULES-TAXONOMY',     'Sample Rules Taxonomy.xlsx',                                            false],
     ['ADDL-XLSM-FRAMEWORK',     'Product Framework.xlsm',                                                false],
-    ['ADDL-HAGERTY-RATING-BLANK', 'Product_Rating Specifications_Hagerty_BLANK.xlsx',                    true],
+    // NOT expectEmpty: this "BLANK" carries a 16-row example rate-table scaffold —
+    // honest extraction routes it to review; only a truly empty source must yield 0.
+    ['ADDL-HAGERTY-RATING-BLANK', 'Product_Rating Specifications_Hagerty_BLANK.xlsx',                    false],
     ['ADDL-HAGERTY-FORMS-BLANK',  'Product_Forms Specifications_Hagerty_BLANK.xlsx',                     true],
   ]
   for (const [id, file, expectEmpty] of addlCases) {

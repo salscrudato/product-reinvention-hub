@@ -96,13 +96,11 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
   await wb.xlsx.load(buf)
 
   const grids = []
+  const hiddenGrids = []
   const skippedHiddenSheets = []
 
   for (const ws of wb.worksheets) {
-    if (ws.state === 'hidden' || ws.state === 'veryHidden') {
-      skippedHiddenSheets.push(ws.name)
-      continue
-    }
+    const hidden = ws.state === 'hidden' || ws.state === 'veryHidden'
     // True-extent scan: only rows/cols with actual values count.
     let lastRow = 0
     let lastCol = 0
@@ -123,13 +121,24 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
       cells.push(arr)
     }
 
+    if (hidden) {
+      // Hidden sheets are excluded from AI extraction (archives/scratch noise) but
+      // FEED the deterministic ISO mapper — the legacy import path always read them,
+      // so canonical identity/coverage parity requires the mapper to see them too.
+      skippedHiddenSheets.push(ws.name)
+      hiddenGrids.push({ sheet: ws.name, cells })
+      continue
+    }
     grids.push({ sheet: ws.name, cells, mergedCells: getMergedRanges(ws) })
   }
 
   const structural = brainShared.buildStructuralModel(grids, sourceName, kind)
-  // Raw grids ride along for the deterministic ISO-family mapper (stage 7 joins
-  // its canonical identities with the brain's cited extraction).
-  const isoGrids = grids.map(g => ({ sheet: g.sheet, file: sourceName, cells: g.cells }))
+  // Raw grids (visible + hidden) ride along for the deterministic ISO-family mapper
+  // (stage 7 joins its canonical identities with the brain's cited extraction).
+  const isoGrids = [
+    ...grids.map(g => ({ sheet: g.sheet, file: sourceName, cells: g.cells })),
+    ...hiddenGrids.map(g => ({ sheet: g.sheet, file: sourceName, cells: g.cells })),
+  ]
   return { structural, skippedHiddenSheets, isoGrids }
 }
 
