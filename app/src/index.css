@@ -609,24 +609,8 @@ h1, h2 { text-wrap: balance; }
 }
 .btn-wave-follow:hover:not(:disabled)::after { opacity: 1; }
 
-/* ── Cursor water ripples — spawned by CursorTrail while the pointer moves ─────
-   Each ripple is one span that expands and dissolves; the component throttles
-   spawn rate and caps live nodes, and does not mount under reduced motion. */
-@keyframes cursor-ripple {
-  0%   { transform: translate(-50%, -50%) scale(.35); opacity: .5; }
-  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
-}
-.cursor-ripple {
-  position: fixed;
-  z-index: 9999;
-  width: 14px;
-  height: 14px;
-  border-radius: 9999px;
-  border: 1px solid var(--color-accent-line);
-  background: var(--color-accent-soft);
-  pointer-events: none;
-  animation: cursor-ripple .7s ease-out both;
-}
+/* (Global cursor trail removed by product direction — the pointer-following
+   wave lives ONLY on button hover, via .btn-wave-follow above.) */
 
 /* ── Agent visualizer (import pipeline) — event-driven pulses only ────────────
    viz-pulse travels a rail segment once per REAL received event (re-keyed by the
@@ -743,7 +727,6 @@ h1, h2 { text-wrap: balance; }
   /* Waveform loader → calm static pulse: fixed mid-height bars, softened. */
   .wf-bar { animation: none !important; transform: scaleY(.55) !important; opacity: .75; }
   .mic-beacon { animation: none !important; }
-  .cursor-ripple { display: none !important; }
   .btn-wave-follow::after { transition: none !important; }
   .state-tile__cell, .state-tile__ring { transition: none !important; }
 }
