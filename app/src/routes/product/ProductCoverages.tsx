@@ -1,5 +1,5 @@
-// Coverages — the product's coverages as a browsable collection (tree ⇄ cards,
-// tree by default). Every coverage is a hub whose tiles drill into focused editors:
+// Coverages — the product's coverages as a browsable collection (cards ⇄ tree,
+// cards by default). Every coverage is a hub whose tiles drill into focused editors:
 // Limits and Deductibles (typed standard options), States (US map), Forms (edition +
 // scope), and the Pricing/Rules tabs. Create / edit / delete keep the hierarchy consistent.
 //
@@ -45,8 +45,8 @@ export default function ProductCoverages() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
 
-  // Tree is the default read of the hierarchy; the toggle is session-only (no persistence).
-  const [view, setView] = useState<ViewMode>('tree')
+  // Cards are the default read; the toggle is session-only (no persistence).
+  const [view, setView] = useState<ViewMode>('cards')
 
   // Filter rail is collapsible — CLOSED by default so the coverage read leads.
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -205,7 +205,7 @@ export default function ProductCoverages() {
       {/* Toolbar — layout options lead on the left, then filters, then the ONE smart
           search (fuzzy typeahead + structured tokens + live text filtering). */}
       <div className="flex flex-wrap items-center gap-2.5">
-        <ViewToggle mode={view} onChange={setView} modes={['tree', 'cards']} />
+        <ViewToggle mode={view} onChange={setView} modes={['cards', 'tree']} />
 
         <button
           type="button"
