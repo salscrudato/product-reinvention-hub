@@ -36,6 +36,7 @@ const AUDIT   = resolve(REPO, 'docs/audit')
 const MODE_WRITE = process.argv.includes('--write-golden')
 const MODE_LIVE  = process.argv.includes('--live')
 // IMPORT_EVAL_ONLY=GL,IM limits the run to specific format ids (CI slicing).
+const EVAL_TIMEOUT_MS = Number(process.env.IMPORT_EVAL_TIMEOUT_MS) || 2_700_000
 const ONLY = (process.env.IMPORT_EVAL_ONLY || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
 
 const F1_TARGET       = 0.95
@@ -260,7 +261,7 @@ interface LiveResult { bundle: unknown; errors: string[]; spend: unknown }
 // Dev is a shared, continuously-deployed environment: a deploy restarts the app and
 // severs in-flight SSE ("fetch: terminated"). Retry the whole import a few times,
 // pausing so the restarted app warms up.
-async function postImport(token: string, files: string[], lobHint?: string, timeoutMs = 2_700_000): Promise<LiveResult> {
+async function postImport(token: string, files: string[], lobHint?: string, timeoutMs = EVAL_TIMEOUT_MS): Promise<LiveResult> {
   let last: LiveResult = { bundle: null, errors: ['not attempted'], spend: null }
   for (let attempt = 1; attempt <= 3; attempt++) {
     last = await postImportOnce(token, files, lobHint, timeoutMs)
