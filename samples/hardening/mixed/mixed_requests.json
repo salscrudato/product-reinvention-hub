@@ -1,0 +1,39 @@
+{
+  "description": "Request-level combinations for the offline enumeration pass and future live probes. Paths are repo-relative; binaries are NOT duplicated here.",
+  "requests": [
+    {
+      "id": "mixed-workbook-plus-pdf",
+      "purpose": "Mixed upload: workbook wins, PDFs dropped with the mixed-upload warning (unified-import.js dispatch)",
+      "files": [
+        "samples/hardening/workbooks/20ISOFrameworkGL.xlsx",
+        "samples/hardening/pdf/PP_00_01_06_98.pdf"
+      ]
+    },
+    {
+      "id": "multi-workbook-merge",
+      "purpose": "mergeStructurals over the full GL 4-workbook set (framework + forms + rules + pricing)",
+      "files": [
+        "samples/hardening/workbooks/20ISOFrameworkGL.xlsx",
+        "samples/hardening/workbooks/20ISOFormsGL.xlsx",
+        "samples/hardening/workbooks/20ISORulesGL.xlsx",
+        "samples/hardening/workbooks/20ISOPricingGL.xlsx"
+      ]
+    },
+    {
+      "id": "exact-dup-pair",
+      "purpose": "Byte-identical workbook uploaded twice in one request (dup handling; conservation must not double-count silently)",
+      "files": [
+        "samples/hardening/workbooks/Product_Component_Model_Framework_Coverages_1.xlsx",
+        "samples/hardening/adversarial/Product_Component_Model_Framework_Coverages.xlsx"
+      ]
+    },
+    {
+      "id": "filing-nj-pair",
+      "purpose": "Two-PDF filing request (manual + rate order) — first-doc-per-role behavior fixture (ledger F13)",
+      "files": [
+        "samples/hardening/pdf/NJ_HO_Manual_02_27_24.pdf",
+        "samples/hardening/pdf/NJ_HO_Rate_Order_of_Calculations.pdf"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3523 @@
+{
+  "generatedBy": "scripts/hardening-manifest.mjs",
+  "corpus": "samples/hardening/{workbooks,adversarial}",
+  "workbookFiles": 29,
+  "parsedWorkbooks": 28,
+  "totalSheets": 218,
+  "hiddenSheets": 29,
+  "sheetsExceedingEmbedCap": 1,
+  "duplicateMd5Groups": [
+    {
+      "md5": "ca729a8b1bdaf76df61ff8ffc7b6e7db",
+      "files": [
+        "adversarial/Product_Component_Model_Framework_Coverages.xlsx",
+        "workbooks/Product_Component_Model_Framework_Coverages_1.xlsx"
+      ]
+    },
+    {
+      "md5": "c941ef672db584752ed41074ffa90c49",
+      "files": [
+        "workbooks/20ISOFormsGL.xlsx",
+        "workbooks/sampleGLforms.xlsx",
+        "iso/sample-GL-forms.xlsx"
+      ]
+    },
+    {
+      "md5": "0e7bbe7c1352110bae4feecdae93c70a",
+      "files": [
+        "workbooks/20ISOFrameworkGL.xlsx",
+        "workbooks/sampleGLframework.xlsx",
+        "iso/sample-GL-framework.xlsx"
+      ]
+    },
+    {
+      "md5": "ad883da11c8338095b4c8c99da7be453",
+      "files": [
+        "workbooks/20ISOPricingGL.xlsx",
+        "workbooks/sampleGLpricing.xlsx",
+        "iso/sample-GL-pricing.xlsx"
+      ]
+    },
+    {
+      "md5": "1ebc6bc9df2541a03cba4da31027f2f8",
+      "files": [
+        "workbooks/20ISORulesGL.xlsx",
+        "workbooks/sampleGLrules.xlsx",
+        "iso/sample-GL-rules.xlsx"
+      ]
+    },
+    {
+      "md5": "df99e3c837b6ad4103a3501ea04ad885",
+      "files": [
+        "workbooks/sampleIMframework.xlsx",
+        "iso/sample-IM-framework.xlsx"
+      ]
+    },
+    {
+      "md5": "424802d3b2be9f81cc587f8f6e8b1e06",
+      "files": [
+        "workbooks/sampleIMrules.xlsx",
+        "iso/sample-IM-rules.xlsx"
+      ]
+    },
+    {
+      "md5": "4ce4e588644ceb02a313b5cfe472a06b",
+      "files": [
+        "workbooks/samplePRframework.xlsx",
+        "iso/sample-PR-framework.xlsx"
+      ]
+    },
+    {
+      "md5": "4a21bd78c2ee5bc3d2631f5a69eced69",
+      "files": [
+        "workbooks/samplePRrating.xlsx",
+        "iso/sample-PR-rating.xlsx"
+      ]
+    }
+  ],
+  "workbooks": [
+    {
+      "file": "1._Product_Framework_-_SECURA_-_Property",
+      "dir": "adversarial",
+      "bytes": 510981,
+      "md5": "3ea14b4d60405d12f60a33abe56ae649",
+      "container": "ZIP_OOXML",
+      "sheets": [],
+      "error": "End of data reached (data length = 510981, asked index = 510984). Corrupted zip ?"
+    },
+    {
+      "file": "Insurance_Product___Process_Value_Explorer_Export.xlsx",
+      "dir": "adversarial",
+      "bytes": 103402,
+      "md5": "83431f5871e6a350f801a132fd10502e",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Report",
+          "state": "visible",
+          "reportedRows": 77,
+          "reportedCols": 15,
+          "usedRows": 77,
+          "usedCols": 15,
+          "nonEmptyCells": 1144,
+          "mergedRanges": 13,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Level 3 - Heatmaps",
+          "state": "veryHidden",
+          "reportedRows": 2,
+          "reportedCols": 3,
+          "usedRows": 2,
+          "usedCols": 3,
+          "nonEmptyCells": 6,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Level 4 - Heatmaps",
+          "state": "veryHidden",
+          "reportedRows": 2,
+          "reportedCols": 4,
+          "usedRows": 2,
+          "usedCols": 4,
+          "nonEmptyCells": 8,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Inventory-Pain Points",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 4,
+          "usedRows": 10,
+          "usedCols": 4,
+          "nonEmptyCells": 40,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Inventory-Opportunities",
+          "state": "veryHidden",
+          "reportedRows": 1,
+          "reportedCols": 4,
+          "usedRows": 1,
+          "usedCols": 4,
+          "nonEmptyCells": 4,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Inventory-In-Flight Initiatives",
+          "state": "veryHidden",
+          "reportedRows": 1,
+          "reportedCols": 4,
+          "usedRows": 1,
+          "usedCols": 4,
+          "nonEmptyCells": 4,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Inventory-System",
+          "state": "veryHidden",
+          "reportedRows": 1,
+          "reportedCols": 4,
+          "usedRows": 1,
+          "usedCols": 4,
+          "nonEmptyCells": 4,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Inventory-Functions",
+          "state": "veryHidden",
+          "reportedRows": 1,
+          "reportedCols": 4,
+          "usedRows": 1,
+          "usedCols": 4,
+          "nonEmptyCells": 4,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Inventory-Input",
+          "state": "veryHidden",
+          "reportedRows": 1,
+          "reportedCols": 4,
+          "usedRows": 1,
+          "usedCols": 4,
+          "nonEmptyCells": 4,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Inventory-Output",
+          "state": "veryHidden",
+          "reportedRows": 1,
+          "reportedCols": 4,
+          "usedRows": 1,
+          "usedCols": 4,
+          "nonEmptyCells": 4,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Inventory-Feedback",
+          "state": "visible",
+          "reportedRows": 1001,
+          "reportedCols": 22,
+          "usedRows": 1001,
+          "usedCols": 22,
+          "nonEmptyCells": 22022,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Diagnostics",
+          "state": "veryHidden",
+          "reportedRows": 1,
+          "reportedCols": 9,
+          "usedRows": 1,
+          "usedCols": 9,
+          "nonEmptyCells": 9,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Value Driver Metric",
+          "state": "veryHidden",
+          "reportedRows": 1,
+          "reportedCols": 7,
+          "usedRows": 1,
+          "usedCols": 7,
+          "nonEmptyCells": 7,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "Product_Component_Model_Framework_Coverages.xlsx",
+      "dir": "adversarial",
+      "bytes": 414567,
+      "md5": "ca729a8b1bdaf76df61ff8ffc7b6e7db",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Product Component Model Hacked",
+          "state": "visible",
+          "reportedRows": 264,
+          "reportedCols": 97,
+          "usedRows": 224,
+          "usedCols": 97,
+          "nonEmptyCells": 13477,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 19,
+          "reportedCols": 3,
+          "usedRows": 16,
+          "usedCols": 3,
+          "nonEmptyCells": 37,
+          "mergedRanges": 1,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 121,
+          "reportedCols": 5,
+          "usedRows": 10,
+          "usedCols": 5,
+          "nonEmptyCells": 19,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            10
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model Main",
+          "state": "visible",
+          "reportedRows": 261,
+          "reportedCols": 97,
+          "usedRows": 221,
+          "usedCols": 97,
+          "nonEmptyCells": 13474,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "StatPlan",
+          "state": "visible",
+          "reportedRows": 84,
+          "reportedCols": 16,
+          "usedRows": 84,
+          "usedCols": 16,
+          "nonEmptyCells": 488,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "CoverageStructure",
+          "state": "visible",
+          "reportedRows": 36,
+          "reportedCols": 14,
+          "usedRows": 36,
+          "usedCols": 13,
+          "nonEmptyCells": 194,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "NewCovStructure",
+          "state": "visible",
+          "reportedRows": 60,
+          "reportedCols": 13,
+          "usedRows": 39,
+          "usedCols": 13,
+          "nonEmptyCells": 219,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "PA CVG",
+          "state": "visible",
+          "reportedRows": 63,
+          "reportedCols": 14,
+          "usedRows": 44,
+          "usedCols": 14,
+          "nonEmptyCells": 244,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "NY CVG",
+          "state": "visible",
+          "reportedRows": 70,
+          "reportedCols": 13,
+          "usedRows": 70,
+          "usedCols": 13,
+          "nonEmptyCells": 167,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "OpenL<->StatPan Cov match",
+          "state": "visible",
+          "reportedRows": 84,
+          "reportedCols": 8,
+          "usedRows": 84,
+          "usedCols": 8,
+          "nonEmptyCells": 299,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "OpenL Cvg Discount Surcharge",
+          "state": "visible",
+          "reportedRows": 117,
+          "reportedCols": 5,
+          "usedRows": 117,
+          "usedCols": 5,
+          "nonEmptyCells": 183,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Coverage Analysis",
+          "state": "visible",
+          "reportedRows": 5,
+          "reportedCols": 4,
+          "usedRows": 4,
+          "usedCols": 3,
+          "nonEmptyCells": 11,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Non-PIP",
+          "state": "visible",
+          "reportedRows": 106,
+          "reportedCols": 2,
+          "usedRows": 53,
+          "usedCols": 2,
+          "nonEmptyCells": 106,
+          "mergedRanges": 1,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "PIP States",
+          "state": "visible",
+          "reportedRows": 42,
+          "reportedCols": 3,
+          "usedRows": 41,
+          "usedCols": 3,
+          "nonEmptyCells": 123,
+          "mergedRanges": 18,
+          "headerCandidates": [
+            1,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Liability limits",
+          "state": "visible",
+          "reportedRows": 43,
+          "reportedCols": 3,
+          "usedRows": 42,
+          "usedCols": 3,
+          "nonEmptyCells": 38,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Discounts",
+          "state": "visible",
+          "reportedRows": 24,
+          "reportedCols": 5,
+          "usedRows": 24,
+          "usedCols": 5,
+          "nonEmptyCells": 27,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model OLD",
+          "state": "visible",
+          "reportedRows": 255,
+          "reportedCols": 58,
+          "usedRows": 215,
+          "usedCols": 58,
+          "nonEmptyCells": 2724,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "PCM Dropdowns (HIDE)",
+          "state": "hidden",
+          "reportedRows": 10,
+          "reportedCols": 9,
+          "usedRows": 9,
+          "usedCols": 9,
+          "nonEmptyCells": 35,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            5
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "Product_Framework__SECURA__Property_RF.xlsm",
+      "dir": "adversarial",
+      "bytes": 1307703,
+      "md5": "2a18e852eb692fad9da9a03b7ea24552",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 122,
+          "reportedCols": 5,
+          "usedRows": 49,
+          "usedCols": 5,
+          "nonEmptyCells": 209,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11,
+            12
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 26,
+          "reportedCols": 3,
+          "usedRows": 23,
+          "usedCols": 3,
+          "nonEmptyCells": 56,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model",
+          "state": "visible",
+          "reportedRows": 630,
+          "reportedCols": 34,
+          "usedRows": 630,
+          "usedCols": 34,
+          "nonEmptyCells": 19974,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            10
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "ROC",
+          "state": "visible",
+          "reportedRows": 1694,
+          "reportedCols": 44,
+          "usedRows": 910,
+          "usedCols": 44,
+          "nonEmptyCells": 24689,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Forms Library",
+          "state": "visible",
+          "reportedRows": 250,
+          "reportedCols": 80,
+          "usedRows": 243,
+          "usedCols": 70,
+          "nonEmptyCells": 10410,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rules Repository",
+          "state": "visible",
+          "reportedRows": 1048417,
+          "reportedCols": 59,
+          "usedRows": 1609,
+          "usedCols": 57,
+          "nonEmptyCells": 69942,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Coverage Summary",
+          "state": "visible",
+          "reportedRows": 365,
+          "reportedCols": 17,
+          "usedRows": 365,
+          "usedCols": 17,
+          "nonEmptyCells": 1751,
+          "mergedRanges": 1,
+          "headerCandidates": [
+            2,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 10,
+          "usedRows": 10,
+          "usedCols": 10,
+          "nonEmptyCells": 46,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Sheet2",
+          "state": "visible",
+          "reportedRows": 8,
+          "reportedCols": 8,
+          "usedRows": 8,
+          "usedCols": 8,
+          "nonEmptyCells": 10,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Sheet1",
+          "state": "visible",
+          "reportedRows": 78,
+          "reportedCols": 37,
+          "usedRows": 78,
+          "usedCols": 37,
+          "nonEmptyCells": 2573,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            6
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "20ISOFormsGL.xlsx",
+      "dir": "workbooks",
+      "bytes": 379669,
+      "md5": "c941ef672db584752ed41074ffa90c49",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 122,
+          "reportedCols": 5,
+          "usedRows": 11,
+          "usedCols": 5,
+          "nonEmptyCells": 22,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions-Forms Specification",
+          "state": "visible",
+          "reportedRows": 40,
+          "reportedCols": 4,
+          "usedRows": 40,
+          "usedCols": 4,
+          "nonEmptyCells": 153,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            7
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Forms Specifications",
+          "state": "visible",
+          "reportedRows": 821,
+          "reportedCols": 95,
+          "usedRows": 821,
+          "usedCols": 95,
+          "nonEmptyCells": 34797,
+          "mergedRanges": 6,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Forms Dynamic Data",
+          "state": "visible",
+          "reportedRows": 214,
+          "reportedCols": 90,
+          "usedRows": 214,
+          "usedCols": 8,
+          "nonEmptyCells": 1460,
+          "mergedRanges": 2,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 22,
+          "reportedCols": 16,
+          "usedRows": 15,
+          "usedCols": 16,
+          "nonEmptyCells": 69,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "20ISOFrameworkGL.xlsx",
+      "dir": "workbooks",
+      "bytes": 70434,
+      "md5": "0e7bbe7c1352110bae4feecdae93c70a",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 119,
+          "reportedCols": 6,
+          "usedRows": 11,
+          "usedCols": 6,
+          "nonEmptyCells": 22,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions-Product Framework",
+          "state": "visible",
+          "reportedRows": 23,
+          "reportedCols": 3,
+          "usedRows": 22,
+          "usedCols": 3,
+          "nonEmptyCells": 62,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Product Framework",
+          "state": "visible",
+          "reportedRows": 115,
+          "reportedCols": 68,
+          "usedRows": 115,
+          "usedCols": 68,
+          "nonEmptyCells": 6606,
+          "mergedRanges": 1,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 9,
+          "reportedCols": 7,
+          "usedRows": 7,
+          "usedCols": 7,
+          "nonEmptyCells": 26,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "20ISOPricingGL.xlsx",
+      "dir": "workbooks",
+      "bytes": 70493,
+      "md5": "ad883da11c8338095b4c8c99da7be453",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 13,
+          "reportedCols": 5,
+          "usedRows": 13,
+          "usedCols": 5,
+          "nonEmptyCells": 28,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions-Rating Specificants",
+          "state": "visible",
+          "reportedRows": 19,
+          "reportedCols": 4,
+          "usedRows": 19,
+          "usedCols": 4,
+          "nonEmptyCells": 69,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            9
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Rating Specifications",
+          "state": "visible",
+          "reportedRows": 109,
+          "reportedCols": 73,
+          "usedRows": 60,
+          "usedCols": 73,
+          "nonEmptyCells": 3297,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            10
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Rating Tables",
+          "state": "visible",
+          "reportedRows": 222,
+          "reportedCols": 11,
+          "usedRows": 218,
+          "usedCols": 11,
+          "nonEmptyCells": 793,
+          "mergedRanges": 7,
+          "headerCandidates": [
+            4,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 7,
+          "reportedCols": 8,
+          "usedRows": 7,
+          "usedCols": 8,
+          "nonEmptyCells": 38,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "20ISORulesGL.xlsx",
+      "dir": "workbooks",
+      "bytes": 125817,
+      "md5": "1ebc6bc9df2541a03cba4da31027f2f8",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 34,
+          "reportedCols": 5,
+          "usedRows": 11,
+          "usedCols": 5,
+          "nonEmptyCells": 22,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 35,
+          "reportedCols": 7,
+          "usedRows": 35,
+          "usedCols": 4,
+          "nonEmptyCells": 133,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions - Rules Categories",
+          "state": "visible",
+          "reportedRows": 15,
+          "reportedCols": 4,
+          "usedRows": 15,
+          "usedCols": 4,
+          "nonEmptyCells": 53,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Optional Forms Rules",
+          "state": "visible",
+          "reportedRows": 286,
+          "reportedCols": 10,
+          "usedRows": 286,
+          "usedCols": 10,
+          "nonEmptyCells": 1708,
+          "mergedRanges": 48,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Rules Specifications",
+          "state": "visible",
+          "reportedRows": 151,
+          "reportedCols": 80,
+          "usedRows": 151,
+          "usedCols": 80,
+          "nonEmptyCells": 9959,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            7
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Limits and Deductibles",
+          "state": "visible",
+          "reportedRows": 398,
+          "reportedCols": 82,
+          "usedRows": 398,
+          "usedCols": 5,
+          "nonEmptyCells": 532,
+          "mergedRanges": 31,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 14,
+          "reportedCols": 8,
+          "usedRows": 13,
+          "usedCols": 8,
+          "nonEmptyCells": 38,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "Inland_Marine_Rules_Repository__SECURA__Master.xlsx",
+      "dir": "workbooks",
+      "bytes": 689380,
+      "md5": "cf1c982b0300c930ea0e4296dd4dede1",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 21,
+          "reportedCols": 5,
+          "usedRows": 15,
+          "usedCols": 5,
+          "nonEmptyCells": 45,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            10,
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 105,
+          "reportedCols": 15,
+          "usedRows": 101,
+          "usedCols": 11,
+          "nonEmptyCells": 95,
+          "mergedRanges": 1,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rules Categories",
+          "state": "visible",
+          "reportedRows": 18,
+          "reportedCols": 4,
+          "usedRows": 18,
+          "usedCols": 4,
+          "nonEmptyCells": 65,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rules Repository",
+          "state": "visible",
+          "reportedRows": 767,
+          "reportedCols": 59,
+          "usedRows": 757,
+          "usedCols": 57,
+          "nonEmptyCells": 33852,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Limits and Deductibles Tables",
+          "state": "visible",
+          "reportedRows": 113,
+          "reportedCols": 45,
+          "usedRows": 113,
+          "usedCols": 5,
+          "nonEmptyCells": 238,
+          "mergedRanges": 1,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Class Codes Tables",
+          "state": "visible",
+          "reportedRows": 5,
+          "reportedCols": 45,
+          "usedRows": 4,
+          "usedCols": 2,
+          "nonEmptyCells": 7,
+          "mergedRanges": 1,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "hidden",
+          "reportedRows": 1482,
+          "reportedCols": 11,
+          "usedRows": 53,
+          "usedCols": 11,
+          "nonEmptyCells": 101,
+          "mergedRanges": 1,
+          "headerCandidates": [
+            6,
+            1
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "Product_Component_Model_Framework_Coverages_1.xlsx",
+      "dir": "workbooks",
+      "bytes": 414567,
+      "md5": "ca729a8b1bdaf76df61ff8ffc7b6e7db",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Product Component Model Hacked",
+          "state": "visible",
+          "reportedRows": 264,
+          "reportedCols": 97,
+          "usedRows": 224,
+          "usedCols": 97,
+          "nonEmptyCells": 13477,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 19,
+          "reportedCols": 3,
+          "usedRows": 16,
+          "usedCols": 3,
+          "nonEmptyCells": 37,
+          "mergedRanges": 1,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 121,
+          "reportedCols": 5,
+          "usedRows": 10,
+          "usedCols": 5,
+          "nonEmptyCells": 19,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            10
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model Main",
+          "state": "visible",
+          "reportedRows": 261,
+          "reportedCols": 97,
+          "usedRows": 221,
+          "usedCols": 97,
+          "nonEmptyCells": 13474,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "StatPlan",
+          "state": "visible",
+          "reportedRows": 84,
+          "reportedCols": 16,
+          "usedRows": 84,
+          "usedCols": 16,
+          "nonEmptyCells": 488,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "CoverageStructure",
+          "state": "visible",
+          "reportedRows": 36,
+          "reportedCols": 14,
+          "usedRows": 36,
+          "usedCols": 13,
+          "nonEmptyCells": 194,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "NewCovStructure",
+          "state": "visible",
+          "reportedRows": 60,
+          "reportedCols": 13,
+          "usedRows": 39,
+          "usedCols": 13,
+          "nonEmptyCells": 219,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "PA CVG",
+          "state": "visible",
+          "reportedRows": 63,
+          "reportedCols": 14,
+          "usedRows": 44,
+          "usedCols": 14,
+          "nonEmptyCells": 244,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "NY CVG",
+          "state": "visible",
+          "reportedRows": 70,
+          "reportedCols": 13,
+          "usedRows": 70,
+          "usedCols": 13,
+          "nonEmptyCells": 167,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "OpenL<->StatPan Cov match",
+          "state": "visible",
+          "reportedRows": 84,
+          "reportedCols": 8,
+          "usedRows": 84,
+          "usedCols": 8,
+          "nonEmptyCells": 299,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "OpenL Cvg Discount Surcharge",
+          "state": "visible",
+          "reportedRows": 117,
+          "reportedCols": 5,
+          "usedRows": 117,
+          "usedCols": 5,
+          "nonEmptyCells": 183,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            2
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Coverage Analysis",
+          "state": "visible",
+          "reportedRows": 5,
+          "reportedCols": 4,
+          "usedRows": 4,
+          "usedCols": 3,
+          "nonEmptyCells": 11,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Non-PIP",
+          "state": "visible",
+          "reportedRows": 106,
+          "reportedCols": 2,
+          "usedRows": 53,
+          "usedCols": 2,
+          "nonEmptyCells": 106,
+          "mergedRanges": 1,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "PIP States",
+          "state": "visible",
+          "reportedRows": 42,
+          "reportedCols": 3,
+          "usedRows": 41,
+          "usedCols": 3,
+          "nonEmptyCells": 123,
+          "mergedRanges": 18,
+          "headerCandidates": [
+            1,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Liability limits",
+          "state": "visible",
+          "reportedRows": 43,
+          "reportedCols": 3,
+          "usedRows": 42,
+          "usedCols": 3,
+          "nonEmptyCells": 38,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Discounts",
+          "state": "visible",
+          "reportedRows": 24,
+          "reportedCols": 5,
+          "usedRows": 24,
+          "usedCols": 5,
+          "nonEmptyCells": 27,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model OLD",
+          "state": "visible",
+          "reportedRows": 255,
+          "reportedCols": 58,
+          "usedRows": 215,
+          "usedCols": 58,
+          "nonEmptyCells": 2724,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "PCM Dropdowns (HIDE)",
+          "state": "hidden",
+          "reportedRows": 10,
+          "reportedCols": 9,
+          "usedRows": 9,
+          "usedCols": 9,
+          "nonEmptyCells": 35,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            5
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "Product_Framework__SECURA__Inland_Marine.xlsx",
+      "dir": "workbooks",
+      "bytes": 174648,
+      "md5": "fd8d809159e7e55437f31e2009ee6c85",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 121,
+          "reportedCols": 5,
+          "usedRows": 15,
+          "usedCols": 5,
+          "nonEmptyCells": 45,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            10,
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 26,
+          "reportedCols": 3,
+          "usedRows": 23,
+          "usedCols": 3,
+          "nonEmptyCells": 56,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model",
+          "state": "visible",
+          "reportedRows": 906,
+          "reportedCols": 35,
+          "usedRows": 906,
+          "usedCols": 34,
+          "nonEmptyCells": 28576,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            9
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Coverage Summary",
+          "state": "visible",
+          "reportedRows": 344,
+          "reportedCols": 34,
+          "usedRows": 344,
+          "usedCols": 4,
+          "nonEmptyCells": 349,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 10,
+          "usedRows": 10,
+          "usedCols": 10,
+          "nonEmptyCells": 46,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            5
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "Property_Rating_Repository__Master.xlsx",
+      "dir": "workbooks",
+      "bytes": 725959,
+      "md5": "7d2b6a5c070f2c1b26c871585bdb3f61",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Version History",
+          "state": "visible",
+          "reportedRows": 13,
+          "reportedCols": 4,
+          "usedRows": 5,
+          "usedCols": 4,
+          "nonEmptyCells": 17,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 23,
+          "reportedCols": 2,
+          "usedRows": 18,
+          "usedCols": 2,
+          "nonEmptyCells": 36,
+          "mergedRanges": 1,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "PROPERTY ROC",
+          "state": "visible",
+          "reportedRows": 822,
+          "reportedCols": 39,
+          "usedRows": 822,
+          "usedCols": 39,
+          "nonEmptyCells": 20380,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "ISO TABLES",
+          "state": "visible",
+          "reportedRows": 1587,
+          "reportedCols": 17,
+          "usedRows": 1587,
+          "usedCols": 17,
+          "nonEmptyCells": 1905,
+          "mergedRanges": 2,
+          "headerCandidates": [
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 69,
+          "usedRows": 10,
+          "usedCols": 8,
+          "nonEmptyCells": 39,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sampleGLforms.xlsx",
+      "dir": "workbooks",
+      "bytes": 379669,
+      "md5": "c941ef672db584752ed41074ffa90c49",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 122,
+          "reportedCols": 5,
+          "usedRows": 11,
+          "usedCols": 5,
+          "nonEmptyCells": 22,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions-Forms Specification",
+          "state": "visible",
+          "reportedRows": 40,
+          "reportedCols": 4,
+          "usedRows": 40,
+          "usedCols": 4,
+          "nonEmptyCells": 153,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            7
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Forms Specifications",
+          "state": "visible",
+          "reportedRows": 821,
+          "reportedCols": 95,
+          "usedRows": 821,
+          "usedCols": 95,
+          "nonEmptyCells": 34797,
+          "mergedRanges": 6,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Forms Dynamic Data",
+          "state": "visible",
+          "reportedRows": 214,
+          "reportedCols": 90,
+          "usedRows": 214,
+          "usedCols": 8,
+          "nonEmptyCells": 1460,
+          "mergedRanges": 2,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 22,
+          "reportedCols": 16,
+          "usedRows": 15,
+          "usedCols": 16,
+          "nonEmptyCells": 69,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sampleGLframework.xlsx",
+      "dir": "workbooks",
+      "bytes": 70434,
+      "md5": "0e7bbe7c1352110bae4feecdae93c70a",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 119,
+          "reportedCols": 6,
+          "usedRows": 11,
+          "usedCols": 6,
+          "nonEmptyCells": 22,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions-Product Framework",
+          "state": "visible",
+          "reportedRows": 23,
+          "reportedCols": 3,
+          "usedRows": 22,
+          "usedCols": 3,
+          "nonEmptyCells": 62,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Product Framework",
+          "state": "visible",
+          "reportedRows": 115,
+          "reportedCols": 68,
+          "usedRows": 115,
+          "usedCols": 68,
+          "nonEmptyCells": 6606,
+          "mergedRanges": 1,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 9,
+          "reportedCols": 7,
+          "usedRows": 7,
+          "usedCols": 7,
+          "nonEmptyCells": 26,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sampleGLpricing.xlsx",
+      "dir": "workbooks",
+      "bytes": 70493,
+      "md5": "ad883da11c8338095b4c8c99da7be453",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 13,
+          "reportedCols": 5,
+          "usedRows": 13,
+          "usedCols": 5,
+          "nonEmptyCells": 28,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions-Rating Specificants",
+          "state": "visible",
+          "reportedRows": 19,
+          "reportedCols": 4,
+          "usedRows": 19,
+          "usedCols": 4,
+          "nonEmptyCells": 69,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            9
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Rating Specifications",
+          "state": "visible",
+          "reportedRows": 109,
+          "reportedCols": 73,
+          "usedRows": 60,
+          "usedCols": 73,
+          "nonEmptyCells": 3297,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            10
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Rating Tables",
+          "state": "visible",
+          "reportedRows": 222,
+          "reportedCols": 11,
+          "usedRows": 218,
+          "usedCols": 11,
+          "nonEmptyCells": 793,
+          "mergedRanges": 7,
+          "headerCandidates": [
+            4,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 7,
+          "reportedCols": 8,
+          "usedRows": 7,
+          "usedCols": 8,
+          "nonEmptyCells": 38,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sampleGLrules.xlsx",
+      "dir": "workbooks",
+      "bytes": 125817,
+      "md5": "1ebc6bc9df2541a03cba4da31027f2f8",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 34,
+          "reportedCols": 5,
+          "usedRows": 11,
+          "usedCols": 5,
+          "nonEmptyCells": 22,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 35,
+          "reportedCols": 7,
+          "usedRows": 35,
+          "usedCols": 4,
+          "nonEmptyCells": 133,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions - Rules Categories",
+          "state": "visible",
+          "reportedRows": 15,
+          "reportedCols": 4,
+          "usedRows": 15,
+          "usedCols": 4,
+          "nonEmptyCells": 53,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Optional Forms Rules",
+          "state": "visible",
+          "reportedRows": 286,
+          "reportedCols": 10,
+          "usedRows": 286,
+          "usedCols": 10,
+          "nonEmptyCells": 1708,
+          "mergedRanges": 48,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Rules Specifications",
+          "state": "visible",
+          "reportedRows": 151,
+          "reportedCols": 80,
+          "usedRows": 151,
+          "usedCols": 80,
+          "nonEmptyCells": 9959,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            7
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Limits and Deductibles",
+          "state": "visible",
+          "reportedRows": 398,
+          "reportedCols": 82,
+          "usedRows": 398,
+          "usedCols": 5,
+          "nonEmptyCells": 532,
+          "mergedRanges": 31,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 14,
+          "reportedCols": 8,
+          "usedRows": 13,
+          "usedCols": 8,
+          "nonEmptyCells": 38,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sampleIMframework.xlsx",
+      "dir": "workbooks",
+      "bytes": 108062,
+      "md5": "df99e3c837b6ad4103a3501ea04ad885",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 15,
+          "reportedCols": 6,
+          "usedRows": 15,
+          "usedCols": 6,
+          "nonEmptyCells": 45,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            10,
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 23,
+          "reportedCols": 4,
+          "usedRows": 23,
+          "usedCols": 4,
+          "nonEmptyCells": 56,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model",
+          "state": "visible",
+          "reportedRows": 906,
+          "reportedCols": 35,
+          "usedRows": 906,
+          "usedCols": 35,
+          "nonEmptyCells": 28576,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            9
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Coverage Summary",
+          "state": "visible",
+          "reportedRows": 344,
+          "reportedCols": 5,
+          "usedRows": 344,
+          "usedCols": 5,
+          "nonEmptyCells": 349,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 11,
+          "usedRows": 10,
+          "usedCols": 11,
+          "nonEmptyCells": 46,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            5
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sampleIMrules.xlsx",
+      "dir": "workbooks",
+      "bytes": 134163,
+      "md5": "424802d3b2be9f81cc587f8f6e8b1e06",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 15,
+          "reportedCols": 6,
+          "usedRows": 15,
+          "usedCols": 6,
+          "nonEmptyCells": 45,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            10,
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 101,
+          "reportedCols": 12,
+          "usedRows": 101,
+          "usedCols": 12,
+          "nonEmptyCells": 92,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rules Categories",
+          "state": "visible",
+          "reportedRows": 18,
+          "reportedCols": 5,
+          "usedRows": 18,
+          "usedCols": 5,
+          "nonEmptyCells": 65,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rules Repository",
+          "state": "visible",
+          "reportedRows": 757,
+          "reportedCols": 58,
+          "usedRows": 757,
+          "usedCols": 58,
+          "nonEmptyCells": 33852,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Limits and Deductibles Tables",
+          "state": "visible",
+          "reportedRows": 113,
+          "reportedCols": 6,
+          "usedRows": 113,
+          "usedCols": 6,
+          "nonEmptyCells": 238,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Class Codes Tables",
+          "state": "visible",
+          "reportedRows": 4,
+          "reportedCols": 3,
+          "usedRows": 4,
+          "usedCols": 3,
+          "nonEmptyCells": 7,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 53,
+          "reportedCols": 12,
+          "usedRows": 53,
+          "usedCols": 12,
+          "nonEmptyCells": 101,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            6,
+            1
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "samplePRframework.xlsx",
+      "dir": "workbooks",
+      "bytes": 474337,
+      "md5": "4ce4e588644ceb02a313b5cfe472a06b",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 49,
+          "reportedCols": 6,
+          "usedRows": 49,
+          "usedCols": 6,
+          "nonEmptyCells": 209,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11,
+            12
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 23,
+          "reportedCols": 4,
+          "usedRows": 23,
+          "usedCols": 4,
+          "nonEmptyCells": 56,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model",
+          "state": "visible",
+          "reportedRows": 630,
+          "reportedCols": 35,
+          "usedRows": 630,
+          "usedCols": 35,
+          "nonEmptyCells": 19974,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            10
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "ROC",
+          "state": "visible",
+          "reportedRows": 910,
+          "reportedCols": 45,
+          "usedRows": 910,
+          "usedCols": 45,
+          "nonEmptyCells": 24676,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Forms Library",
+          "state": "visible",
+          "reportedRows": 243,
+          "reportedCols": 71,
+          "usedRows": 243,
+          "usedCols": 71,
+          "nonEmptyCells": 10410,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rules Repository",
+          "state": "visible",
+          "reportedRows": 1609,
+          "reportedCols": 58,
+          "usedRows": 1609,
+          "usedCols": 58,
+          "nonEmptyCells": 69942,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Coverage Summary",
+          "state": "visible",
+          "reportedRows": 365,
+          "reportedCols": 18,
+          "usedRows": 365,
+          "usedCols": 18,
+          "nonEmptyCells": 1751,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 11,
+          "usedRows": 10,
+          "usedCols": 11,
+          "nonEmptyCells": 46,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Sheet2",
+          "state": "visible",
+          "reportedRows": 8,
+          "reportedCols": 9,
+          "usedRows": 8,
+          "usedCols": 9,
+          "nonEmptyCells": 10,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Sheet1",
+          "state": "visible",
+          "reportedRows": 78,
+          "reportedCols": 38,
+          "usedRows": 78,
+          "usedCols": 38,
+          "nonEmptyCells": 2570,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            6
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "samplePRrating.xlsx",
+      "dir": "workbooks",
+      "bytes": 96657,
+      "md5": "4a21bd78c2ee5bc3d2631f5a69eced69",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Version History",
+          "state": "visible",
+          "reportedRows": 5,
+          "reportedCols": 5,
+          "usedRows": 5,
+          "usedCols": 5,
+          "nonEmptyCells": 17,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 18,
+          "reportedCols": 3,
+          "usedRows": 18,
+          "usedCols": 3,
+          "nonEmptyCells": 36,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "PROPERTY ROC",
+          "state": "visible",
+          "reportedRows": 822,
+          "reportedCols": 40,
+          "usedRows": 822,
+          "usedCols": 40,
+          "nonEmptyCells": 20379,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "ISO TABLES",
+          "state": "visible",
+          "reportedRows": 1587,
+          "reportedCols": 18,
+          "usedRows": 1587,
+          "usedCols": 18,
+          "nonEmptyCells": 1905,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 9,
+          "usedRows": 10,
+          "usedCols": 9,
+          "nonEmptyCells": 39,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "Product_Specifications_Core_07_13_2026.xlsx",
+      "dir": "iso",
+      "bytes": 3571100,
+      "md5": "c36491e41ebeeca69ca4a5e3c7cc5757",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Definitions - Rules Categories",
+          "state": "hidden",
+          "reportedRows": 18,
+          "reportedCols": 3,
+          "usedRows": 18,
+          "usedCols": 3,
+          "nonEmptyCells": 50,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            7
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Revision History",
+          "state": "hidden",
+          "reportedRows": 122,
+          "reportedCols": 9,
+          "usedRows": 11,
+          "usedCols": 9,
+          "nonEmptyCells": 26,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Specification Definitions",
+          "state": "hidden",
+          "reportedRows": 84,
+          "reportedCols": 4,
+          "usedRows": 84,
+          "usedCols": 4,
+          "nonEmptyCells": 324,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Framework _Before50States",
+          "state": "hidden",
+          "reportedRows": 104,
+          "reportedCols": 69,
+          "usedRows": 103,
+          "usedCols": 69,
+          "nonEmptyCells": 2232,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "scratch",
+          "state": "hidden",
+          "reportedRows": 90,
+          "reportedCols": 4,
+          "usedRows": 90,
+          "usedCols": 4,
+          "nonEmptyCells": 323,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "<Name> Product Framework",
+          "state": "hidden",
+          "reportedRows": 237,
+          "reportedCols": 68,
+          "usedRows": 200,
+          "usedCols": 68,
+          "nonEmptyCells": 819,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Framework Data Validation",
+          "state": "hidden",
+          "reportedRows": 10,
+          "reportedCols": 24,
+          "usedRows": 10,
+          "usedCols": 24,
+          "nonEmptyCells": 101,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Forms Specs _Before50State",
+          "state": "hidden",
+          "reportedRows": 248,
+          "reportedCols": 89,
+          "usedRows": 248,
+          "usedCols": 89,
+          "nonEmptyCells": 13124,
+          "mergedRanges": 2,
+          "headerCandidates": [
+            5,
+            12
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Framework",
+          "state": "visible",
+          "reportedRows": 139,
+          "reportedCols": 69,
+          "usedRows": 119,
+          "usedCols": 69,
+          "nonEmptyCells": 7135,
+          "mergedRanges": 2,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Forms Specifications",
+          "state": "visible",
+          "reportedRows": 1460,
+          "reportedCols": 82,
+          "usedRows": 1460,
+          "usedCols": 82,
+          "nonEmptyCells": 90261,
+          "mergedRanges": 4,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Forms Dynamic Data",
+          "state": "hidden",
+          "reportedRows": 214,
+          "reportedCols": 90,
+          "usedRows": 5,
+          "usedCols": 8,
+          "nonEmptyCells": 15,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Forms Data Validation ",
+          "state": "hidden",
+          "reportedRows": 20,
+          "reportedCols": 12,
+          "usedRows": 12,
+          "usedCols": 12,
+          "nonEmptyCells": 50,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Rules Specifications",
+          "state": "visible",
+          "reportedRows": 239,
+          "reportedCols": 77,
+          "usedRows": 239,
+          "usedCols": 77,
+          "nonEmptyCells": 8951,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Rules Specifications _arch",
+          "state": "hidden",
+          "reportedRows": 195,
+          "reportedCols": 80,
+          "usedRows": 6,
+          "usedCols": 80,
+          "nonEmptyCells": 107,
+          "mergedRanges": 2,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rule References",
+          "state": "visible",
+          "reportedRows": 2280,
+          "reportedCols": 34,
+          "usedRows": 2280,
+          "usedCols": 29,
+          "nonEmptyCells": 18289,
+          "mergedRanges": 163,
+          "headerCandidates": [],
+          "exceedsEmbedCap": true
+        },
+        {
+          "name": "Rule References _arch",
+          "state": "hidden",
+          "reportedRows": 1228,
+          "reportedCols": 7,
+          "usedRows": 1227,
+          "usedCols": 7,
+          "nonEmptyCells": 7358,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "hidden",
+          "reportedRows": 16,
+          "reportedCols": 5,
+          "usedRows": 16,
+          "usedCols": 4,
+          "nonEmptyCells": 30,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Rating Specifications (2)",
+          "state": "hidden",
+          "reportedRows": 986,
+          "reportedCols": 112,
+          "usedRows": 639,
+          "usedCols": 73,
+          "nonEmptyCells": 17407,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Rating Specifications  (3)",
+          "state": "visible",
+          "reportedRows": 1007,
+          "reportedCols": 112,
+          "usedRows": 728,
+          "usedCols": 73,
+          "nonEmptyCells": 19186,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Rating Specifications",
+          "state": "visible",
+          "reportedRows": 1662,
+          "reportedCols": 112,
+          "usedRows": 1315,
+          "usedCols": 78,
+          "nonEmptyCells": 63927,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            9
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rating question",
+          "state": "visible",
+          "reportedRows": 248,
+          "reportedCols": 14,
+          "usedRows": 248,
+          "usedCols": 14,
+          "nonEmptyCells": 116,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Rate Tables",
+          "state": "visible",
+          "reportedRows": 490,
+          "reportedCols": 69,
+          "usedRows": 65,
+          "usedCols": 6,
+          "nonEmptyCells": 33,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rating Data Validation",
+          "state": "hidden",
+          "reportedRows": 9,
+          "reportedCols": 8,
+          "usedRows": 8,
+          "usedCols": 8,
+          "nonEmptyCells": 38,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Core Optional Forms Rules",
+          "state": "hidden",
+          "reportedRows": 211,
+          "reportedCols": 10,
+          "usedRows": 5,
+          "usedCols": 10,
+          "nonEmptyCells": 25,
+          "mergedRanges": 2,
+          "headerCandidates": [
+            4,
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "IN Factor Review",
+          "state": "visible",
+          "reportedRows": 34,
+          "reportedCols": 2,
+          "usedRows": 34,
+          "usedCols": 2,
+          "nonEmptyCells": 66,
+          "mergedRanges": 2,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sample-GL-forms.xlsx",
+      "dir": "iso",
+      "bytes": 379669,
+      "md5": "c941ef672db584752ed41074ffa90c49",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 122,
+          "reportedCols": 5,
+          "usedRows": 11,
+          "usedCols": 5,
+          "nonEmptyCells": 22,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions-Forms Specification",
+          "state": "visible",
+          "reportedRows": 40,
+          "reportedCols": 4,
+          "usedRows": 40,
+          "usedCols": 4,
+          "nonEmptyCells": 153,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            7
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Forms Specifications",
+          "state": "visible",
+          "reportedRows": 821,
+          "reportedCols": 95,
+          "usedRows": 821,
+          "usedCols": 95,
+          "nonEmptyCells": 34797,
+          "mergedRanges": 6,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Forms Dynamic Data",
+          "state": "visible",
+          "reportedRows": 214,
+          "reportedCols": 90,
+          "usedRows": 214,
+          "usedCols": 8,
+          "nonEmptyCells": 1460,
+          "mergedRanges": 2,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 22,
+          "reportedCols": 16,
+          "usedRows": 15,
+          "usedCols": 16,
+          "nonEmptyCells": 69,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sample-GL-framework.xlsx",
+      "dir": "iso",
+      "bytes": 70434,
+      "md5": "0e7bbe7c1352110bae4feecdae93c70a",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 119,
+          "reportedCols": 6,
+          "usedRows": 11,
+          "usedCols": 6,
+          "nonEmptyCells": 22,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions-Product Framework",
+          "state": "visible",
+          "reportedRows": 23,
+          "reportedCols": 3,
+          "usedRows": 22,
+          "usedCols": 3,
+          "nonEmptyCells": 62,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Product Framework",
+          "state": "visible",
+          "reportedRows": 115,
+          "reportedCols": 68,
+          "usedRows": 115,
+          "usedCols": 68,
+          "nonEmptyCells": 6606,
+          "mergedRanges": 1,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 9,
+          "reportedCols": 7,
+          "usedRows": 7,
+          "usedCols": 7,
+          "nonEmptyCells": 26,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sample-GL-pricing.xlsx",
+      "dir": "iso",
+      "bytes": 70493,
+      "md5": "ad883da11c8338095b4c8c99da7be453",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 13,
+          "reportedCols": 5,
+          "usedRows": 13,
+          "usedCols": 5,
+          "nonEmptyCells": 28,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions-Rating Specificants",
+          "state": "visible",
+          "reportedRows": 19,
+          "reportedCols": 4,
+          "usedRows": 19,
+          "usedCols": 4,
+          "nonEmptyCells": 69,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            9
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Rating Specifications",
+          "state": "visible",
+          "reportedRows": 109,
+          "reportedCols": 73,
+          "usedRows": 60,
+          "usedCols": 73,
+          "nonEmptyCells": 3297,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            10
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Rating Tables",
+          "state": "visible",
+          "reportedRows": 222,
+          "reportedCols": 11,
+          "usedRows": 218,
+          "usedCols": 11,
+          "nonEmptyCells": 793,
+          "mergedRanges": 7,
+          "headerCandidates": [
+            4,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 7,
+          "reportedCols": 8,
+          "usedRows": 7,
+          "usedCols": 8,
+          "nonEmptyCells": 38,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sample-GL-rules.xlsx",
+      "dir": "iso",
+      "bytes": 125817,
+      "md5": "1ebc6bc9df2541a03cba4da31027f2f8",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 34,
+          "reportedCols": 5,
+          "usedRows": 11,
+          "usedCols": 5,
+          "nonEmptyCells": 22,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 35,
+          "reportedCols": 7,
+          "usedRows": 35,
+          "usedCols": 4,
+          "nonEmptyCells": 133,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions - Rules Categories",
+          "state": "visible",
+          "reportedRows": 15,
+          "reportedCols": 4,
+          "usedRows": 15,
+          "usedCols": 4,
+          "nonEmptyCells": 53,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Optional Forms Rules",
+          "state": "visible",
+          "reportedRows": 286,
+          "reportedCols": 10,
+          "usedRows": 286,
+          "usedCols": 10,
+          "nonEmptyCells": 1708,
+          "mergedRanges": 48,
+          "headerCandidates": [
+            5,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "GL Rules Specifications",
+          "state": "visible",
+          "reportedRows": 151,
+          "reportedCols": 80,
+          "usedRows": 151,
+          "usedCols": 80,
+          "nonEmptyCells": 9959,
+          "mergedRanges": 3,
+          "headerCandidates": [
+            5,
+            7
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Limits and Deductibles",
+          "state": "visible",
+          "reportedRows": 398,
+          "reportedCols": 82,
+          "usedRows": 398,
+          "usedCols": 5,
+          "nonEmptyCells": 532,
+          "mergedRanges": 31,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 14,
+          "reportedCols": 8,
+          "usedRows": 13,
+          "usedCols": 8,
+          "nonEmptyCells": 38,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sample-IM-framework.xlsx",
+      "dir": "iso",
+      "bytes": 108062,
+      "md5": "df99e3c837b6ad4103a3501ea04ad885",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 15,
+          "reportedCols": 6,
+          "usedRows": 15,
+          "usedCols": 6,
+          "nonEmptyCells": 45,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            10,
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 23,
+          "reportedCols": 4,
+          "usedRows": 23,
+          "usedCols": 4,
+          "nonEmptyCells": 56,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model",
+          "state": "visible",
+          "reportedRows": 906,
+          "reportedCols": 35,
+          "usedRows": 906,
+          "usedCols": 35,
+          "nonEmptyCells": 28576,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            9
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Coverage Summary",
+          "state": "visible",
+          "reportedRows": 344,
+          "reportedCols": 5,
+          "usedRows": 344,
+          "usedCols": 5,
+          "nonEmptyCells": 349,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 11,
+          "usedRows": 10,
+          "usedCols": 11,
+          "nonEmptyCells": 46,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            5
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sample-IM-rules.xlsx",
+      "dir": "iso",
+      "bytes": 134163,
+      "md5": "424802d3b2be9f81cc587f8f6e8b1e06",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 15,
+          "reportedCols": 6,
+          "usedRows": 15,
+          "usedCols": 6,
+          "nonEmptyCells": 45,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            10,
+            11
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 101,
+          "reportedCols": 12,
+          "usedRows": 101,
+          "usedCols": 12,
+          "nonEmptyCells": 92,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rules Categories",
+          "state": "visible",
+          "reportedRows": 18,
+          "reportedCols": 5,
+          "usedRows": 18,
+          "usedCols": 5,
+          "nonEmptyCells": 65,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rules Repository",
+          "state": "visible",
+          "reportedRows": 757,
+          "reportedCols": 58,
+          "usedRows": 757,
+          "usedCols": 58,
+          "nonEmptyCells": 33852,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Limits and Deductibles Tables",
+          "state": "visible",
+          "reportedRows": 113,
+          "reportedCols": 6,
+          "usedRows": 113,
+          "usedCols": 6,
+          "nonEmptyCells": 238,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Class Codes Tables",
+          "state": "visible",
+          "reportedRows": 4,
+          "reportedCols": 3,
+          "usedRows": 4,
+          "usedCols": 3,
+          "nonEmptyCells": 7,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 53,
+          "reportedCols": 12,
+          "usedRows": 53,
+          "usedCols": 12,
+          "nonEmptyCells": 101,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            6,
+            1
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sample-PR-framework.xlsx",
+      "dir": "iso",
+      "bytes": 474337,
+      "md5": "4ce4e588644ceb02a313b5cfe472a06b",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Revision History",
+          "state": "visible",
+          "reportedRows": 49,
+          "reportedCols": 6,
+          "usedRows": 49,
+          "usedCols": 6,
+          "nonEmptyCells": 209,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            11,
+            12
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 23,
+          "reportedCols": 4,
+          "usedRows": 23,
+          "usedCols": 4,
+          "nonEmptyCells": 56,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Product Component Model",
+          "state": "visible",
+          "reportedRows": 630,
+          "reportedCols": 35,
+          "usedRows": 630,
+          "usedCols": 35,
+          "nonEmptyCells": 19974,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            10
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "ROC",
+          "state": "visible",
+          "reportedRows": 910,
+          "reportedCols": 45,
+          "usedRows": 910,
+          "usedCols": 45,
+          "nonEmptyCells": 24676,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Forms Library",
+          "state": "visible",
+          "reportedRows": 243,
+          "reportedCols": 71,
+          "usedRows": 243,
+          "usedCols": 71,
+          "nonEmptyCells": 10410,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Rules Repository",
+          "state": "visible",
+          "reportedRows": 1609,
+          "reportedCols": 58,
+          "usedRows": 1609,
+          "usedCols": 58,
+          "nonEmptyCells": 69942,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            1,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Coverage Summary",
+          "state": "visible",
+          "reportedRows": 365,
+          "reportedCols": 18,
+          "usedRows": 365,
+          "usedCols": 18,
+          "nonEmptyCells": 1751,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            4
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 11,
+          "usedRows": 10,
+          "usedCols": 11,
+          "nonEmptyCells": 46,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            4,
+            5
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Sheet2",
+          "state": "visible",
+          "reportedRows": 8,
+          "reportedCols": 9,
+          "usedRows": 8,
+          "usedCols": 9,
+          "nonEmptyCells": 10,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            6
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Sheet1",
+          "state": "visible",
+          "reportedRows": 78,
+          "reportedCols": 38,
+          "usedRows": 78,
+          "usedCols": 38,
+          "nonEmptyCells": 2570,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            6
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "file": "sample-PR-rating.xlsx",
+      "dir": "iso",
+      "bytes": 96657,
+      "md5": "4a21bd78c2ee5bc3d2631f5a69eced69",
+      "container": "ZIP_OOXML",
+      "sheets": [
+        {
+          "name": "Version History",
+          "state": "visible",
+          "reportedRows": 5,
+          "reportedCols": 5,
+          "usedRows": 5,
+          "usedCols": 5,
+          "nonEmptyCells": 17,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            2,
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Definitions",
+          "state": "visible",
+          "reportedRows": 18,
+          "reportedCols": 3,
+          "usedRows": 18,
+          "usedCols": 3,
+          "nonEmptyCells": 36,
+          "mergedRanges": 0,
+          "headerCandidates": [],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "PROPERTY ROC",
+          "state": "visible",
+          "reportedRows": 822,
+          "reportedCols": 40,
+          "usedRows": 822,
+          "usedCols": 40,
+          "nonEmptyCells": 20379,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            8
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "ISO TABLES",
+          "state": "visible",
+          "reportedRows": 1587,
+          "reportedCols": 18,
+          "usedRows": 1587,
+          "usedCols": 18,
+          "nonEmptyCells": 1905,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            3
+          ],
+          "exceedsEmbedCap": false
+        },
+        {
+          "name": "Data Validation",
+          "state": "visible",
+          "reportedRows": 10,
+          "reportedCols": 9,
+          "usedRows": 10,
+          "usedCols": 9,
+          "nonEmptyCells": 39,
+          "mergedRanges": 0,
+          "headerCandidates": [
+            5,
+            6
+          ],
+          "exceedsEmbedCap": false
+        }
+      ],
+      "error": null
+    }
+  ]
+}
