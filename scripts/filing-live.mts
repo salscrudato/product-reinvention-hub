@@ -11,18 +11,19 @@
 // Plus: hash-chained audit verification via GET /api/db/audit/verify.
 //
 // Usage (PowerShell):
-//   $env:PF_BASE_URL     = "https://app-prodhub-dev.azurewebsites.net"
-//   $env:PF_AUTH_SECRET  = "<AUTH_JWT_SECRET from App Service config>"   # for the VIEWER probe
+//   $env:PF_BASE_URL = "https://app-prodhub-dev.azurewebsites.net"
 //   pnpm tsx scripts/filing-live.mts
+//
+// The VIEWER token is minted BY THE SERVER: the SUPER_ADMIN bootstrap session creates a
+// VIEWER user (POST /api/admin/users) and impersonates it (POST /api/admin/impersonate),
+// so the 403 proof exercises the exact same token path as a real VIEWER login.
 //
 // Writes the full transcript (incl. verifier rejection issues) to
 // docs/audit/filing_live_results.json for the EXECUTION-B self-review ledger.
 
-import { createHmac, randomUUID } from 'node:crypto'
 import { writeFileSync } from 'node:fs'
 
 const BASE = (process.env.PF_BASE_URL || 'https://app-prodhub-dev.azurewebsites.net').replace(/\/$/, '')
-const AUTH_SECRET = process.env.PF_AUTH_SECRET || ''
 const TENANT = 'filing-live-b'
 const PRODUCT_ID = 'FLB.PROD.001'
 
@@ -58,20 +59,21 @@ async function apiRetry(path: string, init: RequestInit, token: string | null, t
   return last
 }
 
-const b64url = (buf: Buffer | string) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-
-// Mint a validly-signed VIEWER JWT (same HS256 scheme as server/lib/auth.js sign()).
-// The server evaluates it exactly like a real login token — this proves the SERVER-side gate.
-function mintViewerToken(): string | null {
-  if (!AUTH_SECRET) return null
-  const now = Math.floor(Date.now() / 1000)
-  const head = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const payload = b64url(JSON.stringify({
-    sub: 'filing-live-viewer', name: 'Filing Live Viewer', email: 'viewer@filing-live-b.local',
-    role: 'VIEWER', tenantId: TENANT, method: 'otp', jti: randomUUID(), iat: now, exp: now + 3600,
-  }))
-  const data = `${head}.${payload}`
-  return `${data}.${b64url(createHmac('sha256', AUTH_SECRET).update(data).digest())}`
+// Server-minted VIEWER token: create a VIEWER user in the isolated tenant, then use
+// the audited impersonation seam. The returned token carries role=VIEWER and is signed
+// by the server — the 403 proof below exercises the real token verification path.
+async function mintViewerToken(adminJwt: string): Promise<string | null> {
+  const mk = await apiRetry('/admin/users', {
+    method: 'POST',
+    body: JSON.stringify({ username: 'flb-viewer', role: 'VIEWER', tenants: [TENANT], name: 'Filing Live Viewer' }),
+  }, adminJwt)
+  if (mk.status !== 200) { record('create VIEWER user', false, `${mk.status} ${JSON.stringify(mk.body).slice(0, 200)}`); return null }
+  const imp = await apiRetry('/admin/impersonate', {
+    method: 'POST',
+    body: JSON.stringify({ targetUid: 'flb-viewer', tenantId: TENANT, reason: 'Lane B live proof: VIEWER must be blocked at filing SCOPE' }),
+  }, adminJwt)
+  if (imp.status !== 200 || !imp.body?.token) { record('impersonate VIEWER user', false, `${imp.status} ${JSON.stringify(imp.body).slice(0, 200)}`); return null }
+  return imp.body.token as string
 }
 
 async function mutate(token: string, payload: Record<string, unknown>) {
@@ -110,7 +112,7 @@ async function main() {
     `${seedProduct.status}/${seedCoverage.status}/${seedUpdate.status}`)
 
   // ── STEP 1 proof: VIEWER server-blocked at SCOPE ─────────────────────────────
-  const viewerJwt = mintViewerToken()
+  const viewerJwt = await mintViewerToken(jwt)
   if (viewerJwt) {
     const v = await api('/filing/generate', { method: 'POST', body: JSON.stringify({ productId: PRODUCT_ID, stateCode: 'NJ' }) }, viewerJwt)
     record('VIEWER blocked at SCOPE (403 filing:generate)', v.status === 403 && v.body?.need === 'filing:generate', `${v.status} ${JSON.stringify(v.body)}`)
@@ -118,12 +120,13 @@ async function main() {
     record('VIEWER can read filings (product:read)', vr.status === 200, `${vr.status}`)
     artifacts.viewerProbe = v
   } else {
-    record('VIEWER blocked at SCOPE', false, 'PF_AUTH_SECRET not set — cannot mint VIEWER token')
+    record('VIEWER blocked at SCOPE', false, 'could not obtain a server-minted VIEWER token')
   }
 
   // ── STEPS 2–5: clean end-to-end filing ──────────────────────────────────────
-  const asOf = new Date().toISOString()
-  const gen = await apiRetry('/filing/generate', { method: 'POST', body: JSON.stringify({ productId: PRODUCT_ID, stateCode: 'NJ', asOf }) }, jwt)
+  // No asOf → server defaults to ITS current instant (avoids local/server clock skew
+  // excluding the just-written seed versions from the as-of window).
+  const gen = await apiRetry('/filing/generate', { method: 'POST', body: JSON.stringify({ productId: PRODUCT_ID, stateCode: 'NJ' }) }, jwt)
   artifacts.generate = gen
   const genOk = gen.status === 201 && gen.body?.ok === true && !!gen.body?.packageHash && !!gen.body?.storagePath
   record('filing generate end-to-end (201 + packageHash + storagePath)', genOk, `${gen.status} ${JSON.stringify(gen.body).slice(0, 300)}`)
@@ -152,7 +155,7 @@ async function main() {
   // ── STEP 4 proof: tamper probe → verifier REJECTS, no freeze ────────────────
   const before = await api(`/filing?productId=${PRODUCT_ID}`, {}, jwt)
   const countBefore = (before.body?.filings || []).length
-  const tamper = await apiRetry('/filing/generate', { method: 'POST', body: JSON.stringify({ productId: PRODUCT_ID, stateCode: 'NJ', asOf, tamperProbe: true }) }, jwt)
+  const tamper = await apiRetry('/filing/generate', { method: 'POST', body: JSON.stringify({ productId: PRODUCT_ID, stateCode: 'NJ', tamperProbe: true }) }, jwt)
   artifacts.tamperProbe = tamper
   const tamperRejected = tamper.status === 422 && tamper.body?.error === 'filing_rejected_by_verifier'
     && tamper.body?.probe === true && Array.isArray(tamper.body?.issues) && tamper.body.issues.length > 0
@@ -178,13 +181,14 @@ async function main() {
   // ── Audit chain: filing events are hash-chained and verifiable ──────────────
   const auditVerify = await api('/db/audit/verify', {}, jwt)
   artifacts.auditVerify = auditVerify.body
-  record('audit chain verifies for the tenant (incl. filing events)', auditVerify.status === 200 && auditVerify.body?.ok !== false,
-    `${auditVerify.status} ${JSON.stringify(auditVerify.body).slice(0, 200)}`)
+  record('audit chain verifies for the tenant (incl. filing events)', auditVerify.status === 200 && auditVerify.body?.ok === true,
+    `${auditVerify.status} checked=${auditVerify.body?.checked} paths=${auditVerify.body?.paths} breaks=${(auditVerify.body?.breaks || []).length}`)
 
   // ── Teardown: remove seeded entities (filings are append-only by design) ────
   const del1 = await mutate(jwt, { op: 'delete', path: `products/${PRODUCT_ID}/coverages/FLB-COV-001`, entityType: 'coverage' })
   const del2 = await mutate(jwt, { op: 'delete', path: `products/${PRODUCT_ID}`, entityType: 'product' })
-  record('teardown seeded entities', del1.status === 200 && del2.status === 200, `${del1.status}/${del2.status}`)
+  const del3 = await api('/admin/users/flb-viewer', { method: 'DELETE' }, jwt)
+  record('teardown seeded entities + probe user', del1.status === 200 && del2.status === 200 && del3.status === 200, `${del1.status}/${del2.status}/${del3.status}`)
 
   const passed = results.filter((r) => r.pass).length
   console.log(`\n${passed}/${results.length} checks passed`)

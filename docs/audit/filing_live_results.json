@@ -1,0 +1,225 @@
+{
+  "base": "https://app-prodhub-dev.azurewebsites.net",
+  "tenant": "filing-live-b",
+  "at": "2026-07-14T01:42:10.868Z",
+  "results": [
+    {
+      "name": "bootstrap login",
+      "pass": true,
+      "detail": "tenant=filing-live-b"
+    },
+    {
+      "name": "seed product+coverage (+1 update rev)",
+      "pass": true,
+      "detail": "200/200/200"
+    },
+    {
+      "name": "VIEWER blocked at SCOPE (403 filing:generate)",
+      "pass": true,
+      "detail": "403 {\"error\":\"forbidden\",\"need\":\"filing:generate\",\"have\":\"VIEWER\"}"
+    },
+    {
+      "name": "VIEWER can read filings (product:read)",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "filing generate end-to-end (201 + packageHash + storagePath)",
+      "pass": true,
+      "detail": "201 {\"ok\":true,\"filingId\":\"NJ-FLB.PROD.001-1783993325182\",\"packageHash\":\"9c087cca5ce4510877b34fbd90550468bdd31230af327a79453fd40ce898cc07\",\"storagePath\":\"filings/filing-live-b/NJ-FLB.PROD.001-1783993325182/package.json\",\"itemCount\":2,\"createdAt\":\"2026-07-14T01:42:06.949Z\",\"verifier\":{\"approved\":true,\"is"
+    },
+    {
+      "name": "verifier approved via fleet role",
+      "pass": true,
+      "detail": "role=GROUNDED_CITED deployment=claude-opus-4-8"
+    },
+    {
+      "name": "every filed item carries versionId + contentHash",
+      "pass": true,
+      "detail": "2 items"
+    },
+    {
+      "name": "refId + formNumber verbatim; as-of state folds the update rev (limit=2,000,000)",
+      "pass": true,
+      "detail": "{\"refId\":\"FLB.COV.001\",\"formNumbers\":[\"FLB 00 01 07 26\"],\"limit\":2000000}"
+    },
+    {
+      "name": "frozen record stores verifier verdict + role",
+      "pass": true,
+      "detail": "{\"approved\":true,\"issueCount\":0,\"role\":\"GROUNDED_CITED\",\"deployment\":\"claude-opus-4-8\"}"
+    },
+    {
+      "name": "tamper probe rejected by verifier (422 + issues logged)",
+      "pass": true,
+      "detail": "422 issues=2 role=GROUNDED_CITED"
+    },
+    {
+      "name": "tamper probe did NOT freeze a record",
+      "pass": true,
+      "detail": "filings before=1 after=1"
+    },
+    {
+      "name": "mutate into filings/ rejected (403 reserved_base)",
+      "pass": true,
+      "detail": "403 {\"error\":\"reserved_base\",\"detail\":\"filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base\"}"
+    },
+    {
+      "name": "no update route on /api/filing/:id (PUT is 4xx)",
+      "pass": true,
+      "detail": "404"
+    },
+    {
+      "name": "audit chain verifies for the tenant (incl. filing events)",
+      "pass": true,
+      "detail": "200 checked=5 paths=4 breaks=0"
+    },
+    {
+      "name": "teardown seeded entities + probe user",
+      "pass": true,
+      "detail": "200/200/200"
+    }
+  ],
+  "artifacts": {
+    "viewerProbe": {
+      "status": 403,
+      "body": {
+        "error": "forbidden",
+        "need": "filing:generate",
+        "have": "VIEWER"
+      }
+    },
+    "generate": {
+      "status": 201,
+      "body": {
+        "ok": true,
+        "filingId": "NJ-FLB.PROD.001-1783993325182",
+        "packageHash": "9c087cca5ce4510877b34fbd90550468bdd31230af327a79453fd40ce898cc07",
+        "storagePath": "filings/filing-live-b/NJ-FLB.PROD.001-1783993325182/package.json",
+        "itemCount": 2,
+        "createdAt": "2026-07-14T01:42:06.949Z",
+        "verifier": {
+          "approved": true,
+          "issueCount": 0,
+          "role": "GROUNDED_CITED",
+          "deployment": "claude-opus-4-8"
+        }
+      }
+    },
+    "filingRecord": {
+      "filing": {
+        "id": "filing:NJ-FLB.PROD.001-1783993325182",
+        "pk": "filing-live-b|filings",
+        "kind": "filing",
+        "tenantId": "filing-live-b",
+        "filingId": "NJ-FLB.PROD.001-1783993325182",
+        "scope": {
+          "tenantId": "filing-live-b",
+          "productId": "FLB.PROD.001",
+          "stateCode": "NJ",
+          "asOf": "2026-07-14T01:42:05.182Z"
+        },
+        "items": [
+          {
+            "entityPath": "products/FLB.PROD.001",
+            "entityType": "product",
+            "versionId": "ver:products~FLB.PROD.001:1",
+            "rev": 1,
+            "versionAt": "2026-07-14T01:42:04.099Z",
+            "fieldValues": {
+              "lifecycle": "ACTIVE",
+              "lob": "GL",
+              "name": "Filing Live Probe Product",
+              "refId": "FLB.PROD.001",
+              "states": [
+                "NJ"
+              ]
+            },
+            "contentHash": "8bc23ced0b275efa30cda8f7a630e164fb1202a319b5deefc925b7994486b246"
+          },
+          {
+            "entityPath": "products/FLB.PROD.001/coverages/FLB-COV-001",
+            "entityType": "coverage",
+            "versionId": "ver:products~FLB.PROD.001~coverages~FLB-COV-001:2",
+            "rev": 2,
+            "versionAt": "2026-07-14T01:42:04.653Z",
+            "fieldValues": {
+              "deductible": 500,
+              "formNumbers": [
+                "FLB 00 01 07 26"
+              ],
+              "limit": 2000000,
+              "name": "Probe General Liability Coverage",
+              "refId": "FLB.COV.001"
+            },
+            "contentHash": "4e11611a2f54b26f8f96175186108d357c27a0fc1bb84d96aeb36b561c979ba3"
+          }
+        ],
+        "packageHash": "9c087cca5ce4510877b34fbd90550468bdd31230af327a79453fd40ce898cc07",
+        "storagePath": "filings/filing-live-b/NJ-FLB.PROD.001-1783993325182/package.json",
+        "verifierVerdict": {
+          "approved": true,
+          "issueCount": 0,
+          "role": "GROUNDED_CITED",
+          "deployment": "claude-opus-4-8"
+        },
+        "actor": {
+          "uid": "admin",
+          "name": "Admin"
+        },
+        "createdAt": "2026-07-14T01:42:06.949Z",
+        "_rid": "qx9cAJXxrDcGNQIAAAAAAA==",
+        "_self": "dbs/qx9cAA==/colls/qx9cAJXxrDc=/docs/qx9cAJXxrDcGNQIAAAAAAA==/",
+        "_etag": "\"de000d97-0000-0200-0000-6a5593ee0000\"",
+        "_attachments": "attachments/",
+        "_ts": 1783993326
+      }
+    },
+    "tamperProbe": {
+      "status": 422,
+      "body": {
+        "error": "filing_rejected_by_verifier",
+        "probe": true,
+        "filingId": "NJ-FLB.PROD.001-1783993327120",
+        "issues": [
+          {
+            "entityPath": "products/FLB.PROD.001",
+            "field": "refId",
+            "filedValue": "FLB.PROD.001-TAMPERED",
+            "sourceValue": "FLB.PROD.001",
+            "reason": "refId does not match verbatim"
+          },
+          {
+            "entityPath": "products/FLB.PROD.001",
+            "field": "__inventedLimit",
+            "filedValue": "$9,999,999 special aggregate (fabricated by tamper probe)",
+            "sourceValue": null,
+            "reason": "field not in source"
+          }
+        ],
+        "verifier": {
+          "approved": false,
+          "role": "GROUNDED_CITED",
+          "deployment": "claude-opus-4-8"
+        },
+        "detail": "Tamper probe: fabricated/altered fields correctly rejected by the independent verifier. No blob written, no filing record frozen."
+      }
+    },
+    "updateAttempt": {
+      "status": 403,
+      "body": {
+        "error": "reserved_base",
+        "detail": "filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base"
+      }
+    },
+    "auditVerify": {
+      "ok": true,
+      "checked": 5,
+      "legacy": 0,
+      "paths": 4,
+      "breaks": [],
+      "events": 5,
+      "headDocs": 4,
+      "truncated": false
+    }
+  }
+}

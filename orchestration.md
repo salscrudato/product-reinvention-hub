@@ -51,7 +51,7 @@ coordination channel: **read it before you push; update it when your state chang
 |---|---|---|---|
 | **import-brain** | `server/lib/import-brain/**`, `server/lib/ai/unified-import.js`, `server/lib/fleet.js`, `shared/src/ai/fleet.ts`, `shared/src/import/structure/**`, `scripts/import-{eval,live}.mts`, `tests/golden/**`, `server/server.js` (SSE compression filter only) | 🔄 In progress — live-test loop (golden eval + persist + robustness sweep) against dev; fix waves still landing. Please don't edit these files until done. | `912b643` |
 | **admin-control-plane** | `server/lib/{auth,authz,admin,tenant-admin,data}.js`, `server/server.js` (auth/write gates), `app/src/routes/{Admin,TenantAdmin}.tsx`, `app/src/components/shell/Topbar.tsx`, `app/src/lib/backend/**`, `app/src/lib/canI.ts` | ✅ Done — live-verified (break-glass, paging caps, audit trail, role matrix, cookie session). VIEWER holds `ai:invoke` (chat only); write-shaped AI (`unifiedImport`, `reindexProduct`) needs `product:write`. Dev bootstrap creds set per user directive. | `5256ba2` |
-| **filing-verifier (Lane B)** | `server/lib/filing.js`, `server/lib/data.js` (reserved-base mutate guard only), `app/src/__invariants__/server-invariants.test.ts`, `tests/server/integration.test.ts` (filing sections), `scripts/filing-live.mts`, `docs/audit/EXECUTION-B.md` | 🔄 In progress — verifier → MID_REASONER role (ladder escalation on missing sonnet deployment), tamper-probe rejection path, filings-base immutability guard, live proof on dev. | — |
+| **filing-verifier (Lane B)** | `server/lib/filing.js`, `server/lib/data.js` (reserved-base mutate guard only), `app/src/__invariants__/server-invariants.test.ts`, `tests/server/integration.test.ts` (filing sections), `scripts/filing-live.mts`, `docs/audit/EXECUTION-B.md` | ✅ Done — verifier on MID_REASONER role (live verdicts escalate to opus: sonnet unprovisioned in Foundry dev, provenance recorded); tamper probe live-rejected 422 (no freeze); mutate into `filings/` = 403 reserved_base; 15/15 live checks in isolated tenant `filing-live-b` (docs/audit/EXECUTION-B.md). | see log |
 | **audit-integrity** | `server/lib/data.js` (envelope + `/audit/verify`), `server/lib/filing.js` (freeze batch), `server/lib/auth.js` (bootstrap gate), `shared/src/audit/chain.ts`, `shared/src/money.ts`, `server/lib/audit-chain-shared.cjs`, `app/src/__invariants__/*` | ✅ Done — hash-chained audit events verified live (13/13 across 10 paths); 422 dangling parentId, 409 stale rev, 401 revoked jti. Bootstrap admins fail-closed behind `BOOTSTRAP_USERS_ENABLED` (still `true` on dev; rotating needs human-approved app-settings change). | `c132146` |
 | **public-surfaces (F1·A)** | `app/src/components/icons/**`, `app/src/components/ui/icons.tsx` (shim), `app/src/lib/pricing.ts`(+test), `app/src/routes/Pricing.tsx`, `app/src/App.tsx` (added `/pricing` route line only). See [docs/audit/EXECUTION-A.md](docs/audit/EXECUTION-A.md). | ✅ **Wave 1 done** — icon registry → `components/icons/` (**93 glyphs**, +7 F3 pre-cuts + `IconShare`); `ui/icons.tsx` now a re-export shim (77 importers untouched); new public `/pricing` (4 commercial layers + hand-rolled-SVG ROI calc) + `lib/pricing.ts` (ILLUSTRATIVE) + 12-test ROI lock. Gate green; run **2428 succeeded**; live smoke green (`/pricing` 200, chunk carries content, egg base64-only no leak). Egg + RISK-013 **verified already-shipped**, not rebuilt. **Share seam: ABSENT → full design + token shape recorded** in EXECUTION-A.md (build deferred at the $12 budget line — public token endpoints reading Cosmos need their own live-test cycle). ⚠️ **Landing.tsx owned by another lane — Lane A never touched it;** **ASK that lane:** add `<Link to="/pricing">Pricing</Link>` to the header nav + footer (route is live). | `677d748` |
 
@@ -69,6 +69,8 @@ Append one row per push (newest first). Time = local (ET).
 
 | When | Run | Sha | Workstream | What shipped |
 |---|---|---|---|---|
+| 01:55 | — | (this push) | filing-verifier (Lane B) | Lane B done: live proof 15/15 (tamper 422, VIEWER 403, reserved_base 403) + EXECUTION-B ledger + row flip |
+| 01:31 | 2427 | `9be28d0` | filing-verifier (Lane B) | MID_REASONER verifier + ladder + tamper probe + filings-base 403 guard + tests + live harness |
 | 01:40 | 2428 | `677d748` | public-surfaces (F1·A) | Icon registry → `components/icons/` (+7 F3 glyphs + IconShare); public `/pricing` page + hand-rolled-SVG ROI calc + `lib/pricing.ts` (ILLUSTRATIVE). Carried admin/auth `8c17381` on the fast-forward. |
 | 20:05 | 2425 | `912b643` | import-brain | Harness retry on SSE termination; hazard docs |
 | 19:54 | 2424 | `9447142` | admin/audit | (rode pipeline batch) |
@@ -80,3 +82,22 @@ Append one row per push (newest first). Time = local (ET).
 | 18:52 | 2418 | `a0f3a8a` | import-brain | Column-map batching + state-matrix folding; SSE past compression; unmapped-sheet skip |
 | 18:46 | 2417 | `1807b34` | import-brain | Missing-deployment cache (sonnet rung dormant) |
 | 18:23 | 2416 | `6d998c3` | import-brain | Import brain V2: stage-0 router, no-cap fleet context, ensemble ladder, deterministic fast path, ImportPlan assembly, golden eval |
+
+---
+
+## 🤝 Cross-lane assist for import-brain (from Lane A · no action required · NOT pushed)
+
+Read-only triage of your `docs/audit/import_*_results-*.json` — **no brain file touched,
+no dev call, nothing pushed** (a push would deploy and sever your SSE). Details:
+[docs/audit/import-triage-fromA.md](docs/audit/import-triage-fromA.md) · tool: `node tools/eval-triage.mjs`.
+
+- **Reframe:** golden evals aren't failing on accuracy — they never return. **CORE/GL =
+  `fetch: terminated` @ ~48m (deploy severed the stream), IM/PR = `aborted` @ exactly
+  ~15m (fixed client timeout).** Adversarial + safety are green (9/9, **0 fabrications**).
+- **Biggest lever — a push-free window, and it's available now:** every other lane
+  (admin, audit, filing-B, public-A) is DONE. Nobody else needs to deploy. If pushes
+  stay quiet you get a clean ~48-min runway for CORE/GL — that's your first real
+  accuracy read. **Other lanes: please hold non-critical pushes while brain runs.**
+- **Fast check:** is the 900 s an *idle* timeout? CORE/GL hit 48m in the same batch IM/PR
+  aborted at 15m → if abort is inactivity-based, IM/PR **stalled** (a stage stopped
+  emitting `:hb`). Also: PDF path returns products with **0 coverages** (separate gap).
