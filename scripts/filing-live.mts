@@ -25,7 +25,12 @@ import { writeFileSync } from 'node:fs'
 
 const BASE = (process.env.PF_BASE_URL || 'https://app-prodhub-dev.azurewebsites.net').replace(/\/$/, '')
 const TENANT = 'filing-live-b'
-const PRODUCT_ID = 'FLB.PROD.001'
+// Unique per run: filings + versions are append-only, so a prior run's teardown leaves a
+// `delete` version at a higher rev. Reusing a fixed product id makes RESOLVE fold that stale
+// delete last and 404 with no_entities_at_asof. A fresh id per run keeps the harness re-runnable.
+const RUN = Date.now().toString(36)
+const PRODUCT_ID = `FLB.PROD.${RUN}`
+const COV_DASH = `FLB-COV-${RUN}`
 
 type Check = { name: string; pass: boolean; detail: string }
 const results: Check[] = []
@@ -93,19 +98,19 @@ async function main() {
   record('bootstrap login', true, `tenant=${login.body.user?.tenantId}`)
 
   // ── Seed an isolated product with version history (RESOLVE source of truth) ─
-  const covRefId = 'FLB.COV.001'
+  const covRefId = `FLB.COV.${RUN}`
   const formNumber = 'FLB 00 01 07 26'
   const seedProduct = await mutate(jwt, {
     op: 'create', path: `products/${PRODUCT_ID}`, entityType: 'product',
     data: { refId: PRODUCT_ID, name: 'Filing Live Probe Product', lob: 'GL', lifecycle: 'ACTIVE', states: ['NJ'] },
   })
   const seedCoverage = await mutate(jwt, {
-    op: 'create', path: `products/${PRODUCT_ID}/coverages/FLB-COV-001`, entityType: 'coverage',
+    op: 'create', path: `products/${PRODUCT_ID}/coverages/${COV_DASH}`, entityType: 'coverage',
     data: { refId: covRefId, name: 'Probe General Liability Coverage', formNumbers: [formNumber], limit: 1_000_000, deductible: 500 },
   })
   // A second rev so RESOLVE has a real diff to fold (update limit).
   const seedUpdate = await mutate(jwt, {
-    op: 'update', path: `products/${PRODUCT_ID}/coverages/FLB-COV-001`, entityType: 'coverage',
+    op: 'update', path: `products/${PRODUCT_ID}/coverages/${COV_DASH}`, entityType: 'coverage',
     data: { limit: 2_000_000 },
   })
   record('seed product+coverage (+1 update rev)', seedProduct.status === 200 && seedCoverage.status === 200 && seedUpdate.status === 200,
@@ -142,7 +147,7 @@ async function main() {
     const items: any[] = rec.body?.filing?.items || []
     const allVersioned = items.length > 0 && items.every((i) => i.versionId && i.contentHash && typeof i.rev === 'number')
     record('every filed item carries versionId + contentHash', allVersioned, `${items.length} items`)
-    const cov = items.find((i) => String(i.entityPath).includes('FLB-COV-001'))
+    const cov = items.find((i) => String(i.entityPath).includes(COV_DASH))
     const verbatim = cov && cov.fieldValues?.refId === covRefId
       && Array.isArray(cov.fieldValues?.formNumbers) && cov.fieldValues.formNumbers[0] === formNumber
       && cov.fieldValues?.limit === 2_000_000
@@ -185,7 +190,7 @@ async function main() {
     `${auditVerify.status} checked=${auditVerify.body?.checked} paths=${auditVerify.body?.paths} breaks=${(auditVerify.body?.breaks || []).length}`)
 
   // ── Teardown: remove seeded entities (filings are append-only by design) ────
-  const del1 = await mutate(jwt, { op: 'delete', path: `products/${PRODUCT_ID}/coverages/FLB-COV-001`, entityType: 'coverage' })
+  const del1 = await mutate(jwt, { op: 'delete', path: `products/${PRODUCT_ID}/coverages/${COV_DASH}`, entityType: 'coverage' })
   const del2 = await mutate(jwt, { op: 'delete', path: `products/${PRODUCT_ID}`, entityType: 'product' })
   const del3 = await api('/admin/users/flb-viewer', { method: 'DELETE' }, jwt)
   record('teardown seeded entities + probe user', del1.status === 200 && del2.status === 200 && del3.status === 200, `${del1.status}/${del2.status}/${del3.status}`)

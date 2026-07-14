@@ -102,6 +102,15 @@ The rejection is audit-logged (hash-chained `filing.verify_rejected`, `probe:tru
   **UPDATE (post-proof): `claude-sonnet-5` was provisioned with user approval** (Anthropic v2,
   GlobalStandard 1000) and live-verified via the Foundry Anthropic endpoint; the filing verifier
   retries the ladder per call, so it verifies on sonnet from the next filing onward.
+  **CONFIRMED LIVE (2026-07-14, against deploy `3e6e9f2`, run green):** re-ran `filing-live.mts`
+  → **15/15**, and the verifier now reports `role=MID_REASONER deployment=claude-sonnet-5` on
+  BOTH the clean-approve path and the tamper-reject path (422, 2 issues). The host restart from
+  the `3e6e9f2` deploy cleared the in-process 404 cache, so sonnet is active in the real fleet
+  routing — the designed MID_REASONER verifier, not the opus fallback.
+- **Harness re-runnability fix:** `filing-live.mts` now uses a per-run unique product id
+  (`FLB.PROD.<base36 epoch>`). Filings/versions are append-only, so a prior run's teardown-delete
+  left a `delete` version at a higher rev; reusing a fixed id made RESOLVE fold that stale delete
+  last and 404 `no_entities_at_asof`. Fresh id per run keeps the live proof idempotent.
 - Filing audit events for probe/rejection paths remain append-only (unique per-attempt chains);
   teardown removes seeded entities + probe user, filings/audits stay by design (append-only).
 - `/cost` is a CLI-side command this agent cannot invoke; spend stayed well inside the $20
