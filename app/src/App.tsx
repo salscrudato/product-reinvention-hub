@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { VersionWatcher } from './components/VersionWatcher'
 
 const Landing            = lazy(() => import('./routes/Landing'))
+const Pricing            = lazy(() => import('./routes/Pricing'))
 const MustChangePassword = lazy(() => import('./routes/MustChangePassword'))
 const AppShell           = lazy(() => import('./routes/AppShell'))
 const Home               = lazy(() => import('./routes/Home'))
@@ -46,6 +47,7 @@ export default function App() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/"                      element={<Landing />} />
+            <Route path="/pricing"               element={<Pricing />} />
             <Route path="/must-change-password"  element={<MustChangePassword />} />
             <Route path="/home-check"            element={<HomeCheck />} />
 
