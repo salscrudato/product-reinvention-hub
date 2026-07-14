@@ -40,6 +40,8 @@ logged here as measured token usage instead (honest proxy, same envelope).
 | 5 · News | `fe3bac1` | server suite ✅ (120) | REAL web-search curation; day backfill; og:image→blob; news-image route; never fabricates |
 | 6 · Import | `00093bf` | visualizer+axe ✅ | WarningsPanel; VirtualList; live write stream; BATCH_SIZE 150; brain:escalation real event |
 | Rebecca feedback | `2e6195c` | typecheck+axe ✅ | promote→card view (?view=cards&promoted=id); LOB grouping in cards; dev proxy |
+| User UI feedback 2 | `2ed0f57` | full app suite ✅ | flat 3-col card grid (LOB grouping reverted); Hierarchy ALWAYS default; toggle left of search |
+| User UI feedback 3 | `c06e0a0` | full app suite ✅ (388) | executive-report Overview (full-width, footprint choropleth + composition bars, pb-20); Coverages: filters closed by default, single-choice axes hidden, one smart search (workspace bar removed on tab), toggle left, list removed, tree default |
 | FINAL GATE | — | **typecheck ✅ lint ✅ test ✅ build ✅ · bundle 144.5/175 gz · worst chunk 22.7/25 · CSS 18.3/25 · canaries in-suite ✅** | push HELD awaiting user go |
 
 ## Write-phase speed (1,707-entity case)
