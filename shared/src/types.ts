@@ -420,6 +420,13 @@ export interface Task extends GovernanceBlock {
   // ── GTM launch-tracker fields (additive; present on project-board tasks only) ──
   projectId?:    string          // owning Project — board tasks are scoped by this
   origin?:       TaskOrigin       // 'seeded' from the process, or an 'adhoc' one-off
+  /** Stable identity of the process row this task was seeded from (a hash of the L1→L4 path,
+   *  `pm-XXXXXXXX`). Load-bearing for idempotent re-seed: a re-seed proposes only rows whose
+   *  seedRefId is not already on the board. Absent on ad-hoc/legacy tasks. */
+  seedRefId?:    string
+  /** Groups all tasks created by ONE seed run, so the board can filter/animate a single batch.
+   *  A millisecond stamp minted at seed time. Absent on ad-hoc/legacy tasks. */
+  seedBatchId?:  string
   phaseL2?:      string           // process lineage — L2 phase (e.g. "Product Design")
   groupL3?:      string           // process lineage — L3 group (e.g. "Product Pricing")
   taskL4?:       string           // process lineage — L4 task (mirrors `title`)

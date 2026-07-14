@@ -4,7 +4,7 @@
 // mutate() payload builders for seeding + completing tasks. Kept out of the components
 // so the board, dialogs and runway all agree on one vocabulary.
 import type {
-  Task, Project, TaskColumn, TypeOfWork, Disposition, ScheduledTask, GtmBoardColumn,
+  Task, Project, TaskColumn, TypeOfWork, Disposition, PlannedTask, GtmBoardColumn,
 } from '@pf/shared'
 import type { MutationPayload } from '../../../lib/backend/types'
 
@@ -140,29 +140,35 @@ export function doneFields(done: boolean): Record<string, unknown> {
   return { done, completedAt: done ? new Date().toISOString() : null }
 }
 
-// ─── mutate() payload builders ────────────────────────────────────────────────────
+// ─── mutate() payload builders (v2 — lineage-carrying, idempotent, create-only) ─────
 
-/** Task document data for one back-scheduled process task (no undefined — Firestore-safe). */
-export function taskDataFromScheduled(s: ScheduledTask, project: ProjectDoc): Record<string, unknown> {
+/** Task document data for one PLANNED process task (no undefined — envelope-safe). Carries the
+ *  stable seedRefId (idempotency key) + seedBatchId (arrival grouping), plus the effective
+ *  (possibly PM-overridden) duration + owner and the forward-only computed dates. */
+export function taskDataFromPlanned(
+  p: PlannedTask, project: ProjectDoc, seedBatchId: string,
+): Record<string, unknown> {
   return {
-    title:       s.taskL4,
-    column:      BOARD_TO_COLUMN[s.boardColumn],
+    title:       p.taskL4,
+    column:      BOARD_TO_COLUMN[p.boardColumn],
     projectId:   project.id,
     productId:   project.productId ?? null,
     origin:      'seeded',
-    phaseL2:     s.phaseL2,
-    groupL3:     s.groupL3,
-    taskL4:      s.taskL4,
-    phaseOrder:  s.phaseOrder,
-    slaDays:     s.slaDays,
-    ownerRole:   s.owner,
-    typeOfWork:  s.typeOfWork || null,
-    valueOfWork: s.valueOfWork || null,
-    disposition: s.disposition || null,
-    ongoing:     s.ongoing,
-    startDate:   s.startDate,
-    dueAt:       s.dueDate,          // null for ongoing governance
-    order:       s.globalOrder,
+    seedRefId:   p.seedRefId,
+    seedBatchId,
+    phaseL2:     p.phaseL2,
+    groupL3:     p.groupL3,
+    taskL4:      p.taskL4,
+    phaseOrder:  p.phaseOrder,
+    slaDays:     p.effectiveSla,    // the effective (overridden) duration, preserved onto the task
+    ownerRole:   p.owner,           // the effective (overridden) owner role
+    typeOfWork:  p.typeOfWork || null,
+    valueOfWork: p.valueOfWork || null,
+    disposition: p.disposition || null,
+    ongoing:     p.ongoing,
+    startDate:   p.startDate,
+    dueAt:       p.dueDate,         // null for ongoing governance
+    order:       p.globalOrder,
     assignee:    null,
     checklist:   [],
     done:        false,
@@ -171,22 +177,34 @@ export function taskDataFromScheduled(s: ScheduledTask, project: ProjectDoc): Re
 }
 
 /**
- * Build the atomic re-seed payload set: DELETE the project's existing seeded tasks (ad-hoc
- * tasks are preserved), then CREATE the freshly back-scheduled ones. Passed to
- * adapter.db.mutateBatch() so the whole set is chunked, atomic and fully audited.
+ * Build the ADDITIVE, idempotent seed batch: one CREATE per newly-selected task (those already
+ * on the board are excluded upstream by seedRefId), optionally preceded by a rev-guarded UPDATE
+ * that persists a deadline the PM moved in the review. Never deletes — re-seed only adds what is
+ * missing, so completions/edits on existing seeded tasks survive. Doc ids are DETERMINISTIC
+ * (`gtm-<projectId>-<seedRefId>`) so the same row can never land twice. Passed to
+ * adapter.db.mutateBatch() so the whole set is chunked, atomic-per-chunk and fully audited.
  */
-export function buildSeedPayloads(
-  project: ProjectDoc, scheduled: ScheduledTask[], priorSeeded: TaskDoc[],
-  actor: { uid: string; name: string },
-): MutationPayload[] {
+export function buildSeedPlanPayloads(args: {
+  project:        ProjectDoc
+  toCreate:       PlannedTask[]
+  seedBatchId:    string
+  actor:          { uid: string; name: string }
+  deadlineUpdate?: string | null   // set only when the PM moved the deadline in the review
+}): MutationPayload[] {
+  const { project, toCreate, seedBatchId, actor, deadlineUpdate } = args
   const productId = project.productId ?? undefined
-  const deletes: MutationPayload[] = priorSeeded.map(t => ({
-    op: 'delete', path: `tasks/${t.id}`, entityType: 'task', productId, actor,
-  }))
-  const stamp = Date.now()
-  const creates: MutationPayload[] = scheduled.map((s, i) => ({
-    op: 'create', path: `tasks/gtm-${stamp}-${i}`, entityType: 'task', productId, actor,
-    data: taskDataFromScheduled(s, project),
-  }))
-  return [...deletes, ...creates]
+  const payloads: MutationPayload[] = []
+  if (deadlineUpdate && deadlineUpdate !== project.targetLaunchDate) {
+    payloads.push({
+      op: 'update', path: `projects/${project.id}`, entityType: 'project', actor,
+      expectedRev: project.rev, data: { targetLaunchDate: deadlineUpdate },
+    })
+  }
+  for (const p of toCreate) {
+    payloads.push({
+      op: 'create', path: `tasks/gtm-${project.id}-${p.seedRefId}`, entityType: 'task',
+      productId, actor, data: taskDataFromPlanned(p, project, seedBatchId),
+    })
+  }
+  return payloads
 }

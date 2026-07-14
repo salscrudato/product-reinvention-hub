@@ -17,7 +17,7 @@ import { canI } from '../lib/canI'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
 import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
 import {
-  IconPlus, IconChart, IconChevronDown, IconTasks, IconWarning,
+  IconPlus, IconChart, IconChevronDown, IconTasks, IconWarning, IconCheck,
 } from '../components/ui/icons'
 import { businessDaysBetween } from '@pf/shared'
 import type { Product, TypeOfWork } from '@pf/shared'
@@ -29,7 +29,7 @@ import {
 import { LaunchRunway } from '../components/tasks/gtm/LaunchRunway'
 import { TaskCard, CompletedRow } from '../components/tasks/gtm/TaskCard'
 import { ProjectDialog } from '../components/tasks/gtm/ProjectDialog'
-import { SeedProcessDialog } from '../components/tasks/gtm/SeedProcessDialog'
+import { SeedReviewSheet } from '../components/tasks/gtm/SeedReviewSheet'
 import { AdhocTaskDialog } from '../components/tasks/gtm/AdhocTaskDialog'
 import { TaskDetailDrawer } from '../components/tasks/gtm/TaskDetailDrawer'
 
@@ -72,6 +72,10 @@ export default function Tasks() {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [completedOpen, setCompletedOpen] = useState(true)
   const [params, setParams] = useSearchParams()
+  // A just-seeded batch: `seedBatch` (URL) filters the board to it; `arrivedBatch` (transient)
+  // drives the one-time card arrival animation. Cleared shortly after so it never replays.
+  const [arrivedBatch, setArrivedBatch] = useState<string | null>(null)
+  const seedBatch = params.get('seedBatch')
 
   // Filters
   const [mine, setMine]       = useState(false)
@@ -94,12 +98,34 @@ export default function Tasks() {
   function switchProject(id: string) {
     setCurrentId(id)
     if (typeof localStorage !== 'undefined') localStorage.setItem(STORE_KEY, id)
-    if (params.get('project')) { params.delete('project'); setParams(params, { replace: true }) }
+    if (params.get('project') || params.get('seedBatch')) {
+      params.delete('project'); params.delete('seedBatch'); setParams(params, { replace: true })
+    }
     setMine(false); setOverdue(false); setType(''); setPhase(''); setDisp('')
   }
 
-  // After creating a project, select it and immediately offer to seed its board.
+  // After creating a project, select it and immediately open the review-and-seed surface.
   function onProjectCreated(id: string) { switchProject(id); setDialog('seed') }
+
+  // After a seed lands, briefly flag the batch (drives the one-time card arrival animation)
+  // and toast a link to the board filtered to just this batch.
+  function handleSeeded(batchId: string, count: number) {
+    setArrivedBatch(batchId)
+    toast.success(`${count} task${count === 1 ? '' : 's'} landed on the board`, {
+      action: {
+        label: 'View this batch',
+        onClick: () => { params.set('seedBatch', batchId); setParams(params, { replace: true }) },
+      },
+    })
+  }
+
+  // The arrival flag is one-time: clear it after the cards have had a moment to animate in
+  // (the live subscription echoes the new tasks back within a poll or two).
+  useEffect(() => {
+    if (!arrivedBatch) return
+    const t = setTimeout(() => setArrivedBatch(null), 6000)
+    return () => clearTimeout(t)
+  }, [arrivedBatch])
 
   const current = projects?.find(p => p.id === currentId) ?? null
   // The task whose detail slide-over is open — resolved LIVE from the subscription so the
@@ -117,13 +143,14 @@ export default function Tasks() {
   const seeded = useMemo(() => projectTasks.filter(t => t.origin === 'seeded'), [projectTasks])
 
   const filteredActive = useMemo(() => active.filter(t => {
+    if (seedBatch && t.seedBatchId !== seedBatch) return false
     if (mine && !isMine(t, user?.uid)) return false
     if (overdue && !isOverdue(t, today)) return false
     if (typeFilter && t.typeOfWork !== typeFilter) return false
     if (phaseFilter && t.phaseL2 !== phaseFilter) return false
     if (dispFilter && t.disposition !== dispFilter) return false
     return true
-  }), [active, mine, overdue, typeFilter, phaseFilter, dispFilter, user?.uid, today])
+  }), [active, seedBatch, mine, overdue, typeFilter, phaseFilter, dispFilter, user?.uid, today])
 
   const byColumn = useMemo(() => {
     const map = Object.fromEntries(GTM_COLUMNS.map(c => [c.id, [] as TaskDoc[]]))
@@ -309,6 +336,21 @@ export default function Tasks() {
         />
       ) : (
         <>
+          {/* Seed-batch view — reached from the post-seed toast; scopes the board to one batch. */}
+          {seedBatch && (
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-[12px] text-[13px]"
+              style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-accent-line)' }}>
+              <IconCheck size={16} className="shrink-0 text-accent" aria-hidden="true" />
+              <span className="text-accent font-medium">
+                Showing {filteredActive.length} task{filteredActive.length === 1 ? '' : 's'} from your latest seed.
+              </span>
+              <button onClick={() => { params.delete('seedBatch'); setParams(params, { replace: true }) }}
+                className="ml-auto text-[12px] font-semibold text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[6px]">
+                Show all tasks
+              </button>
+            </div>
+          )}
+
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Task filters">
             <FilterChip active={overdue} onClick={() => setOverdue(v => !v)} danger>Overdue</FilterChip>
@@ -370,7 +412,9 @@ export default function Tasks() {
                   </div>
                   <div className="flex flex-col gap-2 px-1.5 pb-1.5">
                     {items.length > 0
-                      ? items.map(t => <TaskCard key={t.id} task={t} canEdit={canEdit} todayIso={today} onToggle={toggleDone} onOpen={t => setDetailId(t.id)} />)
+                      ? items.map(t => <TaskCard key={t.id} task={t} canEdit={canEdit} todayIso={today}
+                          arriving={!!arrivedBatch && t.seedBatchId === arrivedBatch}
+                          onToggle={toggleDone} onOpen={t => setDetailId(t.id)} />)
                       : <div className="text-xs text-faint text-center italic py-4">Nothing here</div>}
                   </div>
                 </section>
@@ -406,7 +450,8 @@ export default function Tasks() {
           onClose={() => setDialog(null)} onCreated={onProjectCreated} />
       )}
       {dialog === 'seed' && canEdit && actor && (
-        <SeedProcessDialog project={current} priorSeeded={seeded} actor={actor} onClose={() => setDialog(null)} />
+        <SeedReviewSheet project={current} priorSeeded={seeded} actor={actor}
+          onClose={() => setDialog(null)} onSeeded={handleSeeded} />
       )}
       {dialog === 'task' && canEdit && actor && (
         <AdhocTaskDialog project={current} actor={actor} onClose={() => setDialog(null)} />

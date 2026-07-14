@@ -35,6 +35,7 @@ export * from './seed/generalLiability'
 // Process Value Explorer → template converter that generates the process seed.
 export * from './gtm/types'
 export * from './gtm/schedule'
+export * from './gtm/plan'
 export * from './gtm/processExplorer'
 export * from './seed/gtmProcess'
 // Line Intelligence Registry — pure data archetypes for all P&C families.

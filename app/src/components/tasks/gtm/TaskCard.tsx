@@ -38,8 +38,8 @@ function CheckBox({ done, onToggle, size = 19, label }: { done: boolean; onToggl
   )
 }
 
-export function TaskCard({ task, canEdit, todayIso, onToggle, onOpen }: {
-  task: TaskDoc; canEdit: boolean; todayIso: string
+export function TaskCard({ task, canEdit, todayIso, arriving, onToggle, onOpen }: {
+  task: TaskDoc; canEdit: boolean; todayIso: string; arriving?: boolean
   onToggle: (t: TaskDoc) => void; onOpen: (t: TaskDoc) => void
 }) {
   const overdue = isOverdue(task, todayIso)
@@ -51,7 +51,7 @@ export function TaskCard({ task, canEdit, todayIso, onToggle, onOpen }: {
 
   return (
     <div
-      className="group bg-surface rounded-[11px] p-3 flex gap-2.5 rise-in transition-shadow hover:shadow-[var(--shadow-card-hover)] focus-within:shadow-[var(--shadow-card-hover)]"
+      className={`group bg-surface rounded-[11px] p-3 flex gap-2.5 rise-in transition-shadow hover:shadow-[var(--shadow-card-hover)] focus-within:shadow-[var(--shadow-card-hover)]${arriving ? ' task-arrive' : ''}`}
       style={{
         border: '1px solid var(--color-border)',
         // 4E tint: a subtle left stripe in the disposition's token (Embrace/Elevate/Enhance).

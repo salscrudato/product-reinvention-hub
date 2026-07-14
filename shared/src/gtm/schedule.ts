@@ -32,6 +32,11 @@ export function formatISODate(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
+/** Normalise a `yyyy-mm-dd` string or Date to a canonical ISO `yyyy-mm-dd` (UTC parts). */
+export function toISODate(d: string | Date): string {
+  return formatISODate(toDate(d))
+}
+
 function isWeekend(d: Date): boolean {
   const g = d.getUTCDay()
   return g === 0 || g === 6   // Sunday | Saturday
