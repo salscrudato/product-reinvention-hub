@@ -124,6 +124,12 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
     isoPlan,
   })
 
+  // Completeness alert: a forms-only / rating-only upload cannot stand alone as a
+  // product — tell the user what is likely missing (first-principles pillars).
+  if (bundle.completeness && bundle.completeness.assessment !== 'COMPLETE' && bundle.completeness.assessment !== 'EMPTY') {
+    emit(res, { t: 'notice', level: 'warn', kind: 'incomplete-product', message: bundle.completeness.guidance })
+  }
+
   emit(res, { t: 'json', key: 'bundle', value: bundle })
   emit(res, { t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
   return bundle

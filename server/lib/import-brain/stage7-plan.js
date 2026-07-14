@@ -454,6 +454,42 @@ function buildImportPlan(brainOutput, opts = {}) {
     importWarnings.push({ kind: 'dynamic-fields-surfaced', sheet: null, row: null, field: null, detail: `${dynamicFieldCount} dynamic-field row(s) extracted; review them in provenance (not auto-attached to forms).` })
   }
 
+  // ── Completeness intelligence (first principles: a product is a PCM backbone
+  // plus three specification pillars — governed / presented / priced) ──────────
+  // A single artifact (forms-only, rating-only …) rarely constitutes a product.
+  // Assess what this upload actually provides and tell the user what is likely
+  // missing — deterministic, derived from the assembled plan itself.
+  const stepsCount = ratingProgram && Array.isArray(ratingProgram.data.steps) ? ratingProgram.data.steps.length : 0
+  const pillars = {
+    framework: coverages.length > 0,
+    forms:     forms.length > 0,
+    rules:     (rules.length + formRules.length) > 0,
+    rating:    Boolean(ratingProgram) || rtTables.length > 0 || ldTables.length > 0 || stepsCount > 0,
+  }
+  const missing = []
+  const anyContent = Object.values(pillars).some(Boolean)
+  if (anyContent) {
+    if (!pillars.framework) missing.push({ pillar: 'framework', expectedArtifact: 'Product Framework / Product Component Model workbook', why: 'Coverages are the atomic unit of protection — the backbone that forms, rules, and rating attach to. Without the PCM this upload cannot stand alone as a product.' })
+    if (!pillars.forms)     missing.push({ pillar: 'forms', expectedArtifact: 'Forms Specifications (form numbers, editions, attachment conditions)', why: 'How the product is PRESENTED in the market — base coverage forms, endorsements, exclusions, notices.' })
+    if (!pillars.rules)     missing.push({ pillar: 'rules', expectedArtifact: 'Rules Specifications / Rules Repository', why: 'How the product is GOVERNED — eligibility, availability, packaging, mandatory/optional coverage, limit & deductible ranges.' })
+    if (!pillars.rating)    missing.push({ pillar: 'rating', expectedArtifact: 'Rating Specifications / rate order of calculations + factor tables', why: 'How the product is PRICED — ordered rating steps and the factor tables they consume.' })
+  }
+  const completeness = {
+    assessment: !anyContent ? 'EMPTY' : (missing.length === 0 ? 'COMPLETE' : (!pillars.framework ? 'PARTIAL_NO_BACKBONE' : 'PARTIAL')),
+    pillars,
+    missing,
+    guidance: !anyContent
+      ? 'No product content was found in this upload.'
+      : missing.length === 0
+        ? 'Upload covers the product backbone and all three specification pillars (governed / presented / priced).'
+        : (!pillars.framework
+            ? `This upload provides ${Object.entries(pillars).filter(([, v]) => v).map(([k]) => k).join(' + ')} specifications but NO product framework (coverage hierarchy). Import is saved as a partial: upload the Product Framework / Component Model workbook so these specifications have a backbone to attach to.`
+            : `Product backbone imported. Likely missing: ${missing.map(m => m.expectedArtifact).join('; ')}. Upload those artifacts to complete the product.`),
+  }
+  if (missing.length > 0 && anyContent) {
+    importWarnings.push({ kind: 'incomplete-product', sheet: null, row: null, field: null, detail: completeness.guidance })
+  }
+
   const acceptedCount = coverages.length + forms.length + rules.length + formRules.length +
     ldTables.length + rtTables.length + (productPlanned ? 1 : 0) + (ratingProgram ? 1 : 0)
   const counts = {
@@ -519,6 +555,7 @@ function buildImportPlan(brainOutput, opts = {}) {
     },
     sampledVerifications: [],
     splitProducts: [],
+    completeness,
     importWarnings,
     provenance,
     coverages: coverages.map(p => ({ refId: p.refId ?? '', name: p.label, formNumbers: Array.isArray(p.data.formNumbers) ? p.data.formNumbers : [] })),

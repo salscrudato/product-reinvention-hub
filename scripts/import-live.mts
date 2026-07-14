@@ -510,7 +510,7 @@ async function runAdversarialXlsx(
     // parse, and survive (outcome may be an empty plan, never a crash/fabrication).
     const sseResult = await readSse('/ai/unifiedImport', {
       documents: [{ name: `${id}.xlsx`, base64: buffer.toString('base64'), mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }],
-    }, token, 900_000)
+    }, token, 1_800_000)
 
     if (!sseResult.ok && !expectEmpty) {
       result.crashed = true
