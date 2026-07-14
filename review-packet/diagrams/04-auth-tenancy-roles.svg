@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 880" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#64748b"/></marker>
+    <marker id="av" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#8B1FE0"/></marker>
+    <style>
+      .title{font-size:25px;font-weight:700;fill:#0f172a}
+      .sub{font-size:13px;fill:#64748b}
+      .lbl{font-size:13.5px;font-weight:700;fill:#0f172a}
+      .desc{font-size:11.5px;fill:#475569}
+      .mono{font-family:'JetBrains Mono',Consolas,monospace;font-size:11px;fill:#334155}
+      .box{fill:#fff;stroke:#cbd5e1;stroke-width:1.5}
+      .edge{stroke:#64748b;stroke-width:1.6;fill:none}
+      .edgev{stroke:#8B1FE0;stroke-width:2;fill:none}
+    </style>
+  </defs>
+  <rect width="1240" height="880" fill="#f8fafc"/>
+  <text x="40" y="46" class="title">Authentication · Tenancy Isolation · Two-Plane Role Model</text>
+  <text x="40" y="68" class="sub">Hand-rolled HS256 JWT · server/lib/auth.js + authz.js · fail-closed if AUTH_JWT_SECRET unset</text>
+
+  <!-- Login flow -->
+  <text x="40" y="104" class="lbl">Sign-in paths</text>
+  <rect x="40" y="116" width="360" height="120" rx="10" class="box"/>
+  <text x="56" y="138" class="lbl">1 · OTP (email)  — primary</text>
+  <text x="56" y="158" class="desc">POST /api/auth/otp/request → 6-digit code,</text>
+  <text x="56" y="174" class="desc">HMAC-stored (never plaintext), 10-min TTL,</text>
+  <text x="56" y="190" class="desc">5 attempts, 15-min lockout. Domain allowlist;</text>
+  <text x="56" y="206" class="desc">generic ok on bad domain (anti-enumeration).</text>
+  <text x="56" y="226" class="desc">verify → JIT-provision user @ VIEWER + JWT.</text>
+
+  <rect x="40" y="248" width="360" height="96" rx="10" class="box"/>
+  <text x="56" y="270" class="lbl">2 · Bootstrap admin  — dev / break-in</text>
+  <text x="56" y="290" class="desc">POST /api/auth/bootstrap (username+password).</text>
+  <text x="56" y="306" class="desc">Only if BOOTSTRAP_ADMIN_PASSWORD set (or</text>
+  <text x="56" y="322" class="desc">BOOTSTRAP_USERS_ENABLED dev flag). Timing-safe</text>
+  <text x="56" y="338" class="desc">SHA-256 compare → SUPER_ADMIN. Every attempt audited.</text>
+
+  <!-- JWT -->
+  <rect x="430" y="116" width="360" height="228" rx="10" class="box" stroke="#8B1FE0" stroke-width="2"/>
+  <text x="446" y="138" class="lbl" fill="#8B1FE0">JWT (HS256, hand-rolled)</text>
+  <text x="446" y="160" class="mono">{ sub, name, email,</text>
+  <text x="446" y="176" class="mono">  role, tenantId,</text>
+  <text x="446" y="192" class="mono">  method, jti, exp }</text>
+  <text x="446" y="214" class="desc">base64url · timingSafeEqual on signature</text>
+  <text x="446" y="230" class="desc">8h TTL · jti enables revocation</text>
+  <text x="446" y="250" class="desc">Client: localStorage 'pf.azure.token' → Bearer</text>
+  <text x="446" y="266" class="desc">Server also accepts pf_session HTTP-only cookie</text>
+  <text x="446" y="282" class="desc">(SameSite=Lax, Secure on https)</text>
+  <text x="446" y="304" class="desc">attachUser → req.user. Revocation checked via</text>
+  <text x="446" y="320" class="desc">__system__ revokedToken (5-min cache).</text>
+  <text x="446" y="336" class="desc">logout revokes jti + clears cookie.</text>
+
+  <!-- Tenant isolation -->
+  <rect x="820" y="116" width="380" height="228" rx="10" class="box" stroke="#0891b2"/>
+  <text x="836" y="138" class="lbl" fill="#0e7490">Tenant isolation (data plane)</text>
+  <text x="836" y="160" class="desc">tenantId baked into JWT at login (from email</text>
+  <text x="836" y="176" class="desc">domain via ALLOWED_EMAIL_DOMAINS + TENANT_DOMAIN_MAP).</text>
+  <text x="836" y="198" class="mono">pk = ${tenantId}|${baseKey(path)}</text>
+  <text x="836" y="220" class="desc">Every read re-checks resource.tenantId === tid.</text>
+  <text x="836" y="236" class="desc">Every query filters c.tenantId (defense-in-depth).</text>
+  <text x="836" y="256" class="desc">Server is the SOLE writer of tenantId; client</text>
+  <text x="836" y="272" class="desc">data can never assert it (stripped from envelope).</text>
+  <text x="836" y="294" class="desc">DEFAULT_TENANT_ID = 'default' (seed / guest floor).</text>
+  <text x="836" y="316" class="desc">resolveTenantStore seam (SILO_READY — pooled today,</text>
+  <text x="836" y="332" class="desc">physical container isolation later).</text>
+
+  <path class="edgev" d="M400,176 L428,176" marker-end="url(#av)"/>
+  <path class="edgev" d="M400,296 C414,296 418,230 428,214" marker-end="url(#av)"/>
+  <path class="edge" d="M790,230 L818,230" marker-end="url(#a)"/>
+
+  <!-- Two-plane roles -->
+  <rect x="40" y="366" width="750" height="290" rx="12" fill="#eef2ff" stroke="#c7d2fe" stroke-width="1.5"/>
+  <text x="58" y="392" class="lbl" fill="#4338ca">Two-plane role model  (RANK gates writes; normalizeRole maps legacy ADMIN→TENANT_ADMIN)</text>
+
+  <text x="58" y="420" class="lbl">Tenant plane (scoped to one tenantId)</text>
+  <rect x="58" y="432" width="700" height="40" rx="8" fill="#fff" stroke="#cbd5e1"/>
+  <text x="70" y="457" class="desc"><tspan font-weight="700" fill="#0f172a">VIEWER (0)</tspan> read-only  ·  inquiry personas UNDERWRITING/COMPLIANCE/CLAIMS/ACTUARIAL/ANALYST (1)  ·  <tspan font-weight="700" fill="#0f172a">EDITOR (2)</tspan> writes  ·  <tspan font-weight="700" fill="#0f172a">TENANT_ADMIN (3)</tspan></text>
+
+  <text x="58" y="500" class="lbl">Platform plane (cross-tenant, capability-gated)</text>
+  <rect x="58" y="512" width="345" height="72" rx="8" fill="#fff" stroke="#cbd5e1"/>
+  <text x="72" y="534" class="lbl">SUPPORT (rank 0)</text>
+  <text x="72" y="553" class="desc">Cannot pass rank-based writes.</text>
+  <text x="72" y="569" class="desc">Platform caps: audit, impersonate.</text>
+
+  <rect x="413" y="512" width="345" height="72" rx="8" fill="#fff" stroke="#cbd5e1"/>
+  <text x="427" y="534" class="lbl">SUPER_ADMIN (rank 4)</text>
+  <text x="427" y="553" class="desc">Platform caps: tenants, users,</text>
+  <text x="427" y="569" class="desc">break-glass, audit, impersonate.</text>
+
+  <rect x="58" y="596" width="700" height="46" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+  <text x="72" y="618" class="lbl" fill="#b45309">Capability model (authz.js)</text>
+  <text x="72" y="636" class="desc">Guards use capabilities (product:write, ai:invoke, audit:read, platform:*, member:manage) not raw rank. Client canI.ts mirrors — non-authoritative.</text>
+
+  <!-- Break-glass + impersonation -->
+  <rect x="820" y="366" width="380" height="290" rx="12" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+  <text x="838" y="392" class="lbl" fill="#b91c1c">Cross-tenant access — audited &amp; bounded</text>
+
+  <text x="838" y="420" class="lbl">Break-glass</text>
+  <text x="838" y="440" class="desc">SUPER_ADMIN sends X-Tenant-Id override.</text>
+  <text x="838" y="456" class="desc">Honored ONLY with a live grant (5min–8h,</text>
+  <text x="838" y="472" class="desc">reason required, audited). No grant →</text>
+  <text x="838" y="488" class="desc">req.breakGlassDenied → 403 (never silently</text>
+  <text x="838" y="504" class="desc">served from another tenant).</text>
+
+  <text x="838" y="536" class="lbl">Impersonation</text>
+  <text x="838" y="556" class="desc">SUPPORT mints 1h token carrying the target's</text>
+  <text x="838" y="572" class="desc">identity + _impersonatedBy (dual attribution).</text>
+  <text x="838" y="588" class="desc">Role comes from the TARGET user record —</text>
+  <text x="838" y="604" class="desc">a platform role can NEVER be granted via</text>
+  <text x="838" y="620" class="desc">impersonation (signImpersonation throws on</text>
+  <text x="838" y="636" class="desc">SUPER_ADMIN / SUPPORT targets).</text>
+
+  <!-- Request gate -->
+  <rect x="40" y="676" width="1160" height="180" rx="12" class="box"/>
+  <text x="58" y="702" class="lbl">Global request gate — every /api/* request (server.js, defense-in-depth over per-router guards)</text>
+
+  <rect x="58" y="716" width="215" height="122" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="72" y="738" class="lbl">1 · Public?</text>
+  <text x="72" y="758" class="desc">PUBLIC_API allowlist:</text>
+  <text x="72" y="774" class="desc">health, otp/request,</text>
+  <text x="72" y="790" class="desc">otp/verify, bootstrap,</text>
+  <text x="72" y="806" class="desc">tenants, homecheck/*</text>
+  <text x="72" y="826" class="desc">→ pass without auth</text>
+
+  <rect x="288" y="716" width="215" height="122" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="302" y="738" class="lbl">2 · Authenticated?</text>
+  <text x="302" y="758" class="desc">No req.user → 401</text>
+  <text x="302" y="778" class="desc">unauthenticated.</text>
+  <text x="302" y="802" class="desc">breakGlassDenied → 403</text>
+  <text x="302" y="822" class="desc">break_glass_required.</text>
+
+  <rect x="518" y="716" width="215" height="122" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="532" y="738" class="lbl">3 · Read or write?</text>
+  <text x="532" y="758" class="desc">GET/HEAD/OPTIONS → pass</text>
+  <text x="532" y="778" class="desc">(per-router read guards).</text>
+  <text x="532" y="802" class="desc">Read-shaped POSTs</text>
+  <text x="532" y="822" class="desc">whitelisted (db/list…).</text>
+
+  <rect x="748" y="716" width="215" height="122" rx="8" fill="#f5f3ff" stroke="#8B1FE0"/>
+  <text x="762" y="738" class="lbl" fill="#8B1FE0">4 · Write gate</text>
+  <text x="762" y="758" class="desc">Non-GET needs</text>
+  <text x="762" y="778" class="desc">product:write cap —</text>
+  <text x="762" y="798" class="desc">else 403 forbidden.</text>
+  <text x="762" y="818" class="desc">VIEWER can never write.</text>
+
+  <rect x="978" y="716" width="200" height="122" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+  <text x="992" y="738" class="lbl" fill="#b45309">Per-IP limits</text>
+  <text x="992" y="758" class="desc">Token buckets on</text>
+  <text x="992" y="778" class="desc">x-forwarded-for:</text>
+  <text x="992" y="798" class="desc">login 10/hr,</text>
+  <text x="992" y="818" class="desc">tenants 60/hr → 429</text>
+
+  <path class="edge" d="M273,777 L286,777" marker-end="url(#a)"/>
+  <path class="edge" d="M503,777 L516,777" marker-end="url(#a)"/>
+  <path class="edge" d="M733,777 L746,777" marker-end="url(#a)"/>
+</svg>

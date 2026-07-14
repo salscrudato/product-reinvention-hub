@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 900" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#64748b"/></marker>
+    <marker id="av" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#8B1FE0"/></marker>
+    <style>
+      .title{font-size:25px;font-weight:700;fill:#0f172a}
+      .sub{font-size:13px;fill:#64748b}
+      .lbl{font-size:13.5px;font-weight:700;fill:#0f172a}
+      .desc{font-size:11.5px;fill:#475569}
+      .pill{font-size:10.5px;font-weight:700;fill:#475569}
+      .box{fill:#fff;stroke:#cbd5e1;stroke-width:1.5}
+      .ai{fill:#f5f3ff;stroke:#8B1FE0;stroke-width:1.5}
+      .edge{stroke:#64748b;stroke-width:1.6;fill:none}
+      .edgev{stroke:#8B1FE0;stroke-width:2;fill:none}
+      .stage{fill:#fefce8;stroke:#facc15;stroke-width:1.5}
+    </style>
+  </defs>
+  <rect width="1240" height="900" fill="#f8fafc"/>
+  <text x="40" y="46" class="title">AI Fleet · RAG Grounding + Citation Verification · Import Brain</text>
+  <text x="40" y="68" class="sub">All AI is server-side (browser never calls a model). Grounded + cited is an invariant — free invention is a bug.</text>
+
+  <!-- Fleet registry -->
+  <rect x="40" y="92" width="560" height="196" rx="12" class="box"/>
+  <text x="58" y="116" class="lbl">Fleet registry — role → deployment  (shared/src/ai/fleet.ts → fleet-shared.cjs)</text>
+  <text x="58" y="136" class="desc">Roles decouple call-sites from concrete model IDs; fleet.js routes + cost-guards.</text>
+
+  <rect x="58" y="150" width="172" height="54" rx="8" class="ai"/>
+  <text x="70" y="170" class="pill" fill="#8B1FE0">GROUNDED_CITED</text>
+  <text x="70" y="188" class="desc">claude-opus-4-8</text>
+  <text x="70" y="201" class="desc">$15 / $75 per MTok</text>
+
+  <rect x="240" y="150" width="172" height="54" rx="8" class="ai"/>
+  <text x="252" y="170" class="pill" fill="#8B1FE0">MID_REASONER</text>
+  <text x="252" y="188" class="desc">claude-sonnet-5</text>
+  <text x="252" y="201" class="desc">$3 / $15</text>
+
+  <rect x="422" y="150" width="172" height="54" rx="8" class="ai"/>
+  <text x="434" y="170" class="pill" fill="#8B1FE0">BULK_VERIFY</text>
+  <text x="434" y="188" class="desc">claude-haiku-4-5</text>
+  <text x="434" y="201" class="desc">$0.8 / $4</text>
+
+  <rect x="58" y="212" width="172" height="54" rx="8" class="box"/>
+  <text x="70" y="232" class="pill">VISION / validator</text>
+  <text x="70" y="250" class="desc">gpt-5.1</text>
+  <text x="70" y="263" class="desc">decorrelated from Anthropic</text>
+
+  <rect x="240" y="212" width="172" height="54" rx="8" class="box"/>
+  <text x="252" y="232" class="pill">CHEAP_GENERAL</text>
+  <text x="252" y="250" class="desc">gpt-5-mini</text>
+  <text x="252" y="263" class="desc">$0.3 / $1.6</text>
+
+  <rect x="422" y="212" width="172" height="54" rx="8" class="box"/>
+  <text x="434" y="232" class="pill">EMBED</text>
+  <text x="434" y="250" class="desc">text-embedding-3-small</text>
+  <text x="434" y="263" class="desc">int8-quantized vectors</text>
+
+  <!-- Cost guard -->
+  <rect x="620" y="92" width="580" height="196" rx="12" class="box" stroke="#f59e0b"/>
+  <text x="638" y="116" class="lbl" fill="#b45309">Cost guard + escalation  (fleet.js, in-process, per-instance)</text>
+  <text x="638" y="138" class="desc">Rolling 1-hour window · ceiling $25 · soft-degrade at 80% of ceiling.</text>
+  <text x="638" y="156" class="desc">guard(context) → {allow, degrade, reason}. Over ceiling → honest 503.</text>
+  <text x="638" y="176" class="pill">degradedRole: GROUNDED_CITED / MID_REASONER → BULK_VERIFY when throttled</text>
+  <rect x="638" y="188" width="544" height="42" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+  <text x="650" y="207" class="desc">Escalation ladder (import brain): haiku → sonnet → opus. Missing deployments</text>
+  <text x="650" y="222" class="desc">(e.g. sonnet not provisioned) are cached as 404 and skipped on retry.</text>
+  <rect x="638" y="238" width="544" height="42" rx="8" fill="#ecfdf5" stroke="#86efac"/>
+  <text x="650" y="257" class="desc">IMPORT_CONTEXT = 'import-no-cap' → guard ALWAYS allows, never degrades …</text>
+  <text x="650" y="272" class="desc">… but fleet.record() telemetry ALWAYS runs (no-cap removes the cap, never the meter).</text>
+
+  <!-- RAG chat flow -->
+  <rect x="40" y="312" width="560" height="330" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="58" y="337" class="lbl" fill="#1d4ed8">Portfolio copilot — RAG grounding + citation verify  (/api/ai/chat, analyzeClaim)</text>
+
+  <rect x="58" y="352" width="248" height="86" rx="8" class="box"/>
+  <text x="72" y="374" class="lbl">Retrieve (two-tier)</text>
+  <text x="72" y="394" class="desc">PORTFOLIO baseline: all product</text>
+  <text x="72" y="410" class="desc">chunks (≤200).  DETAIL: semantic</text>
+  <text x="72" y="426" class="desc">top-18 of ≤400 chunks.</text>
+
+  <rect x="322" y="352" width="262" height="86" rx="8" class="box"/>
+  <text x="336" y="374" class="lbl">Hybrid score</text>
+  <text x="336" y="394" class="desc">dense int8 cosine + lexical overlap</text>
+  <text x="336" y="410" class="desc">HYBRID_ALPHA 0.72, DENSE_FLOOR 0.22</text>
+  <text x="336" y="426" class="desc">Falls back to lexical on embed fail.</text>
+
+  <rect x="58" y="452" width="526" height="70" rx="8" class="ai"/>
+  <text x="72" y="474" class="lbl" fill="#8B1FE0">Generate (opus, SSE stream)</text>
+  <text x="72" y="494" class="desc">Prompt requires bracketed refs [PH.PROD.001] / [CG 00 01].</text>
+  <text x="72" y="510" class="desc">Ingested documents marked as untrusted data (prompt-injection sandbox).</text>
+
+  <rect x="58" y="536" width="526" height="92" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+  <text x="72" y="558" class="lbl" fill="#b91c1c">Verify citations (anti-fabrication — DEF-0018)</text>
+  <text x="72" y="578" class="desc">Server extracts every cited [refId] and checks it against the retrieved</text>
+  <text x="72" y="594" class="desc">context (bracketed refs + full text). Unverified citation → {t:'notice',</text>
+  <text x="72" y="610" class="desc">kind:'unverified'}. analyzeClaim downgrades verdict to NOT_ADDRESSED if the</text>
+  <text x="72" y="624" class="desc">model gave no cited reasoning. chatCard reports verified vs all citations.</text>
+
+  <path class="edgev" d="M306,395 L318,395" marker-end="url(#av)"/>
+  <path class="edgev" d="M321,438 L321,449" marker-end="url(#av)"/>
+  <path class="edgev" d="M321,522 L321,533" marker-end="url(#av)"/>
+
+  <!-- Import brain -->
+  <rect x="620" y="312" width="580" height="466" rx="12" fill="#fefce8" stroke="#fde68a" stroke-width="1.5"/>
+  <text x="638" y="337" class="lbl" fill="#a16207">Import brain — 6-stage adaptive pipeline  (/api/ai/unifiedImport → import-brain/)</text>
+  <text x="638" y="356" class="desc">Takes raw base64 docs. Runs no-cap. SSE :hb heartbeat every 15s (Azure 230s idle kill).</text>
+
+  <rect x="638" y="368" width="544" height="52" rx="8" class="box"/>
+  <text x="652" y="388" class="lbl">Stage 0 · Router  (magic-byte sniff, never filename)</text>
+  <text x="652" y="406" class="desc">XLSX/CSV → structural model → brain · text PDF → filing pipeline · scanned PDF → vision blocks</text>
+
+  <rect x="638" y="428" width="266" height="60" rx="8" class="stage"/>
+  <text x="652" y="449" class="lbl">1 · Sheet classify</text>
+  <text x="652" y="468" class="desc">BULK pre-filter +</text>
+  <text x="652" y="482" class="desc">reasoner ensemble</text>
+
+  <rect x="916" y="428" width="266" height="60" rx="8" class="stage"/>
+  <text x="930" y="449" class="lbl">2 · Header lock</text>
+  <text x="930" y="468" class="desc">deterministic +</text>
+  <text x="930" y="482" class="desc">AI fallback</text>
+
+  <rect x="638" y="496" width="266" height="60" rx="8" class="stage"/>
+  <text x="652" y="517" class="lbl">3 · Column → field map</text>
+  <text x="652" y="536" class="desc">parallel reasoners A/B</text>
+  <text x="652" y="550" class="desc">+ reconcile</text>
+
+  <rect x="916" y="496" width="266" height="60" rx="8" class="stage"/>
+  <text x="930" y="517" class="lbl">4 · Row extract</text>
+  <text x="930" y="536" class="desc">multi-refId split,</text>
+  <text x="930" y="550" class="desc">refId synthesis</text>
+
+  <rect x="638" y="564" width="266" height="72" rx="8" class="stage" stroke="#dc2626"/>
+  <text x="652" y="585" class="lbl" fill="#b91c1c">5 · Adversarial validate</text>
+  <text x="652" y="604" class="desc">gpt-5.1 — decorrelated</text>
+  <text x="652" y="620" class="desc">from Anthropic extractors</text>
+
+  <rect x="916" y="564" width="266" height="72" rx="8" class="stage"/>
+  <text x="930" y="585" class="lbl">6 · Reconcile</text>
+  <text x="930" y="604" class="desc">WRITES NOTHING —</text>
+  <text x="930" y="620" class="desc">emits a proposal plan</text>
+
+  <rect x="638" y="648" width="544" height="54" rx="8" fill="#ecfdf5" stroke="#86efac"/>
+  <text x="652" y="670" class="lbl" fill="#15803d">Every extracted field cites its source cell (sheet!cell)</text>
+  <text x="652" y="689" class="desc">Grounded against canonicalMap.ts (canonical field dictionary, not a string matcher).</text>
+
+  <rect x="638" y="710" width="544" height="56" rx="8" class="box" stroke="#8B1FE0"/>
+  <text x="652" y="732" class="lbl" fill="#8B1FE0">App persists the plan via standard adapter.db.mutate</text>
+  <text x="652" y="751" class="desc">Import produces proposals; the human-approved plan flows through the same atomic envelope + audit chain.</text>
+
+  <path class="edge" d="M904,458 L914,458" marker-end="url(#a)"/>
+  <path class="edge" d="M904,526 L914,526" marker-end="url(#a)"/>
+  <path class="edge" d="M904,600 L914,600" marker-end="url(#a)"/>
+  <path class="edge" d="M770,556 L770,562" marker-end="url(#a)"/>
+</svg>

@@ -1,0 +1,29 @@
+%% Citation guard - server resolve-or-downgrade mirrored client-side (defense in depth)
+%% SERVER: server/lib/ai/analyze-claim.js  CLIENT: app/src/lib/claims/determination.ts + Claims.tsx
+%% SUBSTANTIVE_VERDICTS = COVERED | NOT_COVERED | PARTIAL. NOT_ADDRESSED is the honest exception.
+flowchart TB
+  RAW["model tool_use.input: verdict, summary, reasoning array, considerations array, coverages, exclusions, citations"] --> DOWN{"SERVER downgrade: substantive verdict AND zero reasoning entries containing a bracket citation ?"}
+  DOWN -->|yes| FORCE["verdict = NOT_ADDRESSED; summary += '(downgraded: no cited reasoning provided)'"]
+  DOWN -->|no| NORM["normalize coverages/exclusions (new object + legacy string/legacy-key shapes)"]
+  FORCE --> NORM
+  NORM --> EMITJSON["emit {t:'json', key:'determination', value}"]
+
+  EMITJSON --> UNV{"SERVER unverified check: cited tokens (citations array + bracket matches in reasoning) not bracketed in ctx and not digit-led ?"}
+  UNV -->|yes| NOTICE["emit {t:'notice', kind:'unverified', level:'warn', refs list} - a SEPARATE event, NOT set on the determination object"]
+  UNV -->|no| DONE1["(no notice)"]
+
+  EMITJSON --> CLIENT["CLIENT receives determination json"]
+  CLIENT --> FOOTER["withForm = {...d, formNumber: d.formNumber || selectedForm.formNumber} - footer chip guaranteed"]
+  FOOTER --> SR{"shouldRenderDetermination(withForm)"}
+
+  SR --> S1{"verdict NOT substantive?"}
+  S1 -->|yes| RENDER["render DeterminationCard"]
+  S1 -->|no| S2{"unverifiedCitations present?"}
+  S2 -->|yes| REFUSE["return false -> show 'couldn't ground that determination - please rephrase'"]
+  S2 -->|no| S3{"isDeterminationCited? explicit citation OR coverage refId/form OR exclusion refId/form OR limit source OR bracket in reasoning (footer formNumber alone does NOT count)"}
+  S3 -->|yes| RENDER
+  S3 -->|no| REFUSE
+
+  classDef gap fill:#fdecea,stroke:#d9534f,color:#611a15;
+  HONEST["HONEST FINDING: the deployed analyze-claim.js NEVER sets determination.unverifiedCitations - it emits a separate unverified NOTICE. So the client S2 branch is effectively dormant for this handler; shouldRenderDetermination reduces to (non-substantive OR isDeterminationCited). The determination.ts guard references the LEGACY functions/src/claims.ts as its authoritative mirror. Real defense is the SERVER citation-downgrade + client isDeterminationCited."]:::gap
+  S2 -.-> HONEST

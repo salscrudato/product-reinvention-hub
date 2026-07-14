@@ -1,0 +1,16 @@
+{
+  "runAt": "2026-07-14T00:26:43.731Z",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "tenant": "import-live-smoke",
+  "exit": {
+    "runs": 0,
+    "crashes": 0,
+    "fabrications": 0,
+    "sourceGaps": 0,
+    "formatsPassed": 0,
+    "formatsTotal": 0,
+    "roundTripOk": true,
+    "pass": true
+  },
+  "results": []
+}

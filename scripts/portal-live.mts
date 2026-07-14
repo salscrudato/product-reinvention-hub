@@ -20,8 +20,13 @@ import { writeFileSync } from 'node:fs'
 
 const BASE = (process.env.PF_BASE_URL || 'https://app-prodhub-dev.azurewebsites.net').replace(/\/$/, '')
 const TENANT = 'portal-live-b'
-const PH_A = 'plb-holder-a'
-const PH_B = 'plb-holder-b'
+// Fresh per-run identities so re-runs (and mid-run dev restarts from a parallel push)
+// never collide with the one-time-upload 409 or a cached summary. The catalog is stable
+// (seeded idempotently). Teardown removes the run's users + records best-effort.
+const RUN = Date.now().toString(36).slice(-6)
+const PH_A = `plb-a-${RUN}`
+const PH_B = `plb-b-${RUN}`
+const VIEWER = `plb-v-${RUN}`
 
 type Check = { name: string; pass: boolean; detail: string }
 const results: Check[] = []
@@ -127,7 +132,8 @@ async function main() {
   let seededAll = true
   for (const [path, data] of seeds) {
     const r = await seed({ op: 'create', path, entityType: path.includes('/coverages/') ? 'coverage' : path.includes('/forms/') ? 'form' : 'product', data })
-    if (r.status !== 200) { seededAll = false; record(`seed ${path}`, false, `${r.status} ${JSON.stringify(r.body).slice(0, 120)}`) }
+    // 409 = catalog already seeded by a prior run (stable across runs) — acceptable.
+    if (r.status !== 200 && r.status !== 409) { seededAll = false; record(`seed ${path}`, false, `${r.status} ${JSON.stringify(r.body).slice(0, 120)}`) }
   }
   if (seededAll) record('seed carrier catalog (product + 4 coverages + form)', true)
   const CATALOG_REFIDS = ['PLB.PROD.001', 'PLB.COV.DWELL', 'PLB.COV.WB', 'PLB.COV.FLD', 'PLB.COV.EQ', 'PLB.FORM.FLD']
@@ -139,10 +145,10 @@ async function main() {
     const r = await apiRetry('/admin/impersonate', { method: 'POST', body: JSON.stringify({ targetUid, tenantId: TENANT, reason: 'Lane B F4 live proof' }) }, jwt)
     return r.status === 200 ? (r.body.token as string) : null
   }
-  await mkUser(PH_A, 'POLICYHOLDER'); await mkUser(PH_B, 'POLICYHOLDER'); await mkUser('plb-viewer', 'VIEWER')
+  await mkUser(PH_A, 'POLICYHOLDER'); await mkUser(PH_B, 'POLICYHOLDER'); await mkUser(VIEWER, 'VIEWER')
   const tokA = await impersonate(PH_A)
   const tokB = await impersonate(PH_B)
-  const tokViewer = await impersonate('plb-viewer')
+  const tokViewer = await impersonate(VIEWER)
   record('provision POLICYHOLDER users + server-minted tokens', Boolean(tokA && tokB && tokViewer))
   if (!tokA || !tokB || !tokViewer) return finish(1)
 
@@ -225,6 +231,18 @@ async function main() {
     !/unicorn|evil\.example|<script|FOUNDRY|SUPER_ADMIN|system prompt/i.test(htmlB))
   const escalated = await api('/db/list', { method: 'POST', body: JSON.stringify({ path: 'products' }) }, tokB)
   record('persona unescalated after hostile doc (db still 403)', escalated.status === 403)
+
+  // ── Teardown (best-effort): remove this run's policyholder records + users ────
+  // Records are deleted via the standard audited mutate envelope (SUPER_ADMIN has
+  // product:write; portalPolicies is not a reserved base). Append-only audit chains
+  // stay by design. The stable catalog + tenant are left for the next run.
+  for (const uid of [PH_A, PH_B]) {
+    await apiRetry('/db/mutate', { method: 'POST', body: JSON.stringify({ payload: { op: 'delete', path: `portalPolicies/${uid}`, entityType: 'portalPolicy' } }) }, jwt).catch(() => {})
+  }
+  for (const uid of [PH_A, PH_B, VIEWER]) {
+    await api(`/admin/users/${encodeURIComponent(uid)}`, { method: 'DELETE' }, jwt).catch(() => {})
+  }
+  console.log('  … teardown: removed run records + users')
 
   finish(0)
 }

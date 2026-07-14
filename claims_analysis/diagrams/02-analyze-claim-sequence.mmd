@@ -1,0 +1,66 @@
+%% Claims Analysis — one determination turn end to end (SSE)
+%% Verified against server/lib/ai/analyze-claim.js, server/lib/ai/_shared.js,
+%% server/lib/fleet.js, app/src/routes/Claims.tsx, app/src/lib/backend/azure.adapter.ts
+%% NOTE: analyze-claim.js uses a NON-streaming forced tool call (_forcedToolCall awaits the
+%% full Foundry response), so it emits NO {t:'token'} events - only tool/json/notice/done.
+%% The RAF token-batching path in Claims.tsx is shared infra, dormant for this handler.
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant C as Claims.tsx (ask)
+  participant A as adapter.fns.stream
+  participant H as Express gates (server.js + ai/index.js)
+  participant AC as analyze-claim.js
+  participant B as Blob (uploads)
+  participant G as grounding() (_shared.js)
+  participant E as Foundry embeddings
+  participant DB as Cosmos groundingChunks
+  participant F as fleet.js
+  participant M as Foundry Claude (opus-4-8)
+
+  U->>C: describe a loss (starter or composer)
+  Note over C: gate isFormAnalyzable(selectedForm) - READY && storagePath
+  C->>A: stream('analyzeClaim', {messages, formNumber, formStoragePath, formStorageMediaType, lob})
+  A->>H: SSE POST /api/ai/analyzeClaim (Bearer JWT)
+  Note over H: requireCapability ai:invoke · requireTenant · flag page.claims · rate-limit · tenant budget
+  H->>AC: analyzeClaim(req, res)
+  AC->>AC: sse(res); validate messages[]
+  AC->>F: fleet.guard()
+  alt guard.allow == false
+    AC-->>A: data: {t:'error', message} then {t:'done'}
+    A-->>C: onChunk -> NoticeBanner / error text; done
+  else allowed
+    Note over AC: deployment = CHAT_OVERRIDE || resolveModel('GROUNDED_CITED', g.degrade)
+    opt formStoragePath present
+      AC-->>A: {t:'tool', name:'fetch:form', phase:'start'}
+      AC->>B: _fetchBlobBase64(formStoragePath)
+      B-->>AC: base64 (or null -> text fallback)
+      AC-->>A: {t:'tool', name:'fetch:form', phase:'end'}
+    end
+    Note over AC: formText = _extractPdfText(formB64) || body.formText
+    AC-->>A: {t:'tool', name:'load:context', phase:'start'}
+    AC->>G: groundingFlat(lastUser, null, tenantId)
+    G->>E: embed.embedOne(query) -> qVec
+    G->>DB: baseline (all product chunks) + TOP 400 candidates
+    DB-->>G: chunks
+    G-->>AC: [baseline ...portfolio, ...detail] context
+    AC-->>A: {t:'tool', name:'load:context', phase:'end', summary:'N chunk(s)'}
+    Note over AC: systemBlocks = CLAIMS_SYSTEM (ephemeral) + PORTFOLIO CONTEXT; contentBlock = extracted text OR native document block
+    AC-->>A: {t:'tool', name:'emit_determination', phase:'start'}
+    AC->>F: _forcedToolCall -> fleet.anthropicMessagesUrl / headers
+    F->>M: POST tool_choice {type:'tool', name:'emit_determination'} (no temperature)
+    M-->>F: tool_use.input (verdict, summary, reasoning[3], considerations[3], coverages, exclusions)
+    F->>F: fleet.record(deployment, inTok, outTok)
+    F-->>AC: raw determination
+    Note over AC: CITATION DOWNGRADE - substantive verdict with 0 bracketed reasoning -> verdict = NOT_ADDRESSED + summary note
+    AC->>AC: normalize coverages/exclusions (new + legacy shapes)
+    AC-->>A: {t:'tool', name:'emit_determination', phase:'end'}
+    AC-->>A: {t:'json', key:'determination', value: determination}
+    A-->>C: onChunk -> shouldRenderDetermination gate -> DeterminationCard (footer formNumber guaranteed)
+    opt cited token not bracketed in context and not digit-led
+      AC-->>A: {t:'notice', kind:'unverified', level:'warn', refs:[...]}
+      A-->>C: stored in m.notice -> NoticeBanner (own field, token flush cannot wipe)
+    end
+    AC-->>A: {t:'done'}; res.end()
+    A-->>C: finally - final flush; setStreaming(false); 'Response ready' polite announce
+  end

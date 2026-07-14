@@ -1,0 +1,235 @@
+{
+  "base": "https://app-prodhub-dev.azurewebsites.net",
+  "capturedRoutes": [
+    {
+      "file": "01-landing.light.png",
+      "path": "/",
+      "theme": "light"
+    },
+    {
+      "file": "02-home-check-guest.light.png",
+      "path": "/home-check",
+      "theme": "light"
+    },
+    {
+      "file": "03-home-cockpit.light.png",
+      "path": "/app",
+      "theme": "light"
+    },
+    {
+      "file": "04-products.light.png",
+      "path": "/app/products",
+      "theme": "light"
+    },
+    {
+      "file": "05-ho-overview.light.png",
+      "path": "/app/products/PH.PROD.001/overview",
+      "theme": "light"
+    },
+    {
+      "file": "06-ho-coverages.light.png",
+      "path": "/app/products/PH.PROD.001/coverages",
+      "theme": "light"
+    },
+    {
+      "file": "07-ho-forms.light.png",
+      "path": "/app/products/PH.PROD.001/forms",
+      "theme": "light"
+    },
+    {
+      "file": "08-ho-pricing.light.png",
+      "path": "/app/products/PH.PROD.001/pricing",
+      "theme": "light"
+    },
+    {
+      "file": "09-ho-states.light.png",
+      "path": "/app/products/PH.PROD.001/states",
+      "theme": "light"
+    },
+    {
+      "file": "10-ho-rules.light.png",
+      "path": "/app/products/PH.PROD.001/rules",
+      "theme": "light"
+    },
+    {
+      "file": "11-gl-overview.light.png",
+      "path": "/app/products/GL.PROD.001/overview",
+      "theme": "light"
+    },
+    {
+      "file": "12-gl-coverages.light.png",
+      "path": "/app/products/GL.PROD.001/coverages",
+      "theme": "light"
+    },
+    {
+      "file": "13-gl-pricing-2635.light.png",
+      "path": "/app/products/GL.PROD.001/pricing",
+      "theme": "light"
+    },
+    {
+      "file": "14-gl-states.light.png",
+      "path": "/app/products/GL.PROD.001/states",
+      "theme": "light"
+    },
+    {
+      "file": "15-builder.light.png",
+      "path": "/app/builder",
+      "theme": "light"
+    },
+    {
+      "file": "16-explorer.light.png",
+      "path": "/app/explorer",
+      "theme": "light"
+    },
+    {
+      "file": "17-tasks-gtm.light.png",
+      "path": "/app/tasks",
+      "theme": "light"
+    },
+    {
+      "file": "18-news.light.png",
+      "path": "/app/news",
+      "theme": "light"
+    },
+    {
+      "file": "19-claims.light.png",
+      "path": "/app/claims",
+      "theme": "light"
+    },
+    {
+      "file": "20-dictionary.light.png",
+      "path": "/app/dictionary",
+      "theme": "light"
+    },
+    {
+      "file": "21-feedback.light.png",
+      "path": "/app/feedback",
+      "theme": "light"
+    },
+    {
+      "file": "22-admin.light.png",
+      "path": "/app/admin",
+      "theme": "light"
+    },
+    {
+      "file": "23-tenant-admin.light.png",
+      "path": "/app/tenant-admin",
+      "theme": "light"
+    },
+    {
+      "file": "01-landing.dark.png",
+      "path": "/",
+      "theme": "dark"
+    },
+    {
+      "file": "02-home-check-guest.dark.png",
+      "path": "/home-check",
+      "theme": "dark"
+    },
+    {
+      "file": "03-home-cockpit.dark.png",
+      "path": "/app",
+      "theme": "dark"
+    },
+    {
+      "file": "04-products.dark.png",
+      "path": "/app/products",
+      "theme": "dark"
+    },
+    {
+      "file": "05-ho-overview.dark.png",
+      "path": "/app/products/PH.PROD.001/overview",
+      "theme": "dark"
+    },
+    {
+      "file": "06-ho-coverages.dark.png",
+      "path": "/app/products/PH.PROD.001/coverages",
+      "theme": "dark"
+    },
+    {
+      "file": "07-ho-forms.dark.png",
+      "path": "/app/products/PH.PROD.001/forms",
+      "theme": "dark"
+    },
+    {
+      "file": "08-ho-pricing.dark.png",
+      "path": "/app/products/PH.PROD.001/pricing",
+      "theme": "dark"
+    },
+    {
+      "file": "09-ho-states.dark.png",
+      "path": "/app/products/PH.PROD.001/states",
+      "theme": "dark"
+    },
+    {
+      "file": "10-ho-rules.dark.png",
+      "path": "/app/products/PH.PROD.001/rules",
+      "theme": "dark"
+    },
+    {
+      "file": "11-gl-overview.dark.png",
+      "path": "/app/products/GL.PROD.001/overview",
+      "theme": "dark"
+    },
+    {
+      "file": "12-gl-coverages.dark.png",
+      "path": "/app/products/GL.PROD.001/coverages",
+      "theme": "dark"
+    },
+    {
+      "file": "13-gl-pricing-2635.dark.png",
+      "path": "/app/products/GL.PROD.001/pricing",
+      "theme": "dark"
+    },
+    {
+      "file": "14-gl-states.dark.png",
+      "path": "/app/products/GL.PROD.001/states",
+      "theme": "dark"
+    },
+    {
+      "file": "15-builder.dark.png",
+      "path": "/app/builder",
+      "theme": "dark"
+    },
+    {
+      "file": "16-explorer.dark.png",
+      "path": "/app/explorer",
+      "theme": "dark"
+    },
+    {
+      "file": "17-tasks-gtm.dark.png",
+      "path": "/app/tasks",
+      "theme": "dark"
+    },
+    {
+      "file": "18-news.dark.png",
+      "path": "/app/news",
+      "theme": "dark"
+    },
+    {
+      "file": "19-claims.dark.png",
+      "path": "/app/claims",
+      "theme": "dark"
+    },
+    {
+      "file": "20-dictionary.dark.png",
+      "path": "/app/dictionary",
+      "theme": "dark"
+    },
+    {
+      "file": "21-feedback.dark.png",
+      "path": "/app/feedback",
+      "theme": "dark"
+    },
+    {
+      "file": "22-admin.dark.png",
+      "path": "/app/admin",
+      "theme": "dark"
+    },
+    {
+      "file": "23-tenant-admin.dark.png",
+      "path": "/app/tenant-admin",
+      "theme": "dark"
+    }
+  ]
+}

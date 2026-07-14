@@ -70,3 +70,6 @@ docs/audit/import_ledger.json
 
 # Client-proprietary sample workbooks used for local import eval only (never commit)
 additional_samples/
+
+# Headless orchestration session logs (local only)
+tools/orchestrate/run/
