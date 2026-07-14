@@ -20,14 +20,36 @@
 
 ## Cost log
 
-| When | Milestone | /cost |
+`/cost` is a CLI-side command not invocable from inside the session; spend is
+logged here as measured token usage instead (honest proxy, same envelope).
+
+| When | Milestone | Measured usage |
 |---|---|---|
-| start | orientation + exploration fan-out | (logged at first wave commit) |
+| orientation | 6 parallel Explore agents (surface maps) | ~464k subagent tokens |
+| waves 1–6 | single-session build, scoped test runs per wave, full gate once at end | main-session context ~1 window; no model API spend outside the session itself |
+| envelope | $30 | not exceeded (single session + subagents; no live AI calls made — live verification deferred) |
 
 ## Wave log
 
 | Wave | Sha | Gate | Notes |
 |---|---|---|---|
+| 1 · stream foundations | `07566fe` | scoped tests + typecheck ✅ | WaveformLoader; StreamRenderer lead/settle; Claims depth folds |
+| 2 · Home | `79c6398` | axe + server tests ✅ | Platform-panel Feedback; collapsible rail (default closed, per-user); taskSummary handler (MID_REASONER, cited); Ctrl+F/K overlay only |
+| 3 · Products+Explorer | `eceeff5` | full app suite ✅ (384) | whole-card click; kebab; highlight; ↑↓/Enter; refId chips restored in Explorer |
+| 4 · Tasks | `21ee85b` | tasks+axe ✅ | Dialog footer layout; Seed never silently disabled (+regression test); dnd-kit board drag |
+| 5 · News | `fe3bac1` | server suite ✅ (120) | REAL web-search curation; day backfill; og:image→blob; news-image route; never fabricates |
+| 6 · Import | `00093bf` | visualizer+axe ✅ | WarningsPanel; VirtualList; live write stream; BATCH_SIZE 150; brain:escalation real event |
+| Rebecca feedback | `2e6195c` | typecheck+axe ✅ | promote→card view (?view=cards&promoted=id); LOB grouping in cards; dev proxy |
+| FINAL GATE | — | **typecheck ✅ lint ✅ test ✅ build ✅ · bundle 144.5/175 gz · worst chunk 22.7/25 · CSS 18.3/25 · canaries in-suite ✅** | push HELD awaiting user go |
+
+## Write-phase speed (1,707-entity case)
+
+- Client chunking raised 50 → 150 entities per `mutateBatch` HTTP call. Server semantics
+  unchanged: per-PK ≤96-op Cosmos transactional chunks, atomic per chunk, audit/version/
+  searchIndex ops intact, sequential ordering preserved (coverage parent-waves untouched).
+- Expected effect: ~3× fewer HTTP round trips + ~3× fewer embedding batch calls.
+- `importPlan` now returns `durationMs`; the UI shows honest rate + ETA.
+- **Before/after wall time to be measured on dev at live-verify and recorded here.**
 
 ## Deferred-to-go (live) checklist
 

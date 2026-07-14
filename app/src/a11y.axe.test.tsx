@@ -148,4 +148,34 @@ describe('a11y (axe) — new/updated surfaces', () => {
     await screen.findByRole('dialog')
     expect(await axeViolations(document.body)).toEqual([])
   })
+
+  // ── R0 wave surfaces ─────────────────────────────────────────────────────────
+
+  it('PriorityRail (with tasks + AI summary affordance) has no accessibility violations', async () => {
+    const { PriorityRail } = await import('./components/home/PriorityRail')
+    const soon = new Date(Date.now() + 2 * 86_400_000).toISOString()
+    const tasks = [
+      { id: 't1', title: 'File GL rates in NJ', column: 'BUILD_FILE', dueAt: soon, checklist: [], order: 1 },
+      { id: 't2', title: 'Review HO-3 forms', column: 'IDEATION', dueAt: soon, checklist: [], order: 2 },
+    ] as unknown as Parameters<typeof PriorityRail>[0]['tasks']
+    const { container } = render(
+      <MemoryRouter>
+        <PriorityRail status="ready" tasks={tasks} products={[]} now={Date.now()} />
+      </MemoryRouter>,
+    )
+    expect(await axeViolations(container)).toEqual([])
+  })
+
+  it('ProductCard (kebab open) has no accessibility violations', async () => {
+    const { ProductCard } = await import('./components/product/ProductCard')
+    const p = { ...PH_PRODUCT, id: 'PH.PROD.001', lifecycle: 'LAUNCHED', rev: 1 } as unknown as Parameters<typeof ProductCard>[0]['p']
+    const { container } = render(
+      <MemoryRouter>
+        <ProductCard p={p} canEdit onDelete={() => {}} onRetire={() => {}} highlight="ho" />
+      </MemoryRouter>,
+    )
+    const menuBtn = await screen.findByRole('button', { name: /actions/i })
+    menuBtn.click()
+    expect(await axeViolations(container)).toEqual([])
+  })
 })
