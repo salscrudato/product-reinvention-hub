@@ -70,18 +70,7 @@ BULK_VERIFY=claude-haiku-4-5, VISION/judge=gpt-5.1, CHEAP=gpt-5-mini.
 
 ## 3. OPEN ITEMS (your job, priority order)
 
-1. **NJ filing rate-order + manual extract 0 items** (user-visible!). Deploys through
-   `3e6e9f2` (pMap hotfix — a runtime `pMap is not defined` broke filing uploads; verify
-   run for `3e6e9f2` succeeded first). Retest: `node <scratch>/probe-live.mjs` with all
-   3 `samples/filings/nj-lemonade-ho/*.pdf` in ONE request. The new `citations-dropped`
-   / `sanitize-note` notices tell you WHY items vanish (suspect: vision models omit
-   `citation` → `sanitize.ts` drops all). If confirmed, best fix: in `stage-filing.js`,
-   when a vision-doc item lacks a citation, DEFAULT it server-side to `p.<page?> <tool
-   label>` derived context (grounded-by-construction: the whole doc was the input) and
-   flag `needsReview` instead of dropping — or add a repair pass that re-asks the model
-   for citations only. Keep the anti-fabrication intent: never invent VALUES, only
-   normalize citation format. Verify UI no longer crashes (bundle now normalized +
-   modal guards in `app/src/import/UnifiedImportModal.tsx`).
+1. **NJ filing rate-order + manual — ROOT CAUSE FOUND, fix deployed, VERIFY IT.** Debug notices caught it live: with maxTokens 4000/8000 the models UNDER-FILL the forced tool call (opus returned maxCreditRuleRef + note but NO variables array; haiku/sonnet returned {}). Fix in `3c1b93b`: output budgets 16000 (rate order, manual) / 8192 (policy form) + one explicit fill-the-array retry per rung when the primary array is empty. A solo rate-order probe already yielded **70 cited variables**. YOUR FIRST TASK: confirm run for `3c1b93b` succeeded, then replay all 3 samples/filings/nj-lemonade-ho PDFs in ONE request (scratch probe-live.mjs pattern or your own SSE client; tee output to a file — piping through head SIGPIPE-kills the probe). Expect: classify all 3 roles, three extractions concurrent (start together ~8s), rate-order ~70 variables, manual rules > 0 (raise its budget further if the extract-empty notice shows under-fill again — the manual is table-dense), policy form 22 coverages, normalized bundle, no UI crash. If manual still under-fills at 16k, split extraction per page-range or per rule-number block.
 2. **CORE rerun** after gap-fill: `IMPORT_EVAL_TIMEOUT_MS=7200000 IMPORT_EVAL_ONLY=CORE
    IMPORT_TENANT=eval-core10 npx tsx scripts/import-eval.mts --live` (~90 min; run solo,
    avoid pushes meanwhile). Expect F1 ≥0.95. Diagnostics land in
