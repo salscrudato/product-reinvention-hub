@@ -203,6 +203,12 @@ async function unifiedImport(req, res) {
   const budget = typeof brainMod.createBudget === 'function'
     ? brainMod.createBudget({ noCap: true })
     : { degraded: false, noCap: true, spendUsd: 0, calls: 0, byDeployment: {} }
+  // Additive SSE: a REAL escalation event whenever the haiku→sonnet→opus ladder
+  // actually hands off (see ai-call.js escalateAnthropic). Existing consumers
+  // ignore unknown json keys; the agent visualizer renders the hand-off live.
+  budget.onEscalation = (info) => {
+    try { emit(res, { t: 'json', key: 'brain:escalation', value: info }) } catch { /* stream closed */ }
+  }
 
   try {
     // ── Legacy/back-compat: pre-built structural model (harness, older clients) ──

@@ -24,6 +24,30 @@ describe('buildVizModel', () => {
     expect(m.announcements).toHaveLength(0)
   })
 
+  it('escalation ladder exists ONLY when a real brain:escalation event fired (R0)', () => {
+    // Without the event: no escalations, even mid-run with active stages.
+    const without = buildVizModel([
+      tool('brain:stage0:route', 'start'),
+      tool('brain:stage0:route', 'end'),
+      tool('brain:stage4:extract', 'start', 'Extracting rows'),
+    ])
+    expect(without.escalations).toHaveLength(0)
+
+    // With the event: the hand-off is recorded, noted on the ACTIVE stage, announced.
+    const withEsc = buildVizModel([
+      tool('brain:stage0:route', 'start'),
+      tool('brain:stage0:route', 'end'),
+      tool('brain:stage4:extract', 'start', 'Extracting rows'),
+      json('brain:escalation', { fromRole: 'BULK_VERIFY', toRole: 'MID_REASONER', deployment: 'claude-sonnet-5' }),
+    ])
+    expect(withEsc.escalations).toEqual([
+      expect.objectContaining({ fromRole: 'BULK_VERIFY', toRole: 'MID_REASONER', deployment: 'claude-sonnet-5' }),
+    ])
+    const extract = withEsc.stages.find(s => s.id === 'extract')!
+    expect(extract.notes.some(n => n.includes('BULK_VERIFY → MID_REASONER'))).toBe(true)
+    expect(withEsc.announcements.at(-1)).toContain('handed off to MID_REASONER')
+  })
+
   it('shows only the router until the family is known (route precedes both families)', () => {
     const m = buildVizModel([tool('brain:stage0:route', 'start', 'Routing 1 artifact(s)')])
     expect(m.family).toBe('unknown')

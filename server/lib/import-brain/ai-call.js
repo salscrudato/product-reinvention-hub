@@ -201,7 +201,11 @@ async function escalateAnthropic({ fromRole, systemPrompt, userPrompt, maxTokens
     try {
       const res    = await callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, budget })
       const parsed = parse(res.raw)
-      if (parsed != null) return { role, deployment, parsed }
+      if (parsed != null) {
+        // Additive telemetry hook (set by unified-import): a REAL hand-off happened.
+        try { budget?.onEscalation?.({ fromRole, toRole: role, deployment }) } catch { /* never fail the ladder */ }
+        return { role, deployment, parsed }
+      }
     } catch (e) {
       // 4xx (deployment absent / bad request) → try the next rung; rethrow nothing.
       if (e && e.status && e.status >= 500) continue

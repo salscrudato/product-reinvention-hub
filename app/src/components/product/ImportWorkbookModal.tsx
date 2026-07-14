@@ -85,7 +85,8 @@ export function ImportWorkbookModal({ onClose, onImported }: Props) {
   const [dragOver, setDragOver] = useState(false)
   const [fileNames, setFiles]   = useState<string[]>([])
   const [plan, setPlan]         = useState<ImportPlan | null>(null)
-  const [progress, setProgress] = useState<ImportProgress>({ done: 0, total: 0, label: '' })
+  const EMPTY_PROGRESS: ImportProgress = { done: 0, total: 0, label: '', batch: 0, batches: 0, lastRefIds: [], etaMs: null, ratePerSec: null }
+  const [progress, setProgress] = useState<ImportProgress>(EMPTY_PROGRESS)
   const [result, setResult]     = useState<ImportResult | null>(null)
   const [error, setError]       = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -112,7 +113,7 @@ export function ImportWorkbookModal({ onClose, onImported }: Props) {
   async function runImport() {
     if (!plan?.product || !plan.productId || !user) return
     setPhase('importing')
-    setProgress({ done: 0, total: 0, label: 'Starting…' })
+    setProgress({ ...EMPTY_PROGRESS, label: 'Starting…' })
     try {
       const actor = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
       const draftId = newDraftId(plan.productId)

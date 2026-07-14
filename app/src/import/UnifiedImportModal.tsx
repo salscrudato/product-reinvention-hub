@@ -31,10 +31,14 @@ import { NoticeBanner } from '../components/ui/NoticeBanner'
 import {
   IconUpload, IconFile, IconCheckCircle, IconWarning, IconSpinner,
   IconCoverage, IconRule, IconPricing, IconTable, IconArrowRight, IconClose,
+  IconChevronRight,
 } from '../components/ui/icons'
 import { readWorkbooks } from '../lib/import/readWorkbook'
 import { readUploadFiles, runUnifiedImport, type UnifiedStageEvent } from './unifiedImportClient'
 import { IconAgent } from '../components/icons'
+import { WaveformLoader } from '../components/ai/WaveformLoader'
+import { WarningsPanel, type ImportWarning } from './WarningsPanel'
+import { VirtualList } from './VirtualList'
 
 // The visualizer is opt-in, so its code loads only when someone actually watches —
 // keeps the Builder/Products route chunks inside the 25 kB per-chunk budget.
@@ -142,7 +146,8 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const [acceptedSuggestions, setAcceptedSuggestions] = useState<Set<string>>(new Set())
   const [accepted, setAccepted] = useState<Set<FilingReviewSectionKey>>(new Set())
   const [cardStatus, setCardStatus] = useState<'PROPOSED' | 'APPROVED' | 'REJECTED'>('PROPOSED')
-  const [progress, setProgress] = useState<ImportProgress>({ done: 0, total: 0, label: '' })
+  const EMPTY_PROGRESS: ImportProgress = { done: 0, total: 0, label: '', batch: 0, batches: 0, lastRefIds: [], etaMs: null, ratePerSec: null }
+  const [progress, setProgress] = useState<ImportProgress>(EMPTY_PROGRESS)
   const [result, setResult]     = useState<ImportResult | null>(null)
   const [error, setError]       = useState('')
   // "Watch the agents" — opt-in live pipeline visualizer (renders only real SSE events).
@@ -208,7 +213,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   async function runImport() {
     if (!bundle?.plan.product || !bundle.plan.productId || !user) return
     setPhase('importing')
-    setProgress({ done: 0, total: 0, label: 'Starting…' })
+    setProgress({ ...EMPTY_PROGRESS, label: 'Starting…' })
     try {
       const actor   = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
       const draftId = newDraftId(bundle.plan.productId)
@@ -231,7 +236,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       return
     }
     setPhase('importing')
-    setProgress({ done: 0, total: 0, label: 'Starting…' })
+    setProgress({ ...EMPTY_PROGRESS, label: 'Starting…' })
     try {
       const actor   = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
       const draftId = newDraftId(localPlan.productId)
@@ -346,17 +351,42 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
           setCardStatus={setCardStatus} onCancel={onClose} onImport={runImport}
         />
       ) : phase === 'importing' ? (
+        // Live write stream: batch progress (chunk i of n), a soft ticker of the last
+        // written refIds, percent, and an honest ETA from the observed write rate.
         <div className="flex flex-col gap-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-text">
-            <IconSpinner size={16} className="animate-spin text-accent" aria-hidden="true" />
-            Writing {progress.done} of {progress.total}…
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-sm text-text">
+              <WaveformLoader size="sm" label="" className="text-accent" />
+              <span className="font-medium tabular-nums">Writing {progress.done} of {progress.total}</span>
+              <span className="text-faint">·</span>
+              <span className="text-xs text-dim tabular-nums">chunk {Math.max(progress.batch, 1)} of {Math.max(progress.batches, 1)}</span>
+            </div>
+            <span className="text-xs text-faint tabular-nums">
+              {progress.etaMs != null
+                ? progress.etaMs < 1500 ? 'almost done' : `~${Math.ceil(progress.etaMs / 1000)}s left`
+                : 'measuring…'}
+              {progress.ratePerSec ? ` · ${Math.round(progress.ratePerSec)}/s` : ''}
+            </span>
           </div>
           <div className="h-2 rounded-full overflow-hidden bg-raised"
             role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
             <div className="h-full rounded-full transition-all duration-200"
               style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--color-accent-bright), var(--color-accent-strong))' }} />
           </div>
+          {/* Soft ticker — the tail of what just committed (real refIds, atomic batches). */}
+          <div className="flex items-center gap-1.5 min-h-[22px] overflow-hidden" aria-hidden="true">
+            {progress.lastRefIds.map((r, i) => (
+              <span key={`${r}-${i}`}
+                className="chip-in inline-flex items-center px-1.5 py-0.5 rounded-[5px] font-mono text-[10px] text-dim bg-raised truncate max-w-[140px]"
+                style={{ border: '1px solid var(--color-border)', opacity: 0.45 + 0.55 * ((i + 1) / progress.lastRefIds.length) }}>
+                {r}
+              </span>
+            ))}
+          </div>
           <p className="text-xs text-faint truncate">{progress.label}</p>
+          <p className="text-[10.5px] text-faint">
+            Every batch is atomic — entity + audit event + version + search index commit together.
+          </p>
         </div>
       ) : phase === 'done' && result ? (
         <div className="flex flex-col gap-4 py-2">
@@ -537,6 +567,14 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
   const splitProducts = bundle.splitProducts ?? []
   const sampledVerifications = bundle.sampledVerifications ?? []
   const ensembleDisagreements = bundle.ensembleDisagreements
+  // Structured warnings from stage 7 (additive bundle field; older bundles omit it).
+  const importWarnings = (bundle as unknown as { importWarnings?: ImportWarning[] }).importWarnings ?? []
+  // Big sections start folded so a 1,707-entity review opens scannable; the
+  // virtualized list below keeps the expanded view at 60fps regardless.
+  const [openSections, setOpenSections] = useState<Set<FilingReviewSectionKey>>(() =>
+    new Set(SECTION_META.filter(({ key }) => (review[key]?.items?.length ?? 0) <= 12).map(({ key }) => key)))
+  const toggleOpen = (k: FilingReviewSectionKey) =>
+    setOpenSections(prev => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
 
   const importCount = useMemo(() => {
     return countPlan(acceptedPlan(bundle, accepted))
@@ -603,70 +641,81 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
                 const section = review[key] ?? { items: [] }
                 if (!section.items?.length && !section.note) return null
                 const on = accepted.has(key)
+                const isOpen = openSections.has(key)
                 return (
                   <div key={key} className="rounded-[12px] overflow-hidden"
                     style={{ border: `1px solid ${on ? 'var(--color-accent)' : 'var(--color-border)'}` }}>
 
-                    {/* Section header with include toggle */}
-                    <label className="flex items-center gap-2 px-3.5 py-2.5 cursor-pointer bg-raised hover:bg-raised transition-colors"
-                      style={{ userSelect: 'none' }}>
+                    {/* Section header: include toggle · stage glyph · count · fold */}
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-raised" style={{ userSelect: 'none' }}>
                       <input type="checkbox" checked={on} onChange={() => toggle(key)}
-                        className="w-4 h-4 accent-[var(--color-accent)] shrink-0"
+                        className="w-4 h-4 accent-[var(--color-accent)] shrink-0 cursor-pointer"
                         aria-label={`Include ${label} in import`} />
-                      <Icon size={13} className="text-dim shrink-0" aria-hidden />
-                      <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-dim flex-1">
-                        {label}
-                      </span>
-                      <span className="text-[11px] text-faint tnum">{section.items.length}</span>
+                      <Icon size={13} className={on ? 'text-accent shrink-0' : 'text-dim shrink-0'} aria-hidden />
+                      <button type="button" onClick={() => toggleOpen(key)} aria-expanded={isOpen}
+                        className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                        <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-dim">
+                          {label}
+                        </span>
+                        <IconChevronRight size={11} aria-hidden="true"
+                          className="text-faint transition-transform duration-200"
+                          style={{ transform: isOpen ? 'rotate(90deg)' : 'none' }} />
+                      </button>
+                      {/* Selected-vs-total at a glance */}
+                      <span className="text-[11px] text-faint tnum">{on ? section.items.length : 0}/{section.items.length}</span>
                       <span className="text-[11px] font-medium ml-2 shrink-0"
                         style={{ color: on ? 'var(--color-good)' : 'var(--color-faint)' }}>
                         {on ? 'Included' : 'Skipped'}
                       </span>
-                    </label>
+                    </div>
 
-                    {/* Per-item list: refId chip · label · confidence · citation */}
+                    {/* Per-item list: refId chip · label · confidence · citation.
+                        Virtualized — every item is reachable, 60fps at 1,707 entities. */}
                     {section.note && (
                       <p className="text-xs text-faint italic px-3.5 py-1.5">{section.note}</p>
                     )}
-                    <div className={`flex flex-col divide-y ${on ? '' : 'opacity-40'}`}
-                      style={{ borderColor: 'var(--color-border)' }}>
-                      {section.items.slice(0, 8).map((it, i) => (
-                        <div key={i} className="flex items-center gap-2 px-3.5 py-1.5 min-w-0">
-                          {/* refId chip — load-bearing display element, never stripped */}
-                          {it.refId && (
-                            <span className="text-[11px] font-mono text-accent shrink-0 px-1.5 py-0.5 rounded"
-                              style={{ background: 'var(--color-accent-soft)' }}>
-                              {it.refId}
+                    {isOpen && (
+                      <VirtualList
+                        items={section.items}
+                        rowHeight={30}
+                        maxHeight={264}
+                        className={on ? '' : 'opacity-40'}
+                        renderRow={(it) => (
+                          <div className="flex items-center gap-2 px-3.5 h-full min-w-0" style={{ borderTop: '1px solid var(--color-border)' }}>
+                            {/* refId chip — load-bearing display element, never stripped */}
+                            {it.refId && (
+                              <span className="text-[11px] font-mono text-accent shrink-0 px-1.5 py-0.5 rounded"
+                                style={{ background: 'var(--color-accent-soft)' }}>
+                                {it.refId}
+                              </span>
+                            )}
+                            <span className="text-xs text-text truncate flex-1">{it.label}</span>
+                            {it.detail && (
+                              <span className="text-[11px] text-faint font-mono truncate max-w-[90px] shrink-0"
+                                title={it.detail}>{it.detail}</span>
+                            )}
+                            <span className="text-[11px] font-mono tnum shrink-0"
+                              style={{ color: confidenceColor(it.confidence) }}
+                              title="Confidence">
+                              {Math.round(it.confidence * 100)}%
                             </span>
-                          )}
-                          <span className="text-xs text-text truncate flex-1">{it.label}</span>
-                          {it.detail && (
-                            <span className="text-[11px] text-faint font-mono truncate max-w-[90px] shrink-0"
-                              title={it.detail}>{it.detail}</span>
-                          )}
-                          <span className="text-[11px] font-mono tnum shrink-0"
-                            style={{ color: confidenceColor(it.confidence) }}
-                            title="Confidence">
-                            {Math.round(it.confidence * 100)}%
-                          </span>
-                          <span className="text-[10px] text-faint truncate max-w-[80px] shrink-0"
-                            title={it.citation}>
-                            {it.citation}
-                          </span>
-                        </div>
-                      ))}
-                      {section.items.length > 8 && (
-                        <div className="px-3.5 py-1.5 text-[11px] text-faint text-center">
-                          +{section.items.length - 8} more
-                        </div>
-                      )}
-                    </div>
+                            <span className="text-[10px] text-faint truncate max-w-[80px] shrink-0"
+                              title={it.citation}>
+                              {it.citation}
+                            </span>
+                          </div>
+                        )}
+                      />
+                    )}
                   </div>
                 )
               })}
             </div>
           )}
         </section>
+
+        {/* ── Warnings — first-class, grouped, severity-tinted, human-language ── */}
+        {importWarnings.length > 0 && <WarningsPanel warnings={importWarnings} />}
 
         {/* ── Section 2: Review & confirm ───────────────────────────────── */}
         <section aria-labelledby="u-sec2-heading">
@@ -1014,22 +1063,21 @@ function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading
                 <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-dim">{label}</span>
                 <span className="text-[11px] text-faint tnum ml-auto">{items.length}</span>
               </div>
-              <ul className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                {items.slice(0, 6).map((e, i) => (
-                  <li key={e.docId || i} className="flex items-center gap-2 px-3.5 py-1.5">
+              {/* Every entity reachable — virtualized so 1,700+ rows stay at 60fps. */}
+              <VirtualList
+                items={items}
+                rowHeight={30}
+                maxHeight={210}
+                renderRow={(e) => (
+                  <div className="flex items-center gap-2 px-3.5 h-full min-w-0" style={{ borderTop: '1px solid var(--color-border)' }}>
                     {e.refId && (
                       <span className="text-[11px] font-mono text-accent shrink-0 px-1.5 py-0.5 rounded"
                         style={{ background: 'var(--color-accent-soft)' }}>{e.refId}</span>
                     )}
                     <span className="text-xs text-text truncate">{e.label}</span>
-                  </li>
-                ))}
-                {items.length > 6 && (
-                  <li className="px-3.5 py-1.5 text-[11px] text-faint text-center">
-                    +{items.length - 6} more
-                  </li>
+                  </div>
                 )}
-              </ul>
+              />
             </div>
           ))}
         </div>
@@ -1077,28 +1125,8 @@ function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading
           </section>
         )}
 
-        {/* Warnings */}
-        {plan.summary.warnings.length > 0 && (
-          <section className="rounded-[12px] overflow-hidden"
-            style={{ border: '1px solid var(--color-warn-line, var(--color-border))' }}>
-            <div className="flex items-center gap-2 px-3.5 py-2.5"
-              style={{ background: 'var(--color-warn-soft, var(--color-raised))' }}>
-              <IconWarning size={15} className="text-warn" />
-              <h4 className="text-[12px] font-semibold uppercase tracking-[.07em] text-text flex-1">
-                Warnings
-              </h4>
-              <span className="text-[11px] text-faint tnum">{plan.summary.warnings.length}</span>
-            </div>
-            <ul className="flex flex-col gap-1 px-3.5 py-2.5">
-              {plan.summary.warnings.slice(0, 6).map((w, i) => (
-                <li key={i} className="text-xs text-dim">{w}</li>
-              ))}
-              {plan.summary.warnings.length > 6 && (
-                <li className="text-xs text-faint">+{plan.summary.warnings.length - 6} more</li>
-              )}
-            </ul>
-          </section>
-        )}
+        {/* Warnings — first-class, grouped by kind, severity-tinted, human copy */}
+        {plan.summary.warnings.length > 0 && <WarningsPanel warnings={plan.summary.warnings} />}
 
         {/* AI Assist suggestions */}
         {aiSuggestions && aiItems.length > 0 && (

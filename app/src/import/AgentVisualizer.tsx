@@ -26,7 +26,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { UnifiedStageEvent } from './unifiedImportClient'
 import type { NoticeEvent } from '../lib/ai/notices'
 import {
-  IconAgent, IconStage, IconVerify, IconReconcile, IconDisagreement, IconStream,
+  IconAgent, IconStage, IconVerify, IconReconcile, IconDisagreement, IconStream, IconEscalate,
   IconSplit, IconTable, IconCombine, IconWarning, IconCheckCircle, IconClose, IconExpand,
 } from '../components/icons'
 
@@ -74,6 +74,8 @@ export interface VizModel {
   spend?:       RunSpend
   notices:      NoticeEvent[]
   degraded:     boolean
+  /** REAL ladder hand-offs (brain:escalation events) — never simulated. */
+  escalations:  { fromRole: string; toRole: string; deployment: string; at: number }[]
   /** Chronological human announcements for the aria-live region. */
   announcements: string[]
   lastEventAt?: number
@@ -156,7 +158,7 @@ export function buildVizModel(events: UnifiedStageEvent[], streamError?: string)
   let stages: VizStage[] = []
   const model: VizModel = {
     family, stages, discrepancies: [], discrepancyCount: 0,
-    notices: [], degraded: false, announcements: [],
+    notices: [], degraded: false, escalations: [], announcements: [],
   }
 
   const ensureFamily = (f: Exclude<Family, 'unknown'>) => {
@@ -227,6 +229,24 @@ export function buildVizModel(events: UnifiedStageEvent[], streamError?: string)
         const counts: Record<string, number> = {}
         for (const [k, n] of Object.entries(v)) if (typeof n === 'number') counts[k] = n
         model.outputCounts = counts
+      } else if (ev.key === 'brain:escalation') {
+        // A REAL haiku→sonnet→opus hand-off fired server-side. Attach it to the
+        // model + note it on the currently-active stage; nothing animates unless
+        // one of these events genuinely arrived.
+        const v = asRecord(ev.value)
+        const esc = {
+          fromRole: String(v.fromRole ?? ''),
+          toRole: String(v.toRole ?? ''),
+          deployment: String(v.deployment ?? ''),
+          at: ev.at,
+        }
+        model.escalations.push(esc)
+        const active = stages.find(s => s.status === 'active')
+        if (active) {
+          active.events += 1
+          active.notes = [...active.notes.slice(-(MAX_NOTES - 1)), `escalated ${esc.fromRole} → ${esc.toRole} (${esc.deployment})`]
+        }
+        model.announcements.push(`Escalation: ${esc.fromRole} handed off to ${esc.toRole}`)
       } else if (ev.key === 'brain:spend' || ev.key === 'import:spend') {
         const v = asRecord(ev.value)
         const by: Record<string, DeploymentSpend> = {}
@@ -489,16 +509,18 @@ function SpendPanel({ spend }: { spend: RunSpend }) {
 }
 
 function DiscrepancyPanel({ model }: { model: VizModel }) {
+  // Cool stage tint: the adversarial validator lane reads analytically cool,
+  // in deliberate contrast to the warm escalation lane above it.
   return (
     <section className="rounded-[12px] overflow-hidden"
-      style={{ border: '1px solid var(--color-warn-line, var(--color-border))' }}
+      style={{ border: '1px solid var(--color-stage-cool-line)' }}
       aria-label="Validator discrepancies">
-      <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'var(--color-warn-soft, var(--color-raised))' }}>
-        <IconDisagreement size={13} className="text-warn" aria-hidden="true" />
+      <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'var(--color-stage-cool-soft)' }}>
+        <IconDisagreement size={13} style={{ color: 'var(--color-stage-cool)' }} aria-hidden="true" />
         <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-text flex-1">
           Validator findings
         </span>
-        <span className="text-[11px] text-warn tnum">{model.discrepancyCount}</span>
+        <span className="text-[11px] tnum" style={{ color: 'var(--color-stage-cool)' }}>{model.discrepancyCount}</span>
       </div>
       <ul className="px-3 py-2 flex flex-col gap-1">
         {model.discrepancies.map((d, i) => (
@@ -511,6 +533,62 @@ function DiscrepancyPanel({ model }: { model: VizModel }) {
           <li className="text-[10.5px] text-faint">+{model.discrepancyCount - model.discrepancies.length} more — full detail lands in the review heatmap</li>
         )}
       </ul>
+    </section>
+  )
+}
+
+// ─── Escalation ladder — renders ONLY on real brain:escalation events ─────────
+// The haiku → sonnet → opus rungs light as far as a genuine hand-off reached;
+// the newest hand-off animates once (keyed by the event count). Reduced motion
+// renders the same rungs statically. No event → this panel does not exist.
+
+const LADDER_RUNGS = [
+  { role: 'BULK_VERIFY',    label: 'haiku'  },
+  { role: 'MID_REASONER',   label: 'sonnet' },
+  { role: 'GROUNDED_CITED', label: 'opus'   },
+] as const
+
+function EscalationLadder({ escalations, reduced }: {
+  escalations: VizModel['escalations']; reduced: boolean
+}) {
+  const reachedIdx = Math.max(...escalations.map(e => LADDER_RUNGS.findIndex(r => r.role === e.toRole)), 0)
+  const latest = escalations[escalations.length - 1]
+  return (
+    <section className="rounded-[12px] px-3 py-2.5"
+      style={{ border: '1px solid var(--color-stage-warm-line)', background: 'var(--color-stage-warm-soft)' }}
+      aria-label={`Escalation ladder — ${escalations.length} real hand-off${escalations.length === 1 ? '' : 's'}`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <IconEscalate size={13} style={{ color: 'var(--color-stage-warm)' }} aria-hidden="true" />
+        <span className="text-[11px] font-semibold uppercase tracking-[.07em]" style={{ color: 'var(--color-stage-warm)' }}>
+          Escalation
+        </span>
+        <span className="flex items-center gap-1.5 ml-1" aria-hidden="true">
+          {LADDER_RUNGS.map((r, i) => {
+            const lit = i <= reachedIdx
+            const isNewest = latest && r.role === latest.toRole
+            return (
+              <span key={r.role} className="flex items-center gap-1.5">
+                {i > 0 && (
+                  <span key={isNewest && !reduced ? `arr-${escalations.length}` : `arr-${i}`}
+                    className={`text-[11px] ${isNewest && !reduced ? 'chip-in' : ''}`}
+                    style={{ color: lit ? 'var(--color-stage-warm)' : 'var(--color-faint)' }}>→</span>
+                )}
+                <span
+                  key={isNewest && !reduced ? `rung-${escalations.length}` : `rung-${i}`}
+                  className={`px-1.5 py-0.5 rounded-[6px] font-mono text-[10.5px] font-semibold ${isNewest && !reduced ? 'chip-in' : ''}`}
+                  style={lit
+                    ? { background: 'var(--color-stage-warm)', color: 'var(--color-surface)' }
+                    : { color: 'var(--color-faint)', border: '1px solid var(--color-border)' }}>
+                  {r.label}
+                </span>
+              </span>
+            )
+          })}
+        </span>
+        <span className="text-[10.5px] text-dim ml-auto tabular-nums">
+          {escalations.length} hand-off{escalations.length === 1 ? '' : 's'} · latest → <span className="font-mono">{latest?.deployment}</span>
+        </span>
+      </div>
     </section>
   )
 }
@@ -592,6 +670,9 @@ export function AgentVisualizer({ events, streaming, streamError, expanded, onTo
           ))}
         </ol>
       )}
+
+      {/* Escalation ladder hand-offs — renders ONLY when real events fired */}
+      {model.escalations.length > 0 && <EscalationLadder escalations={model.escalations} reduced={reduced} />}
 
       {/* Degrade notice (a REAL event from the budget guard) */}
       {model.degraded && (

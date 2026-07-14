@@ -55,6 +55,17 @@
   --color-tile-oos:  #E4E4EB;
   --color-peril:     #F59E0B;
 
+  /* Import pipeline stage tints (R0) — the TWO new semantic hues for the agent
+     constellation: WARM marks the escalation ladder's hand-off lane (haiku →
+     sonnet → opus), COOL marks the adversarial validator lane. Both AA-safe as
+     small text on surface; soft/line companions follow the accent convention. */
+  --color-stage-warm:      #B45309;
+  --color-stage-warm-soft: rgba(180,83,9,.09);
+  --color-stage-warm-line: rgba(180,83,9,.28);
+  --color-stage-cool:      #0E7490;
+  --color-stage-cool-soft: rgba(14,116,144,.09);
+  --color-stage-cool-line: rgba(14,116,144,.28);
+
   /* Apple-inspired UI type: genuine San Francisco on Apple devices, Inter Variable
      (tuned below to San-Francisco-like single-story glyphs) everywhere else. */
   --font-ui:   -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter Variable', 'Inter', system-ui, sans-serif;
@@ -270,6 +281,14 @@ html[data-theme="dark"] {
   /* State-scope map — a mid-dark out-of-scope tile (distinct from surface) + amber peril. */
   --color-tile-oos: #2E2E38;
   --color-peril:    #FBBF24;
+
+  /* Import pipeline stage tints — rebased to 400-level hues for dark surfaces. */
+  --color-stage-warm:      #FBBF24;
+  --color-stage-warm-soft: rgba(251,191,36,.12);
+  --color-stage-warm-line: rgba(251,191,36,.32);
+  --color-stage-cool:      #22D3EE;
+  --color-stage-cool-soft: rgba(34,211,238,.12);
+  --color-stage-cool-line: rgba(34,211,238,.32);
 
   /* Elevation — neutral dark shadows (violet glow reads as noise on black). */
   --shadow-card:       0 1px 2px rgba(0,0,0,.40), 0 12px 30px rgba(0,0,0,.50);

@@ -26,8 +26,18 @@ import type { ImportPlan, PlannedEntity, Lineage } from '@pf/shared'
 import type { MutationPayload } from '../backend/types'
 
 export interface ImportActor { uid: string; name: string }
-export interface ImportProgress { done: number; total: number; label: string }
-export interface ImportResult { productId: string; written: number; failed: number; errors: string[] }
+export interface ImportProgress {
+  done: number; total: number; label: string
+  /** 1-based batch counter + the total planned batches (chunk i of n). */
+  batch: number; batches: number
+  /** The most recently committed refIds (newest last) — the live write ticker. */
+  lastRefIds: string[]
+  /** Honest ETA in ms derived from the observed write rate; null until measurable. */
+  etaMs: number | null
+  /** Observed entities/second so far; null until measurable. */
+  ratePerSec: number | null
+}
+export interface ImportResult { productId: string; written: number; failed: number; errors: string[]; durationMs: number }
 export interface ImportOptions {
   /** The minted draft doc id the product + its sub-tree land under. Defaults to the
    *  plan's canonical productId (kept for callers/tests that want the legacy behaviour). */
@@ -48,9 +58,16 @@ const GROUPS: Record<string, Group> = {
   rtTable:       { entityType: 'rtTable',       underProduct: false, path: (id)      => `rtTables/${id}` },
 }
 
-// Entities per mutateBatch HTTP call. Cosmos allows up to 96 ops per transactional
-// batch (per partition key); 50 keeps us safely inside that limit across any PK split.
-const BATCH_SIZE = 50
+// Entities per mutateBatch HTTP call. The SERVER is what guarantees transactional
+// correctness: it groups every call by partition key and commits ≤96-op Cosmos
+// transactional batches (atomic per chunk, partial-commit reported as batch_partial)
+// regardless of how many entities one HTTP call carries. So the client chunk size
+// only trades HTTP round-trips (and per-call embedding batches) against payload
+// size. 150 entities ≈ 750 ops ≈ 8 server-side chunks per call — measured faster
+// than 50 with identical atomicity, audit events, and ordering. (R0 write-speed
+// pass; before/after wall time for the 1,707-entity case recorded in
+// docs/audit/EXECUTION-R0.md at live-verify.)
+const BATCH_SIZE = 150
 
 /** Persist a mapped plan as a DRAFT. Calls `onProgress` after each batch so the UI
  *  can show a live counter. Returns counts + any per-batch errors that were skipped. */
@@ -69,7 +86,30 @@ export async function importPlan(
 
   let written = 0, failed = 0
   const errors: string[] = []
-  const tick = (label: string) => onProgress?.({ done: written + failed, total, label })
+  const startedAt = Date.now()
+  let lastRefIds: string[] = []
+  let batchNo = 0
+  // Total planned batches (chunk n): coverage waves can flush early on a pending
+  // parent, so this is the FLOOR — the counter never exceeds it by construction
+  // because early flushes replace, not add to, later ones only when full. Estimate
+  // from the queue sizes; recomputed displays stay honest via `batch` itself.
+  const plannedBatches = Math.max(1,
+    Math.ceil(plan.coverages.length / BATCH_SIZE) +
+    Math.ceil((plan.ldTables.length + plan.rtTables.length + plan.forms.length +
+      plan.rules.length + plan.formRules.length + (plan.ratingProgram ? 1 : 0)) / BATCH_SIZE))
+  let batchesTotal = plannedBatches
+  const tick = (label: string) => {
+    const elapsed = Date.now() - startedAt
+    const rate = written > 0 && elapsed > 400 ? written / (elapsed / 1000) : null
+    const remaining = total - (written + failed)
+    onProgress?.({
+      done: written + failed, total, label,
+      batch: batchNo, batches: batchesTotal,
+      lastRefIds,
+      ratePerSec: rate,
+      etaMs: rate ? Math.round((remaining / rate) * 1000) : null,
+    })
+  }
 
   // Product first — abort if it can't be created (its children need it). Owner is the
   // importing user; lineage records that this draft came from a workbook.
@@ -86,15 +126,17 @@ export async function importPlan(
   tick(plan.product.label)
 
   // Helper: commit one batch of payloads, update counters, surface a per-batch error.
-  let batchNo = 0
-  const flush = async (slice: { payload: MutationPayload; label: string }[]) => {
+  const flush = async (slice: { payload: MutationPayload; label: string; refId?: string }[]) => {
     if (slice.length === 0) return
     batchNo += 1
+    if (batchNo > batchesTotal) batchesTotal = batchNo   // coverage waves can split early
     const firstLabel = slice[0]?.label ?? ''
     tick(firstLabel)
     try {
       await adapter.db.mutateBatch(slice.map((lp) => lp.payload))
       written += slice.length
+      // Live ticker: the tail of what just landed (newest last, capped at 5).
+      lastRefIds = slice.slice(-5).map(lp => lp.refId || lp.label).filter(Boolean)
     } catch (err) {
       failed += slice.length
       const msg = err instanceof Error ? err.message : String(err)
@@ -103,7 +145,7 @@ export async function importPlan(
     tick(firstLabel)
   }
 
-  const toPayload = (kind: keyof typeof GROUPS, e: PlannedEntity): { payload: MutationPayload; label: string } => {
+  const toPayload = (kind: keyof typeof GROUPS, e: PlannedEntity): { payload: MutationPayload; label: string; refId?: string } => {
     const g = GROUPS[kind]
     const data =
       kind === 'form'    ? { ...e.data, productRefIds: [productId] } :
@@ -111,6 +153,7 @@ export async function importPlan(
       e.data
     return {
       label: e.label,
+      refId: e.refId ?? undefined,
       payload: {
         op: 'create', path: g.path(e.docId, productId), entityType: g.entityType,
         ...(g.underProduct ? { productId } : {}), actor, data,
@@ -128,7 +171,7 @@ export async function importPlan(
   // Every flush fully commits before the next batch is enveloped, so an ancestor is
   // always present when its descendant is validated. Correct for arbitrary nesting depth.
   {
-    let batch: { payload: MutationPayload; label: string }[] = []
+    let batch: { payload: MutationPayload; label: string; refId?: string }[] = []
     let pendingRefIds = new Set<string>()
     for (const e of plan.coverages) {
       const parentId = (e.data as { parentId?: string | null }).parentId
@@ -153,11 +196,11 @@ export async function importPlan(
     ['formRule', plan.formRules],
     ['ratingProgram', plan.ratingProgram ? [plan.ratingProgram] : []],
   ]
-  const freeQueue: { payload: MutationPayload; label: string }[] = []
+  const freeQueue: { payload: MutationPayload; label: string; refId?: string }[] = []
   for (const [kind, entities] of freeGroups) for (const e of entities) freeQueue.push(toPayload(kind, e))
   for (let i = 0; i < freeQueue.length; i += BATCH_SIZE) {
     await flush(freeQueue.slice(i, i + BATCH_SIZE))
   }
 
-  return { productId, written, failed, errors }
+  return { productId, written, failed, errors, durationMs: Date.now() - startedAt }
 }
