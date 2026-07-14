@@ -410,12 +410,13 @@ if (!MODE_LIVE) {
   }
 }
 
-writeFileSync(join(AUDIT, 'import_eval_results.json'), JSON.stringify({
+const evalSlice = ONLY.length ? '-' + ONLY.join('-') : ''
+writeFileSync(join(AUDIT, `import_eval_results${evalSlice}.json`), JSON.stringify({
   runAt: new Date().toISOString(),
   mode: MODE_LIVE ? 'live' : 'offline',
   baseUrl: MODE_LIVE ? BASE_URL : null,
   targets: { f1: F1_TARGET, numericExact: NUMERIC_TARGET, citation: CITATION_TARGET },
   results,
 }, null, 2))
-log(`\nResults → docs/audit/import_eval_results.json`)
+log(`\nResults → docs/audit/import_eval_results${evalSlice}.json`)
 process.exit(anyFail ? 1 : 0)

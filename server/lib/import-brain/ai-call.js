@@ -100,7 +100,7 @@ function recordSpend(budget, deployment, inputTokens, outputTokens) {
 // ladder climbs never pay repeat round-trips for a known-missing rung.
 const MISSING_DEPLOYMENTS = new Set()
 
-async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, tools, toolName, contentBlocks, budget }) {
+async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, tools, toolName, contentBlocks, budget, timeoutMs }) {
   if (MISSING_DEPLOYMENTS.has(deployment)) {
     const err = new Error(`deployment ${deployment} not provisioned (cached 404)`)
     err.status = 404
@@ -126,7 +126,7 @@ async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, 
     method: 'POST',
     headers: fleet.anthropicHeaders(),
     body: JSON.stringify(body),
-  })
+  }, { timeoutMs: timeoutMs || 120_000 })
   if (!upstream.ok) {
     const detail = (await upstream.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
     if (upstream.status === 404 || /model.+not.+(found|exist)|no deployment/i.test(detail)) {

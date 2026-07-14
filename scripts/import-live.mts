@@ -587,7 +587,7 @@ async function runPdf(
     const sseResult = await readSse('/ai/unifiedImport', {
       documents:   [{ name: filePath.split('/').pop() ?? 'doc.pdf', base64: b64, mediaType: 'application/pdf' }],
       productName, filingState,
-    }, token, 120_000)
+    }, token, 900_000)
 
     if (!sseResult.ok) {
       // For adversarial garbage PDF, a server error is acceptable
@@ -632,6 +632,10 @@ async function runPdf(
 const results: FormatResult[] = []
 let TOKEN = ''
 
+// IMPORT_LIVE_ONLY=pdf,adv slices the sweep into parallel-runnable groups.
+const LIVE_ONLY = (process.env.IMPORT_LIVE_ONLY || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean)
+const grp = (name: string) => LIVE_ONLY.length === 0 || LIVE_ONLY.includes(name)
+
 section('Pre-flight')
 log(`BASE_URL: ${BASE_URL}`)
 log(`IMPORT_USER: ${IMPORT_USER}`)
@@ -662,8 +666,8 @@ ok(`authenticated as ${IMPORT_USER} / tenant=${IMPORT_TENANT}`)
 
 // ─── XLSX formats ────────────────────────────────────────────────────────────
 
+if (grp('gl')) {
 section('ISO XLSX — GL (4 workbooks)')
-{
   const files = [
     join(SAMPLES, 'iso/sample-GL-framework.xlsx'),
     join(SAMPLES, 'iso/sample-GL-forms.xlsx'),
@@ -676,8 +680,8 @@ section('ISO XLSX — GL (4 workbooks)')
   if (r.notes.length) r.notes.forEach(n => log(`    ${n}`))
 }
 
+if (grp('im')) {
 section('ISO XLSX — IM (2 workbooks)')
-{
   const files = [
     join(SAMPLES, 'iso/sample-IM-framework.xlsx'),
     join(SAMPLES, 'iso/sample-IM-rules.xlsx'),
@@ -688,8 +692,8 @@ section('ISO XLSX — IM (2 workbooks)')
   if (r.notes.length) r.notes.forEach(n => log(`    ${n}`))
 }
 
+if (grp('pr')) {
 section('ISO XLSX — PR (2 workbooks)')
-{
   const files = [
     join(SAMPLES, 'iso/sample-PR-framework.xlsx'),
     join(SAMPLES, 'iso/sample-PR-rating.xlsx'),
@@ -700,8 +704,8 @@ section('ISO XLSX — PR (2 workbooks)')
   if (r.notes.length) r.notes.forEach(n => log(`    ${n}`))
 }
 
+if (grp('core')) {
 section('Core XLSX — Product_Specifications_Core_07_13_2026.xlsx')
-{
   const corePath = join(SAMPLES, 'iso/Product_Specifications_Core_07_13_2026.xlsx')
   if (!existsSync(corePath)) {
     warn('Core XLSX not found — marking source-gap')
@@ -721,8 +725,8 @@ section('Core XLSX — Product_Specifications_Core_07_13_2026.xlsx')
 
 // ─── Filing PDFs ──────────────────────────────────────────────────────────────
 
+if (grp('pdf')) {
 section('Filing PDFs — Lemonade NJ HO')
-{
   const pdfFiles = [
     ['NJ-LEMONADE-1', 'samples/filings/nj-lemonade-ho/LEM 03 05 23 Lemonade Homeowners_FINAL.pdf', 'Lemonade NJ HO Policy Form', 'NJ'],
     ['NJ-LEMONADE-2', 'samples/filings/nj-lemonade-ho/NJ HO Manual 02.27.24.pdf', 'NJ HO Manual', 'NJ'],
@@ -742,8 +746,8 @@ section('Filing PDFs — Lemonade NJ HO')
 // must translate them WITHOUT template-specific code. BLANK templates must yield
 // an EMPTY plan (coverages from a blank template = fabrication).
 
+if (grp('addl')) {
 section('additional_samples (differently-presented corpus; skipped when absent)')
-{
   const ADDL = join(REPO, 'additional_samples')
   const addlCases: Array<[string, string, boolean]> = [
     ['ADDL-GL-FRAMEWORK',       'Product Framework_General Liability.xlsx',                              false],
@@ -779,6 +783,7 @@ section('additional_samples (differently-presented corpus; skipped when absent)'
 
 // ─── Adversarial corpus ───────────────────────────────────────────────────────
 
+if (grp('adv')) {
 section('Adversarial corpus')
 const advBuffers = await buildAdversarialWorkbooks()
 for (const [id, buf] of advBuffers) {
@@ -804,15 +809,19 @@ for (const [id, buf] of advBuffers) {
     }
   }
 }
+}
 
 // ─── Round-trip commit + teardown ─────────────────────────────────────────────
 
+let rtIssues: string[] = []
+if (grp('roundtrip')) {
 section('Round-trip: commit + teardown via /api/db/mutate')
-const rtIssues = await roundTrip(TOKEN, IMPORT_TENANT, `smoke-import-live-${Date.now()}`)
+rtIssues = await roundTrip(TOKEN, IMPORT_TENANT, `smoke-import-live-${Date.now()}`)
 if (rtIssues.length > 0) {
   rtIssues.forEach(i => fail(`  ${i}`))
 } else {
   ok('round-trip mutate create + delete succeeded')
+}
 }
 
 // ─── Computed exit ────────────────────────────────────────────────────────────
@@ -854,7 +863,8 @@ const output = {
   exit,
   results,
 }
-writeFileSync(join(AUDIT, 'import_live_results.json'), JSON.stringify(output, null, 2))
-ok(`Results written to docs/audit/import_live_results.json`)
+const sliceName = LIVE_ONLY.length ? '-' + LIVE_ONLY.join('-') : ''
+writeFileSync(join(AUDIT, `import_live_results${sliceName}.json`), JSON.stringify(output, null, 2))
+ok(`Results written to docs/audit/import_live_results${sliceName}.json`)
 
 process.exit(exit.pass ? 0 : 1)

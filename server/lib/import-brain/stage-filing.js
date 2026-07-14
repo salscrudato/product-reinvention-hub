@@ -162,8 +162,11 @@ function buildContentBlock(doc, pdfText) {
 // and per-run spend telemetry. Returns the parsed tool input object.
 
 async function forcedTool(deployment, systemPrompt, tools, toolName, contentBlock, instruction, maxTokens, budget) {
+  // Native-PDF document blocks make the model read whole page images — a 25-page
+  // manual at opus can exceed the default 120s; give extraction calls headroom.
+  const timeoutMs = contentBlock && contentBlock.type === 'document' ? 300_000 : 120_000
   const res = await callAnthropic({
-    deployment, systemPrompt, tools, toolName, maxTokens, budget,
+    deployment, systemPrompt, tools, toolName, maxTokens, budget, timeoutMs,
     contentBlocks: [contentBlock, { type: 'text', text: instruction }],
   })
   try { return JSON.parse(res.raw) } catch { return {} }
@@ -321,7 +324,16 @@ async function runFilingPipeline(opts) {
     })
     const rawCovs = ladder.result ?? []
     escalated = escalated || ladder.escalated
-    policyFormCoverageItems = rawCovs.map(c => ({ name: c.name, requirement: c.requirement, premiumGenerating: c.premiumGenerating !== false, confidence: Number(c.confidence ?? 0.7), citation: c.citation }))
+    // formNumbers must ALWAYS be an array — reconcileFiling dereferences
+    // c.formNumbers.length and a missing field crashes the whole reconcile.
+    policyFormCoverageItems = rawCovs.map(c => ({
+      name: c.name,
+      requirement: c.requirement,
+      premiumGenerating: c.premiumGenerating !== false,
+      formNumbers: Array.isArray(c.formNumbers) ? c.formNumbers.filter(n => n && typeof n === 'string') : [],
+      confidence: Number(c.confidence ?? 0.7),
+      citation: c.citation,
+    }))
     if (rawCovs[0]?.formNumbers?.[0]) baseFormNumber = rawCovs[0].formNumbers[0]
     emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'end', summary: `${rawCovs.length} coverage(s)` })
   }
