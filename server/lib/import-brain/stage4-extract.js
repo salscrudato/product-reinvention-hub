@@ -466,19 +466,30 @@ function deterministicExtract(fp, colMap, headerRow, rows, sheetName) {
         deterministic: true,
       })
     }
-    // State-applicability matrix → states[] derived from X-marked columns (the
-    // cross-cutting dimension from first principles — data, not an entity).
-    if (stateColumns.length > 0 && fields.length > 0) {
-      const states = stateColumns
-        .filter(sc => String(cells[sc.colIndex] ?? '').trim().toUpperCase() === 'X')
-        .map(sc => sc.stateCode)
-      if (states.length > 0) {
-        const first = stateColumns.find(sc => String(cells[sc.colIndex] ?? '').trim().toUpperCase() === 'X')
+    // State-applicability matrix → states[]/allStates derived from X-marked columns
+    // (the cross-cutting dimension from first principles — data, not an entity).
+    if (fields.length > 0) {
+      const allIdx = colMap.allStatesColIndex
+      const allMarked = allIdx != null && String(cells[allIdx] ?? '').trim().toUpperCase() === 'X'
+      if (allIdx != null) {
         fields.push({
-          fieldName: 'states', value: states, confidence: 0.98,
-          citation: { sheet: sheetName, cell: `${colLetter(first.colIndex)}${i + headerRow + 2}`, verbatim: 'X' },
+          fieldName: 'allStates', value: allMarked, confidence: 0.98,
+          citation: { sheet: sheetName, cell: `${colLetter(allIdx)}${i + headerRow + 2}`, verbatim: String(cells[allIdx] ?? '') },
           deterministic: true,
         })
+      }
+      if (stateColumns.length > 0 && !allMarked) {
+        const states = stateColumns
+          .filter(sc => String(cells[sc.colIndex] ?? '').trim().toUpperCase() === 'X')
+          .map(sc => sc.stateCode)
+        if (states.length > 0) {
+          const first = stateColumns.find(sc => String(cells[sc.colIndex] ?? '').trim().toUpperCase() === 'X')
+          fields.push({
+            fieldName: 'states', value: states, confidence: 0.98,
+            citation: { sheet: sheetName, cell: `${colLetter(first.colIndex)}${i + headerRow + 2}`, verbatim: 'X' },
+            deterministic: true,
+          })
+        }
       }
     }
     if (fields.length === 0) continue

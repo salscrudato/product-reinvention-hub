@@ -195,12 +195,21 @@ async function mapColumns(classified, locks, fpByName, budget, review) {
     // response budget. They surface on the map as stateColumns for stage 4.
     const stateColumns = []
     const stateIdxSet  = new Set()
+    let allStatesColIndex = null
     if (fp.wideMatrix) {
       for (const [code, idx] of Object.entries(fp.wideMatrix.stateColIndices || {})) {
         stateColumns.push({ colIndex: idx, stateCode: code })
         stateIdxSet.add(idx)
       }
-      if (fp.wideMatrix.allStatesColIndex != null) stateIdxSet.add(fp.wideMatrix.allStatesColIndex)
+      if (fp.wideMatrix.allStatesColIndex != null) {
+        allStatesColIndex = fp.wideMatrix.allStatesColIndex
+        stateIdxSet.add(allStatesColIndex)
+      }
+    }
+    // ALL ACTIVE STATES column outside a detected wide matrix
+    if (allStatesColIndex === null) {
+      const allCol = (fp.columnProfiles || []).find(c => /^all\s+(active\s+)?states?$/i.test(String(c.headerLabel ?? '').trim()))
+      if (allCol) { allStatesColIndex = allCol.colIndex; stateIdxSet.add(allCol.colIndex) }
     }
     // Fallback detection when the layout detector did not flag WIDE_MATRIX but the
     // sheet still carries a state block: 2-letter-code headers whose cells are X/blank.
@@ -259,7 +268,7 @@ async function mapColumns(classified, locks, fpByName, budget, review) {
     const mappings    = reconcileMappings(mappableCols, aAll.length ? aAll : null, bAll.length ? bAll : null, fp.sheetName, review)
     const unmappedIdx = mappings.filter(m => m.canonicalField === null).map(m => m.colIndex)
 
-    return { sheetName: fp.sheetName, mappings, unmappedIndices: unmappedIdx, stateColumns }
+    return { sheetName: fp.sheetName, mappings, unmappedIndices: unmappedIdx, stateColumns, allStatesColIndex }
   }
 
   const mapped = await pMap(contentSheets, mapOne, 3)

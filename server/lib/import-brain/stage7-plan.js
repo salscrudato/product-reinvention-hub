@@ -177,6 +177,19 @@ function buildImportPlan(brainOutput, opts = {}) {
   }
   if (ratingProgram && steps.length > 0) ratingProgram.data.steps = steps.map(s => s.data)
 
+  // Canonical workflow defaults every imported entity carries (identical to the
+  // deterministic ISO mapper's conventions) — these are importer-stamped review
+  // metadata, not extracted data, so they carry no citation.
+  const stampDefaults = (p) => {
+    if (p.data.status === undefined)       p.data.status = 'ACTIVE'
+    if (p.data.lifecycle === undefined)    p.data.lifecycle = 'DRAFT'
+    if (p.data.reviewStatus === undefined) p.data.reviewStatus = 'NOT_STARTED'
+    if (p.data.reviewer === undefined)     p.data.reviewer = ''
+    if (p.data.allStates === undefined)    p.data.allStates = !Array.isArray(p.data.states) || p.data.states.length === 0
+    if (p.data.formNumbers === undefined)  p.data.formNumbers = []
+    return p
+  }
+
   // ── Groups ─────────────────────────────────────────────────────────────────
   const coverages = byKind('coverage').map(e => toPlanned(e))
   const forms     = byKind('form').map(e => toPlanned(e, productRefId ? { productRefIds: [productRefId] } : {}))
@@ -192,6 +205,22 @@ function buildImportPlan(brainOutput, opts = {}) {
     const bp = b.data.parentId ? 1 : 0
     return ap - bp
   })
+
+  // Canonical defaults + positional `order` (1..n among siblings, same convention
+  // as the deterministic ISO mapper — a derived display position, never a cell).
+  for (const group of [coverages, forms, rules, formRules, ldTables, rtTables]) {
+    group.forEach(p => stampDefaults(p))
+  }
+  {
+    const siblingSeq = new Map()
+    for (const c of coverages) {
+      if (c.data.order !== undefined) continue
+      const key = c.data.parentId ?? '(top)'
+      const n = (siblingSeq.get(key) ?? 0) + 1
+      siblingSeq.set(key, n)
+      c.data.order = n
+    }
+  }
 
   // ── Provenance: every field of every accepted entity keeps its citation ────
   const provenance = []

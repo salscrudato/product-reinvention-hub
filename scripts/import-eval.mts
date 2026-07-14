@@ -163,6 +163,12 @@ interface Metrics {
   precision: number; recall: number; f1: number
   numericTotal: number; numericExact: number; numericExactRate: number
   entityRecall: number
+  diagnostics: {
+    entityByKind: Record<string, { golden: number; found: number }>
+    missByField: Record<string, number>
+    sampleMisses: Array<{ kind: string; refId: string; field: string; golden: unknown; extracted: unknown }>
+    extractedKinds: Record<string, number>
+  }
 }
 
 function score(golden: GoldenEntity[], extracted: GoldenEntity[]): Metrics {
@@ -172,10 +178,17 @@ function score(golden: GoldenEntity[], extracted: GoldenEntity[]): Metrics {
   let tp = 0, fn = 0, goldenFields = 0, numericTotal = 0, numericExact = 0
   let entitiesFound = 0
   const matchedFieldKeys = new Set<string>()
+  const entityByKind: Record<string, { golden: number; found: number }> = {}
+  const missByField: Record<string, number> = {}
+  const sampleMisses: Metrics['diagnostics']['sampleMisses'] = []
+  const extractedKinds: Record<string, number> = {}
+  for (const e of extracted) extractedKinds[e.kind] = (extractedKinds[e.kind] ?? 0) + 1
 
   for (const g of golden) {
     const ex = exByKey.get(`${g.kind}|${g.refId}`)
-    if (ex) entitiesFound++
+    entityByKind[g.kind] ??= { golden: 0, found: 0 }
+    entityByKind[g.kind]!.golden++
+    if (ex) { entitiesFound++; entityByKind[g.kind]!.found++ }
     for (const [field, gv] of Object.entries(g.fields)) {
       goldenFields++
       const numeric = isNumeric(gv)
@@ -187,6 +200,8 @@ function score(golden: GoldenEntity[], extracted: GoldenEntity[]): Metrics {
         if (numeric) numericExact++
       } else {
         fn++
+        missByField[field] = (missByField[field] ?? 0) + 1
+        if (ex && sampleMisses.length < 25) sampleMisses.push({ kind: g.kind, refId: g.refId, field, golden: gv, extracted: ev })
       }
     }
   }
@@ -214,6 +229,12 @@ function score(golden: GoldenEntity[], extracted: GoldenEntity[]): Metrics {
     numericTotal, numericExact,
     numericExactRate: numericTotal > 0 ? numericExact / numericTotal : 1,
     entityRecall: golden.length > 0 ? entitiesFound / golden.length : 1,
+    diagnostics: {
+      entityByKind,
+      missByField: Object.fromEntries(Object.entries(missByField).sort((a, b) => b[1] - a[1]).slice(0, 20)),
+      sampleMisses,
+      extractedKinds,
+    },
   }
 }
 
@@ -401,6 +422,9 @@ if (!MODE_LIVE) {
       continue
     }
     const extracted = bundleToEntities(live.bundle)
+    if (process.env.IMPORT_EVAL_DUMP) {
+      writeFileSync(join(AUDIT, `import_eval_extracted-${fmt.id}.json`), JSON.stringify({ entities: extracted }, null, 2))
+    }
     const m = score(golden.entities, extracted)
     const cit = citationCoverage(live.bundle)
     const pass = m.f1 >= F1_TARGET && m.numericExactRate >= NUMERIC_TARGET && cit.entityCoverage >= CITATION_TARGET
