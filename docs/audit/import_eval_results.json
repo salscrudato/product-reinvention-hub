@@ -1,5 +1,5 @@
 {
-  "runAt": "2026-07-14T22:38:30.982Z",
+  "runAt": "2026-07-14T23:45:11.396Z",
   "mode": "offline",
   "baseUrl": null,
   "targets": {
@@ -15,7 +15,7 @@
       "id": "GL",
       "mode": "offline",
       "goldenFields": 5466,
-      "extractedFields": 5466,
+      "extractedFields": 5515,
       "tp": 5466,
       "fp": 0,
       "fn": 0,
@@ -110,7 +110,7 @@
       "id": "IM",
       "mode": "offline",
       "goldenFields": 19427,
-      "extractedFields": 19427,
+      "extractedFields": 19461,
       "tp": 19427,
       "fp": 0,
       "fn": 0,
