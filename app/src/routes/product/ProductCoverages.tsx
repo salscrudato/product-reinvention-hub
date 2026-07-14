@@ -1,12 +1,12 @@
-// Coverages — the product's coverages as a browsable collection (cards ⇄ list ⇄ tree).
-// Every coverage is a hub whose tiles drill into focused editors: Limits and
-// Deductibles (typed standard options), States (US map), Forms (edition + scope),
-// and the Pricing/Rules tabs. Create / edit / delete keep the hierarchy consistent.
+// Coverages — the product's coverages as a browsable collection (tree ⇄ cards,
+// tree by default). Every coverage is a hub whose tiles drill into focused editors:
+// Limits and Deductibles (typed standard options), States (US map), Forms (edition +
+// scope), and the Pricing/Rules tabs. Create / edit / delete keep the hierarchy consistent.
 //
 // Hierarchy of the page (most → least prominent):
-//   1. the single page search + the coverage cards            (primary)
-//   2. the collapsible filter rail                            (secondary)
-//   3. per-card metadata (chips + aspect counts)              (tertiary)
+//   1. the ONE smart search (fuzzy typeahead + tokens) + the coverage read  (primary)
+//   2. the collapsible filter rail — closed by default, only axes with >1 choice (secondary)
+//   3. per-card metadata (chips + aspect counts)                            (tertiary)
 // The cards view shows TOP-LEVEL coverages only; a parent's sub-coverages stay tucked
 // away behind a "Sub-Coverage" caret and expand into a tree in place, dimming the rest.
 import { Fragment, useMemo, useState, useEffect, useRef } from 'react'
@@ -26,7 +26,6 @@ import { CommandBar } from '../../features/search/CommandBar'
 import { ActiveFilters } from '../../features/search/ActiveFilters'
 import { makeCoveragesFilterSchema } from '../../features/coverages/coveragesSchema'
 import { CoverageHubCard } from '../../components/product/CoverageHubCard'
-import { CoverageRow } from '../../components/product/CoverageRow'
 import { CoverageTree } from '../../components/product/CoverageTree'
 import type { CoverageAspect } from '../../components/product/coverageAspects'
 import { TermOptionsDialog } from '../../components/product/TermOptionsDialog'
@@ -36,8 +35,6 @@ import { CoverageEditDialog } from '../../components/product/CoverageEditDialog'
 import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
-const VIEW_KEY = 'pf.coverages.view'
-const FILTERS_KEY = 'pf.coverages.filters'
 const byOrder = (a: WithId<Coverage>, b: WithId<Coverage>) => (a.order ?? 0) - (b.order ?? 0)
 
 export default function ProductCoverages() {
@@ -48,17 +45,30 @@ export default function ProductCoverages() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
 
-  const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) as ViewMode) || 'cards')
-  const setViewPersist = (m: ViewMode) => { setView(m); localStorage.setItem(VIEW_KEY, m) }
+  // Tree is the default read of the hierarchy; the toggle is session-only (no persistence).
+  const [view, setView] = useState<ViewMode>('tree')
 
-  // Filter rail is collapsible so the card grid can go full-width for fast scanning.
-  const [filtersOpen, setFiltersOpen] = useState<boolean>(() => localStorage.getItem(FILTERS_KEY) !== 'closed')
-  const toggleFilters = () => setFiltersOpen((o) => { const next = !o; localStorage.setItem(FILTERS_KEY, next ? 'open' : 'closed'); return next })
+  // Filter rail is collapsible — CLOSED by default so the coverage read leads.
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const toggleFilters = () => setFiltersOpen((o) => !o)
 
   // Page-scoped, product-shape-agnostic filter engine. The schema drops the coverage-group
   // ("Part A/B…") axis — not every product has groups — and keeps only dimensions that
   // exist for any coverage. getText is enriched so the single search matches name + metadata.
-  const schema = useMemo(() => makeCoveragesFilterSchema(coverages, product?.lob?.name), [coverages, product?.lob?.name])
+  // An enum axis where every coverage shares one value offers no real choice — hidden.
+  const schema = useMemo(() => {
+    const base = makeCoveragesFilterSchema(coverages, product?.lob?.name)
+    const facets = base.facets.filter((f) => {
+      if (f.kind !== 'enum') return true
+      const distinct = new Set<string>()
+      for (const c of coverages) {
+        const v = f.accessor(c)
+        for (const one of Array.isArray(v) ? v : [v]) if (one != null && one !== '') distinct.add(String(one))
+      }
+      return distinct.size > 1
+    })
+    return { ...base, facets }
+  }, [coverages, product?.lob?.name])
   const filters = useEntityFilters(coverages, schema)
   useEffect(() => {
     const n = filters.reconciliation.dropped.length
@@ -111,15 +121,6 @@ export default function ProductCoverages() {
     () => topLevel.filter((r) => passing.has(r.id) || (subsByParent.get(r.refId ?? '') ?? []).some((s) => passing.has(s.id))),
     [topLevel, subsByParent, passing],
   )
-
-  // Flat list (list view): each parent immediately followed by its subs, orphans appended.
-  const flatItems = useMemo(() => {
-    const roots = filtered.filter((c) => !c.parentId).sort(byOrder)
-    const subs = filtered.filter((c) => c.parentId).sort(byOrder)
-    const withKids = roots.flatMap((r) => [r, ...subs.filter((e) => e.parentId === r.refId)])
-    const shown = new Set(withKids.map((c) => c.id))
-    return [...withKids, ...subs.filter((e) => !shown.has(e.id))]
-  }, [filtered])
 
   // Keep the expansion honest: collapse if the expanded card is no longer on screen, or if
   // the view left cards mode.
@@ -201,8 +202,11 @@ export default function ProductCoverages() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Toolbar — the primary search leads; everything else is a compact control cluster. */}
+      {/* Toolbar — layout options lead on the left, then filters, then the ONE smart
+          search (fuzzy typeahead + structured tokens + live text filtering). */}
       <div className="flex flex-wrap items-center gap-2.5">
+        <ViewToggle mode={view} onChange={setView} modes={['tree', 'cards']} />
+
         <button
           type="button"
           onClick={toggleFilters}
@@ -226,7 +230,6 @@ export default function ProductCoverages() {
             placeholder="Search coverages by name, code, status, or type…" />
         </div>
 
-        <ViewToggle mode={view} onChange={setViewPersist} modes={['cards', 'list', 'tree']} />
         {canEdit && <Button variant="primary" size="sm" onClick={() => setEditCov('new')}><IconPlus size={14} />Add coverage</Button>}
       </div>
 
@@ -321,12 +324,8 @@ export default function ProductCoverages() {
                   )
                 })}
               </div>
-            ) : view === 'tree' ? (
-              <CoverageTree coverages={filtered} canEdit={canEdit} onTile={onTile} onEdit={setEditCov} onDelete={onDelete} />
             ) : (
-              <div className="rounded-[14px] overflow-hidden bg-surface" style={{ border: '1px solid var(--color-border)' }}>
-                {flatItems.map((cov) => <CoverageRow key={cov.id} isEndorsement={!!cov.parentId} {...hubProps(cov)} />)}
-              </div>
+              <CoverageTree coverages={filtered} canEdit={canEdit} onTile={onTile} onEdit={setEditCov} onDelete={onDelete} />
             )}
           </div>
         </div>

@@ -247,8 +247,9 @@ function WorkspaceInner() {
       </div>
 
       {/* Global cross-entity command bar — searches Coverages + Forms + Rules together.
-          Shown only on the in-scope tabs (the others are out of scope for search). */}
-      {(activeTab === 'coverages' || activeTab === 'forms' || activeTab === 'rules') && (
+          NOT shown on Coverages: that page's own smart search (typeahead + tokens +
+          live filtering) is the single search there, per product direction. */}
+      {(activeTab === 'forms' || activeTab === 'rules') && (
         <div className="pt-4">
           <GlobalCommandBar pid={pid} rules={rules} coverages={coverages} forms={forms} />
         </div>
