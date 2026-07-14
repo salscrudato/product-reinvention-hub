@@ -532,10 +532,9 @@ function EditUserDialog({ user, tenants, onClose, onSaved }: { user: ManagedUser
   )
 }
 
-// ─── Data browser (paged, break-glass scoped) ─────────────────────────────────
-// Browses the ACTIVE tenant (Topbar switcher — requires a break-glass grant for
-// any tenant other than the session's own). Every page is a bounded server read
-// (cursor + hard cap), never a full-container dump.
+// ─── Data browser (paged) ─────────────────────────────────────────────────────
+// Browses the ACTIVE tenant (Topbar switcher scopes the platform session). Every
+// page is a bounded server read (cursor + hard cap), never a full-container dump.
 const DATA_COLLECTIONS = ['products', 'coverages', 'rules', 'forms', 'ratingPrograms', 'filings', 'dictionary', 'groundingChunks']
 const DATA_PAGE = 50
 
@@ -585,14 +584,14 @@ function DataTab() {
         <span className="text-xs text-faint ml-auto">{rows ? `${rows.length} loaded · ${DATA_PAGE}/page` : ''}</span>
       </div>
       <p className="text-xs text-faint">
-        Pages are server-bounded (cursor + hard cap) — a large container is never dumped. Switch tenant via the
-        topbar switcher; cross-tenant access requires a break-glass grant.
+        Pages are server-bounded (cursor + hard cap) — a large container is never dumped. Switch the active
+        company from the topbar to browse its data.
       </p>
 
       {error && (
         <div role="alert" className="flex items-start gap-2.5 rounded-[12px] px-4 py-3" style={{ border: '1px solid var(--color-danger)', background: 'var(--color-danger-badge)' }}>
           <IconWarning size={16} className="text-danger shrink-0 mt-0.5" aria-hidden="true" />
-          <p className="text-sm text-dim">{error.includes('403') ? 'Access refused — request a break-glass grant for this tenant via the topbar tenant switcher.' : error}</p>
+          <p className="text-sm text-dim">{error}</p>
         </div>
       )}
 
@@ -647,7 +646,7 @@ const actorName = (a: AuditSearchEvent['actor']): string =>
   typeof a === 'string' ? a : (a?.name ?? a?.uid ?? '—')
 
 function AuditTab() {
-  const [source, setSource] = useState<'data' | 'platform'>('data')
+  const [source, setSource] = useState<'all' | 'data' | 'platform'>('all')
   const [tenant, setTenant] = useState('')
   const [tenants, setTenants] = useState<TenantInfo[]>([])
   const [actor, setActor] = useState('')
@@ -691,7 +690,7 @@ function AuditTab() {
       {/* Source + filters — all applied SERVER-side; results are cursor-paginated */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1">
-          {([['data', 'Data changes'], ['platform', 'Platform events']] as const).map(([id, label]) => (
+          {([['all', 'All changes'], ['data', 'Data changes'], ['platform', 'Platform events']] as const).map(([id, label]) => (
             <button key={id} onClick={() => setSource(id)}
               className={`px-3 py-1 rounded-[8px] text-xs font-medium transition-colors ${source === id ? 'text-white' : 'text-dim hover:text-text bg-surface'}`}
               style={source === id ? { background: 'var(--gradient-accent)' } : { border: '1px solid var(--color-border)' }}>
@@ -704,7 +703,7 @@ function AuditTab() {
           {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <Input value={actor} onChange={e => setActor(e.target.value)} placeholder="Actor…" leftIcon={<IconSearch size={13} />} className="max-w-[160px] h-8" />
-        {source === 'data' && (
+        {source !== 'platform' && (
           <Input value={entityType} onChange={e => setEntityType(e.target.value)} placeholder="Entity type…" className="max-w-[140px] h-8" />
         )}
         {source === 'data' ? (
@@ -727,8 +726,15 @@ function AuditTab() {
         <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
           {events.map(e => {
             const act = e.op ?? e.action ?? e.event ?? '—'
+            const isData = (e.kind ?? 'audit') === 'audit'
             return (
               <button key={e.id} onClick={() => setOpen(e)} className="w-full flex flex-wrap items-center gap-3 px-4 py-2.5 bg-surface text-left hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                {source === 'all' && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-[5px] shrink-0"
+                    style={isData ? { color: 'var(--color-accent)', background: 'var(--gradient-accent-soft)' } : { color: 'var(--color-dim)', background: 'var(--color-raised)' }}>
+                    {isData ? 'data' : 'platform'}
+                  </span>
+                )}
                 <Badge label={act} color={actionColor[act] ?? 'default'} />
                 <span className="text-sm text-text">{e.entityType ?? (e.tenantId || '')}</span>
                 <span className="text-xs font-mono text-faint flex-1 min-w-[120px] truncate">{e.entityPath ?? JSON.stringify(e.detail ?? {}).slice(0, 80)}</span>

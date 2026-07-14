@@ -3519,6 +3519,35 @@ async function seedForTenant(tenant) {
     return m;
   }, {});
   console.log(`[seed] \u2705 ${done}/${ops.length} docs \u2192 tenant='${tenant}'`, counts);
+  const seedActor = { uid: "coding-agent", name: "Coding Agent (seed)" };
+  const seedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const runTag = Date.now().toString(36);
+  const auditRecords = [
+    ...BUNDLES.map((bnd, i) => ({
+      id: `platformAudit:seed-${runTag}-${i}`,
+      pk: "__system__",
+      kind: "platformAudit",
+      action: "seed:product",
+      actor: seedActor,
+      detail: { tenantId: tenant, productId: bnd.pid, name: bnd.product.name ?? bnd.pid },
+      at: seedAt
+    })),
+    {
+      id: `platformAudit:seed-${runTag}-run`,
+      pk: "__system__",
+      kind: "platformAudit",
+      action: "seed:run",
+      actor: seedActor,
+      detail: { tenantId: tenant, products: BUNDLES.map((b) => b.pid), documents: done, counts },
+      at: seedAt
+    }
+  ];
+  try {
+    await Promise.all(auditRecords.map((r) => docs.items.upsert(r)));
+    console.log(`[seed] \u{1F4DD} ${auditRecords.length} platform-audit records written for tenant='${tenant}'`);
+  } catch (e) {
+    console.warn("[seed] audit-record write failed (non-fatal):", e.message);
+  }
   return { done, total: ops.length, counts };
 }
 var _isCLI = Boolean(process.argv[1] && (process.argv[1].endsWith("migrate-to-cosmos.ts") || process.argv[1].endsWith("migrate-to-cosmos.cjs")));

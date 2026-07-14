@@ -11,7 +11,7 @@
 // document, odd = collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
-import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, BreakGlassGrant, ManagedUser, TenantMember, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
+import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, ManagedUser, TenantMember, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
 import { MutationConflictError } from './types'
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -69,8 +69,8 @@ export function getSuperAdminTenant(): string | null { return activeTenantOverri
 
 /** Set or clear the active tenant for a SUPER_ADMIN session.
  *  Clears all cached data so the next poll loads from the new tenant.
- *  Server-side, the X-Tenant-Id override is only honoured under a live
- *  break-glass grant (adapter.tenancy.requestBreakGlass) — never implicitly. */
+ *  Server-side, the X-Tenant-Id override is honoured for SUPER_ADMIN sessions
+ *  (platform-plane role); tenant-plane users are always pinned to their own tenant. */
 export function setSuperAdminTenant(id: string | null): void {
   activeTenantOverride = id
   snapshotCache.clear()
@@ -412,17 +412,6 @@ export const adapter: BackendAdapter = {
     },
     async impersonate(targetUid: string, tenantId: string, reason: string): Promise<{ token: string; expiresAt: string; subject: string; tenantId: string }> {
       return api('/admin/impersonate', { method: 'POST', body: JSON.stringify({ targetUid, tenantId, reason }) })
-    },
-    async requestBreakGlass(tenantId: string, reason: string, minutes?: number): Promise<BreakGlassGrant> {
-      const { grant } = await api<{ ok: boolean; grant: BreakGlassGrant }>('/admin/break-glass', { method: 'POST', body: JSON.stringify({ tenantId, reason, minutes }) })
-      return grant
-    },
-    async endBreakGlass(tenantId: string): Promise<void> {
-      await api(`/admin/break-glass/${encodeURIComponent(tenantId)}`, { method: 'DELETE' })
-    },
-    async listBreakGlass(): Promise<BreakGlassGrant[]> {
-      const { grants } = await api<{ grants: BreakGlassGrant[] }>('/admin/break-glass')
-      return grants
     },
     async searchAudit(filters: AuditSearchFilters): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }> {
       return api('/admin/audit/search', { method: 'POST', body: JSON.stringify(filters) })

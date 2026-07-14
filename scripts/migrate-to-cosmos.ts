@@ -187,6 +187,38 @@ export async function seedForTenant(tenant: string): Promise<{ done: number; tot
   }
   const counts = ops.reduce<Record<string, number>>((m, o) => { m[o.entityType] = (m[o.entityType] || 0) + 1; return m }, {})
   console.log(`[seed] ✅ ${done}/${ops.length} docs → tenant='${tenant}'`, counts)
+
+  // Record the seed in the platform audit log so a coding-agent reseed is visible in
+  // Platform → Audit Log. These are append-only platformAudit records on the __system__
+  // plane (same class as tenant/user admin events) — deliberately OUTSIDE the per-entity
+  // hash chain, so a bulk reseed never forks an existing chain. Fail-open: an audit-write
+  // hiccup never fails the migration itself.
+  const seedActor = { uid: 'coding-agent', name: 'Coding Agent (seed)' }
+  const seedAt = new Date().toISOString()
+  const runTag = Date.now().toString(36)
+  const auditRecords: Doc[] = [
+    ...BUNDLES.map((bnd, i) => ({
+      id: `platformAudit:seed-${runTag}-${i}`,
+      pk: '__system__', kind: 'platformAudit',
+      action: 'seed:product', actor: seedActor,
+      detail: { tenantId: tenant, productId: bnd.pid, name: (bnd.product as { name?: string }).name ?? bnd.pid },
+      at: seedAt,
+    })),
+    {
+      id: `platformAudit:seed-${runTag}-run`,
+      pk: '__system__', kind: 'platformAudit',
+      action: 'seed:run', actor: seedActor,
+      detail: { tenantId: tenant, products: BUNDLES.map((b) => b.pid), documents: done, counts },
+      at: seedAt,
+    },
+  ]
+  try {
+    await Promise.all(auditRecords.map((r) => docs.items.upsert(r)))
+    console.log(`[seed] 📝 ${auditRecords.length} platform-audit records written for tenant='${tenant}'`)
+  } catch (e) {
+    console.warn('[seed] audit-record write failed (non-fatal):', (e as Error).message)
+  }
+
   return { done, total: ops.length, counts }
 }
 

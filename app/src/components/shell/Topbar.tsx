@@ -1,10 +1,8 @@
 // Topbar — breadcrumb, global search (opens palette), presence slot, user menu.
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { toast } from 'sonner'
 import { IconSearch, IconSignOut, IconChevronDown, IconHome, IconKey, IconLayers } from '../ui/icons'
 import { ThemeToggle } from './ThemeToggle'
-import { Dialog, Button, Input } from '../ui'
 import { useUser } from '../../context/useUser'
 import { adapter, setSuperAdminTenant } from '../../lib/backend'
 import type { TenantInfo } from '../../lib/backend'
@@ -77,16 +75,13 @@ function Breadcrumb() {
 // Detect Mac so the shortcut badge reads ⌘F instead of Ctrl+F.
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
-// SUPER_ADMIN tenant switcher. Cross-tenant access is NEVER implicit: switching to
-// any tenant other than the session's own opens a break-glass dialog (reason +
-// duration, server-audited, time-bounded). The session's own tenant needs no grant.
+// SUPER_ADMIN tenant switcher — selecting a company scopes the platform session to
+// that tenant's data (X-Tenant-Id override, honoured server-side for the platform
+// plane). Tenant-plane users are always pinned to their own tenant; this control is
+// SUPER_ADMIN-only. Every cross-tenant data change is still recorded in the audit log.
 function SuperAdminTenantSwitcher({ currentTenantId }: { currentTenantId: string | null | undefined }) {
   const [tenants, setTenants] = useState<TenantInfo[]>([])
   const [active, setActive] = useState<string>(currentTenantId ?? '')
-  const [pending, setPending] = useState<TenantInfo | null>(null)
-  const [reason, setReason] = useState('')
-  const [minutes, setMinutes] = useState(60)
-  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     adapter.auth.listTenants().then(setTenants).catch(() => {})
@@ -94,74 +89,24 @@ function SuperAdminTenantSwitcher({ currentTenantId }: { currentTenantId: string
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const id = e.target.value
-    if (!id || id === (currentTenantId ?? '')) {
-      setActive(id)
-      setSuperAdminTenant(id || null)
-      return
-    }
-    // Cross-tenant: require an explicit break-glass grant before switching.
-    setPending(tenants.find(t => t.id === id) ?? { id, name: id })
-  }
-
-  async function confirmBreakGlass() {
-    if (!pending) return
-    if (!reason.trim()) { toast.error('A reason is required for cross-tenant access'); return }
-    setBusy(true)
-    try {
-      const grant = await adapter.tenancy.requestBreakGlass(pending.id, reason.trim(), minutes)
-      setActive(pending.id)
-      setSuperAdminTenant(pending.id)
-      toast.success(`Break-glass granted for ${pending.name} until ${new Date(grant.expiresAt).toLocaleTimeString()}`)
-      setPending(null)
-      setReason('')
-    } catch {
-      toast.error('Break-glass request failed')
-    } finally { setBusy(false) }
+    setActive(id)
+    setSuperAdminTenant(id || null)
   }
 
   if (tenants.length === 0) return null
   return (
-    <>
-      <div className="hidden sm:flex items-center gap-1.5 px-2 h-8 rounded-[8px] bg-raised text-sm text-dim" style={{ border: '1px solid var(--color-border)' }}>
-        <IconLayers size={13} aria-hidden="true" className="text-accent shrink-0" />
-        <select
-          value={active}
-          onChange={handleChange}
-          aria-label="Active tenant (super admin)"
-          className="bg-transparent text-sm text-text focus:outline-none cursor-pointer"
-        >
-          <option value="">— platform (no tenant) —</option>
-          {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-      </div>
-
-      <Dialog open={!!pending} onClose={() => { setPending(null); setReason('') }} title={`Break-glass: ${pending?.name ?? ''}`} width="max-w-md">
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-dim leading-relaxed">
-            You are requesting cross-tenant access to <span className="font-semibold text-text">{pending?.name}</span>
-            {' '}(<span className="font-mono text-xs">{pending?.id}</span>). The grant is time-bounded and every
-            request under it is attributable — the reason below is written to the platform audit log.
-          </p>
-          <Input label="Reason (required)" value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. investigating import issue for support ticket #123" autoFocus />
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-text" htmlFor="bg-minutes">Duration</label>
-            <select id="bg-minutes" value={minutes} onChange={e => setMinutes(Number(e.target.value))}
-              className="h-9 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none" style={{ borderColor: 'var(--color-border-strong)' }}>
-              <option value={15}>15 minutes</option>
-              <option value={60}>1 hour</option>
-              <option value={240}>4 hours</option>
-              <option value={480}>8 hours</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="ghost" size="sm" onClick={() => { setPending(null); setReason('') }} disabled={busy}>Cancel</Button>
-            <Button variant="primary" size="sm" onClick={() => void confirmBreakGlass()} disabled={busy || !reason.trim()}>
-              {busy ? 'Requesting…' : 'Grant access'}
-            </Button>
-          </div>
-        </div>
-      </Dialog>
-    </>
+    <div className="hidden sm:flex items-center gap-1.5 px-2 h-8 rounded-[8px] bg-raised text-sm text-dim" style={{ border: '1px solid var(--color-border)' }}>
+      <IconLayers size={13} aria-hidden="true" className="text-accent shrink-0" />
+      <select
+        value={active}
+        onChange={handleChange}
+        aria-label="Active tenant (super admin)"
+        className="bg-transparent text-sm text-text focus:outline-none cursor-pointer"
+      >
+        <option value="">— platform (no tenant) —</option>
+        {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+      </select>
+    </div>
   )
 }
 

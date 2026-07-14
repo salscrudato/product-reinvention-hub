@@ -181,35 +181,6 @@ function systemContainer() {
   try { return require('./cosmos').docs } catch { return null }
 }
 
-// ─── Break-glass grants (SUPER_ADMIN cross-tenant override) ──────────────────
-// The X-Tenant-Id override is honoured ONLY while an explicit, time-bounded,
-// audited break-glass grant exists for (uid, tenantId). Never implicit: without
-// a live grant the override is refused (403 via server.js), not silently ignored.
-// Grants are created/ended by POST/DELETE /api/admin/break-glass (admin.js) and
-// stored in __system__ as kind='breakGlass' with an expiresAt.
-const _grantCache = new Map()  // `${uid}|${tid}` -> { until, cachedAt }
-const GRANT_CACHE_TTL = 30 * 1000
-
-async function hasBreakGlass(uid, tenantId) {
-  const key = `${uid}|${tenantId}`
-  const now = Date.now()
-  const cached = _grantCache.get(key)
-  if (cached && now - cached.cachedAt < GRANT_CACHE_TTL) return cached.until > now
-  const docs = systemContainer()
-  if (!docs) return false
-  try {
-    const { resource } = await docs.item(`breakGlass:${uid}:${tenantId}`, '__system__').read()
-    const until = Date.parse(resource?.data?.expiresAt || '') || 0
-    _grantCache.set(key, { until, cachedAt: now })
-    return until > now
-  } catch {
-    _grantCache.set(key, { until: 0, cachedAt: now })
-    return false
-  }
-}
-// Called by admin.js when a grant is created or ended so the next request sees it.
-function bustBreakGlassCache(uid, tenantId) { _grantCache.delete(`${uid}|${tenantId}`) }
-
 // ─── Immutable login audit trail ──────────────────────────────────────────────
 // Every auth event writes an append-only Cosmos record (Create, not Upsert).
 // Fail-open: a Cosmos outage does not block authentication.
@@ -479,16 +450,13 @@ async function attachUser(req, _res, next) {
     } else {
       const role = normalizeRole(p.role)
       let tenantId = p.tenantId || null
-      // SUPER_ADMIN: per-request tenant override via X-Tenant-Id header — honoured
-      // ONLY under a live break-glass grant (explicit, time-bounded, audited).
-      // Without one the request is refused downstream (server.js → 403
-      // break_glass_required), never silently served from another tenant.
+      // SUPER_ADMIN: per-request tenant override via X-Tenant-Id header. The platform
+      // plane can scope its session to any tenant to administer it; every resulting data
+      // change is still recorded in that tenant's audit log. Tenant-plane roles never
+      // reach this branch — they are pinned to the tenantId in their JWT.
       if (role === 'SUPER_ADMIN') {
         const override = String(req.headers['x-tenant-id'] || '').trim()
-        if (override && override !== tenantId) {
-          if (await hasBreakGlass(p.sub, override)) tenantId = override
-          else req.breakGlassDenied = override
-        }
+        if (override) tenantId = override
       }
       req.user = { uid: p.sub, name: p.name, email: p.email, role, tenantId, _jti: p.jti || null }
       // Impersonation token: dual-attributed; the real actor is in _impersonatedBy.
@@ -550,5 +518,5 @@ module.exports = {
   normalizeRole, sign, verify, signImpersonation,
   requestOtp, verifyOtp, loginBootstrap, me, changePassword, publicTenants, discoverHomeRealm,
   attachUser, requireAuth, requireRole, requireTenant, resolveTenantForPrincipal, revokeToken,
-  setSessionCookie, clearSessionCookie, hasBreakGlass, bustBreakGlassCache,
+  setSessionCookie, clearSessionCookie,
 }

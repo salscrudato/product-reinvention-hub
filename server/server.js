@@ -69,9 +69,7 @@ app.use(auth.attachUser)
 // ─── Global auth + write gates (defense-in-depth) ────────────────────────────
 // 1. requireAuth on ALL /api/* except the public surface (health, login, guest
 //    HomeCheck). Individual routers keep their own guards; this is the floor.
-// 2. Break-glass: a SUPER_ADMIN X-Tenant-Id override without a live grant is
-//    refused explicitly — never silently served from another tenant (auth.js).
-// 3. Default-deny write gate: every non-GET /api/* requires product:write unless
+// 2. Default-deny write gate: every non-GET /api/* requires product:write unless
 //    whitelisted below, so a VIEWER can never reach a mutation even if a route
 //    forgot its own guard. Read-shaped POSTs and the read-only AI surface are
 //    whitelisted; write-shaped AI calls (import, reindex) are NOT.
@@ -94,12 +92,6 @@ app.use((req, res, next) => {
   if (!p.startsWith('/api/')) return next()
   if (isPublicApi(p)) return next()
   if (!req.user) return res.status(401).json({ error: 'unauthenticated' })
-  if (req.breakGlassDenied) {
-    return res.status(403).json({
-      error: 'break_glass_required', tenantId: req.breakGlassDenied,
-      detail: 'Cross-tenant access requires an active break-glass grant (POST /api/admin/break-glass).',
-    })
-  }
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next()
   if (WRITE_EXEMPT_EXACT.includes(p) || WRITE_EXEMPT_PREFIX.some((x) => p.startsWith(x))) return next()
   if (p.startsWith('/api/ai/')) {

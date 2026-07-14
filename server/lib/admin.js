@@ -10,16 +10,15 @@
 //
 // Every mutation on this router writes an append-only platformAudit record
 // (pk='__system__', kind='platformAudit') — tenant create/update/delete, user
-// create/update/delete, break-glass grant/end, impersonation.
+// create/update/delete, impersonation.
 //
-// Break-glass (POST /break-glass): SUPER_ADMIN cross-tenant data access is explicit,
-// time-bounded and audited. auth.js honours the X-Tenant-Id override ONLY while a
-// live grant exists; without one the request is refused with break_glass_required.
+// SUPER_ADMIN cross-tenant data access is via the X-Tenant-Id session override
+// (auth.js); every resulting data change is recorded in that tenant's audit log.
 
 const express = require('express')
 const crypto = require('crypto')
 const { docs, resolveTenantStore } = require('./cosmos')
-const { MANAGED_TENANT_ROLES, findUser, signImpersonation, normalizeRole, bustBreakGlassCache } = require('./auth')
+const { MANAGED_TENANT_ROLES, findUser, signImpersonation, normalizeRole } = require('./auth')
 const { requirePlatform, CAP_PLATFORM_TENANTS, CAP_PLATFORM_USERS, CAP_PLATFORM_IMPERSONATE, CAP_PLATFORM_AUDIT } = require('./authz')
 
 const router = express.Router()
@@ -213,66 +212,21 @@ router.delete('/users/:username', requirePlatform(CAP_PLATFORM_USERS), async (re
   res.json({ ok: true })
 })
 
-// ─── break-glass (SUPER_ADMIN cross-tenant access) ───────────────────────────
-// Explicit, time-bounded (5 min – 8 h), reason-required, audited. auth.js honours
-// the X-Tenant-Id override only while the grant is live.
-const BREAK_GLASS_MIN = 5
-const BREAK_GLASS_MAX = 8 * 60
-
-router.post('/break-glass', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
-  const { tenantId, reason, minutes } = req.body || {}
-  const tid = slug(tenantId)
-  if (!tid) return res.status(400).json({ error: 'tenantId_required' })
-  if (!reason || !String(reason).trim()) return res.status(400).json({ error: 'reason_required', detail: 'Break-glass access requires a stated reason for audit.' })
-  const mins = Math.min(Math.max(parseInt(minutes, 10) || 60, BREAK_GLASS_MIN), BREAK_GLASS_MAX)
-  const now = Date.now()
-  const grant = {
-    uid: req.user.uid, tenantId: tid, reason: String(reason).trim().slice(0, 500),
-    grantedAt: new Date(now).toISOString(),
-    expiresAt: new Date(now + mins * 60_000).toISOString(),
-  }
-  await docs.items.upsert({ id: `breakGlass:${req.user.uid}:${tid}`, pk: '__system__', kind: 'breakGlass', data: grant })
-  bustBreakGlassCache(req.user.uid, tid)
-  await platformAudit('break-glass:grant', req.user, { tenantId: tid, reason: grant.reason, minutes: mins, expiresAt: grant.expiresAt })
-  res.json({ ok: true, grant })
-})
-
-// End a grant early (or confirm none). Idempotent.
-router.delete('/break-glass/:tenantId', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
-  const tid = slug(req.params.tenantId)
-  try {
-    const item = docs.item(`breakGlass:${req.user.uid}:${tid}`, '__system__')
-    const { resource } = await item.read()
-    if (resource) {
-      resource.data.expiresAt = new Date().toISOString()
-      await docs.items.upsert(resource)
-    }
-  } catch { /* idempotent */ }
-  bustBreakGlassCache(req.user.uid, tid)
-  await platformAudit('break-glass:end', req.user, { tenantId: tid })
-  res.json({ ok: true })
-})
-
-// Active grants for the caller (drives the tenant-switcher UI).
-router.get('/break-glass', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
-  const { resources } = await docs.items.query({
-    query: "SELECT c.data FROM c WHERE c.pk='__system__' AND c.kind='breakGlass' AND c.data.uid=@uid AND c.data.expiresAt > @now",
-    parameters: [{ name: '@uid', value: req.user.uid }, { name: '@now', value: new Date().toISOString() }],
-  }).fetchAll()
-  res.json({ grants: resources.map((r) => r.data) })
-})
-
 // ─── audit viewer (platform:audit — read-only, searchable, paginated) ────────
 // POST body (read-only search — body carries filters + a Cosmos continuation
 // token that can exceed URL length limits):
-//   { source: 'data'|'platform', tenant?, actor?, entityType?, action?,
+//   { source: 'all'|'data'|'platform', tenant?, actor?, entityType?, action?,
 //     since?, until?, limit?, cursor? }
-// source='data'      → kind='audit' mutation events (optionally one tenant)
+// source='all'  (default) → one unified stream: tenant data mutations (kind='audit')
+//                           AND platform-plane events (platformAudit/loginAudit/
+//                           impersonateAudit). This is EVERY change, including bulk
+//                           data seeding, so nothing is hidden behind a source toggle.
+// source='data'      → kind='audit' mutation events only (optionally one tenant)
 // source='platform'  → __system__ platformAudit + loginAudit + impersonateAudit
 router.post('/audit/search', requirePlatform(CAP_PLATFORM_AUDIT), async (req, res) => {
   const b = req.body || {}
   const limit = clampInt(b.limit, 50, AUDIT_PAGE_MAX)
-  const source = b.source === 'platform' ? 'platform' : 'data'
+  const source = b.source === 'platform' ? 'platform' : b.source === 'data' ? 'data' : 'all'
   const params = []
   let query
   let container = docs
@@ -281,8 +235,8 @@ router.post('/audit/search', requirePlatform(CAP_PLATFORM_AUDIT), async (req, re
     if (b.actor) { query += ' AND (CONTAINS(LOWER(c.actor.uid ?? c.actor ?? ""), @actor) OR CONTAINS(LOWER(c.actor.name ?? ""), @actor))'; params.push({ name: '@actor', value: String(b.actor).toLowerCase() }) }
     if (b.action) { query += ' AND (c.action = @action OR c.event = @action)'; params.push({ name: '@action', value: String(b.action) }) }
     if (b.tenant) { query += ' AND (c.tenantId = @tenant OR c.detail.tenantId = @tenant)'; params.push({ name: '@tenant', value: String(b.tenant) }) }
-  } else {
-    query = "SELECT c.id, c.op, c.entityType, c.entityPath, c.actor, c.tenantId, c.rev, c.at FROM c WHERE c.kind='audit'"
+  } else if (source === 'data') {
+    query = "SELECT c.id, c.kind, c.op, c.entityType, c.entityPath, c.actor, c.tenantId, c.rev, c.at FROM c WHERE c.kind='audit'"
     if (b.tenant) {
       container = resolveTenantStore(String(b.tenant)).docs  // SILO_READY seam — isolation follows the store
       query += ' AND c.tenantId = @tenant'; params.push({ name: '@tenant', value: String(b.tenant) })
@@ -290,6 +244,15 @@ router.post('/audit/search', requirePlatform(CAP_PLATFORM_AUDIT), async (req, re
     if (b.actor) { query += ' AND (CONTAINS(LOWER(c.actor.uid ?? ""), @actor) OR CONTAINS(LOWER(c.actor.name ?? ""), @actor))'; params.push({ name: '@actor', value: String(b.actor).toLowerCase() }) }
     if (b.entityType) { query += ' AND c.entityType = @etype'; params.push({ name: '@etype', value: String(b.entityType) }) }
     if (b.action) { query += ' AND c.op = @action'; params.push({ name: '@action', value: String(b.action) }) }
+  } else {
+    // Unified stream over the pooled container: data mutations live in tenant
+    // partitions, platform events under __system__ — a single cross-partition,
+    // c.at-ordered query returns them interleaved. Filters match either shape.
+    query = "SELECT c.id, c.kind, c.op, c.action, c.event, c.entityType, c.entityPath, c.actor, c.tenantId, c.detail, c.targetUid, c.reason, c.rev, c.at FROM c WHERE c.kind IN ('audit','platformAudit','loginAudit','impersonateAudit')"
+    if (b.actor) { query += ' AND (CONTAINS(LOWER(c.actor.uid ?? c.actor ?? ""), @actor) OR CONTAINS(LOWER(c.actor.name ?? ""), @actor))'; params.push({ name: '@actor', value: String(b.actor).toLowerCase() }) }
+    if (b.action) { query += ' AND (c.op = @action OR c.action = @action OR c.event = @action)'; params.push({ name: '@action', value: String(b.action) }) }
+    if (b.tenant) { query += ' AND (c.tenantId = @tenant OR c.detail.tenantId = @tenant)'; params.push({ name: '@tenant', value: String(b.tenant) }) }
+    if (b.entityType) { query += ' AND c.entityType = @etype'; params.push({ name: '@etype', value: String(b.entityType) }) }
   }
   if (b.since) { query += ' AND c.at >= @since'; params.push({ name: '@since', value: new Date(b.since).toISOString() }) }
   if (b.until) { query += ' AND c.at <= @until'; params.push({ name: '@until', value: new Date(b.until).toISOString() }) }

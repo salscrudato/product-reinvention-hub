@@ -51,6 +51,7 @@ export interface TenantSummary {
 // One event from the platform / tenant audit viewers (server-filtered, paginated).
 export interface AuditSearchEvent {
   id: string
+  kind?: string  // 'audit' (data mutation) | 'platformAudit' | 'loginAudit' | 'impersonateAudit'
   op?: string; action?: string; event?: string
   entityType?: string; entityPath?: string
   actor?: { uid?: string; name?: string; impersonatedBy?: { uid: string; name?: string } } | string
@@ -60,14 +61,11 @@ export interface AuditSearchEvent {
 }
 
 export interface AuditSearchFilters {
-  source?: 'data' | 'platform'
+  source?: 'all' | 'data' | 'platform'
   tenant?: string; actor?: string; entityType?: string; action?: string
   since?: string; until?: string
   limit?: number; cursor?: string
 }
-
-// A live break-glass grant (SUPER_ADMIN cross-tenant access).
-export interface BreakGlassGrant { uid: string; tenantId: string; reason: string; grantedAt: string; expiresAt: string }
 
 export interface Session {
   user: AuthUser
@@ -178,10 +176,6 @@ export interface BackendAdapter {
     deleteUser(username: string): Promise<void>
     /** Impersonate a tenant user (SUPPORT/SUPER_ADMIN only). Returns a short-lived token. */
     impersonate(targetUid: string, tenantId: string, reason: string): Promise<{ token: string; expiresAt: string; subject: string; tenantId: string }>
-    /** Break-glass: explicit, time-bounded, audited grant for cross-tenant data access. */
-    requestBreakGlass(tenantId: string, reason: string, minutes?: number): Promise<BreakGlassGrant>
-    endBreakGlass(tenantId: string): Promise<void>
-    listBreakGlass(): Promise<BreakGlassGrant[]>
     /** Platform audit viewer: server-filtered, cursor-paginated, read-only. */
     searchAudit(filters: AuditSearchFilters): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }>
   }

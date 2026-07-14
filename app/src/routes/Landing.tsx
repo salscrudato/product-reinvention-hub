@@ -188,140 +188,27 @@ function InsightGraph() {
   )
 }
 
-// ─── Sal bootstrap modal (top-right "Sign in" path) ──────────────────────────
-// This is the break-glass path for the 'sal' seed admin. Auth is server-validated;
-// showing this modal does not grant any access — only a correct password does.
-
-function SalLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [pass, setPass]       = useState('')
-  const [showPass, setShowPass] = useState(false)
-  const [tenant, setTenant]   = useState('')
-  const [tenants, setTenants] = useState<TenantInfo[]>([])
-  const [error, setError]     = useState('')
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    adapter.auth.listTenants().then(list => {
-      setTenants(list)
-      const def = list.find(t => t.id === 'testco') ?? list[0]
-      if (def) setTenant(def.id)
-    }).catch(() => {})
-  }, [])
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      await adapter.auth.loginBootstrap('sal', pass, tenant || undefined)
-      onSuccess()
-    } catch (err) {
-      setError(err instanceof Error && err.message.includes('401') ? 'Incorrect password.' : (err instanceof Error ? err.message : 'Sign-in failed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: 'var(--color-overlay)' }}
-      onClick={onClose}
-    >
-      <div
-        className="bg-surface rounded-[18px] p-6 w-full max-w-xs flex flex-col gap-4 rise-in"
-        style={{ boxShadow: 'var(--shadow-card)', border: '1px solid var(--color-border)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <span className="font-semibold text-text text-sm">Sign in</span>
-          <button type="button" onClick={onClose} className="text-faint hover:text-dim text-lg leading-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[4px]" aria-label="Close">&#x2715;</button>
-        </div>
-
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
-          <div className="relative">
-            <Input
-              label="Password"
-              type={showPass ? 'text' : 'password'}
-              value={pass}
-              onChange={e => setPass(e.target.value)}
-              placeholder="Enter password"
-              autoComplete="current-password"
-              required
-              disabled={loading}
-              autoFocus
-            />
-            <button
-              type="button"
-              onClick={() => setShowPass(s => !s)}
-              aria-label={showPass ? 'Hide password' : 'Show password'}
-              aria-pressed={showPass}
-              tabIndex={-1}
-              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              {showPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
-            </button>
-          </div>
-
-          {tenants.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-text" htmlFor="sal-tenant">Company</label>
-              <select
-                id="sal-tenant" value={tenant}
-                onChange={e => setTenant(e.target.value)}
-                disabled={loading}
-                className="h-11 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                style={{ borderColor: 'var(--color-border-strong)' }}
-              >
-                <option value="">No company (admin mode)</option>
-                {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-          )}
-
-          {error && <p role="alert" className="text-sm text-danger bg-[var(--color-danger-soft)] rounded-[8px] px-3 py-2">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading || !pass}
-            className="btn-wave-shine inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[11px] text-white text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: 'var(--gradient-accent-vivid)', boxShadow: '0 4px 14px var(--glow-accent)' }}
-          >
-            <span aria-hidden="true" className="wave-shine-span pointer-events-none absolute inset-0"
-              style={{ background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,.18) 50%,transparent 100%)', transform: 'translateX(-180%) skewX(-20deg)' }} />
-            {loading && <IconSpinner size={14} className="animate-spin" aria-hidden="true" />}
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-      </div>
-    </div>
-  )
-}
-
 // ─── Hero sign-in form ────────────────────────────────────────────────────────
-// Three paths:
-//   1. Email (contains @): OTP flow — send code → verify code
-//   2. "admin" username (UI hint only; auth is server-validated): password drop-down → bootstrap
-//   3. "sal" break-glass: top-right "Sign in" button → SalLoginModal
+// One seamless form: username + password are ALWAYS visible, above the company
+// selector. Password sign-in (server-validated) is the primary path. If an email is
+// entered with the password left blank, we fall back to a one-time email code (OTP),
+// which advances to a single code-entry step. Autofill is disabled on both fields.
 
-type SignInStep = 'identifier' | 'admin-pass' | 'otp-sent'
+type SignInStep = 'form' | 'otp-sent'
 
 function HeroSignIn() {
   const navigate = useNavigate()
 
-  const [step,         setStep]         = useState<SignInStep>('identifier')
+  const [step,         setStep]         = useState<SignInStep>('form')
   const [identifier,   setIdentifier]   = useState('')
-  const [adminPass,    setAdminPass]    = useState('')
-  const [showAdminPass, setShowAdminPass] = useState(false)
+  const [password,     setPassword]     = useState('')
+  const [showPass,     setShowPass]     = useState(false)
   const [otpCode,      setOtpCode]      = useState('')
   const [tenant,       setTenant]       = useState('')
   const [tenants,      setTenants]      = useState<TenantInfo[]>([])
   const [tenantPinned, setTenantPinned] = useState(false)
   const [error,        setError]        = useState('')
   const [loading,      setLoading]      = useState(false)
-  // adminDetected: derived synchronously so clicking immediately after typing 'admin' works.
-  // Auth remains server-validated — this only controls which UI branch to show.
-  const adminDetected = identifier.trim().toLowerCase() === 'admin' && !identifier.includes('@')
 
   useEffect(() => {
     adapter.auth.listTenants().then(list => {
@@ -333,10 +220,6 @@ function HeroSignIn() {
     }).catch(() => setTenants([]))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  function handleIdentifierChange(value: string) {
-    setIdentifier(value)
-  }
 
   function inferTenant(username: string) {
     if (!username || tenantPinned || tenants.length === 0) return
@@ -351,7 +234,7 @@ function HeroSignIn() {
 
   function mapError(err: unknown): string {
     const msg = err instanceof Error ? err.message : 'Sign-in failed'
-    if (msg.includes('401') || msg.includes('invalid_credentials') || msg.includes('unauthenticated')) return 'Incorrect password.'
+    if (msg.includes('401') || msg.includes('invalid_credentials') || msg.includes('unauthenticated')) return 'Incorrect username or password.'
     if (msg.includes('otp_invalid')) return 'Incorrect code. Check and try again.'
     if (msg.includes('otp_expired')) return 'Code has expired. Request a new one.'
     if (msg.includes('otp_locked') || msg.includes('429')) return 'Too many attempts. Try again in 15 minutes.'
@@ -361,27 +244,26 @@ function HeroSignIn() {
     return msg
   }
 
+  const isEmail = identifier.includes('@')
+  // With a password → sign in directly. An email with no password → email a code.
+  const willUseOtp = step === 'form' && isEmail && !password
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      if (step === 'identifier') {
-        if (adminDetected) {
-          // Show the admin password field — next click will authenticate
-          setStep('admin-pass')
-          setLoading(false)
-          return
-        }
-        // OTP request for email users
-        await adapter.auth.requestOtp(identifier.trim())
-        setStep('otp-sent')
-      } else if (step === 'admin-pass') {
-        await adapter.auth.loginBootstrap('admin', adminPass, tenant || undefined)
-        navigate('/app', { replace: true })
-      } else if (step === 'otp-sent') {
+      if (step === 'otp-sent') {
         await adapter.auth.verifyOtp(identifier.trim(), otpCode.trim(), tenant || undefined)
         navigate('/app', { replace: true })
+      } else if (password) {
+        await adapter.auth.loginBootstrap(identifier.trim(), password, tenant || undefined)
+        navigate('/app', { replace: true })
+      } else if (isEmail) {
+        await adapter.auth.requestOtp(identifier.trim())
+        setStep('otp-sent')
+      } else {
+        setError('Enter your password to sign in.')
       }
     } catch (err) {
       setError(mapError(err))
@@ -390,66 +272,83 @@ function HeroSignIn() {
     }
   }
 
-  const isEmail = identifier.includes('@')
-  const buttonLabel = step === 'otp-sent'    ? 'Verify code'
-    : step === 'admin-pass'                  ? 'Sign in'
-    : (adminDetected && !isEmail)            ? 'Continue'
-    : 'Send code'
-
+  const buttonLabel = step === 'otp-sent' ? 'Verify code' : willUseOtp ? 'Email me a code' : 'Sign in'
   const buttonDisabled = loading
-    || (step === 'identifier' && !identifier)
-    || (step === 'admin-pass' && !adminPass)
-    || (step === 'otp-sent'   && !otpCode)
+    || (step === 'form' && !identifier)
+    || (step === 'form' && !password && !isEmail)
+    || (step === 'otp-sent' && !otpCode)
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 w-full max-w-sm mx-auto lg:mx-0">
-      {step !== 'otp-sent' && (
-        <Input
-          id="signin-username"
-          label={isEmail ? 'Email' : 'Email or username'}
-          type={isEmail ? 'email' : 'text'}
-          value={identifier}
-          onChange={e => handleIdentifierChange(e.target.value)}
-          onBlur={() => inferTenant(identifier)}
-          placeholder="email@company.com"
-          autoComplete="username email"
-          required
-          disabled={loading || step === 'admin-pass'}
-        />
-      )}
-
-      {/* Admin password drop-down: appears after 'admin' is detected */}
-      {(step === 'admin-pass') && (
-        <div className="relative rise-in">
+    <form onSubmit={handleSubmit} noValidate autoComplete="off" className="flex flex-col gap-4 w-full max-w-sm mx-auto lg:mx-0">
+      {step === 'form' ? (
+        <>
+          {/* Username + password are always visible, above the company selector */}
           <Input
-            label="Password"
-            type={showAdminPass ? 'text' : 'password'}
-            value={adminPass}
-            onChange={e => setAdminPass(e.target.value)}
-            placeholder="Password"
-            autoComplete="current-password"
+            id="signin-username"
+            name="prh-identifier"
+            label="Username or email"
+            type="text"
+            value={identifier}
+            onChange={e => setIdentifier(e.target.value)}
+            onBlur={() => inferTenant(identifier)}
+            placeholder="admin or email@company.com"
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
             required
             disabled={loading}
-            autoFocus
           />
-          <button
-            type="button"
-            onClick={() => setShowAdminPass(s => !s)}
-            aria-label={showAdminPass ? 'Hide password' : 'Show password'}
-            aria-pressed={showAdminPass}
-            tabIndex={-1}
-            className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            {showAdminPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
-          </button>
-        </div>
-      )}
 
-      {/* OTP code input: shown after code is sent */}
-      {step === 'otp-sent' && (
+          <div className="relative">
+            <Input
+              id="signin-password"
+              name="prh-secret"
+              label="Password"
+              type={showPass ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder={isEmail ? 'Password — or leave blank to email a code' : 'Password'}
+              autoComplete="new-password"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              disabled={loading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass(s => !s)}
+              aria-label={showPass ? 'Hide password' : 'Show password'}
+              aria-pressed={showPass}
+              tabIndex={-1}
+              className="absolute right-3 bottom-2.5 text-faint hover:text-dim transition-colors rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              {showPass ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+            </button>
+          </div>
+
+          {/* Company — below the credentials; pre-selected to testco (seeded content default) */}
+          {tenants.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text" htmlFor="signin-tenant">Company</label>
+              <select
+                id="signin-tenant" value={tenant}
+                onChange={e => { setTenantPinned(true); setTenant(e.target.value) }}
+                disabled={loading}
+                className="h-11 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                style={{ borderColor: 'var(--color-border-strong)' }}
+              >
+                <option value="">Select company…</option>
+                {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          )}
+        </>
+      ) : (
         <div className="flex flex-col gap-1 rise-in">
           <p className="text-sm text-dim">A code was sent to <strong className="text-text">{identifier.trim()}</strong>. Enter it below.</p>
           <Input
+            id="signin-otp"
             label="One-time code"
             type="text"
             inputMode="numeric"
@@ -465,28 +364,11 @@ function HeroSignIn() {
           />
           <button
             type="button"
-            onClick={() => { setStep('identifier'); setOtpCode(''); setError('') }}
+            onClick={() => { setStep('form'); setOtpCode(''); setError('') }}
             className="text-xs text-faint hover:text-dim underline self-start mt-1"
           >
-            Use a different email
+            Use a different account
           </button>
-        </div>
-      )}
-
-      {/* Company - below credential; pre-selected to testco (seeded content default) */}
-      {tenants.length > 0 && step !== 'otp-sent' && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-text" htmlFor="signin-tenant">Company</label>
-          <select
-            id="signin-tenant" value={tenant}
-            onChange={e => { setTenantPinned(true); setTenant(e.target.value) }}
-            disabled={loading}
-            className="h-11 px-3 rounded-[10px] bg-surface border text-sm text-text focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            style={{ borderColor: 'var(--color-border-strong)' }}
-          >
-            <option value="">Select company…</option>
-            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
         </div>
       )}
 
@@ -505,7 +387,7 @@ function HeroSignIn() {
         <span aria-hidden="true" className="wave-shine-span pointer-events-none absolute inset-0"
           style={{ background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,.18) 50%,transparent 100%)', transform: 'translateX(-180%) skewX(-20deg)' }} />
         {loading && <IconSpinner size={18} className="animate-spin" aria-hidden="true" />}
-        {loading ? (step === 'otp-sent' ? 'Verifying…' : step === 'admin-pass' ? 'Signing in…' : 'Sending…') : buttonLabel}
+        {loading ? (step === 'otp-sent' ? 'Verifying…' : willUseOtp ? 'Sending…' : 'Signing in…') : buttonLabel}
         {!loading && <IconArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />}
       </button>
 
@@ -559,8 +441,6 @@ function FeatureCard({ icon: Icon, title, body, delay }: { icon: Glyph; title: s
 
 export default function Landing() {
   const { user } = useUser()
-  const navigate = useNavigate()
-  const [salModalOpen, setSalModalOpen] = useState(false)
 
   // Route-level paint diagnostic (must run before the early return below to keep
   // hook order stable across renders).
@@ -579,14 +459,6 @@ export default function Landing() {
           <Logo size={32} />
           <span className="font-semibold text-text text-[15px] tracking-tight">Product Reinvention Hub</span>
         </div>
-        {/* Top-right sign-in: quick-access for the 'sal' seed admin (server-validated). */}
-        <button
-          type="button"
-          onClick={() => setSalModalOpen(true)}
-          className="text-sm font-medium text-dim hover:text-text transition-colors px-4 py-2 rounded-[9px] hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        >
-          Sign in
-        </button>
       </header>
 
       {/* Hero */}
@@ -627,14 +499,6 @@ export default function Landing() {
       <footer className="relative z-10 flex items-center justify-center py-6 text-xs text-faint" style={{ borderTop: '1px solid var(--color-border)' }}>
         Product Reinvention Hub · P&amp;C Insurance Product Management · {new Date().getFullYear()}
       </footer>
-
-      {/* Sal bootstrap modal (mounted when top-right "Sign in" is clicked) */}
-      {salModalOpen && (
-        <SalLoginModal
-          onClose={() => setSalModalOpen(false)}
-          onSuccess={() => navigate('/app', { replace: true })}
-        />
-      )}
     </div>
   )
 }

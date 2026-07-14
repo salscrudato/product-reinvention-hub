@@ -38,8 +38,8 @@ const ALLOWLIST: Record<string, { count: number; why: string }> = {
     why: '__system__ identity plane (DEF-0017): loginAudit append-only create, JIT user provisioning upserts (x2), changePassword user upsert, revokedToken upsert (RISK-006). Not tenant entities.',
   },
   'lib/admin.js': {
-    count: 10,
-    why: 'SUPER_ADMIN platform plane, __system__ partition: platformAudit append-only create, tenant create/update upserts + delete, user create/update upserts + delete, break-glass grant/end upserts, impersonateAudit append-only create. All non-entity platform records (DEF-0017), each paired with a platformAudit write.',
+    count: 8,
+    why: 'SUPER_ADMIN platform plane, __system__ partition: platformAudit append-only create, tenant create/update upserts + delete, user create/update upserts + delete, impersonateAudit append-only create. All non-entity platform records (DEF-0017), each paired with a platformAudit write.',
   },
   'lib/tenant-admin.js': {
     count: 4,
