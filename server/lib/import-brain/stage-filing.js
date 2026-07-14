@@ -197,12 +197,18 @@ async function extractWithLadder({ systemPrompt, tool, block, instruction, maxTo
     let deployment
     try { deployment = resolveAnthropic(role, budget) } catch { return null }
     let raw
-    try { raw = await forcedTool(deployment, systemPrompt, [tool], tool.name, block, instruction, maxTokens, budget) } catch { raw = {} }
+    let callError = null
+    try { raw = await forcedTool(deployment, systemPrompt, [tool], tool.name, block, instruction, maxTokens, budget) } catch (e) { raw = {}; callError = String(e && e.message || e).slice(0, 180) }
     const sanitized = sanitize(raw)
     const before = rawItems(raw)
     const after = sizeOf(sanitized)
-    if (before > 0 && after === 0) {
+    if (callError) {
+      emitFn({ t: 'notice', level: 'warn', kind: 'extract-error', message: `${label ?? tool.name}: ${role} call failed — ${callError}` })
+    } else if (before > 0 && after === 0) {
       emitFn({ t: 'notice', level: 'warn', kind: 'citations-dropped', message: `${label ?? tool.name}: ${role} extracted ${before} item(s) but ALL were dropped by the citation guard — model omitted citations.` })
+    } else if (before === 0) {
+      const rawStr = JSON.stringify(raw ?? {})
+      emitFn({ t: 'notice', level: 'info', kind: 'extract-empty', message: `${label ?? tool.name}: ${role} returned no items — raw tool output ${rawStr.length} chars: ${rawStr.slice(0, 200)}` })
     }
     return { role, sanitized, before, after }
   }
