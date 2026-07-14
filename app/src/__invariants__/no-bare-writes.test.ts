@@ -38,8 +38,12 @@ const ALLOWLIST: Record<string, { count: number; why: string }> = {
     why: '__system__ identity plane (DEF-0017): loginAudit append-only create, JIT user provisioning upserts (x2), changePassword user upsert, revokedToken upsert (RISK-006). Not tenant entities.',
   },
   'lib/admin.js': {
-    count: 8,
-    why: 'SUPER_ADMIN platform plane, __system__ partition: platformAudit append-only create, tenant create/update upserts + delete, user create/update upserts + delete, impersonateAudit append-only create. All non-entity platform records (DEF-0017), each paired with a platformAudit write.',
+    count: 13,
+    why: 'SUPER_ADMIN platform plane, __system__ partition: platformAudit append-only create, tenant create/update upserts + delete, user create/update upserts + delete, impersonateAudit append-only create — plus F5 tenant lifecycle (dd836c2): provision admin-user upsert, suspend/lifecycle tenant upsert, offboard partition-scoped entity-doc purge delete + member-detach user upsert + presence-doc delete. Offboard deletes are the DELIBERATE destructive path (platform:tenants gated, platformAudit-paired); they purge a tenant partition wholesale and are not entity mutations needing version history.',
+  },
+  'lib/platform-config.js': {
+    count: 3,
+    why: 'F5 ops plane (dd836c2), __system__ partition: configAudit append-only create, global platformConfig (feature-flag registry) upsert, per-tenant config upsert on the tenant doc. Platform records, not tenant entities (DEF-0017 class); each change writes a configAudit record.',
   },
   'lib/tenant-admin.js': {
     count: 4,
