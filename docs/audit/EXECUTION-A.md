@@ -38,6 +38,56 @@
 | Milestone | Note |
 |---|---|
 | Orientation complete | Read orchestration, AI_REVIEW, landing, icons, pricing wiring, bundle budget, server banner. |
+| Wave 1 built + gated | Icons registry, /pricing + ROI + test. Gate green (typecheck, lint, 919+186 tests, build, bundle 147.6/175). |
+| Wave 1 shipped | `677d748` pushed (fast-forward, carried admin/auth `8c17381`); pipeline **succeeded**; live smoke green. |
+| Budget line reached | Heavy session (large orientation reads + multiple gate/build runs). Per the $12 rule: finished the current wave, recorded the share design as the remainder, stopping before a second security-sensitive build+deploy cycle. |
+
+## Live verification (dev — smoke level)
+
+`https://app-prodhub-dev.azurewebsites.net`
+
+- `GET /` → 200; `GET /pricing` → 200 (SPA route resolves).
+- Deployed `index-*.js` references `Pricing-BhKepTqv.js`; that chunk is 200 and carries my
+  content ("ILLUSTRATIVE — PENDING COMMERCIAL APPROVAL", "Model the value", "Priced on the value").
+- Egg chunk `reportWebVitals-*.js`: base64 payload present, **zero plaintext personal-name leak**.
+- **Not** covered by this smoke: interactive light/dark/mobile walkthrough and live ROI-slider
+  recompute in a real browser. ROI math is covered by 12 unit tests (bands locked); the recompute
+  is pure client React that builds + serves. A full manual walkthrough was deferred at the budget line.
+
+## Share-link seam — disposition + token shape (recorded for F6)
+
+**Disposition: ABSENT.** Grep across app + server for `shareLink|share-link|/api/share|publicShare|shareToken|signedToken|/s/` → **zero hits**. No share surface exists today. The build was **deferred at the budget boundary** (security-sensitive public token endpoints reading Cosmos demand their own careful build + live-test cycle; shipping them un-verified in the shared dev env would risk exactly the cross-tenant leak F6 exists to catch). The complete, minimal-correct, attackable design is recorded here so F6 can build + attack it.
+
+**Token shape** — opaque, URL-safe, stateless-verifiable:
+```
+share_v1.<payloadB64url>.<sigB64url>
+payload = { v:1, t:<tenantId>, b:<base>, id:<entityId>, exp:<unixSeconds>, jti:<rand>, scope:'read' }
+sig     = HMAC-SHA256(<payloadB64url>, SHARE_SIGNING_SECRET)   // server-only secret in App Service config
+```
+
+**Endpoints**
+- `POST /api/share` — auth + `product:write` (EDITOR+). Body `{ base, id }`. **`t` is forced to `req.auth.tenantId`, never client-supplied** → no cross-tenant mint. Returns `{ token, url:'/s/<token>', expiresAt }`.
+- `GET /api/share/:token` — **public** (a GET passes the auth floor). Verifies sig → exp → not-revoked, then reads exactly one entity by the `${t}|${b}` partition key + `id`, returns a read-only projection (internal/audit fields stripped). Any verify failure → **404** (no oracle). **Zero write surface.**
+- `POST /api/share/:token/revoke` — auth + `product:write`, same tenant. Adds `jti` to the revocation set.
+
+**Revocation store** — minimal = in-memory `Set` (dev). ⚠️ Not durable across restarts; production must back it with a create-only Cosmos `shareRevocations` doc keyed by `jti` (through the mutate envelope). Flagged for F6.
+
+**Client** — public `/s/:token` route (`SharedView.tsx`) calls `GET /api/share/:token` and renders a premium read-only card in the landing's visual language (Aurora, `Logo`, `var(--color-*)` tokens, `IconShare`), with **zero edit affordances and zero adapter writes**.
+
+**Isolation guarantees (F6 attack matrix)** — forged sig; swapped `t` in payload (sig fails); expired `exp`; revoked `jti`; `id` from another tenant (partition-key miss → not found); path traversal in `base`/`id`; replay after revoke. All must 404, never leak, never write.
+
+## Self-review ledger
+
+**Icon inventory — before → after:** third-party icon deps **0 → 0** (already clean; nothing to remove). In-house glyphs **85 → 93** (registry promoted to `components/icons/`; `ui/icons.tsx` → re-export shim; +`IconShare` +7 F3 pre-cuts). Full export list above.
+
+**Share-link seam disposition:** ABSENT → design recorded (above), build deferred at budget line.
+
+**Pricing constants list (`lib/pricing.ts`, ILLUSTRATIVE):** `PLATFORM_TIERS` (Launch/Scale/Enterprise annual bands), `AI_USAGE` (overage $/1M), `SERVICES` (Strategy/Mobilize/AI Run figures), `TRANSFORMATION` (program-priced), `COMMERCIAL_LAYERS` (4), `ROI_BANDS` (25–35% / 10–15% / 15–20%), `ROI_DEFAULTS`, `ROI_SLIDERS`, `computeRoi`, formatters. No client/pipeline/engagement names anywhere.
+
+**Three hostile questions I asked of my own work:**
+1. *Does the ROI headline double-count?* No — headline = OpEx efficiency only; speed + onboarding stay in weeks, never dollarized+summed. Locked by a unit test (`headline annual value equals OpEx savings only`).
+2. *Did I regress the 85 existing glyphs by "moving" them?* No — the move was a byte-for-byte `cp` + a `export *` shim; typecheck + 919 tests + build all green; no glyph path edited; bundle critical JS 147.6/175 (unused new glyphs tree-shake to ~0).
+3. *Did I trample the parallel landing rewrite?* No — I detected its uncommitted rewrite, reverted my one stray import, never touched `Landing.tsx` again, and turned the required landing→/pricing link into an explicit cross-lane ask in `orchestration.md`.
 
 ## Icon registry — full export list (`app/src/components/icons/index.tsx`)
 
