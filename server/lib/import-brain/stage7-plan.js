@@ -224,9 +224,27 @@ function buildImportPlan(brainOutput, opts = {}) {
   const { lobRefIdHint, sourceName, edition } = opts
   const lob = lobRefIdHint ? LOB_REGISTRY[lobRefIdHint] : undefined
 
+  // Template-placeholder rows ("<Enter step>", "[INSERT PRODUCT NAME]", "xxx") are
+  // form filler, not product data — route to unresolved, never into the plan.
+  const PLACEHOLDER_RE = /^\s*(<[^>]*>|\[[^\]]*\]|insert\b.*|enter\b.*|example\b.*|placeholder.*|tbd|n\/a|xxx+|\.{3,})\s*$/i
+  const isPlaceholderEntity = (e) => {
+    const strFields = e.fields.filter(f => typeof f.value === 'string' && f.value.trim() !== '' && f.citation?.verbatim !== '(synthesized)')
+    return strFields.length > 0 && strFields.every(f => PLACEHOLDER_RE.test(f.value))
+  }
+
   const accepted = []
   const unresolved = []
   for (const e of brainOutput.entities || []) {
+    if (isPlaceholderEntity(e)) {
+      unresolved.push({
+        section: e.kind,
+        label:   entityLabel(e),
+        refId:   entityRefId(e),
+        reason:  'placeholder-only row (template filler, not product data)',
+        citation: citationString(e.fields[0]?.citation),
+      })
+      continue
+    }
     if (e.overallConfidence < CONFIDENCE_DISCARD) {
       unresolved.push({
         section: e.kind,
@@ -248,7 +266,10 @@ function buildImportPlan(brainOutput, opts = {}) {
   let productRefId   = productPlanned?.refId ?? null
   const planWarnings = []
 
-  if (!productPlanned && accepted.length > 0) {
+  // A product stub is only justified when the source yielded real content — a
+  // blank template must produce an EMPTY plan, not a synthesized product.
+  const contentEntityCount = accepted.filter(e => e.kind !== 'product').length
+  if (!productPlanned && contentEntityCount > 0) {
     // No product row in the source — derive a stub refId from the LOB registry
     // (registry-scheme synthesis, never model-invented) so children can persist.
     const prefix = lob ? (lob.refIdPrefix || lob.code || lobRefIdHint.split('.')[0]) : 'XX'
@@ -398,6 +419,19 @@ function buildImportPlan(brainOutput, opts = {}) {
         consensus:  f.consensus ?? null,
       })
     }
+  }
+
+  // Empty-plan cleanup: when NO group carries content, SYNTH stubs (product /
+  // rating program) must not survive — a blank template yields an EMPTY plan.
+  const planHasContent = coverages.length + forms.length + rules.length + formRules.length +
+    ldTables.length + rtTables.length + steps.length > 0
+  if (!planHasContent) {
+    if (productPlanned && /SYNTH/.test(String(productPlanned.refId ?? ''))) {
+      productPlanned = null
+      productRefId = null
+      planWarnings.push({ kind: 'empty-source', sheet: null, row: null, field: null, detail: 'Source produced no plan content — synthesized product stub removed; nothing to import.' })
+    }
+    if (ratingProgram && /SYNTH/.test(String(ratingProgram.refId ?? ''))) ratingProgram = null
   }
 
   // refId identity adopted from the mapper → keep provenance rows addressable.
