@@ -70,6 +70,8 @@ async function _forcedToolCall(deployment, system, tools, toolName, blocks, inst
   }
   const json = await upstream.json()
   fleet.record(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
+  // Per-tenant attribution: mirrors the global fleet.record with the ambient tenant (ALS).
+  require('../metering').meterCurrent(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
   const tu = Array.isArray(json.content) ? json.content.find((b) => b.type === 'tool_use') : null
   return (tu && tu.input) || {}
 }

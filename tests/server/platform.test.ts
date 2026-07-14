@@ -35,6 +35,7 @@ describe('platform gating on the ops-plane routes', () => {
     ['put', '/api/admin/config/global'],
     ['get', '/api/admin/tenants/acme/config'],
     ['put', '/api/admin/tenants/acme/config'],
+    ['get', '/api/admin/tenants/acme/telemetry'],
   ]
   for (const [method, path] of routes) {
     it(`${method.toUpperCase()} ${path} → 401 unauthenticated`, async () => {

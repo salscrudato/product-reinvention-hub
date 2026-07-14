@@ -21,6 +21,7 @@ const { docs, presence, resolveTenantStore } = require('./cosmos')
 const { MANAGED_TENANT_ROLES, findUser, signImpersonation, normalizeRole } = require('./auth')
 const { requirePlatform, CAP_PLATFORM_TENANTS, CAP_PLATFORM_USERS, CAP_PLATFORM_IMPERSONATE, CAP_PLATFORM_AUDIT } = require('./authz')
 const platformConfig = require('./platform-config')
+const metering = require('./metering')
 
 const router = express.Router()
 
@@ -377,6 +378,43 @@ router.put('/tenants/:id/config', requirePlatform(CAP_PLATFORM_TENANTS), async (
     if (e.code === 'TENANT_NOT_FOUND') return res.status(404).json({ error: 'tenant_not_found' })
     res.status(500).json({ error: 'config_write_failed', detail: String(e.message || e) })
   }
+})
+
+// ─── per-tenant telemetry dashboard (real data only) ─────────────────────────
+// Seats vs entitlement, products vs entitlement, AI tokens + cost vs monthly budget,
+// request count / error rate / latency, successful-login count, and audit-event volume.
+// Everything here is observed/queried — no synthetic figures.
+router.get('/tenants/:id/telemetry', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  const tid = slug(req.params.id)
+  const tenantDoc = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
+  if (!tenantDoc) return res.status(404).json({ error: 'tenant_not_found' })
+  const store = resolveTenantStore(tid).docs
+  const [seats, products, ai, loginRes, auditRes] = await Promise.all([
+    platformConfig.checkSeatQuota(tid),
+    platformConfig.checkProductQuota(tid),
+    metering.snapshotTenant(tid),
+    docs.items.query({
+      query: "SELECT VALUE COUNT(1) FROM c WHERE c.pk='__system__' AND c.kind='loginAudit' AND c.tenantId=@tid AND c.event='otp_success'",
+      parameters: [{ name: '@tid', value: tid }],
+    }).fetchAll(),
+    store.items.query({
+      query: "SELECT VALUE COUNT(1) FROM c WHERE c.kind='audit' AND c.tenantId=@tid",
+      parameters: [{ name: '@tid', value: tid }],
+    }).fetchAll(),
+  ])
+  const requests = metering.requestSnapshot(tid)
+  res.json({
+    ok: true,
+    tenant: tenantDoc.data,
+    telemetry: {
+      seats: { used: seats.used, max: seats.max, withinEntitlement: seats.ok },
+      products: { used: products.used, max: products.max, withinEntitlement: products.ok },
+      ai,
+      requests,
+      logins: { successfulTotal: loginRes.resources[0] ?? 0 },
+      auditEvents: auditRes.resources[0] ?? 0,
+    },
+  })
 })
 
 // ─── users (SUPER_ADMIN only) ─────────────────────────────────────────────────

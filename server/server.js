@@ -66,6 +66,20 @@ app.use(compression({ filter: (req, res) => {
 app.use(express.json({ limit: '25mb' }))
 app.use(auth.attachUser)
 
+// ─── Per-tenant request telemetry (count / errors / latency) ─────────────────
+// Records every /api request against its tenant for the ops dashboard. In-process,
+// single-instance; never affects the response (fire-on-finish).
+const metering = require('./lib/metering')
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api/')) return next()
+  const start = Date.now()
+  res.on('finish', () => {
+    const tid = req.user && req.user.tenantId
+    if (tid) metering.recordRequest(tid, res.statusCode, Date.now() - start)
+  })
+  next()
+})
+
 // ─── Global auth + write gates (defense-in-depth) ────────────────────────────
 // 1. requireAuth on ALL /api/* except the public surface (health, login, guest
 //    HomeCheck). Individual routers keep their own guards; this is the floor.

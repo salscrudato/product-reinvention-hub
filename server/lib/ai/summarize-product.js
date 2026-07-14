@@ -99,6 +99,7 @@ async function summarizeProduct(req, res) {
     }
     const json = await upstream.json()
     fleet.record(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
+    require('../metering').meterCurrent(deployment, json.usage?.input_tokens, json.usage?.output_tokens) // per-tenant attribution (ALS)
 
     const tu = Array.isArray(json.content) ? json.content.find((b) => b.type === 'tool_use') : null
     const summary = groundSummary((tu && tu.input) || {}, p)

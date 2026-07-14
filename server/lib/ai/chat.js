@@ -77,6 +77,7 @@ async function chat(req, res) {
       }
     }
     fleet.record(deployment, inputTokens, outputTokens)
+    require('../metering').meterCurrent(deployment, inputTokens, outputTokens) // per-tenant attribution (ALS)
     const cited = [...new Set([...fullText.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]))]
     let unverified = []
     if (cited.length > 0) {
