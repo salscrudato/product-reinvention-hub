@@ -140,11 +140,11 @@
       "severity": "MED",
       "confidence": 1.0,
       "cost": "S",
-      "status": "OPEN",
-      "priority": 4,
-      "evidence": "stage7-plan.js:140-142 nameKey; :186-187 Pass-2 findIndex on exact normalized name",
-      "fixture": "none yet — IH2: join fixture with punctuation variants",
-      "lesson": "Join keys need the same canonicalization discipline as value comparison."
+      "status": "FIXED_IH2",
+      "priority": null,
+      "evidence": "stage7-plan.js nameKey now strips punctuation (unicode-aware) + empty-canonical-key guard in Pass-2 (two unnamed entities must not join on ''). Collision safety verified two ways: scripted canon-key scan of every per-kind name set in all 4 goldens (0 collisions) + full offline corpus enumeration byte-identical conservation counts pre/post. Judge ACCEPT. RESIDUAL (out of scope): coverageHierarchy.ts has its own case/whitespace-only nameKey for in-sheet parent resolution — punctuation variants there are same-author-same-sheet, low risk; open a new item if it ever bites.",
+      "fixture": "tests/import-brain/hardening-f11-join-punctuation.test.ts (2/4 red at 643e82b)",
+      "lesson": "Join keys need the same canonicalization discipline as value comparison — and an empty canonical key must never be a join key."
     },
     {
       "id": "F12",

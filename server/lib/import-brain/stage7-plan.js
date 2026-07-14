@@ -138,7 +138,9 @@ function toPlanned(entity, extraData) {
 const ISO_IDENTITY_FIELDS = ['refId', 'parentId', 'order', 'formNumbers', 'allStates', 'states', 'status', 'lifecycle', 'reviewStatus', 'reviewer', 'terms']
 
 function nameKey(v) {
-  return String(v ?? '').toLowerCase().replace(/\s+/g, ' ').trim()
+  // Join keys need the same canonicalization discipline as value comparison:
+  // case, whitespace AND punctuation ('HO 3' ≡ 'HO-3' ≡ 'HO–3', ledger F11).
+  return String(v ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 }
 
 function joinGroupWithIso(brainGroup, isoGroup, kindLabel, importWarnings, refIdRemap) {
@@ -184,7 +186,9 @@ function joinGroupWithIso(brainGroup, isoGroup, kindLabel, importWarnings, refId
   const brainQueue = [...unmatchedBrain]
   for (const isoP of remainingIso) {
     const key = nameKey(isoP.data?.name ?? isoP.label)
-    const idx = brainQueue.findIndex(b => nameKey(b.data?.name) === key)
+    // An empty canonical key ('---', '###', …) must never join — two unnamed
+    // entities matching on '' would be a false merge.
+    const idx = key === '' ? -1 : brainQueue.findIndex(b => nameKey(b.data?.name) === key)
     if (idx >= 0) {
       const brainP = brainQueue.splice(idx, 1)[0]
       adoptIdentity(brainP, isoP)
