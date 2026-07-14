@@ -34,6 +34,12 @@ export interface AuthUser {
   role: Tier | null
   /** The tenant this session is scoped to (null for a tenant-less admin session). */
   tenantId?: string | null
+  /**
+   * Effective feature flags for this session's tenant (server-resolved: global default +
+   * tenant override). Present after /auth/me resolves; used to hide disabled surfaces from
+   * nav. The SERVER remains the authoritative gate — this is UI convenience only.
+   */
+  flags?: Record<string, boolean> | null
 }
 
 export interface TenantInfo { id: string; name: string; status?: 'active' | 'suspended'; createdAt?: string; createdBy?: string }

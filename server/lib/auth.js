@@ -430,7 +430,15 @@ function discoverHomeRealm(_email) {
 }
 
 // ─── Misc handlers ────────────────────────────────────────────────────────────
-function me(req, res) { return res.json({ user: req.user }) }
+// /me carries the caller's EFFECTIVE feature flags so the client can hide disabled
+// surfaces from nav (server-side enforcement remains authoritative). Lazy-require of
+// platform-config avoids a load-order cycle; flags are best-effort (null on any error).
+async function me(req, res) {
+  let flags = null
+  try { flags = await require('./platform-config').getEffectiveFlags(resolveTenantForPrincipal(req.user)) }
+  catch { /* best-effort: client falls back to all-enabled defaults */ }
+  return res.json({ user: req.user, flags })
+}
 
 async function changePassword(req, res) {
   const next = String((req.body || {}).password ?? '')

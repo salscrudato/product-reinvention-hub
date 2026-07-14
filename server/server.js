@@ -104,6 +104,61 @@ app.use((req, res, next) => {
   next()
 })
 
+// ─── Per-tenant rate limiter (token bucket, in-process) ──────────────────────
+// Runs BEFORE the flag lookup so a rate-limited request is shed without extra work.
+// Layered ON TOP of the per-IP auth limiter AND the global AI cost breaker (both stay
+// intact): this caps how fast ONE tenant can hit the expensive AI / write / filing
+// surfaces, so a single tenant cannot exhaust the instance for everyone. Keyed by tenant.
+const _tenantBuckets = new Map()
+const TENANT_RL_CAP = Number(process.env.TENANT_RL_CAP) || 120          // burst
+const TENANT_RL_PER_SEC = Number(process.env.TENANT_RL_PER_SEC) || 2    // sustained (~120/min)
+const RL_PATHS = ['/api/ai/', '/api/filing', '/api/db/mutate', '/api/db/mutateBatch']
+app.use((req, res, next) => {
+  const p = req.path
+  if (!req.user || req.method === 'GET' || req.method === 'HEAD') return next()
+  if (!RL_PATHS.some((x) => (x.endsWith('/') ? p.startsWith(x) : p === x || p.startsWith(x + '/')))) return next()
+  const tid = req.user.tenantId || 'default'
+  const now = Date.now()
+  let b = _tenantBuckets.get(tid)
+  if (!b) { b = { tokens: TENANT_RL_CAP - 1, lastMs: now }; _tenantBuckets.set(tid, b); return next() }
+  b.tokens = Math.min(TENANT_RL_CAP, b.tokens + (now - b.lastMs) / 1000 * TENANT_RL_PER_SEC)
+  b.lastMs = now
+  if (b.tokens >= 1) { b.tokens -= 1; return next() }
+  const retryAfter = Math.ceil((1 - b.tokens) / TENANT_RL_PER_SEC)
+  res.set('Retry-After', String(retryAfter))
+  return res.status(429).json({ error: 'tenant_rate_limited', retryAfter })
+})
+
+// ─── Feature-flag enforcement (server-side, authoritative) ───────────────────
+// The client hides disabled surfaces from nav; THIS is the authoritative deny. Each
+// mapped path is checked against the tenant's EFFECTIVE flags (global default + tenant
+// override, global-disable-is-a-floor). A disabled surface → 403 feature_disabled.
+// Fail-OPEN on infra error (flags are a management convenience, not the security boundary
+// — capability gates are). The import path (/api/ai/unifiedImport) is deliberately NOT
+// flag-gated (import no-cap invariant).
+const FLAG_ROUTES = [
+  { match: '/api/ai/chat',            flag: 'feature.agenticCopilot' },
+  { match: '/api/ai/scaffoldProduct', flag: 'feature.scaffoldProduct' },
+  { match: '/api/ai/draftRule',       flag: 'feature.draftRule' },
+  { match: '/api/ai/refreshNews',     flag: 'feature.newsRefresh' },
+  { match: '/api/ai/analyzeClaim',    flag: 'page.claims' },
+  { match: '/api/filing/generate',    flag: 'feature.filingGeneration' },
+  { prefix: '/api/filing',            flag: 'page.filing' },
+]
+app.use(async (req, res, next) => {
+  const p = req.path
+  if (!p.startsWith('/api/') || !req.user) return next()
+  const rules = FLAG_ROUTES.filter((r) => (r.match ? p === r.match : p.startsWith(r.prefix)))
+  if (!rules.length) return next()
+  try {
+    const pc = require('./lib/platform-config')
+    const tid = auth.resolveTenantForPrincipal(req.user)
+    const flags = await pc.getEffectiveFlags(tid)
+    for (const r of rules) if (flags[r.flag] === false) return res.status(403).json({ error: 'feature_disabled', flag: r.flag })
+  } catch { /* fail-open */ }
+  next()
+})
+
 // ─── health ─────────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
   res.set('Cache-Control', 'no-store').json({ status: 'ok' })

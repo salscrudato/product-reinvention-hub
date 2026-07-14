@@ -322,6 +322,15 @@ router.post('/mutate', requireCapability('product:write'), requireTenant, async 
   const payload = (req.body || {}).payload || req.body
   const actor = { uid: req.user.uid, name: req.user.name }
   const tid = resolveTenantForPrincipal(req.user)
+  // Per-tenant PRODUCT quota: creating a new product consumes product entitlement. Enforced
+  // on the interactive create only (op:create, entityType:product); bulk import/seed goes
+  // through mutateBatch and is governed by the import path's own controls, not this cap.
+  if (payload && payload.op === 'create' && payload.entityType === 'product') {
+    try {
+      const q = await require('./platform-config').checkProductQuota(tid)
+      if (!q.ok) return res.status(403).json({ error: 'product_quota_exceeded', used: q.used, max: q.max })
+    } catch { /* fail-open on infra error */ }
+  }
   try {
     const { rev } = await commitEnvelope(tid, () => envelope(tid, payload, actor, '/api/db/mutate')())
     res.json({ ok: true, rev })

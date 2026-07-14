@@ -136,6 +136,44 @@ async function getEffectiveEntitlements(tid) {
   return pf.effectiveEntitlements(t)
 }
 
+// ─── quotas (seats + products), server-enforced per tenant ───────────────────
+// Seats = distinct member users whose tenants array includes the tenant. Products =
+// entity docs in the tenant's `products` collection. Both are checked against the
+// tenant's effective entitlements before a create is allowed. Fail-OPEN on a read error
+// (a Cosmos blip must not block legitimate work); an at/over-cap count always denies.
+async function seatUsage(tid) {
+  const docs = sysDocs()
+  if (!docs) return 0
+  try {
+    const { resources } = await docs.items.query({
+      query: "SELECT VALUE COUNT(1) FROM c WHERE c.pk='__system__' AND c.kind='user' AND ARRAY_CONTAINS(c.data.tenants, @tid)",
+      parameters: [{ name: '@tid', value: tid }],
+    }).fetchAll()
+    return resources[0] ?? 0
+  } catch { return 0 }
+}
+
+async function checkSeatQuota(tid) {
+  const [ent, used] = await Promise.all([getEffectiveEntitlements(tid), seatUsage(tid)])
+  return { ok: used < ent.maxSeats, used, max: ent.maxSeats }
+}
+
+async function productUsage(tid) {
+  try {
+    const store = require('./cosmos').resolveTenantStore(tid).docs
+    const { resources } = await store.items.query({
+      query: "SELECT VALUE COUNT(1) FROM c WHERE c.kind='entity' AND c.coll='products' AND c.tenantId=@tid",
+      parameters: [{ name: '@tid', value: tid }],
+    }).fetchAll()
+    return resources[0] ?? 0
+  } catch { return 0 }
+}
+
+async function checkProductQuota(tid) {
+  const [ent, used] = await Promise.all([getEffectiveEntitlements(tid), productUsage(tid)])
+  return { ok: used < ent.maxProducts, used, max: ent.maxProducts }
+}
+
 // ─── requireFlag(key) middleware ──────────────────────────────────────────────
 // Server-side surface enforcement. A disabled surface (global floor OR tenant override)
 // returns 403 feature_disabled. Fail-OPEN on infra error so a Cosmos outage never takes
@@ -159,7 +197,9 @@ module.exports = {
   getGlobalConfig, setGlobalConfig, invalidateGlobal,
   getTenantConfig, setTenantConfig, invalidateTenant,
   getEffectiveFlags, getEffectiveEntitlements,
+  seatUsage, checkSeatQuota, productUsage, checkProductQuota,
   requireFlag, configAudit,
   FLAG_KEYS: pf.FLAG_KEYS, FEATURE_FLAGS: pf.FEATURE_FLAGS,
+  TENANT_OVERRIDABLE_KEYS: pf.TENANT_OVERRIDABLE_KEYS,
   DEFAULT_ENTITLEMENTS: pf.DEFAULT_ENTITLEMENTS,
 }

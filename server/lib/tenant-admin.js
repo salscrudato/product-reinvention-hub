@@ -20,6 +20,7 @@ const express = require('express')
 const { docs } = require('./cosmos')
 const { requireAuth, MANAGED_TENANT_ROLES, normalizeRole } = require('./auth')
 const { requireCapability, requireSameTenant } = require('./authz')
+const platformConfig = require('./platform-config')
 
 const router = express.Router()
 
@@ -92,6 +93,13 @@ router.post('/members', requireCapability('role:assign'), async (req, res) => {
 
   const existing = (await docs.item(`user:${u}`, '__system__').read().catch(() => ({ resource: null }))).resource
   const tenants = existing?.data?.tenants
+  const alreadyInTenant = tenants === '*' || (Array.isArray(tenants) && tenants.includes(tid))
+  // Per-tenant SEAT quota: adding a NEW member consumes a seat. An existing member being
+  // updated does not. Server-enforced against the tenant's effective entitlements.
+  if (!alreadyInTenant) {
+    const seat = await platformConfig.checkSeatQuota(tid)
+    if (!seat.ok) return res.status(403).json({ error: 'seat_quota_exceeded', used: seat.used, max: seat.max })
+  }
   const tenantList = Array.isArray(tenants)
     ? (tenants.includes(tid) ? tenants : [...tenants, tid])
     : [tid]
@@ -201,6 +209,40 @@ router.get('/audit', requireCapability('audit:read'), async (req, res) => {
   )
   const page = await iterator.fetchNext()
   res.json({ events: page.resources, cursor: page.continuationToken || null, hasMore: !!page.continuationToken })
+})
+
+// ─── per-tenant config: read + feature-flag overrides (within the platform allowlist) ──
+// A TENANT_ADMIN may override ONLY tenantOverridable flags, and only for their own org
+// (requireSameTenant is applied router-wide). Entitlements + branding accent are platform-set
+// and rejected here by the 'tenant' plane in validateConfigPatch. Schema-validated + audited.
+router.get('/config', async (req, res) => {
+  const tid = req.user.tenantId
+  const [config, effectiveFlags] = await Promise.all([
+    platformConfig.getTenantConfig(tid),
+    platformConfig.getEffectiveFlags(tid),
+  ])
+  res.json({
+    ok: true,
+    config,
+    effectiveFlags,
+    // The subset a tenant admin is allowed to toggle (the platform allowlist).
+    overridableKeys: platformConfig.TENANT_OVERRIDABLE_KEYS,
+    registry: platformConfig.FEATURE_FLAGS,
+  })
+})
+
+router.put('/flags', requireCapability('role:assign'), async (req, res) => {
+  const tid = req.user.tenantId
+  try {
+    const merged = await platformConfig.setTenantConfig(tid, { flags: (req.body || {}).flags }, 'tenant', {
+      uid: req.user.uid, name: req.user.name, ...(req.user._impersonatedBy ? { _impersonatedBy: req.user._impersonatedBy } : {}),
+    })
+    res.json({ ok: true, config: merged })
+  } catch (e) {
+    if (e.code === 'INVALID_CONFIG') return res.status(400).json({ error: 'invalid_config', detail: e.errors })
+    if (e.code === 'TENANT_NOT_FOUND') return res.status(404).json({ error: 'tenant_not_found' })
+    res.status(500).json({ error: 'config_write_failed', detail: String(e.message || e) })
+  }
 })
 
 module.exports = router

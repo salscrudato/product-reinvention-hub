@@ -11,22 +11,26 @@ import {
 } from '../ui/icons'
 import { useUser } from '../../context/useUser'
 import { isPlatform, isTenantAdmin } from '../../lib/canI'
+import { useFeatureFlags } from '../../lib/useFeatureFlags'
 
-interface NavItem { to: string; label: string; icon: IconType; exact?: boolean }
+// `flag` (optional) ties a nav item to a platform feature flag: when the server resolves
+// that flag to `false` for the tenant, the item is hidden. Server-side enforcement on the
+// underlying routes remains authoritative — this only declutters the nav.
+interface NavItem { to: string; label: string; icon: IconType; exact?: boolean; flag?: string }
 
 const WORKSPACE_ITEMS: NavItem[] = [
   { to: '/app',          label: 'Home',       icon: IconHome, exact: true },
   { to: '/app/products', label: 'Products',   icon: IconProduct },
-  { to: '/app/builder',  label: 'Builder',    icon: IconSparkle },
-  { to: '/app/explorer', label: 'Explorer',   icon: IconExplorer },
+  { to: '/app/builder',  label: 'Builder',    icon: IconSparkle, flag: 'page.builder' },
+  { to: '/app/explorer', label: 'Explorer',   icon: IconExplorer, flag: 'page.explorer' },
 ]
 
 const INTELLIGENCE_ITEMS: NavItem[] = [
-  { to: '/app/tasks',      label: 'Tasks',           icon: IconTasks },
-  { to: '/app/news',       label: 'News',            icon: IconNews },
-  { to: '/app/claims',     label: 'Claims Analysis', icon: IconChart },
-  { to: '/app/dictionary', label: 'Data Dictionary', icon: IconBook },
-  { to: '/app/feedback',   label: 'Feedback',        icon: IconChat },
+  { to: '/app/tasks',      label: 'Tasks',           icon: IconTasks, flag: 'page.tasks' },
+  { to: '/app/news',       label: 'News',            icon: IconNews, flag: 'page.news' },
+  { to: '/app/claims',     label: 'Claims Analysis', icon: IconChart, flag: 'page.claims' },
+  { to: '/app/dictionary', label: 'Data Dictionary', icon: IconBook, flag: 'page.dictionary' },
+  { to: '/app/feedback',   label: 'Feedback',        icon: IconChat, flag: 'page.feedback' },
 ]
 
 const SECTIONS = [
@@ -81,6 +85,8 @@ function Item({ item, collapsed, active }: { item: NavItem; collapsed: boolean; 
 export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation()
   const { profile } = useUser()
+  const flags = useFeatureFlags()
+  const visible = (items: NavItem[]) => items.filter((it) => !it.flag || flags[it.flag] !== false)
   const isActive = (to: string, exact?: boolean) => exact ? location.pathname === to : location.pathname.startsWith(to)
   // Platform plane (SUPER_ADMIN/SUPPORT) → platform console at /app/admin
   // Tenant admin (TENANT_ADMIN) → self-service org console at /app/tenant-admin
@@ -123,7 +129,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
               ? <p className="px-4 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-[.08em] text-faint select-none">{section.label}</p>
               : si > 0 && <div className="my-2 mx-3 h-px" style={{ background: 'var(--color-border)' }} aria-hidden="true" />}
             <div className="flex flex-col gap-0.5">
-              {section.items.map(item => (
+              {visible(section.items).map(item => (
                 <Item key={item.to} item={item} collapsed={collapsed} active={isActive(item.to, item.exact)} />
               ))}
             </div>

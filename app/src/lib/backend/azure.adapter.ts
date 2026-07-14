@@ -182,8 +182,8 @@ export const adapter: BackendAdapter = {
       // Fire immediately with the decoded token, then validate against the server.
       queueMicrotask(() => cb(currentUser))
       if (token) {
-        api<{ user: AuthUser }>('/auth/me')
-          .then(({ user }) => setUser(user))
+        api<{ user: AuthUser; flags?: Record<string, boolean> | null }>('/auth/me')
+          .then(({ user, flags }) => setUser({ ...user, flags: flags ?? null }))
           .catch(() => setUser(null))
       }
       return () => { userListeners.delete(cb) }
