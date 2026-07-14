@@ -2,7 +2,7 @@
 // Home cockpit panels. It does one awaited list() so a hard failure (permission /
 // network) surfaces as a genuine ERROR state instead of a silent empty list, then
 // keeps the data live via subscribe(). All access goes through the adapter seam.
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { adapter } from './backend'
 import type { Query } from './backend'
 
@@ -19,6 +19,8 @@ export function combineStatus(...statuses: LoadStatus[]): LoadStatus {
 export interface LiveCollection<T> {
   items:  (T & { id: string })[]
   status: LoadStatus
+  /** Re-run the subscribe + error probe after a hard failure (fresh loading state). */
+  retry:  () => void
 }
 
 /** Subscribe to a collection with real state handling.
@@ -27,10 +29,12 @@ export interface LiveCollection<T> {
 export function useLiveCollection<T>(path: string, q?: Query): LiveCollection<T> {
   const [items, setItems]   = useState<(T & { id: string })[]>([])
   const [status, setStatus] = useState<LoadStatus>('loading')
+  const [gen, setGen]       = useState(0)   // bumped by retry() to re-run the effect
 
   useEffect(() => {
     let live = true
     let delivered = false
+    setStatus('loading')
 
     // Realtime data. The adapter degrades listener errors to [] (and logs), so this
     // path alone can't tell "empty" from "failed" — hence the awaited probe below.
@@ -48,7 +52,9 @@ export function useLiveCollection<T>(path: string, q?: Query): LiveCollection<T>
       .catch(() => { if (live && !delivered) setStatus('error') })
 
     return () => { live = false; unsub() }
-  }, [path, q])
+  }, [path, q, gen])
 
-  return { items, status }
+  const retry = useCallback(() => setGen(g => g + 1), [])
+
+  return { items, status, retry }
 }

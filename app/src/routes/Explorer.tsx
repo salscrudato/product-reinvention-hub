@@ -8,8 +8,9 @@
 // and never mutates. Keyboard model (a11y first): ↑/↓ move within a column, →/Enter
 // descend into the next, ← steps back, Home/End jump. Selection in each column is the
 // keyboard "highlight"; moving it live-updates the downstream columns and the peek.
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import { adapter } from '../lib/backend'
+import { useLiveCollection } from '../lib/useLiveCollection'
 import { MillerColumn, type ColumnItem } from '../components/explorer/MillerColumn'
 import { PeekPanel, type PeekNode } from '../components/explorer/PeekPanel'
 import { IconSearch, IconProduct, IconCoverage, IconEndorsement, IconChevronRight, type IconType } from '../components/ui/icons'
@@ -31,9 +32,16 @@ function makeMatcher(q: string) {
 
 export default function Explorer() {
   // ── Data (adapter subscriptions; reads only) ──────────────────────────────
-  const [products, setProducts]               = useState<WithId<Product>[]>([])
-  const [productsLoading, setProductsLoading] = useState(true)
-  const [forms, setForms]                     = useState<WithId<Form>[]>([])
+  // Products via the loading/ready/error hook — a hard subscribe failure surfaces as a
+  // recoverable error row instead of an infinite column skeleton. Forms stay on a raw
+  // subscribe (pure enrichment; an error there degrades to "no form chips", not a dead end).
+  const productsLive = useLiveCollection<Product>('products')
+  const products = useMemo(
+    () => [...productsLive.items].sort((a, b) => a.name.localeCompare(b.name)),
+    [productsLive.items],
+  )
+  const productsLoading = productsLive.status === 'loading'
+  const [forms, setForms] = useState<WithId<Form>[]>([])
   const [coverages, setCoverages]             = useState<WithId<Coverage>[]>([])
   const [coveragesLoading, setCovLoading]     = useState(false)
 
@@ -53,13 +61,10 @@ export default function Explorer() {
     else optionRefs.current.delete(key)
   }, [])
 
-  // Products + forms: subscribed once. Forms enrich the peek's attached-form chips.
+  // Forms: subscribed once — they enrich the peek's attached-form chips.
   useEffect(() => {
-    const unsubP = adapter.db.subscribe<WithId<Product>>('products', (d) => {
-      if (Array.isArray(d)) { setProducts([...d].sort((a, b) => a.name.localeCompare(b.name))); setProductsLoading(false) }
-    })
     const unsubF = adapter.db.subscribe<WithId<Form>>('forms', (d) => { if (Array.isArray(d)) setForms(d) })
-    return () => { unsubP(); unsubF() }
+    return () => { unsubF() }
   }, [])
 
   // Auto-select the first product once so the cascade is alive on arrival (no focus grab).
@@ -282,6 +287,18 @@ export default function Explorer() {
             />
           </div>
         </div>
+
+        {/* Load failure — recoverable, never an infinite column skeleton */}
+        {productsLive.status === 'error' && (
+          <div role="alert" className="flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm text-dim"
+            style={{ background: 'var(--color-warn-soft, var(--color-raised))', border: '1px solid var(--color-warn-line, var(--color-border))' }}>
+            <span className="flex-1">Couldn't load products — usually a temporary network or permission hiccup.</span>
+            <button type="button" onClick={productsLive.retry}
+              className="shrink-0 text-sm font-medium text-accent rounded-[6px] px-2 py-0.5 transition-colors hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Breadcrumb path */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1 flex-wrap min-h-[1.5rem]">

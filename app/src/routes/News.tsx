@@ -865,7 +865,6 @@ export default function News() {
   const { user } = useUser()
   const isAdmin = canI(user, 'member:manage')
 
-  const [items, setItems]           = useState<NewsDoc[] | null>(null)
   const [instruction, setInstr]     = useState(BASE_NEWS_INSTRUCTION)
   const [savedInstr, setSaved]      = useState(BASE_NEWS_INSTRUCTION)
   const [savedRev, setSavedRev]     = useState<number | undefined>(undefined)
@@ -881,9 +880,12 @@ export default function News() {
   const savedInstrRef = useRef(BASE_NEWS_INSTRUCTION)
 
   const products = useLiveCollection<Product>('products')
+  // Feed items via the loading/ready/error hook — a hard subscribe failure surfaces
+  // as a genuine error state with Retry instead of an infinite skeleton.
+  const news = useLiveCollection<NewsType>('news')
+  const items: NewsDoc[] | null = news.status === 'loading' ? null : news.items
 
   useEffect(() => {
-    const u1 = adapter.db.subscribe<NewsDoc>('news', d => { if (Array.isArray(d)) setItems(d) })
     let u2: (() => void) | undefined
     if (user) {
       u2 = adapter.db.subscribe<NewsPrefs & { rev?: number }>(`newsPrefs/${user.uid}`, d => {
@@ -903,7 +905,7 @@ export default function News() {
         }
       })
     }
-    return () => { u1(); u2?.() }
+    return () => { u2?.() }
   }, [user])
 
   const pinnedSet = useMemo(() => new Set(pinnedHashes), [pinnedHashes])
@@ -1108,7 +1110,16 @@ export default function News() {
 
       {/* Feed */}
       <div className="pt-4">
-        {items === null ? (
+        {news.status === 'error' ? (
+          <EmptyState
+            icon={<IconNews size={28} />}
+            title="Couldn't load the news feed"
+            description="The feed failed to load — this is usually a temporary network or permission hiccup."
+            action={<Button variant="primary" size="sm" onClick={news.retry}>
+              <IconRefresh size={14} aria-hidden="true" /> Retry
+            </Button>}
+          />
+        ) : items === null ? (
           <div className="flex flex-col gap-4">
             <HeroSkeleton />
             {Array.from({ length: 3 }).map((_, i) => <CompactSkeleton key={i} />)}

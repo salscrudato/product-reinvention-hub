@@ -14,6 +14,7 @@ import { adapter, MutationConflictError } from '../lib/backend'
 import { conflictToast } from '../lib/conflict'
 import { useUser } from '../context/useUser'
 import { canI } from '../lib/canI'
+import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
 import { Badge, Button, Skeleton, EmptyState } from '../components/ui'
 import {
   IconPlus, IconChart, IconChevronDown, IconTasks, IconWarning,
@@ -47,9 +48,25 @@ export default function Tasks() {
   const canEdit = canI(profile, 'product:write')
   const actor = user ? { uid: user.uid, name: user.name ?? user.email ?? 'User' } : null
 
-  const [projects, setProjects] = useState<ProjectDoc[] | null>(null)
-  const [tasks,    setTasks]    = useState<TaskDoc[] | null>(null)
-  const [products, setProducts] = useState<ProductDoc[]>([])
+  // Loading/ready/error hooks — a hard subscribe failure surfaces as a real error
+  // state with Retry instead of an infinite skeleton (parity with Home/Dictionary).
+  const projectsLive = useLiveCollection<ProjectDoc>('projects')
+  const tasksLive    = useLiveCollection<TaskDoc>('tasks')
+  const productsLive = useLiveCollection<ProductDoc>('products')
+  const projects: ProjectDoc[] | null = projectsLive.status === 'loading' ? null : projectsLive.items
+  const products = productsLive.items
+  const feedStatus = combineStatus(projectsLive.status, tasksLive.status)
+
+  // Optimistic done-toggle overlay: flips render instantly; a failed mutate() removes
+  // the override (rollback); a successful one leaves it (identical to the server value,
+  // which the live subscription echoes back).
+  const [doneOverride, setDoneOverride] = useState<Record<string, Partial<TaskDoc>>>({})
+  const tasks: TaskDoc[] | null = useMemo(
+    () => tasksLive.status === 'loading'
+      ? null
+      : tasksLive.items.map(t => doneOverride[t.id] ? { ...t, ...doneOverride[t.id] } : t),
+    [tasksLive.status, tasksLive.items, doneOverride],
+  )
   const [currentId, setCurrentId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<Dialog>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -62,13 +79,6 @@ export default function Tasks() {
   const [typeFilter, setType] = useState<'' | TypeOfWork>('')
   const [phaseFilter, setPhase] = useState('')
   const [dispFilter, setDisp] = useState<'' | BoardDisposition>('')
-
-  useEffect(() => {
-    const u1 = adapter.db.subscribe<ProjectDoc>('projects', d => { if (Array.isArray(d)) setProjects(d) })
-    const u2 = adapter.db.subscribe<TaskDoc>('tasks',       d => { if (Array.isArray(d)) setTasks(d) })
-    const u3 = adapter.db.subscribe<ProductDoc>('products', d => { if (Array.isArray(d)) setProducts(d) })
-    return () => { u1(); u2(); u3() }
-  }, [])
 
   // Resolve the selected project: ?project= → localStorage → first. Runs when the set loads
   // or the current selection falls out of the list (e.g. after a switch).
@@ -141,7 +151,7 @@ export default function Tasks() {
     if (nowDone) setCompletedOpen(true)
     // Optimistic update — flip the task immediately so the board feels instant.
     // pokeAll() after a successful mutate() will reconcile with the server value.
-    setTasks(prev => prev ? prev.map(t => t.id === task.id ? { ...t, ...doneFields(nowDone) } : t) : prev)
+    setDoneOverride(prev => ({ ...prev, [task.id]: doneFields(nowDone) }))
     try {
       await adapter.db.mutate({
         op: 'update', path: `tasks/${task.id}`, data: doneFields(nowDone),
@@ -149,13 +159,28 @@ export default function Tasks() {
       })
     } catch (err) {
       // Roll back the optimistic flip on failure.
-      setTasks(prev => prev ? prev.map(t => t.id === task.id ? { ...t, done: task.done } : t) : prev)
+      setDoneOverride(prev => { const next = { ...prev }; delete next[task.id]; return next })
       if (err instanceof MutationConflictError) conflictToast({})
       else toast.error('Update failed')
     }
   }
 
   const activeFilters = [mine, overdue, !!typeFilter, !!phaseFilter, !!dispFilter].filter(Boolean).length
+
+  // ── Load failure (network / permission) — recoverable, never a silent skeleton ──
+  if (feedStatus === 'error') {
+    return (
+      <EmptyState
+        icon={<IconTasks size={28} />}
+        title="Couldn't load your projects"
+        description="Projects or tasks failed to load — usually a temporary network or permission hiccup."
+        action={<Button variant="primary" size="sm"
+          onClick={() => { projectsLive.retry(); tasksLive.retry(); productsLive.retry() }}>
+          Retry
+        </Button>}
+      />
+    )
+  }
 
   // ── Loading ──
   if (projects === null || tasks === null) {
