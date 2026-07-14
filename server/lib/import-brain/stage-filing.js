@@ -129,9 +129,12 @@ const MANUAL_TOOL = {
 
 const EXTRACT_SYSTEM =
   "You are a P&C actuarial analyst reading a rate filing. Ground EVERY item in the document's " +
-  'actual text — never invent a variable, rule, factor, table row or number. Cite each item. For ' +
-  'tables, return a SCHEMA + the verbatim region; deterministic code parses the rows. Call the ' +
-  'forced tool exactly once.'
+  'actual text — never invent a variable, rule, factor, table row or number. ' +
+  'CITATIONS ARE MANDATORY: every item MUST include a non-empty "citation" giving the page and ' +
+  'heading or rule number where it appears (e.g. "p.1, Rate Order of Calculations table" or ' +
+  '"Rule 406.C"). Items without a citation are DISCARDED by the pipeline — an uncited item is a ' +
+  'wasted item. For tables, return a SCHEMA + the verbatim region; deterministic code parses the ' +
+  'rows. Call the forced tool exactly once.'
 
 // ─── Build content block from a filing document ───────────────────────────────
 // TEXT FIRST: extracted text goes whole-document-in-context (up to 180k chars) so
@@ -172,20 +175,56 @@ async function forcedTool(deployment, systemPrompt, tools, toolName, contentBloc
   try { return JSON.parse(res.raw) } catch { return {} }
 }
 
-// ─── Escalation: haiku → sonnet → opus until the parse yields content ─────────
-// A missing sonnet deployment (Foundry 4xx) is skipped; ladder degrades gracefully.
+// ─── Escalation strategies ────────────────────────────────────────────────────
+// TEXT blocks: haiku → sonnet → opus sequentially until the parse yields content
+// (cheap-first; a missing rung is skipped).
+// DOCUMENT (vision) blocks: haiku and opus read the pages IN PARALLEL and the
+// richer non-empty result wins (sequential ladders re-read the whole PDF per rung
+// — slow and wasteful); sonnet only runs if both come back empty.
+// `count` sizes a sanitized result so the race can prefer the richer extraction;
+// `rawCount` counts the model's PRE-sanitize items so silent citation-drops surface.
 
-async function extractWithLadder({ systemPrompt, tool, block, instruction, maxTokens, budget, sanitize, isEmpty }) {
-  let result = null
-  let escalated = false
-  for (const role of ['BULK_VERIFY', 'MID_REASONER', 'GROUNDED_CITED']) {
+async function extractWithLadder({ systemPrompt, tool, block, instruction, maxTokens, budget, sanitize, isEmpty, count, emit, label }) {
+  const emitFn = typeof emit === 'function' ? emit : () => {}
+  const sizeOf = typeof count === 'function' ? count : (r) => (isEmpty(r) ? 0 : 1)
+  const rawItems = (raw) => {
+    if (!raw || typeof raw !== 'object') return 0
+    for (const v of Object.values(raw)) if (Array.isArray(v)) return v.length
+    return 0
+  }
+  const attempt = async (role) => {
     let deployment
-    try { deployment = resolveAnthropic(role, budget) } catch { continue }
+    try { deployment = resolveAnthropic(role, budget) } catch { return null }
     let raw
     try { raw = await forcedTool(deployment, systemPrompt, [tool], tool.name, block, instruction, maxTokens, budget) } catch { raw = {} }
     const sanitized = sanitize(raw)
-    if (!isEmpty(sanitized)) return { result: sanitized, escalated }
-    result = result ?? sanitized
+    const before = rawItems(raw)
+    const after = sizeOf(sanitized)
+    if (before > 0 && after === 0) {
+      emitFn({ t: 'notice', level: 'warn', kind: 'citations-dropped', message: `${label ?? tool.name}: ${role} extracted ${before} item(s) but ALL were dropped by the citation guard — model omitted citations.` })
+    }
+    return { role, sanitized, before, after }
+  }
+
+  if (block && block.type === 'document') {
+    const [a, b] = await Promise.all([attempt('BULK_VERIFY'), attempt('GROUNDED_CITED')])
+    const candidates = [a, b].filter(Boolean).filter(r => !isEmpty(r.sanitized))
+    if (candidates.length > 0) {
+      candidates.sort((x, y) => sizeOf(y.sanitized) - sizeOf(x.sanitized))
+      return { result: candidates[0].sanitized, escalated: candidates[0].role !== 'BULK_VERIFY' }
+    }
+    const c = await attempt('MID_REASONER')
+    if (c && !isEmpty(c.sanitized)) return { result: c.sanitized, escalated: true }
+    return { result: (a ?? b ?? c)?.sanitized ?? null, escalated: true }
+  }
+
+  let result = null
+  let escalated = false
+  for (const role of ['BULK_VERIFY', 'MID_REASONER', 'GROUNDED_CITED']) {
+    const r = await attempt(role)
+    if (!r) continue
+    if (!isEmpty(r.sanitized)) return { result: r.sanitized, escalated }
+    result = result ?? r.sanitized
     escalated = true
   }
   return { result, escalated }
@@ -222,14 +261,13 @@ async function runFilingPipeline(opts) {
   emit({ t: 'tool', name: 'filing:classify', phase: 'start' })
   const deployBulk = resolveAnthropic('BULK_VERIFY', budget)
 
-  const classifications = []
-  for (const doc of documents) {
+  const classifications = await pMap(documents, async (doc) => {
     const pdfText = doc.base64 ? extractText(doc.base64) : null
     const block   = buildContentBlock(doc, pdfText)
     const input   = await forcedTool(deployBulk, FILING_CLASSIFY_SYSTEM, [CLASSIFY_TOOL], CLASSIFY_TOOL.name, block, `Classify this document (filename: "${doc.name}").`, 500, budget)
       .catch(() => ({}))
-    classifications.push(sanitizeCls(doc.name, input))
-  }
+    return sanitizeCls(doc.name, input)
+  }, 3)
   emit({ t: 'tool', name: 'filing:classify', phase: 'end', summary: classifications.map(c => `${String(c.name).split(/[\\/]/).pop()} -> ${c.role}`).join(', ') })
   emit({ t: 'json', key: 'filing:classifications', value: classifications })
 
@@ -241,38 +279,43 @@ async function runFilingPipeline(opts) {
   const manualDoc     = roleOf('manual')
   const policyFormDoc = roleOf('policyForm')
 
-  // ── EXTRACT: rate order (haiku → sonnet → opus until non-empty) ──
-  let rateOrder = { variables: [] }
-  if (rateOrderDoc) {
+  // ── EXTRACT: rate order + manual + policy form IN PARALLEL (independent docs) ──
+  const extractRateOrder = async () => {
+    if (!rateOrderDoc) return { variables: [] }
     emit({ t: 'tool', name: 'filing:extract:rateOrder', phase: 'start' })
     const pdfText = rateOrderDoc.base64 ? extractText(rateOrderDoc.base64) : null
     const block   = buildContentBlock(rateOrderDoc, pdfText)
     const ladder  = await extractWithLadder({
       systemPrompt: EXTRACT_SYSTEM, tool: RATE_ORDER_TOOL, block,
-      instruction: 'Extract the rate order of calculations, in order.',
+      instruction: 'Extract the rate order of calculations, in order. Remember: every variable MUST carry a citation (page + table/heading).',
       maxTokens: 4000, budget,
       sanitize: sanitizeRO, isEmpty: (r) => !r || r.variables.length === 0,
+      count: (r) => r?.variables?.length ?? 0, emit, label: 'rate-order',
     })
-    rateOrder = ladder.result ?? { variables: [] }
+    const ro = ladder.result ?? { variables: [] }
     escalated = escalated || ladder.escalated
-    emit({ t: 'tool', name: 'filing:extract:rateOrder', phase: 'end', summary: `${rateOrder.variables.length} variable(s)` })
+    emit({ t: 'tool', name: 'filing:extract:rateOrder', phase: 'end', summary: `${ro.variables.length} variable(s)${ro.note ? ` — ${ro.note}` : ''}` })
+    if (ro.note) emit({ t: 'notice', level: 'warn', kind: 'sanitize-note', message: `rate-order: ${ro.note}` })
+    return ro
   }
 
-  // ── EXTRACT: manual (haiku → sonnet → opus until non-empty) ──
-  let manual = { rules: [] }
-  if (manualDoc) {
+  const extractManual = async () => {
+    if (!manualDoc) return { rules: [] }
     emit({ t: 'tool', name: 'filing:extract:manual', phase: 'start' })
     const pdfText = manualDoc.base64 ? extractText(manualDoc.base64) : null
     const block   = buildContentBlock(manualDoc, pdfText)
     const ladder  = await extractWithLadder({
       systemPrompt: EXTRACT_SYSTEM, tool: MANUAL_TOOL, block,
-      instruction: "Extract the manual's numbered rules — schemas + verbatim regions for tables, scalars for single facts.",
+      instruction: "Extract the manual's numbered rules — schemas + verbatim regions for tables, scalars for single facts. Remember: every rule MUST carry a citation (page + rule number).",
       maxTokens: 8000, budget,
       sanitize: sanitizeMnl, isEmpty: (r) => !r || r.rules.length === 0,
+      count: (r) => r?.rules?.length ?? 0, emit, label: 'manual-rules',
     })
-    manual = ladder.result ?? { rules: [] }
+    const mn = ladder.result ?? { rules: [] }
     escalated = escalated || ladder.escalated
-    emit({ t: 'tool', name: 'filing:extract:manual', phase: 'end', summary: `${manual.rules.length} rule(s)` })
+    emit({ t: 'tool', name: 'filing:extract:manual', phase: 'end', summary: `${mn.rules.length} rule(s)${mn.note ? ` — ${mn.note}` : ''}` })
+    if (mn.note) emit({ t: 'notice', level: 'warn', kind: 'sanitize-note', message: `manual: ${mn.note}` })
+    return mn
   }
 
   // ── EXTRACT: policy form coverages (single-pass forced propose_coverages) ──
@@ -309,24 +352,28 @@ async function runFilingPipeline(opts) {
     "Cite each item by section or heading. Call propose_coverages exactly once."
 
   const filingState = String(filingStateHint || 'XX').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 2)
-  let policyFormCoverageItems = []
   let baseFormNumber = policyFormDoc ? policyFormDoc.name.replace(/\.[^.]+$/, '') : 'BASE'
-  if (policyFormDoc) {
+
+  const extractPolicyForm = async () => {
+    if (!policyFormDoc) return []
     emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'start' })
     const pdfText = policyFormDoc.base64 ? extractText(policyFormDoc.base64) : null
     const block   = buildContentBlock(policyFormDoc, pdfText)
     const ladder  = await extractWithLadder({
       systemPrompt: COVERAGE_SYSTEM, tool: PROPOSE_COVERAGES_TOOL, block,
-      instruction: `Extract ALL coverages this policy form defines. Filing state: ${filingState}.`,
+      instruction: `Extract ALL coverages this policy form defines. Filing state: ${filingState}. Every coverage MUST carry a citation (page + section).`,
       maxTokens: 4096, budget,
       sanitize: (raw) => (Array.isArray(raw?.coverages) ? raw.coverages : []).filter(c => c && c.name && c.citation),
       isEmpty: (r) => !r || r.length === 0,
+      count: (r) => r?.length ?? 0, emit, label: 'policy-form',
     })
     const rawCovs = ladder.result ?? []
     escalated = escalated || ladder.escalated
+    if (rawCovs[0]?.formNumbers?.[0]) baseFormNumber = rawCovs[0].formNumbers[0]
+    emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'end', summary: `${rawCovs.length} coverage(s)` })
     // formNumbers must ALWAYS be an array — reconcileFiling dereferences
     // c.formNumbers.length and a missing field crashes the whole reconcile.
-    policyFormCoverageItems = rawCovs.map(c => ({
+    return rawCovs.map(c => ({
       name: c.name,
       requirement: c.requirement,
       premiumGenerating: c.premiumGenerating !== false,
@@ -334,9 +381,14 @@ async function runFilingPipeline(opts) {
       confidence: Number(c.confidence ?? 0.7),
       citation: c.citation,
     }))
-    if (rawCovs[0]?.formNumbers?.[0]) baseFormNumber = rawCovs[0].formNumbers[0]
-    emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'end', summary: `${rawCovs.length} coverage(s)` })
   }
+
+  // All three documents extract concurrently — they are independent artifacts.
+  const [rateOrder, manual, policyFormCoverageItems] = await Promise.all([
+    extractRateOrder(),
+    extractManual(),
+    extractPolicyForm(),
+  ])
 
   const policyForm = { coverages: { items: policyFormCoverageItems }, forms: { items: [] }, rules: { items: [] }, rating: { items: [] } }
 

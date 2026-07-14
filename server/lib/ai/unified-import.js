@@ -57,6 +57,53 @@ const _IMPORT_SYSTEM =
   'Cite each item by section or heading. Include form numbers only if they literally appear in the document. ' +
   'Call propose_coverages exactly once with ALL coverages the form defines.'
 
+// ─── Bundle normalization ─────────────────────────────────────────────────────
+// Every emitted bundle must present the FULL UnifiedProposalBundle surface — the
+// review UI dereferences review sections, sampledVerifications, splitProducts,
+// unresolved etc. without guards, and a missing array is a client crash.
+
+function normalizeBundle(bundle, { container = 'PDF', detectedFormat = 'COMPANY_FILING_PDF', documents = [] } = {}) {
+  const b = bundle && typeof bundle === 'object' ? bundle : {}
+  b.plan = b.plan && typeof b.plan === 'object' ? b.plan : {}
+  for (const k of ['coverages', 'forms', 'rules', 'formRules', 'ldTables', 'rtTables', 'products']) {
+    if (!Array.isArray(b.plan[k])) b.plan[k] = []
+  }
+  if (b.plan.product === undefined) b.plan.product = null
+  if (b.plan.ratingProgram === undefined) b.plan.ratingProgram = null
+  if (b.plan.productId === undefined) b.plan.productId = null
+  b.plan.summary = b.plan.summary && typeof b.plan.summary === 'object' ? b.plan.summary : {}
+  for (const k of ['warnings', 'unmappedColumns', 'sheetsRecognized', 'sheetsSkipped', 'defects', 'notices']) {
+    if (!Array.isArray(b.plan.summary[k])) b.plan.summary[k] = []
+  }
+  b.review = b.review && typeof b.review === 'object' ? b.review : {}
+  for (const k of ['product', 'coverages', 'tables', 'rules', 'rating']) {
+    if (!b.review[k] || typeof b.review[k] !== 'object') b.review[k] = { items: [] }
+    if (!Array.isArray(b.review[k].items)) b.review[k].items = []
+  }
+  for (const k of ['unresolved', 'sampledVerifications', 'splitProducts', 'importWarnings', 'provenance']) {
+    if (!Array.isArray(b[k])) b[k] = []
+  }
+  if (!Array.isArray(b.ensembleDisagreements)) b.ensembleDisagreements = []
+  if (!b.counts || typeof b.counts !== 'object') b.counts = { proposed: 0, accepted: 0, unresolved: 0 }
+  if (!b.fingerprint || typeof b.fingerprint !== 'object') {
+    b.fingerprint = {
+      container, detectedFormat,
+      lineGuesses: [],
+      documentRoles: documents.map(d => ({ documentName: d.name, role: 'unknown', confidence: 0 })),
+    }
+  }
+  if (!Array.isArray(b.fingerprint.lineGuesses)) b.fingerprint.lineGuesses = []
+  if (!Array.isArray(b.fingerprint.documentRoles)) b.fingerprint.documentRoles = []
+  if (!b.extractionPlan || typeof b.extractionPlan !== 'object') {
+    b.extractionPlan = { format: detectedFormat, lobRefId: '', archetype: null, documentRoleAssignments: [], splitStrategy: 'SINGLE_PRODUCT' }
+  }
+  if (!Array.isArray(b.extractionPlan.documentRoleAssignments)) b.extractionPlan.documentRoleAssignments = []
+  if (!Array.isArray(b.coverages)) {
+    b.coverages = b.plan.coverages.map(p => ({ refId: p.refId ?? '', name: p.data?.name ?? p.label ?? '', formNumbers: Array.isArray(p.data?.formNumbers) ? p.data.formNumbers : [] }))
+  }
+  return b
+}
+
 // ─── Merge multiple workbook structural models into one brain input ───────────
 // Sheet names must stay citable: kept verbatim when unique across workbooks; a
 // collision gets " (workbook name)" appended so citations remain unambiguous.
@@ -130,6 +177,7 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
     emit(res, { t: 'notice', level: 'warn', kind: 'incomplete-product', message: bundle.completeness.guidance })
   }
 
+  normalizeBundle(bundle, { container: 'XLSX', detectedFormat: 'ISO_WORKBOOK' })
   emit(res, { t: 'json', key: 'bundle', value: bundle })
   emit(res, { t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
   return bundle
@@ -228,6 +276,7 @@ async function unifiedImport(req, res) {
         extractPdfText:   _extractPdfText,
         emit:             (ev) => emit(res, ev),
       })
+      normalizeBundle(bundle, { documents: routed.filingDocs })
       const planCoverages = (Array.isArray(bundle?.plan?.coverages) ? bundle.plan.coverages : [])
         .map((e) => ({ refId: e.data?.refId ?? e.refId ?? '', name: e.data?.name ?? e.label ?? '', formNumbers: e.data?.formNumbers ?? [] }))
       emit(res, { t: 'json', key: 'bundle', value: bundle })

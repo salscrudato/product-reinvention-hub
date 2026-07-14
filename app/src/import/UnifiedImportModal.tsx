@@ -530,13 +530,19 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
   onCancel:       () => void
   onImport:       () => void
 }) {
-  const { review, unresolved, fingerprint, splitProducts, sampledVerifications, formatCard, ensembleDisagreements } = bundle
+  // Defensive defaults: a server bundle variant (filing reconcile, fallback paths)
+  // may omit optional arrays — never crash the review pane over a missing field.
+  const { review = {} as UnifiedProposalBundle['review'], fingerprint, formatCard } = bundle
+  const unresolved = bundle.unresolved ?? []
+  const splitProducts = bundle.splitProducts ?? []
+  const sampledVerifications = bundle.sampledVerifications ?? []
+  const ensembleDisagreements = bundle.ensembleDisagreements
 
   const importCount = useMemo(() => {
     return countPlan(acceptedPlan(bundle, accepted))
   }, [bundle, accepted])
 
-  const hasDetectedContent = SECTION_META.some(({ key }) => review[key].items.length > 0)
+  const hasDetectedContent = SECTION_META.some(({ key }) => (review[key]?.items?.length ?? 0) > 0)
 
   const hasReviewItems =
     unresolved.length > 0 ||
@@ -594,8 +600,8 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
           ) : (
             <div className="flex flex-col gap-2.5">
               {SECTION_META.map(({ key, label, Icon }) => {
-                const section = review[key]
-                if (!section.items.length && !section.note) return null
+                const section = review[key] ?? { items: [] }
+                if (!section.items?.length && !section.note) return null
                 const on = accepted.has(key)
                 return (
                   <div key={key} className="rounded-[12px] overflow-hidden"
