@@ -5,7 +5,7 @@
 // step opens the 1-3D grid editor; steps persist through the atomic mutate. Line-agnostic.
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { IconRefresh, IconClose, IconPricing } from '../../components/ui/icons'
+import { IconRefresh, IconClose, IconPricing, IconChevronLeft, IconChevronRight } from '../../components/ui/icons'
 import { evaluate, resolveLob, resolveRatingKit, deriveGridInputSpec } from '@pf/shared'
 import type { RatingInputs, RatingInputMap, RatingStep, RTTable, LDTable, RatingProgram, Coverage, EvaluatorResult } from '@pf/shared'
 import { linkCoverageToPricing } from '../../lib/insurance/pricingLinks'
@@ -179,6 +179,8 @@ export default function ProductPricing() {
   const [riskState, setRiskState] = useState('OH')
   const [editing, setEditing]     = useState<EditableStep | null>(null)
   const [stepDialog, setStepDialog] = useState<{ step: RatingStep | null } | null>(null)
+  // The rating-calculation rail (premium + scenario inputs) — collapsed by default.
+  const [calcOpen, setCalcOpen] = useState(false)
 
   useEffect(() => { setInputs({ ...(gridWorksheet?.workedExample ?? kit.workedExample) }) }, [lob.prefix, kit, gridWorksheet])
   const upd = (patch: RatingInputMap) => setInputs(prev => ({ ...prev, ...patch }))
@@ -267,7 +269,13 @@ export default function ProductPricing() {
         <PricingLinkagePanel cov={covFilter} program={ratingProgram} rtTables={rtTables} ldTables={ldTables} onClear={clearCov} />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-5 items-start">
+      <div
+        className="grid grid-cols-1 lg:grid lg:items-start gap-5"
+        // The rating-calculation rail springs between full width and a slim edge
+        // affordance — COLLAPSED by default so the algorithm read leads. The strip
+        // still whispers the live premium, so the calculation is never out of mind.
+        style={{ gridTemplateColumns: calcOpen ? 'minmax(0,1.3fr) minmax(0,1fr)' : 'minmax(0,1fr) 34px', transition: 'grid-template-columns .3s var(--ease-spring)' }}
+      >
         {/* Left — the editable rating algorithm */}
         {!ratingProgram ? (
           <div className="bg-surface rounded-[14px] p-5 flex flex-col items-center justify-center gap-2 text-faint min-h-[300px]" style={{ border: '1px solid var(--color-border)' }}>
@@ -282,34 +290,73 @@ export default function ProductPricing() {
           />
         )}
 
-        {/* Right — calculated premium + scenario inputs */}
-        <div className="flex flex-col gap-5">
-          <PremiumCard premium={result?.finalPremium ?? null} minimum={ratingProgram?.minimumPremium} />
+        {/* Right — the rating calculation (premium + scenario inputs), collapsible */}
+        {calcOpen ? (
+          <div className="relative flex flex-col gap-5">
+            <button
+              onClick={() => setCalcOpen(false)}
+              aria-expanded="true"
+              aria-label="Hide the rating calculation"
+              className="hidden lg:flex absolute -left-3 top-5 z-10 w-6 h-6 items-center justify-center rounded-full bg-surface text-dim hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+            >
+              <IconChevronRight size={13} aria-hidden="true" />
+            </button>
+            <button
+              onClick={() => setCalcOpen(false)}
+              aria-expanded="true"
+              className="lg:hidden self-end inline-flex items-center gap-1 text-xs text-dim hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[6px] px-1"
+            >
+              Hide calculator <IconChevronRight size={12} aria-hidden="true" />
+            </button>
+            <PremiumCard premium={result?.finalPremium ?? null} minimum={ratingProgram?.minimumPremium} />
 
-          <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-semibold text-text">Scenario inputs</span>
-              <Button variant="ghost" size="sm"
-                title="Load the worked example — prices to this line’s reference premium"
-                onClick={() => setInputs({ ...(gridWorksheet?.workedExample ?? kit.workedExample) })}>
-                <IconRefresh size={13} />Worked example
-              </Button>
+            <div className="bg-surface rounded-[14px] p-5" style={{ border: '1px solid var(--color-border)' }}>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-semibold text-text">Scenario inputs</span>
+                <Button variant="ghost" size="sm"
+                  title="Load the worked example — prices to this line’s reference premium"
+                  onClick={() => setInputs({ ...(gridWorksheet?.workedExample ?? kit.workedExample) })}>
+                  <IconRefresh size={13} />Worked example
+                </Button>
+              </div>
+              {isHO ? (
+                <HomeownersRatingPanel
+                  inputs={inputs as RatingInputs} onChange={upd}
+                  riskState={riskState} setRiskState={setRiskState}
+                  coastal={coastal} ldTables={ldTables} />
+              ) : (
+                <GenericRatingPanel spec={gridWorksheet?.inputSpec ?? kit.inputSpec} inputs={inputs} ldTables={ldTables} onChange={upd} />
+              )}
+              {ratingProgram && !result && (
+                <p className={`text-[12px] pt-3 mt-3 ${evaluation.error ? 'text-warn' : 'text-faint'}`} style={{ borderTop: '1px solid var(--color-border)' }}>
+                  {!tablesReady ? 'Loading rating tables…' : (evaluation.error ?? 'Couldn’t evaluate these inputs — adjust and retry.')}
+                </p>
+              )}
             </div>
-            {isHO ? (
-              <HomeownersRatingPanel
-                inputs={inputs as RatingInputs} onChange={upd}
-                riskState={riskState} setRiskState={setRiskState}
-                coastal={coastal} ldTables={ldTables} />
-            ) : (
-              <GenericRatingPanel spec={gridWorksheet?.inputSpec ?? kit.inputSpec} inputs={inputs} ldTables={ldTables} onChange={upd} />
-            )}
-            {ratingProgram && !result && (
-              <p className={`text-[12px] pt-3 mt-3 ${evaluation.error ? 'text-warn' : 'text-faint'}`} style={{ borderTop: '1px solid var(--color-border)' }}>
-                {!tablesReady ? 'Loading rating tables…' : (evaluation.error ?? 'Couldn’t evaluate these inputs — adjust and retry.')}
-              </p>
-            )}
           </div>
-        </div>
+        ) : (
+          // Collapsed → a slim edge affordance carrying the live premium.
+          <button
+            onClick={() => setCalcOpen(true)}
+            aria-expanded="false"
+            aria-label={`Show the rating calculation${result?.finalPremium != null ? ` — current premium $${result.finalPremium.toLocaleString()}` : ''}`}
+            className="group flex w-full items-center justify-center gap-1.5 rounded-[12px] px-2 py-2 lg:h-full lg:min-h-[300px] lg:w-[34px] lg:flex-col lg:px-0 lg:py-4 bg-surface hover:bg-raised transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            style={{ border: '1px solid var(--color-border)' }}
+          >
+            <IconChevronLeft size={13} className="text-faint group-hover:text-accent transition-colors shrink-0" aria-hidden="true" />
+            <span className="lg:hidden text-xs text-dim group-hover:text-text transition-colors">
+              Rating calculation{result?.finalPremium != null ? ` · $${result.finalPremium.toLocaleString()}` : ''}
+            </span>
+            <span
+              className="hidden lg:block text-[9.5px] font-semibold uppercase tracking-[.14em] text-faint group-hover:text-accent transition-colors select-none"
+              style={{ writingMode: 'vertical-rl' }}
+              aria-hidden="true"
+            >
+              {result?.finalPremium != null ? `Premium $${result.finalPremium.toLocaleString()}` : 'Rating calculation'}
+            </span>
+          </button>
+        )}
       </div>
 
       {editing && (

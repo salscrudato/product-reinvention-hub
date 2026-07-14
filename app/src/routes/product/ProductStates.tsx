@@ -96,25 +96,71 @@ export default function ProductStates() {
     )
   }
 
+  // Executive stat band figures — all deterministic, live with every toggle.
+  const pct = FOOTPRINT.size > 0 ? Math.round((states.length / FOOTPRINT.size) * 100) : 0
+  const perilInScope = states.filter(st => COASTAL.has(st)).length
+  const RING_R = 17
+  const RING_C = 2 * Math.PI * RING_R
+
   return (
     <div className="flex flex-col gap-5">
-      {/* Controls */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-sm font-semibold text-text">
-          {states.length} of {FOOTPRINT.size} state{FOOTPRINT.size === 1 ? '' : 's'}
-        </span>
-        {canEdit && (
-          <>
-            <Button variant="ghost" size="sm" onClick={() => { setStates([...FOOTPRINT]); setDirty(true) }}>
-              <IconStates size={13} />All footprint
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => { setStates([]); setDirty(true) }}>Clear</Button>
-            {dirty && <Button variant="primary" size="sm" onClick={handleSave}>Save states</Button>}
-          </>
+      {/* Stat band — coverage ring + live figures + actions. The ring animates with
+          each toggle (spring on stroke-dashoffset; neutralised by reduced motion). */}
+      <div className="flex items-center gap-4 flex-wrap rounded-[14px] bg-surface px-4 py-3"
+        style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+        <div className="flex items-center gap-3">
+          <svg width="44" height="44" viewBox="0 0 44 44" role="img"
+            aria-label={`Footprint coverage: ${pct}% — ${states.length} of ${FOOTPRINT.size} states`}>
+            <circle cx="22" cy="22" r={RING_R} fill="none" stroke="var(--color-raised)" strokeWidth="4.5" />
+            <circle
+              cx="22" cy="22" r={RING_R} fill="none"
+              stroke="url(#footprint-ring-grad)" strokeWidth="4.5" strokeLinecap="round"
+              strokeDasharray={RING_C}
+              strokeDashoffset={RING_C * (1 - pct / 100)}
+              transform="rotate(-90 22 22)"
+              style={{ transition: 'stroke-dashoffset .6s var(--ease-spring)' }}
+            />
+            <defs>
+              <linearGradient id="footprint-ring-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="var(--color-accent-bright)" />
+                <stop offset="100%" stopColor="var(--color-accent-strong)" />
+              </linearGradient>
+            </defs>
+            <text x="22" y="26" textAnchor="middle" fontSize="11" fontWeight="700"
+              fill="var(--color-text)" fontFamily="var(--font-mono)">{pct}%</text>
+          </svg>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-text tnum tabular-nums">
+              {states.length} of {FOOTPRINT.size} state{FOOTPRINT.size === 1 ? '' : 's'}
+            </span>
+            <span className="text-[11px] text-faint">of the {lob.name} footprint</span>
+          </div>
+        </div>
+
+        {COASTAL.size > 0 && (
+          <div className="flex items-center gap-2 pl-4" style={{ borderLeft: '1px solid var(--color-border)' }}>
+            <PerilBolt />
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-text tnum tabular-nums">{perilInScope} in scope</span>
+              <span className="text-[11px] text-faint">{lob.peril.label}</span>
+            </div>
+          </div>
         )}
-        <Button variant="ghost" size="sm" onClick={exportSVG} className="ml-auto">
-          <IconDownload size={13} />SVG
-        </Button>
+
+        <div className="flex items-center gap-2 ml-auto flex-wrap">
+          {canEdit && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => { setStates([...FOOTPRINT]); setDirty(true) }}>
+                <IconStates size={13} />All footprint
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => { setStates([]); setDirty(true) }}>Clear</Button>
+              {dirty && <Button variant="primary" size="sm" onClick={handleSave}>Save states</Button>}
+            </>
+          )}
+          <Button variant="ghost" size="sm" onClick={exportSVG}>
+            <IconDownload size={13} />SVG
+          </Button>
+        </div>
       </div>
 
       {/* Map */}

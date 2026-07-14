@@ -12,7 +12,6 @@ import { Skeleton, ProductStatusPill, Badge, Button, EmptyState } from '../../co
 import { IconRecent, IconChat, IconBack, IconChevronDown, IconArrowUp, IconEdit, IconCheck, IconClose, IconRefresh, IconProduct } from '../../components/ui/icons'
 import { HistoryDrawer } from '../../components/product/HistoryDrawer'
 import { HeroGlyph, type HeroGlyphName } from '../../components/ui/heroGlyphs'
-import { GlobalCommandBar } from '../../features/search/GlobalCommandBar'
 import { CommentsPanel } from '../../components/product/CommentsPanel'
 import { ExportMenu } from '../../components/product/ExportMenu'
 import { PromoteDraftDialog } from '../../components/product/PromoteDraftDialog'
@@ -246,14 +245,9 @@ function WorkspaceInner() {
         ))}
       </div>
 
-      {/* Global cross-entity command bar — searches Coverages + Forms + Rules together.
-          NOT shown on Coverages or Forms: those pages carry ONE smart search of their
-          own (typeahead + tokens + live filtering), per product direction. */}
-      {activeTab === 'rules' && (
-        <div className="pt-4">
-          <GlobalCommandBar pid={pid} rules={rules} coverages={coverages} forms={forms} />
-        </div>
-      )}
+      {/* The workspace-level cross-entity search bar is retired: every entity tab
+          (Coverages / Forms / Rules) carries ONE smart search of its own
+          (typeahead + tokens + live filtering), per product direction. */}
 
       {/* Tab content */}
       <div className="pt-5">

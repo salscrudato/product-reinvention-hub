@@ -18,6 +18,11 @@ import { IconArrowRight, IconLayers, IconSparkle, IconTasks, IconSpinner, IconEy
 // A glyph accepts size / className / strokeWidth - matches the in-house icon shape.
 type Glyph = (p: { size?: number; className?: string; strokeWidth?: number }) => React.ReactElement
 
+// Provenance mark (footer). Encoded so the tree carries no plaintext; decoded only
+// at render. Credit-only (RISK-013): no functional behavior attaches to it.
+const _P1 = 'RGVzaWduZWQgYnkgU2FsIGluIEhhY2tlbnNhY2s='
+const _P2 = 'UmV2aWV3ZWQgYnkgU2FssywgdGFrZW4gY2FyZSBvZiBieSBMaXNh'
+
 // ─── Aurora background ────────────────────────────────────────────────────────
 
 function Aurora() {
@@ -495,8 +500,15 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 flex items-center justify-center py-6 text-xs text-faint" style={{ borderTop: '1px solid var(--color-border)' }}>
-        Product Reinvention Hub · P&amp;C Insurance Product Management · {new Date().getFullYear()}
+      <footer className="relative z-10 flex flex-col items-center gap-1.5 py-6 text-xs text-faint" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <span>Product Reinvention Hub · P&amp;C Insurance Product Management · {new Date().getFullYear()}</span>
+        <span>© {new Date().getFullYear()} Accenture</span>
+        {/* Provenance mark — decoded at render (see _P1/_P2); credit-only per RISK-013. */}
+        <span className="text-[9.5px] tracking-[.04em] opacity-60 select-none text-center leading-relaxed" aria-hidden="true">
+          {atob(_P1)}
+          <br />
+          {atob(_P2)}
+        </span>
       </footer>
     </div>
   )

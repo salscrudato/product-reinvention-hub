@@ -15,7 +15,7 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { Badge, Skeleton, EmptyState } from '../../components/ui'
 import { Button } from '../../components/ui/Button'
-import { IconPlus, IconClose, IconCheckCircle } from '../../components/ui/icons'
+import { IconPlus, IconClose, IconCheckCircle, IconFilter } from '../../components/ui/icons'
 import { RuleFlowCard, RuleComposer, type NewRule } from '../../components/product/RuleBuilder'
 import { simulateRule, type RuleLike } from '../../components/product/ruleSim'
 import { useEntityFilters } from '../../features/search/useEntityFilters'
@@ -23,7 +23,6 @@ import { FacetPanel } from '../../features/search/FacetPanel'
 import { CommandBar } from '../../features/search/CommandBar'
 import { ActiveFilters } from '../../features/search/ActiveFilters'
 import { rulesSchema } from '../../features/search/schemas/rulesSchema'
-import { SavedViews } from '../../features/search/SavedViews'
 import type { Rule } from '@pf/shared'
 
 const CAT_COLOR: Record<RuleCategory, 'purple'|'blue'|'warn'> = { PRODUCT: 'purple', RATING: 'blue', FORMS: 'warn' }
@@ -448,7 +447,26 @@ export default function ProductRules() {
   // The generic filter engine, driven by the Rules facet schema. The coverage deep-link
   // scopes the entity set first, so facet counts reflect the coverage-scoped view.
   const entities = useMemo(() => (covRef ? rules.filter(r => r.coverageRefIds?.includes(covRef)) : rules), [rules, covRef])
-  const filters = useEntityFilters(entities, rulesSchema)
+
+  // Only filter axes with a real choice: an enum axis where every rule in scope
+  // shares one value is hidden (matches Coverages/Forms).
+  const schema = useMemo(() => {
+    const facets = rulesSchema.facets.filter((f) => {
+      if (f.kind !== 'enum') return true
+      const distinct = new Set<string>()
+      for (const e of entities) {
+        const v = f.accessor(e)
+        for (const one of Array.isArray(v) ? v : [v]) if (one != null && one !== '') distinct.add(String(one))
+      }
+      return distinct.size > 1
+    })
+    return { ...rulesSchema, facets }
+  }, [entities])
+
+  // Filter rail is collapsible — CLOSED by default so the rule read leads.
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  const filters = useEntityFilters(entities, schema)
 
   // Announce reconciliation (e.g. deselecting a category dropped orphaned sub-categories).
   useEffect(() => {
@@ -567,12 +585,29 @@ export default function ProductRules() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 flex-wrap">
+      {/* Toolbar — mirrors Coverages/Forms: Filters toggle leads, then the ONE smart search. */}
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(o => !o)}
+          aria-pressed={filtersOpen}
+          aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
+          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-[10px] text-[13px] font-medium border transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+            filtersOpen || filters.activeChips.length ? 'text-accent bg-accent-soft border-[color:var(--color-accent-line)]' : 'text-dim bg-surface border-[color:var(--color-border)] hover:text-text'
+          }`}
+        >
+          <IconFilter size={15} />
+          <span className="hidden sm:inline">Filters</span>
+          {filters.activeChips.length > 0 && (
+            <span className="tnum tabular-nums min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold text-white inline-flex items-center justify-center" style={{ background: 'var(--gradient-accent)' }}>
+              {filters.activeChips.length}
+            </span>
+          )}
+        </button>
         <div className="flex-1 min-w-[240px] max-w-xl">
-          <CommandBar schema={rulesSchema} state={filters.state} applyState={filters.applyState}
+          <CommandBar schema={schema} state={filters.state} applyState={filters.applyState}
             placeholder="Search rules, or filter: category:Product status:Active" />
         </div>
-        <SavedViews scope={`rules:${pid}`} state={filters.state} onApply={filters.applyState} />
         <div className="flex items-center gap-2 ml-auto">
           {canSimulate && (
             <Button variant="ghost" size="sm" onClick={() => setSimOpen(s => !s)} aria-pressed={simOpen}>
@@ -621,13 +656,22 @@ export default function ProductRules() {
         <p className="text-xs text-faint">The {lob.name} line documents its rules here; live simulation is available on lines with a rating/rules engine.</p>
       )}
 
-      <div className="grid lg:grid-cols-[236px_1fr] gap-5 items-start">
-        <div className="lg:sticky lg:top-4">
-          <FacetPanel schema={rulesSchema} counts={filters.counts} state={filters.state}
-            unknownValues={filters.unknownValues}
-            onToggleEnum={filters.toggleEnum} onToggleParent={filters.toggleParent}
-            onToggleChild={filters.toggleChild} onSetDateRange={filters.setDateRange} />
-        </div>
+      <div className={`grid gap-5 items-start ${filtersOpen ? 'lg:grid-cols-[236px_1fr]' : ''}`}>
+        {filtersOpen && (
+          <div className="lg:sticky lg:top-4 flex flex-col gap-2">
+            <div className="flex items-center justify-between px-0.5">
+              <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-faint">Refine</span>
+              <button type="button" onClick={() => setFiltersOpen(false)} aria-label="Hide filters"
+                className="w-6 h-6 rounded-[6px] flex items-center justify-center text-faint hover:text-text hover:bg-hover transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
+                <IconClose size={13} />
+              </button>
+            </div>
+            <FacetPanel schema={schema} counts={filters.counts} state={filters.state}
+              unknownValues={filters.unknownValues}
+              onToggleEnum={filters.toggleEnum} onToggleParent={filters.toggleParent}
+              onToggleChild={filters.toggleChild} onSetDateRange={filters.setDateRange} />
+          </div>
+        )}
 
         <div className="flex flex-col gap-5 min-w-0">
       {/* Product / rating rules — IF → THEN flows grouped by category → sub-category */}
