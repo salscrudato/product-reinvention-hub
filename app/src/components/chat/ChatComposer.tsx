@@ -27,7 +27,14 @@ export function ChatComposer({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const srRef       = useRef<any>(null)
   const finalRef    = useRef('')       // accumulated final transcript for this recording session
+  const silenceRef  = useRef<number | null>(null)   // natural-pause timer → auto-send
   const [listening, setListening] = useState(false)
+
+  // Natural-speech pacing: the mic stays open through pauses; the message auto-sends
+  // only after a real stretch of silence. A longer first window lets the user gather
+  // their thought before speaking at all.
+  const SILENCE_MS = 2600
+  const FIRST_WINDOW_MS = 7000
 
   // SpeechRecognition is a browser API not always typed; use this helper throughout.
   type SRC = { new(): SpeechRecognitionLike }
@@ -57,7 +64,10 @@ export function ChatComposer({
   }, [value])
 
   // Clean up on unmount.
-  useEffect(() => () => { srRef.current?.stop() }, [])
+  useEffect(() => () => {
+    srRef.current?.stop()
+    if (silenceRef.current) clearTimeout(silenceRef.current)
+  }, [])
 
   // If streaming starts mid-recording, stop the mic so tokens don't race with voice.
   useEffect(() => {
@@ -78,12 +88,20 @@ export function ChatComposer({
     if (!SR) return
 
     const sr = new SR()
-    sr.continuous     = false  // auto-stops on silence (~1-2s pause) via browser VAD
+    // Continuous: the browser no longer cuts the mic at the first ~1s breath —
+    // natural sentences with pauses stay in one utterance. OUR silence timer
+    // decides when the user is done (SILENCE_MS after the last speech event).
+    sr.continuous     = true
     sr.interimResults = true
     sr.lang           = 'en-US'
     srRef.current     = sr
     // Seed from any text already typed so we append, not overwrite.
     finalRef.current  = value.trimEnd()
+
+    const armSilence = (ms: number) => {
+      if (silenceRef.current) clearTimeout(silenceRef.current)
+      silenceRef.current = window.setTimeout(() => { srRef.current?.stop() }, ms)
+    }
 
     sr.onresult = (e) => {
       let interim = ''
@@ -97,9 +115,14 @@ export function ChatComposer({
         }
       }
       onChange(finalRef.current + (interim ? (finalRef.current ? ' ' : '') + interim : ''))
+      armSilence(SILENCE_MS)   // speech heard — reset the pause window
     }
-    sr.onerror = () => { srRef.current = null; setListening(false) }
+    sr.onerror = () => {
+      if (silenceRef.current) clearTimeout(silenceRef.current)
+      srRef.current = null; setListening(false)
+    }
     sr.onend   = () => {
+      if (silenceRef.current) clearTimeout(silenceRef.current)
       srRef.current = null
       setListening(false)
       const transcript = finalRef.current.trim()
@@ -114,6 +137,7 @@ export function ChatComposer({
 
     sr.start()
     setListening(true)
+    armSilence(FIRST_WINDOW_MS)   // generous first window before anything is said
   }
 
   return (
@@ -154,7 +178,7 @@ export function ChatComposer({
               ? 'text-white'
               : disabled
               ? 'text-faint opacity-40 cursor-not-allowed'
-              : 'text-faint hover:text-accent hover:bg-accent-soft'
+              : 'mic-beacon text-accent hover:bg-accent-soft'
           }`}
           style={listening
             ? { background: 'var(--gradient-accent)', boxShadow: '0 0 0 4px var(--color-accent-soft)' }

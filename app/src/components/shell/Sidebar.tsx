@@ -72,14 +72,17 @@ function Item({ item, collapsed, active }: { item: NavItem; collapsed: boolean; 
         end={item.exact}
         aria-current={active ? 'page' : undefined}
         onMouseEnter={() => { const fn = ROUTE_IMPORTS[item.to]; if (fn) prefetchRoute(item.to, fn) }}
-        className={`relative flex items-center gap-3 mx-2 px-2.5 py-2 rounded-[10px] text-sm transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
-          ${active ? 'bg-accent-soft text-accent font-medium' : 'text-dim hover:bg-raised hover:text-text'} ${collapsed ? 'justify-center' : ''}`}
+        className={`group relative flex items-center gap-3 mx-2 px-2.5 py-2 rounded-[10px] text-sm transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
+          ${active
+            ? 'bg-accent-soft text-accent font-medium shadow-[inset_0_0_0_1px_var(--color-accent-line)]'
+            : 'text-dim hover:bg-raised hover:text-text hover:translate-x-[1px]'} ${collapsed ? 'justify-center' : ''}`}
       >
         {active && (
           <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-            style={{ background: 'var(--gradient-accent)' }} aria-hidden="true" />
+            style={{ background: 'var(--gradient-accent)', boxShadow: '0 0 8px var(--glow-accent)' }} aria-hidden="true" />
         )}
-        <Icon size={18} strokeWidth={active ? 2.2 : 1.9} className="shrink-0" aria-hidden="true" />
+        <Icon size={18} strokeWidth={active ? 2.2 : 1.9}
+          className={`shrink-0 transition-colors duration-150 ${active ? '' : 'group-hover:text-accent'}`} aria-hidden="true" />
         {!collapsed && <span className="truncate">{item.label}</span>}
       </NavLink>
     </Tooltip>

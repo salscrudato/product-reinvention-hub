@@ -283,12 +283,14 @@ function ArticleImage({
     >
       <div className="w-full h-full flex flex-col items-center justify-center gap-2 select-none">
         <Glyph
-          size={variant === 'hero' ? 46 : 32}
+          size={variant === 'hero' ? 46 : 30}
           strokeWidth={1.3}
           className="text-white"
           aria-hidden="true"
         />
-        {item.source && (
+        {/* Source wordmark on the HERO tile only — compact cards already carry the
+            source in their byline, so repeating it in the thumbnail read as noise. */}
+        {variant === 'hero' && item.source && (
           <span className="text-white opacity-80 text-xs font-medium tracking-wide px-4 text-center line-clamp-1">
             {item.source}
           </span>
@@ -523,8 +525,8 @@ function CompactCard({
       />
 
       <div className="flex gap-4 p-4 pl-5">
-        {/* Thumbnail */}
-        <div className="shrink-0 w-[140px] sm:w-[180px] overflow-hidden rounded-[10px] transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:group-hover:scale-100">
+        {/* Thumbnail — slimmer so the words lead; self-centered for short cards */}
+        <div className="shrink-0 self-center w-[116px] sm:w-[152px] overflow-hidden rounded-[10px] transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:group-hover:scale-100">
           <ArticleImage
             item={item}
             variant="thumbnail"
@@ -568,9 +570,9 @@ function CompactCard({
             </a>
           </h3>
 
-          {/* One-line summary */}
+          {/* Two-line summary — enough to decide whether to open, never a wall */}
           {item.summary && (
-            <p className="text-[13px] text-dim leading-relaxed line-clamp-1">
+            <p className="text-[13px] text-dim leading-relaxed line-clamp-2">
               {item.summary}
             </p>
           )}
@@ -1060,8 +1062,10 @@ export default function News() {
     <div className="mx-auto w-full max-w-[1160px] lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8 lg:items-start">
       {/* Feed column */}
       <div className="flex flex-col min-w-0">
-      {/* Sticky command bar */}
-      <header className="sticky top-0 z-30 bg-page flex flex-col gap-3 pb-3 pt-1" style={{ borderBottom: '1px solid var(--color-border)' }}>
+      {/* Sticky command bar — the negative top margin + matching padding extend its
+          opaque background up over the shell's content padding, so cards can never
+          peek through the band above the header while scrolling. */}
+      <header className="sticky top-0 z-30 bg-page flex flex-col gap-3 pb-3 -mt-6 pt-6" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <div className="flex items-center gap-3">
           <span aria-hidden="true" className="grid place-items-center w-9 h-9 rounded-[11px] shrink-0"
             style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>

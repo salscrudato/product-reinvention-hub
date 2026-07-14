@@ -1,10 +1,14 @@
-// Button — four visual variants sharing the same layout rhythm.
-import type { ButtonHTMLAttributes } from 'react'
+// Button — four visual variants sharing the same layout rhythm, plus a soft
+// pointer-following wave: onMouseMove feeds --wx/--wy so a radial sheen glides
+// under the cursor (see .btn-wave-follow in index.css; reduced-motion softens
+// it to a static hover tint). Primary buttons wave in white-on-gradient; the
+// rest wave in accent-soft.
+import { useCallback, type ButtonHTMLAttributes, type MouseEvent } from 'react'
 
 type Variant = 'default' | 'primary' | 'ghost' | 'destructive'
 type Size    = 'sm' | 'md' | 'lg'
 
-const base = 'inline-flex items-center justify-center gap-2 font-medium rounded-[10px] border-0 cursor-pointer transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none'
+const base = 'btn-wave-follow inline-flex items-center justify-center gap-2 font-medium rounded-[10px] border-0 cursor-pointer transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none'
 
 const variants: Record<Variant, string> = {
   default:     'bg-raised text-text hover:bg-hover focus-visible:outline-accent',
@@ -24,17 +28,29 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: Size
 }
 
-export function Button({ variant = 'default', size = 'md', className = '', style, children, ...props }: ButtonProps) {
+export function Button({ variant = 'default', size = 'md', className = '', style, children, onMouseMove, ...props }: ButtonProps) {
   const isPrimary = variant === 'primary'
+
+  // Track the pointer inside the button — drives the CSS wave (no re-render).
+  const handleMove = useCallback((e: MouseEvent<HTMLButtonElement>) => {
+    const el = e.currentTarget
+    const r = el.getBoundingClientRect()
+    el.style.setProperty('--wx', `${e.clientX - r.left}px`)
+    el.style.setProperty('--wy', `${e.clientY - r.top}px`)
+    onMouseMove?.(e)
+  }, [onMouseMove])
+
   return (
     <button
       {...props}
+      onMouseMove={handleMove}
       className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
-      style={isPrimary ? {
-        background: 'var(--gradient-accent)',
-        boxShadow: '0 1px 3px var(--glow-accent)',
+      style={{
+        // Wave hue per variant: white sheen on the filled gradient, accent-soft elsewhere.
+        ['--color-btn-wave' as string]: isPrimary ? 'var(--color-btn-wave-on-fill)' : 'var(--color-accent-soft)',
+        ...(isPrimary ? { background: 'var(--gradient-accent)', boxShadow: '0 1px 3px var(--glow-accent)' } : {}),
         ...style,
-      } : style}
+      }}
     >
       {children}
     </button>

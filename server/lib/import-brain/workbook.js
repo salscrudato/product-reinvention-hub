@@ -117,7 +117,12 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
     for (let r = 1; r <= lastRow; r++) {
       const rowObj = ws.getRow(r)
       const arr = new Array(lastCol).fill(null)
-      for (let c = 1; c <= lastCol; c++) arr[c - 1] = rowObj.getCell(c).value
+      // Normalize to IsoCell scalars HERE, not just inside buildStructuralModel:
+      // isoGrids feed mapIsoWorkbook directly, and raw ExcelJS objects (formula
+      // {result}, richText) fail its state-scope X-marker tests — 137 CORE rules
+      // came back allStates:false on the server while the same file parsed
+      // allStates:true locally from flattened grids.
+      for (let c = 1; c <= lastCol; c++) arr[c - 1] = brainShared.normalizeCellValue(rowObj.getCell(c).value)
       cells.push(arr)
     }
 

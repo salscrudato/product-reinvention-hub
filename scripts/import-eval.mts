@@ -33,8 +33,12 @@ const SAMPLES = resolve(REPO, 'samples')
 const GOLDEN  = resolve(REPO, 'tests/golden/import')
 const AUDIT   = resolve(REPO, 'docs/audit')
 
-const MODE_WRITE = process.argv.includes('--write-golden')
-const MODE_LIVE  = process.argv.includes('--live')
+const MODE_WRITE   = process.argv.includes('--write-golden')
+const MODE_LIVE    = process.argv.includes('--live')
+// --rescore: score the last dumped extraction (docs/audit/import_eval_extracted-<ID>.json)
+// against the golden set WITHOUT a live run — seconds instead of a full brain pass.
+// Use it to iterate on scoring/canonicalization; confirm with --live when done.
+const MODE_RESCORE = process.argv.includes('--rescore')
 // IMPORT_EVAL_ONLY=GL,IM limits the run to specific format ids (CI slicing).
 const EVAL_TIMEOUT_MS = Number(process.env.IMPORT_EVAL_TIMEOUT_MS) || 2_700_000
 const ONLY = (process.env.IMPORT_EVAL_ONLY || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
@@ -256,13 +260,13 @@ async function login(): Promise<string> {
   return body.token
 }
 
-interface LiveResult { bundle: unknown; errors: string[]; spend: unknown }
+interface LiveResult { bundle: unknown; errors: string[]; spend: unknown; notices: string[] }
 
 // Dev is a shared, continuously-deployed environment: a deploy restarts the app and
 // severs in-flight SSE ("fetch: terminated"). Retry the whole import a few times,
 // pausing so the restarted app warms up.
 async function postImport(token: string, files: string[], lobHint?: string, timeoutMs = EVAL_TIMEOUT_MS): Promise<LiveResult> {
-  let last: LiveResult = { bundle: null, errors: ['not attempted'], spend: null }
+  let last: LiveResult = { bundle: null, errors: ['not attempted'], spend: null, notices: [] }
   for (let attempt = 1; attempt <= 3; attempt++) {
     last = await postImportOnce(token, files, lobHint, timeoutMs)
     if (last.bundle || last.errors.length === 0) return last
@@ -282,7 +286,18 @@ async function postImportOnce(token: string, files: string[], lobHint?: string, 
   }))
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
-  const out: LiveResult = { bundle: null, errors: [], spend: null }
+  // Stall watchdog: the server emits an SSE heartbeat (`:hb`) every 15s
+  // (server/lib/ai/unified-import.js). A dev deploy can sever the connection
+  // without a FIN reaching us, leaving read() hung on a half-open socket until
+  // the big timeout — and that abort message doesn't match the transient-retry
+  // regex. Abort after 90s of total silence with a message that does.
+  let lastByteAt = Date.now()
+  const stallTimer = setInterval(() => {
+    if (Date.now() - lastByteAt > 90_000) controller.abort(new Error('socket stalled (no SSE heartbeat for 90s)'))
+  }, 15_000)
+  const out: LiveResult = { bundle: null, errors: [], spend: null, notices: [] }
+  const t0 = Date.now()
+  const elapsed = () => `${Math.round((Date.now() - t0) / 1000)}s`
   try {
     const res = await fetch(`${BASE_URL}/api/ai/unifiedImport`, {
       method: 'POST',
@@ -297,21 +312,34 @@ async function postImportOnce(token: string, files: string[], lobHint?: string, 
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
+      lastByteAt = Date.now()
       buf += decoder.decode(value, { stream: true })
       const lines = buf.split('\n'); buf = lines.pop() ?? ''
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue
         try {
-          const evt = JSON.parse(line.slice(6)) as { t: string; key?: string; value?: unknown; message?: string }
+          const evt = JSON.parse(line.slice(6)) as {
+            t: string; key?: string; value?: unknown; message?: string
+            name?: string; phase?: string; summary?: string; level?: string; kind?: string
+          }
           if (evt.t === 'json' && evt.key === 'bundle') out.bundle = evt.value
           if (evt.t === 'json' && (evt.key === 'brain:spend' || evt.key === 'import:spend')) out.spend = evt.value
           if (evt.t === 'error') out.errors.push(evt.message ?? 'unknown')
+          // Server stage progress + notices: without these a 90-minute brain run is
+          // 90 minutes of silence, and diagnostics like "Deterministic ISO mapper
+          // skipped: <reason>" are lost. Notices also land in the results JSON.
+          if (evt.t === 'tool' && evt.phase !== 'end') log(`    [${elapsed()}] ${evt.name}${evt.summary ? ` — ${evt.summary}` : ''}`)
+          if (evt.t === 'notice') {
+            const msg = `[${evt.level ?? 'info'}/${evt.kind ?? '-'}] ${evt.message ?? ''}`
+            out.notices.push(msg)
+            log(`    [${elapsed()}] NOTICE ${msg}`)
+          }
         } catch { /* skip */ }
       }
     }
   } catch (e) {
     out.errors.push(`fetch: ${(e as Error).message}`)
-  } finally { clearTimeout(timer) }
+  } finally { clearTimeout(timer); clearInterval(stallTimer) }
   return out
 }
 
@@ -385,7 +413,22 @@ if (MODE_WRITE) {
 
 const ACTIVE_FORMATS = ONLY.length ? FORMATS.filter(f => ONLY.includes(f.id)) : FORMATS
 
-if (!MODE_LIVE) {
+if (MODE_RESCORE) {
+  section('RESCORE: last dumped live extraction vs golden (no network, no AI)')
+  for (const fmt of ACTIVE_FORMATS) {
+    const goldenPath = join(GOLDEN, `${fmt.id}.golden.json`)
+    const dumpPath   = join(AUDIT, `import_eval_extracted-${fmt.id}.json`)
+    if (!existsSync(goldenPath)) { log(`  ⚠ ${fmt.id}: no golden — skipped`); continue }
+    if (!existsSync(dumpPath))   { log(`  ⚠ ${fmt.id}: no extraction dump (run --live once) — skipped`); continue }
+    const golden = JSON.parse(readFileSync(goldenPath, 'utf8')) as GoldenSet
+    const dump   = JSON.parse(readFileSync(dumpPath, 'utf8')) as { entities: GoldenEntity[] }
+    const m = score(golden.entities, dump.entities)
+    const pass = m.f1 >= F1_TARGET && m.numericExactRate >= NUMERIC_TARGET
+    if (!pass) anyFail = true
+    results.push({ id: fmt.id, mode: 'rescore', ...m, pass })
+    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | entityRecall ${m.entityRecall.toFixed(3)} (citations not re-checked)`)
+  }
+} else if (!MODE_LIVE) {
   section('OFFLINE: parse-stability diff vs golden')
   for (const fmt of ACTIVE_FORMATS) {
     const goldenPath = join(GOLDEN, `${fmt.id}.golden.json`)
@@ -423,14 +466,14 @@ if (!MODE_LIVE) {
       continue
     }
     const extracted = bundleToEntities(live.bundle)
-    if (process.env.IMPORT_EVAL_DUMP) {
-      writeFileSync(join(AUDIT, `import_eval_extracted-${fmt.id}.json`), JSON.stringify({ entities: extracted }, null, 2))
-    }
+    // Always dump: a live extraction costs real money and ~an hour — the dump makes
+    // it replayable through --rescore instead of disposable.
+    writeFileSync(join(AUDIT, `import_eval_extracted-${fmt.id}.json`), JSON.stringify({ entities: extracted, citations: citationCoverage(live.bundle) }, null, 2))
     const m = score(golden.entities, extracted)
     const cit = citationCoverage(live.bundle)
     const pass = m.f1 >= F1_TARGET && m.numericExactRate >= NUMERIC_TARGET && cit.entityCoverage >= CITATION_TARGET
     if (!pass) anyFail = true
-    results.push({ id: fmt.id, mode: 'live', ...m, ...cit, spend: live.spend, durationMs, pass })
+    results.push({ id: fmt.id, mode: 'live', ...m, ...cit, spend: live.spend, durationMs, notices: live.notices, pass })
     log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | citations entity=${(cit.entityCoverage * 100).toFixed(0)}% prov=${(cit.provenanceCoverage * 100).toFixed(0)}% (${cit.provenanceRows} rows) | entityRecall ${m.entityRecall.toFixed(3)} | ${Math.round(durationMs / 1000)}s`)
   }
 }
@@ -438,7 +481,7 @@ if (!MODE_LIVE) {
 const evalSlice = ONLY.length ? '-' + ONLY.join('-') : ''
 writeFileSync(join(AUDIT, `import_eval_results${evalSlice}.json`), JSON.stringify({
   runAt: new Date().toISOString(),
-  mode: MODE_LIVE ? 'live' : 'offline',
+  mode: MODE_RESCORE ? 'rescore' : MODE_LIVE ? 'live' : 'offline',
   baseUrl: MODE_LIVE ? BASE_URL : null,
   targets: { f1: F1_TARGET, numericExact: NUMERIC_TARGET, citation: CITATION_TARGET },
   results,

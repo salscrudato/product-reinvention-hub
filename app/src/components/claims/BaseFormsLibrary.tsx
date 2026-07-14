@@ -11,7 +11,18 @@ import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { statusAfterIdentify, isUnverified, type BaseFormStatus } from '../../lib/claims/baseForm'
 import { RefChip, Skeleton, EmptyState, Dialog, Button } from '../ui'
-import { IconUpload, IconFile, IconSpinner, IconCheck, IconTrash, IconShield, IconWarning } from '../ui/icons'
+import { IconUpload, IconFile, IconSpinner, IconCheck, IconTrash, IconShield, IconWarning, IconSparkle, IconChevronRight } from '../ui/icons'
+import { WaveformLoader } from '../ai/WaveformLoader'
+import { CitedText } from './DeterminationCard'
+
+/** Sectioned, grounded risk report generated from the uploaded form itself. */
+export interface FormRiskReport {
+  overview:       string
+  riskHighlights: string[]
+  watchFor:       string[]
+  insurerLens:    string[]
+  generatedAt?:   string
+}
 
 export interface BaseForm {
   id:             string
@@ -27,6 +38,7 @@ export interface BaseForm {
   // The server read a form number the forms catalogue could not confirm. The form is still
   // READY + analyzable (the attached document is the authority); the UI flags it "Unverified".
   verified?:      boolean
+  riskReport?:    FormRiskReport   // cached server-side by /api/ai/formRiskReport
   uploadedBy:     string
   uploadedByName: string
   createdAt?:     unknown
@@ -72,6 +84,85 @@ function relativeTime(v: unknown): string {
 const ACCEPT = '.pdf,.txt,.md,text/plain,application/pdf'
 function isSupported(f: File): boolean {
   return f.type === 'application/pdf' || f.type === 'text/plain' || /\.(pdf|txt|md)$/i.test(f.name)
+}
+
+// ─── Risk report accordion — collapsed by default, one per READY form ───────────
+// Sits directly under the form's name block. First expand fetches the sectioned,
+// grounded report (cached server-side on the doc thereafter); every point cites
+// the form's own clause in [brackets] (rendered as mono chips via CitedText).
+
+const REPORT_SECTIONS: { key: keyof Pick<FormRiskReport, 'riskHighlights' | 'watchFor' | 'insurerLens'>; label: string }[] = [
+  { key: 'riskHighlights', label: 'Risk overview' },
+  { key: 'watchFor',       label: 'What to look for' },
+  { key: 'insurerLens',    label: "The insurer's lens" },
+]
+
+function RiskReportAccordion({ form }: { form: BaseForm }) {
+  const [open, setOpen]       = useState(false)
+  const [report, setReport]   = useState<FormRiskReport | null>(form.riskReport ?? null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState<string | null>(null)
+
+  async function toggle() {
+    const next = !open
+    setOpen(next)
+    if (!next || report || loading) return
+    setLoading(true); setError(null)
+    try {
+      const out = await adapter.fns.call<{ formKey: string }, { report: FormRiskReport; cached: boolean }>(
+        'formRiskReport', { formKey: form.id },
+      )
+      setReport(out.report)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Report unavailable right now.')
+      setOpen(false)
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div className="mt-1.5 rounded-[10px] overflow-hidden transition-colors"
+      style={{ border: `1px solid ${open ? 'var(--color-accent-line)' : 'var(--color-border)'}` }}>
+      <button
+        type="button"
+        onClick={() => void toggle()}
+        aria-expanded={open}
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left transition-colors hover:bg-accent-soft"
+        style={{ background: open ? 'var(--color-accent-soft)' : 'var(--color-raised)' }}
+      >
+        <IconSparkle size={12} className="text-accent shrink-0" aria-hidden="true" />
+        <span className="text-[11px] font-semibold text-text flex-1">Risk report</span>
+        {loading
+          ? <WaveformLoader size="xs" label="" className="text-accent" />
+          : <IconChevronRight size={12} aria-hidden="true"
+              className="shrink-0 text-faint transition-transform duration-200"
+              style={{ transform: open ? 'rotate(90deg)' : 'none' }} />}
+      </button>
+      {error && <p className="px-2.5 py-1.5 text-[10.5px] text-danger" role="alert">{error}</p>}
+      {open && report && (
+        <div className="facet-reveal flex flex-col gap-3 px-2.5 py-2.5 bg-surface" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <p className="text-[11.5px] text-dim leading-relaxed">{report.overview}</p>
+          {REPORT_SECTIONS.map(({ key, label }) => {
+            const items = report[key] ?? []
+            if (items.length === 0) return null
+            return (
+              <div key={key} className="flex flex-col gap-1">
+                <h4 className="text-[9.5px] font-semibold uppercase tracking-[.08em] text-accent">{label}</h4>
+                <ul className="flex flex-col gap-1">
+                  {items.map((p, i) => (
+                    <li key={i} className="flex gap-1.5 text-[11px] text-dim leading-relaxed">
+                      <span className="mt-[6px] w-1 h-1 rounded-full shrink-0" style={{ background: 'var(--color-accent)' }} aria-hidden="true" />
+                      <span className="min-w-0"><CitedText text={p} /></span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
+          <p className="text-[9.5px] text-faint">Grounded in the attached form — every point cites its clause. Not a claims decision.</p>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit, actor }: Props) {
@@ -260,16 +351,30 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
           forms.map(f => {
             const on = f.id === selectedId
             return (
-              <div key={f.id} className="relative group">
+              <div key={f.id}
+                className={`relative group rounded-[12px] transition-all ${on ? 'bg-accent-soft' : 'bg-surface hover:bg-hover'}`}
+                style={{ border: `1px solid ${on ? 'var(--color-accent-line)' : 'var(--color-border)'}`, boxShadow: on ? 'var(--shadow-card)' : 'none' }}
+              >
+                {/* Name block — the select target */}
                 <button
                   onClick={() => onSelect(f.id)}
                   aria-pressed={on}
-                  className={`w-full text-left rounded-[12px] p-3 flex items-start gap-2.5 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${on ? 'bg-accent-soft' : 'bg-surface hover:bg-hover'}`}
-                  style={{ border: `1px solid ${on ? 'var(--color-accent-line)' : 'var(--color-border)'}`, boxShadow: on ? 'var(--shadow-card)' : 'none' }}
+                  className="w-full text-left rounded-t-[12px] p-3 pb-1.5 flex items-start gap-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
-                  <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 ${on ? 'text-accent' : 'text-faint'}`}
-                    style={{ background: on ? 'color-mix(in srgb, var(--color-accent) 12%, var(--color-surface))' : 'var(--color-raised)' }}>
+                  {/* Document emblem — gradient when selected; a shield-check seal once READY */}
+                  <div className={`relative w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0 transition-all ${on ? 'text-white' : 'text-faint group-hover:text-accent'}`}
+                    style={{
+                      background: on ? 'var(--gradient-accent)' : 'var(--color-raised)',
+                      boxShadow: on ? '0 1px 4px var(--glow-accent)' : 'none',
+                    }}>
                     <IconFile size={15} aria-hidden="true" />
+                    {f.status === 'READY' && !isUnverified(f) && (
+                      <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full grid place-items-center"
+                        style={{ background: 'var(--color-good)', border: '1.5px solid var(--color-surface)' }}
+                        title="Identified & verified" aria-hidden="true">
+                        <IconCheck size={8} className="text-white" />
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-col gap-1 min-w-0 flex-1">
                     <span className={`text-[13px] font-semibold leading-snug line-clamp-2 ${on ? 'text-accent' : 'text-text'}`}>{f.title}</span>
@@ -294,19 +399,29 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 text-[10px] text-faint">
-                      {f.status === 'PROCESSING' ? (
-                        <span className="inline-flex items-center gap-1 text-accent"><IconSpinner size={10} className="animate-spin" aria-hidden="true" /> Reading form…</span>
-                      ) : f.status === 'NEEDS_REVIEW' ? (
-                        <span className="inline-flex items-center gap-1 text-warn"><IconWarning size={10} aria-hidden="true" /> Needs review</span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1"><IconCheck size={10} className="text-good" aria-hidden="true" /> Ready</span>
-                      )}
-                      <span aria-hidden="true">·</span>
-                      <span>{relativeTime(f.createdAt)}</span>
-                    </div>
                   </div>
                 </button>
+
+                {/* Risk report — collapsed accordion, below the name block, above the status row */}
+                {f.status === 'READY' && (
+                  <div className="px-3">
+                    <RiskReportAccordion form={f} />
+                  </div>
+                )}
+
+                {/* Status row */}
+                <div className="flex items-center gap-1.5 text-[10px] text-faint px-3 pt-1.5 pb-2.5">
+                  {f.status === 'PROCESSING' ? (
+                    <span className="inline-flex items-center gap-1 text-accent"><IconSpinner size={10} className="animate-spin" aria-hidden="true" /> Reading form…</span>
+                  ) : f.status === 'NEEDS_REVIEW' ? (
+                    <span className="inline-flex items-center gap-1 text-warn"><IconWarning size={10} aria-hidden="true" /> Needs review</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1"><IconCheck size={10} className="text-good" aria-hidden="true" /> Ready</span>
+                  )}
+                  <span aria-hidden="true">·</span>
+                  <span>{relativeTime(f.createdAt)}</span>
+                </div>
+
                 {canEdit && (
                   <button
                     onClick={() => void remove(f)}

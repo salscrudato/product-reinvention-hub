@@ -1,5 +1,5 @@
 {
-  "runAt": "2026-07-14T11:21:46.281Z",
+  "runAt": "2026-07-14T16:06:48.758Z",
   "mode": "live",
   "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
   "targets": {
@@ -12,13 +12,13 @@
       "id": "CORE",
       "mode": "live",
       "goldenFields": 4132,
-      "extractedFields": 8205,
-      "tp": 3543,
-      "fp": 139,
-      "fn": 589,
-      "precision": 0.9622487778381315,
-      "recall": 0.8574540174249758,
-      "f1": 0.9068338878935245,
+      "extractedFields": 7891,
+      "tp": 3995,
+      "fp": 137,
+      "fn": 137,
+      "precision": 0.9668441432720233,
+      "recall": 0.9668441432720233,
+      "f1": 0.9668441432720233,
       "numericTotal": 112,
       "numericExact": 112,
       "numericExactRate": 1,
@@ -39,219 +39,234 @@
           }
         },
         "missByField": {
-          "allStates": 137,
-          "requirement": 112,
-          "claimsBasis": 112,
-          "premiumGenerating": 112,
-          "source": 112,
-          "name": 1,
-          "description": 1,
-          "marketSegment": 1,
-          "status": 1
+          "allStates": 137
         },
         "sampleMisses": [
           {
-            "kind": "product",
-            "refId": "CORE.PRD.001",
-            "field": "name",
-            "golden": "Core",
-            "extracted": "Product_Specifications_Core_07_13_2026"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.001",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "product",
-            "refId": "CORE.PRD.001",
-            "field": "description",
-            "golden": ""
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.002",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "product",
-            "refId": "CORE.PRD.001",
-            "field": "marketSegment",
-            "golden": "Personal Lines / Property"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.003",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "product",
-            "refId": "CORE.PRD.001",
-            "field": "status",
-            "golden": "ACTIVE",
-            "extracted": "DRAFT"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.004",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.001",
-            "field": "requirement",
-            "golden": "MANDATORY"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.005",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.001",
-            "field": "claimsBasis",
-            "golden": ""
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.006",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.001",
-            "field": "premiumGenerating",
-            "golden": false
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.007",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.001",
-            "field": "source",
-            "golden": "BUREAU"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.008",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.002",
-            "field": "requirement",
-            "golden": "MANDATORY"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.009",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.002",
-            "field": "claimsBasis",
-            "golden": ""
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.010",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.002",
-            "field": "premiumGenerating",
-            "golden": false
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.011",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.002",
-            "field": "source",
-            "golden": "BUREAU"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.012",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.003",
-            "field": "requirement",
-            "golden": "MANDATORY"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.013",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.003",
-            "field": "claimsBasis",
-            "golden": ""
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.014",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.003",
-            "field": "premiumGenerating",
-            "golden": false
+            "kind": "rule",
+            "refId": "CORE.PRD.001.RULE.015",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.003",
-            "field": "source",
-            "golden": "BUREAU"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.018",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.004",
-            "field": "requirement",
-            "golden": "MANDATORY"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.022",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.004",
-            "field": "claimsBasis",
-            "golden": ""
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.024",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.004",
-            "field": "premiumGenerating",
-            "golden": false
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.029",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.004",
-            "field": "source",
-            "golden": "BUREAU"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.030",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.005",
-            "field": "requirement",
-            "golden": "MANDATORY"
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.035",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.005",
-            "field": "claimsBasis",
-            "golden": ""
+            "kind": "rule",
+            "refId": "CORE.LOB.001.RULE.037",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.005",
-            "field": "premiumGenerating",
-            "golden": false
+            "kind": "rule",
+            "refId": "CORE.PRD.001.RULE.038",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.005",
-            "field": "source",
-            "golden": "BUREAU"
+            "kind": "rule",
+            "refId": "CORE.PRD.001.RULE.039",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           },
           {
-            "kind": "coverage",
-            "refId": "CORE.COV.006",
-            "field": "requirement",
-            "golden": "MANDATORY"
+            "kind": "rule",
+            "refId": "CORE.PRD.001.RULE.040",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
           }
         ],
         "extractedKinds": {
           "product": 1,
           "coverage": 113,
-          "rule": 537,
+          "rule": 468,
           "rtTable": 20
         }
       },
       "provenanceCoverage": 1,
       "entityCoverage": 1,
-      "provenanceRows": 14960,
+      "provenanceRows": 14744,
       "spend": {
-        "spendUsd": 69.8153,
-        "calls": 647,
+        "spendUsd": 70.0218,
+        "calls": 642,
         "noCap": true,
         "byDeployment": {
           "claude-haiku-4-5": {
             "calls": 189,
-            "inputTokens": 508392,
-            "outputTokens": 777409,
-            "usd": 3.5163496
+            "inputTokens": 507814,
+            "outputTokens": 774590,
+            "usd": 3.5046111999999994
           },
           "claude-opus-4-8": {
-            "calls": 106,
-            "inputTokens": 416123,
-            "outputTokens": 621771,
-            "usd": 52.87466999999997
+            "calls": 104,
+            "inputTokens": 416604,
+            "outputTokens": 625087,
+            "usd": 53.13058499999998
           },
           "gpt-5-mini": {
             "calls": 188,
-            "inputTokens": 448300,
-            "outputTokens": 987255,
-            "usd": 1.7140979999999992
+            "inputTokens": 447869,
+            "outputTokens": 988096,
+            "usd": 1.7153142999999995
           },
           "gpt-5.1": {
-            "calls": 74,
-            "inputTokens": 285622,
-            "outputTokens": 41864,
-            "usd": 1.3592339999999996
+            "calls": 71,
+            "inputTokens": 288371,
+            "outputTokens": 38463,
+            "usd": 1.3266690000000003
           },
           "claude-sonnet-5": {
             "calls": 90,
-            "inputTokens": 352873,
-            "outputTokens": 619491,
-            "usd": 10.350984
+            "inputTokens": 352821,
+            "outputTokens": 619080,
+            "usd": 10.344662999999999
           }
         }
       },
-      "durationMs": 5695298,
-      "pass": false
+      "durationMs": 5689734,
+      "pass": true
     }
   ]
 }

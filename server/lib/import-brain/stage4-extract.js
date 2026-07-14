@@ -207,6 +207,14 @@ function fieldsFromExtraction(payload, rowIdx) {
   return ent ? toEntityFields(ent) : []
 }
 
+// Called ONCE per sheet with every batch's conflicts pooled (was per-batch: each
+// conflicted 20-row batch paid its own sonnet+opus re-extraction — 40 opus calls /
+// 2059 s of a 2292 s forms-library run). Pooled conflicts regroup into DENSE chunks
+// of ≤ BATCH_ROWS conflicted rows (buildExtractionPrompt addresses rows by explicit
+// index, so chunks need not be contiguous), chunks run 3-wide, and each chunk climbs
+// the same sonnet→opus ladder. Chunks stay ≤ BATCH_ROWS so the 4096-token escalation
+// output can hold every re-extracted row — oversized chunks under-fill silently
+// (the filing rate-order bug class).
 async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, rows, batchStart, sheetName, budget, review, deployJudge }) {
   if (conflicts.length === 0) return
 
@@ -217,39 +225,48 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
 
   // ── Ladder votes: MID_REASONER (sonnet) first, GROUNDED_CITED (opus) second ──
   // A missing sonnet deployment (Foundry 4xx) is skipped — ladder degrades to opus.
-  const ladderPayloads = []
-  for (const role of ['MID_REASONER', 'GROUNDED_CITED']) {
-    // Stop climbing once every conflict already has a 2-vote consensus.
-    const unresolved = conflicts.filter(c => !c.resolved)
-    if (unresolved.length === 0) break
-    let deployment
-    try { deployment = resolveAnthropic(role, budget) } catch { continue }
-    const targetIdxs = [...new Set(unresolved.map(c => c.rowIdx))]
-    const escUser = [
-      buildExtractionPrompt(fp, colMap, headerRow, rowSlice.filter(r => targetIdxs.includes(r.idx)).map(r => r.cells), 0, rowSlice.filter(r => targetIdxs.includes(r.idx)).map(r => r.idx)),
-      `\nIndependent extractors disagreed on some fields in these rows. Re-extract every row above with maximum care and exact citations.`,
-    ].join('\n')
-    let payload = null
-    try {
-      const res = await callAnthropic({ deployment, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt: escUser, maxTokens: 4096, budget })
-      payload = parseExtraction(res.raw)
-    } catch { payload = null }
-    if (!payload) continue
-    ladderPayloads.push({ role, payload })
+  const chunks = []
+  for (let i = 0; i < rowSlice.length; i += BATCH_ROWS) chunks.push(rowSlice.slice(i, i + BATCH_ROWS))
+  const conflictsByRow = new Map()
+  for (const c of conflicts) {
+    if (!conflictsByRow.has(c.rowIdx)) conflictsByRow.set(c.rowIdx, [])
+    conflictsByRow.get(c.rowIdx).push(c)
+  }
+  await pMap(chunks, async (chunk) => {
+    const chunkConflicts = chunk.flatMap(r => conflictsByRow.get(r.idx) ?? [])
+    for (const role of ['MID_REASONER', 'GROUNDED_CITED']) {
+      // Stop climbing once every conflict in this chunk has a 2-vote consensus.
+      const unresolved = chunkConflicts.filter(c => !c.resolved)
+      if (unresolved.length === 0) break
+      let deployment
+      try { deployment = resolveAnthropic(role, budget) } catch { continue }
+      const targetIdxs = [...new Set(unresolved.map(c => c.rowIdx))]
+      const target = chunk.filter(r => targetIdxs.includes(r.idx))
+      const escUser = [
+        buildExtractionPrompt(fp, colMap, headerRow, target.map(r => r.cells), 0, target.map(r => r.idx)),
+        `\nIndependent extractors disagreed on some fields in these rows. Re-extract every row above with maximum care and exact citations.`,
+      ].join('\n')
+      let payload = null
+      try {
+        const res = await callAnthropic({ deployment, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt: escUser, maxTokens: 4096, budget })
+        payload = parseExtraction(res.raw)
+      } catch { payload = null }
+      if (!payload) continue
 
-    for (const conflict of unresolved) {
-      const tierFields = fieldsFromExtraction(payload, conflict.rowIdx)
-      const tf = tierFields.find(f => f.fieldName === conflict.fieldName)
-      if (tf) {
-        conflict.candidates.push({ key: role === 'MID_REASONER' ? 'c' : 'd', value: tf.value, confidence: tf.confidence, citation: tf.citation, source: role })
-      }
-      const strict = isStrictField(conflict.fieldName)
-      const vote = weightedMajority(conflict.candidates, strict)
-      if (vote.consensus) {
-        conflict.resolved = { ...vote.winner, method: `majority@${role}` }
+      for (const conflict of unresolved) {
+        const tierFields = fieldsFromExtraction(payload, conflict.rowIdx)
+        const tf = tierFields.find(f => f.fieldName === conflict.fieldName)
+        if (tf) {
+          conflict.candidates.push({ key: role === 'MID_REASONER' ? 'c' : 'd', value: tf.value, confidence: tf.confidence, citation: tf.citation, source: role })
+        }
+        const strict = isStrictField(conflict.fieldName)
+        const vote = weightedMajority(conflict.candidates, strict)
+        if (vote.consensus) {
+          conflict.resolved = { ...vote.winner, method: `majority@${role}` }
+        }
       }
     }
-  }
+  }, 3)
 
   // Final majority pass for conflicts that gained votes but were checked mid-ladder.
   for (const conflict of conflicts) {
@@ -259,9 +276,11 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
   }
 
   // ── LLM judge (gpt-5.1, decorrelated family) for still-unresolved fields ─────
-  for (const conflict of conflicts) {
-    if (conflict.resolved) continue
-    const row = rowSlice.find(r => r.idx === conflict.rowIdx)
+  // Judge calls are independent per field — 4-wide (was sequential; 118 unresolved
+  // fields at ~1.5 s each is 3 minutes of avoidable serialization).
+  const rowByIdx = new Map(rowSlice.map(r => [r.idx, r]))
+  await pMap(conflicts.filter(c => !c.resolved), async (conflict) => {
+    const row = rowByIdx.get(conflict.rowIdx)
     const rowCells = row ? row.cells.map((c, i) => `${colLetter(i)}${conflict.rowIdx + headerRow + 2}="${String(c ?? '')}"`).join(' | ') : '(row unavailable)'
     const candLines = conflict.candidates.slice(0, 3).map((c, i) =>
       `Candidate ${String.fromCharCode(97 + i)} (${c.source}, confidence ${Number(c.confidence).toFixed(2)}): ${JSON.stringify(c.value)}`).join('\n')
@@ -281,7 +300,7 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
       const pick = conflict.candidates['abc'.indexOf(judged.verdict)] ?? null
       if (pick) {
         conflict.resolved = { ...pick, confidence: Math.min(Number(judged.confidence ?? pick.confidence), 1), method: 'judge' }
-        continue
+        return
       }
     }
     // Judge could not ground any candidate → importWarning; keep best candidate FLAGGED.
@@ -289,7 +308,7 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
       kind: 'consensus-failure', sheetName, rowIndex: conflict.rowIdx, fieldPath: conflict.fieldName,
       detail: `No grounded consensus for "${conflict.fieldName}" (candidates: ${conflict.candidates.map(c => JSON.stringify(c.value)).slice(0, 4).join(' vs ')}). Kept highest-confidence candidate flagged for review.`,
     })
-  }
+  }, 4)
 
   // ── Write resolved values back into the entities ──────────────────────────
   const byRow = new Map(entities.map(e => [e.sourceRowIndex, e]))
@@ -673,10 +692,10 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
         }
         if (!recovered) {
           review.push({ kind: 'dropped-batch', sheetName: fp.sheetName, detail: `Rows ${batchStart}-${batchStart + batch.length - 1}: every extractor tier failed to parse — rows require manual review.` })
-          return []
+          return { entities: [], conflicts: [] }
         }
         const { entities } = reconcileEntities(recovered.entities, [], fp.sheetName, review)
-        return entities
+        return { entities, conflicts: [] }
       }
 
       const { entities, conflicts } = reconcileEntities(
@@ -686,18 +705,24 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
         review,
       )
 
-      // Consensus ladder + judge for conflicted fields.
-      await resolveConflicts({
-        conflicts, entities, fp, colMap,
-        headerRow: lock.headerRowIndex, rows: batch, batchStart,
-        sheetName: fp.sheetName, budget, review, deployJudge,
-      })
-
       progress(`${fp.sheetName}: rows ${batchStart}-${batchStart + batch.length - 1} of ${rows.length} extracted`)
-      return entities
+      return { entities, conflicts }
     }, 3)
 
-    return { fp, entities: batchResults }
+    // Consensus ladder + judge ONCE per sheet over the pooled conflicts — dense
+    // chunks of conflicted rows instead of one ladder climb per conflicted batch.
+    const sheetConflicts = batchResults.flatMap(r => r.conflicts)
+    const sheetEntities  = batchResults.flatMap(r => r.entities)
+    if (sheetConflicts.length > 0) {
+      progress(`${fp.sheetName}: resolving ${sheetConflicts.length} conflicted field(s) across ${new Set(sheetConflicts.map(c => c.rowIdx)).size} row(s)`)
+      await resolveConflicts({
+        conflicts: sheetConflicts, entities: sheetEntities, fp, colMap,
+        headerRow: lock.headerRowIndex, rows, batchStart: 0,
+        sheetName: fp.sheetName, budget, review, deployJudge,
+      })
+    }
+
+    return { fp, entities: batchResults.map(r => r.entities) }
   }
 
   const sheetResults = await pMap(contentSheets, extractSheet, 2)

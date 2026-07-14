@@ -66,14 +66,28 @@ BULK_VERIFY=claude-haiku-4-5, VISION/judge=gpt-5.1, CHEAP=gpt-5-mini.
 
 | Check | Result |
 |---|---|
-| Golden eval (`pnpm import:eval --live`, targets F1≥0.95 / numeric≥0.98 / citations 100%) | GL **0.970/1.000/100%** ✓ · IM **1.000/1.000/100%** ✓ · PR **0.999/1.000/100%** ✓ · CORE **0.907** ✗→ gap-fill fix (`c76f4c2`) deployed, **rerun pending** (expect ≥0.95) |
+| Golden eval (`pnpm import:eval --live`, targets F1≥0.95 / numeric≥0.98 / citations 100%) | GL **0.970/1.000/100%** ✓ · IM **1.000/1.000/100%** ✓ · PR **0.999/1.000/100%** ✓ · CORE **0.967/1.000/100%** ✓ (16:06Z 2026-07-14 rerun, 14,744 prov rows, entityRecall 1.0 — ALL FOUR FORMATS PASS). Residual CORE miss = `allStates` ×137 on rules only (stage-7 iso-join contributes 0 rules); the earlier 0.907 was an **intermittent** full-workbook iso-join skip — see `docs/audit/import_eval_iso_join_investigation.md` |
 | Adversarial corpus (blank/decoy/dup/placeholder/wrong-LOB/mixed-lang/garbage-PDF) | 0 fabrications ✓ |
 | XLSM (macro, 10 sheets, 1M phantom rows) | `PR.PROD.001`: 1067 cov + 240 forms + 1608 rules, 29,290/29,290 cited ✓ |
 | additional_samples (gitignored, repo root: Hagerty/FY25/FY26/2026 variants) | pass (105–450 covs); header-only templates correctly source-gap ✓ |
-| NJ filing PDFs (encrypted/CID — naive text = 0 chars) | policy form 22 covs via vision ✓; rate-order/manual **0 items — open item #1** |
-| Persist (`/api/db/mutate` atomic batch) + canaries | ✓ (probe leftover: 8 coverage docs in `import-persist-probe` tenant — clean up) |
+| NJ filing PDFs (encrypted/CID — naive text = 0 chars) | ✓ VERIFIED post-`3c1b93b` (all 3 in ONE request, `accenture-test`): classify 3/3, extractions concurrent (all start ~8s), rate-order **74 cited vars**, manual **72 cited rules**, policy form **22 covs**, 51 unresolved rate-order steps flagged w/ reason+citation (nothing dropped), clean `done`, $6.45 telemetry |
+| UI notice crash (`Cannot destructure 'level'`) | ✓ FIXED `aa4aa60`: `resolveNotice` was undefined for non-canonical SSE kinds (`sanitize-note`, `extract-empty`, …) → NoticeBanner destructure crashed the shell. Reproduced live via Playwright 3-PDF upload (byte-identical error), re-verified post-deploy (banners render, review reached, 0 page errors). 16-test regression lock `app/src/lib/ai/notices.test.ts` |
+| Persist (`/api/db/mutate` atomic batch) + canaries | ✓ re-verified E2E via the REAL UI (Playwright: Import 28 items → draft written → opened → UI-deleted; `accenture-test` back to 4 seeded products). `import-persist-probe` entity docs already clean; 4 inert `loginAudit` rows remain (direct Cosmos delete was permission-denied; tenant has no `tenant:` doc so `/offboard` 404s) |
 
-## 3. OPEN ITEMS (your job, priority order)
+## 3. OPEN ITEMS — ALL CLOSED 2026-07-14 (see §2 for verified results)
+
+Resolution summary: (1) NJ filing under-fill fix `3c1b93b` VERIFIED live (74 vars / 72 rules /
+22 covs, one request, concurrent). (2) UI `level`-destructure crash FIXED `aa4aa60` (resolveNotice
+made total; live before/after Playwright repro; 16-test lock). (3) CORE rerun **0.967 PASS**;
+the residual 137 rules-`allStates` misses were then root-caused by the EM session to raw ExcelJS
+cell objects entering `isoGrids` — fixed in `workbook.js` via `normalizeCellValue` (projected
+F1 ≈ 0.999; see `docs/audit/import_eval_iso_join_investigation.md`, confirm-run status in
+orchestration.md). (4) forms-library GL 2025 retested on current deploy — see §2. (5) persist E2E
+re-verified via the real UI; probe tenant clean (4 inert loginAudit rows remain, delete
+permission-gated). Remaining optional hardening: single-scheme grounding-chunk corpus
+(memory `reference-cosmos-reseed`); UnifiedImportModal restyling is the AgentVisualizer lane's.
+
+<details><summary>Original open-item detail (historical)</summary>
 
 1. **NJ filing rate-order + manual — ROOT CAUSE FOUND, fix deployed, VERIFY IT.** Debug notices caught it live: with maxTokens 4000/8000 the models UNDER-FILL the forced tool call (opus returned maxCreditRuleRef + note but NO variables array; haiku/sonnet returned {}). Fix in `3c1b93b`: output budgets 16000 (rate order, manual) / 8192 (policy form) + one explicit fill-the-array retry per rung when the primary array is empty. A solo rate-order probe already yielded **70 cited variables**. YOUR FIRST TASK: confirm run for `3c1b93b` succeeded, then replay all 3 samples/filings/nj-lemonade-ho PDFs in ONE request (scratch probe-live.mjs pattern or your own SSE client; tee output to a file — piping through head SIGPIPE-kills the probe). Expect: classify all 3 roles, three extractions concurrent (start together ~8s), rate-order ~70 variables, manual rules > 0 (raise its budget further if the extract-empty notice shows under-fill again — the manual is table-dense), policy form 22 coverages, normalized bundle, no UI crash. If manual still under-fills at 16k, split extraction per page-range or per rule-number block.
 2. **UI ErrorBoundary crash — TRIAGE (user-reported on latest deploy):**
@@ -106,12 +120,19 @@ BULK_VERIFY=claude-haiku-4-5, VISION/judge=gpt-5.1, CHEAP=gpt-5-mini.
    `reference-cosmos-reseed`), UnifiedImportModal ownership is ANOTHER lane's
    (AgentVisualizer) — coordinate via orchestration.md before restyling.
 
+</details>
+
 ## 4. Test harnesses & commands
 
 - Offline (no AI, gate-safe): `pnpm import:eval` (parse-stability vs
   `tests/golden/import/*.golden.json`; regenerate with `--write-golden`).
 - Live metrics: `pnpm import:eval -- --live` with env `IMPORT_EVAL_ONLY=GL,IM`,
-  `IMPORT_TENANT=<isolated>`, `IMPORT_EVAL_TIMEOUT_MS`, `IMPORT_EVAL_DUMP=1`.
+  `IMPORT_TENANT=<isolated>`, `IMPORT_EVAL_TIMEOUT_MS`. Live runs now stream server
+  stage events + notices (timestamped, persisted into the results JSON), ALWAYS dump
+  extractions to `docs/audit/import_eval_extracted-<ID>.json`, and carry a 90 s SSE
+  stall watchdog (half-open sockets after a deploy abort with a retryable message).
+  `--rescore` re-scores the last dump against golden offline in seconds (no AI spend) —
+  server-side changes still need a fresh `--live`.
 - Live robustness: `pnpm import:live` with `IMPORT_LIVE_ONLY=gl|im|pr|core|pdf|addl|adv|roundtrip`
   (per-slice results `docs/audit/import_live_results-<slice>.json`). Parallelize slices
   in separate tenants — one workbook import ≈ 1–40 min, ~$0.30–0.70 per single workbook.

@@ -1,5 +1,5 @@
 {
-  "runAt": "2026-07-13T22:32:16.819Z",
+  "runAt": "2026-07-14T16:19:36.205Z",
   "mode": "offline",
   "baseUrl": null,
   "targets": {
@@ -23,6 +23,44 @@
       "numericExact": 116,
       "numericExactRate": 1,
       "entityRecall": 1,
+      "diagnostics": {
+        "entityByKind": {
+          "product": {
+            "golden": 1,
+            "found": 1
+          },
+          "coverage": {
+            "golden": 105,
+            "found": 105
+          },
+          "rule": {
+            "golden": 146,
+            "found": 146
+          },
+          "formRule": {
+            "golden": 259,
+            "found": 259
+          },
+          "ldTable": {
+            "golden": 37,
+            "found": 37
+          },
+          "rtTable": {
+            "golden": 4,
+            "found": 4
+          }
+        },
+        "missByField": {},
+        "sampleMisses": [],
+        "extractedKinds": {
+          "product": 1,
+          "coverage": 105,
+          "rule": 146,
+          "formRule": 259,
+          "ldTable": 37,
+          "rtTable": 4
+        }
+      },
       "pass": true
     },
     {
@@ -40,6 +78,34 @@
       "numericExact": 832,
       "numericExactRate": 1,
       "entityRecall": 1,
+      "diagnostics": {
+        "entityByKind": {
+          "product": {
+            "golden": 1,
+            "found": 1
+          },
+          "coverage": {
+            "golden": 798,
+            "found": 798
+          },
+          "rule": {
+            "golden": 752,
+            "found": 752
+          },
+          "ldTable": {
+            "golden": 34,
+            "found": 34
+          }
+        },
+        "missByField": {},
+        "sampleMisses": [],
+        "extractedKinds": {
+          "product": 1,
+          "coverage": 798,
+          "rule": 752,
+          "ldTable": 34
+        }
+      },
       "pass": true
     },
     {
@@ -57,6 +123,29 @@
       "numericExact": 603,
       "numericExactRate": 1,
       "entityRecall": 1,
+      "diagnostics": {
+        "entityByKind": {
+          "product": {
+            "golden": 1,
+            "found": 1
+          },
+          "coverage": {
+            "golden": 603,
+            "found": 603
+          },
+          "rule": {
+            "golden": 1608,
+            "found": 1608
+          }
+        },
+        "missByField": {},
+        "sampleMisses": [],
+        "extractedKinds": {
+          "product": 1,
+          "coverage": 603,
+          "rule": 1608
+        }
+      },
       "pass": true
     },
     {
@@ -74,6 +163,29 @@
       "numericExact": 112,
       "numericExactRate": 1,
       "entityRecall": 1,
+      "diagnostics": {
+        "entityByKind": {
+          "product": {
+            "golden": 1,
+            "found": 1
+          },
+          "coverage": {
+            "golden": 112,
+            "found": 112
+          },
+          "rule": {
+            "golden": 234,
+            "found": 234
+          }
+        },
+        "missByField": {},
+        "sampleMisses": [],
+        "extractedKinds": {
+          "product": 1,
+          "coverage": 112,
+          "rule": 234
+        }
+      },
       "pass": true
     }
   ]

@@ -578,6 +578,56 @@ h1, h2 { text-wrap: balance; }
 }
 .wf-rest .wf-bar { animation: none; transform: scaleY(var(--wf-min, .3)); }
 
+/* ── Mic beacon (ChatComposer voice button) — a quiet attention breath ─────────
+   The idle mic swells and settles on a slow repeat while a soft accent back-glow
+   blooms behind it. Deliberately gentle: ~4% scale, long period, token glow. */
+@keyframes mic-beacon {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 var(--color-accent-soft); }
+  45%      { transform: scale(1.06); box-shadow: 0 0 0 7px var(--color-accent-soft), 0 0 18px 2px var(--color-accent-line); }
+  60%      { transform: scale(1.02); }
+}
+.mic-beacon { animation: mic-beacon 3.2s var(--ease-spring) infinite; }
+
+/* ── Button wave — a soft highlight that follows the pointer (see ui/Button) ───
+   --color-btn-wave-on-fill is the white sheen used on filled (primary) buttons. */
+:root { --color-btn-wave-on-fill: rgba(255,255,255,.22); }
+/*
+   --wx/--wy are set from onMouseMove; the ::after sheen fades in on hover and
+   glides with the cursor. Sits above the background, below the label. */
+.btn-wave-follow { position: relative; overflow: hidden; isolation: isolate; }
+.btn-wave-follow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(90px circle at var(--wx, 50%) var(--wy, 50%),
+    var(--color-btn-wave, var(--color-accent-soft)) 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity .25s var(--ease-spring);
+  pointer-events: none;
+}
+.btn-wave-follow:hover:not(:disabled)::after { opacity: 1; }
+
+/* ── Cursor water ripples — spawned by CursorTrail while the pointer moves ─────
+   Each ripple is one span that expands and dissolves; the component throttles
+   spawn rate and caps live nodes, and does not mount under reduced motion. */
+@keyframes cursor-ripple {
+  0%   { transform: translate(-50%, -50%) scale(.35); opacity: .5; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+.cursor-ripple {
+  position: fixed;
+  z-index: 9999;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-accent-line);
+  background: var(--color-accent-soft);
+  pointer-events: none;
+  animation: cursor-ripple .7s ease-out both;
+}
+
 /* ── Agent visualizer (import pipeline) — event-driven pulses only ────────────
    viz-pulse travels a rail segment once per REAL received event (re-keyed by the
    event count); viz-ring breathes on the active stage node. Both are neutralised
@@ -692,5 +742,8 @@ h1, h2 { text-wrap: balance; }
   .para-in { animation: none !important; }
   /* Waveform loader → calm static pulse: fixed mid-height bars, softened. */
   .wf-bar { animation: none !important; transform: scaleY(.55) !important; opacity: .75; }
+  .mic-beacon { animation: none !important; }
+  .cursor-ripple { display: none !important; }
+  .btn-wave-follow::after { transition: none !important; }
   .state-tile__cell, .state-tile__ring { transition: none !important; }
 }

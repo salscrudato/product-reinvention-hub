@@ -180,8 +180,10 @@ export function SeedReviewSheet({ project, priorSeeded, actor, onClose, onSeeded
           const phaseState: 'all' | 'some' | 'none' =
             newRows.length === 0 ? 'all' : selCount === newRows.length ? 'all' : selCount === 0 ? 'none' : 'some'
           return (
-            <section key={ph.name} className="rounded-[12px]" style={{ border: '1px solid var(--color-border)' }}>
-              <div className="flex items-center gap-2.5 px-3 py-2.5">
+            <section key={ph.name} className="rounded-[12px] overflow-hidden transition-shadow hover:shadow-[var(--shadow-card)]" style={{ border: '1px solid var(--color-border)' }}>
+              {/* Phase band — tint rail, name, live selection + duration chips */}
+              <div className="relative flex items-center gap-2.5 pl-4 pr-3 py-2.5 bg-raised">
+                <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: `var(${ph.cssVar})` }} aria-hidden="true" />
                 <TriCheckbox
                   state={phaseState}
                   disabled={newRows.length === 0}
@@ -190,17 +192,27 @@ export function SeedReviewSheet({ project, priorSeeded, actor, onClose, onSeeded
                 />
                 <button type="button" onClick={() => toggleCollapse(ph.name)} aria-expanded={isOpen}
                   className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-[7px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-                  <IconChevronDown size={14} className="transition-transform shrink-0" style={{ transform: isOpen ? 'none' : 'rotate(-90deg)' }} aria-hidden="true" />
-                  <span className="w-2 h-2 rounded-[3px] shrink-0" style={{ background: `var(${ph.cssVar})` }} aria-hidden="true" />
+                  <IconChevronDown size={14} className="transition-transform duration-200 shrink-0 text-faint" style={{ transform: isOpen ? 'none' : 'rotate(-90deg)' }} aria-hidden="true" />
                   <span className="text-[13px] font-semibold text-text truncate">{ph.name}</span>
                 </button>
-                <span className="text-[11px] text-faint font-semibold whitespace-nowrap">
-                  {newRows.length === 0 ? 'all on board' : `${selCount}/${newRows.length}`}
-                  {' · '}{ph.name === 'Product Governance & Monitoring' ? 'post-launch' : `${phaseDays(rows, overrides)}d`}
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[10.5px] font-semibold tabular-nums bg-surface text-dim whitespace-nowrap" style={{ border: '1px solid var(--color-border)' }}>
+                  {newRows.length === 0 ? 'all on board' : `${selCount}/${newRows.length} selected`}
+                </span>
+                <span className="text-[10.5px] font-semibold text-faint tabular-nums whitespace-nowrap">
+                  {ph.name === 'Product Governance & Monitoring' ? 'post-launch' : `${phaseDays(rows, overrides)}d`}
                 </span>
               </div>
               {isOpen && (
                 <div style={{ borderTop: '1px solid var(--color-border)' }}>
+                  {/* Column legend — names the editable columns so the grid reads at a glance */}
+                  <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 text-[9.5px] font-semibold uppercase tracking-[.08em] text-faint select-none" style={{ borderBottom: '1px solid var(--color-border)' }} aria-hidden="true">
+                    <span className="w-4 shrink-0" />
+                    <span className="flex-1 min-w-0">Task</span>
+                    <span className="w-[128px]">Owner</span>
+                    <span className="w-[52px] text-right">Days</span>
+                    <span className="hidden md:block w-[76px]">Type</span>
+                    <span className="w-[112px] text-right">Schedule</span>
+                  </div>
                   {rows.map(t => {
                     const id = seedRefIdFor(t)
                     const onBoard = present.has(id)
@@ -296,7 +308,8 @@ function TaskRow({
         : task.phaseOrder === 5 ? 'Post-launch' : '—'
   const editable = !onBoard && selected
   return (
-    <div className={`flex items-center gap-2.5 px-3 py-2 ${onBoard ? 'opacity-60' : ''}`} style={{ borderTop: '1px solid var(--color-border)' }}>
+    <div className={`group flex items-center gap-2.5 px-3 py-2 transition-colors hover:bg-raised/60 ${onBoard ? 'opacity-60' : selected ? '' : 'opacity-75'}`}
+      style={{ borderTop: '1px solid var(--color-border)' }}>
       {onBoard ? (
         <span title="Already on the board" className="w-[17px] h-[17px] rounded-[5px] grid place-items-center shrink-0"
           style={{ background: 'var(--color-good-soft)' }}>
@@ -319,7 +332,7 @@ function TaskRow({
       {/* Owner (editable role) */}
       {editable ? (
         <input value={ownerValue} onChange={e => onOwner(e.target.value)} aria-label={`Owner for ${task.taskL4}`}
-          className="hidden sm:block w-[128px] h-7 px-2 rounded-[7px] bg-raised text-[11.5px] text-text truncate focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+          className="hidden sm:block w-[128px] h-7 px-2 rounded-[7px] bg-surface text-[11.5px] text-text truncate transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 hover:border-[color:var(--color-accent-line)]"
           style={{ border: '1px solid var(--color-border)' }} />
       ) : (
         <span className="hidden sm:block w-[128px] text-[11.5px] text-dim truncate">{ownerValue}</span>
