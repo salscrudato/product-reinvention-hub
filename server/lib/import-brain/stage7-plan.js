@@ -457,6 +457,39 @@ function buildImportPlan(brainOutput, opts = {}) {
     }
   }
 
+  // ── refId remap: rewrite EDGES, not just node names (ledger F17) ────────────
+  // Identity adoption is a graph operation. Every field that can reference a
+  // remapped refId must follow it, or the plan carries dangling relations and
+  // the orphan check below falsely promotes children whose parent simply got a
+  // new id. Falsy remap targets never rewrite (iso forms carry refId null).
+  if (refIdRemap.size > 0) {
+    const remapTo = (kind, id) => (typeof id === 'string' && id !== '' && refIdRemap.get(`${kind}|${id}`)) || null
+    for (const c of coverages) {
+      const p = remapTo('coverage', c.data.parentId)
+      if (p) c.data.parentId = p
+      if (Array.isArray(c.data.terms)) {
+        for (const t of c.data.terms) {
+          const ld = t && remapTo('ldTable', t.ldTableRef)
+          if (ld) t.ldTableRef = ld
+        }
+      }
+    }
+    for (const r of [...rules, ...formRules]) {
+      if (Array.isArray(r.data.coverageRefIds)) {
+        r.data.coverageRefIds = r.data.coverageRefIds.map((id) => remapTo('coverage', id) || id)
+      }
+      const tableRef = remapTo('ldTable', r.data.ldTableRef) || remapTo('rtTable', r.data.ldTableRef)
+      if (tableRef) r.data.ldTableRef = tableRef
+    }
+    if (ratingProgram && Array.isArray(ratingProgram.data.steps)) {
+      for (const s of ratingProgram.data.steps) {
+        const ref = s && s.source && s.source.ref
+        const to = remapTo('rtTable', ref) || remapTo('ldTable', ref)
+        if (to) s.source.ref = to
+      }
+    }
+  }
+
   // ── Provenance: every field of every accepted entity keeps its citation ────
   const provenance = []
   for (const e of accepted) {
