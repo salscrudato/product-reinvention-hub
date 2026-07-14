@@ -14,7 +14,7 @@
 const fleet = require('../fleet')
 const { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI } = require('./ai-call')
 const { STAGE3_MAP_SYSTEM } = require('./prompts')
-const { extractJson, DOMAIN_ENTITY_KINDS, CONFIDENCE_REVIEW, colLetter, pMap } = require('./constants')
+const { extractJson, DOMAIN_ENTITY_KINDS, CONFIDENCE_REVIEW, colLetter, pMap, parseWithRetry } = require('./constants')
 
 // Load CANONICAL_MAP and SURFACED_COLUMNS from the shared CJS bundle.
 const brainShared = require('../import-brain-shared.cjs')
@@ -66,19 +66,26 @@ function parseMappings(raw) {
   try {
     const arr = extractJson(raw)
     if (!Array.isArray(arr)) return null
-    return arr.map(item => {
+    const entries = []
+    let dropped = 0
+    for (const item of arr) {
+      // Runtime shape validation (P0-7 / ledger F16): a non-numeric colIndex used
+      // to become NaN and flow through; malformed items are dropped and counted.
+      if (!item || typeof item !== 'object' || !Number.isFinite(Number(item.colIndex))) { dropped++; continue }
       const citation = item.citation || null
-      return {
-        colIndex:       Number(item.colIndex ?? 0),
-        canonicalField: item.canonicalField ?? null,
-        entityKind:     item.entityKind ?? null,
-        confidence:     Number(item.confidence ?? 0),
+      entries.push({
+        colIndex:       Number(item.colIndex),
+        canonicalField: typeof item.canonicalField === 'string' ? item.canonicalField : null,
+        entityKind:     typeof item.entityKind === 'string' ? item.entityKind : null,
+        confidence:     Number.isFinite(Number(item.confidence)) ? Number(item.confidence) : 0,
         citation:       citation
           ? { sheet: citation.sheet ?? '', cell: citation.cell ?? '', verbatim: citation.verbatim ?? '' }
           : null,
         needsReview: Boolean(item.needsReview ?? false),
-      }
-    })
+      })
+    }
+    if (entries.length === 0 && arr.length > 0) return null
+    return { entries, dropped }
   } catch { return null }
 }
 
@@ -249,16 +256,21 @@ async function mapColumns(classified, locks, fpByName, budget, review) {
       ].join('\n')
 
       // REASONER_A (opus) + REASONER_B (gpt-5.1) map independently in parallel.
-      const [rAResult, rBResult] = await Promise.all([
-        callAnthropic({ deployment: deployOpus, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
-        callOpenAI({ deployment: deployGpt, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
+      // Malformed output = structured telemetry + one targeted retry per reasoner
+      // (P0-7 / ledger F16).
+      const chunkWhat = `column-map batch cols ${start}-${start + chunk.length - 1}`
+      const [aParsed, bParsed] = await Promise.all([
+        parseWithRetry({ call: () => callAnthropic({ deployment: deployOpus, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseMappings, review, stage: 'stage3', sheetName: fp.sheetName, what: `REASONER_A ${chunkWhat}` }),
+        parseWithRetry({ call: () => callOpenAI({ deployment: deployGpt, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseMappings, review, stage: 'stage3', sheetName: fp.sheetName, what: `REASONER_B ${chunkWhat}` }),
       ])
-
-      const aArr = parseMappings(rAResult.raw)
-      const bArr = parseMappings(rBResult.raw)
-      if (!aArr && !bArr) parseFailures++
-      if (aArr) aAll.push(...aArr)
-      if (bArr) bAll.push(...bArr)
+      for (const [side, parsed] of [['REASONER_A', aParsed], ['REASONER_B', bParsed]]) {
+        if (parsed && parsed.dropped > 0) {
+          review.push({ kind: 'malformed-model-output', sheetName: fp.sheetName, detail: `stage3: ${side} ${chunkWhat} — ${parsed.dropped} malformed mapping item(s) dropped by shape validation.` })
+        }
+      }
+      if (!aParsed && !bParsed) parseFailures++
+      if (aParsed) aAll.push(...aParsed.entries)
+      if (bParsed) bAll.push(...bParsed.entries)
     }
 
     if (parseFailures > 0) {

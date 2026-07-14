@@ -53,6 +53,45 @@ function extractJson(raw) {
   return JSON.parse(text)
 }
 
+// ─── Runtime schema validation on model output (P0-7 / ledger F16) ─────────────
+// A syntactically-parseable-but-malformed model response must never degrade to a
+// silent null. parseWithRetry runs a call, validates via `parse` (which returns
+// null for an unusable shape), and on failure emits STRUCTURED TELEMETRY (a review
+// item) plus exactly ONE targeted retry of the same call. Transport-level failures
+// (empty raw — ai-call.js already retried the network) are not retried again.
+
+async function parseWithRetry({ call, parse, review, stage, sheetName, what }) {
+  let res
+  try { res = await call() } catch { res = { raw: '' } }
+  let parsed = res && res.raw ? parse(res.raw) : null
+  if (parsed != null) return parsed
+  if (!res || !res.raw) return null
+  if (Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — model returned unparseable/malformed output; retrying once.` })
+  try { res = await call() } catch { return null }
+  parsed = res && res.raw ? parse(res.raw) : null
+  if (parsed == null && Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — retry also malformed; treated as a missing vote (never silent).` })
+  return parsed
+}
+
+// Shape guard for extraction payloads: keeps only entities with a numeric
+// sourceRowIndex and fields shaped {fieldName: string}; malformed items are
+// DROPPED AND COUNTED so the caller reports them instead of passing NaN/undefined
+// downstream.
+function sanitizeEntities(rawEntities) {
+  const entities = []
+  let dropped = 0
+  for (const e of Array.isArray(rawEntities) ? rawEntities : []) {
+    if (!e || typeof e !== 'object' || !Number.isFinite(Number(e.sourceRowIndex))) { dropped++; continue }
+    const fields = []
+    for (const f of Array.isArray(e.fields) ? e.fields : []) {
+      if (!f || typeof f !== 'object' || typeof f.fieldName !== 'string' || f.fieldName === '') { dropped++; continue }
+      fields.push(f)
+    }
+    entities.push({ ...e, sourceRowIndex: Number(e.sourceRowIndex), fields })
+  }
+  return { entities, dropped }
+}
+
 // ─── Column letter helper ──────────────────────────────────────────────────────
 // Convert 0-based column index to Excel column letter(s): 0→A, 25→Z, 26→AA.
 
@@ -98,4 +137,6 @@ module.exports = {
   splitMultiRefId,
   extractJson,
   colLetter,
+  parseWithRetry,
+  sanitizeEntities,
 }

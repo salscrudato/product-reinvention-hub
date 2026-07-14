@@ -18,7 +18,7 @@ const { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI } = require('
 const {
   STAGE1_PREFILTER_SYSTEM, STAGE1_CLASSIFY_SYSTEM, STAGE1_ADJUDICATE_SYSTEM,
 } = require('./prompts')
-const { extractJson, SHEET_DOMAINS, pMap } = require('./constants')
+const { extractJson, SHEET_DOMAINS, pMap, parseWithRetry } = require('./constants')
 
 // ─── Serialise sheet metadata for the model ────────────────────────────────────
 // Compact, grounding-safe representation of a SheetFingerprint.
@@ -137,14 +137,12 @@ async function classifySheets(sheets, budget, review) {
       }
     }
 
-    // ── Step b: REASONER_A (opus) + REASONER_B (gpt-5.1) classify in parallel ─
-    const [rARes, rBRes] = await Promise.all([
-      callAnthropic({ deployment: deployOpus, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256, budget }).catch(() => ({ raw: '' })),
-      callOpenAI({ deployment: deployGpt, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256, budget }).catch(() => ({ raw: '' })),
+    // ── Step b: REASONER_A (opus) + REASONER_B (gpt-5.1) classify in parallel.
+    // Malformed output = telemetry + one targeted retry per side (P0-7/F16). ──
+    const [rA, rB] = await Promise.all([
+      parseWithRetry({ call: () => callAnthropic({ deployment: deployOpus, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256, budget }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_A classify' }),
+      parseWithRetry({ call: () => callOpenAI({ deployment: deployGpt, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256, budget }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_B classify' }),
     ])
-
-    const rA = parseClassify(rARes.raw)
-    const rB = parseClassify(rBRes.raw)
 
     // Parse failure on both → human flag
     if (!rA && !rB) {
@@ -195,11 +193,12 @@ async function classifySheets(sheets, budget, review) {
       `Classifier B said domain="${rB.domain}" (confidence ${rB.confidence.toFixed(2)}): ${rB.rationale}`,
     ].join('\n')
 
-    const adjRes = await callAnthropic({
-      deployment: deployOpus, systemPrompt: STAGE1_ADJUDICATE_SYSTEM, userPrompt: adjUser, maxTokens: 256, budget,
-    }).catch(() => ({ raw: '' }))
-
-    const adj = parseAdjudicate(adjRes.raw)
+    const adj = await parseWithRetry({
+      call: () => callAnthropic({
+        deployment: deployOpus, systemPrompt: STAGE1_ADJUDICATE_SYSTEM, userPrompt: adjUser, maxTokens: 256, budget,
+      }),
+      parse: parseAdjudicate, review, stage: 'stage1', sheetName: fp.sheetName, what: 'adjudication',
+    })
 
     // ── Step e: Adjudicator failed or flagged human ──────────────────────────
     if (!adj || adj.humanFlag) {

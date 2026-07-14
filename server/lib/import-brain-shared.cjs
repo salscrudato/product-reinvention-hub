@@ -31,6 +31,7 @@ __export(brain_server_entry_exports, {
   mapIsoWorkbook: () => mapIsoWorkbook,
   normalizeCellValue: () => normalizeCellValue,
   pickBestHeaderRow: () => pickBestHeaderRow,
+  refIdSegmentKind: () => refIdSegmentKind,
   resolveLobByRefId: () => resolveLobByRefId,
   scoreHeaderCandidates: () => scoreHeaderCandidates,
   synthesizeRefId: () => synthesizeRefId
@@ -1979,6 +1980,19 @@ function lobByPrefix(refId) {
 function resolveLobByRefId(refId) {
   return lobByPrefix(refId);
 }
+function refIdSegmentKind(refId) {
+  if (typeof refId !== "string") return null;
+  const m = /^[A-Z]{1,6}[.\-_ ]([A-Z]+)/i.exec(refId.trim());
+  if (!m) return null;
+  const token = m[1].toUpperCase();
+  if (token.startsWith("PROD") || token === "PRD") return "product";
+  if (token.startsWith("LOB")) return "lob";
+  if (token.startsWith("SUBCOV") || token.startsWith("COV")) return "coverage";
+  if (token === "RU" || token === "RL" || token.startsWith("RULE") || token === "FR") return "rule";
+  if (token.startsWith("FORM")) return "form";
+  if (token.startsWith("RAT") || token === "ROC" || token.startsWith("PROG") || token.startsWith("STEP") || token === "RT" || token === "LD") return "rating";
+  return null;
+}
 function usableRefId(v) {
   if (!v) return null;
   const s = v.trim();
@@ -3488,6 +3502,7 @@ function mapIsoWorkbook(grids, overlay) {
   mapIsoWorkbook,
   normalizeCellValue,
   pickBestHeaderRow,
+  refIdSegmentKind,
   resolveLobByRefId,
   scoreHeaderCandidates,
   synthesizeRefId

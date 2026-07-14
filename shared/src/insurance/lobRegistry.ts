@@ -460,6 +460,32 @@ export function resolveLobByRefId(refId?: string | null): LobDefinition | undefi
   return lobByPrefix(refId)
 }
 
+/** Entity-kind classification a refId's SCHEME SEGMENT carries, across every line's
+ *  shape — including glued digit runs ("PR.PROD001", "IM.PROD044") and abbreviated
+ *  tokens ("CORE.PRD.001"). This is the shared identifier parser the import brain
+ *  routes row-kind decisions through (ledger F05): narrow ad-hoc regexes like
+ *  /\.PROD\./ miss real scheme variants and silently misclassify rows. Returns null
+ *  when the string carries no recognizable scheme segment (the caller falls back to
+ *  its own context, e.g. the sheet's dominant mapped kind). */
+export type RefIdSegmentKind =
+  | 'product' | 'lob' | 'coverage' | 'rule' | 'form' | 'rating'
+
+export function refIdSegmentKind(refId?: string | null): RefIdSegmentKind | null {
+  if (typeof refId !== 'string') return null
+  // PREFIX <sep> SEGMENT…  — separator is '.', '-', '_' or a space; the segment's
+  // leading letter run is the kind token (digits may be glued: "PROD001").
+  const m = /^[A-Z]{1,6}[.\-_ ]([A-Z]+)/i.exec(refId.trim())
+  if (!m) return null
+  const token = m[1].toUpperCase()
+  if (token.startsWith('PROD') || token === 'PRD') return 'product'
+  if (token.startsWith('LOB')) return 'lob'
+  if (token.startsWith('SUBCOV') || token.startsWith('COV')) return 'coverage'
+  if (token === 'RU' || token === 'RL' || token.startsWith('RULE') || token === 'FR') return 'rule'
+  if (token.startsWith('FORM')) return 'form'
+  if (token.startsWith('RAT') || token === 'ROC' || token.startsWith('PROG') || token.startsWith('STEP') || token === 'RT' || token === 'LD') return 'rating'
+  return null
+}
+
 // ─── Workbook line inference (from the source's OWN content, never a filename) ────
 
 /** The evidence inferLob() weighs, gathered from a workbook's own cells — never its
