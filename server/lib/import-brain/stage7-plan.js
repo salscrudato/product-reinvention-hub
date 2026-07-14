@@ -454,6 +454,66 @@ function buildImportPlan(brainOutput, opts = {}) {
     importWarnings.push({ kind: 'dynamic-fields-surfaced', sheet: null, row: null, field: null, detail: `${dynamicFieldCount} dynamic-field row(s) extracted; review them in provenance (not auto-attached to forms).` })
   }
 
+  // ── Plan integrity (first principles: relationships are first-class; the
+  // Framework ID is the linkage key across all pillars) ───────────────────────
+  {
+    // 1. Duplicate refIds within a group → keep the first, flag the rest (a
+    //    duplicate create would fail or silently overwrite at persist time).
+    for (const [label, group] of [['coverage', coverages], ['form', forms], ['rule', rules], ['formRule', formRules], ['ldTable', ldTables], ['rtTable', rtTables]]) {
+      const seen = new Set()
+      for (const p of group) {
+        if (!p.refId) continue
+        if (seen.has(p.refId)) {
+          p.data.needsReview = true
+          p.data.duplicateOf = p.refId
+          importWarnings.push({ kind: 'duplicate-refId', sheet: null, row: null, field: label, detail: `Duplicate ${label} refId "${p.refId}" (${p.label}) — review which row is authoritative before persisting.` })
+        }
+        seen.add(p.refId)
+      }
+    }
+
+    // 2. Orphan sub-coverages: a parentId that resolves to no coverage in this plan
+    //    would be rejected by the server's parent validation — promote to top level
+    //    with a warning (same convention as the deterministic mapper).
+    const covIds = new Set(coverages.map(c => c.refId).filter(Boolean))
+    for (const c of coverages) {
+      const pid = c.data.parentId
+      if (pid != null && pid !== '' && !covIds.has(pid)) {
+        importWarnings.push({ kind: 'orphan-promoted', sheet: null, row: null, field: 'parentId', detail: `Sub-coverage ${c.refId ?? c.label} references parent "${pid}" which is not in this plan — promoted to top level; re-parent after import if needed.` })
+        c.data.parentId = null
+        c.data.needsReview = true
+      }
+    }
+
+    // 3. Cross-pillar linkage: coverage/rule formNumbers should resolve to forms in
+    //    this upload (or an already-imported product). Dangling references are the
+    //    #1 sign of a missing artifact — reported, never dropped.
+    const formNumberSet = new Set(forms.map(f => String(f.data.number ?? f.refId ?? '').trim()).filter(Boolean))
+    if (formNumberSet.size > 0) {
+      const dangling = new Map()
+      for (const p of [...coverages, ...rules, ...formRules]) {
+        for (const fn of Array.isArray(p.data.formNumbers) ? p.data.formNumbers : []) {
+          const t = String(fn).trim()
+          if (t && !formNumberSet.has(t)) dangling.set(t, (dangling.get(t) ?? 0) + 1)
+        }
+      }
+      if (dangling.size > 0) {
+        const list = [...dangling.keys()].slice(0, 12).join(', ')
+        importWarnings.push({ kind: 'dangling-form-reference', sheet: null, row: null, field: 'formNumbers', detail: `${dangling.size} referenced form number(s) are not in this upload's forms specifications (${list}${dangling.size > 12 ? ', …' : ''}) — they may live in a forms workbook that was not uploaded, or in the target product.` })
+      }
+    }
+
+    // 4. Exclusion-as-coverage smell: per first principles an exclusion is NOT a
+    //    coverage (no limit/deductible/premium) — it is a form/rule that removes
+    //    or amends coverage. Flag for review, keep the extraction.
+    for (const c of coverages) {
+      if (/\bexclusion\b|\bexcluded\b/i.test(String(c.data.name ?? ''))) {
+        c.data.needsReview = true
+        importWarnings.push({ kind: 'exclusion-as-coverage', sheet: null, row: null, field: 'name', detail: `"${c.data.name}" (${c.refId}) looks like an EXCLUSION — per the product model an exclusion is a form/rule that removes coverage, not a coverage. Review its classification.` })
+      }
+    }
+  }
+
   // ── Completeness intelligence (first principles: a product is a PCM backbone
   // plus three specification pillars — governed / presented / priced) ──────────
   // A single artifact (forms-only, rating-only …) rarely constitutes a product.
@@ -476,6 +536,9 @@ function buildImportPlan(brainOutput, opts = {}) {
   }
   const completeness = {
     assessment: !anyContent ? 'EMPTY' : (missing.length === 0 ? 'COMPLETE' : (!pillars.framework ? 'PARTIAL_NO_BACKBONE' : 'PARTIAL')),
+    // Specifications without a backbone should ATTACH to an existing product
+    // rather than mint a new one — the review UI can offer that flow directly.
+    attachStrategy: anyContent && !pillars.framework ? 'ATTACH_TO_EXISTING_PRODUCT' : 'NEW_PRODUCT',
     pillars,
     missing,
     guidance: !anyContent
