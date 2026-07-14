@@ -74,6 +74,9 @@ export default function Products() {
   const [deleteFor,  setDeleteFor]  = useState<WithId<Product> | null>(null)
   const [retireFor,  setRetireFor]  = useState<WithId<Product> | null>(null)
   const [showRetired, setShowRetired] = useState(false)
+  // Keyboard cursor over the visible results — driven from the search field
+  // (↑/↓ move, Enter opens, Esc clears). -1 = no card selected.
+  const [focusIdx, setFocusIdx] = useState(-1)
 
   const setViewPersist = (m: ProductView) => { setView(m); localStorage.setItem(VIEW_KEY, m) }
 
@@ -134,6 +137,18 @@ export default function Products() {
     [debouncedQuery, fuse, segFiltered],
   )
 
+  // Reset the keyboard cursor whenever the result set changes shape.
+  useEffect(() => { setFocusIdx(-1) }, [debouncedQuery, seg])
+
+  function onSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setFocusIdx(i => Math.min(i + 1, visible.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setFocusIdx(i => Math.max(i - 1, -1)) }
+    else if (e.key === 'Enter') {
+      const target = visible[focusIdx] ?? (visible.length === 1 ? visible[0] : undefined)
+      if (target) { e.preventDefault(); navigate(`/app/products/${target.id}/overview`) }
+    } else if (e.key === 'Escape') { setQuery(''); setFocusIdx(-1) }
+  }
+
   // Portfolio at-a-glance KPIs for the hero stat line.
   const kpis = useMemo(() => {
     const lines    = new Set(launched.map(p => p.lob?.name).filter(Boolean)).size
@@ -186,10 +201,11 @@ export default function Products() {
           <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
           <input
             className="w-full h-9 pl-9 pr-3 rounded-[10px] bg-surface border border-border-strong text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent"
-            placeholder="Search products by name, line, segment, or state…"
-            aria-label="Search products"
+            placeholder="Search products by name, line, segment, state, or refId…"
+            aria-label="Search products (↑↓ to select, Enter to open)"
             value={query}
             onChange={e => setQuery(e.target.value)}
+            onKeyDown={onSearchKeyDown}
           />
         </div>
         <ViewSwitch view={view} onChange={setViewPersist} />
@@ -250,7 +266,11 @@ export default function Products() {
         ) : (
           <EmptyState icon={<IconProduct size={32} />}
             title={query ? `No results for "${query}"` : (activeSeg > 0 ? 'No products match these filters' : 'No published products')}
-            description={query || activeSeg > 0 ? 'Adjust your search or segment filters to see published products.' : 'Adjust your search to see published products.'} />
+            description={query || activeSeg > 0 ? 'Adjust your search or segment filters to see published products.' : 'Adjust your search to see published products.'}
+            action={(query || activeSeg > 0)
+              ? <Button variant="ghost" size="sm" onClick={() => { setQuery(''); setSeg({}) }}>Clear search & filters</Button>
+              : undefined}
+          />
         )
       ) : view === 'cards' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -258,7 +278,8 @@ export default function Products() {
               one motion language. Capped + reduced-motion-neutralised (see index.css). */}
           {visible.map((p, i) => (
             <div key={p.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(i, 8) * 40}ms` } as React.CSSProperties}>
-              <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} onRetire={() => setRetireFor(p)} />
+              <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} onRetire={() => setRetireFor(p)}
+                highlight={debouncedQuery} focused={i === focusIdx} />
             </div>
           ))}
         </div>

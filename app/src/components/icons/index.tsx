@@ -151,6 +151,8 @@ export const IconSearch = (p: IconProps) => (<Glyph {...p}><circle cx="10.5" cy=
 export const IconFilter = (p: IconProps) => (<Glyph {...p}><path d="M4 5.5h16l-6.2 7.4V19l-3.6 1.6v-7.7z" /></Glyph>)
 export const IconDownload = (p: IconProps) => (<Glyph {...p}><path d="M12 3.5v11M8 10.5l4 4 4-4M5 20h14" /></Glyph>)
 export const IconDrag = (p: IconProps) => (<Glyph {...p}><path d="M9 6.5h.01M15 6.5h.01M9 12h.01M15 12h.01M9 17.5h.01M15 17.5h.01" strokeWidth={2.4} /></Glyph>)
+/** More — vertical ellipsis, the kebab-menu affordance. */
+export const IconMore = (p: IconProps) => (<Glyph {...p}><path d="M12 5.4h.01M12 12h.01M12 18.6h.01" strokeWidth={2.6} /></Glyph>)
 export const IconArrowUp = (p: IconProps) => (<Glyph {...p}><path d="M12 20V5M6 11l6-6 6 6" /></Glyph>)
 export const IconArrowRight = (p: IconProps) => (<Glyph {...p}><path d="M4 12h15M13 6l6 6-6 6" /></Glyph>)
 /** Tasks — a kanban board: two columns of stacked cards. */

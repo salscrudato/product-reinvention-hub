@@ -73,6 +73,7 @@ export function PeekPanel({ node }: { node: PeekNode | null }) {
       <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-5">
         <div className="flex flex-col gap-2">
           <h3 className="text-base font-bold text-text leading-tight">{p.name}</h3>
+          {p.refId && <p className="font-mono text-[10.5px] text-faint tracking-[-.01em]">{p.refId}</p>}
           <p className="text-xs text-dim">{p.lob?.name} · {p.marketSegment}</p>
           <div className="flex flex-wrap gap-1.5 pt-0.5">
             <ProductStatusPill lifecycle={p.lifecycle} />
@@ -119,9 +120,10 @@ export function PeekPanel({ node }: { node: PeekNode | null }) {
 
   return shell(
     <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-5">
-      {/* Identity — name + governance pills (internal refId intentionally not shown). */}
+      {/* Identity — name + the load-bearing refId + governance pills. */}
       <div className="flex flex-col gap-2">
         <h3 className="text-base font-bold text-text leading-tight">{cov.name}</h3>
+        {cov.refId && <p className="font-mono text-[10.5px] text-faint tracking-[-.01em]">{cov.refId}</p>}
         <div className="flex flex-wrap gap-1.5 pt-0.5">
           <StatusPill status={cov.status} />
           <LifecyclePill lifecycle={cov.lifecycle} />

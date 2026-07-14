@@ -4,7 +4,7 @@
 // the parent (Explorer.tsx) so the whole cascade shares one nav model; this component
 // just renders items, the per-column loading / empty states, and registers each
 // option's element for roving-focus management.
-import { Skeleton, EmptyState } from '../ui'
+import { Skeleton, EmptyState, Highlight } from '../ui'
 import type { IconType } from '../ui/icons'
 import { IconChevronRight, IconSearch } from '../ui/icons'
 
@@ -31,21 +31,6 @@ interface MillerColumnProps {
   onSelect:   (id: string) => void   // single click — select (reveals downstream)
   onActivate: (id: string) => void   // Enter / double click — descend or open
   registerRef: (key: string, el: HTMLButtonElement | null) => void
-}
-
-// Highlight the query substring inside a title so search hits are scannable.
-function Highlight({ text, query }: { text: string; query: string }) {
-  const q = query.trim()
-  if (!q) return <>{text}</>
-  const i = text.toLowerCase().indexOf(q.toLowerCase())
-  if (i < 0) return <>{text}</>
-  return (
-    <>
-      {text.slice(0, i)}
-      <mark className="bg-accent-soft text-accent not-italic rounded-[2px]">{text.slice(i, i + q.length)}</mark>
-      {text.slice(i + q.length)}
-    </>
-  )
 }
 
 export function MillerColumn({
@@ -108,19 +93,30 @@ export function MillerColumn({
                 tabIndex={focused && selected ? 0 : -1}
                 onClick={() => onSelect(item.id)}
                 onDoubleClick={() => onActivate(item.id)}
-                className={`group w-full text-left rounded-[9px] px-2.5 py-2 flex items-center gap-2 transition-colors outline-none
+                className={`group relative w-full text-left rounded-[9px] px-2.5 py-2 flex items-center gap-2 transition-colors outline-none
                   focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent
                   ${selected && focused ? 'bg-accent text-on-accent'
                     : selected ? 'bg-accent-soft text-accent'
                     : 'text-text hover:bg-raised'}`}
               >
+                {/* Selected rail — keeps the trail legible in non-focused columns */}
+                {selected && (
+                  <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full ${focused ? 'bg-on-accent/70' : ''}`}
+                    style={focused ? undefined : { background: 'var(--gradient-accent)' }} aria-hidden="true" />
+                )}
                 <span className="flex-1 min-w-0 flex flex-col gap-0.5">
                   <span className="text-sm font-medium truncate leading-snug">
                     <Highlight text={item.title} query={query} />
                   </span>
-                  {item.meta && (
-                    <span className={`text-[11px] truncate ${selected && focused ? 'text-on-accent/85' : 'text-faint'}`}>
-                      {item.meta}
+                  {(item.meta || item.refId) && (
+                    <span className={`flex items-center gap-1.5 min-w-0 text-[11px] ${selected && focused ? 'text-on-accent/85' : 'text-faint'}`}>
+                      {item.refId && (
+                        <span className="font-mono text-[10px] tracking-[-.01em] truncate shrink-0">
+                          <Highlight text={item.refId} query={query} />
+                        </span>
+                      )}
+                      {item.meta && item.refId && <span aria-hidden="true">·</span>}
+                      {item.meta && <span className="truncate">{item.meta}</span>}
                     </span>
                   )}
                 </span>
