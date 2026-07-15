@@ -169,10 +169,33 @@ function mutShuffleColumns(grids: IsoGrid[]): IsoGrid[] {
     return { ...g, cells: g.cells.map(r => { const full = Array.from({ length: width }, (_, i) => (r ?? [])[i] ?? null); return full.reverse() }) }
   })
 }
-const REFID_TOKEN = /\b((?:GL|IM|PR|PH|PA)(?:\.[A-Z]{2,12})+\.(?:SYNTH)?\d+(?:\.\d+)*)\b/g
+// SOURCE ids only: a MINTED id (SYNTH marker) is the platform's own convention —
+// byte-for-byte preservation applies to what the document states, never to what
+// the pipeline mints (blind-challenge finding, IM seed: the synthesized product id
+// must stay dotted even in a dash-notation workbook).
+const REFID_TOKEN = /\b((?:GL|IM|PR|PH|PA)(?:\.[A-Z]{2,12})+\.\d+(?:\.\d+)*)\b/g
 function dashToken(s: string): string { return s.replace(REFID_TOKEN, m => m.replace(/\./g, '-')) }
-function mutDashRefIds(grids: IsoGrid[]): IsoGrid[] {
-  return deepCopy(grids).map(g => ({ ...g, cells: g.cells.map(r => (r ?? []).map(c => (typeof c === 'string' ? dashToken(c) : c))) }))
+/** Byte-for-byte applies to ids the DOCUMENT states — so the expected-plan
+ *  transform swaps exactly the tokens found in the source cells, and never ids
+ *  the platform MINTS (SYNTH products, registry LOB pointers stay canonical
+ *  dotted; blind-challenge finding on the IM seed). */
+function mutDashRefIds(grids: IsoGrid[]): { grids: IsoGrid[]; sourceTokens: Set<string> } {
+  const sourceTokens = new Set<string>()
+  const out = deepCopy(grids).map(g => ({
+    ...g,
+    cells: g.cells.map(r => (r ?? []).map(c => {
+      if (typeof c !== 'string') return c
+      for (const m of c.match(REFID_TOKEN) ?? []) sourceTokens.add(m)
+      return dashToken(c)
+    })),
+  }))
+  return { grids: out, sourceTokens }
+}
+function dashExpected(json: string, sourceTokens: Set<string>): string {
+  let out = json
+  // Longest first: "GL.COV.001" must never rewrite the prefix of "GL.COV.001.001".
+  for (const t of [...sourceTokens].sort((a, b) => b.length - a.length)) out = out.split(t).join(t.replace(/\./g, '-'))
+  return out
 }
 function mutRenameSheets(grids: IsoGrid[]): IsoGrid[] {
   const RENAME: [RegExp, string][] = [
@@ -312,7 +335,8 @@ async function generate() {
   // v3: banner + merged cells across the banner row on each sheet.
   const banner = mutPreamble(pristine)
   await put('v3-merged-banner', banner, expectedPlan, {}, Object.fromEntries(banner.map(g => [g.sheet, ['A1:E1', 'A2:C2']])))
-  await put('v4-dashed-refids', mutDashRefIds(pristine), JSON.parse(dashToken(stableStringify(expectedPlan))))
+  const dashed = mutDashRefIds(pristine)
+  await put('v4-dashed-refids', dashed.grids, JSON.parse(dashExpected(stableStringify(expectedPlan), dashed.sourceTokens)))
   const { grids: blankGrids, blanked } = mutBlankSilence(pristine)
   await put('v5-blank-silence', blankGrids, null, { blanked })
   await put('v6-renamed-sheets', mutRenameSheets(pristine), null, { sheetCount: pristine.length })
@@ -344,7 +368,13 @@ async function check() {
         const diffs = diffEntities(expected, got)
         if (diffs.length) { verdict = 'RED'; details.push(...diffs.slice(0, 12), `(${diffs.length} total diffs)`) }
       } else if (v.kind === 'HONESTY') {
+        // Honesty contract (recorded in g4-clusters.md BEFORE any fix):
+        //  - requirement: STRICT — blank must surface as UNKNOWN (the type supports it, F14).
+        //  - category / boolean defaults: the documented default may stand ONLY when the
+        //    plan carries a warning naming the defaulting (F18: warned defaults are the
+        //    platform's honesty floor; SILENT fabrication is the defect).
         const plan = await parseFile(`${v.id}.xlsx`)
+        const warns = plan.summary.warnings.join('\n')
         const { coverageRefIds, formNumbers } = manifest.variants[v.id].blanked
         for (const rid of coverageRefIds) {
           const cov = plan.coverages.find(c => c.refId === rid)
@@ -359,13 +389,17 @@ async function check() {
           const form = plan.forms.find(f => String(f.data['number'] ?? '') === num)
           if (!form) { details.push(`form ${num} missing entirely`); verdict = 'RED'; continue }
           const cat = form.data['category']
-          if (cat !== 'UNKNOWN' && cat !== undefined && cat !== null && cat !== '') {
-            details.push(`form ${num}: blank category cell fabricated as ${JSON.stringify(cat)}`)
+          const catHonest = cat === 'UNKNOWN' || cat === undefined || cat === null || cat === ''
+            || /blank FORM CATEGORY/i.test(warns)
+          if (!catHonest) {
+            details.push(`form ${num}: blank category cell SILENTLY fabricated as ${JSON.stringify(cat)} (no warning)`)
             verdict = 'RED'
           }
           const man = form.data['mandatoryDefault']
-          if (man !== undefined && man !== null && man !== 'UNKNOWN') {
-            details.push(`form ${num}: blank mandatory cell fabricated as ${JSON.stringify(man)}`)
+          const manHonest = man === undefined || man === null || man === 'UNKNOWN'
+            || /blank MANDATORY/i.test(warns)
+          if (!manHonest) {
+            details.push(`form ${num}: blank mandatory cell SILENTLY fabricated as ${JSON.stringify(man)} (no warning)`)
             verdict = 'RED'
           }
         }
