@@ -2090,18 +2090,22 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     ratingSteps: stepCount,
     rtTables: rtTables.length,
     ldTables: allLdTables.length,
-    referenceTables: refTables.length,
-    referenceTablesBackLinked: refLinks.backLinked,
-    referenceTablesCovLinked: refLinks.covLinked,
-    rulesTableLinked: refLinks.rulesLinked,
-    rulesResolvedToCoverage: refLinks.resolvedToCoverage,
-    ruleRefsUnresolved: refLinks.unresolved,
-    ratingGroups: ratingGroups.groups,
-    ratingGroupsMatched: ratingGroups.matched,
-    ratingGroupsUnmatched: ratingGroups.unmatchedNames.length,
-    formAnchorUpgrades: formUpgrades,
-    ratePlaceholders: ratePlaceholders.length,
-    rateTemplateArtifactsExcluded: excludedArtifacts.length,
+    // Concept-linker counts are added ONLY under the CORE signature, so a workbook with no
+    // reference tables (GL/IM/PR) keeps a byte-identical `summary.counts` object.
+    ...(refTables.length > 0 ? {
+      referenceTables: refTables.length,
+      referenceTablesBackLinked: refLinks.backLinked,
+      referenceTablesCovLinked: refLinks.covLinked,
+      rulesTableLinked: refLinks.rulesLinked,
+      rulesResolvedToCoverage: refLinks.resolvedToCoverage,
+      ruleRefsUnresolved: refLinks.unresolved,
+      ratingGroups: ratingGroups.groups,
+      ratingGroupsMatched: ratingGroups.matched,
+      ratingGroupsUnmatched: ratingGroups.unmatchedNames.length,
+      formAnchorUpgrades: formUpgrades,
+      ratePlaceholders: ratePlaceholders.length,
+      rateTemplateArtifactsExcluded: excludedArtifacts.length,
+    } : {}),
   }
 
   const knownSheets = new Set(ctx.recognized)

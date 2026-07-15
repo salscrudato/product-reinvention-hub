@@ -312,7 +312,7 @@ describe('mapIsoWorkbook — rules, form rules, rating, tables', () => {
   it('a GL "Limits and Deductibles" sheet is NOT re-minted as reference tables (double-parse guard)', () => {
     // The GL LD blocks key on "LDTable.NNN" at col 0 ("TABLE NAME:" only sits at col 1) and the
     // sheet is claimed by parseLdTables → the signature detector must produce zero minted tables.
-    expect(plan.summary.counts['referenceTables']).toBe(0)
+    expect(plan.summary.counts['referenceTables'] ?? 0).toBe(0)   // absent on a non-CORE parse
     expect(plan.ldTables.every(t => !(t.data as Record<string, unknown>)['mintedId'])).toBe(true)
     expect(plan.ldTables.map(t => t.refId)).toEqual(['LDTable.001', 'LDTable.002'])
   })

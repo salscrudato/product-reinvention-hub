@@ -3043,7 +3043,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3060,7 +3061,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3077,7 +3079,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3094,7 +3097,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3111,7 +3115,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3128,7 +3133,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3230,7 +3236,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3366,7 +3373,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3468,7 +3476,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3587,7 +3596,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3604,7 +3614,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3621,7 +3632,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3655,7 +3667,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3672,7 +3685,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3689,7 +3703,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3853,7 +3868,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3873,7 +3889,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3893,7 +3910,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -3913,7 +3931,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4073,7 +4092,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4133,7 +4153,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4213,7 +4234,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4232,7 +4254,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4251,7 +4274,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4270,7 +4294,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "resolvedCoverageRefId": "CORE.COV.004.002"
       }
     },
     {
@@ -4330,7 +4355,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "resolvedCoverageRefId": "CORE.COV.009.001"
       }
     },
     {
@@ -4370,7 +4396,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4390,7 +4417,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4449,7 +4477,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4468,7 +4497,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "resolvedCoverageRefId": "CORE.COV.011"
       }
     },
     {
@@ -4487,7 +4517,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4506,7 +4537,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4563,7 +4595,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4639,7 +4672,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4713,7 +4747,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4732,7 +4767,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4789,7 +4825,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4846,7 +4883,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -4998,7 +5036,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5074,7 +5113,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5093,7 +5133,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5210,7 +5251,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5232,7 +5274,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5254,7 +5297,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5273,7 +5317,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5295,7 +5340,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5317,7 +5363,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5339,7 +5386,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5361,7 +5409,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5383,7 +5432,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5405,7 +5455,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5427,7 +5478,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5449,7 +5501,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5470,7 +5523,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5490,7 +5544,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5510,7 +5565,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5548,7 +5604,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5624,7 +5681,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5643,7 +5701,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5662,7 +5721,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5681,7 +5741,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5723,7 +5784,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5744,7 +5806,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5765,7 +5828,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5786,7 +5850,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5807,7 +5872,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5828,7 +5894,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5849,7 +5916,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5870,7 +5938,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5891,7 +5960,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5912,7 +5982,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5933,7 +6004,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5971,7 +6043,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -5990,7 +6063,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6066,7 +6140,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6085,7 +6160,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6104,7 +6180,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6123,7 +6200,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6142,7 +6220,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6161,7 +6240,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6180,7 +6260,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6199,7 +6280,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6218,7 +6300,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6237,7 +6320,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6256,7 +6340,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6275,7 +6360,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6294,7 +6380,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6313,7 +6400,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6332,7 +6420,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6351,7 +6440,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6370,7 +6460,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6427,7 +6518,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6484,7 +6576,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6503,7 +6596,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6541,7 +6635,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6560,7 +6655,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6579,7 +6675,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6598,7 +6695,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6617,7 +6715,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6636,7 +6735,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6655,7 +6755,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6674,7 +6775,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6693,7 +6795,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6712,7 +6815,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6731,7 +6835,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6750,7 +6855,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6769,7 +6875,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6788,7 +6895,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6828,7 +6936,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6848,7 +6957,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -6868,7 +6978,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "tableLinkBasis": "derived"
       }
     },
     {
@@ -7225,6 +7336,1872 @@
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
         "reviewer": ""
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.001",
+      "fields": {
+        "name": "Minimum Premiums",
+        "defaultValue": 125,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.002",
+      "fields": {
+        "name": "Fees",
+        "defaultValue": 25,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.003",
+      "fields": {
+        "name": "Vehicle Type Applicability Matrix",
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.004",
+      "fields": {
+        "name": "Sub-Coverage, Endorsement, Limit Matrix",
+        "defaultValue": 250,
+        "valueHeader": "Form Name/Number; Stacking Limits ($)",
+        "kindHint": "LIMIT",
+        "backLinkWas": "Form Name/Number; Stacking Limits ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.005",
+      "fields": {
+        "name": "Accident Prevention Course Discount Requirements by State",
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.006",
+      "fields": {
+        "name": "AC 900",
+        "defaultValue": 1500,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.007",
+      "fields": {
+        "name": "Spare Parts Limit Increase via AC 900 / AC 00 01",
+        "defaultValue": 750,
+        "kindHint": "LIMIT",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.008",
+      "fields": {
+        "name": "AC 103 Motorcycle Safety Apparel Coverage via Collector Motorcycle",
+        "defaultValue": 3000,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.009",
+      "fields": {
+        "name": "AC 108 Custom Features Coverage",
+        "defaultValue": 10000,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.010",
+      "fields": {
+        "name": "AC 110 Foreign Coverage Endorsement",
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.011",
+      "fields": {
+        "name": "Legendary Ride Limits (AC 114)",
+        "defaultValue": 10000,
+        "kindHint": "LIMIT",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.012",
+      "fields": {
+        "name": "Traveling Collector Limits (AC 113)",
+        "defaultValue": 10000,
+        "kindHint": "LIMIT",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.013",
+      "fields": {
+        "name": "Motorsports Advantage Sub-Coverages (AC 115; AC 125; AC 126; AC 127)",
+        "defaultValue": 10000,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.014",
+      "fields": {
+        "name": "AC 116 Vehicle Under Construction Coverage",
+        "defaultValue": 10,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.015",
+      "fields": {
+        "name": "AC 124 Collector Camper Trailer Endorsement",
+        "defaultValue": 500,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.016",
+      "fields": {
+        "name": "AC 128 Special Build Coverage",
+        "defaultValue": 50,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.017",
+      "fields": {
+        "name": "AC 400 Value-Added",
+        "defaultValue": 500,
+        "valueHeader": "PLUS",
+        "kindHint": "OPTION",
+        "backLinkWas": "PLUS",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.018",
+      "fields": {
+        "name": "Loss of Earnings Limit Increase via AC 402",
+        "defaultValue": 1000,
+        "kindHint": "LIMIT",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.019",
+      "fields": {
+        "name": "AC 500 Automobilia",
+        "defaultValue": 1500,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.020",
+      "fields": {
+        "name": "AC 500 Fine Arts",
+        "defaultValue": 1500,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.021",
+      "fields": {
+        "name": "AC 500 Miscellaneous Collectibles",
+        "defaultValue": 1500,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.022",
+      "fields": {
+        "name": "AC 500 Additional Subcoverages",
+        "defaultValue": 1000,
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.023",
+      "fields": {
+        "name": "AC 501 Automotive Tools Limits and Deductibles (Blanket)",
+        "defaultValue": 1000,
+        "kindHint": "DEDUCTIBLE",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.024",
+      "fields": {
+        "name": "AC 501 Limited Mail Coverage via Collector Vehicle Spare Parts or Tools",
+        "defaultValue": 1000,
+        "kindHint": "LIMIT",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.025",
+      "fields": {
+        "name": "AC 501 Spare Parts Limits and Deductibles (Blanket)",
+        "defaultValue": 1500,
+        "kindHint": "DEDUCTIBLE",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.026",
+      "fields": {
+        "name": "Vehicle Symbol",
+        "kindHint": "OPTION",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.027",
+      "fields": {
+        "name": "Liability Limits - AZ",
+        "defaultValue": 1,
+        "valueHeader": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "kindHint": "LIMIT",
+        "state": "AZ",
+        "backLinkWas": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.028",
+      "fields": {
+        "name": "Liability Limits - CO",
+        "defaultValue": 5,
+        "valueHeader": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "kindHint": "LIMIT",
+        "state": "CO",
+        "backLinkWas": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.029",
+      "fields": {
+        "name": "Liability Limits - GA",
+        "defaultValue": 1,
+        "valueHeader": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "kindHint": "LIMIT",
+        "state": "GA",
+        "backLinkWas": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.030",
+      "fields": {
+        "name": "Liability Limits - MO",
+        "defaultValue": 1,
+        "valueHeader": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "kindHint": "LIMIT",
+        "state": "MO",
+        "backLinkWas": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.031",
+      "fields": {
+        "name": "Liability Limits - OH",
+        "defaultValue": 1,
+        "valueHeader": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "kindHint": "LIMIT",
+        "state": "OH",
+        "backLinkWas": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.032",
+      "fields": {
+        "name": "Liability Limits - WI",
+        "defaultValue": 1,
+        "valueHeader": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "kindHint": "LIMIT",
+        "state": "WI",
+        "backLinkWas": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.033",
+      "fields": {
+        "name": "Liability Limits - TN",
+        "defaultValue": 1,
+        "valueHeader": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "kindHint": "LIMIT",
+        "state": "TN",
+        "backLinkWas": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.034",
+      "fields": {
+        "name": "Liability Limits - IN",
+        "defaultValue": 1,
+        "valueHeader": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "kindHint": "LIMIT",
+        "state": "IN",
+        "backLinkWas": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.035",
+      "fields": {
+        "name": "Liability Limits - NE",
+        "defaultValue": 1,
+        "valueHeader": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "kindHint": "LIMIT",
+        "state": "NE",
+        "backLinkWas": "Liability Limit: Available Limit(s) marked with 'X' (thousands; $)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.036",
+      "fields": {
+        "name": "Physical Damage Deductibles - AZ [GROUP 1]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "AZ",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.037",
+      "fields": {
+        "name": "Physical Damage Deductibles - CO [GROUP 1]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "CO",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.038",
+      "fields": {
+        "name": "Physical Damage Deductibles - GA [GROUP 1]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "GA",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.039",
+      "fields": {
+        "name": "Physical Damage Deductibles - MO [GROUP 1]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "MO",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.040",
+      "fields": {
+        "name": "Physical Damage Deductibles - OH [GROUP 1]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "OH",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.041",
+      "fields": {
+        "name": "Physical Damage Deductibles - WI [GROUP 1]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "WI",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.042",
+      "fields": {
+        "name": "Physical Damage Deductibles - TN [GROUP 1]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "TN",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.043",
+      "fields": {
+        "name": "Physical Damage Deductibles - TN [GROUP 2]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "TN",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.044",
+      "fields": {
+        "name": "Physical Damage Deductibles - TN [GROUP 3]",
+        "defaultValue": 250,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "TN",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.045",
+      "fields": {
+        "name": "Physical Damage Deductibles - IN [GROUP 1]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "IN",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.046",
+      "fields": {
+        "name": "Physical Damage Deductibles - IN [GROUP 2]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "IN",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.047",
+      "fields": {
+        "name": "Physical Damage Deductibles - IN [GROUP 3]",
+        "defaultValue": 250,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "IN",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.048",
+      "fields": {
+        "name": "Physical Damage Deductibles - NE [GROUP 1]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "NE",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.049",
+      "fields": {
+        "name": "Physical Damage Deductibles - NE [GROUP 2]",
+        "defaultValue": 0,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "NE",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.050",
+      "fields": {
+        "name": "Physical Damage Deductibles - NE [GROUP 3]",
+        "defaultValue": 500,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "NE",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ldTable",
+      "refId": "CORE.TBL.051",
+      "fields": {
+        "name": "Physical Damage Deductibles - NE [GROUP 4]",
+        "defaultValue": 250,
+        "valueHeader": "Deductible ($)",
+        "kindHint": "DEDUCTIBLE",
+        "state": "NE",
+        "backLinkWas": "Deductible ($)",
+        "mintedId": true,
+        "linkBasis": "derived"
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.001",
+      "fields": {
+        "name": "Base rate",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.002",
+      "fields": {
+        "name": "Model year factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.003",
+      "fields": {
+        "name": "Vehicle modification factor (round to 4 decimals)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.004",
+      "fields": {
+        "name": "Program tier factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.005",
+      "fields": {
+        "name": "Insurance score factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.006",
+      "fields": {
+        "name": "Vehicle class factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.007",
+      "fields": {
+        "name": "Policy vehicle class factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.008",
+      "fields": {
+        "name": "Vehicle class factor ratio",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.009",
+      "fields": {
+        "name": "Liability limit factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.010",
+      "fields": {
+        "name": "Modified/Model year factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.011",
+      "fields": {
+        "name": "Vehicle type factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.012",
+      "fields": {
+        "name": "Vehicle attribute factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.013",
+      "fields": {
+        "name": "Territory factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.014",
+      "fields": {
+        "name": "Number of vehicles factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.015",
+      "fields": {
+        "name": "Vehicle symbol factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.016",
+      "fields": {
+        "name": "Body style code factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.017",
+      "fields": {
+        "name": "Operator age factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.018",
+      "fields": {
+        "name": "Years licensed factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.019",
+      "fields": {
+        "name": "Inexperienced household operator factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.020",
+      "fields": {
+        "name": "One less regular use vehicle than household drivers factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.021",
+      "fields": {
+        "name": "High performance exotic factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.022",
+      "fields": {
+        "name": "Vehicle modified with 650+ HP flex factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.023",
+      "fields": {
+        "name": "Emerging collector vehicle factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.024",
+      "fields": {
+        "name": "Driving record/Loss history flex factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.025",
+      "fields": {
+        "name": "Drive to work at least 20 times annually/Seasonal commuting flex factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.026",
+      "fields": {
+        "name": "Annual mileage factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.027",
+      "fields": {
+        "name": "Lienholder factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.028",
+      "fields": {
+        "name": "Drive to work times annually/Seasonal commuting factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.029",
+      "fields": {
+        "name": "Youthful household operator factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.030",
+      "fields": {
+        "name": "Ineligible risk surcharge factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.031",
+      "fields": {
+        "name": "Mass marketing discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.032",
+      "fields": {
+        "name": "Paid-in-full discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.033",
+      "fields": {
+        "name": "Supplemental spousal liability exclusion factor (round to 2 decimals)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.034",
+      "fields": {
+        "name": "Factory-installed daytime running lights discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.035",
+      "fields": {
+        "name": "Motor vehicle accident prevention course discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.036",
+      "fields": {
+        "name": "Mileage verification discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.037",
+      "fields": {
+        "name": "Inexperienced operator of high performance vehicle factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.038",
+      "fields": {
+        "name": "Accident prevention course discount (60+) factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.039",
+      "fields": {
+        "name": "Motorcycle training course discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.040",
+      "fields": {
+        "name": "Motor vehicle driver improvement course discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.041",
+      "fields": {
+        "name": "Accident prevention course discount (55+) factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.042",
+      "fields": {
+        "name": "Senior operator motor vehicle prevention course discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.043",
+      "fields": {
+        "name": "Mature operator motor vehicle traffic safety course discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.044",
+      "fields": {
+        "name": "Portfolio transfer discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.045",
+      "fields": {
+        "name": "Anti-lock brakes discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.046",
+      "fields": {
+        "name": "Defensive driver highway traffic safety program discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.047",
+      "fields": {
+        "name": "Accident prevention course discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.048",
+      "fields": {
+        "name": "Vehicle coverage premium (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.049",
+      "fields": {
+        "name": "Inexperienced operator factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.050",
+      "fields": {
+        "name": "Sum of vehicle premium (round) subject to minimum coverage premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.051",
+      "fields": {
+        "name": "Book transfer premium stabilization factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.052",
+      "fields": {
+        "name": "Final vehicle coverage premium (round to cent)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.053",
+      "fields": {
+        "name": "Passive restraint discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.054",
+      "fields": {
+        "name": "Safety equipment discount factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.055",
+      "fields": {
+        "name": "Vehicle premium ratio",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.056",
+      "fields": {
+        "name": "South Carolina highway department compulsory insurance enforcement fund premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.057",
+      "fields": {
+        "name": "High performance exotic flex factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.058",
+      "fields": {
+        "name": "Emerging collector vehicle flex factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.059",
+      "fields": {
+        "name": "Final vehicle coverage premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.060",
+      "fields": {
+        "name": "One less regular use vehicle than household drivers flex factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.061",
+      "fields": {
+        "name": "Annual mileage flex factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.062",
+      "fields": {
+        "name": "Youthful household operator flex factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.063",
+      "fields": {
+        "name": "Vehicle coverage premium (round to cent)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.064",
+      "fields": {
+        "name": "Model year/Modified group factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.065",
+      "fields": {
+        "name": "Exclusion of loss of income benefit factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.066",
+      "fields": {
+        "name": "Vehicle coverage premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.067",
+      "fields": {
+        "name": "Final coverage premium (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.068",
+      "fields": {
+        "name": "PIP medical exclusion factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.069",
+      "fields": {
+        "name": "Coordination of personal injury protection medical benefits factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.070",
+      "fields": {
+        "name": "Final vehicle coverage premium (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.071",
+      "fields": {
+        "name": "Limit factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.072",
+      "fields": {
+        "name": "Vehicle deductible factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.073",
+      "fields": {
+        "name": "Full safety glass factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.074",
+      "fields": {
+        "name": "$100 glass deductible factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.075",
+      "fields": {
+        "name": "Value factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.076",
+      "fields": {
+        "name": "Storage type factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.077",
+      "fields": {
+        "name": "Guaranteed Value® factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.078",
+      "fields": {
+        "name": "Other available credits factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.079",
+      "fields": {
+        "name": "Individual risk premium modification plan (IRPM) factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.080",
+      "fields": {
+        "name": "Loss control measure credits factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.081",
+      "fields": {
+        "name": "Experience rating plan factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.082",
+      "fields": {
+        "name": "Homing device credit factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.083",
+      "fields": {
+        "name": "Anti-theft device credit factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.084",
+      "fields": {
+        "name": "Alarm ONLY or active disabling devices factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.085",
+      "fields": {
+        "name": "Passive disabling devices factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.086",
+      "fields": {
+        "name": "Individual risk characteristics credits (IRC)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.087",
+      "fields": {
+        "name": "Cherished Salvage® factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.088",
+      "fields": {
+        "name": "Waiver of subrogation factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.089",
+      "fields": {
+        "name": "Travel/transit factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.090",
+      "fields": {
+        "name": "Special build coverage factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.091",
+      "fields": {
+        "name": "Broadened and limited collision factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.092",
+      "fields": {
+        "name": "Limited collision coverage factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.093",
+      "fields": {
+        "name": "Loss history credit factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.094",
+      "fields": {
+        "name": "Limited trailer and paddock collision factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.095",
+      "fields": {
+        "name": "Camper trailer model year factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.096",
+      "fields": {
+        "name": "Camper trailer usage factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.097",
+      "fields": {
+        "name": "Camper trailer body style factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.098",
+      "fields": {
+        "name": "Camper trailer length factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.099",
+      "fields": {
+        "name": "Camper trailer value factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.100",
+      "fields": {
+        "name": "Camper trailer storage type factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.101",
+      "fields": {
+        "name": "Total camper trailer premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.102",
+      "fields": {
+        "name": "Rate",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.103",
+      "fields": {
+        "name": "Premium per item/coverage (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.104",
+      "fields": {
+        "name": "Final premium per item/coverage (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.105",
+      "fields": {
+        "name": "Deductible factor",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.106",
+      "fields": {
+        "name": "Foreign Coverage Premium (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.107",
+      "fields": {
+        "name": "Business Use Premium (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.108",
+      "fields": {
+        "name": "Value-Added coverage Premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.109",
+      "fields": {
+        "name": "Vehicle Under Construction coverage Premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.110",
+      "fields": {
+        "name": "Traveling Collector Premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.111",
+      "fields": {
+        "name": "Evacuation Expense Premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.112",
+      "fields": {
+        "name": "Legendary Ride™ Premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.113",
+      "fields": {
+        "name": "Short term coverage Premium (round to cent)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.114",
+      "fields": {
+        "name": "Motorsports Advantage™ Premium (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.115",
+      "fields": {
+        "name": "Total endorsement premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.116",
+      "fields": {
+        "name": "Liability Coverage Premium (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.117",
+      "fields": {
+        "name": "Physical Damage Premium (round)",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.118",
+      "fields": {
+        "name": "Prior specialty carrier discount",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.119",
+      "fields": {
+        "name": "Total premium subject to minimum premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.120",
+      "fields": {
+        "name": "Transfer policy discount",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.121",
+      "fields": {
+        "name": "Auto Theft & Fraud Surcharge",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.122",
+      "fields": {
+        "name": "Auto theft surcharge",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
+      }
+    },
+    {
+      "kind": "ratePlaceholder",
+      "refId": "CORE.RTB.123",
+      "fields": {
+        "name": "Final premium",
+        "status": "PLACEHOLDER",
+        "note": "PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column",
+        "mintedId": true
       }
     }
   ]
