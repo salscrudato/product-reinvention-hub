@@ -336,6 +336,10 @@ export interface LDTable {
   ruleRefIds?:     string[]
   /** The verbatim back-link cell the source carried (usually the value-column header). */
   backLinkWas?:    string
+  /** Distinct option values as displayed — numeric single limits AND split-limit strings
+   *  ("100/300") the numeric-only `rows` cannot hold; drives a derived term's option list so
+   *  split liability limits are not silently lost. */
+  optionValues?:   (string | number)[]
   /** True when this table's refId was SYNTHESIZED by the importer (never a source id). */
   mintedId?:       boolean
   linkBasis?:      LinkBasis

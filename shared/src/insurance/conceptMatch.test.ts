@@ -84,6 +84,10 @@ describe('coverage-code map (D1/D7)', () => {
   it('physical damage = collision + other than collision', () => {
     expect(physicalDamageCoverages(COVERAGES).sort()).toEqual(['X.COV.009', 'X.COV.010'])
   })
+  it('physical damage excludes a "Comprehensive Personal Liability" coverage (anchored, not substring)', () => {
+    const withCpl = [...COVERAGES, { refId: 'X.COV.099', name: 'Comprehensive Personal Liability' }]
+    expect(physicalDamageCoverages(withCpl).sort()).toEqual(['X.COV.009', 'X.COV.010'])
+  })
 })
 
 describe('coverage-name matcher (four tiers)', () => {
@@ -180,6 +184,16 @@ describe('rating-group matcher + package→form linking (D5)', () => {
   })
   it('containment catches "Optional Bodily Injury To Others" → Bodily Injury', () => {
     expect(matchGroup('Optional Bodily Injury To Others', COVERAGES, covsByForm).covRefIds).toEqual(['X.COV.001'])
+  })
+  it('combined "Uninsured/Underinsured Motorists Combined Single Limit" → all four UM/UIM BI+PD', () => {
+    const m = matchGroup('Uninsured/Underinsured Motorists Combined Single Limit', COVERAGES, covsByForm)
+    expect(m.covRefIds.sort()).toEqual(['X.COV.005', 'X.COV.006', 'X.COV.007', 'X.COV.008'])
+  })
+  it('a package name with NO form provenance in the file is not stamped (never fabricates the form)', () => {
+    // "Value-Added" → AC 400, but covsByForm carries no AC 400 → must fall through, not stamp AC 400.
+    const m = matchGroup('Value-Added', COVERAGES, covsByForm)
+    expect(m.formNums).toEqual([])
+    expect(m.matchBasis).toBe('unmatched')
   })
 })
 

@@ -344,6 +344,7 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
     ['RULE ID:', 'Liability Limit: Available (thousands; $)', 'Available', 'Default', 'Available2', 'Default2'],
     ['Single Limits ($)', 25, 'X', 'N/A', 'X', 'N/A'],
     ['Single Limits ($)', 50, 'X', 'X', 'N/A', 'N/A'],
+    ['Split Limits', '100/300', 'X', 'N/A', 'X', 'N/A'],   // split limit the numeric parse would drop
     ['TABLE NAME: Physical Damage Deductibles - AZ', '', 'Collision', 'Other Than Collision (OTC)'],
     ['RULE ID:', 'Deductible ($)'],
     ['GROUP 1: All vehicles', 0, 'X'],
@@ -427,7 +428,7 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
     expect(t['kind']).toBe('LIMIT')
     expect(t['states']).toEqual(['AZ'])
     expect(t['allStates']).toBe(false)
-    expect(t['options']).toEqual([25, 50])
+    expect(t['options']).toEqual([25, 50, '100/300'])   // split limit preserved, not dropped
     expect(t['linkBasis']).toBe('derived')
   })
   it('a DEDUCTIBLE table yields DEDUCTIBLE terms on Collision + OTC', () => {
@@ -816,5 +817,72 @@ describe('mapIsoWorkbook — form anchor upgrades (D6)', () => {
   it('a form in no coverage form list is left unanchored (never invented)', () => {
     const f = plan3.forms.find(x => x.data['number'] === 'AC 999')!
     expect(f.data['coverageRefIds']).toBeUndefined()
+  })
+})
+
+// ─── Review-hardening: rating-group forward-fill stops at policy-level steps (D5) ──
+describe('mapIsoWorkbook — rating-group forward-fill never bleeds onto policy-level steps', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Auto', 'Bodily Injury', '', 'X'],
+  ])
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI'],
+    ['RULE ID:', 'Available'],
+    ['Single', 25],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Late', 10],
+  ])
+  const rating = g('Rating Specifications', [
+    ['RATING'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RATING STEP ID', 'COVERAGE NAME', 'RATING RULES', 'ALGORITHM STEP', 'CALCULATION', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.RAT.1', '', 'Bodily Injury', 'base', 'Base Rate', '*', 'X'],
+    ['Active', 'CORE.RAT.1', '', '', 'ilf', 'Increased Limit Factor', '*', 'X'],   // coverage continuation → attributed
+    ['Active', 'CORE.RAT.1', '', '', 'fin', 'Final premium', '+', 'X'],            // policy-level → unattributed
+    ['Active', 'CORE.RAT.1', '', '', 'tax', 'MCCA Assessment', '+', 'X'],          // policy-level → unattributed
+  ])
+  const p = mapIsoWorkbook([fw, refs, rating])
+  const stepBy = (frag: string) => (p.ratingProgram!.data['steps'] as Array<Record<string, unknown>>).find(s => new RegExp(frag, 'i').test(String(s['label'])))!
+
+  it('a coverage continuation step inherits the group; a policy-level step does not', () => {
+    expect(stepBy('Increased Limit')['groupRefId']).toBe('CORE.RTG.001')
+    expect(stepBy('Final premium')['groupRefId']).toBeUndefined()
+    expect(stepBy('MCCA Assessment')['groupRefId']).toBeUndefined()
+  })
+})
+
+// ─── Review-hardening: rate-table artifacts correlated to their own block (D4) ──
+describe('mapIsoWorkbook — rate-table artifact detection is order/count-independent', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Auto', 'Bodily Injury', '', 'X'],
+  ])
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI'],
+    ['RULE ID:', 'Available'],
+    ['Single', 25],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Late', 10],
+  ])
+  // Artifact block FIRST (no RATE TABLE ID), real table SECOND — the old slice(N) got this backwards.
+  const rt = g('Rating Tables', [
+    ['RATE TABLE NAME:', 'Wrong-Line Example'],
+    ['(no id here)', 1],
+    ['RATE TABLE NAME:', 'Real Factor Table'],
+    ['RATE TABLE ID:', 'RTTable.001'],
+    ['Territory', 'Factor'],
+    ['A', 1.1],
+  ])
+  const p = mapIsoWorkbook([fw, refs, rt])
+  it('reports only the block with no RATE TABLE ID as the excluded artifact', () => {
+    const n = p.summary.notices.find(x => x.code === 'template_artifacts_excluded')!
+    expect((n.data as { names: string[] }).names).toEqual(['Wrong-Line Example'])
+    expect(p.rtTables.map(t => t.refId)).toContain('RTTable.001')   // the real table is kept
   })
 })

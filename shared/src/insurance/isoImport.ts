@@ -1447,6 +1447,11 @@ const RATE_FIELDS: Record<string, string[]> = {
   review:    ['REVIEW STATUS', 'REVIEW', 'APPROVAL STATUS'],
 }
 
+// Policy-level aggregation steps — a total/final/minimum premium, a tax, an assessment, or a
+// statutory fee/surcharge. Coverage-scoped when the row names its own coverage; otherwise (a
+// blank-coverage continuation row) they are global and must not inherit the previous group.
+const GLOBAL_STEP = /\b(final premium|total (?:endorsement )?premium|premium subject to minimum|minimum premium|assessment|authority fee|fund fee|theft surcharge|taxe?s?)\b/i
+
 function mapOp(v: IsoCell): RatingStep['op'] {
   const s = text(v).trim()
   if (s === '+' || s === '-') return 'ADD'
@@ -1490,6 +1495,11 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
     // into minted RTG group ids under the CORE signature.
     const gn = clean(at(cells, 'groupName'))
     if (gn) lastGroupName = gn
+    // A policy-level aggregation step (final/total/minimum premium, tax, assessment, statutory
+    // fee/surcharge) that carries NO coverage name of its own belongs to no coverage group — do
+    // not forward-fill the previous group onto it, or the trailing statutory taxes/fees and the
+    // final premium get falsely attributed to the last coverage (D5).
+    const stepGroupName = (!gn && GLOBAL_STEP.test(label)) ? '' : lastGroupName
     if (!programRefId) {
       const full = [stepId, ...splitList(at(cells, 'ids'))].find(s => /\.RAT/i.test(s))
       if (full) { const m = full.match(/^(.*\.RAT\.\d+)/i); programRefId = m ? m[1]! : full } // "GL.RAT.1.00" → "GL.RAT.1"
@@ -1508,7 +1518,7 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
         ? { type: 'RT', ref }
         : (rawRef ? { type: 'RT', ref: rawRef } : { type: 'INPUT', ref: label || stepId }),
       ...(roundTo !== undefined ? { roundTo } : {}),
-      ...(lastGroupName ? { groupName: lastGroupName } : {}),
+      ...(stepGroupName ? { groupName: stepGroupName } : {}),
     })
     scopes.push(stateScope(cells, sc))
   }
@@ -1556,6 +1566,7 @@ interface ReferenceTableDraft {
   kindHint:    TermKind
   sourceRows:  string        // "start-end", 1-based, for provenance
   rows:        LDRow[]       // distinct numeric option values (limit/deductible amounts)
+  optionValues:(string | number)[]  // distinct option values incl. split limits ("100/300")
   rowLabels:   string[]      // every data-row col-0 label (sub-coverage-matrix name matching)
   backLinkWas: string        // the RULE ID line's value-column header
 }
@@ -1591,18 +1602,26 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
       const state = (baseName.match(/-\s*([A-Z]{2})\s*$/) ?? [])[1]
       let group: string | undefined
       const rows: LDRow[] = []
+      const optionValues: (string | number)[] = []
       const rowLabels: string[] = []
       const seen = new Set<string>()
       for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
         const label = clean(cell(grid, r, 0))
         const rawVal = cell(grid, r, 1)
-        if (!label && !clean(rawVal)) continue
+        const valStr = clean(rawVal)
+        if (!label && !valStr) continue
         if (label && !rowLabels.includes(label)) rowLabels.push(label)
         if (!group) { const gm = label.match(/^GROUP \d[^:]*/i); if (gm) group = gm[0]!.trim() }
         const num = parseNum(rawVal)
         if (num !== null && !seen.has(String(num)) && rows.length < 40) {
           seen.add(String(num))
           rows.push({ label: label || String(num), value: num })
+          if (!optionValues.includes(num)) optionValues.push(num)
+        } else if (num === null && /^\d[\d.,]*\s*\/\s*\d/.test(valStr) && !seen.has(valStr) && optionValues.length < 60) {
+          // A split limit ("100/300") the numeric parse rejects — preserve the display value so
+          // the derived term's option list keeps it instead of silently dropping it.
+          seen.add(valStr)
+          optionValues.push(valStr)
         }
       }
       // Kind from the same "hay" the reference impl scans (name + back-link + codes).
@@ -1612,7 +1631,7 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
       const n = (nameCount.get(displayName) ?? 0) + 1
       nameCount.set(displayName, n)
       if (n > 1) displayName = `${displayName} (v${n})`
-      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, rowLabels, backLinkWas })
+      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, optionValues, rowLabels, backLinkWas })
     }
   }
   return drafts
@@ -1635,6 +1654,7 @@ function mintReferenceTables(drafts: ReferenceTableDraft[], prefix: string): Pla
       coverageRefIds: [],
       ruleRefIds: [],
       backLinkWas: d.backLinkWas || undefined,
+      optionValues: d.optionValues.length ? d.optionValues : undefined,
       mintedId: true,
       linkBasis: 'derived',
     }
@@ -1760,7 +1780,7 @@ function deriveTermsFromReferenceTables(coverages: PlannedEntity[], refTables: P
         kind: data.kindHint,
         label: data.name || tableRefId,
         ldTableRef: tableRefId,                       // resolves in the UI — CORE.TBL is in plan.ldTables
-        options: (data.rows ?? []).map(r => r.value),
+        options: data.optionValues ?? (data.rows ?? []).map(r => r.value),
         default: data.defaultValue ?? data.rows?.[0]?.value ?? 0,
         basis: '',
         states: data.state ? [data.state] : [],
@@ -1811,7 +1831,11 @@ function enrichRatingWithGroups(
       groups.push(cur)
       if (m.matchBasis === 'unmatched') unmatchedNames.push(gn)
     }
-    if (cur) {
+    // Attribute ONLY steps that carry a group name. A policy-level step (parseRating left its
+    // groupName unset because it is a global aggregation with no coverage of its own) is not
+    // stamped with the persisting `cur` group — that would falsely link statutory taxes/fees and
+    // the final premium to the last coverage (D5).
+    if (cur && gn) {
       step.groupRefId = cur.refId
       if (cur.coverageRefIds.length) step.groupCoverageRefIds = cur.coverageRefIds
       if (cur.formNumbers.length) step.packageFormNumbers = cur.formNumbers
@@ -1886,18 +1910,29 @@ function mintRatePlaceholders(ratingProgram: PlannedEntity | null, prefix: strin
 
 /** Names of the RATE-TABLE-NAME block markers on the rate-tables grid that yielded no usable
  *  table — template artifacts (a wrong-line example, blank-name skeletons) the mapper correctly
- *  excludes (D4). Surfaced as a notice + defects so the exclusion is transparent, never silent. */
-function rateTableArtifacts(grid: IsoGrid | undefined, tablesProduced: number): string[] {
+ *  excludes (D4). A block is an artifact iff it carries no RATE TABLE ID with a real refId — this
+ *  correlates each NAME marker to its own block, so it is order- and count-independent (a real
+ *  table sitting after an example, or two ids under one name, are handled correctly). Surfaced as
+ *  a notice + defects so the exclusion is transparent, never silent. */
+function rateTableArtifacts(grid: IsoGrid | undefined): string[] {
   if (!grid) return []
-  const names: string[] = []
+  const markers: { row: number; name: string }[] = []
   for (let r = 0; r < grid.cells.length; r++) {
-    if (!RT_NAME_MARKER.test(norm(cell(grid, r, 0)))) continue
-    const nm = clean(row(grid, r).slice(1).find(c => clean(c)) ?? null)
-    names.push(nm || '(blank skeleton)')
+    if (RT_NAME_MARKER.test(norm(cell(grid, r, 0)))) {
+      markers.push({ row: r, name: clean(row(grid, r).slice(1).find(c => clean(c)) ?? null) || '(blank skeleton)' })
+    }
   }
-  // Markers beyond the tables actually produced are the excluded artifacts (the common CORE
-  // case is tablesProduced === 0, so every marker is an artifact).
-  return tablesProduced >= names.length ? [] : names.slice(tablesProduced)
+  const artifacts: string[] = []
+  for (let i = 0; i < markers.length; i++) {
+    const start = markers[i]!.row
+    const end = markers[i + 1]?.row ?? grid.cells.length
+    let hasId = false
+    for (let r = start; r < end; r++) {
+      if (RT_ID_MARKER.test(norm(cell(grid, r, 0))) && clean(row(grid, r).slice(1).find(c => clean(c)) ?? null)) { hasId = true; break }
+    }
+    if (!hasId) artifacts.push(markers[i]!.name)
+  }
+  return artifacts
 }
 
 // ─── Orchestration ───────────────────────────────────────────────────────────────
@@ -2020,7 +2055,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   // template example + blank skeletons), so mint one placeholder per distinct factor the rating
   // algorithm names and flag the missing values. STRICTLY after parseRating (rtTables consumed).
   const ratePlaceholders = mintRatePlaceholders(ratingProgram, refPrefix, refTables.length > 0)
-  const excludedArtifacts = refTables.length > 0 ? rateTableArtifacts(rtGrid, rtTables.length) : []
+  const excludedArtifacts = refTables.length > 0 ? rateTableArtifacts(rtGrid) : []
   if (ratePlaceholders.length > 0) {
     ctx.addNotice({
       code: 'rate_table_placeholders',

@@ -102,9 +102,11 @@ export const COVERAGE_CODE_MAP: { code: RegExp; phrases: string[] }[] = [
 
 // Endorsement PACKAGES rated as programs but modeled as forms: the rating group names the
 // package in words while the coverages it grants are the package form's coverage list. These
-// package↔form pairs are ISO collector-auto DOMAIN data (form numbers, not client
-// identifiers); the AI overlay (R4) extends the map per-workbook. Each entry resolves via the
-// file's own covsByForm reverse index — no literal coverage refIds.
+// package↔form pairs are collector-auto seed data — the form numbers (AC 400/113/114/115/116)
+// are carrier-ish identifiers, so matchGroup ONLY applies a pair when the uploaded file's OWN
+// coverages actually reference that form (covsByForm hit); a workbook that merely reuses a
+// phrase like "Value Added" without the form falls through to 'unmatched' (never a fabricated
+// form link). The AI overlay (R4) extends this map per-workbook.
 export const PACKAGE_FORMS: { re: RegExp; formNum: string }[] = [
   { re: /^VALUE ADDED/,           formNum: 'AC 400' },
   { re: /^VEHICLE UNDER CONSTRUCTION/, formNum: 'AC 116' },
@@ -226,7 +228,10 @@ export function resolveCoverageCode(code: string, coverages: readonly NamedCover
 export function physicalDamageCoverages(coverages: readonly NamedCoverage[]): string[] {
   const out: string[] = []
   for (const c of coverages) {
-    if (/^collision/i.test(c.name) || /other than collision|comprehensive/i.test(c.name)) out.push(c.refId)
+    // "comprehensive" is anchored + excluded from liability/personal-lines names so a
+    // "Comprehensive Personal Liability" coverage is never mistaken for auto physical damage.
+    if (/^collision/i.test(c.name) || /other than collision/i.test(c.name) ||
+        (/\bcomprehensive\b/i.test(c.name) && !/liabilit|personal|medical|business/i.test(c.name))) out.push(c.refId)
   }
   return out
 }
@@ -297,6 +302,11 @@ export function matchRuleReferenceToTables(
 // file's hierarchy — never a hard-coded id. Ordered most-specific first (UM/UIM CSL before bare
 // CSL, before bare UM/UIM). ISO auto DOMAIN vocab, not carrier identifiers; AI-overlay-extensible.
 export const RATING_GROUP_CONCEPTS: { re: RegExp; phrases: string[] }[] = [
+  // Combined "Uninsured/Underinsured Motorists Combined Single Limit" must precede the
+  // single-sided CSL entries (first-match-wins): "UNINSURED" is not a substring of
+  // "UNDERINSURED", so without this the underinsured-only entry below would shadow it and drop
+  // the uninsured coverages.
+  { re: /\bUNINSURED\b.*\bUNDERINSURED MOTORISTS? COMBINED SINGLE LIMIT/, phrases: ['UNINSURED MOTORISTS BODILY INJURY', 'UNINSURED MOTORISTS PROPERTY DAMAGE', 'UNDERINSURED MOTORISTS BODILY INJURY', 'UNDERINSURED MOTORISTS PROPERTY DAMAGE'] },
   { re: /\bUNINSURED MOTORISTS? COMBINED SINGLE LIMIT/,    phrases: ['UNINSURED MOTORISTS BODILY INJURY', 'UNINSURED MOTORISTS PROPERTY DAMAGE'] },
   { re: /\bUNDERINSURED MOTORISTS? COMBINED SINGLE LIMIT/, phrases: ['UNDERINSURED MOTORISTS BODILY INJURY', 'UNDERINSURED MOTORISTS PROPERTY DAMAGE'] },
   { re: /\bCOMBINED SINGLE LIMIT/,                         phrases: ['BODILY INJURY', 'PROPERTY DAMAGE'] },
@@ -322,12 +332,14 @@ export function matchGroup(
 ): GroupMatch {
   const base = norm(raw.replace(/\(.*?\)/g, ' ').replace(/excluding.*$/i, ' ').replace(/™/g, ' '))
 
-  // 1 — endorsement package rated as a program.
+  // 1 — endorsement package rated as a program. ONLY when the file's own coverages actually
+  // reference the package form (covsByForm hit): a seeded carrier form is never stamped onto a
+  // workbook that doesn't contain it — fall through to concept resolution / 'unmatched' instead.
   for (const { re, formNum } of PACKAGE_FORMS) {
-    if (re.test(base)) {
-      const via = covsByForm.get(squish(formNum)) ?? []
-      return { covRefIds: [...new Set(via)].slice(0, 40), formNums: [formNum], how: `rates endorsement package ${formNum}`, matchBasis: 'derived' }
-    }
+    if (!re.test(base)) continue
+    const via = covsByForm.get(squish(formNum)) ?? []
+    if (!via.length) break   // recognized package name but no file provenance → do not fabricate the form
+    return { covRefIds: [...new Set(via)].slice(0, 40), formNums: [formNum], how: `rates endorsement package ${formNum}`, matchBasis: 'derived' }
   }
 
   // 2 — domain taxonomy (UM/UIM/CSL/scheduled) → concept phrases resolved against the hierarchy.

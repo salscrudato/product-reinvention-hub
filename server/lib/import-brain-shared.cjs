@@ -2239,7 +2239,7 @@ function resolveCoverageCode(code, coverages) {
 function physicalDamageCoverages(coverages) {
   const out = [];
   for (const c of coverages) {
-    if (/^collision/i.test(c.name) || /other than collision|comprehensive/i.test(c.name)) out.push(c.refId);
+    if (/^collision/i.test(c.name) || /other than collision/i.test(c.name) || /\bcomprehensive\b/i.test(c.name) && !/liabilit|personal|medical|business/i.test(c.name)) out.push(c.refId);
   }
   return out;
 }
@@ -2273,6 +2273,11 @@ function matchRuleReferenceToTables(ref, tables, ruleStates, ruleAll, coverages)
   return { tableRefIds: cands.map((t) => t.refId), how: "concept match on reference name" };
 }
 var RATING_GROUP_CONCEPTS = [
+  // Combined "Uninsured/Underinsured Motorists Combined Single Limit" must precede the
+  // single-sided CSL entries (first-match-wins): "UNINSURED" is not a substring of
+  // "UNDERINSURED", so without this the underinsured-only entry below would shadow it and drop
+  // the uninsured coverages.
+  { re: /\bUNINSURED\b.*\bUNDERINSURED MOTORISTS? COMBINED SINGLE LIMIT/, phrases: ["UNINSURED MOTORISTS BODILY INJURY", "UNINSURED MOTORISTS PROPERTY DAMAGE", "UNDERINSURED MOTORISTS BODILY INJURY", "UNDERINSURED MOTORISTS PROPERTY DAMAGE"] },
   { re: /\bUNINSURED MOTORISTS? COMBINED SINGLE LIMIT/, phrases: ["UNINSURED MOTORISTS BODILY INJURY", "UNINSURED MOTORISTS PROPERTY DAMAGE"] },
   { re: /\bUNDERINSURED MOTORISTS? COMBINED SINGLE LIMIT/, phrases: ["UNDERINSURED MOTORISTS BODILY INJURY", "UNDERINSURED MOTORISTS PROPERTY DAMAGE"] },
   { re: /\bCOMBINED SINGLE LIMIT/, phrases: ["BODILY INJURY", "PROPERTY DAMAGE"] },
@@ -2284,10 +2289,10 @@ var RATING_GROUP_CONCEPTS = [
 function matchGroup(raw, coverages, covsByForm) {
   const base = norm(raw.replace(/\(.*?\)/g, " ").replace(/excluding.*$/i, " ").replace(/™/g, " "));
   for (const { re, formNum } of PACKAGE_FORMS) {
-    if (re.test(base)) {
-      const via = covsByForm.get(squish(formNum)) ?? [];
-      return { covRefIds: [...new Set(via)].slice(0, 40), formNums: [formNum], how: `rates endorsement package ${formNum}`, matchBasis: "derived" };
-    }
+    if (!re.test(base)) continue;
+    const via = covsByForm.get(squish(formNum)) ?? [];
+    if (!via.length) break;
+    return { covRefIds: [...new Set(via)].slice(0, 40), formNums: [formNum], how: `rates endorsement package ${formNum}`, matchBasis: "derived" };
   }
   const folded = foldSynonyms(base);
   for (const { re, phrases } of RATING_GROUP_CONCEPTS) {
@@ -3663,6 +3668,7 @@ var RATE_FIELDS = {
   ],
   review: ["REVIEW STATUS", "REVIEW", "APPROVAL STATUS"]
 };
+var GLOBAL_STEP = /\b(final premium|total (?:endorsement )?premium|premium subject to minimum|minimum premium|assessment|authority fee|fund fee|theft surcharge|taxe?s?)\b/i;
 function mapOp(v) {
   const s = text(v).trim();
   if (s === "+" || s === "-") return "ADD";
@@ -3704,6 +3710,7 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
     if (!stepId && !label) continue;
     const gn = clean(at(cells, "groupName"));
     if (gn) lastGroupName = gn;
+    const stepGroupName = !gn && GLOBAL_STEP.test(label) ? "" : lastGroupName;
     if (!programRefId) {
       const full = [stepId, ...splitList(at(cells, "ids"))].find((s) => /\.RAT/i.test(s));
       if (full) {
@@ -3723,7 +3730,7 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
       op: mapOp(at(cells, "calc")),
       source: ref ? { type: "RT", ref } : rawRef ? { type: "RT", ref: rawRef } : { type: "INPUT", ref: label || stepId },
       ...roundTo !== void 0 ? { roundTo } : {},
-      ...lastGroupName ? { groupName: lastGroupName } : {}
+      ...stepGroupName ? { groupName: stepGroupName } : {}
     });
     scopes.push(stateScope(cells, sc));
   }
@@ -3781,12 +3788,14 @@ function detectReferenceTables(grids, consumed, ctx) {
       const state = (baseName.match(/-\s*([A-Z]{2})\s*$/) ?? [])[1];
       let group;
       const rows = [];
+      const optionValues = [];
       const rowLabels = [];
       const seen = /* @__PURE__ */ new Set();
       for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
         const label = clean(cell(grid, r, 0));
         const rawVal = cell(grid, r, 1);
-        if (!label && !clean(rawVal)) continue;
+        const valStr = clean(rawVal);
+        if (!label && !valStr) continue;
         if (label && !rowLabels.includes(label)) rowLabels.push(label);
         if (!group) {
           const gm = label.match(/^GROUP \d[^:]*/i);
@@ -3796,6 +3805,10 @@ function detectReferenceTables(grids, consumed, ctx) {
         if (num !== null && !seen.has(String(num)) && rows.length < 40) {
           seen.add(String(num));
           rows.push({ label: label || String(num), value: num });
+          if (!optionValues.includes(num)) optionValues.push(num);
+        } else if (num === null && /^\d[\d.,]*\s*\/\s*\d/.test(valStr) && !seen.has(valStr) && optionValues.length < 60) {
+          seen.add(valStr);
+          optionValues.push(valStr);
         }
       }
       const hay = `${baseName} ${backLinkWas} ${covCodes.join(" ")}`.toUpperCase();
@@ -3804,7 +3817,7 @@ function detectReferenceTables(grids, consumed, ctx) {
       const n = (nameCount.get(displayName) ?? 0) + 1;
       nameCount.set(displayName, n);
       if (n > 1) displayName = `${displayName} (v${n})`;
-      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, rowLabels, backLinkWas });
+      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, optionValues, rowLabels, backLinkWas });
     }
   }
   return drafts;
@@ -3823,6 +3836,7 @@ function mintReferenceTables(drafts, prefix) {
       coverageRefIds: [],
       ruleRefIds: [],
       backLinkWas: d.backLinkWas || void 0,
+      optionValues: d.optionValues.length ? d.optionValues : void 0,
       mintedId: true,
       linkBasis: "derived"
     };
@@ -3923,7 +3937,7 @@ function deriveTermsFromReferenceTables(coverages, refTables) {
         label: data.name || tableRefId,
         ldTableRef: tableRefId,
         // resolves in the UI — CORE.TBL is in plan.ldTables
-        options: (data.rows ?? []).map((r) => r.value),
+        options: data.optionValues ?? (data.rows ?? []).map((r) => r.value),
         default: data.defaultValue ?? data.rows?.[0]?.value ?? 0,
         basis: "",
         states: data.state ? [data.state] : [],
@@ -3963,7 +3977,7 @@ function enrichRatingWithGroups(ratingProgram, coverages, refTablesPresent, pref
       groups.push(cur);
       if (m.matchBasis === "unmatched") unmatchedNames.push(gn);
     }
-    if (cur) {
+    if (cur && gn) {
       step.groupRefId = cur.refId;
       if (cur.coverageRefIds.length) step.groupCoverageRefIds = cur.coverageRefIds;
       if (cur.formNumbers.length) step.packageFormNumbers = cur.formNumbers;
@@ -4028,15 +4042,28 @@ function mintRatePlaceholders(ratingProgram, prefix, refTablesPresent) {
   }
   return placeholders;
 }
-function rateTableArtifacts(grid, tablesProduced) {
+function rateTableArtifacts(grid) {
   if (!grid) return [];
-  const names = [];
+  const markers = [];
   for (let r = 0; r < grid.cells.length; r++) {
-    if (!RT_NAME_MARKER.test(norm2(cell(grid, r, 0)))) continue;
-    const nm = clean(row(grid, r).slice(1).find((c) => clean(c)) ?? null);
-    names.push(nm || "(blank skeleton)");
+    if (RT_NAME_MARKER.test(norm2(cell(grid, r, 0)))) {
+      markers.push({ row: r, name: clean(row(grid, r).slice(1).find((c) => clean(c)) ?? null) || "(blank skeleton)" });
+    }
   }
-  return tablesProduced >= names.length ? [] : names.slice(tablesProduced);
+  const artifacts = [];
+  for (let i = 0; i < markers.length; i++) {
+    const start = markers[i].row;
+    const end = markers[i + 1]?.row ?? grid.cells.length;
+    let hasId = false;
+    for (let r = start; r < end; r++) {
+      if (RT_ID_MARKER.test(norm2(cell(grid, r, 0))) && clean(row(grid, r).slice(1).find((c) => clean(c)) ?? null)) {
+        hasId = true;
+        break;
+      }
+    }
+    if (!hasId) artifacts.push(markers[i].name);
+  }
+  return artifacts;
 }
 function mapIsoWorkbook(grids, overlay) {
   const ctx = new Ctx();
@@ -4109,7 +4136,7 @@ function mapIsoWorkbook(grids, overlay) {
   const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix);
   const formUpgrades = upgradeFormAnchors(forms, allCoverages, refTables.length > 0);
   const ratePlaceholders = mintRatePlaceholders(ratingProgram, refPrefix, refTables.length > 0);
-  const excludedArtifacts = refTables.length > 0 ? rateTableArtifacts(rtGrid, rtTables.length) : [];
+  const excludedArtifacts = refTables.length > 0 ? rateTableArtifacts(rtGrid) : [];
   if (ratePlaceholders.length > 0) {
     ctx.addNotice({
       code: "rate_table_placeholders",
