@@ -259,12 +259,21 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
     setAiSuggestions(null)
     try {
       const { headers, samples } = buildSheetSamples(localGrids)
+      // Concept-linker tail (R4): the ambiguous links the deterministic passes left open, plus
+      // the model id sets the server validates every proposed link against.
+      const ratingGroups = ((localPlan.ratingProgram?.data as { ratingGroups?: Array<{ name: string; matchBasis: string }> })?.ratingGroups) ?? []
+      const mintedTables = localPlan.ldTables.filter(t => (t.data as { mintedId?: boolean }).mintedId)
       const body = {
         unmappedColumns:     localPlan.summary.unmappedColumns,
         sheetsSkipped:       localPlan.summary.sheetsSkipped,
         headers,
         samples,
         dataValidationVocab: {},
+        unmatchedGroups:     ratingGroups.filter(g => g.matchBasis === 'unmatched').map(g => g.name),
+        unlinkedTables:      mintedTables.filter(t => !((t.data as { coverageRefIds?: string[] }).coverageRefIds?.length)).map(t => ({ refId: t.refId, name: (t.data as { name?: string }).name ?? '' })),
+        unresolvedRuleRefs:  ((localPlan.summary.notices.find(n => n.code === 'unresolved_rule_refs')?.data as { refs?: string[] })?.refs) ?? [],
+        coverageRefIds:      localPlan.coverages.map(c => c.refId).filter((r): r is string => !!r),
+        tableRefIds:         mintedTables.map(t => t.refId).filter((r): r is string => !!r),
       }
       const data = await adapter.fns.call<typeof body, AISuggestions>('proposeMapping', body)
       setAiSuggestions(data)
@@ -279,7 +288,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   function handleApplyOverlay() {
     if (!aiSuggestions || !localGrids.length) return
     // Build overlay from accepted suggestions only.
-    const overlay: AliasOverlay = { columnAliases: {}, enumOverrides: {}, sheetRoleHints: {}, confidences: {}, citations: {} }
+    const overlay: AliasOverlay = { columnAliases: {}, enumOverrides: {}, sheetRoleHints: {}, ratingGroupLinks: {}, tableCoverageLinks: {}, ruleReferenceLinks: {}, confidences: {}, citations: {} }
     const { aliasOverlay, confidences, citations } = aiSuggestions
     for (const [field, aliases] of Object.entries(aliasOverlay.columnAliases ?? {})) {
       for (const alias of aliases) {
@@ -305,6 +314,17 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       if (acceptedSuggestions.has(key)) {
         overlay.sheetRoleHints![sheet] = role
       }
+    }
+    // Concept links (R4): apply accepted proposals — the shared mapper validates each refId
+    // against the model and applies it fill-only (never overriding a deterministic link).
+    for (const [name, refIds] of Object.entries(aliasOverlay.ratingGroupLinks ?? {})) {
+      if (acceptedSuggestions.has(`rgl:${name}`)) overlay.ratingGroupLinks![name] = refIds as string[]
+    }
+    for (const [tid, refIds] of Object.entries(aliasOverlay.tableCoverageLinks ?? {})) {
+      if (acceptedSuggestions.has(`tcl:${tid}`)) overlay.tableCoverageLinks![tid] = refIds as string[]
+    }
+    for (const [txt, refIds] of Object.entries(aliasOverlay.ruleReferenceLinks ?? {})) {
+      if (acceptedSuggestions.has(`rrl:${txt}`)) overlay.ruleReferenceLinks![txt] = refIds as string[]
     }
     const newPlan = mapIsoWorkbook(localGrids, overlay)
     setLocalPlan(newPlan)
@@ -987,6 +1007,19 @@ function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading
     for (const [sheet, role] of Object.entries(aiSuggestions.aliasOverlay.sheetRoleHints ?? {})) {
       const key = `sheet:${sheet}`
       aiItems.push({ key, label: `Sheet role`, detail: `"${sheet}" → ${role}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
+    }
+    // Concept-link proposals (R4) — resolve the ambiguous tail the deterministic passes left open.
+    for (const [name, refIds] of Object.entries(aiSuggestions.aliasOverlay.ratingGroupLinks ?? {})) {
+      const key = `rgl:${name}`
+      aiItems.push({ key, label: `Rating-group link`, detail: `"${name}" → ${(refIds as string[]).join(', ')}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
+    }
+    for (const [tid, refIds] of Object.entries(aiSuggestions.aliasOverlay.tableCoverageLinks ?? {})) {
+      const key = `tcl:${tid}`
+      aiItems.push({ key, label: `Table → coverage`, detail: `${tid} → ${(refIds as string[]).join(', ')}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
+    }
+    for (const [txt, refIds] of Object.entries(aiSuggestions.aliasOverlay.ruleReferenceLinks ?? {})) {
+      const key = `rrl:${txt}`
+      aiItems.push({ key, label: `Rule ref → table`, detail: `"${txt}" → ${(refIds as string[]).join(', ')}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
     }
   }
 

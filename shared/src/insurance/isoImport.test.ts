@@ -886,3 +886,52 @@ describe('mapIsoWorkbook — rate-table artifact detection is order/count-indepe
     expect(p.rtTables.map(t => t.refId)).toContain('RTTable.001')   // the real table is kept
   })
 })
+
+// ─── AI overlay: fill-only + validated (R4) ────────────────────────────────────────
+// The AI overlay resolves ONLY the tail the deterministic passes left unresolved, only to
+// entities that exist, and never overrides a deterministic link. Every applied link is
+// linkBasis:'ai-proposed'.
+describe('mapIsoWorkbook — AI overlay is fill-only + validated (R4)', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Auto', 'Bodily Injury', '', 'X'],
+    ['Active', 'CORE.COV.003', 'Core', 'Auto', 'Property Damage', '', 'X'],
+  ])
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI'],
+    ['RULE ID:', 'Available'],
+    ['Single', 25],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Late', 10],
+  ])
+  const rating = g('Rating Specifications', [
+    ['RATING'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RATING STEP ID', 'COVERAGE NAME', 'RATING RULES', 'ALGORITHM STEP', 'CALCULATION', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.RAT.1', '', 'Bodily Injury', 'base', 'Base Rate', '*', 'X'],
+    ['Active', 'CORE.RAT.1', '', 'Business Use', 'biz', 'Business Factor', '*', 'X'],
+  ])
+  const groupsOf = (p: ImportPlan) => p.ratingProgram!.data['ratingGroups'] as Array<{ name: string; coverageRefIds: string[]; matchBasis: string }>
+
+  it('resolves an unmatched group from a VALID cited proposal (linkBasis ai-proposed)', () => {
+    const p = mapIsoWorkbook([fw, refs, rating], { ratingGroupLinks: { 'Business Use': ['CORE.COV.001'] } })
+    const bu = groupsOf(p).find(x => x.name === 'Business Use')!
+    expect(bu.matchBasis).toBe('ai-proposed')
+    expect(bu.coverageRefIds).toEqual(['CORE.COV.001'])
+    expect(p.summary.notices.some(n => n.code === 'ai_proposed_links')).toBe(true)
+  })
+  it('DROPS a dangling proposal (refId not in the model) — group stays flagged unmatched', () => {
+    const p = mapIsoWorkbook([fw, refs, rating], { ratingGroupLinks: { 'Business Use': ['CORE.COV.999'] } })
+    const bu = groupsOf(p).find(x => x.name === 'Business Use')!
+    expect(bu.matchBasis).toBe('unmatched')
+    expect(bu.coverageRefIds).toEqual([])
+  })
+  it('NEVER overrides a deterministic match, even when the overlay names that group', () => {
+    const p = mapIsoWorkbook([fw, refs, rating], { ratingGroupLinks: { 'Bodily Injury': ['CORE.COV.003'] } })
+    const bi = groupsOf(p).find(x => x.name === 'Bodily Injury')!
+    expect(bi.matchBasis).toBe('derived')
+    expect(bi.coverageRefIds).toEqual(['CORE.COV.001'])
+  })
+})

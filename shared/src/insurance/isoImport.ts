@@ -80,6 +80,17 @@ export interface AliasOverlay {
   confidences?:    Record<string, number>
   /** cited cell per proposal key (source of truth for each suggestion). */
   citations?:      Record<string, string>
+  // ── Concept-linker AI overlay (R4): accepted, cited proposals for the ambiguous tail the
+  //    deterministic passes left unresolved. FILL-ONLY — applied only where the deterministic
+  //    result was empty/unmatched, never overwriting a 'given'/'derived' link, and only when the
+  //    proposed refIds EXIST in the deterministic model (dangling refs are dropped). Every applied
+  //    link is stamped linkBasis:'ai-proposed'. ──
+  /** rating-group name (raw) → coverage refId(s), for a group no coverage matched. */
+  ratingGroupLinks?:   Record<string, string[]>
+  /** reference-table refId → coverage refId(s), for a table left coverage-unlinked. */
+  tableCoverageLinks?: Record<string, string[]>
+  /** rule-reference text (raw) → reference-table refId(s), for an unresolved rule reference. */
+  ruleReferenceLinks?: Record<string, string[]>
 }
 
 export interface ImportSummary {
@@ -1690,20 +1701,27 @@ function linkReferenceTables(
   refTables: PlannedEntity[],
   coverages: PlannedEntity[],
   rules: PlannedEntity[],
-): { backLinked: number; covLinked: number; rulesLinked: number; resolvedToCoverage: number; unresolved: number; resolvedRefs: string[]; unresolvedRefs: string[] } {
+  overlay?: AliasOverlay | null,
+): { backLinked: number; covLinked: number; rulesLinked: number; resolvedToCoverage: number; unresolved: number; aiProposed: number; resolvedRefs: string[]; unresolvedRefs: string[] } {
   // Always pull + clear the transient reference text (keeps every non-CORE golden clean).
   const refTexts = rules.map(r => {
     const t = r.data['_referenceText']
     delete r.data['_referenceText']
     return typeof t === 'string' ? t : ''
   })
-  const tally = { backLinked: 0, covLinked: 0, rulesLinked: 0, resolvedToCoverage: 0, unresolved: 0, resolvedRefs: [] as string[], unresolvedRefs: [] as string[] }
+  const tally = { backLinked: 0, covLinked: 0, rulesLinked: 0, resolvedToCoverage: 0, unresolved: 0, aiProposed: 0, resolvedRefs: [] as string[], unresolvedRefs: [] as string[] }
   if (!refTables.length) return tally
 
   const namedCovs: NamedCoverage[] = coverages.map(c => ({ refId: c.refId as string, name: String(c.data['name'] ?? '') }))
   const conceptTables: ConceptTable[] = refTables.map((t, i) => ({ refId: t.refId as string, baseName: refDrafts[i]!.baseName, state: refDrafts[i]!.state }))
   const tableByRefId = new Map(refTables.map(t => [t.refId as string, t]))
   const covsByForm = buildCovsByForm(coverages)
+  // Validation sets: an AI-proposed link is applied ONLY when its refIds exist in the
+  // deterministic model (dangling refs are dropped, never invented).
+  const covRefIdSet = new Set(namedCovs.map(c => c.refId))
+  const tableRefIdSet = new Set(refTables.map(t => t.refId as string))
+  const validRefs = (proposed: string[] | undefined, ids: ReadonlySet<string>): string[] =>
+    (proposed ?? []).filter(id => ids.has(id))
 
   // ── Reference-table → coverage links (D1/D7) ──
   refDrafts.forEach((d, i) => {
@@ -1718,6 +1736,12 @@ function linkReferenceTables(
       const m = matchCoverageByName(d.baseName.replace(FORM_TOKEN, ' '), namedCovs)
       if (m) linked.add(m.refId)
       for (const ftk of formTokens(d.baseName)) for (const id of (covsByForm.get(squishStr(ftk)) ?? [])) linked.add(id)
+    }
+    // Fill-only AI overlay: a table the deterministic passes left coverage-unlinked may be
+    // linked by an accepted, cited proposal — but only to coverages that actually exist.
+    if (linked.size === 0 && overlay?.tableCoverageLinks) {
+      const ai = validRefs(overlay.tableCoverageLinks[refTables[i]!.refId as string], covRefIdSet)
+      if (ai.length) { ai.forEach(id => linked.add(id)); refTables[i]!.data['linkBasis'] = 'ai-proposed'; tally.aiProposed++ }
     }
     refTables[i]!.data['coverageRefIds'] = [...linked]
     if (linked.size) tally.covLinked++
@@ -1743,9 +1767,19 @@ function linkReferenceTables(
       rule.data['resolvedCoverageRefId'] = m.resolvedCoverageRefId
       tally.resolvedToCoverage++
       if (!tally.resolvedRefs.includes(ref)) tally.resolvedRefs.push(ref)
-    } else if (m.how === 'NO MATCHING TABLE IN SOURCE') {
-      tally.unresolved++
-      if (!tally.unresolvedRefs.includes(ref)) tally.unresolvedRefs.push(ref)
+    } else {
+      // Deterministically unresolved — try an accepted, cited AI proposal (existing tables only).
+      const ai = overlay?.ruleReferenceLinks ? validRefs(overlay.ruleReferenceLinks[ref], tableRefIdSet) : []
+      if (ai.length) {
+        rule.data['tableRefIds'] = ai
+        rule.data['tableLinkBasis'] = 'ai-proposed'
+        tally.rulesLinked++
+        tally.aiProposed++
+        for (const tid of ai) { const rr = tableByRefId.get(tid)?.data['ruleRefIds'] as string[] | undefined; if (rr && !rr.includes(rule.refId as string)) rr.push(rule.refId as string) }
+      } else if (m.how === 'NO MATCHING TABLE IN SOURCE') {
+        tally.unresolved++
+        if (!tally.unresolvedRefs.includes(ref)) tally.unresolvedRefs.push(ref)
+      }
     }
   }
   tally.backLinked = refTables.filter(t => (t.data['ruleRefIds'] as string[]).length > 0).length
@@ -1806,14 +1840,17 @@ function enrichRatingWithGroups(
   coverages: PlannedEntity[],
   refTablesPresent: boolean,
   prefix: string,
-): { groups: number; matched: number; unmatchedNames: string[] } {
-  const empty = { groups: 0, matched: 0, unmatchedNames: [] as string[] }
+  overlay?: AliasOverlay | null,
+): { groups: number; matched: number; aiProposed: number; unmatchedNames: string[] } {
+  const empty = { groups: 0, matched: 0, aiProposed: 0, unmatchedNames: [] as string[] }
   if (!ratingProgram || !refTablesPresent) return empty
   const steps = ratingProgram.data['steps'] as RatingStep[]
   if (!steps.some(s => s.groupName)) return empty
 
   const namedCovs: NamedCoverage[] = coverages.map(c => ({ refId: c.refId as string, name: String(c.data['name'] ?? '') }))
   const covsByForm = buildCovsByForm(coverages)
+  const covRefIdSet = new Set(namedCovs.map(c => c.refId))
+  let aiProposed = 0
 
   const groups: RatingGroupSummary[] = []
   const unmatchedNames: string[] = []
@@ -1824,12 +1861,20 @@ function enrichRatingWithGroups(
     if (gn && (!cur || cur.name !== gn)) {
       gSeq += 1
       const m = matchGroup(gn, namedCovs, covsByForm)
+      let covRefIds = m.covRefIds
+      let matchBasis: RatingGroupSummary['matchBasis'] = m.matchBasis
+      // Fill-only AI overlay: a group no coverage matched may be resolved by an accepted, cited
+      // proposal — but only to coverages that exist. Never overrides a deterministic match.
+      if (m.matchBasis === 'unmatched' && overlay?.ratingGroupLinks) {
+        const ai = (overlay.ratingGroupLinks[gn] ?? []).filter(id => covRefIdSet.has(id))
+        if (ai.length) { covRefIds = ai; matchBasis = 'ai-proposed'; aiProposed++ }
+      }
       cur = {
         refId: `${prefix}.RTG.${String(gSeq).padStart(3, '0')}`, name: gn,
-        coverageRefIds: m.covRefIds, formNumbers: m.formNums, stepRefIds: [], matchBasis: m.matchBasis,
+        coverageRefIds: covRefIds, formNumbers: m.formNums, stepRefIds: [], matchBasis,
       }
       groups.push(cur)
-      if (m.matchBasis === 'unmatched') unmatchedNames.push(gn)
+      if (matchBasis === 'unmatched') unmatchedNames.push(gn)
     }
     // Attribute ONLY steps that carry a group name. A policy-level step (parseRating left its
     // groupName unset because it is a global aggregation with no coverage of its own) is not
@@ -1844,7 +1889,7 @@ function enrichRatingWithGroups(
     }
   }
   ratingProgram.data['ratingGroups'] = groups
-  return { groups: groups.length, matched: groups.filter(g => g.matchBasis !== 'unmatched').length, unmatchedNames }
+  return { groups: groups.length, matched: groups.filter(g => g.matchBasis !== 'unmatched').length, aiProposed, unmatchedNames }
 }
 
 /** Upgrade form anchors (D6): a form the source anchors only at product/line level, whose form
@@ -2024,7 +2069,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   // Reconstruct rule↔table↔coverage links by concept matching (D2/D7/D8). Clears the
   // transient rule reference text on every workbook; only wires links when reference tables
   // were detected (CORE signature) — GL/IM/PR are byte-identical.
-  const refLinks = linkReferenceTables(refDrafts, refTables, allCoverages, rules)
+  const refLinks = linkReferenceTables(refDrafts, refTables, allCoverages, rules, overlay)
 
   // Assemble coverage.terms from the LD tables and the rules that reference them
   // (ledger PCM-A). coverageRefIds are globally unique, so the flat union is safe
@@ -2046,7 +2091,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
 
   // Reconstruct the rating algorithm's coverage-name groups (D5) — mint RTG group ids, resolve
   // each to hierarchy coverages / package forms, flag the genuinely-missing ones. CORE-gated.
-  const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix)
+  const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix, overlay)
 
   // Upgrade line-level form anchors to the coverages the hierarchy's form lists name (D6). CORE-gated.
   const formUpgrades = upgradeFormAnchors(forms, allCoverages, refTables.length > 0)
@@ -2107,6 +2152,14 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
       ctx.addDefect({ code: 'rating_group_unmatched', field: 'ratingGroup', rawValue: clean0(name) })
     }
   }
+  const aiLinks = refLinks.aiProposed + ratingGroups.aiProposed
+  if (aiLinks > 0) {
+    ctx.addNotice({
+      code: 'ai_proposed_links',
+      message: `${aiLinks} link(s) resolved from an accepted, cited AI proposal (linkBasis: ai-proposed) — applied only where the deterministic pass was unresolved and only to entities that exist; review before accepting.`,
+      data: { count: aiLinks },
+    })
+  }
 
   // Reference tables share a single home with the real LD tables so the UI ldTables→chip
   // lookup and the golden both see them under their minted CORE.TBL refIds.
@@ -2140,6 +2193,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
       formAnchorUpgrades: formUpgrades,
       ratePlaceholders: ratePlaceholders.length,
       rateTemplateArtifactsExcluded: excludedArtifacts.length,
+      linksAiProposed: refLinks.aiProposed + ratingGroups.aiProposed,
     } : {}),
   }
 

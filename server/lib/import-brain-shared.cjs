@@ -3856,18 +3856,21 @@ function buildCovsByForm(coverages) {
   }
   return out;
 }
-function linkReferenceTables(refDrafts, refTables, coverages, rules) {
+function linkReferenceTables(refDrafts, refTables, coverages, rules, overlay) {
   const refTexts = rules.map((r) => {
     const t = r.data["_referenceText"];
     delete r.data["_referenceText"];
     return typeof t === "string" ? t : "";
   });
-  const tally = { backLinked: 0, covLinked: 0, rulesLinked: 0, resolvedToCoverage: 0, unresolved: 0, resolvedRefs: [], unresolvedRefs: [] };
+  const tally = { backLinked: 0, covLinked: 0, rulesLinked: 0, resolvedToCoverage: 0, unresolved: 0, aiProposed: 0, resolvedRefs: [], unresolvedRefs: [] };
   if (!refTables.length) return tally;
   const namedCovs = coverages.map((c) => ({ refId: c.refId, name: String(c.data["name"] ?? "") }));
   const conceptTables = refTables.map((t, i) => ({ refId: t.refId, baseName: refDrafts[i].baseName, state: refDrafts[i].state }));
   const tableByRefId = new Map(refTables.map((t) => [t.refId, t]));
   const covsByForm = buildCovsByForm(coverages);
+  const covRefIdSet = new Set(namedCovs.map((c) => c.refId));
+  const tableRefIdSet = new Set(refTables.map((t) => t.refId));
+  const validRefs = (proposed, ids) => (proposed ?? []).filter((id) => ids.has(id));
   refDrafts.forEach((d, i) => {
     const linked = /* @__PURE__ */ new Set();
     if (/LIABILITY LIMITS/i.test(d.baseName)) {
@@ -3883,6 +3886,14 @@ function linkReferenceTables(refDrafts, refTables, coverages, rules) {
       const m = matchCoverageByName(d.baseName.replace(FORM_TOKEN, " "), namedCovs);
       if (m) linked.add(m.refId);
       for (const ftk of formTokens(d.baseName)) for (const id of covsByForm.get(squishStr(ftk)) ?? []) linked.add(id);
+    }
+    if (linked.size === 0 && overlay?.tableCoverageLinks) {
+      const ai = validRefs(overlay.tableCoverageLinks[refTables[i].refId], covRefIdSet);
+      if (ai.length) {
+        ai.forEach((id) => linked.add(id));
+        refTables[i].data["linkBasis"] = "ai-proposed";
+        tally.aiProposed++;
+      }
     }
     refTables[i].data["coverageRefIds"] = [...linked];
     if (linked.size) tally.covLinked++;
@@ -3906,9 +3917,21 @@ function linkReferenceTables(refDrafts, refTables, coverages, rules) {
       rule.data["resolvedCoverageRefId"] = m.resolvedCoverageRefId;
       tally.resolvedToCoverage++;
       if (!tally.resolvedRefs.includes(ref)) tally.resolvedRefs.push(ref);
-    } else if (m.how === "NO MATCHING TABLE IN SOURCE") {
-      tally.unresolved++;
-      if (!tally.unresolvedRefs.includes(ref)) tally.unresolvedRefs.push(ref);
+    } else {
+      const ai = overlay?.ruleReferenceLinks ? validRefs(overlay.ruleReferenceLinks[ref], tableRefIdSet) : [];
+      if (ai.length) {
+        rule.data["tableRefIds"] = ai;
+        rule.data["tableLinkBasis"] = "ai-proposed";
+        tally.rulesLinked++;
+        tally.aiProposed++;
+        for (const tid of ai) {
+          const rr = tableByRefId.get(tid)?.data["ruleRefIds"];
+          if (rr && !rr.includes(rule.refId)) rr.push(rule.refId);
+        }
+      } else if (m.how === "NO MATCHING TABLE IN SOURCE") {
+        tally.unresolved++;
+        if (!tally.unresolvedRefs.includes(ref)) tally.unresolvedRefs.push(ref);
+      }
     }
   }
   tally.backLinked = refTables.filter((t) => t.data["ruleRefIds"].length > 0).length;
@@ -3950,13 +3973,15 @@ function deriveTermsFromReferenceTables(coverages, refTables) {
   }
   return attached;
 }
-function enrichRatingWithGroups(ratingProgram, coverages, refTablesPresent, prefix) {
-  const empty = { groups: 0, matched: 0, unmatchedNames: [] };
+function enrichRatingWithGroups(ratingProgram, coverages, refTablesPresent, prefix, overlay) {
+  const empty = { groups: 0, matched: 0, aiProposed: 0, unmatchedNames: [] };
   if (!ratingProgram || !refTablesPresent) return empty;
   const steps = ratingProgram.data["steps"];
   if (!steps.some((s) => s.groupName)) return empty;
   const namedCovs = coverages.map((c) => ({ refId: c.refId, name: String(c.data["name"] ?? "") }));
   const covsByForm = buildCovsByForm(coverages);
+  const covRefIdSet = new Set(namedCovs.map((c) => c.refId));
+  let aiProposed = 0;
   const groups = [];
   const unmatchedNames = [];
   let cur = null;
@@ -3966,16 +3991,26 @@ function enrichRatingWithGroups(ratingProgram, coverages, refTablesPresent, pref
     if (gn && (!cur || cur.name !== gn)) {
       gSeq += 1;
       const m = matchGroup(gn, namedCovs, covsByForm);
+      let covRefIds = m.covRefIds;
+      let matchBasis = m.matchBasis;
+      if (m.matchBasis === "unmatched" && overlay?.ratingGroupLinks) {
+        const ai = (overlay.ratingGroupLinks[gn] ?? []).filter((id) => covRefIdSet.has(id));
+        if (ai.length) {
+          covRefIds = ai;
+          matchBasis = "ai-proposed";
+          aiProposed++;
+        }
+      }
       cur = {
         refId: `${prefix}.RTG.${String(gSeq).padStart(3, "0")}`,
         name: gn,
-        coverageRefIds: m.covRefIds,
+        coverageRefIds: covRefIds,
         formNumbers: m.formNums,
         stepRefIds: [],
-        matchBasis: m.matchBasis
+        matchBasis
       };
       groups.push(cur);
-      if (m.matchBasis === "unmatched") unmatchedNames.push(gn);
+      if (matchBasis === "unmatched") unmatchedNames.push(gn);
     }
     if (cur && gn) {
       step.groupRefId = cur.refId;
@@ -3986,7 +4021,7 @@ function enrichRatingWithGroups(ratingProgram, coverages, refTablesPresent, pref
     }
   }
   ratingProgram.data["ratingGroups"] = groups;
-  return { groups: groups.length, matched: groups.filter((g) => g.matchBasis !== "unmatched").length, unmatchedNames };
+  return { groups: groups.length, matched: groups.filter((g) => g.matchBasis !== "unmatched").length, aiProposed, unmatchedNames };
 }
 function upgradeFormAnchors(forms, coverages, refTablesPresent) {
   if (!refTablesPresent) return 0;
@@ -4123,7 +4158,7 @@ function mapIsoWorkbook(grids, overlay) {
   }
   const product = products[0] ?? null;
   const allCoverages = fwResults ? fwResults.flatMap((fw) => fw.coverages) : [];
-  const refLinks = linkReferenceTables(refDrafts, refTables, allCoverages, rules);
+  const refLinks = linkReferenceTables(refDrafts, refTables, allCoverages, rules, overlay);
   foldLdTermsIntoCoverages(allCoverages, rules, ldTables, ctx);
   const derivedTerms = deriveTermsFromReferenceTables(allCoverages, refTables);
   if (derivedTerms > 0) {
@@ -4133,7 +4168,7 @@ function mapIsoWorkbook(grids, overlay) {
       data: { terms: derivedTerms, tables: refTables.length }
     });
   }
-  const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix);
+  const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix, overlay);
   const formUpgrades = upgradeFormAnchors(forms, allCoverages, refTables.length > 0);
   const ratePlaceholders = mintRatePlaceholders(ratingProgram, refPrefix, refTables.length > 0);
   const excludedArtifacts = refTables.length > 0 ? rateTableArtifacts(rtGrid) : [];
@@ -4186,6 +4221,14 @@ function mapIsoWorkbook(grids, overlay) {
       ctx.addDefect({ code: "rating_group_unmatched", field: "ratingGroup", rawValue: clean0(name) });
     }
   }
+  const aiLinks = refLinks.aiProposed + ratingGroups.aiProposed;
+  if (aiLinks > 0) {
+    ctx.addNotice({
+      code: "ai_proposed_links",
+      message: `${aiLinks} link(s) resolved from an accepted, cited AI proposal (linkBasis: ai-proposed) \u2014 applied only where the deterministic pass was unresolved and only to entities that exist; review before accepting.`,
+      data: { count: aiLinks }
+    });
+  }
   const allLdTables = [...ldTables, ...refTables];
   const dynFieldCount = forms.reduce((n, f) => n + (f.data["dynamicFields"]?.length ?? 0), 0);
   const stepCount = ratingProgram ? ratingProgram.data["steps"].length : 0;
@@ -4213,7 +4256,8 @@ function mapIsoWorkbook(grids, overlay) {
       ratingGroupsUnmatched: ratingGroups.unmatchedNames.length,
       formAnchorUpgrades: formUpgrades,
       ratePlaceholders: ratePlaceholders.length,
-      rateTemplateArtifactsExcluded: excludedArtifacts.length
+      rateTemplateArtifactsExcluded: excludedArtifacts.length,
+      linksAiProposed: refLinks.aiProposed + ratingGroups.aiProposed
     } : {}
   };
   const knownSheets = new Set(ctx.recognized);

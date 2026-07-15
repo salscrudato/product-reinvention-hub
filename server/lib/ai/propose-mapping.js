@@ -63,6 +63,51 @@ const PROPOSER_TOOL = {
           required: ['sheetName', 'role', 'cellRef', 'confidence'],
         },
       },
+      // ── Concept-linker tail (R4): resolve the ambiguous links the deterministic passes left
+      //    open. ONLY reference entity ids that appear in the provided MODEL ID SETS — a link to
+      //    an id not in those sets is rejected. Cite the exact source row for every proposal. ──
+      ratingGroupLinks: {
+        type: 'array',
+        description: 'Rating groups (from UNMATCHED RATING GROUPS) resolved to the coverage(s) they rate. refIds MUST be coverage refIds from MODEL COVERAGE IDS.',
+        items: {
+          type: 'object',
+          properties: {
+            groupName:  { type: 'string', description: 'Exact rating-group name as it appears in the source' },
+            refIds:     { type: 'array', items: { type: 'string' }, description: 'Coverage refId(s) from MODEL COVERAGE IDS' },
+            cellRef:    { type: 'string' },
+            confidence: { type: 'number' },
+          },
+          required: ['groupName', 'refIds', 'cellRef', 'confidence'],
+        },
+      },
+      tableCoverageLinks: {
+        type: 'array',
+        description: 'Reference tables (from UNLINKED REFERENCE TABLES) resolved to the coverage(s) whose terms they carry. refIds MUST be coverage refIds from MODEL COVERAGE IDS.',
+        items: {
+          type: 'object',
+          properties: {
+            tableRefId: { type: 'string', description: 'The reference-table refId (from UNLINKED REFERENCE TABLES)' },
+            refIds:     { type: 'array', items: { type: 'string' }, description: 'Coverage refId(s) from MODEL COVERAGE IDS' },
+            cellRef:    { type: 'string' },
+            confidence: { type: 'number' },
+          },
+          required: ['tableRefId', 'refIds', 'cellRef', 'confidence'],
+        },
+      },
+      ruleReferenceLinks: {
+        type: 'array',
+        description: 'Rule references (from UNRESOLVED RULE REFERENCES) resolved to the reference table(s) they cite. refIds MUST be table refIds from MODEL TABLE IDS.',
+        items: {
+          type: 'object',
+          properties: {
+            referenceText: { type: 'string', description: 'Exact rule-reference text as it appears in the source' },
+            refIds:        { type: 'array', items: { type: 'string' }, description: 'Reference-table refId(s) from MODEL TABLE IDS' },
+            cellRef:       { type: 'string' },
+            confidence:    { type: 'number' },
+          },
+          required: ['referenceText', 'refIds', 'cellRef', 'confidence'],
+        },
+      },
     },
     required: ['columnAliases', 'enumCrosswalk', 'sheetRoleHints'],
   },
@@ -80,7 +125,7 @@ const VALIDATOR_TOOL_ANTHROPIC = {
         items: {
           type: 'object',
           properties: {
-            kind:          { type: 'string', enum: ['columnAlias', 'enumCrosswalk', 'sheetRoleHint'] },
+            kind:          { type: 'string', enum: ['columnAlias', 'enumCrosswalk', 'sheetRoleHint', 'ratingGroupLink', 'tableCoverageLink', 'ruleReferenceLink'] },
             proposalIndex: { type: 'number', description: 'Zero-based index into the proposals array for this kind' },
             verified:      { type: 'boolean', description: 'true = literal text confirmed in source; false = rejected' },
             reason:        { type: 'string', description: 'Brief reason for rejection (omit if verified=true)' },
@@ -105,9 +150,13 @@ const VALIDATOR_TOOL_OPENAI = {
 
 // ─── PROPOSER ─────────────────────────────────────────────────────────────────
 async function runProposer(input, deployment) {
-  const { headers, samples, dataValidationVocab, unmappedColumns, sheetsSkipped } = input
+  const {
+    headers, samples, dataValidationVocab, unmappedColumns, sheetsSkipped,
+    unmatchedGroups = [], unlinkedTables = [], unresolvedRuleRefs = [],
+    coverageRefIds = [], tableRefIds = [],
+  } = input
 
-  const systemPrompt = `You are an ISO insurance workbook mapping expert. Propose column alias mappings, enum crosswalk entries, and sheet role classifications for gaps the deterministic importer could not resolve.
+  const systemPrompt = `You are an ISO insurance workbook mapping expert. Propose column alias mappings, enum crosswalk entries, sheet role classifications, AND concept links for gaps the deterministic importer could not resolve.
 
 CRITICAL RULES:
 1. Cite the exact cell reference (e.g. "Sheet1!A1") for EVERY proposal — uncited proposals are rejected.
@@ -115,7 +164,11 @@ CRITICAL RULES:
 3. Do not invent mappings from general knowledge not present in the input.
 4. Confidence threshold: omit proposals with confidence < 0.7.
 5. Enum crosswalk: NEVER map "ISO Filed" or "Policy" to any canonical category — these are outliers.
-6. If no literal evidence exists for a category, return an empty array for it.`
+6. If no literal evidence exists for a category, return an empty array for it.
+7. CONCEPT LINKS (ratingGroupLinks / tableCoverageLinks / ruleReferenceLinks): every refId you
+   propose MUST appear verbatim in the provided MODEL COVERAGE IDS / MODEL TABLE IDS. Never invent
+   an id, and never resolve a genuinely-missing coverage — if the concept has no matching id in the
+   model, omit it (it will be flagged for the customer to add).`
 
   const dataBlock = {
     type: 'text',
@@ -125,6 +178,21 @@ CRITICAL RULES:
       '',
       'SHEETS SKIPPED (need role hints):',
       JSON.stringify(sheetsSkipped, null, 2),
+      '',
+      'UNMATCHED RATING GROUPS (resolve to coverage refIds, or omit if genuinely missing):',
+      JSON.stringify(unmatchedGroups, null, 2),
+      '',
+      'UNLINKED REFERENCE TABLES (resolve to coverage refIds):',
+      JSON.stringify(unlinkedTables, null, 2),
+      '',
+      'UNRESOLVED RULE REFERENCES (resolve to table refIds):',
+      JSON.stringify(unresolvedRuleRefs, null, 2),
+      '',
+      'MODEL COVERAGE IDS (the ONLY valid coverage refIds):',
+      JSON.stringify(coverageRefIds, null, 2),
+      '',
+      'MODEL TABLE IDS (the ONLY valid table refIds):',
+      JSON.stringify(tableRefIds, null, 2),
       '',
       'DATA VALIDATION VOCAB (workbook dropdown values):',
       JSON.stringify(dataValidationVocab, null, 2),
@@ -220,22 +288,27 @@ async function runValidatorAnthropic(input, proposals, deployment) {
 }
 
 // ─── Apply validation verdicts ────────────────────────────────────────────────
+const PROPOSAL_KINDS = [
+  ['columnAliases',      'columnAlias'],
+  ['enumCrosswalk',      'enumCrosswalk'],
+  ['sheetRoleHints',     'sheetRoleHint'],
+  ['ratingGroupLinks',   'ratingGroupLink'],
+  ['tableCoverageLinks', 'tableCoverageLink'],
+  ['ruleReferenceLinks', 'ruleReferenceLink'],
+]
+
 function applyVerdicts(proposals, verdicts) {
   if (!verdicts || !Array.isArray(verdicts.verified)) {
     // No verdicts → fail-safe: drop everything.
-    return {
-      columnAliases:   [],
-      enumCrosswalk:   [],
-      sheetRoleHints:  [],
-      droppedProposals: [
-        ...(proposals.columnAliases  || []).map((item, i) => ({ kind: 'columnAlias',     index: i, item })),
-        ...(proposals.enumCrosswalk  || []).map((item, i) => ({ kind: 'enumCrosswalk',   index: i, item })),
-        ...(proposals.sheetRoleHints || []).map((item, i) => ({ kind: 'sheetRoleHint',   index: i, item })),
-      ],
+    const out = { droppedProposals: [] }
+    for (const [field, kind] of PROPOSAL_KINDS) {
+      out[field] = []
+      ;(proposals[field] || []).forEach((item, i) => out.droppedProposals.push({ kind, index: i, item }))
     }
+    return out
   }
 
-  const rejectedIdx = { columnAlias: new Set(), enumCrosswalk: new Set(), sheetRoleHint: new Set() }
+  const rejectedIdx = Object.fromEntries(PROPOSAL_KINDS.map(([, kind]) => [kind, new Set()]))
   for (const v of verdicts.verified) {
     if (v.verified === false && v.kind && typeof v.proposalIndex === 'number') {
       rejectedIdx[v.kind]?.add(v.proposalIndex)
@@ -243,17 +316,32 @@ function applyVerdicts(proposals, verdicts) {
   }
 
   const droppedProposals = []
-  const filterKind = (arr, kind, rejSet) => arr.filter((item, i) => {
-    if (rejSet.has(i)) { droppedProposals.push({ kind, index: i, item }); return false }
-    return true
-  })
-
-  return {
-    columnAliases:   filterKind(proposals.columnAliases  || [], 'columnAlias',    rejectedIdx.columnAlias),
-    enumCrosswalk:   filterKind(proposals.enumCrosswalk  || [], 'enumCrosswalk',  rejectedIdx.enumCrosswalk),
-    sheetRoleHints:  filterKind(proposals.sheetRoleHints || [], 'sheetRoleHint',  rejectedIdx.sheetRoleHint),
-    droppedProposals,
+  const out = { droppedProposals }
+  for (const [field, kind] of PROPOSAL_KINDS) {
+    out[field] = (proposals[field] || []).filter((item, i) => {
+      if (rejectedIdx[kind].has(i)) { droppedProposals.push({ kind, index: i, item }); return false }
+      return true
+    })
   }
+  return out
+}
+
+/** Drop any proposed link whose refIds are not ALL in the deterministic model's id sets — the
+ *  AI may only reference entities that exist (dangling refs are never applied). Mutates `verified`
+ *  in place and returns the count dropped. */
+function validateEntityRefs(verified, coverageRefIds, tableRefIds) {
+  const covSet = new Set(coverageRefIds || [])
+  const tblSet = new Set(tableRefIds || [])
+  let dropped = 0
+  const keep = (arr, ids) => (arr || []).filter(p => {
+    const ok = Array.isArray(p.refIds) && p.refIds.length > 0 && p.refIds.every(id => ids.has(id))
+    if (!ok) { dropped++; verified.droppedProposals.push({ kind: 'danglingRef', item: p }) }
+    return ok
+  })
+  verified.ratingGroupLinks   = keep(verified.ratingGroupLinks, covSet)
+  verified.tableCoverageLinks = keep(verified.tableCoverageLinks, covSet)
+  verified.ruleReferenceLinks = keep(verified.ruleReferenceLinks, tblSet)
+  return dropped
 }
 
 // ─── Build AliasOverlay from verified proposals ───────────────────────────────
@@ -285,7 +373,25 @@ function buildOverlay(verified) {
     citations[`sheet:${sh.sheetName}`]   = sh.cellRef
   }
 
-  return { columnAliases, enumOverrides, sheetRoleHints, confidences, citations }
+  // Concept links (R4): keyed exactly as the shared mapper consumes them.
+  const ratingGroupLinks = {}, tableCoverageLinks = {}, ruleReferenceLinks = {}
+  for (const g of (verified.ratingGroupLinks || [])) {
+    ratingGroupLinks[g.groupName] = g.refIds
+    confidences[`rgl:${g.groupName}`] = g.confidence
+    citations[`rgl:${g.groupName}`]   = g.cellRef
+  }
+  for (const t of (verified.tableCoverageLinks || [])) {
+    tableCoverageLinks[t.tableRefId] = t.refIds
+    confidences[`tcl:${t.tableRefId}`] = t.confidence
+    citations[`tcl:${t.tableRefId}`]   = t.cellRef
+  }
+  for (const r of (verified.ruleReferenceLinks || [])) {
+    ruleReferenceLinks[r.referenceText] = r.refIds
+    confidences[`rrl:${r.referenceText}`] = r.confidence
+    citations[`rrl:${r.referenceText}`]   = r.cellRef
+  }
+
+  return { columnAliases, enumOverrides, sheetRoleHints, ratingGroupLinks, tableCoverageLinks, ruleReferenceLinks, confidences, citations }
 }
 
 // ─── HTTP handler ─────────────────────────────────────────────────────────────
@@ -296,13 +402,22 @@ async function proposeMapping(req, res) {
     headers            = {},
     samples            = {},
     dataValidationVocab = {},
+    // Concept-linker tail (R4): the ambiguous links the deterministic passes left open.
+    unmatchedGroups    = [],
+    unlinkedTables     = [],
+    unresolvedRuleRefs = [],
+    coverageRefIds     = [],
+    tableRefIds        = [],
   } = req.body || {}
+
+  const hasConceptTail = unmatchedGroups.length > 0 || unlinkedTables.length > 0 || unresolvedRuleRefs.length > 0
 
   // Guard: nothing to propose → return empty overlay without AI spend (8 known samples path).
   if (
     unmappedColumns.length === 0 &&
     sheetsSkipped.length === 0 &&
-    Object.keys(dataValidationVocab).length === 0
+    Object.keys(dataValidationVocab).length === 0 &&
+    !hasConceptTail
   ) {
     return res.json({ aliasOverlay: {}, enumOverlay: {}, confidences: {}, citations: {}, droppedProposals: [], meta: { skipped: true } })
   }
@@ -310,19 +425,45 @@ async function proposeMapping(req, res) {
   const { allow, degrade, reason } = fleet.guard()
   if (!allow) return res.status(503).json({ error: 'ai_budget_ceiling', reason })
 
-  const proposerDeploy    = fleet.resolveModel('GROUNDED_CITED', degrade)
+  const midDeploy         = fleet.resolveModel('MID_REASONER', degrade)   // claude-sonnet-5 (batch disambiguation)
+  const groundedDeploy    = fleet.resolveModel('GROUNDED_CITED', degrade) // claude-opus-4-8 (escalation)
   const validatorDeployGPT = fleet.DEPLOY_GPT    // gpt-5.1 cross-family validator (may be undefined)
   const validatorDeployAnt = fleet.resolveModel('GROUNDED_CITED', false) // adversarial claude-opus-4-8
 
-  const input = { headers, samples, dataValidationVocab, unmappedColumns, sheetsSkipped }
+  const input = {
+    headers, samples, dataValidationVocab, unmappedColumns, sheetsSkipped,
+    unmatchedGroups, unlinkedTables, unresolvedRuleRefs, coverageRefIds, tableRefIds,
+  }
 
-  // ── Phase 1: PROPOSER (claude-opus-4-8, GROUNDED_CITED) ──────────────────
+  // ── Phase 1: PROPOSER ladder — MID_REASONER (sonnet-5) first, then escalate the concept-link
+  //    RESIDUAL to GROUNDED_CITED (opus). Batched by category; telemetry (fleet.record) fires on
+  //    every rung inside _forcedToolCall. ──
   let proposals
   try {
-    proposals = await runProposer(input, proposerDeploy)
+    proposals = await runProposer(input, midDeploy)
   } catch (err) {
-    console.error('[proposeMapping] proposer failed:', err.message)
+    console.error('[proposeMapping] mid-reasoner proposer failed:', err.message)
     return res.status(500).json({ error: 'proposer_failed', message: err.message })
+  }
+
+  const key = (x, ...fields) => (typeof x === 'string' ? x : (fields.map(f => x?.[f]).find(Boolean) ?? ''))
+  const resolvedG = new Set((proposals.ratingGroupLinks   || []).map(p => p.groupName))
+  const resolvedT = new Set((proposals.tableCoverageLinks || []).map(p => p.tableRefId))
+  const resolvedR = new Set((proposals.ruleReferenceLinks || []).map(p => p.referenceText))
+  const residual = {
+    unmatchedGroups:    unmatchedGroups.filter(g => !resolvedG.has(key(g, 'name', 'groupName'))),
+    unlinkedTables:     unlinkedTables.filter(t => !resolvedT.has(key(t, 'refId', 'tableRefId'))),
+    unresolvedRuleRefs: unresolvedRuleRefs.filter(r => !resolvedR.has(key(r, 'text', 'referenceText'))),
+  }
+  if ((residual.unmatchedGroups.length || residual.unlinkedTables.length || residual.unresolvedRuleRefs.length) && groundedDeploy !== midDeploy) {
+    try {
+      const esc = await runProposer({ ...input, ...residual }, groundedDeploy)
+      proposals.ratingGroupLinks   = [...(proposals.ratingGroupLinks   || []), ...(esc.ratingGroupLinks   || [])]
+      proposals.tableCoverageLinks = [...(proposals.tableCoverageLinks || []), ...(esc.tableCoverageLinks || [])]
+      proposals.ruleReferenceLinks = [...(proposals.ruleReferenceLinks || []), ...(esc.ruleReferenceLinks || [])]
+    } catch (err) {
+      console.warn('[proposeMapping] grounded escalation failed (keeping mid-reasoner proposals):', err.message)
+    }
   }
 
   // ── Phase 2: VALIDATOR (cross-family gpt-5.1, then adversarial claude fallback) ──
@@ -348,8 +489,11 @@ async function proposeMapping(req, res) {
     }
   }
 
-  // ── Phase 3: Filter + build overlay ──────────────────────────────────────
-  const verified     = applyVerdicts(proposals, verdicts)
+  // ── Phase 3: Filter + validate entity refs + build overlay ───────────────
+  const verified = applyVerdicts(proposals, verdicts)
+  // Every concept-link refId must exist in the deterministic model — dangling refs are dropped
+  // BEFORE the overlay is built, so an AI proposal can never link to an entity that isn't there.
+  const danglingDropped = validateEntityRefs(verified, coverageRefIds, tableRefIds)
   const aliasOverlay = buildOverlay(verified)
 
   return res.json({
@@ -359,11 +503,16 @@ async function proposeMapping(req, res) {
     citations:        aliasOverlay.citations,
     droppedProposals: verified.droppedProposals,
     meta: {
-      proposerModel:  proposerDeploy,
-      validatorModel: validatorUsed,
-      columnAliases:  (verified.columnAliases  || []).length,
-      enumCrosswalk:  (verified.enumCrosswalk  || []).length,
-      sheetRoleHints: (verified.sheetRoleHints || []).length,
+      proposerModel:   midDeploy,
+      escalationModel: groundedDeploy,
+      validatorModel:  validatorUsed,
+      columnAliases:   (verified.columnAliases      || []).length,
+      enumCrosswalk:   (verified.enumCrosswalk      || []).length,
+      sheetRoleHints:  (verified.sheetRoleHints     || []).length,
+      ratingGroupLinks:   (verified.ratingGroupLinks   || []).length,
+      tableCoverageLinks: (verified.tableCoverageLinks || []).length,
+      ruleReferenceLinks: (verified.ruleReferenceLinks || []).length,
+      danglingDropped,
       dropped:        (verified.droppedProposals || []).length,
     },
   })
