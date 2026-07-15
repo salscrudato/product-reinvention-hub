@@ -32,6 +32,7 @@ import type {
 } from './types'
 import { matchConcept } from './registry'
 import { parseFactorTable, type ParsedTable } from './tableParser'
+import { LOB_REGISTRY, resolveLobByRefId, DEFAULT_LOB } from '../lobRegistry'
 
 // ─── options + small helpers ────────────────────────────────────────────────────────
 
@@ -42,6 +43,10 @@ export interface ReconcileOptions {
    *  form + state, e.g. "LEM03NJ"). RT/LD tables are a global collection, so this keeps a
    *  filing's tables from clobbering the seeded PH/PA/GL tables or another filing's. */
   productToken?: string
+  /** Stage-0's content-derived LOB (e.g. 'PA.LOB.001') — F18: the router already
+   *  derives the line; reconciliation must not re-hard-code Personal Home.
+   *  Unset/unresolvable → the platform DEFAULT_LOB with an explicit warning. */
+  lobRefIdHint?: string
 }
 
 const dashId = (refId: string): string => refId.replace(/\./g, '-')
@@ -76,7 +81,15 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
   const token = opts.productToken ?? tokenOf(ex.baseFormNumber, state)
   const productRefId = `FIL.${token}.PROD`
   const productId = productRefId
-  const prefix = 'PH'   // Homeowners filing → Personal Home LOB, so it prices via the PH kit.
+  // F18: the line comes from the stage-0 router's content-derived hint,
+  // resolved against the LOB registry — never re-hard-coded. No hint (or an
+  // unresolvable one) falls back to the platform DEFAULT_LOB (Personal Home),
+  // which downstream resolveLob() would apply anyway — but as a WARNED default,
+  // never a silent one.
+  const hintedLob = opts.lobRefIdHint ? (LOB_REGISTRY[opts.lobRefIdHint] ?? resolveLobByRefId(opts.lobRefIdHint)) : undefined
+  const lobDef = hintedLob ?? DEFAULT_LOB
+  const lobDefaulted = !hintedLob
+  const prefix = lobDef.refIdPrefix || lobDef.code || 'PH'
 
   const unresolved: UnresolvedItem[] = []
   const ratingItems: FilingReviewItem[] = []
@@ -110,6 +123,14 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
   const steps: RatingStep[] = []
   let order = 0
   const vars = ex.rateOrder.variables.filter(v => v.forms.map(f => f.toUpperCase()).includes(targetForm.toUpperCase()))
+  // Interim honesty for ledger F22: a non-HO3 filing's rate-order variables
+  // match no 'HO3' column and were filtered out ABOVE the conservation ledger —
+  // a correctly-labeled product with a silently empty rating program. Until
+  // targetForm is threaded from the base form / line, say so loudly.
+  const varsFiltered = ex.rateOrder.variables.length - vars.length
+  const targetFormWarning = varsFiltered > 0
+    ? [`${varsFiltered} rate-order variable(s) matched no "${targetForm}" form column and were NOT imported — the rate order likely belongs to a different form (base form ${ex.baseFormNumber}); the rating program is incomplete until the target form is set correctly.`]
+    : []
 
   for (const v of vars) {
     const concept = matchConcept(v.name)
@@ -266,11 +287,11 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
     docId: productId, refId: productRefId, label: `${productRefId} — ${ex.productName}`,
     data: {
       refId: productRefId, name: ex.productName || `${ex.baseFormNumber} (${state})`,
-      lob: { refId: `${prefix}.LOB.001`, name: 'Personal Home' },
+      lob: { refId: lobDef.refId, name: lobDef.name },
       description: `Imported from a ${state} rate filing (${ex.baseFormNumber} ${ex.baseFormEdition}).`,
-      marketSegment: 'Personal Lines / Property',
+      marketSegment: `${lobDef.vertical} / ${lobDef.family}`,
       owner: { uid: '', name: '' },   // stamped by the writer
-      baseForm: { path: '', url: '', name: `${ex.baseFormNumber} ${ex.baseFormEdition}`, uploadedAt: null, uploadedBy: '', formNumber: ex.baseFormNumber, edition: ex.baseFormEdition, lob: 'Personal Home' },
+      baseForm: { path: '', url: '', name: `${ex.baseFormNumber} ${ex.baseFormEdition}`, uploadedAt: null, uploadedBy: '', formNumber: ex.baseFormNumber, edition: ex.baseFormEdition, lob: lobDef.name },
       allStates: false, states: [state], ...gov,
     },
   }
@@ -278,12 +299,17 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
   const summary: ImportSummary = {
     productName: product.data['name'] as string,
     productRefId,
-    lobName: 'Personal Home',
+    lobName: lobDef.name,
     counts: {
       products: 1, coverages: coverages.length, forms: forms.length, rules: rules.length,
       formRules: 0, ratingSteps: steps.length, rtTables: rtTables.length, ldTables: ldTables.length,
     },
-    warnings: unresolved.map(u => `UNRESOLVED [${u.stage}/${u.kind}] ${u.name}: ${u.reason} (cited: ${u.citation})`),
+    warnings: [
+      // A defaulted line is a WARNED default, never a silent one (F18).
+      ...(lobDefaulted ? [`LOB undetected${opts.lobRefIdHint ? ` (hint "${opts.lobRefIdHint}" matched no registry line)` : ''} — defaulted to ${DEFAULT_LOB.name} (the platform default); verify the product line.`] : []),
+      ...targetFormWarning,
+      ...unresolved.map(u => `UNRESOLVED [${u.stage}/${u.kind}] ${u.name}: ${u.reason} (cited: ${u.citation})`),
+    ],
     unmappedColumns: [],
     sheetsRecognized: [`rate order · ${ex.rateOrder.variables.length} variables`, `manual · ${ex.manual.rules.length} rules`, `policy form · ${ex.baseFormNumber}`],
     sheetsSkipped: [],

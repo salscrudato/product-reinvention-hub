@@ -278,6 +278,10 @@ async function unifiedImport(req, res) {
         documents:        routed.filingDocs.map(d => ({ name: d.name, base64: d.base64, text: d.text })),
         productNameHint:  productName,
         filingStateHint:  filingState,
+        // F18: same precedence as the workbook path — body override wins, else
+        // the router's content-derived line. The filing path must never
+        // re-hard-code Personal Home.
+        lobRefIdHint:     body.lobRefIdHint || routed.lobRefIdHint,
         budget,
         extractPdfText:   _extractPdfText,
         emit:             (ev) => emit(res, ev),
@@ -299,6 +303,13 @@ async function unifiedImport(req, res) {
     // ── Fallback: single-pass extraction (legacy robustness path) ─────────────
     const doc = docs[0]
     emit(res, { t: 'tool', name: 'extract:coverages', phase: 'start', summary: doc.name })
+
+    // F18: honor the content-derived line even on the fallback; PH stays the
+    // WARNED platform default when no hint resolved.
+    const fbHint = body.lobRefIdHint || routed.lobRefIdHint
+    const fbLobDef = fbHint ? require('../import-brain-shared.cjs').LOB_REGISTRY?.[fbHint] : null
+    const fbLob = fbLobDef ? { refId: fbLobDef.refId, name: fbLobDef.name } : { refId: 'PH.LOB.001', name: 'Personal Home' }
+    if (!fbLobDef) emit(res, { t: 'notice', level: 'warn', kind: 'lob-defaulted', message: `LOB undetected${fbHint ? ` (hint "${fbHint}" matched no registry line)` : ''} — defaulted to Personal Home; verify the product line.` })
 
     const deployment = HAIKU_OVERRIDE || fleet.resolveModel('BULK_VERIFY', { bypassDegrade: true })
     const pdfText = doc.base64 ? _extractPdfText(doc.base64) : null
@@ -353,7 +364,7 @@ async function unifiedImport(req, res) {
           // lob must be an object { refId, name } to match the seeded/ISO-imported product
           // shape — the app reads product.lob.name across Products/News/etc. A bare string
           // here produces a product that crashes those surfaces.
-          data: { refId: productRefId, name: productName, lob: { refId: 'PH.LOB.001', name: 'Personal Home' }, state: filingState },
+          data: { refId: productRefId, name: productName, lob: fbLob, state: filingState },
         },
         coverages: coverageEntities,
         forms: [], rules: [], formRules: [], ratingProgram: null, ldTables: [], rtTables: [],
@@ -375,11 +386,11 @@ async function unifiedImport(req, res) {
       counts: { proposed: coverageEntities.length, accepted: coverageEntities.length, unresolved: 0 },
       fingerprint: {
         container: 'PDF', detectedFormat: 'COMPANY_FILING_PDF',
-        lineGuesses: [{ lobRefId: 'PH.LOB.001', confidence: 0.85, signals: [] }],
+        lineGuesses: [{ lobRefId: fbLob.refId, confidence: 0.85, signals: fbLobDef ? ['router-hint'] : [] }],
         documentRoles: docs.map((d) => ({ documentName: d.name, role: 'policyForm', confidence: 0.9 })),
       },
       extractionPlan: {
-        format: 'COMPANY_FILING_PDF', lobRefId: 'PH.LOB.001', archetype: null,
+        format: 'COMPANY_FILING_PDF', lobRefId: fbLob.refId, archetype: null,
         documentRoleAssignments: docs.map((d) => ({ documentName: d.name, role: 'policyForm', extractor: 'AI_EXTRACT_FULL' })),
         splitStrategy: 'SINGLE_PRODUCT',
       },

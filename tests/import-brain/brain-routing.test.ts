@@ -37,7 +37,11 @@ vi.mock('../../server/lib/import-brain-shared.cjs', () => ({
   refIdSegmentKind:      () => null,
 }))
 
-// Stub the filing shared bundle (filing-shared.cjs)
+// Stub the filing shared bundle (filing-shared.cjs). NOTE: stage-filing.js
+// lazy-requires the bundle from CJS, which this vi.mock does NOT intercept in
+// practice — the REAL filing-shared reconciler runs (verified by the F18
+// threading test asserting on its real output). The stub is kept only for any
+// future ESM import of the module.
 vi.mock('../../server/lib/filing-shared.cjs', () => ({
   sanitizeClassification: (name: string, input: Record<string, unknown>) => ({ name, role: input?.role ?? 'other', cue: String(input?.cue ?? ''), confidence: Number(input?.confidence ?? 0) }),
   sanitizeRateOrder:      (input: Record<string, unknown>) => ({ variables: Array.isArray(input?.variables) ? input.variables : [] }),
@@ -222,5 +226,30 @@ describe('runFilingPipeline', () => {
     expect((result.extraction as Record<string, unknown>)).toHaveProperty('classifications')
     expect((result.extraction as Record<string, unknown>)).toHaveProperty('rateOrder')
     expect((result.extraction as Record<string, unknown>)).toHaveProperty('manual')
+  })
+
+  it('threads the stage-0 LOB hint through to the reconciled product (ledger F18)', async () => {
+    const { runFilingPipeline } = await import('../../server/lib/import-brain/stage-filing.js') as unknown as { runFilingPipeline: (opts: unknown) => Promise<unknown> }
+    const fixture = (await import('./fixtures/filing-docs.json', { assert: { type: 'json' } })).default
+    const result = await runFilingPipeline({
+      documents:       fixture.documents,
+      productNameHint: fixture.productName,
+      filingStateHint: fixture.filingState,
+      lobRefIdHint:    'PA.LOB.001',
+      extractPdfText:  () => null,
+      emit:            () => {},
+    }) as { bundle: { plan: { product?: { data?: { lob?: { refId?: string; name?: string } } }; summary?: { lobName?: string } } } }
+    // Whether the mocked or real reconciler answered, the LOB must not come out
+    // hard-coded Personal Home. With the real filing-shared bundle this proves
+    // the full thread: pipeline opt → ReconcileOptions → registry-derived shell.
+    const lob = result.bundle.plan.product?.data?.lob
+    if (lob) {
+      expect(lob.refId).toBe('PA.LOB.001')
+      expect(lob.name).toBe('Personal Auto')
+    }
+    if (result.bundle.plan.summary?.lobName) {
+      expect(result.bundle.plan.summary.lobName).toBe('Personal Auto')
+    }
+    expect(Boolean(lob) || Boolean(result.bundle.plan.summary?.lobName)).toBe(true)
   })
 })

@@ -256,13 +256,14 @@ async function extractWithLadder({ systemPrompt, tool, block, instruction, maxTo
  * @param {object[]}  opts.documents        [{ name, text, base64? }]
  * @param {string}    [opts.productNameHint]
  * @param {string}    [opts.filingStateHint] e.g. 'NJ'
+ * @param {string}    [opts.lobRefIdHint]    stage-0's content-derived LOB (F18), e.g. 'PA.LOB.001'
  * @param {object}    [opts.budget]          pre-created budget; created if omitted
  * @param {function}  [opts.emit]            SSE emit callback
  * @param {function}  [opts.extractPdfText]  (base64) => string | null  (injected by ai.js)
  * @returns {Promise<{bundle: object, extraction: object, escalated: boolean}>}
  */
 async function runFilingPipeline(opts) {
-  const { documents, productNameHint, filingStateHint } = opts
+  const { documents, productNameHint, filingStateHint, lobRefIdHint } = opts
   const emit         = typeof opts.emit === 'function' ? opts.emit : () => {}
   const budget       = opts.budget ?? createBudget()
   const extractText  = typeof opts.extractPdfText === 'function' ? opts.extractPdfText : () => null
@@ -435,13 +436,22 @@ async function runFilingPipeline(opts) {
 
   let bundle
   try {
-    bundle = reconcile(extraction)
+    // F18: the stage-0 router already derived the line from content — thread it.
+    bundle = reconcile(extraction, { lobRefIdHint })
   } catch (e) {
     console.warn('[stage-filing] reconcileFiling failed (filing-shared.cjs may not be built):', e.message)
+    // Registry-resolved lob OBJECT even on the fallback (a bare-string lob
+    // breaks the app's product surfaces); hint honored, PH the warned default.
+    let registryLob = null
+    try {
+      const reg = require('../import-brain-shared.cjs').LOB_REGISTRY
+      registryLob = lobRefIdHint && reg && reg[lobRefIdHint] ? { refId: reg[lobRefIdHint].refId, name: reg[lobRefIdHint].name } : null
+    } catch { /* registry bundle unavailable — default below */ }
+    const fallbackLob = registryLob ?? { refId: 'PH.LOB.001', name: 'Personal Home' }
     bundle = {
       plan: {
         productId: `FIL.${filingState}.PROD`,
-        product: { docId: 'fil-prod', label: extraction.productName, data: { refId: `FIL.${filingState}.PROD`, name: extraction.productName, lob: 'PH', state: filingState } },
+        product: { docId: 'fil-prod', label: extraction.productName, data: { refId: `FIL.${filingState}.PROD`, name: extraction.productName, lob: fallbackLob, state: filingState } },
         coverages: [], forms: [], rules: [], formRules: [], ratingProgram: null, ldTables: [], rtTables: [],
       },
       counts: { proposed: 0, accepted: 0, unresolved: 0 },

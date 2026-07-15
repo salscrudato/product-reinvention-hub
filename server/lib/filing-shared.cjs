@@ -320,6 +320,501 @@ function parseMatrix(schema) {
   return { columns: [rowDim, colDim, schema.valueColumn], rows, skipped };
 }
 
+// shared/src/insurance/lobRegistry.ts
+var pad = (n, w) => String(Math.trunc(Math.abs(n))).padStart(w, "0");
+function dottedScheme(code, nameSignals) {
+  return {
+    shapes: {
+      product: `${code}.PROD.###`,
+      lob: `${code}.LOB.###`,
+      coverage: `${code}.COV.###`,
+      subCoverage: `${code}.COV.###.###`,
+      rule: `${code}.RU.###`,
+      formRule: `${code}.FORM.RU.###`,
+      ratingProgram: `${code}.RAT.#`,
+      ratingStep: `${code}.RAT.#.##`
+    },
+    pattern: new RegExp(`^${code}\\.(PROD|LOB|COV|RU|FORM|RAT)`, "i"),
+    nameSignals,
+    synthesize(kind, seq, parentSeq = 1) {
+      switch (kind) {
+        case "product":
+          return `${code}.PROD.${pad(seq, 3)}`;
+        case "lob":
+          return `${code}.LOB.${pad(seq, 3)}`;
+        case "coverage":
+          return `${code}.COV.${pad(seq, 3)}`;
+        case "subCoverage":
+          return `${code}.COV.${pad(parentSeq, 3)}.${pad(seq, 3)}`;
+        case "rule":
+          return `${code}.RU.${pad(seq, 3)}`;
+        case "formRule":
+          return `${code}.FORM.RU.${pad(seq, 3)}`;
+        case "ratingProgram":
+          return `${code}.RAT.${Math.trunc(seq) || 1}`;
+        case "ratingStep":
+          return `${code}.RAT.1.${pad(seq, 2)}`;
+        default:
+          return `${code}.${pad(seq, 3)}`;
+      }
+    }
+  };
+}
+var PH_REFIDS = dottedScheme("PH", [/homeowners?/i, /personal home/i, /\bHO-?[2-8]\b/i, /dwelling/i]);
+var PA_REFIDS = dottedScheme("PA", [/personal auto/i, /\bauto(mobile)?\b/i, /\bPAP\b/i, /\bPP 00 01\b/i]);
+var GL_REFIDS = dottedScheme("GL", [/general liability/i, /\bC\.?G\.?L\b/i, /commercial general/i, /\bCG 00 0[12]\b/i]);
+var IM_REFIDS = {
+  shapes: {
+    product: "IM.PROD###",
+    lob: "IM.LOB###",
+    coverage: "IM.COV###.##",
+    subCoverage: "IM.COV###.##",
+    rule: "IM.RL.###",
+    formRule: "IM.FORM.RL.###",
+    ratingProgram: "IM.RAT.###",
+    ratingStep: "IM.RAT.###"
+  },
+  pattern: /^IM\.(PROD|LOB|COV|RL|RU|FORM|RAT)/i,
+  nameSignals: [/inland marine/i, /scheduled (personal )?property/i, /contractors?.?equipment/i, /\bfloater\b/i],
+  synthesize(kind, seq, parentSeq = seq) {
+    switch (kind) {
+      case "product":
+        return `IM.PROD${pad(seq, 3)}`;
+      case "lob":
+        return `IM.LOB${pad(seq, 3)}`;
+      case "coverage":
+        return `IM.COV${pad(seq, 3)}.00`;
+      case "subCoverage":
+        return `IM.COV${pad(parentSeq, 3)}.${pad(seq, 2)}`;
+      case "rule":
+        return `IM.RL.${pad(seq, 3)}`;
+      case "formRule":
+        return `IM.FORM.RL.${pad(seq, 3)}`;
+      case "ratingProgram":
+        return `IM.RAT.${pad(seq, 3)}`;
+      case "ratingStep":
+        return `IM.RAT.${pad(seq, 3)}`;
+      default:
+        return `IM.${pad(seq, 3)}`;
+    }
+  }
+};
+var PR_REFIDS = {
+  shapes: {
+    product: "PR.PROD###",
+    lob: "PR.LOB###",
+    coverage: "PR.COV###.#",
+    subCoverage: "PR.COV###.#",
+    rule: "PR.RU.###",
+    formRule: "PR.FORM.RU.###",
+    ratingProgram: "PR.ROC",
+    ratingStep: "PR.ROC.###"
+  },
+  pattern: /^PR\.(PROD|LOB|COV|RU|ROC|FORM|RAT)/i,
+  nameSignals: [/commercial property/i, /property (framework|component|coverage part|roc|rating)/i, /building and (business )?personal property/i, /\bCP 00 10\b/i],
+  synthesize(kind, seq, parentSeq = seq) {
+    switch (kind) {
+      case "product":
+        return `PR.PROD${pad(seq, 3)}`;
+      case "lob":
+        return `PR.LOB${pad(seq, 3)}`;
+      case "coverage":
+        return `PR.COV${pad(seq, 3)}.0`;
+      case "subCoverage":
+        return `PR.COV${pad(parentSeq, 3)}.${Math.trunc(seq)}`;
+      case "rule":
+        return `PR.RU.${pad(seq, 3)}`;
+      case "formRule":
+        return `PR.FORM.RU.${pad(seq, 3)}`;
+      case "ratingProgram":
+        return "PR.ROC";
+      case "ratingStep":
+        return `PR.ROC.${pad(seq, 3)}`;
+      default:
+        return `PR.${pad(seq, 3)}`;
+    }
+  }
+};
+var isPHLiability = (name) => /liabilit|medical/i.test(name);
+var PH_SECTIONS = [
+  { label: "Section I \u2014 Property", shortName: "Section I", match: (n) => !isPHLiability(n) },
+  { label: "Section II \u2014 Liability", shortName: "Section II", match: isPHLiability }
+];
+var PH_PERIL = {
+  kind: "COASTAL_WIND_HAIL",
+  eligibleStates: ["FL", "GA", "NC", "SC", "TX"],
+  label: "Coastal wind/hail"
+};
+var PH_LOB = {
+  refId: "PH.LOB.001",
+  prefix: "PH",
+  name: "Personal Home",
+  vertical: "Personal Lines",
+  family: "Property",
+  sections: PH_SECTIONS,
+  peril: PH_PERIL,
+  footprintStates: ["AZ", "CA", "CO", "FL", "GA", "IL", "IN", "MI", "NC", "OH", "PA", "SC", "TN", "TX", "VA"],
+  // canonical additive fields
+  code: "PH",
+  displayName: "Personal Home",
+  refIdPrefix: "PH",
+  lineCategory: "PROPERTY",
+  personalOrCommercial: "Personal",
+  sectionTaxonomy: PH_SECTIONS,
+  perilModel: PH_PERIL,
+  supportsRulesSimulation: true,
+  refIdScheme: PH_REFIDS,
+  marketSegments: ["Personal Lines"]
+};
+var PA_SECTIONS = [
+  { label: "Part A \u2014 Liability Coverage", shortName: "Part A", match: (n) => /liabilit/i.test(n) },
+  { label: "Part B \u2014 Medical Payments Coverage", shortName: "Part B", match: (n) => /medical/i.test(n) },
+  { label: "Part C \u2014 Uninsured Motorists Coverage", shortName: "Part C", match: (n) => /uninsured|underinsured|motorist/i.test(n) },
+  { label: "Part D \u2014 Coverage for Damage to Your Auto", shortName: "Part D", match: () => true }
+];
+var PA_PERIL = {
+  kind: "TERRITORY",
+  eligibleStates: [],
+  label: "Rating territory"
+};
+var PA_LOB = {
+  refId: "PA.LOB.001",
+  prefix: "PA",
+  name: "Personal Auto",
+  vertical: "Personal Lines",
+  family: "Automobile",
+  sections: PA_SECTIONS,
+  peril: PA_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NC",
+    "ND",
+    "OH",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI"
+  ],
+  // canonical additive fields
+  code: "PA",
+  displayName: "Personal Auto",
+  refIdPrefix: "PA",
+  lineCategory: "CASUALTY",
+  personalOrCommercial: "Personal",
+  sectionTaxonomy: PA_SECTIONS,
+  perilModel: PA_PERIL,
+  supportsRulesSimulation: true,
+  refIdScheme: PA_REFIDS,
+  marketSegments: ["Personal Lines"]
+};
+var GL_SECTIONS = [
+  {
+    label: "Coverage A \u2014 Bodily Injury & Property Damage Liability",
+    shortName: "Coverage A",
+    match: (n) => /bodily.injury|property.damage|BI.?PD|Coverage A/i.test(n)
+  },
+  {
+    label: "Coverage B \u2014 Personal & Advertising Injury Liability",
+    shortName: "Coverage B",
+    match: (n) => /personal.*advertis|advertis.*injur|Coverage B/i.test(n)
+  },
+  {
+    label: "Coverage C \u2014 Medical Payments",
+    shortName: "Coverage C",
+    match: () => true
+  }
+  // catch-all for Coverage C and unclassified
+];
+var GL_PERIL = {
+  // Commercial casualty — no coastal peril deductible. Rate variation is by class
+  // code and exposure base, not by territory in the base occurrence form.
+  kind: "NONE",
+  eligibleStates: [],
+  label: "None"
+};
+var GL_LOB = {
+  refId: "GL.LOB.001",
+  prefix: "GL",
+  name: "General Liability",
+  vertical: "Commercial Lines",
+  family: "Casualty",
+  sections: GL_SECTIONS,
+  peril: GL_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  // canonical additive fields
+  code: "GL",
+  displayName: "General Liability",
+  refIdPrefix: "GL",
+  lineCategory: "CASUALTY",
+  personalOrCommercial: "Commercial",
+  sectionTaxonomy: GL_SECTIONS,
+  perilModel: GL_PERIL,
+  supportsRulesSimulation: true,
+  refIdScheme: GL_REFIDS,
+  marketSegments: ["Commercial Lines", "Small Commercial", "Middle Market"]
+};
+var IM_SECTIONS = [
+  { label: "Scheduled Property", shortName: "Scheduled", match: (n) => /schedul|itemized|valued|floater/i.test(n) },
+  { label: "Blanket & Equipment Coverage", shortName: "Blanket", match: (n) => /blanket|equipment|installation|tool/i.test(n) },
+  { label: "Coverage Extensions", shortName: "Extensions", match: () => true }
+  // catch-all
+];
+var IM_PERIL = { kind: "NONE", eligibleStates: [], label: "None" };
+var IM_LOB = {
+  refId: "IM.LOB.001",
+  prefix: "IM",
+  name: "Inland Marine",
+  vertical: "Commercial Lines",
+  family: "Property",
+  sections: IM_SECTIONS,
+  peril: IM_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  code: "IM",
+  displayName: "Inland Marine",
+  refIdPrefix: "IM",
+  lineCategory: "PROPERTY",
+  personalOrCommercial: "Commercial",
+  sectionTaxonomy: IM_SECTIONS,
+  perilModel: IM_PERIL,
+  supportsRulesSimulation: false,
+  refIdScheme: IM_REFIDS,
+  // Segments drawn from the existing registry set so the portfolio facets are unchanged.
+  marketSegments: ["Commercial Lines", "Small Commercial"]
+};
+var PR_SECTIONS = [
+  { label: "Building & Business Personal Property", shortName: "Property", match: (n) => /building|business personal|contents|stock/i.test(n) },
+  { label: "Time Element", shortName: "Time Element", match: (n) => /business income|extra expense|rental value|time element/i.test(n) },
+  { label: "Additional Coverages", shortName: "Additional", match: () => true }
+  // catch-all (incl. causes of loss)
+];
+var PR_PERIL = {
+  kind: "COASTAL_WIND_HAIL",
+  eligibleStates: ["AL", "FL", "GA", "LA", "MS", "NC", "SC", "TX", "VA"],
+  label: "Coastal wind/hail"
+};
+var PR_LOB = {
+  refId: "PR.LOB.001",
+  prefix: "PR",
+  name: "Commercial Property",
+  vertical: "Commercial Lines",
+  family: "Property",
+  sections: PR_SECTIONS,
+  peril: PR_PERIL,
+  footprintStates: [
+    "AL",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  code: "PR",
+  displayName: "Commercial Property",
+  refIdPrefix: "PR",
+  lineCategory: "PROPERTY",
+  personalOrCommercial: "Commercial",
+  sectionTaxonomy: PR_SECTIONS,
+  perilModel: PR_PERIL,
+  supportsRulesSimulation: false,
+  refIdScheme: PR_REFIDS,
+  // Segments drawn from the existing registry set so the portfolio facets are unchanged.
+  marketSegments: ["Commercial Lines", "Middle Market"]
+};
+var LOB_REGISTRY = {
+  [PH_LOB.refId]: PH_LOB,
+  [PA_LOB.refId]: PA_LOB,
+  [GL_LOB.refId]: GL_LOB,
+  [IM_LOB.refId]: IM_LOB,
+  [PR_LOB.refId]: PR_LOB
+};
+var DEFAULT_LOB = PH_LOB;
+function lobByPrefix(refId) {
+  if (!refId) return void 0;
+  const prefix = refId.split(".")[0];
+  return Object.values(LOB_REGISTRY).find((l) => l.prefix === prefix);
+}
+function resolveLobByRefId(refId) {
+  return lobByPrefix(refId);
+}
+
 // shared/src/insurance/filing/reconcile.ts
 var dashId = (refId) => refId.replace(/\./g, "-");
 var gov = {
@@ -350,7 +845,10 @@ function reconcileFiling(ex, opts = {}) {
   const token = opts.productToken ?? tokenOf(ex.baseFormNumber, state);
   const productRefId = `FIL.${token}.PROD`;
   const productId = productRefId;
-  const prefix = "PH";
+  const hintedLob = opts.lobRefIdHint ? LOB_REGISTRY[opts.lobRefIdHint] ?? resolveLobByRefId(opts.lobRefIdHint) : void 0;
+  const lobDef = hintedLob ?? DEFAULT_LOB;
+  const lobDefaulted = !hintedLob;
+  const prefix = lobDef.refIdPrefix || lobDef.code || "PH";
   const unresolved = [];
   const ratingItems = [];
   const tableItems = [];
@@ -377,6 +875,8 @@ function reconcileFiling(ex, opts = {}) {
   const steps = [];
   let order = 0;
   const vars = ex.rateOrder.variables.filter((v) => v.forms.map((f) => f.toUpperCase()).includes(targetForm.toUpperCase()));
+  const varsFiltered = ex.rateOrder.variables.length - vars.length;
+  const targetFormWarning = varsFiltered > 0 ? [`${varsFiltered} rate-order variable(s) matched no "${targetForm}" form column and were NOT imported \u2014 the rate order likely belongs to a different form (base form ${ex.baseFormNumber}); the rating program is incomplete until the target form is set correctly.`] : [];
   for (const v of vars) {
     const concept = matchConcept(v.name);
     const rule = concept ? manualByConcept.get(concept.key) : void 0;
@@ -550,12 +1050,12 @@ function reconcileFiling(ex, opts = {}) {
     data: {
       refId: productRefId,
       name: ex.productName || `${ex.baseFormNumber} (${state})`,
-      lob: { refId: `${prefix}.LOB.001`, name: "Personal Home" },
+      lob: { refId: lobDef.refId, name: lobDef.name },
       description: `Imported from a ${state} rate filing (${ex.baseFormNumber} ${ex.baseFormEdition}).`,
-      marketSegment: "Personal Lines / Property",
+      marketSegment: `${lobDef.vertical} / ${lobDef.family}`,
       owner: { uid: "", name: "" },
       // stamped by the writer
-      baseForm: { path: "", url: "", name: `${ex.baseFormNumber} ${ex.baseFormEdition}`, uploadedAt: null, uploadedBy: "", formNumber: ex.baseFormNumber, edition: ex.baseFormEdition, lob: "Personal Home" },
+      baseForm: { path: "", url: "", name: `${ex.baseFormNumber} ${ex.baseFormEdition}`, uploadedAt: null, uploadedBy: "", formNumber: ex.baseFormNumber, edition: ex.baseFormEdition, lob: lobDef.name },
       allStates: false,
       states: [state],
       ...gov
@@ -564,7 +1064,7 @@ function reconcileFiling(ex, opts = {}) {
   const summary = {
     productName: product.data["name"],
     productRefId,
-    lobName: "Personal Home",
+    lobName: lobDef.name,
     counts: {
       products: 1,
       coverages: coverages.length,
@@ -575,7 +1075,12 @@ function reconcileFiling(ex, opts = {}) {
       rtTables: rtTables.length,
       ldTables: ldTables.length
     },
-    warnings: unresolved.map((u) => `UNRESOLVED [${u.stage}/${u.kind}] ${u.name}: ${u.reason} (cited: ${u.citation})`),
+    warnings: [
+      // A defaulted line is a WARNED default, never a silent one (F18).
+      ...lobDefaulted ? [`LOB undetected${opts.lobRefIdHint ? ` (hint "${opts.lobRefIdHint}" matched no registry line)` : ""} \u2014 defaulted to ${DEFAULT_LOB.name} (the platform default); verify the product line.`] : [],
+      ...targetFormWarning,
+      ...unresolved.map((u) => `UNRESOLVED [${u.stage}/${u.kind}] ${u.name}: ${u.reason} (cited: ${u.citation})`)
+    ],
     unmappedColumns: [],
     sheetsRecognized: [`rate order \xB7 ${ex.rateOrder.variables.length} variables`, `manual \xB7 ${ex.manual.rules.length} rules`, `policy form \xB7 ${ex.baseFormNumber}`],
     sheetsSkipped: [],

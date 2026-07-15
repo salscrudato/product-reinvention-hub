@@ -231,11 +231,11 @@
       "severity": "HIGH",
       "confidence": 1.0,
       "cost": "M",
-      "status": "OPEN",
-      "priority": 2,
-      "evidence": "stage-filing.js:433 lob:'PH'; unified-import.js:353 fallback lob {refId:'PH.LOB.001'}; stage-0's routed.lobRefIdHint is not passed into runFilingPipeline",
-      "fixture": "samples/hardening/pdf/PP_00_01_06_98.pdf + PersonalAuto_WA_Rate manual (must NOT come out Personal Home)",
-      "lesson": "The router already derives the line from content — downstream paths that ignore it re-introduce the assumption the router was built to remove."
+      "status": "FIXED_IH2",
+      "priority": null,
+      "evidence": "ReconcileOptions.lobRefIdHint resolved LOB_REGISTRY[hint] ?? resolveLobByRefId(hint) with DEFAULT_LOB fallback — all four hard-coded literals (product.lob, marketSegment, baseForm.lob, summary.lobName) registry-derived; coverage/rule prefix from lobDef.refIdPrefix; stage-filing threads the hint + its catch-fallback lob is a registry-resolved OBJECT (bare-string 'PH' was the crash shape); unified-import threads body||routed hint into the filing call (workbook-path precedence parity) and fixes the single-pass fallback's three literals with a lob-defaulted warn notice. No-hint/unresolvable → PH as a WARNED default (never silent); hint-less NJ Lemonade golden untouched (still PH). Judge REJECT #1: the targetForm='HO3' residual (non-HO3 rate-order variables vanish pre-ledger) had to be LEDGERED — now F22 (OPEN, with an interim loud warning shipped here). Judge probe also confirmed resolveLobByRefId prefix fallback resolves 'PA'/'PA.COV.001' to the correct line and unknown prefixes fall to the warned default, never a silent wrong line.",
+      "fixture": "shared/src/insurance/filing/reconcile-lob.test.ts (PA hint / unresolvable hint / warned default / conservation / F22-interim warning — red 3/4 pre-fix) + brain-routing threading test against the REAL filing-shared reconciler (two-fixture rule)",
+      "lesson": "The router already derives the line from content — downstream paths that ignore it re-introduce the assumption the router was built to remove. A defaulted value must always be a WARNED default."
     },
     {
       "id": "F19",
@@ -275,6 +275,19 @@
       "evidence": "Judge-found during F12 review: app/src/lib/draft/cloneProduct.ts:111 and ScaffoldProductModal.tsx:162 mint copy ids from form.number only; envelope writes are Upsert (data.js:278) so the second edition silently overwrites the first IN THE CLONE. Same defect class as F12 in an untouched mechanism; reachable only since F12 made multi-edition forms persistable.",
       "fixture": "none yet — clone a fixture product carrying two editions of one number; assert both survive in the copy",
       "lesson": "When an identity fix lands, sweep every OTHER site that mints ids from the old identity."
+    },
+    {
+      "id": "F22",
+      "title": "reconcileFiling targetForm defaults 'HO3' — every non-HO3 filing's rate-order variables are filtered out BEFORE the conservation ledger (proposed=0, unresolved=[], no warning pre-interim)",
+      "class": "SILENT_LOSS",
+      "severity": "HIGH",
+      "confidence": 1.0,
+      "cost": "M",
+      "status": "OPEN",
+      "priority": 2,
+      "evidence": "Judge-probed during F18 review: a PA filing with 3 real rate-order variables (forms ['PP 00 01']) under a resolved PA.LOB.001 hint returned counts proposed:0/accepted:0/unresolved:0, warnings:[] — the reconcile.ts targetForm ?? 'HO3' filter excludes variables before they enter the proposal ledger. Post-F18 this was MORE deceptive: a correctly-labeled Personal Auto product with a clean summary and silently empty rating program. INTERIM (shipped with F18): a loud summary warning states the filtered count + likely cause whenever variables match no targetForm column. FULL FIX: thread targetForm from the base form number / line registry (ex.baseFormNumber or per-line default), and make filtered variables conserved (enter the proposed/unresolved ledger).",
+      "fixture": "shared/src/insurance/filing/reconcile-lob.test.ts 'non-HO3 rate-order variables warn loudly' (interim); full-fix fixture: PA extraction with PP-form variables producing a POPULATED rating program",
+      "lesson": "A filter above the conservation ledger is invisible to it — filters must run inside the ledger (filtered = unresolved) or be derived from the document itself."
     },
     {
       "id": "PCM-A",
