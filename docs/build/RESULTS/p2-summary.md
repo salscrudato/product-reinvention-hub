@@ -130,17 +130,47 @@ dragHandle node defeats it) · pausing ambient/aurora loops via IntersectionObse
 CPU cost lives in foreign surfaces (AppShell/index.css keyframes owned by other lanes);
 **recommendation recorded** for the owning lane rather than edited across the boundary.
 
-## Parity captures + live verification — DEFERRED (operator input needed)
+## Live verification — EXECUTED (operator-authorized), isolated tenant `p2-live-smoke`
 
-The per-commit visual evidence plan (BEFORE = deployed dev site, which serves the pre-wave
-build since P1's commits were docs-only; AFTER = the local stack at :8181; light+dark across
-tasks/home/news/claims/products) requires an authed session. The sandbox's permission
-classifier blocked both materializing pulled credentials to disk (correctly) and the
-bootstrap login against the SHARED dev Cosmos — a real authorization boundary this wave
-respects rather than works around. Everything unit-pinnable was unit-pinned instead (see the
-test lists above). **Ready to execute on authorization:** the local stack is up, the capture
-script pattern (`review-packet/capture-current-state.mjs`, PF_BASE_URL/PF_JWT) is proven, and
-`docs/build/RESULTS/p2-parity/` is reserved for the artifacts. The same authorization
-unblocks the live checklist: brief cold/cached/force + zero-product tenant, profile→scout
-scope change in an isolated `p2-live-smoke` tenant (torn down after), a real board drag, the
-risk-report v2 round-trip, and the dictionary reveal-on-override walk.
+Authorized explicitly by the operator (AskUserQuestion, "Yes — run it all"). Every write and
+every AI-cost call ran inside the provisioned-then-offboarded `p2-live-smoke` tenant on the
+local stack (real dev Cosmos + Foundry; JWTs held in process memory only, never on disk).
+
+| Check | Result |
+|---|---|
+| `/auth/me` serves `page.dictionary=false` from the new registry default | **PASS** (live, pre-override) |
+| Brief, zero-ish tenant: honest empty blocks, deterministic CITED headline, metric pills, labeled enrichment stub | **PASS** |
+| Brief cache: second call byte-identical `generatedAt` (HIT); `{force:true}` recomputes | **PASS** |
+| Seed profile + project + 3 tasks through the audited mutate envelope | **PASS** (4/4 + project) |
+| Brief, seeded: per-block isolation under a REAL upstream incident | **PASS with environmental note** — dev Foundry returned persistent `529 Overloaded` on the MID_REASONER call (verified directly: `taskSummary` → 502 `ai_upstream: Foundry 529`), so `tasks.status='error'` rendered as the labeled quiet line while headline fell back to deterministic+cited, 200 every time. The isolation design is exactly what got exercised; the AI paragraph itself could not be demonstrated on this surface (same constraint the filing lane hit on dev sonnet). |
+| News scout with profile: honest failure path | **PASS** — `refreshNews` → 501 `web_search_unavailable`, nothing stored, nothing fabricated (dev Foundry rejects the web_search tool; the profile-first scope composition itself is pinned by the byte-parity unit fixtures) |
+| Board dnd write: column-only update lands (rev 1→2); STALE rev → **409** conflict | **PASS** (the exact payload the board sends) |
+| Risk report v2 live (real GROUNDED_CITED call): insured-voiced `plainSummary`, protections 4 / watchouts 4 / actions 4 — every item `[cited]`, `reportVersion:2`, no insurerLens; second call `cached:true` | **PASS** |
+| `page.dictionary` reveal: tenant-admin config shows effective `false` → override → `true` | **PASS** (end-to-end through the real platform-config write) |
+| sal seeded as TENANT_ADMIN in all six named tenants via the audited invite route (operator-directed) | **DONE** — accenture-test, acn-test-1, acn-test-2, commercial-lines, hagerty, personal-lines; bootstrap SUPER_ADMIN unaffected (env-based) |
+| Teardown | `p2-live-smoke` offboarded (partition-scoped delete + export manifest); one orphan blob (`baseforms/admin/p2s-f1/smoke-ho3.txt`) noted — blob storage is outside the offboard's Cosmos scope |
+
+## Parity captures — `docs/build/RESULTS/p2-parity/` (20 PNGs, light+dark × before/after)
+
+BEFORE = deployed dev site (pre-wave UI, same shared data) · AFTER = local stack at :8181 ·
+all page loads scoped to `p2-live-smoke`. Triage:
+
+- **home**: the load-bearing pair — BEFORE is the bare chat hero; AFTER shows the First-Prompt
+  brief card live (pills, visible `COMPUTED` label on the deterministic headline, `SOURCES`
+  chip, the honest "Task synthesis unavailable right now." line — the 529 degradation
+  rendering as designed — metrics line, labeled enrichment stub, "cached for today").
+  Visually verified in-session.
+- **tasks**: re-captured after creating the project doc (first pass showed identical
+  "No project yet" empty states on both — recorded honestly); AFTER shows the redesigned
+  board (project-accent recast, main-step cards).
+- **claims**: AFTER differs by the new rail Risk-report trigger + header button + quieter
+  chips; DeterminationCard untouched by design.
+- **news**: byte-identical pairs — an EMPTY feed renders the same on both builds (the 501
+  path stored nothing); the visual News delta (About-you badge) needs stored carrier-matched
+  items, which the dev surface's missing web_search tool can't produce. Pinned by unit tests
+  instead.
+- **products**: AFTER renders collapsed-by-default with the Expand/Collapse-all toolbar.
+- The Dictionary nav item is VISIBLE in the p2-live-smoke after-shots — that is the reveal
+  state (the flag-flip check left the tenant override `true`; the before-build shows it too
+  since its registry default was still `true`). The hidden-by-default state is pinned by
+  `/auth/me` returning `false` pre-override (first table row) + Sidebar tests.
