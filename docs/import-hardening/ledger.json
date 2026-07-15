@@ -114,11 +114,11 @@
       "severity": "HIGH",
       "confidence": 0.95,
       "cost": "L",
-      "status": "PARTIAL_OPEN",
-      "priority": 2,
-      "evidence": "ALREADY_WARNED at HEAD: 'grid-truncated' (stage0-router.js:152-156) and 'hidden-sheets-skipped' (:149-151) reach importWarnings; hidden grids feed the ISO mapper (workbook.js:143-146). STILL OPEN: rows past the cap are never extracted by any path (manifest ground truth: CORE 'Rule References' VISIBLE 2280x29 loses 280 rows; CORE has 16 hidden sheets incl. 'Core Rating Specifications (2)' 639x73 — AI never sees them, only the ISO mapper does). Needed: chunked/windowed extraction past the cap, and an explicit documented hidden-sheet policy surfaced in the review UI.",
-      "fixture": "samples/hardening/manifest/xlsx_ooxml_summary.json (exceedsEmbedCap flags)",
-      "lesson": "A warned truncation is still a truncation; capacity limits need a continuation strategy, not just a notice."
+      "status": "FIXED_IH2",
+      "priority": null,
+      "evidence": "extendTruncatedGrids (stage0-router): a truncated fingerprint is UPGRADED to the authoritative uncapped grid from isoGrids (normalizeCellValue idempotence gives byte-parity — judge verified 0 mismatches across 58k CORE cells), sliced to the embedded column width (column overflow stays a warned non-goal), per workbook BEFORE the merge rename. Stage-4 batching and stage-5 citation resolution are already windowed over fp.cells with absolute grid rows — the tail extracts with zero changes there. CSV branch gets the same continuation from in-scope rows. JUDGE REJECT #1 (real): STACKED_TABLES extraction reads fp.subTables (segmented from the CAPPED grid), so the upgrade would falsely claim continuation — REVISED: consumesCells guard keeps the honest NOT-extracted warning naming the stacked reason; column-only truncation got its own honest wording ('all rows are covered'). Warnings now state EXACT loss (rows/cols past cap) in all modes; hidden-sheet warning states the policy (AI-skip + ISO-mapper-feed) with per-sheet dimensions. RESIDUAL (trigger written): a real >2000-row STACKED_TABLES sheet needs subTable re-segmentation from the extended grid — none exists in any corpus today; build it when one arrives red.",
+      "fixture": "tests/import-brain/hardening-f09-cap-continuation.test.ts — 7 cases: upgrade+warning, no-raw exact-loss, column-slice, STACKED no-false-claim (judge-demanded), col-only wording, untouched non-truncated, stage-5 tail citation resolution (two-fixture rule: upgrade fn + stage-5 resolution are structurally different locks)",
+      "lesson": "A warned truncation is still a truncation; capacity limits need a continuation strategy, not just a notice. And a continuation claim must be gated on the path that actually CONSUMES the continued data."
     },
     {
       "id": "F10",

@@ -145,14 +145,22 @@ async function routeArtifacts(opts) {
     if (sniff.container === 'ZIP' && sniff.workbookKind) {
       try {
         const { structural, skippedHiddenSheets, isoGrids } = await readWorkbookToStructural(buf, doc.name, sniff.workbookKind)
+        // Embed-cap continuation (ledger F09): upgrade truncated fingerprints to
+        // the authoritative uncapped grid BEFORE any rename/merge — per workbook,
+        // so the sheet-name join can never drift.
+        extendTruncatedGrids(structural, isoGrids, doc.name, out.warnings)
         out.workbooks.push({ name: doc.name, kind: sniff.workbookKind, structural, skippedHiddenSheets, isoGrids })
         if (skippedHiddenSheets.length > 0) {
-          out.warnings.push({ kind: 'hidden-sheets-skipped', doc: doc.name, detail: `Skipped ${skippedHiddenSheets.length} hidden sheet(s): ${skippedHiddenSheets.slice(0, 8).join(', ')}` })
-        }
-        for (const fp of structural.sheets || []) {
-          if (fp.cellsTruncated) {
-            out.warnings.push({ kind: 'grid-truncated', doc: doc.name, detail: `Sheet "${fp.sheetName}" exceeds the embed cap (${fp.dataRowCount} rows) — extraction covers the first ${brainShared.MAX_EMBED_ROWS} rows; review the tail manually.` })
-          }
+          // Explicit hidden-sheet policy: hidden sheets are EXCLUDED from AI
+          // classification/extraction (archive/scratch noise) but FEED the
+          // deterministic ISO mapper (legacy-parity requirement, workbook.js).
+          // Per-sheet sizes ride along so the review UI shows what was skipped.
+          const gridBySheet = new Map((isoGrids || []).map(g => [g.sheet, g]))
+          const dims = skippedHiddenSheets.slice(0, 8).map(n => {
+            const g = gridBySheet.get(n)
+            return g ? `${n} (${g.cells.length}×${g.cells[0]?.length ?? 0})` : n
+          })
+          out.warnings.push({ kind: 'hidden-sheets-skipped', doc: doc.name, detail: `Skipped ${skippedHiddenSheets.length} hidden sheet(s) for AI extraction — policy: hidden sheets feed the deterministic ISO mapper only: ${dims.join(', ')}${skippedHiddenSheets.length > 8 ? ', …' : ''}` })
         }
         const sig = collectWorkbookSignals(structural)
         allRefIds.push(...sig.refIds)
@@ -191,6 +199,11 @@ async function routeArtifacts(opts) {
       const text = doc.text || (buf ? buf.toString('utf8') : '')
       const rows = text.split(/\r?\n/).filter(l => l.trim().length > 0).map(l => l.split(','))
       const structural = buildStructuralModel([{ sheet: doc.name, cells: rows }], doc.name, 'CSV')
+      // A >cap CSV has its uncapped rows right here — same continuation as
+      // workbooks (F09). normalizeCellValue-parity: CSV cells are plain strings,
+      // which normalize idempotently; extendTruncatedGrids slices to the
+      // embedded width so the fingerprint's column policy is preserved.
+      extendTruncatedGrids(structural, [{ sheet: doc.name, file: doc.name, cells: rows.map(r => r.map(c => brainShared.normalizeCellValue(c))) }], doc.name, out.warnings)
       out.workbooks.push({ name: doc.name, kind: 'CSV', structural, skippedHiddenSheets: [] })
       docSummaries.push(`Type: CSV/text, ${rows.length} line(s)\nHead: ${text.slice(0, 400)}`)
       continue
@@ -243,4 +256,45 @@ async function routeArtifacts(opts) {
   return out
 }
 
-module.exports = { routeArtifacts, prefixToLobRefId, PDF_TEXT_MIN_CHARS }
+// ── Embed-cap continuation (ledger F09) ───────────────────────────────────────
+// The client-embed caps (MAX_EMBED_ROWS/COLS) bound what a FINGERPRINT carries —
+// but on the server path the full normalized grid already exists (isoGrids, the
+// same normalizeCellValue output fingerprinting re-derives, so values are
+// byte-identical). Upgrade each truncated fingerprint's cells to the
+// authoritative uncapped grid, sliced to the embedded COLUMN width (column
+// overflow stays a warned non-goal) — stage-4 batching and stage-5 citation
+// resolution are already windowed over fp.cells with absolute row indices, so
+// the tail extracts with no further changes. Runs per workbook BEFORE the
+// multi-workbook merge rename. When no raw grid exists (legacy structural
+// path, corrupt reads), the warning states the EXACT loss instead of a vague
+// "review manually".
+function extendTruncatedGrids(structural, isoGrids, docName, warnings) {
+  const bySheet = new Map((isoGrids || []).map(g => [g.sheet, g]))
+  for (const fp of (structural && structural.sheets) || []) {
+    if (!fp.cellsTruncated) continue
+    const embeddedRows = Array.isArray(fp.cells) ? fp.cells.length : 0
+    const embeddedWidth = fp.cells?.[0]?.length ?? 0
+    const rowsPastCap = Math.max(0, (fp.dataRowCount ?? 0) - embeddedRows)
+    const colsPastCap = Math.max(0, (fp.dataColCount ?? 0) - embeddedWidth)
+    const raw = bySheet.get(fp.sheetName)
+    // STACKED_TABLES extraction reads fp.subTables — segmented from the CAPPED
+    // grid at fingerprint time, never from fp.cells — so an upgraded grid would
+    // NOT be consumed; claiming continuation there would be a false conservation
+    // attestation. Keep the honest NOT-extracted warning for that shape.
+    const consumesCells = fp.layoutShape !== 'STACKED_TABLES' || !Array.isArray(fp.subTables) || fp.subTables.length === 0
+    if (consumesCells && raw && Array.isArray(raw.cells) && raw.cells.length >= embeddedRows && rowsPastCap > 0) {
+      fp.cells = embeddedWidth > 0 ? raw.cells.map(r => (r ?? []).slice(0, embeddedWidth)) : raw.cells
+      fp.cellsExtended = true
+      fp.cellsTruncated = false
+      warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}": ${fp.dataRowCount} rows exceed the ${brainShared.MAX_EMBED_ROWS}-row embed cap — the tail (${rowsPastCap} row(s)) IS extracted via continuation windows${colsPastCap > 0 ? `; ${colsPastCap} column(s) past the ${brainShared.MAX_EMBED_COLS}-column cap remain excluded (warned non-goal)` : ''}.` })
+    } else if (rowsPastCap === 0 && colsPastCap > 0) {
+      // Column-only truncation: no rows lost; column overflow is the warned non-goal.
+      warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}": ${fp.dataColCount} columns exceed the ${brainShared.MAX_EMBED_COLS}-column embed cap — ${colsPastCap} column(s) are NOT extracted; all rows are covered.` })
+    } else {
+      const why = !consumesCells ? 'stacked-table layout extracts from segmented sub-tables, not the raw grid' : 'no raw grid on this path'
+      warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}" exceeds the embed cap (${fp.dataRowCount} rows${colsPastCap > 0 ? `, ${fp.dataColCount} columns` : ''}) — ${rowsPastCap} row(s)${colsPastCap > 0 ? ` and ${colsPastCap} column(s)` : ''} past the cap are NOT extracted (${why}); review the tail manually.` })
+    }
+  }
+}
+
+module.exports = { routeArtifacts, prefixToLobRefId, PDF_TEXT_MIN_CHARS, extendTruncatedGrids }
