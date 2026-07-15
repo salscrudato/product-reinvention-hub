@@ -136,6 +136,52 @@ describe('mapIsoWorkbook — framework → product + coverages', () => {
   })
 })
 
+// ─── Form identity: (number, edition) — ledger F12 ────────────────────────────
+// Form identity in P&C is (number, edition, jurisdiction) — first principles
+// §5.2. Same-number rows with the SAME edition are state/coverage variants and
+// merge (applicability union); same-number rows with a DIFFERENT edition are
+// legally distinct documents and must stay separate entities. Jurisdiction is
+// an attachment condition (states/allStates scope), never part of the map key.
+describe('mapIsoWorkbook — form edition identity (F12)', () => {
+  const edForms = g('GL Forms Specifications', [
+    ['FORMS SPECIFICATIONS'],
+    ['PRODUCT FRAMEWORK ID', 'FORM NAME', 'FORM NUMBER', 'FORM EDITION DATE (MM YY)', 'CLAIMS BASIS', 'BUREAU', 'PROPRIETARY',
+     'ADMITTED / NON-ADMITTED', 'FORM CATEGORY', 'DYNAMIC / STATIC', 'MANDATORY/ OPTIONAL', 'ATTACHMENT CONDITION',
+     'DISPLAY ON FORMS SCHEDULE', 'SINGLE OR MULTI-USE', 'ALL ACTIVE STATES', 'CA'],
+    // Two editions of HO 00 03 — legally distinct documents.
+    ['GL.COV.002', 'Special Form', 'HO 00 03', '10 00', 'Occurrence', 'Yes', 'No', 'Admitted', 'Base Coverage Form', 'Static', 'Mandatory', 'No Additional Conditions', 'Yes', 'Single Use', 'X', ''],
+    ['GL.COV.002', 'Special Form', 'HO 00 03', '05 11', 'Occurrence', 'Yes', 'No', 'Admitted', 'Base Coverage Form', 'Static', 'Mandatory', 'No Additional Conditions', 'Yes', 'Single Use', '', 'X'],
+    // Same number + SAME edition twice — a state variant: still merges to one.
+    ['GL.COV.002.011', 'Pollution Form', 'CG 00 40', '04 13', 'Occurrence', 'Yes', 'No', 'Admitted', 'Other Coverage Form', 'Dynamic', 'Optional', 'Defined by Rule', 'No', 'Multi Use', 'X', ''],
+    ['GL.COV.002.011', 'Pollution Form', 'CG 00 40', '04 13', 'Occurrence', 'Yes', 'No', 'Admitted', 'Other Coverage Form', 'Dynamic', 'Optional', 'Defined by Rule', 'No', 'Multi Use', '', 'X'],
+  ])
+  const p = mapIsoWorkbook([edForms])
+
+  it('distinct editions of the same number are distinct entities with distinct docIds', () => {
+    const ho3 = p.forms.filter(f => f.data['number'] === 'HO 00 03')
+    expect(ho3).toHaveLength(2)
+    expect(new Set(ho3.map(f => f.docId)).size).toBe(2)
+    expect(new Set(ho3.map(f => f.data['edition']))).toEqual(new Set(['10 00', '05 11']))
+    // Each edition keeps its own applicability — no cross-edition union.
+    const ed1000 = ho3.find(f => f.data['edition'] === '10 00')!
+    const ed0511 = ho3.find(f => f.data['edition'] === '05 11')!
+    expect(ed1000.data['allStates']).toBe(true)
+    expect(ed0511.data['allStates']).toBe(false)
+    expect(ed0511.data['states']).toEqual(['CA'])
+  })
+
+  it('same number + same edition still merges as a state variant (one entity)', () => {
+    const cg0040 = p.forms.filter(f => f.data['number'] === 'CG 00 40')
+    expect(cg0040).toHaveLength(1)
+    expect(cg0040[0]!.data['allStates']).toBe(true)
+    expect(p.summary.warnings.some(w => /CG 00 40 appears on multiple rows/.test(w))).toBe(true)
+  })
+
+  it('number-only references keep resolving: data.number stays the verbatim number', () => {
+    for (const f of p.forms) expect(['HO 00 03', 'CG 00 40']).toContain(f.data['number'])
+  })
+})
+
 describe('mapIsoWorkbook — forms + dynamic fields', () => {
   it('maps categories, merges duplicate form numbers, attaches dynamic fields', () => {
     expect(plan.forms).toHaveLength(2)

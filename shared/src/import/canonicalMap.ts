@@ -258,7 +258,7 @@ export const CANONICAL_MAP: Record<CanonicalEntityKind, CanonicalEntityDef> = {
 
   form: {
     entity: 'form', idField: 'number',
-    description: 'A policy form / endorsement. Identity is its form number (forms are a shared library).',
+    description: 'A policy form / endorsement. Identity is (form number, edition date when stated) — first principles §5.2: distinct editions are legally distinct documents. Number-only references (coverage/rule formNumbers) resolve to ALL editions of that number (attachment semantics). Forms are a shared library.',
     fields: [
       {
         field: 'number', role: 'stored', type: 'string',

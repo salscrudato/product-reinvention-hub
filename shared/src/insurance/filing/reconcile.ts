@@ -232,8 +232,10 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
   }
 
   // ── Forms from the policy form ──
+  // Form identity is (number, edition) — F12. Blank edition degrades to the
+  // number-only id (filing extraction often has no edition).
   const forms: PlannedEntity[] = ex.policyForm.forms.items.map(f => ({
-    docId: f.number.replace(/\s+/g, '-'), refId: null, label: `${f.number} — ${f.name}`,
+    docId: (f.edition ? `${f.number.replace(/\s+/g, '-')}__${f.edition.replace(/\s+/g, '-')}` : f.number.replace(/\s+/g, '-')), refId: null, label: `${f.number} — ${f.name}`,
     data: {
       number: f.number, name: f.name, edition: f.edition, category: f.category,
       claimsBasis: '', dynamic: false, mandatoryDefault: f.mandatoryDefault, attachmentCondition: f.attachmentCondition,

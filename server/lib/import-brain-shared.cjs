@@ -364,7 +364,7 @@ var CANONICAL_MAP = {
   form: {
     entity: "form",
     idField: "number",
-    description: "A policy form / endorsement. Identity is its form number (forms are a shared library).",
+    description: "A policy form / endorsement. Identity is (form number, edition date when stated) \u2014 first principles \xA75.2: distinct editions are legally distinct documents. Number-only references (coverage/rule formNumbers) resolve to ALL editions of that number (attachment semantics). Forms are a shared library.",
     fields: [
       {
         field: "number",
@@ -2867,7 +2867,9 @@ function parseForms(grid, dynByForm, productRefId, ctx, overlay) {
     const cells = row(grid, r);
     const number = clean(at(cells, "number"));
     if (!number || /^form number/i.test(number)) continue;
-    const key = number.replace(/\s+/g, "-");
+    const numKey = number.replace(/\s+/g, "-");
+    const edition = clean(at(cells, "edition"));
+    const key = edition ? `${numKey}__${edition.replace(/\s+/g, "-")}` : numKey;
     const scope = stateScope(cells, sc);
     const coverageParts = partCols.filter((p) => isX(cells[p.col] ?? null)).map((p) => p.name);
     const transactions = txnCols.filter((t) => isX(cells[t.col] ?? null)).map((t) => t.name);
@@ -2909,7 +2911,7 @@ function parseForms(grid, dynByForm, productRefId, ctx, overlay) {
       data: {
         number,
         name: clean(at(cells, "name")),
-        edition: clean(at(cells, "edition")),
+        edition,
         // Outlier → write ENDORSEMENT as safe write-fallback (defect surfaced above).
         category: cat.category ?? "ENDORSEMENT",
         claimsBasis: mapClaimsBasis(at(cells, "claimsBasis")),
@@ -2924,7 +2926,9 @@ function parseForms(grid, dynByForm, productRefId, ctx, overlay) {
         coverageParts,
         productRefIds: productRefId ? [productRefId] : [],
         description: "",
-        dynamicFields: dynByForm[key] ?? [],
+        // The Dynamic Data sheet carries no edition column — its rows apply to
+        // every edition of the number, so the lookup stays number-keyed.
+        dynamicFields: dynByForm[numKey] ?? [],
         ...scope,
         status: "ACTIVE",
         lifecycle: "DRAFT",

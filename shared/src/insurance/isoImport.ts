@@ -835,7 +835,15 @@ function parseForms(
     const cells = row(grid, r)
     const number = clean(at(cells, 'number'))
     if (!number || /^form number/i.test(number)) continue
-    const key = number.replace(/\s+/g, '-')
+    // Form identity is (number, edition) — first principles §5.2 / ledger F12.
+    // Same number + same edition on multiple rows = a state/coverage variant
+    // (applicability union below); a DIFFERENT edition is a legally distinct
+    // document and gets its own entity. Jurisdiction stays attachment scope
+    // (states/allStates), never part of the key. Blank edition degrades to the
+    // number-only key — never a trailing separator.
+    const numKey  = number.replace(/\s+/g, '-')
+    const edition = clean(at(cells, 'edition'))
+    const key = edition ? `${numKey}__${edition.replace(/\s+/g, '-')}` : numKey
     const scope = stateScope(cells, sc)
     const coverageParts = partCols.filter(p => isX(cells[p.col] ?? null)).map(p => p.name)
     const transactions = txnCols.filter(t => isX(cells[t.col] ?? null)).map(t => t.name)
@@ -879,7 +887,7 @@ function parseForms(
       docId: key, refId: null, label: `${number} — ${clean(at(cells, 'name'))}`,
       data: {
         number, name: clean(at(cells, 'name')),
-        edition: clean(at(cells, 'edition')),
+        edition,
         // Outlier → write ENDORSEMENT as safe write-fallback (defect surfaced above).
         category: cat.category ?? 'ENDORSEMENT',
         claimsBasis: mapClaimsBasis(at(cells, 'claimsBasis')),
@@ -893,7 +901,9 @@ function parseForms(
         transactions, coverageParts,
         productRefIds: productRefId ? [productRefId] : [],
         description: '',
-        dynamicFields: dynByForm[key] ?? [],
+        // The Dynamic Data sheet carries no edition column — its rows apply to
+        // every edition of the number, so the lookup stays number-keyed.
+        dynamicFields: dynByForm[numKey] ?? [],
         ...scope,
         status: 'ACTIVE' as Status,
         lifecycle: 'DRAFT' as Lifecycle,

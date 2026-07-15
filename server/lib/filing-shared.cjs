@@ -501,7 +501,7 @@ function reconcileFiling(ex, opts = {}) {
     coverageItems.push({ section: "coverages", label: c.name, refId, docId: dashId(refId), confidence: c.confidence, citation: c.citation });
   }
   const forms = ex.policyForm.forms.items.map((f) => ({
-    docId: f.number.replace(/\s+/g, "-"),
+    docId: f.edition ? `${f.number.replace(/\s+/g, "-")}__${f.edition.replace(/\s+/g, "-")}` : f.number.replace(/\s+/g, "-"),
     refId: null,
     label: `${f.number} \u2014 ${f.name}`,
     data: {
