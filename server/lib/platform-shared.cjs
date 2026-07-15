@@ -52,7 +52,12 @@ var FEATURE_FLAGS = [
   { key: "page.homeCheck", label: "HomeCheck", group: "page", defaultEnabled: true, tenantOverridable: true },
   { key: "page.explorer", label: "Explorer", group: "page", defaultEnabled: true, tenantOverridable: true },
   { key: "page.tasks", label: "Tasks", group: "page", defaultEnabled: true, tenantOverridable: true },
-  { key: "page.dictionary", label: "Dictionary", group: "page", defaultEnabled: true, tenantOverridable: true },
+  // EX-02 (DEFAULTS_SPEC §2): the Dictionary hides by default and is EARNED — a
+  // successful Duck Creek export (validation ladder green + bundle delivered) flips
+  // the tenant override true server-side (P3's export-success hook). The literal key
+  // 'page.dictionary' is the ONE shared switch between P2 (default + gated render)
+  // and P3 (the unlock write); neither side invents a second flag.
+  { key: "page.dictionary", label: "Dictionary", group: "page", defaultEnabled: false, tenantOverridable: true },
   { key: "page.news", label: "News", group: "page", defaultEnabled: true, tenantOverridable: true },
   { key: "page.builder", label: "Builder", group: "page", defaultEnabled: true, tenantOverridable: true },
   { key: "page.feedback", label: "Feedback", group: "page", defaultEnabled: true, tenantOverridable: true },
