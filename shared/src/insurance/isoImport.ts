@@ -1816,6 +1816,30 @@ function enrichRatingWithGroups(
   return { groups: groups.length, matched: groups.filter(g => g.matchBasis !== 'unmatched').length, unmatchedNames }
 }
 
+/** Upgrade form anchors (D6): a form the source anchors only at product/line level, whose form
+ *  number appears in one-or-more coverages' form-number lists, is re-anchored to those coverages
+ *  — the hierarchy identifies the owning coverage the forms sheet left implicit. Forms keep
+ *  refId:null (their natural key is number+edition) and their verbatim number; the link rides
+ *  nested form.data.coverageRefIds (golden-invisible — forms are never pushed to the golden).
+ *  Signature-gated so GL/IM/PR forms are byte-identical. Returns the number upgraded. */
+function upgradeFormAnchors(forms: PlannedEntity[], coverages: PlannedEntity[], refTablesPresent: boolean): number {
+  if (!refTablesPresent) return 0
+  const covsByForm = buildCovsByForm(coverages)
+  let upgraded = 0
+  for (const form of forms) {
+    if (Array.isArray(form.data['coverageRefIds']) && (form.data['coverageRefIds'] as unknown[]).length) continue
+    const num = squishStr(String(form.data['number'] ?? ''))
+    if (!num) continue
+    const via = covsByForm.get(num)
+    if (via && via.length) {
+      form.data['coverageRefIds'] = [...via]
+      form.data['anchorBasis'] = 'derived: hierarchy form list'
+      upgraded++
+    }
+  }
+  return upgraded
+}
+
 // ─── Orchestration ───────────────────────────────────────────────────────────────
 
 /** Map a set of parsed ISO template worksheets onto the canonical model. The grids
@@ -1929,6 +1953,9 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   // each to hierarchy coverages / package forms, flag the genuinely-missing ones. CORE-gated.
   const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix)
 
+  // Upgrade line-level form anchors to the coverages the hierarchy's form lists name (D6). CORE-gated.
+  const formUpgrades = upgradeFormAnchors(forms, allCoverages, refTables.length > 0)
+
   // Reference tables share a single home with the real LD tables so the UI ldTables→chip
   // lookup and the golden both see them under their minted CORE.TBL refIds.
   const allLdTables = [...ldTables, ...refTables]
@@ -1955,6 +1982,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     ratingGroups: ratingGroups.groups,
     ratingGroupsMatched: ratingGroups.matched,
     ratingGroupsUnmatched: ratingGroups.unmatchedNames.length,
+    formAnchorUpgrades: formUpgrades,
   }
 
   const knownSheets = new Set(ctx.recognized)

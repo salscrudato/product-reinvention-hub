@@ -753,3 +753,43 @@ describe('mapIsoWorkbook — no fabrication on silence (G-D)', () => {
     expect(p.summary.warnings.some(w => /blank MANDATORY/.test(w))).toBe(true)
   })
 })
+
+// ─── Form anchor upgrades (D6) ────────────────────────────────────────────────────
+// A form the source anchors only at product/line level, whose number the hierarchy's
+// per-coverage form list names, is re-anchored to that coverage. Forms stay refId:null.
+describe('mapIsoWorkbook — form anchor upgrades (D6)', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'FORM NUMBER(S)', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Auto', 'Bodily Injury', '', 'AC 200', 'X'],
+  ])
+  // Two "TABLE NAME:" blocks → CORE signature (so the upgrade pass runs).
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI'],
+    ['RULE ID:', 'Available'],
+    ['Single', 25],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Late', 10],
+  ])
+  const forms = g('Forms Specifications', [
+    ['FORMS'],
+    ['PRODUCT FRAMEWORK ID', 'FORM NAME', 'FORM NUMBER', 'FORM CATEGORY'],
+    ['CORE.PRD.001', 'Some Form', 'AC 200', 'Endorsement'],   // line-level anchor only
+    ['CORE.PRD.001', 'Other Form', 'AC 999', 'Endorsement'],  // in no coverage form list
+  ])
+  const plan3 = mapIsoWorkbook([fw, refs, forms])
+
+  it('re-anchors a line-level form to the coverage whose form list names it (forms stay refId:null)', () => {
+    const f = plan3.forms.find(x => x.data['number'] === 'AC 200')!
+    expect(f.data['coverageRefIds']).toEqual(['CORE.COV.001'])
+    expect(String(f.data['anchorBasis'])).toMatch(/hierarchy form list/)
+    expect(f.refId).toBeNull()
+    expect(plan3.summary.counts['formAnchorUpgrades']).toBe(1)
+  })
+  it('a form in no coverage form list is left unanchored (never invented)', () => {
+    const f = plan3.forms.find(x => x.data['number'] === 'AC 999')!
+    expect(f.data['coverageRefIds']).toBeUndefined()
+  })
+})
