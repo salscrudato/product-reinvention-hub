@@ -15,6 +15,11 @@ export type Role = 'VIEWER' | 'UNDERWRITING' | 'COMPLIANCE' | 'CLAIMS' | 'ACTUAR
 export type Requirement  = 'MANDATORY' | 'OPTIONAL' | 'UNKNOWN'
 export type Source       = 'BUREAU' | 'PROPRIETARY'
 export type TermKind     = 'LIMIT' | 'DEDUCTIBLE' | 'OPTION'
+// Provenance of a derived/proposed link edge produced by the concept-linker import path.
+// 'given' = stated verbatim in the source; 'derived' = deterministically inferred by
+// concept matching; 'ai-proposed' = an accepted, cited AI-overlay suggestion (never
+// overwrites a deterministic basis). See shared/insurance/conceptMatch.ts + isoImport.ts.
+export type LinkBasis    = 'given' | 'derived' | 'ai-proposed'
 
 export interface GovernanceBlock {
   status:       Status
