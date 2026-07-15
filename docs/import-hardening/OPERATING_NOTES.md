@@ -30,5 +30,13 @@ Created by IH2, 2026-07-14. Prune stale lines every self-tune.
   G5 fix loop → blind challenge. Final status vocabulary: PROVEN / PARTIALLY_PROVEN /
   NOT_PROVEN / PARKED — never stronger than the evidence.
 
-## Learned this run (IH2)
-- (none yet)
+## Learned this run (IH2, self-tune #1 after 5 iterations)
+- Give every judge a corpus-probe mandate — PCM-A's phantom-terms defect (22% of GL terms) was
+  invisible to synthetic fixtures and found only because the judge ran the real workbooks.
+- Real workbooks carry STALE table refs; a citation that doesn't resolve must abstain, and the
+  same source cell usually carries the recovery channel (locked: isoImport stale-ref fixture).
+- committed .cmd files get eol-normalized to LF on fresh checkout (silent no-op) — regenerate
+  via Set-Content -Encoding Ascii before each detached run; don't trust the checkout copy.
+- docs/audit/import_eval_results.json churns on every eval run — commit it only at wave tips.
+- Old extraction dumps (pre-IH1) legitimately FAIL the new rescore gates (extras 11-17%) —
+  evidence of the gates working, not a HEAD regression; replace dumps at wave live runs.

@@ -138,12 +138,15 @@ async function callAnthropic({ deployment, systemPrompt, userPrompt, maxTokens, 
   }
   const json = await upstream.json()
   recordSpend(budget, deployment, json.usage?.input_tokens, json.usage?.output_tokens)
+  // stop_reason rides along so callers can DETECT token-ceiling truncation
+  // (ledger F10) instead of treating it as a generic parse failure.
+  const stopReason = json.stop_reason ?? null
   if (tools && toolName) {
     const tu = Array.isArray(json.content) ? json.content.find(b => b.type === 'tool_use') : null
-    return { raw: JSON.stringify(tu?.input ?? {}), usage: json.usage }
+    return { raw: JSON.stringify(tu?.input ?? {}), usage: json.usage, stopReason }
   }
   const text = Array.isArray(json.content) ? (json.content.find(b => b.type === 'text')?.text ?? '') : ''
-  return { raw: text, usage: json.usage }
+  return { raw: text, usage: json.usage, stopReason }
 }
 
 // ─── OpenAI Chat API call ─────────────────────────────────────────────────────
@@ -177,12 +180,14 @@ async function callOpenAI({ deployment, systemPrompt, userPrompt, maxTokens, too
   }
   const json = await upstream.json()
   recordSpend(budget, deployment, json.usage?.prompt_tokens, json.usage?.completion_tokens)
+  // finish_reason 'length' is the openai-family truncation signal (ledger F10).
+  const stopReason = json.choices?.[0]?.finish_reason ?? null
   if (tools && toolName) {
     const tc = json.choices?.[0]?.message?.tool_calls?.[0]
-    return { raw: tc?.function?.arguments ?? '{}', usage: json.usage }
+    return { raw: tc?.function?.arguments ?? '{}', usage: json.usage, stopReason }
   }
   const text = json.choices?.[0]?.message?.content ?? ''
-  return { raw: text, usage: json.usage }
+  return { raw: text, usage: json.usage, stopReason }
 }
 
 // ─── Escalation ladder (haiku → sonnet → opus) ────────────────────────────────

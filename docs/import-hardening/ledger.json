@@ -127,11 +127,11 @@
       "severity": "HIGH",
       "confidence": 1.0,
       "cost": "M",
-      "status": "OPEN",
-      "priority": 1,
-      "evidence": "stage4-extract.js:32 BATCH_ROWS=20; ai-call.js returns {raw, usage} with no stop_reason/finish_reason check (grep: zero matches in import-brain/). A maxTokens-truncated JSON reads as a parse failure -> since IH1, telemetry + one retry + ladder; but truncation is not DETECTED as such, and wide sheets still cut flat 20-row batches (the 312-col forms-library sheet embeds ~20k tokens/batch). Fix direction: read stop_reason from the API response, split the batch in half on truncation, budget batches by CELLS not rows.",
-      "fixture": "none yet — IH2: fixture with a forced-truncation stub asserting batch split",
-      "lesson": "The API tells you when output was cut off; not reading stop_reason converts a detectable condition into silent loss."
+      "status": "FIXED_IH2",
+      "priority": null,
+      "evidence": "Three layers: (1) ai-call surfaces stopReason from BOTH families (anthropic stop_reason, openai choices[0].finish_reason) — recordSpend fires before the read, telemetry intact; (2) parseWithRetry treats TRUNCATED_STOP_REASONS ('max_tokens','length','model_context_window_exceeded') as a detectable condition: onTruncation callback for callers with a recovery strategy, named 'truncated-model-output' + null for everyone else — never the wasted identical retry; P0-7's targeted retry for genuinely-malformed output byte-equivalent (judge stash-verified); (3) stage-4: recursive extractBatch halving on truncation (floor 1 row; single-row both-tiers-truncated → dropped-batch review NAMING the token ceiling) + width-aware rowsPerBatch = clamp(floor(480/mappedCols),1,20) — ≤24-col sheets keep the historical 20 rows exactly (corpus enumeration byte-identical). Judge ACCEPT. RESIDUALS (non-blocking, recorded): (a) a truncated single vote at a 1-row batch is unnamed telemetry (the row survives via single-vote); (b) recursion Promise.all can transiently exceed pMap's 3×2 concurrency under pathological all-truncation; revisit only if live runs show it.",
+      "fixture": "tests/import-brain/hardening-f10-truncation.test.ts — 3 layers (ai-call surfacing, parseWithRetry policy, end-to-end 20-row split with absolute citations), 4/5 red pre-fix, the P0-7-unchanged case green on both shas by design (two-fixture rule)",
+      "lesson": "The API tells you when output was cut off; not reading stop_reason converts a detectable condition into silent loss. Truncation is a batch-size signal, not a model failure — halve, don't retry."
     },
     {
       "id": "F11",

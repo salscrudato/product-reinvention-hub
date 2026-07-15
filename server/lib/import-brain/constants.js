@@ -60,9 +60,21 @@ function extractJson(raw) {
 // item) plus exactly ONE targeted retry of the same call. Transport-level failures
 // (empty raw — ai-call.js already retried the network) are not retried again.
 
-async function parseWithRetry({ call, parse, review, stage, sheetName, what }) {
+// Stop reasons that mean "output hit the token ceiling" — anthropic-style and
+// openai-style respectively. Truncation is a DETECTABLE condition (ledger F10):
+// retrying the identical prompt re-truncates identically, so parseWithRetry
+// never burns its retry on it — callers with a recovery strategy (stage-4
+// batch halving) pass onTruncation; everyone else gets named telemetry + null.
+const TRUNCATED_STOP_REASONS = new Set(['max_tokens', 'length', 'model_context_window_exceeded'])
+
+async function parseWithRetry({ call, parse, review, stage, sheetName, what, onTruncation }) {
   let res
   try { res = await call() } catch { res = { raw: '' } }
+  if (res && TRUNCATED_STOP_REASONS.has(res.stopReason)) {
+    if (typeof onTruncation === 'function') return onTruncation(res)
+    if (Array.isArray(review)) review.push({ kind: 'truncated-model-output', sheetName, detail: `${stage}: ${what} — model output hit the token ceiling (${res.stopReason}); treated as a missing vote (an identical retry would re-truncate).` })
+    return null
+  }
   let parsed = res && res.raw ? parse(res.raw) : null
   if (parsed != null) return parsed
   if (!res || !res.raw) return null
@@ -139,4 +151,5 @@ module.exports = {
   colLetter,
   parseWithRetry,
   sanitizeEntities,
+  TRUNCATED_STOP_REASONS,
 }

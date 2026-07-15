@@ -765,23 +765,45 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
       return { fp, entities: [detEntities] }
     }
 
-    // Batches extract independently — up to 3 in flight (pMap keeps batch order;
-    // synthesis/flagging runs after collection so SYNTH numbering stays stable).
-    const batchStarts = []
-    for (let b = 0; b < rows.length; b += BATCH_ROWS) batchStarts.push(b)
+    // Width-aware batch size (ledger F10): the prompt embeds one line per row ×
+    // mapped column, so the OUTPUT scales with cells, not rows — budget cells so
+    // wide sheets (state matrices, forms libraries) start small instead of
+    // discovering the token ceiling the hard way. Typical sheets (≤24 mapped
+    // columns) keep the historical 20-row batches.
+    const CELL_BUDGET   = 480
+    const rowsPerBatch  = Math.max(1, Math.min(BATCH_ROWS, Math.floor(CELL_BUDGET / Math.max(1, mappedColumnCount))))
 
-    const batchResults = await pMap(batchStarts, async (batchStart) => {
-      const batch      = rows.slice(batchStart, batchStart + BATCH_ROWS)
+    // Truncation sentinel: a vote whose output hit the token ceiling is not a
+    // malformed vote — it is a batch that is too big. Split in half and
+    // re-extract (recursion floor: 1 row); rows are never dropped for size.
+    const TRUNCATED = Symbol('stage4-truncated')
+
+    async function extractBatch(batch, batchStart) {
       const userPrompt = buildExtractionPrompt(fp, colMap, lock.headerRowIndex, batch, batchStart, null, gridRows)
 
       // Two decorrelated extraction votes in parallel: BULK (haiku) + BULK_ALT
       // (gpt-mini). Malformed output = structured telemetry + one targeted retry
-      // per side (P0-7 / ledger F16) — never a silent missing vote.
+      // per side (P0-7 / ledger F16) — never a silent missing vote. Truncation
+      // short-circuits to the sentinel (no identical retry — it re-truncates).
       const rowsWhat = `rows ${batchStart}-${batchStart + batch.length - 1}`
-      const [aPayload, bPayload] = await Promise.all([
-        parseWithRetry({ call: () => callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK extraction ${rowsWhat}` }),
-        parseWithRetry({ call: () => callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK_ALT extraction ${rowsWhat}` }),
+      const onTruncation = () => TRUNCATED
+      const [aVote, bVote] = await Promise.all([
+        parseWithRetry({ call: () => callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK extraction ${rowsWhat}`, onTruncation }),
+        parseWithRetry({ call: () => callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK_ALT extraction ${rowsWhat}`, onTruncation }),
       ])
+
+      if ((aVote === TRUNCATED || bVote === TRUNCATED) && batch.length > 1) {
+        review.push({ kind: 'truncated-batch-split', sheetName: fp.sheetName, detail: `${rowsWhat}: model output hit the token ceiling — batch split in half and re-extracted (no rows dropped).` })
+        const mid = Math.ceil(batch.length / 2)
+        const [left, right] = await Promise.all([
+          extractBatch(batch.slice(0, mid), batchStart),
+          extractBatch(batch.slice(mid), batchStart + mid),
+        ])
+        return { entities: [...left.entities, ...right.entities], conflicts: [...left.conflicts, ...right.conflicts] }
+      }
+      const truncatedAtOneRow = aVote === TRUNCATED || bVote === TRUNCATED
+      const aPayload = aVote === TRUNCATED ? null : aVote
+      const bPayload = bVote === TRUNCATED ? null : bVote
       for (const [side, payload] of [['BULK', aPayload], ['BULK_ALT', bPayload]]) {
         if (payload && payload.dropped > 0) {
           review.push({ kind: 'malformed-model-output', sheetName: fp.sheetName, detail: `stage4: ${side} ${rowsWhat} — ${payload.dropped} malformed entit(y|ies)/field(s) dropped by shape validation.` })
@@ -801,7 +823,7 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
           } catch { /* next rung */ }
         }
         if (!recovered) {
-          review.push({ kind: 'dropped-batch', sheetName: fp.sheetName, detail: `Rows ${batchStart}-${batchStart + batch.length - 1}: every extractor tier failed to parse — rows require manual review.` })
+          review.push({ kind: 'dropped-batch', sheetName: fp.sheetName, detail: `Rows ${batchStart}-${batchStart + batch.length - 1}: ${truncatedAtOneRow ? 'a single row exceeds the output token ceiling on every tier' : 'every extractor tier failed to parse'} — rows require manual review.` })
           return { entities: [], conflicts: [] }
         }
         const { entities } = reconcileEntities(recovered.entities, [], fp.sheetName, review)
@@ -817,7 +839,15 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
 
       progress(`${fp.sheetName}: rows ${batchStart}-${batchStart + batch.length - 1} of ${rows.length} extracted`)
       return { entities, conflicts }
-    }, 3)
+    }
+
+    // Batches extract independently — up to 3 in flight (pMap keeps batch order;
+    // synthesis/flagging runs after collection so SYNTH numbering stays stable).
+    const batchStarts = []
+    for (let b = 0; b < rows.length; b += rowsPerBatch) batchStarts.push(b)
+
+    const batchResults = await pMap(batchStarts, (batchStart) =>
+      extractBatch(rows.slice(batchStart, batchStart + rowsPerBatch), batchStart), 3)
 
     // Consensus ladder + judge ONCE per sheet over the pooled conflicts — dense
     // chunks of conflicted rows instead of one ladder climb per conflicted batch.
