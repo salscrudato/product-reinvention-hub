@@ -10,8 +10,8 @@
       "severity": "BLOCKING",
       "effort": "L",
       "phase": "P3",
-      "status": "SPEC_READY",
-      "evidence": "Spec pins base binding (inherited bare-id vs workbook file-name form, SPEC 1.1), override-vs-net-new with conservative full-restatement (SPEC 1.2), id grammar with observed PascalCase proof (SPEC 2), node map with node-index required attrs (SPEC 3.10). Old flattened exporter DELETED in 8825cbd - do not resurrect its shapes.",
+      "status": "DONE",
+      "evidence": "DONE @ p3/xml-export 08507b9: buildOverlay emits deltas on Carrier_ProductBase_PersonalAuto_1_0_0_0 (bare-id inherited, inheritedPage absent, productCode=Data); abstract scaffolding without override (observed SP3 shape); term-option restatements override=1 (spec 5 row 10); rating chain as dependency-driven privates (lookup/calculation/if, observed round/roundType); forms as documentSets with compiled coverage-elected conditions or HITL:GUESSED stubs; byte-stable ASCII serialization | (was) Spec pins base binding (inherited bare-id vs workbook file-name form, SPEC 1.1), override-vs-net-new with conservative full-restatement (SPEC 1.2), id grammar with observed PascalCase proof (SPEC 2), node map with node-index required attrs (SPEC 3.10). Old flattened exporter DELETED in 8825cbd - do not resurrect its shapes.",
       "test": "Golden overlay fixture for seeded PA.PROD.001; L0-L3 validation ladder green; byte-stable serialization test",
       "lesson": "The overlay IS the product statement - a flattened document imports once and diverges forever; deltas compose."
     },
@@ -22,8 +22,8 @@
       "severity": "HIGH",
       "effort": "M",
       "phase": "P3",
-      "status": "SPEC_READY",
-      "evidence": "XML_EXPORT_SPEC 1.3 (normative clauses 1-4 + R-flatten/R-rates/R-override-attr/R-idref) and 6 (ladder; XSD demoted to confirm-only per guide 9 conflicts C1-C3)",
+      "status": "DONE",
+      "evidence": "DONE @ 08507b9: runOverlayLint = L0 well-formed+ASCII, L1 grammar vs node-index subset (drift-locked to docs JSON), L2 delta clauses, R-flatten/R-rates/R-override-attr/R-idref; red fixtures prove flatten FAIL, untraceable net-new FAIL, dead scaffolding FAIL, inlined rate table FAIL, dangling keyRef FAIL, override!=1 FAIL; runs as a HARD GATE inside buildExportBundle | (was) XML_EXPORT_SPEC 1.3 (normative clauses 1-4 + R-flatten/R-rates/R-override-attr/R-idref) and 6 (ladder; XSD demoted to confirm-only per guide 9 conflicts C1-C3)",
       "test": "Lint unit fixtures: legal override, untraceable net-new FAIL, dead scaffolding FAIL, inlined rate table FAIL, dangling keyRef FAIL, >5% identical restatement FAIL",
       "lesson": "A lint that runs offline in the gate catches what an engine import would reveal only at the customer."
     },
@@ -34,8 +34,8 @@
       "severity": "BLOCKING",
       "effort": "L",
       "phase": "P3",
-      "status": "SPEC_READY",
-      "evidence": "Zero hits for TableConfig/CoverageConfig across code AND all git history (verified this pass). Shapes pinned from the updated workbooks: TableConfig 23 sheets = TOC + 21 tables + Config manifest LAST (brief's 'Config sheet is gone' is WRONG - it moved and gained ManuscriptID/SheetName columns); per-sheet preamble rows 4-7 (MS Physical Path / Manuscript ID / Comments / title+Table Type), header row 8, data 9+; keys = cols 1..n-1, value = col n, 2-D tables unpivoted. CoverageConfig: Coverage/Config/InputFields sheets with RequirementID carrying Hub refIds. SPEC 3.2-3.4.",
+      "status": "DONE",
+      "evidence": "DONE @ b9be5fe: Unity CoverageConfig+TableConfig producers BUILT (transform never existed); cell-for-cell golden lockstep vs the committed (1).xlsx pair — CoverageConfig 3 sheets, TableConfig all 23 sheets (golden = PH tables 1-10 + PA tables 11-21, fed as concatenation); one documented anomaly normalization (Medical Payments Coverage T); safeCellValue on every cell, formula injection proven literal through a real exceljs round-trip | (was) Zero hits for TableConfig/CoverageConfig across code AND all git history (verified this pass). Shapes pinned from the updated workbooks: TableConfig 23 sheets = TOC + 21 tables + Config manifest LAST (brief's 'Config sheet is gone' is WRONG - it moved and gained ManuscriptID/SheetName columns); per-sheet preamble rows 4-7 (MS Physical Path / Manuscript ID / Comments / title+Table Type), header row 8, data 9+; keys = cols 1..n-1, value = col n, 2-D tables unpivoted. CoverageConfig: Coverage/Config/InputFields sheets with RequirementID carrying Hub refIds. SPEC 3.2-3.4.",
       "test": "Structural golden test: producer output sheet inventory, preamble bytes, header rows, manifest rows match the (1).xlsx pair for seeded PA.PROD.001",
       "lesson": "The updated workbooks resolved the schema guide's Open Question 1 (the missing 'MS Physical Path' binding) - ground truth arrived as data, not documentation."
     },
@@ -46,8 +46,8 @@
       "severity": "HIGH",
       "effort": "M",
       "phase": "P3",
-      "status": "SPEC_READY",
-      "evidence": "SPEC 2 (manifest is what makes two-way identity scoring possible; refId is load-bearing per CLAUDE.md invariant), SPEC 5 (17-row HITL inventory; row 1 base-manuscript id BLOCKS export when unset)",
+      "status": "DONE",
+      "evidence": "DONE @ e188cb8: buildExportBundle delivers overlay.xml + both workbooks + export-manifest.json (ids map covering EVERY coverage identity, tables[], hitl[], 17-row gapReport, P4 provenance envelope authoredBy=human w/ cited refIds); MISSING blocks with zero artifacts; L3 cross-artifact ManuscriptID coherence checked; read-only DuckCreekExportPanel (P2 Dialog contract) renders the checklist | (was) SPEC 2 (manifest is what makes two-way identity scoring possible; refId is load-bearing per CLAUDE.md invariant), SPEC 5 (17-row HITL inventory; row 1 base-manuscript id BLOCKS export when unset)",
       "test": "Bundle integrity test (all artifacts name the same base manuscript); HITL rows render; GUESSED stubs carry in-XML comments",
       "lesson": "The missing-info list IS the product feature - surfacing what the model cannot know beats guessing it."
     },
@@ -58,8 +58,8 @@
       "severity": "HIGH",
       "effort": "M",
       "phase": "P3",
-      "status": "SPEC_READY",
-      "evidence": "SPEC 6.1; seam verified: stage0-router.js:143-214 container sniff with TEXT branch at :197; workbooks already ingest via the ZIP/workbook branch (:145-152) so the workbook half of round-trip works day one",
+      "status": "DONE",
+      "evidence": "DONE @ 7797fb7 (validation-only scope): stage-0 TEXT branch grows one additive <ManuScript> sniff clause behind an opts-only flag (default OFF, flag-off control test proves byte-identical legacy behavior); deterministic mapManuscriptOverlay (sibling of mapIsoWorkbook) -> canonical ImportPlan; foreign overlays (real SP3) land honest PARTIAL with zero invented refIds; user-facing two-way plug ledgered XE-10 BACKLOG | (was) SPEC 6.1; seam verified: stage0-router.js:143-214 container sniff with TEXT branch at :197; workbooks already ingest via the ZIP/workbook branch (:145-152) so the workbook half of round-trip works day one",
       "test": "Round-trip closure: export seeded PA.PROD.001 -> re-import -> identity-join F1 1.0 on coverages/forms/tables; foreign-overlay import lands honest PARTIAL with cited opaque logic",
       "lesson": "The import brain's format-agnostic seam pays off: XML-in is one sniff clause + one mapper, not an architecture change."
     },
@@ -70,8 +70,8 @@
       "severity": "HIGH",
       "effort": "M",
       "phase": "P3",
-      "status": "SPEC_READY",
-      "evidence": "SPEC 6 L5; thresholds mirror import-eval discipline (extras 0, linkage 1.0 offline)",
+      "status": "DONE",
+      "evidence": "DONE @ 7797fb7: round-trip harness scores identity-join F1 = 1.0 / extras 0 on coverages+forms+tables for seeded PA.PROD.001 (the spec 6.1 numeric bar, quoted in the test name); rating-step count + reference-chain order recovered; XML-half-only scoring stated honestly (rules/formRules/ldTables not-recovered notice); DuckCreekXML.xml plays no role | (was) SPEC 6 L5; thresholds mirror import-eval discipline (extras 0, linkage 1.0 offline)",
       "test": "The gate itself; partial-coverage output states 'XML half not yet scored' honestly until XE-05 lands",
       "lesson": "A proof that silently scores half the artifact is a lie with a green checkmark."
     },
@@ -94,8 +94,8 @@
       "severity": "MED",
       "effort": "S",
       "phase": "P3",
-      "status": "SPEC_READY",
-      "evidence": "DEFAULTS_SPEC 2; flag key verbatim 'page.dictionary' (shared/src/platform/featureFlags.ts:57); pairs with EX-02 (the default flip)",
+      "status": "DONE",
+      "evidence": "DONE @ 99967da: flipDictionaryFlag writes the CONTRACTS-frozen tenant override (literal page.dictionary, plane tenant, setTenantConfig -> Cosmos tenant doc, audited); flips on SUCCESS only — blocked export writes nothing and never flips; idempotent once revealed; VIEWER 403 proven | (was) DEFAULTS_SPEC 2; flag key verbatim 'page.dictionary' (shared/src/platform/featureFlags.ts:57); pairs with EX-02 (the default flip)",
       "test": "Hook writes override on success, not on lint FAIL; VIEWER cannot trigger",
       "lesson": "One switch, named once, wired by both sides - the spec names the exact flag key so P2 and P3 cannot drift."
     },
@@ -302,20 +302,81 @@
       "evidence": "Operator directive in the P1 brief ('the voice feature is PARKED to backlog'); grounding/citation and server-side-AI invariants apply to any future implementation",
       "test": "n/a while parked",
       "lesson": "Parking with a written trigger beats a silent drop - the item stays findable."
+    },
+    {
+      "id": "XE-10",
+      "workstream": "BACKLOG",
+      "title": "Two-way plug as a USER-FACING import source - ManuScript XML as a first-class unifiedImport format (stage-0 clause always-on, mapper wired through stage-7 identity join, review UI). P3 shipped the seam validation-only behind an opts flag per the operator brief; un-park trigger: operator decision",
+      "severity": "MED",
+      "effort": "M",
+      "phase": "P5",
+      "status": "OPEN",
+      "evidence": "Seam proven at 7797fb7: sniff clause + deterministic mapManuscriptOverlay + hardened parser (XXE/billion-laughs rejected) + F1 1.0 round-trip; remaining work is exposure policy, not mechanism",
+      "test": "Round-trip suite reuses as the acceptance harness when un-parked",
+      "lesson": "A validation seam and an import source differ only by an exposure flag - ship the proof, defer the policy."
     }
   ],
   "summary": {
     "byPhase": {
-      "P1_thisWave_docsOnly": ["RE-01", "RE-04", "RE-03", "RE-02"],
-      "P2_experience_brief": ["EX-01", "EX-02", "BR-01", "BR-02", "BR-03", "BR-04"],
-      "P3_xml_export": ["XE-01", "XE-02", "XE-03", "XE-04", "XE-05", "XE-06", "XE-08", "EX-03"],
-      "P4_history": ["HI-01", "HI-02", "HI-03", "HI-04"],
-      "P5_release_deferred": ["XE-07", "XE-09", "VOICE-01"]
+      "P1_thisWave_docsOnly": [
+        "RE-01",
+        "RE-04",
+        "RE-03",
+        "RE-02"
+      ],
+      "P2_experience_brief": [
+        "EX-01",
+        "EX-02",
+        "BR-01",
+        "BR-02",
+        "BR-03",
+        "BR-04"
+      ],
+      "P3_xml_export": [
+        "XE-01",
+        "XE-02",
+        "XE-03",
+        "XE-04",
+        "XE-05",
+        "XE-06",
+        "XE-08",
+        "EX-03"
+      ],
+      "P4_history": [
+        "HI-01",
+        "HI-02",
+        "HI-03",
+        "HI-04"
+      ],
+      "P5_release_deferred": [
+        "XE-07",
+        "XE-09",
+        "VOICE-01",
+        "XE-10"
+      ]
     },
     "held": [],
-    "doneP1": ["RE-01", "RE-02", "RE-03", "RE-04"],
-    "parked": ["VOICE-01"],
-    "resolvedPrior": ["RE-03"],
-    "criticalPath": "XE-01 -> XE-02 -> XE-03 -> XE-04 (bundle) -> XE-05/XE-06 (two-way) ; DEFAULTS EX-02+XE-08 share the literal flag key 'page.dictionary'"
+    "doneP1": [
+      "RE-01",
+      "RE-02",
+      "RE-03",
+      "RE-04"
+    ],
+    "parked": [
+      "VOICE-01"
+    ],
+    "resolvedPrior": [
+      "RE-03"
+    ],
+    "criticalPath": "XE-01 -> XE-02 -> XE-03 -> XE-04 (bundle) -> XE-05/XE-06 (two-way) ; DEFAULTS EX-02+XE-08 share the literal flag key 'page.dictionary' ; P3 DONE: XE-01..06+08 closed, EX-03 (export pill on the Home brief) remains OPEN for a later wave (not in the trimmed P3 brief)",
+    "doneP3": [
+      "XE-01",
+      "XE-02",
+      "XE-03",
+      "XE-04",
+      "XE-05",
+      "XE-06",
+      "XE-08"
+    ]
   }
 }
