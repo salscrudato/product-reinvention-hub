@@ -3,6 +3,7 @@
 // work-type + phase colour metadata (design tokens only), date coercion, and the
 // mutate() payload builders for seeding + completing tasks. Kept out of the components
 // so the board, dialogs and runway all agree on one vocabulary.
+import type { CSSProperties } from 'react'
 import type {
   Task, Project, TaskColumn, TypeOfWork, Disposition, PlannedTask, GtmBoardColumn,
 } from '@pf/shared'
@@ -12,14 +13,15 @@ export type TaskDoc    = Task & { id: string }
 export type ProjectDoc = Project & { id: string }
 
 // ─── Columns ───────────────────────────────────────────────────────────────────
-// The four board columns. `bar` is the accent stripe (reusing existing brand tokens,
-// no new hex): violet → deep violet → amber → blue, left to right.
-export interface ColumnDef { id: TaskColumn; label: string; board: GtmBoardColumn; bar: string }
+// The four board columns. Column identity is carried by position + label; the header
+// bar renders in the board's per-project accent (see projectAccentVars below), so the
+// whole board recasts when the PM switches projects.
+export interface ColumnDef { id: TaskColumn; label: string; board: GtmBoardColumn }
 export const GTM_COLUMNS: ColumnDef[] = [
-  { id: 'IDEATION',       label: 'Ideation & Design', board: 'IDEATION & DESIGN', bar: 'var(--color-accent-bright)' },
-  { id: 'BUILD_FILE',     label: 'Build & File',      board: 'BUILD & FILE',      bar: 'var(--color-accent-strong)' },
-  { id: 'TEST_APPROVE',   label: 'Test & Approve',    board: 'TEST & APPROVE',    bar: 'var(--color-peril)' },
-  { id: 'LAUNCH_MONITOR', label: 'Launch & Monitor',  board: 'LAUNCH & MONITOR',  bar: 'var(--color-info)' },
+  { id: 'IDEATION',       label: 'Ideation & Design', board: 'IDEATION & DESIGN' },
+  { id: 'BUILD_FILE',     label: 'Build & File',      board: 'BUILD & FILE' },
+  { id: 'TEST_APPROVE',   label: 'Test & Approve',    board: 'TEST & APPROVE' },
+  { id: 'LAUNCH_MONITOR', label: 'Launch & Monitor',  board: 'LAUNCH & MONITOR' },
 ]
 const BOARD_TO_COLUMN: Record<GtmBoardColumn, TaskColumn> = {
   'IDEATION & DESIGN': 'IDEATION', 'BUILD & FILE': 'BUILD_FILE',
@@ -64,6 +66,47 @@ export function dispositionMeta(d?: string): { label: BoardDisposition; token: s
     return { label: d as BoardDisposition, token: m.token, soft: m.soft }
   }
   return null
+}
+
+// ─── Per-project accent (the board's organizing signal) ─────────────────────────
+// One project renders at a time, so its accent recasts the whole board: card stripes,
+// column header bars, drop-hover tints, the launch metric, the switcher dot. The accent
+// is a STABLE token reference — `var(--color-proj-N)` — keyed by an FNV-1a hash of the
+// project id, so a project keeps its color forever and dark mode recasts by value
+// (index.css owns the hex; nothing here ever emits a raw color).
+export const PROJECT_ACCENT_STOPS = 5
+
+/** Stable 1..N stop index for a project id (FNV-1a over the id string). */
+export function projectAccentIndex(projectId: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < projectId.length; i++) {
+    h ^= projectId.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (Math.abs(h) % PROJECT_ACCENT_STOPS) + 1
+}
+
+/** The three scoped custom properties every board descendant reads via
+ *  `var(--proj-accent|-soft|-line, <fallback>)`. Apply to the board root (and re-apply
+ *  inside portalled surfaces like the task drawer, which escape the scope). */
+export function projectAccentVars(projectId: string): CSSProperties {
+  const i = projectAccentIndex(projectId)
+  return {
+    '--proj-accent': `var(--color-proj-${i})`,
+    '--proj-soft':   `var(--color-proj-${i}-soft)`,
+    '--proj-line':   `var(--color-proj-${i}-line)`,
+  } as CSSProperties
+}
+
+/** How far through its start→due window a back-scheduled task is (0..1, clamped), or
+ *  null when the task has no meaningful window. Drives the card's runway micro-bar. */
+export function elapsedFraction(startDate: string | null | undefined, dueAt: unknown, todayIso: string): number | null {
+  if (!startDate || dueAt == null) return null
+  const start = toMillis(startDate)
+  const due   = toMillis(dueAt)
+  const today = toMillis(todayIso)
+  if (start == null || due == null || today == null || due <= start) return null
+  return Math.min(1, Math.max(0, (today - start) / (due - start)))
 }
 
 // ─── Phases (runway ramp) ────────────────────────────────────────────────────────

@@ -117,6 +117,23 @@
   --color-gtm-phase-4: #7A00E6;   /* Launch     — deep (= accent-strong) */
   --color-gtm-phase-5: #A2ADC0;   /* Governance — neutral slate tail */
   --color-gtm-phase-ink: #3A2A52; /* dark label ink for the two light phases */
+
+  /* ── Per-project categorical accents (Tasks board) ──────────────────────────
+     Five stops keyed by a stable hash of the project id (gtm.ts projectAccentIndex);
+     the board renders ONE stop at a time (it is scoped to a single project, and the
+     project NAME always accompanies the accent — identity is never color-alone).
+     AA math, validated (WCAG small-text, worst light surface #F3F3F8):
+       cyan 5.05 · fuchsia 5.72 · olive 6.40 · indigo 7.15 · rose 5.46  — all ≥4.5:1.
+     Families deliberately avoid the semantic hues (accent violet, good green, info
+     blue, warn amber, danger red) so a project accent can never impersonate a
+     disposition or status. Noted deviation: the cyan stop's OKLCH chroma (0.087)
+     sits just under the categorical-chart floor (0.1) — accepted because stops are
+     never simultaneous series and the name is the primary identity carrier. */
+  --color-proj-1: #0B7285;  --color-proj-1-soft: rgba(11,114,133,.09);  --color-proj-1-line: rgba(11,114,133,.28);
+  --color-proj-2: #A21CAF;  --color-proj-2-soft: rgba(162,28,175,.08);  --color-proj-2-line: rgba(162,28,175,.26);
+  --color-proj-3: #3F6212;  --color-proj-3-soft: rgba(63,98,18,.09);    --color-proj-3-line: rgba(63,98,18,.28);
+  --color-proj-4: #4338CA;  --color-proj-4-soft: rgba(67,56,202,.08);   --color-proj-4-line: rgba(67,56,202,.26);
+  --color-proj-5: #BE185D;  --color-proj-5-soft: rgba(190,24,93,.08);   --color-proj-5-line: rgba(190,24,93,.26);
 }
 
 /* Gradient + glow tokens — kept as plain custom properties (not @theme) so they
@@ -289,6 +306,15 @@ html[data-theme="dark"] {
   --color-stage-cool:      #22D3EE;
   --color-stage-cool-soft: rgba(34,211,238,.12);
   --color-stage-cool-line: rgba(34,211,238,.32);
+
+  /* Per-project accents — 400-level recasts, re-validated on the worst dark surface
+     (#1E1E27): cyan 6.81 · fuchsia 6.72 · lime 10.96 · indigo 5.54 · pink 6.24 — all
+     ≥4.5:1 small-text AA. Same five families as light; dark mode recasts by value. */
+  --color-proj-1: #06B6D4;  --color-proj-1-soft: rgba(6,182,212,.13);    --color-proj-1-line: rgba(6,182,212,.32);
+  --color-proj-2: #E879F9;  --color-proj-2-soft: rgba(232,121,249,.13);  --color-proj-2-line: rgba(232,121,249,.32);
+  --color-proj-3: #A3E635;  --color-proj-3-soft: rgba(163,230,53,.12);   --color-proj-3-line: rgba(163,230,53,.30);
+  --color-proj-4: #818CF8;  --color-proj-4-soft: rgba(129,140,248,.14);  --color-proj-4-line: rgba(129,140,248,.34);
+  --color-proj-5: #F472B6;  --color-proj-5-soft: rgba(244,114,182,.13);  --color-proj-5-line: rgba(244,114,182,.32);
 
   /* Elevation — neutral dark shadows (violet glow reads as noise on black). */
   --shadow-card:       0 1px 2px rgba(0,0,0,.40), 0 12px 30px rgba(0,0,0,.50);
