@@ -12,17 +12,6 @@ import { conflictToast } from '../../lib/conflict'
 import { statusAfterIdentify, isUnverified, type BaseFormStatus } from '../../lib/claims/baseForm'
 import { RefChip, Skeleton, EmptyState, Dialog, Button } from '../ui'
 import { IconUpload, IconFile, IconSpinner, IconCheck, IconTrash, IconShield, IconWarning, IconSparkle, IconChevronRight } from '../ui/icons'
-import { WaveformLoader } from '../ai/WaveformLoader'
-import { CitedText } from './DeterminationCard'
-
-/** Sectioned, grounded risk report generated from the uploaded form itself. */
-export interface FormRiskReport {
-  overview:       string
-  riskHighlights: string[]
-  watchFor:       string[]
-  insurerLens:    string[]
-  generatedAt?:   string
-}
 
 export interface BaseForm {
   id:             string
@@ -38,7 +27,10 @@ export interface BaseForm {
   // The server read a form number the forms catalogue could not confirm. The form is still
   // READY + analyzable (the attached document is the authority); the UI flags it "Unverified".
   verified?:      boolean
-  riskReport?:    FormRiskReport   // cached server-side by /api/ai/formRiskReport
+  // Cached server-side by /api/ai/formRiskReport. Typed unknown on purpose: the shape is
+  // VERSIONED — consumers narrow via isRenderableRiskReport (lib/claims/riskReport) so a
+  // stale cached shape can never render.
+  riskReport?:    unknown
   uploadedBy:     string
   uploadedByName: string
   createdAt?:     unknown
@@ -57,6 +49,8 @@ interface Props {
   loading:    boolean
   selectedId: string | null
   onSelect:   (id: string) => void
+  /** Opens the insured-centric risk report (RiskReportDialog — Claims owns it). */
+  onOpenReport: (form: BaseForm) => void
   canEdit:    boolean
   actor:      { uid: string; name: string } | null
 }
@@ -86,86 +80,7 @@ function isSupported(f: File): boolean {
   return f.type === 'application/pdf' || f.type === 'text/plain' || /\.(pdf|txt|md)$/i.test(f.name)
 }
 
-// ─── Risk report accordion — collapsed by default, one per READY form ───────────
-// Sits directly under the form's name block. First expand fetches the sectioned,
-// grounded report (cached server-side on the doc thereafter); every point cites
-// the form's own clause in [brackets] (rendered as mono chips via CitedText).
-
-const REPORT_SECTIONS: { key: keyof Pick<FormRiskReport, 'riskHighlights' | 'watchFor' | 'insurerLens'>; label: string }[] = [
-  { key: 'riskHighlights', label: 'Risk overview' },
-  { key: 'watchFor',       label: 'What to look for' },
-  { key: 'insurerLens',    label: "The insurer's lens" },
-]
-
-function RiskReportAccordion({ form }: { form: BaseForm }) {
-  const [open, setOpen]       = useState(false)
-  const [report, setReport]   = useState<FormRiskReport | null>(form.riskReport ?? null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState<string | null>(null)
-
-  async function toggle() {
-    const next = !open
-    setOpen(next)
-    if (!next || report || loading) return
-    setLoading(true); setError(null)
-    try {
-      const out = await adapter.fns.call<{ formKey: string }, { report: FormRiskReport; cached: boolean }>(
-        'formRiskReport', { formKey: form.id },
-      )
-      setReport(out.report)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Report unavailable right now.')
-      setOpen(false)
-    } finally { setLoading(false) }
-  }
-
-  return (
-    <div className="mt-1.5 rounded-[10px] overflow-hidden transition-colors"
-      style={{ border: `1px solid ${open ? 'var(--color-accent-line)' : 'var(--color-border)'}` }}>
-      <button
-        type="button"
-        onClick={() => void toggle()}
-        aria-expanded={open}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left transition-colors hover:bg-accent-soft"
-        style={{ background: open ? 'var(--color-accent-soft)' : 'var(--color-raised)' }}
-      >
-        <IconSparkle size={12} className="text-accent shrink-0" aria-hidden="true" />
-        <span className="text-[11px] font-semibold text-text flex-1">Risk report</span>
-        {loading
-          ? <WaveformLoader size="xs" label="" className="text-accent" />
-          : <IconChevronRight size={12} aria-hidden="true"
-              className="shrink-0 text-faint transition-transform duration-200"
-              style={{ transform: open ? 'rotate(90deg)' : 'none' }} />}
-      </button>
-      {error && <p className="px-2.5 py-1.5 text-[10.5px] text-danger" role="alert">{error}</p>}
-      {open && report && (
-        <div className="facet-reveal flex flex-col gap-3 px-2.5 py-2.5 bg-surface" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <p className="text-[11.5px] text-dim leading-relaxed">{report.overview}</p>
-          {REPORT_SECTIONS.map(({ key, label }) => {
-            const items = report[key] ?? []
-            if (items.length === 0) return null
-            return (
-              <div key={key} className="flex flex-col gap-1">
-                <h4 className="text-[9.5px] font-semibold uppercase tracking-[.08em] text-accent">{label}</h4>
-                <ul className="flex flex-col gap-1">
-                  {items.map((p, i) => (
-                    <li key={i} className="flex gap-1.5 text-[11px] text-dim leading-relaxed">
-                      <span className="mt-[6px] w-1 h-1 rounded-full shrink-0" style={{ background: 'var(--color-accent)' }} aria-hidden="true" />
-                      <span className="min-w-0"><CitedText text={p} /></span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          })}
-          <p className="text-[9.5px] text-faint">Grounded in the attached form — every point cites its clause. Not a claims decision.</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit, actor }: Props) {
+export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, onOpenReport, canEdit, actor }: Props) {
   const [busy, setBusy]         = useState(false)
   const [dragOver, setDragOver] = useState(false)
   // Duplicate-upload guard: set when a freshly-identified, verified form matches an existing
@@ -402,10 +317,20 @@ export function BaseFormsLibrary({ forms, loading, selectedId, onSelect, canEdit
                   </div>
                 </button>
 
-                {/* Risk report — collapsed accordion, below the name block, above the status row */}
+                {/* Risk report — one-line trigger; the report itself opens in the premium
+                    focus-trapped RiskReportDialog (E6), where it has room to breathe. */}
                 {f.status === 'READY' && (
                   <div className="px-3">
-                    <RiskReportAccordion form={f} />
+                    <button
+                      type="button"
+                      onClick={() => onOpenReport(f)}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[10px] text-left transition-colors hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                      style={{ background: 'var(--color-raised)', border: '1px solid var(--color-border)' }}
+                    >
+                      <IconSparkle size={12} className="text-accent shrink-0" aria-hidden="true" />
+                      <span className="text-[11px] font-semibold text-text flex-1">Risk report</span>
+                      <IconChevronRight size={12} className="shrink-0 text-faint" aria-hidden="true" />
+                    </button>
                   </div>
                 )}
 

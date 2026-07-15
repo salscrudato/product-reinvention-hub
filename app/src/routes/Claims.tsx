@@ -12,6 +12,7 @@ import { useUser } from '../context/useUser'
 import { ChatComposer } from '../components/chat/ChatComposer'
 import { StreamRenderer } from '../components/ai/StreamRenderer'
 import { BaseFormsLibrary, type BaseForm } from '../components/claims/BaseFormsLibrary'
+import { RiskReportDialog } from '../components/claims/RiskReportDialog'
 import { DeterminationCard, type Determination } from '../components/claims/DeterminationCard'
 import { shouldRenderDetermination } from '../lib/claims/determination'
 import { assistantBubbleContent, EMPTY_TURN_FALLBACK } from '../lib/claims/bubble'
@@ -20,7 +21,7 @@ import { buildGapFeedbackPrefill } from '../lib/claims/gapFeedback'
 import { useFeedbackLaunch } from '../context/useFeedbackLaunch'
 import { RefChip, NoticeBanner } from '../components/ui'
 import type { NoticeEvent, NoticeKind } from '../lib/ai/notices'
-import { IconCheck, IconShield, IconWarning } from '../components/ui/icons'
+import { IconCheck, IconShield, IconWarning, IconSparkle } from '../components/ui/icons'
 import { WaveformLoader } from '../components/ai/WaveformLoader'
 import { canI } from '../lib/canI'
 
@@ -140,6 +141,12 @@ export default function Claims() {
   const [linkedMsgs, setLinkedMsgs] = useState<Set<number>>(new Set())
   const launch = useFeedbackLaunch()
 
+  // The insured-centric risk report (E6): which form's report is open, and a report
+  // item queued as a copilot question. pendingAsk is PINNED to its form id so a rapid
+  // re-selection can never fire the question against a different policy.
+  const [reportForm, setReportForm] = useState<BaseForm | null>(null)
+  const [pendingAsk, setPendingAsk] = useState<{ formId: string; question: string } | null>(null)
+
   const scrollRef     = useRef<HTMLDivElement>(null)
   const abortRef      = useRef<AbortController | null>(null)
   // RAF token batching: buffer tokens and flush to React state at most once per animation
@@ -173,6 +180,18 @@ export default function Claims() {
   // A new selection starts a fresh conversation (a different policy) — abort any stream
   // still running against the previous form so its tokens can't bleed into the new thread.
   useEffect(() => { abortRef.current?.abort(); setMessages([]); setInput(''); setLinkedMsgs(new Set()) }, [selectedId])
+
+  // Declared AFTER the selection-reset effect so the fresh thread exists before a
+  // queued report question fires. Fires only when the selected form IS the question's
+  // form and is analyzable; a mismatched selection drops the queued ask instead.
+  useEffect(() => {
+    if (!pendingAsk) return
+    if (selectedId !== pendingAsk.formId) { setPendingAsk(null); return }
+    if (!isFormAnalyzable(selectedForm)) return
+    const q = pendingAsk.question
+    setPendingAsk(null)
+    void ask(q)
+  }, [pendingAsk, selectedForm, selectedId])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Abort any in-flight analysis on unmount so it doesn't keep consuming tokens/network.
   useEffect(() => () => abortRef.current?.abort(), [])
@@ -306,9 +325,25 @@ export default function Claims() {
       <aside className="w-full lg:w-[320px] lg:shrink-0 flex flex-col min-h-0 lg:h-full lg:border-r lg:pr-5" style={{ borderColor: 'var(--color-border)' }}>
         <BaseFormsLibrary
           forms={sortedForms} loading={loading} selectedId={selectedId}
-          onSelect={id => setSelectedId(id || null)} canEdit={canEdit} actor={actor}
+          onSelect={id => setSelectedId(id || null)} onOpenReport={setReportForm}
+          canEdit={canEdit} actor={actor}
         />
       </aside>
+
+      {/* The insured-centric risk report — focus-trapped Dialog; "Ask the copilot"
+          closes it and routes the question through the real grounded ask(). */}
+      {reportForm && (
+        <RiskReportDialog
+          form={reportForm}
+          onClose={() => setReportForm(null)}
+          onAsk={(form, question) => {
+            setReportForm(null)
+            if (form.id === selectedId) { void ask(question); return }
+            setSelectedId(form.id)
+            setPendingAsk({ formId: form.id, question })
+          }}
+        />
+      )}
 
       {/* Right — conversation */}
       <section className="flex-1 flex flex-col min-h-0 max-w-3xl w-full mx-auto">
@@ -342,6 +377,16 @@ export default function Claims() {
               </div>
               <span className="text-[11px] text-faint">Grounded in this form + its product data</span>
             </div>
+            {selectedForm.status === 'READY' && (
+              <button
+                type="button"
+                onClick={() => setReportForm(selectedForm)}
+                className="ml-auto shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[9px] text-[12px] font-medium text-dim hover:text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                style={{ border: '1px solid var(--color-border)' }}
+              >
+                <IconSparkle size={13} aria-hidden="true" />Risk report
+              </button>
+            )}
           </div>
         )}
 
@@ -376,11 +421,12 @@ export default function Claims() {
                       {m.tools.length > 0 && (
                         <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
                           {m.tools.map((t, ti) => (
+                            /* Quieter chips (E6 polish): the soft tint alone carries state —
+                               the border double-encoded it and read as noise in a row. */
                             <span key={ti}
                               className="inline-flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full text-[10.5px] font-medium transition-colors"
                               style={{
                                 background: t.done ? 'var(--color-good-soft)' : 'var(--color-accent-soft)',
-                                border: `1px solid ${t.done ? 'var(--color-good-line)' : 'var(--color-accent-line)'}`,
                                 color: t.done ? 'var(--color-good)' : 'var(--color-accent)',
                               }}>
                               {t.done ? (
@@ -496,8 +542,8 @@ function Starters({ scenarios, onPick }: { scenarios: readonly string[]; onPick:
               <button
                 key={i}
                 onClick={() => onPick(s)}
-                className="text-[12.5px] text-dim px-3 py-1.5 rounded-full bg-surface hover:bg-hover hover:text-text transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                style={{ border: '1px solid var(--color-border)' }}
+                className="text-[12.5px] text-dim px-3 py-1.5 rounded-full bg-surface hover:bg-hover hover:text-text hover:-translate-y-px motion-reduce:hover:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                style={{ border: '1px solid var(--color-border)', transition: 'all .2s var(--ease-spring)' }}
               >
                 {s}
               </button>
