@@ -51,7 +51,16 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     },
   })
   if (res.status === 409) throw new MutationConflictError()
-  if (res.status === 401) { setToken(null); throw new Error('unauthenticated') }
+  if (res.status === 401) {
+    // Session expired or token rejected: perform the full LOCAL sign-out, not just
+    // the token clear. Clearing only the token left currentUser set, so the shell
+    // kept rendering the authed app and every live-collection poller kept firing
+    // unauthenticated requests forever (401 console storm). Nulling the user flips
+    // AppShell to the sign-in route, which unmounts subscribers and stops polling.
+    setToken(null)
+    if (currentUser !== null) { setUser(null); clearClientCaches() }
+    throw new Error('unauthenticated')
+  }
   if (!res.ok) {
     // Surface the server's honest error detail when it sent one (e.g. payload_too_large
     // with the actual size limit) instead of an opaque "<path> failed: <status>" — the
@@ -272,6 +281,10 @@ export const adapter: BackendAdapter = {
           onError?.(err)
           deliveredOnce = true
           deliver((doc ? null : []) as T | T[])
+          // An unauthenticated session can never heal by re-polling — the 401
+          // handler has already signed the session out locally; stop this poller
+          // for good instead of rescheduling into a 401 storm.
+          if (err instanceof Error && err.message === 'unauthenticated') { stopped = true; clear(); pollers.delete(poller) }
           interval = Math.min(Math.round(interval * BACKOFF), POLL_MAX)
         } finally {
           inFlight = false
