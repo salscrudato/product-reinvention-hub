@@ -29,8 +29,10 @@ const SNAPS = resolve(__dir, '__snapshots__')
 const GOLDEN = {
   // Framework: 105 coverage rows (4 PROD + 1 LOB rows are skipped)
   coverages: 105,
-  // Forms: 795 distinct form numbers (816 rows, 21 duplicates deduped)
-  forms: 795,
+  // Forms: 816 entities — identity is (number, edition) per F12: the workbook's
+  // 21 same-number/different-edition pairs are legally distinct documents (795
+  // distinct numbers; same-number-SAME-edition state variants still merge).
+  forms: 816,
   // Rules: 146 unique rule IDs
   rules: 146,
   // Form-rules: 259 (merge-aware — each merged FORM RULE ID anchor fills its rows)
@@ -165,7 +167,7 @@ describe('GL golden fixtures — Phase 0 baseline counts', () => {
     expect(actual).toMatchSnapshot()
   })
 
-  it('forms: distinct form-number count (golden=795)', () => {
+  it('forms: entity count under (number, edition) identity (golden=816)', () => {
     const actual = glPlan.summary.counts['forms'] ?? 0
     logDelta('forms', actual, GOLDEN.forms)
     expect(actual).toMatchSnapshot()

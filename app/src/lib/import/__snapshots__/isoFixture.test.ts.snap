@@ -17,9 +17,9 @@ exports[`GL golden fixtures — Phase 0 baseline counts > RT tables: stacked-blo
 exports[`GL golden fixtures — Phase 0 baseline counts > counts snapshot (locks current parser output as regression baseline) 1`] = `
 {
   "coverages": 105,
-  "dynamicFields": 200,
+  "dynamicFields": 244,
   "formRules": 259,
-  "forms": 795,
+  "forms": 816,
   "ldTables": 37,
   "products": 1,
   "ratingSteps": 55,
@@ -30,7 +30,7 @@ exports[`GL golden fixtures — Phase 0 baseline counts > counts snapshot (locks
 
 exports[`GL golden fixtures — Phase 0 baseline counts > form-rules: merge-aware count (golden=259; ExcelJS resolves merges → 259 already reached) 1`] = `259`;
 
-exports[`GL golden fixtures — Phase 0 baseline counts > forms: distinct form-number count (golden=795) 1`] = `795`;
+exports[`GL golden fixtures — Phase 0 baseline counts > forms: entity count under (number, edition) identity (golden=816) 1`] = `816`;
 
 exports[`GL golden fixtures — Phase 0 baseline counts > framework: coverage count (golden=105) 1`] = `105`;
 
@@ -58,4 +58,4 @@ exports[`GL golden fixtures — Phase 0 baseline counts > sheets recognized — 
 ]
 `;
 
-exports[`GL golden fixtures — Phase 0 baseline counts > warnings — logs all summary warnings for review 1`] = `30`;
+exports[`GL golden fixtures — Phase 0 baseline counts > warnings — logs all summary warnings for review 1`] = `9`;
