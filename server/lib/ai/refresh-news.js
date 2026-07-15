@@ -24,6 +24,7 @@ const crypto     = require('crypto')
 const fleet      = require('../fleet')
 const metering   = require('../metering')
 const dataRouter = require('../data')
+const { loadTenantProfile } = require('../tenant-profile')
 
 // Bundled shared helpers (pnpm build:news → news-shared.cjs). Lazy so the server
 // boots even on a fresh clone before `pnpm build`.
@@ -242,6 +243,70 @@ async function loadProducts(tid) {
   } catch { return [] }
 }
 
+// ─── Tenant-profile-first scope (BR-04 / NEWS_TENANT_SPEC §2–3) ────────────────
+// The scope the scout searches with. ABSENT profile → the two historical literals,
+// byte-for-byte (pinned by refresh-news.test.ts) — personalization may only ADD
+// signal, never narrow. Present profile → the unchanged base sentence FIRST, then an
+// appended tenant-focus paragraph (carrier → aliases → LOB captions → market →
+// states → watch topics → product names capped at 12) closed with an explicit
+// anti-narrowing instruction.
+const SCOPE_PRODUCT_CAP = 12
+
+// LOB display captions come from the shared registry bundle when present (lazy, same
+// pattern as newsShared) — a raw prefix like "PH" resolves to "Personal Home"; unknown
+// keys fall back to themselves rather than being dropped.
+let _lobReg = null
+function lobCaption(key) {
+  if (_lobReg === null) {
+    try { _lobReg = Object.values(require('../import-brain-shared.cjs').LOB_REGISTRY || {}) } catch { _lobReg = [] }
+  }
+  return _lobReg.find(l => l.prefix === key)?.name || key
+}
+
+function buildScope({ day, todayStr }, profile, products) {
+  const base = day
+    ? `Find REAL P&C insurance market news PUBLISHED ON ${day} (U.S. market). Today is ${todayStr}. Only include items you can verify were published on or about that date; include publishedAt when the source states it.`
+    : `Today is ${todayStr}. Find REAL P&C insurance market news from the past 7 days.`
+  if (!profile?.carrierName) return base
+
+  const focus = [`Tenant focus — the reader is a product manager at the carrier "${profile.carrierName}".`]
+  if (profile.aliases?.length)     focus.push(`The carrier is also known as ${profile.aliases.join(', ')}.`)
+  if (profile.lobs?.length)        focus.push(`Lines of business: ${profile.lobs.map(lobCaption).join(', ')}.`)
+  if (profile.market)              focus.push(`Market: ${profile.market} lines.`)
+  if (profile.states?.length)      focus.push(`Operating states: ${profile.states.join(', ')}.`)
+  if (profile.watchTopics?.length) focus.push(`Watch topics: ${profile.watchTopics.join(', ')}.`)
+  const names = (products || []).map(p => p?.name).filter(Boolean).slice(0, SCOPE_PRODUCT_CAP)
+  if (names.length)                focus.push(`Portfolio products: ${names.join(', ')}.`)
+  focus.push('This tenant focus ADDS signal on top of the general scope; do not narrow the general P&C market coverage below it.')
+
+  return `${base}\n${focus.join(' ')}`
+}
+
+// ─── Carrier tagging (matchedCarrier — "about you") ───────────────────────────
+// Case-insensitive, WORD-BOUNDED carrierName/alias match over title+summary+tags:
+// an alias like "ATM" must never tag "atmosphere" (boundary check both sides, plain
+// string scan — no regex construction from user data). Degenerate short names
+// (<3 chars) are ignored so a stray initial can never tag the feed.
+const _isAlnum = (c) => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
+function _wordBoundedIncludes(hay, needle) {
+  let i = hay.indexOf(needle)
+  while (i !== -1) {
+    const before = i > 0 ? hay[i - 1] : ' '
+    const after = i + needle.length < hay.length ? hay[i + needle.length] : ' '
+    if (!_isAlnum(before) && !_isAlnum(after)) return true
+    i = hay.indexOf(needle, i + 1)
+  }
+  return false
+}
+function matchesCarrier(item, profile) {
+  if (!profile?.carrierName) return false
+  const hay = `${item.title || ''} ${item.summary || ''} ${(item.tags || []).join(' ')}`.toLowerCase()
+  return [profile.carrierName, ...(profile.aliases || [])]
+    .map(n => String(n).trim().toLowerCase())
+    .filter(n => n.length >= 3)
+    .some(n => _wordBoundedIncludes(hay, n))
+}
+
 function matchToProductIds(item, products) {
   const raw = `${item.title} ${item.summary} ${item.tags.join(' ')}`
   const lower = raw.toLowerCase()
@@ -295,9 +360,12 @@ async function refreshNews(req, res) {
     if (custom) instruction = custom
   } catch { /* default instruction */ }
 
-  const scope = day
-    ? `Find REAL P&C insurance market news PUBLISHED ON ${day} (U.S. market). Today is ${todayStr}. Only include items you can verify were published on or about that date; include publishedAt when the source states it.`
-    : `Today is ${todayStr}. Find REAL P&C insurance market news from the past 7 days.`
+  // Profile-first scope (BR-04): the tenant-carrier profile + portfolio products fold
+  // into the search scope; absent profile → the historical scope byte-for-byte. The
+  // per-user newsPrefs `instruction` keeps its append precedence untouched below.
+  const profile = await loadTenantProfile(tid)
+  const products = await loadProducts(tid)
+  const scope = buildScope({ day, todayStr }, profile, products)
 
   const deployment = fleet.resolveModel('BULK_VERIFY', g.degrade)
   const N = newsShared()
@@ -320,7 +388,6 @@ async function refreshNews(req, res) {
   // Existence gate: shape-check + liveness-probe every URL; drop the dead.
   const live = N.verifyItems ? await N.verifyItems(items, headIsAlive) : []
 
-  const products = await loadProducts(tid)
   const actor = { uid: req.user.uid || 'system', name: req.user.name || 'News Bot' }
   let stored = 0
 
@@ -344,6 +411,7 @@ async function refreshNews(req, res) {
         image,
         publishedAt: it.publishedAt,
         relatedProductIds: matchToProductIds(it, products),
+        matchedCarrier: matchesCarrier(it, profile),
         fetchedAt: `${articleDate}T12:00:00.000Z`,
       }
       await dataRouter.mutateInternal(tid, { op: 'update', path: `news/${urlHash}`, data, entityType: 'news' }, actor, '/api/ai/refreshNews')
@@ -356,4 +424,7 @@ async function refreshNews(req, res) {
   return res.json({ found: items.length, verified: live.length, stored, day })
 }
 
-module.exports = { refreshNews, _internals: { extractJsonArray, matchToProductIds, webSearchScout } }
+module.exports = {
+  refreshNews,
+  _internals: { extractJsonArray, matchToProductIds, webSearchScout, buildScope, matchesCarrier },
+}

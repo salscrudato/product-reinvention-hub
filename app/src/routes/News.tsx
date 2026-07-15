@@ -144,6 +144,10 @@ function computeRelevance(
     }
   }
 
+  // Carrier match (server-tagged from the tenant profile): news about YOU outranks
+  // everything of equal portfolio relevance.
+  if (item.matchedCarrier) score += 3
+
   return { score, lobs: [...matchedLobs], states: [...matchedStates] }
 }
 
@@ -370,6 +374,18 @@ function HeroCard({
                 </span>
               </>
             )}
+            {item.matchedCarrier && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: 'var(--color-on-media)', color: 'white' }}
+                  title="Mentions your carrier (from the tenant profile)"
+                >
+                  About you
+                </span>
+              </>
+            )}
           </div>
 
           {/* Headline — primary link, AA contrast over scrim */}
@@ -553,6 +569,18 @@ function CompactCard({
                 <span className="inline-flex items-center gap-1 text-accent font-medium">
                   <IconStar size={11} className="fill-current" aria-hidden="true" />
                   Pinned
+                </span>
+              </>
+            )}
+            {item.matchedCarrier && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-accent-soft text-accent"
+                  style={{ border: '1px solid var(--color-accent-line)' }}
+                  title="Mentions your carrier (from the tenant profile)"
+                >
+                  About you
                 </span>
               </>
             )}

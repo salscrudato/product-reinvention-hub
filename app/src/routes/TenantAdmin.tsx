@@ -9,6 +9,7 @@ import type { AuditSearchEvent, TenantMember, Tier } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { Tabs, Badge, Button, Input, Dialog, Skeleton, EmptyState } from '../components/ui'
 import { canI } from '../lib/canI'
+import { TenantProfileTab } from '../components/admin/TenantProfileTab'
 
 const TENANT_ROLES: Tier[] = ['VIEWER', 'UNDERWRITING', 'COMPLIANCE', 'CLAIMS', 'ACTUARIAL', 'ANALYST', 'EDITOR', 'TENANT_ADMIN']
 
@@ -27,19 +28,13 @@ const ROLE_HELP = 'VIEWER = read | inquiry personas = read + AI | EDITOR = edit 
 
 export default function TenantAdmin() {
   const { profile, user, loading } = useUser()
-  const [tab, setTab] = useState('members')
+  // Per-tab gating (BR-03): Members/Audit stay TENANT_ADMIN-only; the carrier Profile tab
+  // is org context every staff role may read (EDITOR+ saves; the server's product:write
+  // guard on /db/mutate is the real write gate).
+  const isOrgAdmin = canI(profile, 'member:manage')
+  const [tab, setTab] = useState(isOrgAdmin ? 'members' : 'profile')
 
   if (loading || !profile) return null
-
-  if (!canI(profile, 'member:manage')) {
-    return (
-      <EmptyState
-        icon={<IconShield size={28} />}
-        title="Org Admins only"
-        description="You need the TENANT_ADMIN role to access org administration."
-      />
-    )
-  }
 
   const tenantLabel = user?.tenantId ?? 'your org'
 
@@ -47,17 +42,25 @@ export default function TenantAdmin() {
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-xl font-bold text-text">Org Admin</h1>
-        <p className="text-sm text-dim">Manage members and audit events for <span className="font-mono text-text">{tenantLabel}</span>.</p>
+        <p className="text-sm text-dim">
+          {isOrgAdmin
+            ? <>Manage members, the carrier profile and audit events for <span className="font-mono text-text">{tenantLabel}</span>.</>
+            : <>The carrier profile for <span className="font-mono text-text">{tenantLabel}</span>. Member and audit administration needs the TENANT_ADMIN role.</>}
+        </p>
       </div>
       <Tabs
-        tabs={[
-          { id: 'members', label: 'Members'   },
-          { id: 'audit',   label: 'Audit Log' },
-        ]}
+        tabs={isOrgAdmin
+          ? [
+              { id: 'members', label: 'Members'   },
+              { id: 'profile', label: 'Carrier Profile' },
+              { id: 'audit',   label: 'Audit Log' },
+            ]
+          : [{ id: 'profile', label: 'Carrier Profile' }]}
         active={tab} onChange={setTab}
       />
-      {tab === 'members' && <MembersTab />}
-      {tab === 'audit'   && <OrgAuditTab />}
+      {tab === 'members' && isOrgAdmin && <MembersTab />}
+      {tab === 'profile' && <TenantProfileTab />}
+      {tab === 'audit'   && isOrgAdmin && <OrgAuditTab />}
     </div>
   )
 }

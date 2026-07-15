@@ -516,6 +516,20 @@ export interface News {
   tags:              string[]
   relatedProductIds: string[]
   fetchedAt:         unknown
+  matchedCarrier?:   boolean        // additive: item mentions the tenant's carrierName/alias ("about you")
+}
+
+/** Tenant-carrier profile (`tenantProfile/main`) — the personalization source for the
+ *  news scout + daily brief (NEWS_TENANT_SPEC §1). One per tenant, standard audited
+ *  envelope write. carrierName is required; everything else optional. */
+export interface TenantProfile {
+  carrierName:  string
+  aliases?:     string[]
+  lobs?:        string[]                              // LOB registry prefixes, e.g. ['PH','PA','GL']
+  market?:      'personal' | 'commercial' | 'both'
+  states?:      string[]                              // 2-letter footprint
+  watchTopics?: string[]
+  competitors?: string[]
 }
 
 export interface NewsPrefs {
