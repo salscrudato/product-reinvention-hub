@@ -1,6 +1,6 @@
 {
   "generatedBy": "scripts/import-enumerate.mjs (offline, stubbed AI)",
-  "headSha": "ebb2940",
+  "headSha": null,
   "runs": 24,
   "completed": 24,
   "unhandled": 0,
@@ -54,7 +54,7 @@
       "planCounts": {
         "products": 0,
         "coverages": 0,
-        "forms": 795,
+        "forms": 816,
         "rules": 0,
         "formRules": 0,
         "ldTables": 0,
@@ -63,18 +63,18 @@
       },
       "conservation": {
         "stage4Candidates": 0,
-        "planEntities": 795,
+        "planEntities": 816,
         "flagged": 0,
         "reviewQueue": null,
         "bundleUnresolved": 0,
-        "unaccountedDelta": -795
+        "unaccountedDelta": -816
       },
       "counts": {
-        "proposed": 795,
-        "accepted": 795,
+        "proposed": 816,
+        "accepted": 816,
         "unresolved": 0
       },
-      "durationMs": 2052
+      "durationMs": 4169
     },
     {
       "id": "workbooks/20ISOFrameworkGL.xlsx",
@@ -143,7 +143,7 @@
         "accepted": 106,
         "unresolved": 0
       },
-      "durationMs": 63
+      "durationMs": 102
     },
     {
       "id": "workbooks/20ISOPricingGL.xlsx",
@@ -212,7 +212,7 @@
         "accepted": 5,
         "unresolved": 0
       },
-      "durationMs": 1766
+      "durationMs": 2111
     },
     {
       "id": "workbooks/20ISORulesGL.xlsx",
@@ -281,7 +281,7 @@
         "accepted": 442,
         "unresolved": 0
       },
-      "durationMs": 103
+      "durationMs": 100
     },
     {
       "id": "workbooks/Inland_Marine_Rules_Repository__SECURA__Master.xlsx",
@@ -315,7 +315,7 @@
           {
             "kind": "hidden-sheets-skipped",
             "doc": "Inland_Marine_Rules_Repository__SECURA__Master.xlsx",
-            "detail": "Skipped 1 hidden sheet(s): Data Validation"
+            "detail": "Skipped 1 hidden sheet(s) for AI extraction — policy: hidden sheets feed the deterministic ISO mapper only: Data Validation (53×11)"
           }
         ]
       },
@@ -358,7 +358,7 @@
         "accepted": 786,
         "unresolved": 0
       },
-      "durationMs": 352
+      "durationMs": 336
     },
     {
       "id": "workbooks/Product_Component_Model_Framework_Coverages_1.xlsx",
@@ -390,7 +390,7 @@
           {
             "kind": "hidden-sheets-skipped",
             "doc": "Product_Component_Model_Framework_Coverages_1.xlsx",
-            "detail": "Skipped 1 hidden sheet(s): PCM Dropdowns (HIDE)"
+            "detail": "Skipped 1 hidden sheet(s) for AI extraction — policy: hidden sheets feed the deterministic ISO mapper only: PCM Dropdowns (HIDE) (9×9)"
           }
         ]
       },
@@ -433,7 +433,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 400
+      "durationMs": 392
     },
     {
       "id": "workbooks/Product_Framework__SECURA__Inland_Marine.xlsx",
@@ -502,7 +502,7 @@
         "accepted": 799,
         "unresolved": 0
       },
-      "durationMs": 152
+      "durationMs": 142
     },
     {
       "id": "workbooks/Property_Rating_Repository__Master.xlsx",
@@ -571,7 +571,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 209
+      "durationMs": 233
     },
     {
       "id": "workbooks/sampleGLforms.xlsx",
@@ -620,7 +620,7 @@
       "planCounts": {
         "products": 0,
         "coverages": 0,
-        "forms": 795,
+        "forms": 816,
         "rules": 0,
         "formRules": 0,
         "ldTables": 0,
@@ -629,18 +629,18 @@
       },
       "conservation": {
         "stage4Candidates": 0,
-        "planEntities": 795,
+        "planEntities": 816,
         "flagged": 0,
         "reviewQueue": null,
         "bundleUnresolved": 0,
-        "unaccountedDelta": -795
+        "unaccountedDelta": -816
       },
       "counts": {
-        "proposed": 795,
-        "accepted": 795,
+        "proposed": 816,
+        "accepted": 816,
         "unresolved": 0
       },
-      "durationMs": 1363
+      "durationMs": 1386
     },
     {
       "id": "workbooks/sampleGLframework.xlsx",
@@ -709,7 +709,7 @@
         "accepted": 106,
         "unresolved": 0
       },
-      "durationMs": 48
+      "durationMs": 49
     },
     {
       "id": "workbooks/sampleGLpricing.xlsx",
@@ -778,7 +778,7 @@
         "accepted": 5,
         "unresolved": 0
       },
-      "durationMs": 2378
+      "durationMs": 2313
     },
     {
       "id": "workbooks/sampleGLrules.xlsx",
@@ -847,7 +847,7 @@
         "accepted": 442,
         "unresolved": 0
       },
-      "durationMs": 86
+      "durationMs": 90
     },
     {
       "id": "workbooks/sampleIMframework.xlsx",
@@ -916,7 +916,7 @@
         "accepted": 799,
         "unresolved": 0
       },
-      "durationMs": 116
+      "durationMs": 112
     },
     {
       "id": "workbooks/sampleIMrules.xlsx",
@@ -985,7 +985,7 @@
         "accepted": 786,
         "unresolved": 0
       },
-      "durationMs": 115
+      "durationMs": 111
     },
     {
       "id": "workbooks/samplePRframework.xlsx",
@@ -1052,7 +1052,7 @@
         "accepted": 2453,
         "unresolved": 0
       },
-      "durationMs": 435
+      "durationMs": 497
     },
     {
       "id": "workbooks/samplePRrating.xlsx",
@@ -1121,7 +1121,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 214
+      "durationMs": 242
     },
     {
       "id": "adversarial/1._Product_Framework_-_SECURA_-_Property",
@@ -1167,7 +1167,7 @@
         "unaccountedDelta": null
       },
       "counts": null,
-      "durationMs": 5
+      "durationMs": 6
     },
     {
       "id": "adversarial/Insurance_Product___Process_Value_Explorer_Export.xlsx",
@@ -1208,7 +1208,7 @@
           {
             "kind": "hidden-sheets-skipped",
             "doc": "Insurance_Product___Process_Value_Explorer_Export.xlsx",
-            "detail": "Skipped 10 hidden sheet(s): Level 3 - Heatmaps, Level 4 - Heatmaps, Inventory-Opportunities, Inventory-In-Flight Initiatives, Inventory-System, Inventory-Functions, Inventory-Input, Inventory-Output"
+            "detail": "Skipped 10 hidden sheet(s) for AI extraction — policy: hidden sheets feed the deterministic ISO mapper only: Level 3 - Heatmaps (2×3), Level 4 - Heatmaps (2×4), Inventory-Opportunities (1×4), Inventory-In-Flight Initiatives (1×4), Inventory-System (1×4), Inventory-Functions (1×4), Inventory-Input (1×4), Inventory-Output (1×4), …"
           }
         ]
       },
@@ -1251,7 +1251,7 @@
         "accepted": 0,
         "unresolved": 0
       },
-      "durationMs": 70
+      "durationMs": 72
     },
     {
       "id": "adversarial/Product_Component_Model_Framework_Coverages.xlsx",
@@ -1283,7 +1283,7 @@
           {
             "kind": "hidden-sheets-skipped",
             "doc": "Product_Component_Model_Framework_Coverages.xlsx",
-            "detail": "Skipped 1 hidden sheet(s): PCM Dropdowns (HIDE)"
+            "detail": "Skipped 1 hidden sheet(s) for AI extraction — policy: hidden sheets feed the deterministic ISO mapper only: PCM Dropdowns (HIDE) (9×9)"
           }
         ]
       },
@@ -1326,7 +1326,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 229
+      "durationMs": 260
     },
     {
       "id": "adversarial/Product_Framework__SECURA__Property_RF.xlsm",
@@ -1393,7 +1393,7 @@
         "accepted": 2453,
         "unresolved": 0
       },
-      "durationMs": 2564
+      "durationMs": 3272
     },
     {
       "id": "mixed/mixed-workbook-plus-pdf",
@@ -1469,7 +1469,7 @@
         "accepted": 106,
         "unresolved": 0
       },
-      "durationMs": 115
+      "durationMs": 136
     },
     {
       "id": "mixed/multi-workbook-merge",
@@ -1537,7 +1537,7 @@
       "planCounts": {
         "products": 1,
         "coverages": 105,
-        "forms": 795,
+        "forms": 816,
         "rules": 146,
         "formRules": 259,
         "ldTables": 37,
@@ -1546,18 +1546,18 @@
       },
       "conservation": {
         "stage4Candidates": 0,
-        "planEntities": 1348,
+        "planEntities": 1369,
         "flagged": 0,
         "reviewQueue": null,
         "bundleUnresolved": 0,
-        "unaccountedDelta": -1348
+        "unaccountedDelta": -1369
       },
       "counts": {
-        "proposed": 1348,
-        "accepted": 1348,
+        "proposed": 1369,
+        "accepted": 1369,
         "unresolved": 0
       },
-      "durationMs": 3663
+      "durationMs": 4015
     },
     {
       "id": "mixed/exact-dup-pair",
@@ -1598,12 +1598,12 @@
           {
             "kind": "hidden-sheets-skipped",
             "doc": "Product_Component_Model_Framework_Coverages_1.xlsx",
-            "detail": "Skipped 1 hidden sheet(s): PCM Dropdowns (HIDE)"
+            "detail": "Skipped 1 hidden sheet(s) for AI extraction — policy: hidden sheets feed the deterministic ISO mapper only: PCM Dropdowns (HIDE) (9×9)"
           },
           {
             "kind": "hidden-sheets-skipped",
             "doc": "Product_Component_Model_Framework_Coverages.xlsx",
-            "detail": "Skipped 1 hidden sheet(s): PCM Dropdowns (HIDE)"
+            "detail": "Skipped 1 hidden sheet(s) for AI extraction — policy: hidden sheets feed the deterministic ISO mapper only: PCM Dropdowns (HIDE) (9×9)"
           }
         ]
       },
@@ -1646,7 +1646,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 537
+      "durationMs": 347
     },
     {
       "id": "mixed/filing-nj-pair",
@@ -1720,7 +1720,7 @@
         "accepted": 0,
         "unresolved": 0
       },
-      "durationMs": 49
+      "durationMs": 48
     }
   ]
 }
