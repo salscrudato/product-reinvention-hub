@@ -15,6 +15,9 @@ export {
   coverageDisplayName, fieldId, tableDcId, tableSheetName,
 } from './ids'
 export { parseXml, serialize, XmlParseError, DEFAULT_PARSE_LIMITS } from './xml'
+// Validation-only round-trip seam (XE-05): deterministic ManuScript reader —
+// reachable server-side for the harness; NOT a user-facing import source (XE-10).
+export { mapManuscriptOverlay, sniffManuscriptXml } from '../../insurance/manuscriptImport'
 
 // The rating kit seam supplies the per-LOB rating input spec (the canonical
 // driver-input inventory the overlay's net-new inputs trace to). The kit lives

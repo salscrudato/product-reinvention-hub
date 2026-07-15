@@ -37,12 +37,14 @@ __export(server_entry_exports, {
   manifestTables: () => manifestTables,
   manuscriptFileName: () => manuscriptFileName,
   manuscriptPhysicalPath: () => manuscriptPhysicalPath,
+  mapManuscriptOverlay: () => mapManuscriptOverlay,
   parseXml: () => parseXml,
   pascalCase: () => pascalCase,
   resolveExportRatingInputSpec: () => resolveExportRatingInputSpec,
   runOverlayLint: () => runOverlayLint,
   safeCellValue: () => safeCellValue,
   serialize: () => serialize,
+  sniffManuscriptXml: () => sniffManuscriptXml,
   tableDcId: () => tableDcId,
   tableSheetName: () => tableSheetName
 });
@@ -1379,6 +1381,203 @@ function buildExportBundle(input, _opts = {}) {
     tableConfig,
     manifest,
     lint
+  };
+}
+
+// shared/src/insurance/manuscriptImport.ts
+function sniffManuscriptXml(text) {
+  const head = text.slice(0, 4096).replace(/^﻿/, "");
+  const stripped = head.replace(/<\?[^?]*\?>/g, " ").replace(/<!--[\s\S]*?-->/g, " ").trimStart();
+  return /^<ManuScript[\s>]/.test(stripped);
+}
+function walk2(node, visit, ancestors = []) {
+  visit(node, ancestors);
+  for (const c of node.children) walk2(c, visit, [...ancestors, node]);
+}
+var COVERAGE_PATH_RE = /^coverage\[Type="(.+)"\]$/;
+function refIdFromManuscriptId(manuscriptID) {
+  const m = manuscriptID.match(/^[A-Za-z0-9]+_([A-Za-z0-9_]+?)_\d+_\d+_\d+_\d+$/);
+  if (!m) return null;
+  const candidate = m[1].replace(/_/g, ".");
+  return /^[A-Z]{2,4}\.[A-Z]+\.\d+$/.test(candidate) ? candidate : null;
+}
+function summaryBase() {
+  return {
+    productName: null,
+    productRefId: null,
+    lobName: null,
+    counts: {},
+    warnings: [],
+    unmappedColumns: [],
+    sheetsRecognized: [],
+    sheetsSkipped: [],
+    defects: [],
+    notices: []
+  };
+}
+function mapManuscriptOverlay(xmlText, manifest, limits = DEFAULT_PARSE_LIMITS) {
+  const root = parseXml(xmlText, limits);
+  if (root.name !== "ManuScript") {
+    throw new Error(`not a ManuScript overlay (root element <${root.name}>)`);
+  }
+  const ids = manifest?.ids ?? {};
+  const summary = summaryBase();
+  const notices = summary.notices;
+  const properties = root.children.find((c) => c.name === "properties");
+  const manuscriptID = properties?.attrs.manuscriptID ?? null;
+  const caption = properties?.attrs.caption ?? null;
+  const keyInfos = /* @__PURE__ */ new Map();
+  walk2(root, (n) => {
+    if (n.name === "keyInfo" && n.attrs.name) keyInfos.set(n.attrs.name, n.attrs.value ?? "");
+  });
+  const productRefId = manifest?.product?.refId ?? (manuscriptID ? refIdFromManuscriptId(manuscriptID) : null);
+  if (!manifest?.product?.refId && productRefId) {
+    notices.push({ code: "refid-derived", message: `product refId ${productRefId} derived from manuscriptID grammar (no manifest)` });
+  }
+  if (!productRefId) {
+    notices.push({ code: "foreign-overlay", message: "no Hub manifest and no Hub manuscriptID grammar \u2014 identities are opaque (honest PARTIAL)" });
+  }
+  const productName = manifest?.product?.name ?? caption ?? manuscriptID ?? "ManuScript overlay";
+  const product = {
+    docId: productRefId ?? manuscriptID ?? "manuscript-overlay",
+    refId: productRefId,
+    label: productName,
+    data: {
+      name: productName,
+      manuscriptID,
+      inherited: properties?.attrs.inherited ?? null,
+      lob: keyInfos.get("lob") ?? null,
+      source: "manuscript-xml"
+    }
+  };
+  summary.productName = productName;
+  summary.productRefId = productRefId;
+  summary.lobName = keyInfos.get("lob") ?? null;
+  const coverageByRefId = /* @__PURE__ */ new Map();
+  walk2(root, (n) => {
+    if (n.name !== "object" || !n.attrs.path || !n.attrs.id) return;
+    const m = n.attrs.path.match(COVERAGE_PATH_RE);
+    if (!m) return;
+    const display = m[1];
+    const refId = ids[n.attrs.id] ?? null;
+    const entity = {
+      docId: refId ? refId.replace(/\./g, "-") : n.attrs.id,
+      refId,
+      label: display,
+      data: { name: display, dcObjectId: n.attrs.id }
+    };
+    if (refId) coverageByRefId.set(refId, entity);
+    else notices.push({ code: "coverage-unmapped", message: `coverage object ${n.attrs.id} ("${display}") has no manifest identity` });
+  });
+  for (const [dcId, refId] of Object.entries(ids)) {
+    if (!/^[A-Z]{2,3}\.COV\./.test(refId) || coverageByRefId.has(refId)) continue;
+    coverageByRefId.set(refId, {
+      docId: refId.replace(/\./g, "-"),
+      refId,
+      label: dcId,
+      data: { name: dcId, dcObjectId: dcId, recoveredFrom: "manifest" }
+    });
+  }
+  const coverages = [...coverageByRefId.values()].sort((a, b) => (a.refId ?? "").localeCompare(b.refId ?? ""));
+  for (const cov of coverages) {
+    if (!cov.refId) continue;
+    const parentRefId = cov.refId.split(".").slice(0, -1).join(".");
+    cov.data.parentId = coverageByRefId.has(parentRefId) ? parentRefId : null;
+  }
+  const forms = [];
+  walk2(root, (n) => {
+    if (n.name !== "documentSet" || !n.attrs.name) return;
+    const setName = n.attrs.name;
+    const number = ids[setName] ?? null;
+    const editionRaw = setName.includes("_") ? setName.slice(setName.lastIndexOf("_") + 1) : null;
+    forms.push({
+      docId: (number ?? setName).replace(/\s+/g, "-"),
+      refId: number,
+      label: number ?? setName,
+      data: {
+        number: number ?? setName,
+        edition: editionRaw,
+        mandatoryDefault: n.attrs.printDefault === "Mandatory",
+        attachmentCondition: n.attrs.condition ? "RULE" : "NONE",
+        documentSetName: setName
+      }
+    });
+  });
+  const rtTables = [];
+  const seenTables = /* @__PURE__ */ new Set();
+  for (const t of manifest?.tables ?? []) {
+    seenTables.add(t.dcTableId);
+    rtTables.push({
+      docId: t.hubRefId,
+      refId: t.hubRefId,
+      label: t.tableName,
+      data: { name: t.tableName, columns: [...t.keyColumns, t.valueColumn], dcTableId: t.dcTableId, sheetName: t.sheetName ?? null }
+    });
+  }
+  walk2(root, (n) => {
+    if (n.name !== "tableRef" || n.attrs.value === void 0) return;
+    if (seenTables.has(n.attrs.value)) return;
+    seenTables.add(n.attrs.value);
+    rtTables.push({
+      docId: n.attrs.value,
+      refId: null,
+      label: n.attrs.value,
+      data: { name: n.attrs.value, dcTableId: n.attrs.value, recoveredFrom: "overlay-tableRef" }
+    });
+    notices.push({ code: "table-unmapped", message: `tableRef ${n.attrs.value} has no manifest row \u2014 identity opaque` });
+  });
+  const steps = [];
+  let programRefId = null;
+  walk2(root, (n, ancestors) => {
+    if (n.name !== "private" || !n.attrs.id) return;
+    const mapped = ids[n.attrs.id];
+    const stepMatch = mapped?.match(/^(.+)#(s[\w]+)$/);
+    const lookup = function findLookup(node) {
+      if (node.name === "lookup") return node;
+      for (const c of node.children) {
+        const hit = findLookup(c);
+        if (hit) return hit;
+      }
+      return null;
+    }(n);
+    if (stepMatch) {
+      programRefId = programRefId ?? stepMatch[1];
+      steps.push({
+        id: stepMatch[2],
+        dcId: n.attrs.id,
+        order: steps.length + 1,
+        tableRef: lookup?.children.find((c) => c.name === "tableRef")?.attrs.value ?? null
+      });
+    } else if (!mapped && lookup && ancestors.some((a) => a.name === "object")) {
+      notices.push({ code: "opaque-logic", message: `private ${n.attrs.id} carries lookup wiring with no manifest step mapping \u2014 kept as cited-but-opaque logic` });
+    }
+  });
+  const ratingProgram = programRefId ? {
+    docId: programRefId.replace(/\./g, "-"),
+    refId: programRefId,
+    label: `${productName} rating program`,
+    data: { stepCount: steps.length, steps, recoveredFrom: "overlay-compute-chain" }
+  } : null;
+  notices.push({ code: "not-recovered", message: "rules, formRules and ldTables are not recoverable from an overlay (spec \xA73.9) \u2014 workbook/manifest half owns them" });
+  summary.counts = {
+    products: 1,
+    coverages: coverages.length,
+    forms: forms.length,
+    rtTables: rtTables.length,
+    ratingSteps: steps.length
+  };
+  return {
+    productId: productRefId,
+    product,
+    products: [product],
+    coverages,
+    forms,
+    rules: [],
+    formRules: [],
+    ratingProgram,
+    ldTables: [],
+    rtTables,
+    summary
   };
 }
 
@@ -5966,12 +6165,14 @@ function resolveExportRatingInputSpec(lobPrefix) {
   manifestTables,
   manuscriptFileName,
   manuscriptPhysicalPath,
+  mapManuscriptOverlay,
   parseXml,
   pascalCase,
   resolveExportRatingInputSpec,
   runOverlayLint,
   safeCellValue,
   serialize,
+  sniffManuscriptXml,
   tableDcId,
   tableSheetName
 });
