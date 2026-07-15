@@ -190,10 +190,10 @@
       "severity": "HIGH",
       "effort": "M",
       "phase": "P4",
-      "status": "SPEC_READY",
-      "evidence": "HISTORY_SPEC 2; write side already correct (F19 disproven - do not re-fix); versions read shipped (data.js:427)",
-      "test": "Happy path writes new rev+version+audit in one batch; 409; 422 on gap; VIEWER 403; audit verify green post-restore",
-      "lesson": "Restore is a forward mutation, never a history rewrite - the chain must extend, not bend."
+      "status": "DONE",
+      "evidence": "H2 (4b2a3dd). reconstructStateAtRev (pure reverse-apply; gap OR delete-in-range -> 422 firstMissingRev, never a best-guess) + readVersionsForPath (partition-scoped READ, census stays 3) + POST /api/db/restore (VIEWER 403, 404, 409 stale_rev, 400 invalid target, 422 unreconstructable, else commit via mutateInternal op:'restore' with restore provenance). H1 (8b9c70a) also extracted the pure assembleEnvelope proving BOTH mutate + mutateBatch emit a hash-chained version doc (imported entities carry a genesis version).",
+      "test": "tests/server/restore.test.ts + versions-write.test.ts; hostile-judged SAFE (2 rounds counting H6a)",
+      "lesson": "Restore is a forward mutation, never a history rewrite - the chain must extend, not bend. The SERVER reconstructs; the client never sends a snapshot it could forge."
     },
     {
       "id": "HI-02",
@@ -202,9 +202,9 @@
       "severity": "MED",
       "effort": "S",
       "phase": "P4",
-      "status": "SPEC_READY",
-      "evidence": "HISTORY_SPEC 2 client half; dormancy verified this pass (restore code exists at HistoryDrawer.tsx:140-166 but can never activate)",
-      "test": "canRestore gating; 409 conflict toast + refresh flow; 422 honest message",
+      "status": "DONE",
+      "evidence": "H2 (4b2a3dd). versionRead maps canRestore=rev>0 + provenance; adapter.db.restore seam (409->MutationConflictError, 422->honest Error) + pokeAll refresh; HistoryDrawer restore activated, hidden on the current version (no-op the server rejects), 409 conflict toast, 422 gap message.",
+      "test": "app/src/components/product/HistoryDrawer.test.tsx (gating/action/409/422) + versionRead.test.ts (canRestore/provenance)",
       "lesson": "UI built ahead of its endpoint is a latent contract - finish it or it rots into a false affordance."
     },
     {
@@ -214,10 +214,10 @@
       "severity": "MED",
       "effort": "S",
       "phase": "P4",
-      "status": "SPEC_READY",
-      "evidence": "HISTORY_SPEC 4; verified MISSING at HEAD (only portfolio exporter exists, app/src/lib/export/excel.ts)",
-      "test": "Row-per-diff fixture workbook; empty history exports header+note, never zero-byte",
-      "lesson": ""
+      "status": "DONE",
+      "evidence": "H3 (9f7fd9a). historyExcel.ts (sheet 'Change history' - Excel reserves 'History'; row-per-diff; empty->header+note; filename <productId>-history-<date>.xlsx; dynamic-imported so exceljs stays a lazy chunk, bundle budget 146.3/175). NEW safeCellValue neutralizes formula/CSV injection (=+-@\\t\\r\\n -> apostrophe) routed through the shared table(), hardening the portfolio export too.",
+      "test": "app/src/lib/export/historyExcel.test.ts: columns+order, row-per-diff, restore/create labels, formula-injection literal (cell.formula undefined), empty->note",
+      "lesson": "The formula-injection guard belongs in the shared table(), so every current AND future export inherits it."
     },
     {
       "id": "HI-04",
@@ -226,10 +226,58 @@
       "severity": "MED",
       "effort": "S",
       "phase": "P4",
-      "status": "SPEC_READY",
-      "evidence": "HISTORY_SPEC 3; verify endpoint at server/lib/data.js:472; no-bare-writes census guards the write path",
-      "test": "The fixture itself",
-      "lesson": ""
+      "status": "DONE",
+      "evidence": "H2 (4b2a3dd). restore.test.ts HI-04: a create->update->restore chain (op:'restore' + restore provenance) verifies green via verifyAuditChain with the tail anchor; tampering the restore provenance breaks the chain (provenance is sealed).",
+      "test": "tests/server/restore.test.ts HI-04 block",
+      "lesson": "A restore extends the chain like any mutation; the tamper-evidence must survive it."
+    },
+    {
+      "id": "HI-05",
+      "workstream": "HISTORY",
+      "title": "Provenance sealed in the audit hash WITHOUT forking the chain (AI/voice/restore attestation: fleet-sourced model id, citation refs, confidence, authoredBy)",
+      "severity": "HIGH",
+      "effort": "M",
+      "phase": "P4",
+      "status": "DONE",
+      "evidence": "H4 (0db95c0). computeAuditHash seals provenance CONDITIONALLY (present -> tamper-evident; absent -> byte-identical to legacy, chain NOT forked); provenance deliberately NOT in AUDIT_HASH_FIELDS (an always-null would fork every legacy chain). Bundle audit-chain-shared.cjs rebuilt in-sync. Provenance envelope published to the orchestration CONTRACTS row.",
+      "test": "shared/src/audit/chain.test.ts (26): no-fork (absent===legacy hash), present-covered, strip/alter->hash_mismatch, mixed legacy+provenanced chain; versions-write.test.ts H4 integration",
+      "lesson": "To add a hashed field without forking a live chain, seal it CONDITIONALLY - absence must change nothing."
+    },
+    {
+      "id": "HI-06",
+      "workstream": "HISTORY",
+      "title": "HITL: an AI/voice-authored governed change requires a resolvable citation, enforced at the write seam (envelope 422 citation_required)",
+      "severity": "HIGH",
+      "effort": "S",
+      "phase": "P4",
+      "status": "DONE",
+      "evidence": "H6b (b4a55b8). requiresCitation (authoredBy in {ai,voice}) + hasResolvableCitation (non-empty, non-placeholder) in the envelope sync prelude; CITATION_REQUIRED->422 in /mutate + /mutateBatch. Non-breaking: import sets no provenance (IMPORT-CERTIFIED safe), human/restore/vote unaffected. Only surfaces that DECLARE ai/voice authoring are bound.",
+      "test": "tests/server/hitl.test.ts (in test:gates -> deploy-blocking); hostile-judged SAFE (import not broken)",
+      "lesson": "Enforce grounding at the write SEAM, not just the reviewed UI - a script or future agent must not slip an ungrounded AI change past it."
+    },
+    {
+      "id": "HI-07",
+      "workstream": "HISTORY",
+      "title": "Tenant isolation proven (cross-tenant read+write fail closed) AND wired into the CI deploy gate; cost-guard trips/degrades counters + admin diagnostics read + structured logging + a11y",
+      "severity": "HIGH",
+      "effort": "M",
+      "phase": "P4",
+      "status": "DONE",
+      "evidence": "H6a (f74647f): scopeDoc functional read-drop + assembleEnvelope write-isolation + whole-server-lib body/query audit; pnpm test:gates + azure-pipelines.yml step (the @pf/shared canary couldn't see a tests/server test). H6c (08e3c82): fleet trips/degrades counters + GET /api/admin/ai/cost-guard (platform-plane) + log.js structured logging on touched endpoints + HistoryDrawer.axe.test.tsx.",
+      "test": "tests/server/{tenant-isolation,cost-guard}.test.ts (in test:gates); HistoryDrawer.axe.test.tsx; two hostile-judge rounds (isolation)",
+      "lesson": "A gate that the CI never runs is theater - a tests/server invariant must be wired into the pipeline explicitly, and scoped to deterministic files."
+    },
+    {
+      "id": "HI-08",
+      "workstream": "HISTORY",
+      "title": "Fleet audit: confirm + PIN the certified task->model routing (no import-path swap); read-only capability probe + FLEET_AUDIT.md + CI-wired lock test",
+      "severity": "MED",
+      "effort": "M",
+      "phase": "P4",
+      "status": "DONE",
+      "evidence": "H5 (cc99233). scripts/fleet-audit.mts (read-only probe, prints no key, exits 0) + docs/build/FLEET_AUDIT.md (KEEP decision: every role serves the import path or is the only embedding tier; gpt-5.1 decorrelation is load-bearing) + shared/src/ai/fleet.lock.test.ts (pins each role->deployment + ladder + never claude-fable-5; runs in the @pf/shared CI step). No import-path model changed, so G2 re-cert correctly not required; the re-cert slice is documented for any future swap.",
+      "test": "shared/src/ai/fleet.lock.test.ts (deploy-blocking); hostile-judged (keep-decision confirmed honest)",
+      "lesson": "The strongest fleet-audit outcome can be 'keep' - but PIN it with a CI-wired lock so a future swap must re-certify, not drift silently."
     },
     {
       "id": "RE-01",
@@ -297,7 +345,7 @@
       "P1_thisWave_docsOnly": ["RE-01", "RE-04", "RE-03", "RE-02"],
       "P2_experience_brief": ["EX-01", "EX-02", "BR-01", "BR-02", "BR-03", "BR-04"],
       "P3_xml_export": ["XE-01", "XE-02", "XE-03", "XE-04", "XE-05", "XE-06", "XE-08", "EX-03"],
-      "P4_history": ["HI-01", "HI-02", "HI-03", "HI-04"],
+      "P4_history": ["HI-01", "HI-02", "HI-03", "HI-04", "HI-05", "HI-06", "HI-07", "HI-08"],
       "P5_release_deferred": ["XE-07", "VOICE-01"]
     },
     "held": [],
