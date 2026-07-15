@@ -264,6 +264,30 @@ export interface RatingStep {
   // A credit is a multiplicative factor ≤ 1.0 (loyalty/bundle/renovation/…); flagging it lets
   // the evaluator floor the CUMULATIVE product of credits without touching non-credit steps.
   isCredit?:  boolean
+  // ── Concept-linker rating-group additions (set on a group-enriched import, e.g. CORE;
+  //    nested in ratingProgram.steps → golden-invisible; read by NO evaluator code). ──
+  /** The coverage-name group this step rates under (forward-filled from the COVERAGE NAME column). */
+  groupName?:            string
+  /** Minted rating-group id this step belongs to (e.g. CORE.RTG.007). */
+  groupRefId?:           string
+  /** Hierarchy coverage(s) the group resolved to (D5). */
+  groupCoverageRefIds?:  string[]
+  /** Endorsement-package form(s) the group rates, when it rates a package rather than a coverage. */
+  packageFormNumbers?:   string[]
+  groupMatchBasis?:      LinkBasis | 'unmatched'
+  /** Minted rate-table placeholder this step draws its factor from (D4; PREFIX.RTB.NNN). */
+  ratePlaceholderRef?:   string
+}
+
+/** Concept-linker rating-group summary — one per coverage-name group in a group-enriched
+ *  import (e.g. CORE). Nested on RatingProgram → golden-invisible. */
+export interface RatingGroupSummary {
+  refId:          string
+  name:           string
+  coverageRefIds: string[]
+  formNumbers:    string[]
+  stepRefIds:     string[]
+  matchBasis:     LinkBasis | 'unmatched'
 }
 
 export interface RatingProgram extends GovernanceBlock, StateScope {
@@ -271,6 +295,9 @@ export interface RatingProgram extends GovernanceBlock, StateScope {
   name:           string
   minimumPremium: number
   steps:          RatingStep[]
+  /** Coverage-name rating groups reconstructed by the concept-linker (D5). Absent on every
+   *  seeded/legacy program → golden-invisible, no behavioural change. */
+  ratingGroups?:  RatingGroupSummary[]
   // Optional maximum-credit cap: the cumulative product of every `isCredit` step is floored
   // at this value (e.g. 0.50 = "max total credit 50%", a filing's Rule 92). The evaluator
   // applies one corrective adjustment after the last credit step so the cumulative credit

@@ -14,13 +14,13 @@
 import type {
   Status, ReviewStatus, Lifecycle, Requirement, Source,
   FormCategory, DynamicFieldType, RuleCategory, DynamicField,
-  RTTable, LDTable, LDRow, RatingStep, CoverageTerm, TermKind,
+  RTTable, LDTable, LDRow, RatingStep, RatingGroupSummary, CoverageTerm, TermKind,
 } from '../types'
 import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
 import {
   matchCoverageByName, matchRuleReferenceToTables, resolveCoverageCode,
-  physicalDamageCoverages, formTokens, FORM_TOKEN,
+  physicalDamageCoverages, matchGroup, formTokens, FORM_TOKEN,
   type NamedCoverage, type ConceptTable,
 } from './conceptMatch'
 
@@ -1423,6 +1423,9 @@ const RATE_FIELDS: Record<string, string[]> = {
   stepId:    ['RATING STEP ID', 'STEP ID', 'STEP', 'STEP NUMBER', 'STEP NO',
                'ITEM', 'ID', 'SEQUENCE', 'STEP #', 'LINE NO', 'LINE NUMBER'],
   grouping:  ['RATING GROUPING', 'GROUPING', 'GROUP', 'SECTION', 'ELEMENT', 'CATEGORY'],
+  // The coverage-name group column real carrier ROCs group their steps under (forward-filled;
+  // one value per group). Distinct from `grouping` so it never shadows the step-label fallback.
+  groupName: ['COVERAGE NAME', 'COVERAGE GROUP', 'RATING GROUP NAME'],
   manualId:  ['RATING MANUAL RULE/ STEP ID', 'RATING MANUAL RULE/STEP ID',
                'MANUAL RULE/ STEP ID', 'MANUAL STEP', 'MANUAL REF', 'MANUAL RULE'],
   // "RULES" is the ROC-template short form; broader synonyms for novel formats.
@@ -1470,12 +1473,18 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
   const scopes: { allStates: boolean; states: string[] }[] = []
   let programRefId: string | null = null
   let order = 0
+  let lastGroupName = ''
 
   for (let r = hr + 1; r < grid.cells.length; r++) {
     const cells = row(grid, r)
     const stepId = clean(at(cells, 'stepId'))
     const label = clean(at(cells, 'algorithm')) || clean(at(cells, 'rules')) || clean(at(cells, 'grouping'))
     if (!stepId && !label) continue
+    // Forward-fill the coverage-name group column (populated once per group). Purely
+    // descriptive on the step (nested → golden-invisible); enrichRatingWithGroups turns it
+    // into minted RTG group ids under the CORE signature.
+    const gn = clean(at(cells, 'groupName'))
+    if (gn) lastGroupName = gn
     if (!programRefId) {
       const full = [stepId, ...splitList(at(cells, 'ids'))].find(s => /\.RAT/i.test(s))
       if (full) { const m = full.match(/^(.*\.RAT\.\d+)/i); programRefId = m ? m[1]! : full } // "GL.RAT.1.00" → "GL.RAT.1"
@@ -1494,6 +1503,7 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
         ? { type: 'RT', ref }
         : (rawRef ? { type: 'RT', ref: rawRef } : { type: 'INPUT', ref: label || stepId }),
       ...(roundTo !== undefined ? { roundTo } : {}),
+      ...(lastGroupName ? { groupName: lastGroupName } : {}),
     })
     scopes.push(stateScope(cells, sc))
   }
@@ -1627,6 +1637,22 @@ function mintReferenceTables(drafts: ReferenceTableDraft[], prefix: string): Pla
   })
 }
 
+/** Reverse index: squished form number → the coverage refIds whose form list names it. Shared
+ *  by the reference-table linker and the rating-group enricher (package-form resolution). */
+function buildCovsByForm(coverages: PlannedEntity[]): Map<string, string[]> {
+  const out = new Map<string, string[]>()
+  for (const c of coverages) {
+    for (const f of ((c.data['formNumbers'] as string[] | undefined) ?? [])) {
+      const k = squishStr(f)
+      if (!k) continue
+      const list = out.get(k) ?? []
+      if (!list.includes(c.refId as string)) list.push(c.refId as string)
+      out.set(k, list)
+    }
+  }
+  return out
+}
+
 /** Reconstruct the implied links a human analyst would (D2/D7/D8): reference-table → coverage
  *  (via header codes / physical-damage / sub-coverage-matrix rows / name / form tokens), and
  *  rule → reference-table (concept match on the rule's free-text reference), with a rule →
@@ -1652,17 +1678,7 @@ function linkReferenceTables(
   const namedCovs: NamedCoverage[] = coverages.map(c => ({ refId: c.refId as string, name: String(c.data['name'] ?? '') }))
   const conceptTables: ConceptTable[] = refTables.map((t, i) => ({ refId: t.refId as string, baseName: refDrafts[i]!.baseName, state: refDrafts[i]!.state }))
   const tableByRefId = new Map(refTables.map(t => [t.refId as string, t]))
-  // covsByForm: squished form number → the coverage refIds whose form list names it.
-  const covsByForm = new Map<string, string[]>()
-  for (const c of coverages) {
-    for (const f of ((c.data['formNumbers'] as string[] | undefined) ?? [])) {
-      const k = squishStr(f)
-      if (!k) continue
-      const list = covsByForm.get(k) ?? []
-      if (!list.includes(c.refId as string)) list.push(c.refId as string)
-      covsByForm.set(k, list)
-    }
-  }
+  const covsByForm = buildCovsByForm(coverages)
 
   // ── Reference-table → coverage links (D1/D7) ──
   refDrafts.forEach((d, i) => {
@@ -1749,6 +1765,55 @@ function deriveTermsFromReferenceTables(coverages: PlannedEntity[], refTables: P
     }
   }
   return attached
+}
+
+/** Reconstruct the rating algorithm's coverage-name GROUPS (D5): the COVERAGE NAME column
+ *  appears once per group and the steps beneath it rate that coverage. Mint a stable
+ *  PREFIX.RTG.NNN per group, resolve it to hierarchy coverage(s) (or an endorsement package's
+ *  form) via matchGroup, and stamp the linkage onto each step + a golden-invisible
+ *  ratingProgram.data.ratingGroups summary. Groups that name no coverage are flagged (never
+ *  invented). Signature-gated (refTablesPresent) so GL/PR/seeded programs are untouched — the
+ *  evaluator reads none of the fields written here. */
+function enrichRatingWithGroups(
+  ratingProgram: PlannedEntity | null,
+  coverages: PlannedEntity[],
+  refTablesPresent: boolean,
+  prefix: string,
+): { groups: number; matched: number; unmatchedNames: string[] } {
+  const empty = { groups: 0, matched: 0, unmatchedNames: [] as string[] }
+  if (!ratingProgram || !refTablesPresent) return empty
+  const steps = ratingProgram.data['steps'] as RatingStep[]
+  if (!steps.some(s => s.groupName)) return empty
+
+  const namedCovs: NamedCoverage[] = coverages.map(c => ({ refId: c.refId as string, name: String(c.data['name'] ?? '') }))
+  const covsByForm = buildCovsByForm(coverages)
+
+  const groups: RatingGroupSummary[] = []
+  const unmatchedNames: string[] = []
+  let cur: RatingGroupSummary | null = null
+  let gSeq = 0
+  for (const step of steps) {
+    const gn = step.groupName
+    if (gn && (!cur || cur.name !== gn)) {
+      gSeq += 1
+      const m = matchGroup(gn, namedCovs, covsByForm)
+      cur = {
+        refId: `${prefix}.RTG.${String(gSeq).padStart(3, '0')}`, name: gn,
+        coverageRefIds: m.covRefIds, formNumbers: m.formNums, stepRefIds: [], matchBasis: m.matchBasis,
+      }
+      groups.push(cur)
+      if (m.matchBasis === 'unmatched') unmatchedNames.push(gn)
+    }
+    if (cur) {
+      step.groupRefId = cur.refId
+      if (cur.coverageRefIds.length) step.groupCoverageRefIds = cur.coverageRefIds
+      if (cur.formNumbers.length) step.packageFormNumbers = cur.formNumbers
+      step.groupMatchBasis = cur.matchBasis
+      cur.stepRefIds.push(step.id)
+    }
+  }
+  ratingProgram.data['ratingGroups'] = groups
+  return { groups: groups.length, matched: groups.filter(g => g.matchBasis !== 'unmatched').length, unmatchedNames }
 }
 
 // ─── Orchestration ───────────────────────────────────────────────────────────────
@@ -1860,6 +1925,10 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     })
   }
 
+  // Reconstruct the rating algorithm's coverage-name groups (D5) — mint RTG group ids, resolve
+  // each to hierarchy coverages / package forms, flag the genuinely-missing ones. CORE-gated.
+  const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix)
+
   // Reference tables share a single home with the real LD tables so the UI ldTables→chip
   // lookup and the golden both see them under their minted CORE.TBL refIds.
   const allLdTables = [...ldTables, ...refTables]
@@ -1883,6 +1952,9 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     rulesTableLinked: refLinks.rulesLinked,
     rulesResolvedToCoverage: refLinks.resolvedToCoverage,
     ruleRefsUnresolved: refLinks.unresolved,
+    ratingGroups: ratingGroups.groups,
+    ratingGroupsMatched: ratingGroups.matched,
+    ratingGroupsUnmatched: ratingGroups.unmatchedNames.length,
   }
 
   const knownSheets = new Set(ctx.recognized)

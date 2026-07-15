@@ -187,12 +187,14 @@ export function matchCoverageByName(raw: string, coverages: readonly NamedCovera
   if (rawM && rawM.score >= 0.6) return { refId: rawM.c.refId, how: `name match (${Math.round(rawM.score * 100)}%)` }
 
   // Tier 4 — containment: a coverage whose (≥2) significant tokens all appear in the input
-  // (e.g. group "Optional Bodily Injury Liability" ⊇ coverage "Bodily Injury"). Longest wins.
+  // (e.g. group "Optional Bodily Injury To Others" ⊇ coverage "Bodily Injury Liability
+  // Coverage"). LIABILITY is dropped from the coverage side (near-universal domain word, like
+  // the overlap tiers) so it doesn't block an otherwise-clean containment. Longest wins.
   const inTokens = new Set(tokens(foldSynonyms(nn)))
   let cont: NamedCoverage | null = null
   let contLen = 0
   for (const c of coverages) {
-    const ct = tokens(c.name)
+    const ct = tokens(c.name).filter(t => t !== 'LIABILITY')
     if (ct.length >= 2 && ct.every(t => inTokens.has(t)) && ct.length > contLen) { cont = c; contLen = ct.length }
   }
   if (cont) return { refId: cont.refId, how: 'containment' }
@@ -287,10 +289,28 @@ export function matchRuleReferenceToTables(
 
 // ─── Rating-group → coverage matcher (D5) ────────────────────────────────────────
 
+// Auto/collector rating-group taxonomy: a group names a coverage CONCEPT in words that don't
+// lexically match the hierarchy coverage names (e.g. "Combined Single Limit" rates the bodily-
+// injury + property-damage coverages; a bare "Scheduled"/"Unscheduled" group rates the
+// scheduled personal-property coverage). Each entry maps a group-name pattern to canonical
+// concept PHRASE(s) that are resolved to refIds at runtime via matchCoverageByName against THIS
+// file's hierarchy — never a hard-coded id. Ordered most-specific first (UM/UIM CSL before bare
+// CSL, before bare UM/UIM). ISO auto DOMAIN vocab, not carrier identifiers; AI-overlay-extensible.
+export const RATING_GROUP_CONCEPTS: { re: RegExp; phrases: string[] }[] = [
+  { re: /\bUNINSURED MOTORISTS? COMBINED SINGLE LIMIT/,    phrases: ['UNINSURED MOTORISTS BODILY INJURY', 'UNINSURED MOTORISTS PROPERTY DAMAGE'] },
+  { re: /\bUNDERINSURED MOTORISTS? COMBINED SINGLE LIMIT/, phrases: ['UNDERINSURED MOTORISTS BODILY INJURY', 'UNDERINSURED MOTORISTS PROPERTY DAMAGE'] },
+  { re: /\bCOMBINED SINGLE LIMIT/,                         phrases: ['BODILY INJURY', 'PROPERTY DAMAGE'] },
+  { re: /\bUNINSURED\b.*\bUNDERINSURED MOTORISTS/,         phrases: ['UNINSURED MOTORISTS BODILY INJURY', 'UNDERINSURED MOTORISTS BODILY INJURY'] },
+  { re: /\bUNDERINSURED MOTORISTS\b/,                      phrases: ['UNDERINSURED MOTORISTS BODILY INJURY'] },
+  { re: /\bUNINSURED MOTORISTS\b/,                         phrases: ['UNINSURED MOTORISTS BODILY INJURY'] },
+  { re: /^(UN)?SCHEDULED$/,                                phrases: ['COLLECTIBLE PERSONAL PROPERTY', 'PERSONAL PROPERTY'] },
+]
+
 /**
  * Resolve a rating-group coverage-name to the hierarchy coverage(s) it rates. Order:
  *   1. endorsement PACKAGE (PACKAGE_FORMS) → the package form's coverage list (via covsByForm)
- *   2. direct coverage-name match (matchCoverageByName: exact/synonym/overlap/containment)
+ *   2. domain taxonomy (RATING_GROUP_CONCEPTS) → concept phrases → matchCoverageByName
+ *   3. direct coverage-name match (matchCoverageByName: exact/synonym/overlap/containment)
  * Returns an empty covRefIds + matchBasis 'unmatched' when the group names no coverage in the
  * hierarchy — a genuinely missing coverage the customer must add (flagged upstream, never
  * invented). `covsByForm` maps a squished form number → the coverage refIds that list it.
@@ -310,7 +330,16 @@ export function matchGroup(
     }
   }
 
-  // 2 — direct coverage-name resolution.
+  // 2 — domain taxonomy (UM/UIM/CSL/scheduled) → concept phrases resolved against the hierarchy.
+  const folded = foldSynonyms(base)
+  for (const { re, phrases } of RATING_GROUP_CONCEPTS) {
+    if (!re.test(folded)) continue
+    const ids = new Set<string>()
+    for (const p of phrases) { const m = matchCoverageByName(p, coverages); if (m) ids.add(m.refId) }
+    if (ids.size) return { covRefIds: [...ids], formNums: [], how: 'domain concept', matchBasis: 'derived' }
+  }
+
+  // 3 — direct coverage-name resolution.
   const m = matchCoverageByName(raw, coverages)
   if (m) return { covRefIds: [m.refId], formNums: [], how: m.how, matchBasis: 'derived' }
 

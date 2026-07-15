@@ -166,6 +166,21 @@ describe('rating-group matcher + package→form linking (D5)', () => {
     expect(m.covRefIds).toEqual([])
     expect(m.matchBasis).toBe('unmatched')
   })
+  it('domain taxonomy: "Combined Single Limit" rates bodily injury + property damage', () => {
+    expect(matchGroup('Combined Single Limit', COVERAGES, covsByForm).covRefIds.sort()).toEqual(['X.COV.001', 'X.COV.003'])
+  })
+  it('domain taxonomy: bare "Uninsured Motorists" → its bodily-injury coverage', () => {
+    expect(matchGroup('Uninsured Motorists', COVERAGES, covsByForm).covRefIds).toEqual(['X.COV.005'])
+  })
+  it('domain taxonomy: "Under insured Motorists" folds → its BI coverage', () => {
+    expect(matchGroup('Under insured Motorists', COVERAGES, covsByForm).covRefIds).toEqual(['X.COV.007'])
+  })
+  it('domain taxonomy: "Uninsured Motorists Combined Single Limit" → UM BI + UM PD', () => {
+    expect(matchGroup('Uninsured Motorists Combined Single Limit', COVERAGES, covsByForm).covRefIds.sort()).toEqual(['X.COV.005', 'X.COV.006'])
+  })
+  it('containment catches "Optional Bodily Injury To Others" → Bodily Injury', () => {
+    expect(matchGroup('Optional Bodily Injury To Others', COVERAGES, covsByForm).covRefIds).toEqual(['X.COV.001'])
+  })
 })
 
 describe('term-kind inference', () => {

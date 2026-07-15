@@ -352,9 +352,18 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
     ['Active', 'CORE.COV.001', '', 'Product', 'Limits', 'If BI selected', 'A limit applies', 'Liability Limits', 'X'],
     ['Active', 'CORE.COV.020', '', 'Product', 'Coverage', 'If requested', 'Evacuation applies', 'Evacuation Expense', 'X'],
   ])
+  // Rating: COVERAGE NAME groups (one value per group; forward-filled), blank step ids.
+  const rating = g('Rating Specifications', [
+    ['RATING'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RATING STEP ID', 'COVERAGE NAME', 'RATING RULES', 'ALGORITHM STEP', 'CALCULATION', 'RATE REFERENCE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.RAT.1', '', 'Bodily Injury (Excluding Camper Trailer)', 'base', 'Base Rate', '*', 'Base Rate Table', 'X'],
+    ['Active', 'CORE.RAT.1', '', '', 'inc', 'Increased Limit Factor', '*', 'ILF Table', 'X'],
+    ['Active', 'CORE.RAT.1', '', 'Combined Single Limit (Excluding Camper Trailer)', 'csl', 'CSL Factor', '*', 'CSL Table', 'X'],
+    ['Active', 'CORE.RAT.1', '', 'Business Use', 'biz', 'Business Factor', '*', '', 'X'],
+  ])
   // A single-marker grid must NOT be detected (below the >= 2 signature gate).
   const single = g('Notes', [['TABLE NAME: Just One Block'], ['x', 1]])
-  const plan2 = mapIsoWorkbook([fw, refs, rules, single])
+  const plan2 = mapIsoWorkbook([fw, refs, rules, rating, single])
   const minted = plan2.ldTables.filter(t => (t.data as Record<string, unknown>)['mintedId'] === true)
   const d = (i: number) => minted[i]!.data as Record<string, unknown>
   const ruleOf = (frag: string) => plan2.rules.find(r => new RegExp(frag, 'i').test(String(r.data['outcome'])))!
@@ -423,6 +432,25 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
   })
   it('emits a reference_table_terms_derived notice distinct from the PCM-A ld_terms_folded', () => {
     expect(plan2.summary.notices.some(n => n.code === 'reference_table_terms_derived')).toBe(true)
+  })
+
+  // ── Rating groups (D5) ──
+  const rgOf = (frag: string) =>
+    (plan2.ratingProgram!.data['ratingGroups'] as Array<{ refId: string; name: string; coverageRefIds: string[]; matchBasis: string }>)
+      .find(x => new RegExp(frag, 'i').test(x.name))!
+  it('mints coverage-name rating groups (PREFIX.RTG.NNN) and stamps steps', () => {
+    const grps = plan2.ratingProgram!.data['ratingGroups'] as unknown[]
+    expect(grps).toHaveLength(3)
+    expect((plan2.ratingProgram!.data['steps'] as Array<Record<string, unknown>>)[0]!['groupRefId']).toBe('CORE.RTG.001')
+  })
+  it('resolves a direct coverage-name group and a CSL group via the domain taxonomy', () => {
+    expect(rgOf('Bodily Injury').coverageRefIds).toEqual(['CORE.COV.001'])
+    expect(rgOf('Combined Single Limit').coverageRefIds.sort()).toEqual(['CORE.COV.001', 'CORE.COV.003'])
+  })
+  it('flags a group that names no coverage in the hierarchy (never invented)', () => {
+    const bu = rgOf('Business Use')
+    expect(bu.matchBasis).toBe('unmatched')
+    expect(bu.coverageRefIds).toEqual([])
   })
 })
 
