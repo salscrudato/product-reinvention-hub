@@ -1,0 +1,61 @@
+{
+  "seed": "GL",
+  "sources": [
+    "samples\\iso\\sample-GL-framework.xlsx",
+    "samples\\iso\\sample-GL-forms.xlsx"
+  ],
+  "variants": {
+    "v1-moved-preamble": {
+      "id": "v1-moved-preamble",
+      "kind": "EQUAL",
+      "note": "banner rows above every sheet"
+    },
+    "v2-shuffled-columns": {
+      "id": "v2-shuffled-columns",
+      "kind": "EQUAL",
+      "note": "column order reversed on every sheet"
+    },
+    "v3-merged-banner": {
+      "id": "v3-merged-banner",
+      "kind": "EQUAL",
+      "note": "merged-cell title banner above the header"
+    },
+    "v4-dashed-refids": {
+      "id": "v4-dashed-refids",
+      "kind": "EQUAL_TRANSFORMED",
+      "note": "line-scoped refIds use dashes; extraction must carry them byte-for-byte"
+    },
+    "v5-blank-silence": {
+      "id": "v5-blank-silence",
+      "kind": "HONESTY",
+      "note": "requirement/category/mandatory cells blanked — fabrication probe (G1 clusters)",
+      "blanked": {
+        "coverageRefIds": [
+          "GL.COV.001",
+          "GL.COV.001.001",
+          "GL.COV.002",
+          "GL.COV.002.001",
+          "GL.COV.002.002"
+        ],
+        "formNumbers": [
+          "CG 00 01",
+          "CG 00 02",
+          "CG 00 09",
+          "CG 00 14",
+          "CG 00 33"
+        ]
+      }
+    },
+    "v6-renamed-sheets": {
+      "id": "v6-renamed-sheets",
+      "kind": "FLOOR",
+      "note": "sheet names outside every known regex — zero silent loss",
+      "sheetCount": 9
+    },
+    "v7-unfamiliar-layout": {
+      "id": "v7-unfamiliar-layout",
+      "kind": "EQUAL_PAIR",
+      "note": "valid IM content, unfamiliar layout vs plain layout"
+    }
+  }
+}

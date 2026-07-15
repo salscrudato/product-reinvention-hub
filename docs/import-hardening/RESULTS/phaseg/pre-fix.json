@@ -1,0 +1,138 @@
+{
+  "$schema": "Phase G G1 assumption audit — read-only, pre-fix state. Verdicts: FABRICATION_RISK (pipeline invents a canonical value the source never stated), HONEST (warned default / UNKNOWN representable / source-evidenced), FIXED (prior ledger fix verified at this sha), RESIDUAL (recorded non-blocking follow-up). Clusters feed G2 holdout design; fixes only on G3 red evidence through the standard loop.",
+  "auditedAtSha": "1c47f25deb9762bff2408a352d981371a7c8becf",
+  "auditedAt": "2026-07-15",
+  "method": "three fresh-context read-only Haiku investigators (mapper defaults / F21-F26 verification sweep / F23 residuals), findings re-judged by the writer against ledger scope decisions",
+  "seeds": [
+    {
+      "id": "G1-1",
+      "seed": "isoImport mapRequirement blank->MANDATORY",
+      "file": "shared/src/insurance/isoImport.ts",
+      "line": 173,
+      "snippet": "function mapRequirement(v: IsoCell): Requirement { return /optional/i.test(text(v)) ? 'OPTIONAL' : 'MANDATORY' }",
+      "verdict": "FABRICATION_RISK",
+      "cluster": "REQUIREMENT-SILENCE",
+      "notes": "Recorded F14 workbook-path residual, confirmed live. Requirement type supports UNKNOWN (F14) but the deterministic mapper never mints it; a blank cell in the requirement column silently becomes MANDATORY, unwarned. Blast radius: every coverage entity persisted from a framework sheet."
+    },
+    {
+      "id": "G1-2",
+      "seed": "stage7 BOOLEANISH ''->false",
+      "file": "server/lib/import-brain/stage7-plan.js",
+      "line": 81,
+      "snippet": "else if (v === 'no' || v === 'n' || v === 'false' || v === '') data[f] = false",
+      "verdict": "FABRICATION_RISK",
+      "cluster": "BOOLEAN-SILENCE",
+      "notes": "Recorded F14 workbook-path residual, confirmed live. 9 BOOLEANISH fields (premiumGenerating, dynamic, mandatoryDefault, admitted, displayOnSchedule, multiUse, allStates, bureauFlag, proprietaryFlag): source-silent '' is indistinguishable from explicit false in the plan."
+    },
+    {
+      "id": "G1-3",
+      "seed": "coverageHierarchy own nameKey (case/whitespace only)",
+      "file": "shared/src/insurance/coverageHierarchy.ts",
+      "line": 64,
+      "verdict": "HONEST",
+      "cluster": null,
+      "notes": "Empty canonical key is explicitly blocked from joining (line 191 guard). The punctuation-normalization gap vs stage7's F11-fixed nameKey remains the F11 recorded residual (same-author-same-sheet, low risk, open an item if it ever bites) — WATCH, not a defect."
+    },
+    {
+      "id": "G1-4",
+      "seed": "scaffold-product forced requirement enum",
+      "file": "server/lib/ai/scaffold-product.js",
+      "line": 29,
+      "verdict": "RESIDUAL",
+      "cluster": null,
+      "notes": "Forced MANDATORY/OPTIONAL confirmed at HEAD, but the ledger (F14) records the scaffold path as deliberately unchanged: it is a generative design flow from cited portfolio analogues plus human review, not extraction-from-source. Verified-deliberate; no fabrication-from-document exists here."
+    },
+    {
+      "id": "G1-5",
+      "seed": "F21 deep-clone minting (verify fixed)",
+      "file": "app/src/lib/draft/cloneProduct.ts",
+      "line": 113,
+      "verdict": "FIXED",
+      "cluster": null,
+      "notes": "Both mint sites (cloneProduct.ts:113, ScaffoldProductModal.tsx:163) verified on the composite (number, edition) key with blank-edition degradation. Sweep found no other number-only minting site; usage.ts:134 and chunk.ts:118 are number-scoped reference sites (acceptable attachment semantics)."
+    },
+    {
+      "id": "G1-6",
+      "seed": "F26 product synthesis (verify fixed)",
+      "file": "shared/src/insurance/isoImport.ts",
+      "line": 702,
+      "verdict": "FIXED",
+      "cluster": null,
+      "notes": "PROD.SYNTH001 (702) and RULE.SYNTH### (985) verified. Full synth-site sweep: every minted id in filing reconcile.ts (RT/LD/COV/RU) carries the SYNTH marker. lobRegistry synthesizeRefId still has no production caller."
+    },
+    {
+      "id": "G1-7",
+      "seed": "emit() swallowing stringify errors",
+      "file": "server/lib/ai/_shared.js",
+      "line": 21,
+      "verdict": "RESIDUAL",
+      "cluster": "TRANSPORT-HYGIENE",
+      "notes": "Confirmed: emit()'s catch conflates serialization failure with socket closure. Reachability judged LOW: bundles are JSON-parsed model output plus plain objects (no circular refs/BigInt path exists today), and when a runId is supplied the persist path surfaces its own stringify failure via run:persisted{ok:false}. Recorded residual with trigger: ledger an item if any bundle field ever becomes non-JSON-serializable."
+    },
+    {
+      "id": "G1-8",
+      "seed": "no-TTL on import-results blobs",
+      "file": "server/lib/ai/run-results.js",
+      "line": 58,
+      "verdict": "RESIDUAL",
+      "cluster": "OPS-LIFECYCLE",
+      "notes": "Confirmed: unbounded growth at import-results/<tenant>/<runId>.json. The right layer is an Azure Blob lifecycle-management rule on the import-results/ prefix (e.g. delete after 30 days), an ops configuration action, not pipeline code. Recommended in close-out notes; non-blocking."
+    },
+    {
+      "id": "G1-9",
+      "seed": "browser client not minting runIds",
+      "file": "app/src/import/unifiedImportClient.ts",
+      "line": 104,
+      "verdict": "RESIDUAL",
+      "cluster": "CLIENT-RECOVERY",
+      "notes": "Confirmed: the browser sends no runId, so browser users get no F23 durable-result recovery (scripts do). The result endpoint is already auth/tenant-compatible with the browser session; the ledgered 'natural next slice' for a successor lane — product enhancement, not import-brain robustness."
+    }
+  ],
+  "bonusFindings": [
+    {
+      "id": "G1-B1",
+      "file": "shared/src/insurance/isoImport.ts",
+      "line": 264,
+      "snippet": "if (s === '') return { category: 'ENDORSEMENT', exact: true, outlier: false }",
+      "verdict": "FABRICATION_RISK",
+      "cluster": "CATEGORY-SILENCE",
+      "notes": "Blank form category is minted as ENDORSEMENT and marked exact:true — an invented canonical value carrying a truth marker. Consumed at parseForms (~:874, persisted :895)."
+    },
+    {
+      "id": "G1-B2",
+      "file": "shared/src/insurance/isoImport.ts",
+      "line": 897,
+      "snippet": "dynamic: /dynamic/i.test(...), mandatoryDefault: /mandat/i.test(...)",
+      "verdict": "FABRICATION_RISK",
+      "cluster": "BOOLEAN-SILENCE",
+      "notes": "parseForms boolean regex tests: blank cells become false with no unstated marker (same class as G1-2, mapper layer)."
+    },
+    {
+      "id": "G1-B3",
+      "file": "shared/src/insurance/isoImport.ts",
+      "line": 901,
+      "snippet": "admitted: !/non-admitted/i.test(text(at(cells, 'admitted')))",
+      "verdict": "FABRICATION_RISK",
+      "cluster": "BOOLEAN-SILENCE",
+      "notes": "Inverted polarity: blank becomes admitted=TRUE. Source silence fabricates a regulatory posture — the most consequential of the boolean-silence sites."
+    }
+  ],
+  "failureClusters": {
+    "REQUIREMENT-SILENCE": {
+      "members": ["G1-1"],
+      "hypothesis": "A blank cell in a requirement column is read as MANDATORY. A holdout variant with deliberately blank requirement cells discriminates honest (UNKNOWN + warning) from fabricated (MANDATORY) handling."
+    },
+    "BOOLEAN-SILENCE": {
+      "members": ["G1-2", "G1-B2", "G1-B3"],
+      "hypothesis": "Source-silent boolean cells collapse to a canonical false (or true for admitted) at two layers (deterministic mapper, stage-7 enum fold). Same discriminating holdout variant as above."
+    },
+    "CATEGORY-SILENCE": {
+      "members": ["G1-B1"],
+      "hypothesis": "Blank form category collapses to ENDORSEMENT with exact:true. Holdout variant: form rows with blank category cells."
+    },
+    "TRANSPORT-HYGIENE": { "members": ["G1-7"], "hypothesis": "non-format residual; not a generalization cluster" },
+    "OPS-LIFECYCLE": { "members": ["G1-8"], "hypothesis": "non-format residual; ops action" },
+    "CLIENT-RECOVERY": { "members": ["G1-9"], "hypothesis": "non-format residual; successor product slice" }
+  },
+  "dispositionRule": "The three *-SILENCE clusters are candidate GENERALIZATION items ONLY if the G2/G3 no-edit holdout baseline shows them red on a never-seen variant; fixes then ride the standard loop (red fixture, minimal right-layer fix, hostile judge, offline gate, lockstep goldens where field values change). Residual clusters are recorded, not fixed, in this workstream."
+}
