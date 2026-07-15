@@ -186,3 +186,63 @@ describe('verifyAuditChain — tamper detection (the point of the chain)', () =>
     expect(v.breaks.some((b) => b.reason === 'tail_missing')).toBe(true)
   })
 })
+
+// ─── Provenance (H4): AI/voice-authoring attestation sealed WITHOUT forking ─────
+// A governed mutation may carry `provenance` (fleet-sourced model id, citation refs,
+// confidence, authoredBy) so an AI/voice/restore-authored change is attributable. It is
+// sealed into the audit hash CONDITIONALLY: present → tamper-evident; absent → the event
+// hashes byte-identically to a pre-provenance (legacy) event, so no existing chain forks.
+describe('provenance — attributable authoring sealed without forking the chain (H4)', () => {
+  const base: AuditChainEvent = {
+    tenantId: 't1', entityPath: 'products/P1', entityType: 'product',
+    actor: { uid: 'ai', name: 'Import brain' }, source: '/api/db/mutateBatch',
+    op: 'create', rev: 1, at: '2026-07-15T00:00:00.000Z',
+    diff: { before: {}, changed: { name: 'X' } }, prevHash: null,
+  }
+  const PROV = { authoredBy: 'ai', model: 'claude-opus-4-8', citations: ['GL.COV.001'], confidence: 0.94 }
+
+  it('an ABSENT provenance hashes IDENTICALLY (undefined ≡ null ≡ missing) — the no-fork guarantee', () => {
+    const h = computeAuditHash(base)
+    expect(computeAuditHash({ ...base, provenance: undefined })).toBe(h)
+    expect(computeAuditHash({ ...base, provenance: null })).toBe(h)
+  })
+
+  it('a PRESENT provenance is COVERED by the hash (differs from the un-provenanced event)', () => {
+    expect(computeAuditHash({ ...base, provenance: PROV })).not.toBe(computeAuditHash(base))
+  })
+
+  it('altering the model, citations, or confidence changes the hash (forgery is caught)', () => {
+    const sealed = computeAuditHash({ ...base, provenance: PROV })
+    expect(computeAuditHash({ ...base, provenance: { ...PROV, model: 'claude-haiku-4-5' } })).not.toBe(sealed)
+    expect(computeAuditHash({ ...base, provenance: { ...PROV, citations: ['GL.COV.999'] } })).not.toBe(sealed)
+    expect(computeAuditHash({ ...base, provenance: { ...PROV, confidence: 0.1 } })).not.toBe(sealed)
+  })
+
+  it('verify FLAGS provenance stripped OR altered after the write (hash_mismatch both ways)', () => {
+    const evt: AuditChainEvent = { ...base, provenance: PROV }
+    evt.hash = computeAuditHash(evt)               // sealed WITH provenance
+    expect(verifyAuditChain([evt]).ok).toBe(true)  // intact verifies
+    const stripped = { ...evt }; delete (stripped as Record<string, unknown>).provenance
+    expect(verifyAuditChain([stripped]).breaks.some((b) => b.reason === 'hash_mismatch')).toBe(true)
+    const altered = { ...evt, provenance: { ...PROV, confidence: 0.1 } }
+    expect(verifyAuditChain([altered]).breaks.some((b) => b.reason === 'hash_mismatch')).toBe(true)
+  })
+
+  it('provenance is canonicalized (nested key order does not change the hash)', () => {
+    const p1 = { authoredBy: 'ai', model: 'm', citations: ['a', 'b'] }
+    const p2 = { citations: ['a', 'b'], model: 'm', authoredBy: 'ai' }
+    expect(computeAuditHash({ ...base, provenance: p1 })).toBe(computeAuditHash({ ...base, provenance: p2 }))
+  })
+
+  it('a provenance-bearing event chains normally with legacy (un-provenanced) events', () => {
+    // Mixed chain: e1 legacy (no provenance), e2 provenance-bearing — links + verify hold.
+    const e1: AuditChainEvent = { ...base, id: 'aud:1' }
+    e1.hash = computeAuditHash(e1)
+    const e2: AuditChainEvent = {
+      ...base, id: 'aud:2', op: 'update', rev: 2, at: '2026-07-15T00:05:00.000Z',
+      diff: { before: { name: 'X' }, changed: { name: 'Y' } }, prevHash: e1.hash, provenance: PROV,
+    }
+    e2.hash = computeAuditHash(e2)
+    expect(verifyAuditChain([e1, e2]).ok).toBe(true)
+  })
+})

@@ -113,6 +113,27 @@ describe('H1 version WRITE side — assembleEnvelope emits a hash-chained versio
   })
 })
 
+describe('H4 — a provenance-bearing write seals provenance into the audit hash + version doc', () => {
+  const PROV = { authoredBy: 'ai', model: 'claude-opus-4-8', citations: ['GL.COV.001'], confidence: 0.9 }
+  const args = { tid: 't1', path: 'products/P1', entityType: 'product', op: 'create', data: { refId: 'P1' }, actor: ACTOR, source: '/api/db/mutateBatch', now: NOW, current: null, head: null } as const
+
+  it('provenance rides the audit + version docs and CHANGES the hash (vs an un-provenanced write)', () => {
+    const plain = data.assembleEnvelope({ ...args })
+    const attested = data.assembleEnvelope({ ...args, provenance: PROV })
+    const auditPlain = byKind(plain.ops, 'audit')[0]
+    const auditAttested = byKind(attested.ops, 'audit')[0]
+    // provenance is carried on BOTH the audit event and the version doc
+    expect(auditAttested.provenance).toEqual(PROV)
+    expect(byKind(attested.ops, 'version')[0].provenance).toEqual(PROV)
+    // sealed: the hash differs from the un-provenanced write and recomputes correctly
+    expect(auditAttested.hash).not.toBe(auditPlain.hash)
+    expect(computeAuditHash({ tenantId: 't1', ...auditAttested })).toBe(auditAttested.hash)
+    // no fork: the un-provenanced write carries NO provenance key at all
+    expect('provenance' in auditPlain).toBe(false)
+    expect('provenance' in (byKind(plain.ops, 'version')[0])).toBe(false)
+  })
+})
+
 describe('H1 — BOTH write paths converge on envelope(); READ is the dedicated versions endpoint', () => {
   const src = readFileSync(
     path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../server/lib/data.js'),

@@ -103,18 +103,24 @@ export interface AuditChainEvent {
   tenantId: string
   entityPath: string
   entityType?: string | null
-  op: string // create | update | delete
+  op: string // create | update | delete | restore
   actor?: unknown
   rev: number
   at: string // ISO timestamp
   source?: string | null // which write path produced this event
   diff?: unknown // { before, changed } field diff, null on delete
   prevHash: string | null
+  // Optional AI/voice/restore-authoring attestation (fleet-sourced model id, citation
+  // refs, confidence, authoredBy). Sealed into the hash CONDITIONALLY — see below.
+  provenance?: unknown
   hash?: string
 }
 
-/** The exact fields sealed by the hash — storage adornments (id, pk, kind, _rid…)
- *  are deliberately excluded so a Cosmos round-trip never changes the hash. */
+/** The exact fields ALWAYS sealed by the hash — storage adornments (id, pk, kind, _rid…)
+ *  are deliberately excluded so a Cosmos round-trip never changes the hash. `provenance`
+ *  is NOT in this list on purpose: an always-present `provenance: null` would change the
+ *  canonical input for every pre-provenance (legacy) event and fork every existing chain.
+ *  It is sealed CONDITIONALLY instead (computeAuditHash below). */
 export const AUDIT_HASH_FIELDS = [
   'tenantId', 'entityPath', 'entityType', 'op', 'actor', 'rev', 'at', 'source', 'diff', 'prevHash',
 ] as const
@@ -122,6 +128,13 @@ export const AUDIT_HASH_FIELDS = [
 export function computeAuditHash(evt: Omit<AuditChainEvent, 'hash' | 'id'>): string {
   const subset: Record<string, unknown> = {}
   for (const f of AUDIT_HASH_FIELDS) subset[f] = (evt as Record<string, unknown>)[f] ?? null
+  // Provenance is sealed ONLY when the event carries it. An event with NO provenance
+  // hashes byte-identically to a pre-provenance (legacy) event — so introducing this
+  // field forks NO existing chain. A provenance-bearing event seals its provenance, and
+  // stripping OR altering it after the write yields hash_mismatch on verify (tamper-
+  // evident both ways). This is why the field is conditional, not in AUDIT_HASH_FIELDS.
+  const prov = (evt as Record<string, unknown>).provenance
+  if (prov != null) subset.provenance = prov
   return sha256Hex(canonicalize(subset))
 }
 

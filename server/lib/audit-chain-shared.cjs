@@ -167,6 +167,8 @@ var AUDIT_HASH_FIELDS = [
 function computeAuditHash(evt) {
   const subset = {};
   for (const f of AUDIT_HASH_FIELDS) subset[f] = evt[f] ?? null;
+  const prov = evt.provenance;
+  if (prov != null) subset.provenance = prov;
   return sha256Hex(canonicalize(subset));
 }
 var pathKey = (e) => `${e.tenantId} ${e.entityPath}`;

@@ -337,6 +337,20 @@ export interface VersionDiff {
   after:  unknown
 }
 
+// Provenance — attestation for an AI/voice/restore-authored governed mutation. The model
+// id is fleet-sourced (never a literal); citations are the refIds the change is grounded
+// on; confidence is 0..1; authoredBy names who/what authored it. Sealed into the audit
+// hash CONDITIONALLY (shared/src/audit/chain.ts) so it is tamper-evident without forking
+// the legacy (un-provenanced) chains. Human edits omit it entirely.
+export interface Provenance {
+  authoredBy:    'human' | 'ai' | 'voice' | 'restore'
+  model?:        string    // fleet-sourced deployment id (e.g. 'claude-opus-4-8')
+  role?:         string    // fleet role that produced the change (GROUNDED_CITED, …)
+  citations?:    string[]  // refIds the change is grounded on (HITL requires ≥1 resolvable)
+  confidence?:   number    // 0..1
+  restoredFrom?: number    // op:'restore' only — the target rev the state was rewound to
+}
+
 export interface Version {
   entityType: string
   entityPath: string
@@ -349,6 +363,9 @@ export interface Version {
   // legacy rows without them still satisfy the contract.
   op?:        'create' | 'update' | 'delete'
   rev?:       number
+  // AI/voice-authoring attestation, sealed in the audit hash (H4). Absent on human
+  // edits and on all legacy rows.
+  provenance?: Provenance
 }
 
 export interface AuditEvent {
