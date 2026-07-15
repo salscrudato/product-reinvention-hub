@@ -324,6 +324,22 @@ export const adapter: BackendAdapter = {
       pokeAll()
     },
 
+    async restore(path: string, targetRev: number, expectedRev?: number): Promise<{ rev: number; restoredFrom: number }> {
+      // The server reconstructs the target state and commits a forward op:'restore' mutation;
+      // the client only names the target. 409 → stale rev (MutationConflictError, so the
+      // drawer refreshes + toasts); 422 unreconstructable arrives as Error(detail) from api().
+      try {
+        const r = await api<{ rev: number; restoredFrom: number }>('/db/restore', {
+          method: 'POST', body: JSON.stringify({ path, targetRev, expectedRev }),
+        })
+        pokeAll()   // reflect the restore in every open view (incl. the history drawer)
+        return r
+      } catch (err) {
+        if (err instanceof MutationConflictError) throw new MutationConflictError(path)
+        throw err
+      }
+    },
+
     async vote(path: string, _uid: string): Promise<void> {
       await api('/db/vote', { method: 'POST', body: JSON.stringify({ path }) })
       pokeAll()

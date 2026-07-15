@@ -50,10 +50,11 @@ function exactTime(at: unknown): string {
 
 // Action comes from the recorded op (PCM-B) with the legacy snapshot heuristic
 // as fallback — see versionAction in lib/backend/versionRead.ts.
-const ACTION_META: Record<string, { label: string; color: 'good' | 'blue' | 'danger' }> = {
-  create: { label: 'Created', color: 'good' },
-  update: { label: 'Updated', color: 'blue' },
-  delete: { label: 'Deleted', color: 'danger' },
+const ACTION_META: Record<string, { label: string; color: 'good' | 'blue' | 'danger' | 'purple' }> = {
+  create:  { label: 'Created',  color: 'good' },
+  update:  { label: 'Updated',  color: 'blue' },
+  delete:  { label: 'Deleted',  color: 'danger' },
+  restore: { label: 'Restored', color: 'purple' },
 }
 
 // A readable name for the changed entity, drawn from its snapshot then its path.
@@ -98,10 +99,9 @@ function DiffView({ diff }: { diff: WithId<Version>['diff'] }) {
 }
 
 export function HistoryDrawer({ onClose }: Props) {
-  const { versions, pid } = useProductCtx()
+  const { versions } = useProductCtx()
   const { user } = useUser()
   const canEdit = canI(user, 'product:write')
-  const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
   const [expanded, setExpanded] = useState<string | null>(null)
   const [restoring, setRestoring] = useState<string | null>(null)
   const [confirmRestoreId, setConfirmRestoreId] = useState<string | null>(null)   // A5: inline restore confirm (no native window.confirm)
@@ -135,31 +135,44 @@ export function HistoryDrawer({ onClose }: Props) {
     })
   }, [all, filter, q])
 
+  // The entity's CURRENT rev = the highest rev recorded for that path (the drawer shows the
+  // whole product's trail). Sent as the optimistic-concurrency token so a concurrent edit → 409.
+  function currentRevOf(entityPath: string): number {
+    return all.reduce((m, x) => (x.entityPath === entityPath ? Math.max(m, x.rev ?? 0) : m), 0)
+  }
+  // A row is restorable when it is a real version (rev > 0) AND not already the entity's
+  // current state (restoring to the latest rev is a no-op the server rejects). versionRead
+  // maps canRestore = rev > 0; the "not current" refinement lives here where currentRev is known.
+  function isRestorable(v: WithId<Version>): boolean {
+    return !!v.canRestore && v.rev != null && v.rev < currentRevOf(v.entityPath)
+  }
+
   // Restore is gated by an inline confirm (A5: no native window.confirm). `askRestore`
-  // arms the confirm on a row; `doRestore` performs the write once the user confirms.
+  // arms the confirm on a row; `doRestore` performs the forward restore once confirmed.
   function askRestore(v: WithId<Version>) {
-    if (!v.snapshot) { toast.error('No snapshot available for this version'); return }
+    if (!isRestorable(v)) { toast.error('This version can’t be restored'); return }
     setConfirmRestoreId(v.id)
   }
 
   async function doRestore(v: WithId<Version>) {
-    if (!v.snapshot) return
+    if (!isRestorable(v) || v.rev == null) return
     setRestoring(v.id)
     try {
       // Restore targets the version's OWN entity — not the product doc — so restoring a
-      // coverage/rule change writes back to that child entity.
-      // No expectedRev: restore semantics are unconditional ("rewind to this snapshot"),
-      // so an intervening edit is intentionally overwritten — that is the point of restore.
-      await adapter.db.mutate({
-        op: 'update', path: v.entityPath,
-        data: v.snapshot as Record<string, unknown>,
-        entityType: v.entityType, productId: v.productId ?? pid, actor,
-      })
+      // coverage/rule change rewinds that child entity. The SERVER reconstructs the state at
+      // this rev and commits it forward (new rev + version + hash-chained audit event); we send
+      // only the target rev and the entity's current rev as the optimistic-concurrency token.
+      await adapter.db.restore(v.entityPath, v.rev, currentRevOf(v.entityPath))
       toast.success('Restored to selected version')
       setConfirmRestoreId(null)
     } catch (err) {
+      // 409 stale rev → conflict toast; the write already poked the pollers, so history refreshes.
       if (err instanceof MutationConflictError) conflictToast({})
-      else toast.error('Restore failed')
+      // 422 unreconstructable (a gap or a delete in this entity's history) → explain honestly,
+      // never a silent failure or a best-guess restore.
+      else if (err instanceof Error && /unreconstructable/.test(err.message)) {
+        toast.error('Can’t restore — this entity’s change history has a gap.')
+      } else toast.error('Restore failed')
     } finally {
       setRestoring(null)
     }
@@ -234,7 +247,7 @@ export function HistoryDrawer({ onClose }: Props) {
                   {isOpen && (
                     <div className="px-3.5 pb-3.5 flex flex-col gap-3" style={{ borderTop: '1px solid var(--color-border)' }}>
                       <div className="pt-3"><DiffView diff={v.diff ?? []} /></div>
-                      {canEdit && v.snapshot != null && (
+                      {canEdit && isRestorable(v) && (
                         confirmRestoreId === v.id ? (
                           // Inline restore confirmation — on-brand replacement for the native
                           // window.confirm (A5), kept in-drawer to avoid a modal-on-modal. Warn

@@ -360,12 +360,16 @@ export interface Version {
   actor:      { uid: string; name: string }
   at:         unknown
   // Recorded by the server's version documents (PCM-B read path); optional so
-  // legacy rows without them still satisfy the contract.
-  op?:        'create' | 'update' | 'delete'
+  // legacy rows without them still satisfy the contract. `restore` is a forward
+  // mutation that rewinds state to a past rev — never a history rewrite (HISTORY_SPEC §2).
+  op?:        'create' | 'update' | 'delete' | 'restore'
   rev?:       number
-  // AI/voice-authoring attestation, sealed in the audit hash (H4). Absent on human
-  // edits and on all legacy rows.
+  // AI/voice/restore-authoring attestation, sealed in the audit hash (H4). Absent on
+  // human edits and on all legacy rows.
   provenance?: Provenance
+  // Client-derived (versionRead): a version is restorable when it has a real rev (>0).
+  // Replaces the dead `snapshot != null` gate — the SERVER reconstructs, never the client.
+  canRestore?: boolean
 }
 
 export interface AuditEvent {

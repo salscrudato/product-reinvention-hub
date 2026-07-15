@@ -170,6 +170,13 @@ export interface BackendAdapter {
      *  seeding 70+ tasks, or a re-seed that clears then re-creates) stays atomic per chunk
      *  and fully audited — never a raw write. No-op on an empty list. */
     mutateBatch(ms: MutationPayload[]): Promise<void>
+    /** Restore an entity to a past rev (HISTORY_SPEC §2). The SERVER reconstructs the target
+     *  state (reverse-applying diffs) and commits it as a FORWARD op:'restore' mutation —
+     *  new rev + version doc + hash-chained audit event — so the chain extends, never bends.
+     *  The client never sends a snapshot. `expectedRev` is the optimistic-concurrency token:
+     *  a stale view throws MutationConflictError (409). An unreconstructable history (a gap
+     *  or a delete inside the range) rejects with an Error (422). */
+    restore(path: string, targetRev: number, expectedRev?: number): Promise<{ rev: number; restoredFrom: number }>
     /** Vote (EDITOR+): increments votes.count and unions uid into votes.voters via the
      *  atomic mutate() envelope (entity + audit + version + searchIndex). VIEWER is read-only. */
     vote(path: string, uid: string): Promise<void>

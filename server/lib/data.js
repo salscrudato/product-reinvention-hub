@@ -22,6 +22,7 @@ const { requireCapability } = require('./authz')
 // shared/src/audit/chain.ts) and COMMITTED — a hard require, not a lazy best-effort
 // load: tamper evidence on the audit stream is load-bearing, never optional.
 const { computeAuditHash, verifyAuditChain } = require('./audit-chain-shared.cjs')
+const log = require('./log') // structured NDJSON logger (RISK-015) for security-relevant events
 
 const router = express.Router()
 // storeFor(tid): resolve a tenant's Cosmos container through the SILO_READY seam
@@ -55,6 +56,30 @@ const fieldDiff = (prev, next) => {
   return { before, changed }
 }
 
+// reconstructStateAtRev — reverse-apply the recorded before/changed diffs from the current
+// entity data back to `targetRev`, yielding the entity's domain data AS OF targetRev. Pure:
+// no I/O. Powers POST /api/db/restore — the SERVER reconstructs, the client never sends a
+// snapshot (so it can't forge a restore payload). A HOLE in the version chain (a missing
+// rev) or a DELETE inside the range (op:'delete' has a null diff) makes the pre-change
+// values unknowable, so we refuse with { error:'unreconstructable', firstMissingRev }
+// rather than best-guess. Never mutates the caller's `currentData`.
+function reconstructStateAtRev(currentData, versionsByRev, currentRev, targetRev) {
+  const state = { ...(currentData || {}) }
+  for (let r = currentRev; r > targetRev; r--) {
+    const v = versionsByRev.get(r)
+    if (!v || !v.diff) return { error: 'unreconstructable', firstMissingRev: r }
+    const before = v.diff.before || {}
+    const changed = v.diff.changed || {}
+    for (const k of new Set([...Object.keys(before), ...Object.keys(changed)])) {
+      // Undo rev r: revert each touched field to its before-value; a field that had no
+      // before-value (i.e. was ADDED at r) is removed.
+      if (Object.prototype.hasOwnProperty.call(before, k)) state[k] = before[k]
+      else delete state[k]
+    }
+  }
+  return { state }
+}
+
 async function readEntity(tid, path) {
   try {
     const r = (await storeFor(tid).item(idFor('ent', path), pkFor(tid, path)).read()).resource
@@ -73,6 +98,20 @@ async function readChainHead(tid, path) {
     const r = (await storeFor(tid).item(idFor('chn', path), pkFor(tid, path)).read()).resource
     return r && r.tenantId === tid ? { hash: r.hash, etag: r._etag } : null
   } catch { return null }
+}
+
+// Read every version doc for ONE entityPath (partition-scoped), keyed by rev. Powers the
+// restore reconstruction. A READ — no envelope, no chain write (the no-bare-writes census
+// only counts .items.create/upsert/batch and .item().delete/replace, never .items.query).
+async function readVersionsForPath(tid, path) {
+  const sql = "SELECT c.rev, c.op, c.diff FROM c WHERE c.kind = 'version' AND c.entityPath = @path AND c.tenantId = @tid"
+  const { resources } = await storeFor(tid).items.query(
+    { query: sql, parameters: [{ name: '@path', value: String(path) }, { name: '@tid', value: tid }] },
+    { partitionKey: pkFor(tid, String(path)) },
+  ).fetchAll()
+  const byRev = new Map()
+  for (const r of resources) byRev.set(r.rev, { op: r.op, diff: r.diff })
+  return byRev
 }
 
 // ─── reads (any authenticated role, tenant-scoped) ───────────────────────────
@@ -463,6 +502,46 @@ router.get('/versions', requireCapability('product:read'), requireTenant, async 
   }
 })
 
+// ─── restore (HI-01): rewind an entity to a past rev via the STANDARD envelope ─────
+// A restore is a FORWARD mutation, never a history rewrite: the server reconstructs the
+// target state (reverse-applying diffs — reconstructStateAtRev), then commits it through
+// the same atomic envelope — new rev, new version doc, hash-chained audit event, op:'restore'
+// with restore provenance ({ authoredBy:'restore', restoredFrom }). The chain EXTENDS, never
+// bends. The client sends only { path, targetRev, expectedRev } — it can never forge a
+// snapshot/payload. expectedRev is the optimistic-concurrency token (stale → 409), so a
+// restore built against a stale view is refused, never silently overwriting a newer edit.
+router.post('/restore', requireCapability('product:write'), requireTenant, async (req, res) => {
+  const { path, targetRev, expectedRev } = req.body || {}
+  const tid = resolveTenantForPrincipal(req.user)
+  const actor = { uid: req.user.uid, name: req.user.name }
+  // Validation fires BEFORE any Cosmos I/O.
+  if (!path || typeof path !== 'string') return res.status(400).json({ error: 'path_required' })
+  if (!Number.isInteger(targetRev) || targetRev < 1) return res.status(400).json({ error: 'invalid_target', detail: 'targetRev must be a positive integer' })
+  try {
+    const current = await readEntity(tid, path)
+    if (!current) return res.status(404).json({ error: 'not_found' })
+    const currentRev = current.rev ?? 0
+    // Optimistic concurrency: the client restores against the rev it last saw.
+    if (expectedRev !== undefined && currentRev !== expectedRev) return res.status(409).json({ error: 'stale_rev', currentRev })
+    if (targetRev >= currentRev) return res.status(400).json({ error: 'invalid_target', detail: 'targetRev must be older than the current rev', currentRev })
+    const versions = await readVersionsForPath(tid, path)
+    const recon = reconstructStateAtRev(current.data, versions, currentRev, targetRev)
+    if (recon.error) return res.status(422).json({ error: 'unreconstructable', firstMissingRev: recon.firstMissingRev })
+    // Commit the reconstructed state as a forward restore. expectedRev re-guards a concurrent
+    // write landing between our read and the commit (the envelope re-checks → CONFLICT → 409).
+    const provenance = { authoredBy: 'restore', restoredFrom: targetRev }
+    const { rev } = await mutateInternal(tid, { op: 'restore', path, data: recon.state, entityType: current.entityType, expectedRev: currentRev, provenance }, actor, '/api/db/restore')
+    log.info('data', 'restore', { tenantId: tid, path, targetRev, fromRev: currentRev, toRev: rev, actor: actor.uid })
+    res.json({ ok: true, rev, restoredFrom: targetRev })
+  } catch (e) {
+    if (e.code === 'CONFLICT') return res.status(409).json({ error: 'stale_rev' })
+    if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
+    if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable' })
+    log.error('data', 'restore_failed', { tenantId: tid, path: String(path), targetRev, detail: String(e.message || e).slice(0, 200) })
+    res.status(500).json({ error: 'restore_failed', detail: String(e.message || e) })
+  }
+})
+
 // ─── PROBE endpoint: audit documents (ADMIN + PROBE_MODE=1 only) ─────────────
 // Added for Phase 3 fault-injection testing (FAULT-003). Returns raw kind=audit
 // documents for a path so the smoke harness can verify the audit write is present.
@@ -511,4 +590,4 @@ router.get('/audit/verify', requireCapability('audit:read'), requireTenant, asyn
   }
 })
 
-module.exports = Object.assign(router, { mutateInternal, assembleEnvelope })
+module.exports = Object.assign(router, { mutateInternal, assembleEnvelope, reconstructStateAtRev })

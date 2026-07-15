@@ -68,3 +68,24 @@ describe('versionAction (PCM-B: honest action badges)', () => {
     expect(versionAction({ snapshot: { a: 1 }, diff: [{ field: 'a', before: 0, after: 1 }] })).toBe('update')
   })
 })
+
+// ─── H2/H4: canRestore gate + provenance passthrough + restore op ────────────────
+describe('mapServerVersionRow — H2/H4 additions', () => {
+  it('sets canRestore from rev (>0), replacing the dead snapshot gate', () => {
+    expect(mapServerVersionRow(row({ rev: 2 })).canRestore).toBe(true)
+    expect(mapServerVersionRow(row({ rev: 0 })).canRestore).toBe(false)
+  })
+
+  it('carries provenance through when present, undefined otherwise', () => {
+    const prov = { authoredBy: 'ai' as const, model: 'claude-opus-4-8', citations: ['GL.COV.001'], confidence: 0.9 }
+    expect(mapServerVersionRow(row({ provenance: prov })).provenance).toEqual(prov)
+    expect(mapServerVersionRow(row()).provenance).toBeUndefined()
+  })
+
+  it('maps a restore row faithfully (op + restore provenance)', () => {
+    const v = mapServerVersionRow(row({ op: 'restore', rev: 5, provenance: { authoredBy: 'restore', restoredFrom: 2 } }))
+    expect(v.op).toBe('restore')
+    expect(versionAction(v)).toBe('restore')
+    expect(v.provenance?.restoredFrom).toBe(2)
+  })
+})
