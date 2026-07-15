@@ -241,4 +241,54 @@ export interface BackendAdapter {
     removeMember(username: string): Promise<void>
     listAudit(opts?: { entityType?: string; action?: string; actor?: string; since?: string; limit?: number; cursor?: string }): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }>
   }
+  /** Governed product exports (EDITOR+, server-enforced). P3 Duck Creek seam. */
+  export: {
+    /** POST /api/export/duckcreek — overlay + Unity workbook bundle, gap-gated. */
+    duckcreek(productId: string): Promise<DuckCreekExportResult>
+  }
+}
+
+// ─── Duck Creek export result (mirror of the /api/export/duckcreek contract) ──
+
+export interface DuckCreekGapRow {
+  specRow: number
+  field:   string
+  status:  'MAPPED' | 'DEFAULTED' | 'MISSING'
+  source?: string
+  rule?:   string
+  value?:  string
+  detail?: string
+}
+
+export interface DuckCreekGapReport {
+  productRefId: string
+  rows:         DuckCreekGapRow[]
+  missing:      DuckCreekGapRow[]
+  blocked:      boolean
+  counts:       { mapped: number; defaulted: number; missing: number }
+}
+
+export interface DuckCreekLintFinding {
+  level:   'FAIL' | 'WARN'
+  rule:    string
+  element: string
+  id?:     string
+  detail:  string
+}
+
+export interface DuckCreekExportResult {
+  ok:                  boolean
+  blocked:             boolean
+  error?:              string
+  exportId?:           string
+  dictionaryRevealed?: boolean
+  gapReport:           DuckCreekGapReport
+  lint?:               { ok: boolean; findings: DuckCreekLintFinding[] }
+  artifacts?: {
+    overlayFileName:       string
+    overlayXml:            string
+    coverageConfigXlsxB64: string
+    tableConfigXlsxB64:    string
+    manifest:              Record<string, unknown>
+  }
 }

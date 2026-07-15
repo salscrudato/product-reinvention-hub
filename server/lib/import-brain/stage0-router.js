@@ -30,6 +30,17 @@ const ESCALATE_CONFIDENCE = 0.6
 // document is treated as scanned/non-extractable and routed to native-PDF vision.
 const PDF_TEXT_MIN_CHARS = 400
 
+// ─── ManuScript Author XML fingerprint (P3 validation seam, XE-05) ────────────
+// String-level sniff only — no XML parse happens in stage-0. The deterministic
+// hardened reader (mapManuscriptOverlay, shared/src/insurance/manuscriptImport)
+// runs downstream in the validation harness.
+function isManuscriptXml(text) {
+  if (typeof text !== 'string') return false
+  const head = text.slice(0, 4096).replace(/^﻿/, '')
+  const stripped = head.replace(/<\?[^?]*\?>/g, ' ').replace(/<!--[\s\S]*?-->/g, ' ').trimStart()
+  return /^<ManuScript[\s>]/.test(stripped)
+}
+
 // ─── Registry-derived prefix → LOB refId map (never invented) ─────────────────
 
 function prefixToLobRefId(prefix) {
@@ -195,8 +206,21 @@ async function routeArtifacts(opts) {
     }
 
     if (sniff.container === 'TEXT') {
-      // CSV / plain text → single-sheet structural model through the brain.
       const text = doc.text || (buf ? buf.toString('utf8') : '')
+      // P3 VALIDATION-ONLY seam (XE-05, spec §6.1): an Author XML overlay
+      // fingerprints by its <ManuScript> root. Routed ONLY when the caller opts
+      // in (`enableManuscriptXml: true` — the round-trip validation harness);
+      // the HTTP unifiedImport path never sets the flag, so this is NOT exposed
+      // as a user-facing import source (ledger XE-10 BACKLOG) and behavior for
+      // every existing caller is byte-identical.
+      if (opts.enableManuscriptXml === true && isManuscriptXml(text)) {
+        out.manuscriptXml = out.manuscriptXml || []
+        out.manuscriptXml.push({ name: doc.name, text, detectedFormat: 'manuscript-xml' })
+        // Deliberately NOT pushed into docSummaries: the validation seam is
+        // deterministic end-to-end — no AI routing assist ever sees it.
+        continue
+      }
+      // CSV / plain text → single-sheet structural model through the brain.
       const rows = text.split(/\r?\n/).filter(l => l.trim().length > 0).map(l => l.split(','))
       const structural = buildStructuralModel([{ sheet: doc.name, cells: rows }], doc.name, 'CSV')
       // A >cap CSV has its uncapped rows right here — same continuation as
@@ -222,7 +246,10 @@ async function routeArtifacts(opts) {
   }
 
   // ── AI assist for LOB/edition when deterministic is inconclusive ───────────
-  if ((!out.lobRefIdHint || out.workbooks.length + out.filingDocs.length > 0) && docSummaries.length > 0) {
+  // Under the P3 validation flag the run is deterministic END TO END: the
+  // round-trip harness never invokes a model (its seam is validation-only).
+  if (opts.enableManuscriptXml !== true
+      && (!out.lobRefIdHint || out.workbooks.length + out.filingDocs.length > 0) && docSummaries.length > 0) {
     const assist = await aiRoutingAssist(docSummaries, budget).catch(() => null)
     if (assist) {
       if (!out.lobRefIdHint && assist.lobPrefix) {
@@ -297,4 +324,4 @@ function extendTruncatedGrids(structural, isoGrids, docName, warnings) {
   }
 }
 
-module.exports = { routeArtifacts, prefixToLobRefId, PDF_TEXT_MIN_CHARS, extendTruncatedGrids }
+module.exports = { routeArtifacts, prefixToLobRefId, PDF_TEXT_MIN_CHARS, extendTruncatedGrids, isManuscriptXml }

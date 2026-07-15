@@ -274,6 +274,17 @@ try {
   console.warn('[prodhub-host] /api/portal NOT mounted:', err.message)
 }
 
+// ─── Duck Creek Author XML export (P3 — XE-01..06/08) ───────────────────────
+// POST /api/export/duckcreek — overlay + Unity workbook pair + manifest bundle;
+// gap-report gated (MISSING blocks), OVERLAY-DELTA LINT hard gate, audited run
+// record, page.dictionary reveal on first success. EDITOR+ (product:write).
+try {
+  app.use('/api/export', require('./lib/export-duckcreek'))
+  console.log('[prodhub-host] /api/export mounted (Duck Creek Author XML export)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/export NOT mounted:', err.message)
+}
+
 // ─── HomeCheck consumer surface (guest-accessible, rate-limited, zero portfolio access) ──
 // POST /api/homecheck/v1/risk               — address risk report (Census+FEMA+USGS+NOAA+WHP)
 // POST /api/homecheck/v1/report-html        — saveable single-file HTML risk report

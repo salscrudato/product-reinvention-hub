@@ -1,13 +1,17 @@
-// ExportMenu — the product's export affordances: Excel (exceljs, client-side).
-import { useEffect, useRef, useState } from 'react'
+// ExportMenu — the product's export affordances: Excel (exceljs, client-side)
+// and the governed Duck Creek Author XML bundle (server-side, gap-gated — P3).
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { IconDownload, IconFileSpreadsheet, IconChevronDown } from '../ui/icons'
+import { IconDownload, IconFileSpreadsheet, IconFileCode, IconChevronDown } from '../ui/icons'
 import { Button } from '../ui'
 import { exportProductExcel, type ProductExport } from '../../lib/export/excel'
+
+const DuckCreekExportPanel = lazy(() => import('./DuckCreekExportPanel'))
 
 export function ExportMenu({ data }: { data: ProductExport }) {
   const [open,       setOpen]       = useState(false)
   const [busy,       setBusy]       = useState(false)
+  const [dcOpen,     setDcOpen]     = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -39,7 +43,17 @@ export function ExportMenu({ data }: { data: ProductExport }) {
             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-text hover:bg-raised transition-colors text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent rounded-[8px]">
             <IconFileSpreadsheet size={15} className="text-good" aria-hidden="true" /> Export to Excel
           </button>
+          <button onClick={() => { setDcOpen(true); setOpen(false) }} disabled={busy} role="menuitem"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-text hover:bg-raised transition-colors text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent rounded-[8px]">
+            <IconFileCode size={15} className="text-accent" aria-hidden="true" /> Export to Duck Creek&hellip;
+          </button>
         </div>
+      )}
+      {dcOpen && (
+        <Suspense fallback={null}>
+          <DuckCreekExportPanel open={dcOpen} onClose={() => setDcOpen(false)}
+            productId={data.product.id} productName={data.product.name} />
+        </Suspense>
       )}
     </div>
   )
