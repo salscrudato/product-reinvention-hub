@@ -2776,9 +2776,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.001",
+      "refId": "CORE.LOB.001.RULE.SYNTH001",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.001",
+        "refId": "CORE.LOB.001.RULE.SYNTH001",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If a motor vehicle is 25 years or more of age which is not used for any commercial or business purposes",
@@ -2793,9 +2793,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.002",
+      "refId": "CORE.LOB.001.RULE.SYNTH002",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.002",
+        "refId": "CORE.LOB.001.RULE.SYNTH002",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If a motor vehicle is of unique or rare design and of limited product that is an object of curiosity and which is not used for any commercial or business purposes",
@@ -2810,9 +2810,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.003",
+      "refId": "CORE.LOB.001.RULE.SYNTH003",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.003",
+        "refId": "CORE.LOB.001.RULE.SYNTH003",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If a motor vehicle, typically manufactured within the past 14 years, which because of its specific make, model year of manufacture, and exceptional physical condition, is considered to be increasing in value rather than depreciating in value",
@@ -2827,9 +2827,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.004",
+      "refId": "CORE.LOB.001.RULE.SYNTH004",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.004",
+        "refId": "CORE.LOB.001.RULE.SYNTH004",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If an enthusiast vehicle has been retrofitted with an electric drivetrain",
@@ -2844,9 +2844,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.005",
+      "refId": "CORE.LOB.001.RULE.SYNTH005",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.005",
+        "refId": "CORE.LOB.001.RULE.SYNTH005",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If a vehicle has been modified to a significant extent and is highly customized for looks and/or performance (e.g., customized engine, body kit, or large-bodied vehicle with custom rims of 22\" or more or 100-spoke type rims)",
@@ -2861,9 +2861,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.006",
+      "refId": "CORE.LOB.001.RULE.SYNTH006",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.006",
+        "refId": "CORE.LOB.001.RULE.SYNTH006",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If a vehicle was originally manufactured prior to 1950 and has been modified to increase performance",
@@ -2878,9 +2878,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.007",
+      "refId": "CORE.LOB.001.RULE.SYNTH007",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.007",
+        "refId": "CORE.LOB.001.RULE.SYNTH007",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If an original-bodied vehicle has had multiple significant mechanical, non-cosmetic components replaced with modern equivalents to increase safety and performance to levels similar to a newer vehicle",
@@ -2895,9 +2895,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.008",
+      "refId": "CORE.LOB.001.RULE.SYNTH008",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.008",
+        "refId": "CORE.LOB.001.RULE.SYNTH008",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If the vehicle is a non-motorized vehicle designed to be towed, and featuring living accommodations which may include cooking, heating/cooling, bathroom plumbing, and sleeping arrangements, and may include fifth-wheel trailers, but do not include self-propelled vehicles, truck-mounted camper bodies, semi-trailers, or trailers used for any commercial purpose or as a vehicle conveyance",
@@ -2912,9 +2912,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.009",
+      "refId": "CORE.LOB.001.RULE.SYNTH009",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.009",
+        "refId": "CORE.LOB.001.RULE.SYNTH009",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If the vehicle is a 2- or 3-wheeled vehicle of the motorbike, motorcycle, moped, or motor scooter type designed for travel on public roads, and any sidecar designed for use with the same collector vehicle",
@@ -2929,9 +2929,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.010",
+      "refId": "CORE.LOB.001.RULE.SYNTH010",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.010",
+        "refId": "CORE.LOB.001.RULE.SYNTH010",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If the vehicle is specifically purpose-built for competition type use rather than street use, including competition cars with historic significance or provenance",
@@ -2946,9 +2946,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.011",
+      "refId": "CORE.LOB.001.RULE.SYNTH011",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.011",
+        "refId": "CORE.LOB.001.RULE.SYNTH011",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If the vehicle has been modified after manufacture for drag racing rather than street use, including at minimum, a roll cage, narrowed rear axle, and enlarged rear wheel wells/wheels",
@@ -2963,9 +2963,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.012",
+      "refId": "CORE.LOB.001.RULE.SYNTH012",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.012",
+        "refId": "CORE.LOB.001.RULE.SYNTH012",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If the insured has another means of daily transportation which is not insured in the Classic Automobile Program",
@@ -2980,9 +2980,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.013",
+      "refId": "CORE.LOB.001.RULE.SYNTH013",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.013",
+        "refId": "CORE.LOB.001.RULE.SYNTH013",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If the vehicle is primarily used for auto club activities, exhibits, parades, or a private collection (not including racing, rallies, or any other type of speed or timed event)",
@@ -2997,9 +2997,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.014",
+      "refId": "CORE.LOB.001.RULE.SYNTH014",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.014",
+        "refId": "CORE.LOB.001.RULE.SYNTH014",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If the vehicle is occasionally used for purposes other than auto club activities, exhibits, parades, or a private collection, so long as the insured maintains and insures a means of daily transportation",
@@ -3014,9 +3014,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.015",
+      "refId": "CORE.PRD.001.RULE.SYNTH015",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.015",
+        "refId": "CORE.PRD.001.RULE.SYNTH015",
         "category": "PRODUCT",
         "subCategory": "Policy Term",
         "condition": "If the Product is Core and the Line of Business is Personal Auto",
@@ -3031,9 +3031,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.016",
+      "refId": "CORE.PRD.001.RULE.SYNTH016",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.016",
+        "refId": "CORE.PRD.001.RULE.SYNTH016",
         "category": "PRODUCT",
         "subCategory": "Policy Term",
         "condition": "If an individual who is a visitor from outside the U.S. is traveling in the U.S.",
@@ -3048,9 +3048,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.017",
+      "refId": "CORE.PRD.001.RULE.SYNTH017",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.017",
+        "refId": "CORE.PRD.001.RULE.SYNTH017",
         "category": "PRODUCT",
         "subCategory": "Policy Term",
         "condition": "If an individual is a U.S. resident with an unregistered vehicle",
@@ -3065,9 +3065,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.018",
+      "refId": "CORE.LOB.001.RULE.SYNTH018",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.018",
+        "refId": "CORE.LOB.001.RULE.SYNTH018",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If the Product is Core",
@@ -3082,9 +3082,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.019",
+      "refId": "CORE.LOB.001.RULE.SYNTH019",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.019",
+        "refId": "CORE.LOB.001.RULE.SYNTH019",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If the Product is Core",
@@ -3099,9 +3099,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.020",
+      "refId": "CORE.LOB.001.RULE.SYNTH020",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.020",
+        "refId": "CORE.LOB.001.RULE.SYNTH020",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If the vehicle type is applicable as shown in the Vehicle Type Applicability Reference; and there is Liability, Collision, and/or Other Than Collision coverage selected",
@@ -3116,9 +3116,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.021",
+      "refId": "CORE.LOB.001.RULE.SYNTH021",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.021",
+        "refId": "CORE.LOB.001.RULE.SYNTH021",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If the vehicle type is applicable as shown in the Vehicle Type Applicability Reference; and Liability Coverage is selected",
@@ -3133,9 +3133,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.022",
+      "refId": "CORE.LOB.001.RULE.SYNTH022",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.022",
+        "refId": "CORE.LOB.001.RULE.SYNTH022",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If the vehicle is installed with a homing device or system that transmits a signal by which the vehicle location may be tracked, is activated when the vehicle is stolen or reported stolen to police, transmits to local and/or state police or a private central monitoring station in communication with police, and provides vehicle location information to the proper authorities for recovery",
@@ -3150,9 +3150,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.023",
+      "refId": "CORE.LOB.001.RULE.SYNTH023",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.023",
+        "refId": "CORE.LOB.001.RULE.SYNTH023",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If the policyholder is a member of Hagerty Drivers Club",
@@ -3167,9 +3167,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.024",
+      "refId": "CORE.LOB.001.RULE.SYNTH024",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.024",
+        "refId": "CORE.LOB.001.RULE.SYNTH024",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If the selected Pay Plan is Full Pay",
@@ -3184,9 +3184,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.025",
+      "refId": "CORE.LOB.001.RULE.SYNTH025",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.025",
+        "refId": "CORE.LOB.001.RULE.SYNTH025",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If, the applicant was continuously insured for at least 1 year with a specialty collector vehicle carrier immediately prior to applying for coverage with us",
@@ -3201,9 +3201,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.026",
+      "refId": "CORE.LOB.001.RULE.SYNTH026",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.026",
+        "refId": "CORE.LOB.001.RULE.SYNTH026",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If a policy originally written under a non-Essentia insurance program is converted to the Core Program as part of a qualifying portfolio transfer",
@@ -3218,9 +3218,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.027",
+      "refId": "CORE.LOB.001.RULE.SYNTH027",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.027",
+        "refId": "CORE.LOB.001.RULE.SYNTH027",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If the state-wise criteria for the Accident Prevention Course Discount are met as shown in the rule reference",
@@ -3235,9 +3235,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.028",
+      "refId": "CORE.LOB.001.RULE.SYNTH028",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.028",
+        "refId": "CORE.LOB.001.RULE.SYNTH028",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If a motorcycle or scooter is on the policy and the principal operator has submitted proof of successful completion of a state-approved motorcycle rider training course",
@@ -3252,9 +3252,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.029",
+      "refId": "CORE.LOB.001.RULE.SYNTH029",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.029",
+        "refId": "CORE.LOB.001.RULE.SYNTH029",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If changes are made to the policy which require premium adjustments",
@@ -3269,9 +3269,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.030",
+      "refId": "CORE.LOB.001.RULE.SYNTH030",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.030",
+        "refId": "CORE.LOB.001.RULE.SYNTH030",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If a vehicle or a form of coverage is cancelled from a policy at the request of the insured, then is subsequently reinstated within 30 days",
@@ -3286,9 +3286,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.031",
+      "refId": "CORE.LOB.001.RULE.SYNTH031",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.031",
+        "refId": "CORE.LOB.001.RULE.SYNTH031",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If a policy is amended and results in a premium reduction of less than $5",
@@ -3303,9 +3303,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.032",
+      "refId": "CORE.LOB.001.RULE.SYNTH032",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.032",
+        "refId": "CORE.LOB.001.RULE.SYNTH032",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If a policy is amended and results in a premium reduction of less than $5 and the insured requests the retained premium be returned",
@@ -3320,9 +3320,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.033",
+      "refId": "CORE.LOB.001.RULE.SYNTH033",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.033",
+        "refId": "CORE.LOB.001.RULE.SYNTH033",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If a policy is amended and results in a premium reduction of less than $10",
@@ -3337,9 +3337,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.034",
+      "refId": "CORE.LOB.001.RULE.SYNTH034",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.034",
+        "refId": "CORE.LOB.001.RULE.SYNTH034",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If a policy is amended and results in a premium reduction of less than $10 and the insured requests the retained premium be returned",
@@ -3354,9 +3354,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.035",
+      "refId": "CORE.LOB.001.RULE.SYNTH035",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.035",
+        "refId": "CORE.LOB.001.RULE.SYNTH035",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If an insured requests a change which results in a premium increase",
@@ -3371,9 +3371,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.036",
+      "refId": "CORE.LOB.001.RULE.SYNTH036",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.036",
+        "refId": "CORE.LOB.001.RULE.SYNTH036",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If the premium for a vehicle is calculated",
@@ -3388,9 +3388,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.037",
+      "refId": "CORE.LOB.001.RULE.SYNTH037",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.037",
+        "refId": "CORE.LOB.001.RULE.SYNTH037",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If a policy or form of coverage (excluding coverage that requires a minimum earned premium) is cancelled",
@@ -3405,9 +3405,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.038",
+      "refId": "CORE.PRD.001.RULE.SYNTH038",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.038",
+        "refId": "CORE.PRD.001.RULE.SYNTH038",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the Product is Core",
@@ -3422,9 +3422,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.039",
+      "refId": "CORE.PRD.001.RULE.SYNTH039",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.039",
+        "refId": "CORE.PRD.001.RULE.SYNTH039",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the insured selects the Full Payment Plan",
@@ -3439,9 +3439,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.040",
+      "refId": "CORE.PRD.001.RULE.SYNTH040",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.040",
+        "refId": "CORE.PRD.001.RULE.SYNTH040",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the insured selects the Full Payment Plan",
@@ -3456,9 +3456,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.041",
+      "refId": "CORE.PRD.001.RULE.SYNTH041",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.041",
+        "refId": "CORE.PRD.001.RULE.SYNTH041",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the total policy premium is greater than or equal to the minimum premium for payment plan eligibility shown in the Rule Reference",
@@ -3473,9 +3473,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.042",
+      "refId": "CORE.PRD.001.RULE.SYNTH042",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.042",
+        "refId": "CORE.PRD.001.RULE.SYNTH042",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the insured selects the Semi-Annual Payment Plan",
@@ -3490,9 +3490,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.043",
+      "refId": "CORE.PRD.001.RULE.SYNTH043",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.043",
+        "refId": "CORE.PRD.001.RULE.SYNTH043",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the insured selects the Semi-Annual Payment Plan",
@@ -3507,9 +3507,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.044",
+      "refId": "CORE.PRD.001.RULE.SYNTH044",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.044",
+        "refId": "CORE.PRD.001.RULE.SYNTH044",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the insured selects the Quarterly Payment Plan",
@@ -3524,9 +3524,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.045",
+      "refId": "CORE.PRD.001.RULE.SYNTH045",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.045",
+        "refId": "CORE.PRD.001.RULE.SYNTH045",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the insured selects the Quarterly Payment Plan",
@@ -3541,9 +3541,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.046",
+      "refId": "CORE.PRD.001.RULE.SYNTH046",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.046",
+        "refId": "CORE.PRD.001.RULE.SYNTH046",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the insured selects the Monthly Payment Plan",
@@ -3558,9 +3558,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.047",
+      "refId": "CORE.PRD.001.RULE.SYNTH047",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.047",
+        "refId": "CORE.PRD.001.RULE.SYNTH047",
         "category": "PRODUCT",
         "subCategory": "Payment Plan",
         "condition": "If the insured selects the Monthly Payment Plan",
@@ -3575,9 +3575,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.048",
+      "refId": "CORE.PRD.001.RULE.SYNTH048",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.048",
+        "refId": "CORE.PRD.001.RULE.SYNTH048",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If processing payment attempts are declined due to insufficient funds or the unavailability or inaccessibility of funds",
@@ -3592,9 +3592,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.049",
+      "refId": "CORE.PRD.001.RULE.SYNTH049",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.049",
+        "refId": "CORE.PRD.001.RULE.SYNTH049",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If any payment is late",
@@ -3609,9 +3609,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.050",
+      "refId": "CORE.PRD.001.RULE.SYNTH050",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.050",
+        "refId": "CORE.PRD.001.RULE.SYNTH050",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If a policy is reinstated after the cancellation date for non-payment",
@@ -3626,9 +3626,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.051",
+      "refId": "CORE.PRD.001.RULE.SYNTH051",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.051",
+        "refId": "CORE.PRD.001.RULE.SYNTH051",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If the reinstatement fee is charged",
@@ -3643,9 +3643,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.052",
+      "refId": "CORE.PRD.001.RULE.SYNTH052",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.052",
+        "refId": "CORE.PRD.001.RULE.SYNTH052",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If the insured selects any Payment Plan other than the Full Payment Plan",
@@ -3660,9 +3660,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.053",
+      "refId": "CORE.PRD.001.RULE.SYNTH053",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.053",
+        "refId": "CORE.PRD.001.RULE.SYNTH053",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If more than one form is present on the policy which grants the same coverage(s) and/or subcoverage(s)",
@@ -3677,9 +3677,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.054",
+      "refId": "CORE.LOB.001.RULE.SYNTH054",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.054",
+        "refId": "CORE.LOB.001.RULE.SYNTH054",
         "category": "RATING",
         "subCategory": "Symbol Assignment",
         "condition": "If the vehicle is model year 1980 and newer and is not a Tractor, Semi-Truck, Military, Fire Truck, Replica of vehicles manufactured prior to 1980, Trailers, or Camper Trailers",
@@ -3694,9 +3694,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.055",
+      "refId": "CORE.LOB.001.RULE.SYNTH055",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.055",
+        "refId": "CORE.LOB.001.RULE.SYNTH055",
         "category": "RATING",
         "subCategory": "Symbol Assignment",
         "condition": "If the vehicle is a Motorcycle, Moped, or Scooter, or the vehicle is not listed in the Vehicle Symbol List",
@@ -3711,9 +3711,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.056",
+      "refId": "CORE.LOB.001.RULE.SYNTH056",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.056",
+        "refId": "CORE.LOB.001.RULE.SYNTH056",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If a vehicle or driver does not meet the underwriting criteria and the company is required to provide coverage",
@@ -3728,9 +3728,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.057",
+      "refId": "CORE.LOB.001.RULE.SYNTH057",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.057",
+        "refId": "CORE.LOB.001.RULE.SYNTH057",
         "category": "RATING",
         "subCategory": "Fees / Discounts",
         "condition": "If significant business of at least $50,000 of premium is transitioned from a non-Drivers Edge company to the Core Program, and the Portfolio Transfer Discount is not applied",
@@ -3745,9 +3745,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.058",
+      "refId": "CORE.PRD.001.RULE.SYNTH058",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.058",
+        "refId": "CORE.PRD.001.RULE.SYNTH058",
         "category": "PRODUCT",
         "subCategory": "Product Eligibility",
         "condition": "If the total value of a collection fluctuates frequently due to the insured adding or eliminating vehicles from the collection",
@@ -3762,9 +3762,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.059",
+      "refId": "CORE.PRD.001.RULE.SYNTH059",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.059",
+        "refId": "CORE.PRD.001.RULE.SYNTH059",
         "category": "FORMS",
         "subCategory": "Conditional Form",
         "condition": "If the policy is a Reporting Form Policy",
@@ -3781,9 +3781,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.PRD.001.RULE.060",
+      "refId": "CORE.PRD.001.RULE.SYNTH060",
       "fields": {
-        "refId": "CORE.PRD.001.RULE.060",
+        "refId": "CORE.PRD.001.RULE.SYNTH060",
         "category": "FORMS",
         "subCategory": "Conditional Form",
         "condition": "If the policy is a Reporting Form Policy",
@@ -3800,9 +3800,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.061",
+      "refId": "CORE.LOB.001.RULE.SYNTH061",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.061",
+        "refId": "CORE.LOB.001.RULE.SYNTH061",
         "category": "FORMS",
         "subCategory": "Mandatory Form",
         "condition": "If the Product is Core and the Line of Business is Personal Auto",
@@ -3819,9 +3819,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.062",
+      "refId": "CORE.LOB.001.RULE.SYNTH062",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.062",
+        "refId": "CORE.LOB.001.RULE.SYNTH062",
         "category": "FORMS",
         "subCategory": "Mandatory Form",
         "condition": "If the Product is Core and the Line of Business is Personal Auto",
@@ -3838,9 +3838,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.063",
+      "refId": "CORE.COV.001.RULE.SYNTH063",
       "fields": {
-        "refId": "CORE.COV.001.RULE.063",
+        "refId": "CORE.COV.001.RULE.SYNTH063",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -3858,9 +3858,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.003.RULE.064",
+      "refId": "CORE.COV.003.RULE.SYNTH064",
       "fields": {
-        "refId": "CORE.COV.003.RULE.064",
+        "refId": "CORE.COV.003.RULE.SYNTH064",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -3878,9 +3878,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.065",
+      "refId": "CORE.COV.009.RULE.SYNTH065",
       "fields": {
-        "refId": "CORE.COV.009.RULE.065",
+        "refId": "CORE.COV.009.RULE.SYNTH065",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If The vehicle type is applicable as shown in the Vehicle Type Applicability Reference; and Limited Trailer and Paddock Coverage is not selected",
@@ -3898,9 +3898,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.010.RULE.066",
+      "refId": "CORE.COV.010.RULE.SYNTH066",
       "fields": {
-        "refId": "CORE.COV.010.RULE.066",
+        "refId": "CORE.COV.010.RULE.SYNTH066",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -3918,9 +3918,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.067",
+      "refId": "CORE.COV.001.RULE.SYNTH067",
       "fields": {
-        "refId": "CORE.COV.001.RULE.067",
+        "refId": "CORE.COV.001.RULE.SYNTH067",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Bodily Injury Liability Coverage is selected",
@@ -3938,9 +3938,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.003.RULE.068",
+      "refId": "CORE.COV.003.RULE.SYNTH068",
       "fields": {
-        "refId": "CORE.COV.003.RULE.068",
+        "refId": "CORE.COV.003.RULE.SYNTH068",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Property Damage Liability Coverage is selected",
@@ -3958,9 +3958,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.069",
+      "refId": "CORE.COV.001.RULE.SYNTH069",
       "fields": {
-        "refId": "CORE.COV.001.RULE.069",
+        "refId": "CORE.COV.001.RULE.SYNTH069",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If a combined single limit (CSL) for Liabiliy Coverage is selected",
@@ -3978,9 +3978,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.070",
+      "refId": "CORE.COV.001.RULE.SYNTH070",
       "fields": {
-        "refId": "CORE.COV.001.RULE.070",
+        "refId": "CORE.COV.001.RULE.SYNTH070",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If a standalone limit, Split or Single, for Bodily Injury Liability is selected",
@@ -3998,9 +3998,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.003.RULE.071",
+      "refId": "CORE.COV.003.RULE.SYNTH071",
       "fields": {
-        "refId": "CORE.COV.003.RULE.071",
+        "refId": "CORE.COV.003.RULE.SYNTH071",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If a standalone limit for Property Damage Liability is selected",
@@ -4018,9 +4018,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.001.RULE.072",
+      "refId": "CORE.COV.001.001.RULE.SYNTH072",
       "fields": {
-        "refId": "CORE.COV.001.001.RULE.072",
+        "refId": "CORE.COV.001.001.RULE.SYNTH072",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Liability Coverage is present",
@@ -4038,9 +4038,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.002.RULE.073",
+      "refId": "CORE.COV.001.002.RULE.SYNTH073",
       "fields": {
-        "refId": "CORE.COV.001.002.RULE.073",
+        "refId": "CORE.COV.001.002.RULE.SYNTH073",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Liability Coverage is present",
@@ -4058,9 +4058,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.003.RULE.074",
+      "refId": "CORE.COV.001.003.RULE.SYNTH074",
       "fields": {
-        "refId": "CORE.COV.001.003.RULE.074",
+        "refId": "CORE.COV.001.003.RULE.SYNTH074",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Liability Coverage is present",
@@ -4078,9 +4078,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.004.RULE.075",
+      "refId": "CORE.COV.001.004.RULE.SYNTH075",
       "fields": {
-        "refId": "CORE.COV.001.004.RULE.075",
+        "refId": "CORE.COV.001.004.RULE.SYNTH075",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Liability Coverage is present",
@@ -4098,9 +4098,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.005.RULE.076",
+      "refId": "CORE.COV.001.005.RULE.SYNTH076",
       "fields": {
-        "refId": "CORE.COV.001.005.RULE.076",
+        "refId": "CORE.COV.001.005.RULE.SYNTH076",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Liability Coverage is present",
@@ -4118,9 +4118,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.006.RULE.077",
+      "refId": "CORE.COV.001.006.RULE.SYNTH077",
       "fields": {
-        "refId": "CORE.COV.001.006.RULE.077",
+        "refId": "CORE.COV.001.006.RULE.SYNTH077",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Liability Coverage is present",
@@ -4138,9 +4138,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.007.RULE.078",
+      "refId": "CORE.COV.001.007.RULE.SYNTH078",
       "fields": {
-        "refId": "CORE.COV.001.007.RULE.078",
+        "refId": "CORE.COV.001.007.RULE.SYNTH078",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Liability Coverage is present",
@@ -4158,9 +4158,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.008.RULE.079",
+      "refId": "CORE.COV.001.008.RULE.SYNTH079",
       "fields": {
-        "refId": "CORE.COV.001.008.RULE.079",
+        "refId": "CORE.COV.001.008.RULE.SYNTH079",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Liability Coverage is present",
@@ -4178,9 +4178,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.003.008.RULE.080",
+      "refId": "CORE.COV.003.008.RULE.SYNTH080",
       "fields": {
-        "refId": "CORE.COV.003.008.RULE.080",
+        "refId": "CORE.COV.003.008.RULE.SYNTH080",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Liability Coverage is present",
@@ -4198,9 +4198,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.004.RULE.081",
+      "refId": "CORE.COV.004.RULE.SYNTH081",
       "fields": {
-        "refId": "CORE.COV.004.RULE.081",
+        "refId": "CORE.COV.004.RULE.SYNTH081",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If Liability Coverage is present, and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -4218,9 +4218,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.004.RULE.082",
+      "refId": "CORE.COV.004.RULE.SYNTH082",
       "fields": {
-        "refId": "CORE.COV.004.RULE.082",
+        "refId": "CORE.COV.004.RULE.SYNTH082",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Liability Coverage is present, and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -4237,9 +4237,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.004.002.RULE.083",
+      "refId": "CORE.COV.004.002.RULE.SYNTH083",
       "fields": {
-        "refId": "CORE.COV.004.002.RULE.083",
+        "refId": "CORE.COV.004.002.RULE.SYNTH083",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Medical Payments Coverage is present",
@@ -4256,9 +4256,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.004.002.RULE.084",
+      "refId": "CORE.COV.004.002.RULE.SYNTH084",
       "fields": {
-        "refId": "CORE.COV.004.002.RULE.084",
+        "refId": "CORE.COV.004.002.RULE.SYNTH084",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 00 06 Auto Show Medical Reimbursement Endorsement is added",
@@ -4275,9 +4275,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.085",
+      "refId": "CORE.COV.009.RULE.SYNTH085",
       "fields": {
-        "refId": "CORE.COV.009.RULE.085",
+        "refId": "CORE.COV.009.RULE.SYNTH085",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Collision Coverage is present and the Stated Value Endorsement is not present",
@@ -4295,9 +4295,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.086",
+      "refId": "CORE.COV.009.RULE.SYNTH086",
       "fields": {
-        "refId": "CORE.COV.009.RULE.086",
+        "refId": "CORE.COV.009.RULE.SYNTH086",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Collision Coverage is present and the Stated Value Endorsement is present",
@@ -4315,9 +4315,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.001.RULE.087",
+      "refId": "CORE.COV.009.001.RULE.SYNTH087",
       "fields": {
-        "refId": "CORE.COV.009.001.RULE.087",
+        "refId": "CORE.COV.009.001.RULE.SYNTH087",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Physical Damage Coverage is present",
@@ -4335,9 +4335,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.002.RULE.088",
+      "refId": "CORE.COV.009.002.RULE.SYNTH088",
       "fields": {
-        "refId": "CORE.COV.009.002.RULE.088",
+        "refId": "CORE.COV.009.002.RULE.SYNTH088",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Physical Damage Coverage is present",
@@ -4355,9 +4355,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.003.RULE.089",
+      "refId": "CORE.COV.009.003.RULE.SYNTH089",
       "fields": {
-        "refId": "CORE.COV.009.003.RULE.089",
+        "refId": "CORE.COV.009.003.RULE.SYNTH089",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Physical Damage Coverage is present",
@@ -4375,9 +4375,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.004.RULE.090",
+      "refId": "CORE.COV.009.004.RULE.SYNTH090",
       "fields": {
-        "refId": "CORE.COV.009.004.RULE.090",
+        "refId": "CORE.COV.009.004.RULE.SYNTH090",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Physical Damage Coverage is present",
@@ -4395,9 +4395,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.010.RULE.091",
+      "refId": "CORE.COV.010.RULE.SYNTH091",
       "fields": {
-        "refId": "CORE.COV.010.RULE.091",
+        "refId": "CORE.COV.010.RULE.SYNTH091",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Other Than Collision Coverage is present and the Stated Value Endorsement is not present",
@@ -4415,9 +4415,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.010.RULE.092",
+      "refId": "CORE.COV.010.RULE.SYNTH092",
       "fields": {
-        "refId": "CORE.COV.010.RULE.092",
+        "refId": "CORE.COV.010.RULE.SYNTH092",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Other Than Collision Coverage is present and the Stated Value Endorsement is present",
@@ -4435,9 +4435,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.011.RULE.093",
+      "refId": "CORE.COV.011.RULE.SYNTH093",
       "fields": {
-        "refId": "CORE.COV.011.RULE.093",
+        "refId": "CORE.COV.011.RULE.SYNTH093",
         "category": "PRODUCT",
         "subCategory": "Mandatory Coverage",
         "condition": "If Collision Coverage and/or Other Than Collision Coverage is/are present",
@@ -4454,9 +4454,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.011.RULE.094",
+      "refId": "CORE.COV.011.RULE.SYNTH094",
       "fields": {
-        "refId": "CORE.COV.011.RULE.094",
+        "refId": "CORE.COV.011.RULE.SYNTH094",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 11 01 Evacuation Expense Endorsement is added",
@@ -4473,9 +4473,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.005.RULE.095",
+      "refId": "CORE.COV.005.RULE.SYNTH095",
       "fields": {
-        "refId": "CORE.COV.005.RULE.095",
+        "refId": "CORE.COV.005.RULE.SYNTH095",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If Bodily Injury Liability coverage is present and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -4492,9 +4492,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.005.RULE.096",
+      "refId": "CORE.COV.005.RULE.SYNTH096",
       "fields": {
-        "refId": "CORE.COV.005.RULE.096",
+        "refId": "CORE.COV.005.RULE.SYNTH096",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Bodily Injury Liability coverage is present and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -4511,9 +4511,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.005.RULE.097",
+      "refId": "CORE.COV.005.RULE.SYNTH097",
       "fields": {
-        "refId": "CORE.COV.005.RULE.097",
+        "refId": "CORE.COV.005.RULE.SYNTH097",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Uninsured Motorist Bodily Injury (UMBI) coverage is present",
@@ -4530,9 +4530,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.006.RULE.098",
+      "refId": "CORE.COV.006.RULE.SYNTH098",
       "fields": {
-        "refId": "CORE.COV.006.RULE.098",
+        "refId": "CORE.COV.006.RULE.SYNTH098",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If Uninsured Motorist Bodily Injury (UMBI) coverage is present, Collision Coverage and Inland Marine Coverage (AC 500 and/or AC 501) are not present, and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -4549,9 +4549,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.006.RULE.099",
+      "refId": "CORE.COV.006.RULE.SYNTH099",
       "fields": {
-        "refId": "CORE.COV.006.RULE.099",
+        "refId": "CORE.COV.006.RULE.SYNTH099",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Uninsured Motorist Bodily Injury (UMBI) coverage is present, and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -4568,9 +4568,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.006.RULE.100",
+      "refId": "CORE.COV.006.RULE.SYNTH100",
       "fields": {
-        "refId": "CORE.COV.006.RULE.100",
+        "refId": "CORE.COV.006.RULE.SYNTH100",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Uninsured Motorist Property Damage (UMPD) coverage is present",
@@ -4587,9 +4587,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.006.RULE.101",
+      "refId": "CORE.COV.006.RULE.SYNTH101",
       "fields": {
-        "refId": "CORE.COV.006.RULE.101",
+        "refId": "CORE.COV.006.RULE.SYNTH101",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Uninsured Motorist Property Damage (UMPD) coverage is present",
@@ -4606,9 +4606,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.006.RULE.102",
+      "refId": "CORE.COV.006.RULE.SYNTH102",
       "fields": {
-        "refId": "CORE.COV.006.RULE.102",
+        "refId": "CORE.COV.006.RULE.SYNTH102",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Uninsured Motorist Property Damage (UMPD) coverage is present",
@@ -4625,9 +4625,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.006.RULE.103",
+      "refId": "CORE.COV.006.RULE.SYNTH103",
       "fields": {
-        "refId": "CORE.COV.006.RULE.103",
+        "refId": "CORE.COV.006.RULE.SYNTH103",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If Uninsured Motorist Bodily Injury (UMBI) coverage is present",
@@ -4644,9 +4644,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.006.RULE.104",
+      "refId": "CORE.COV.006.RULE.SYNTH104",
       "fields": {
-        "refId": "CORE.COV.006.RULE.104",
+        "refId": "CORE.COV.006.RULE.SYNTH104",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Uninsured Motorist Property Damage (UMPD) coverage is present",
@@ -4663,9 +4663,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.005.RULE.105",
+      "refId": "CORE.COV.005.RULE.SYNTH105",
       "fields": {
-        "refId": "CORE.COV.005.RULE.105",
+        "refId": "CORE.COV.005.RULE.SYNTH105",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If a Liability CSL limit is selected and Uninsured Motorist Coverage is present",
@@ -4682,9 +4682,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.005.RULE.106",
+      "refId": "CORE.COV.005.RULE.SYNTH106",
       "fields": {
-        "refId": "CORE.COV.005.RULE.106",
+        "refId": "CORE.COV.005.RULE.SYNTH106",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If Uninsured Motorist Bodily Injury (UMBI) coverage and Uninsured Motorist Property Damage (UMPD) Coverage are selected, and an Added On or Reduced By option is selected",
@@ -4699,9 +4699,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.007.RULE.107",
+      "refId": "CORE.COV.007.RULE.SYNTH107",
       "fields": {
-        "refId": "CORE.COV.007.RULE.107",
+        "refId": "CORE.COV.007.RULE.SYNTH107",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If Bodily Injury Liability coverage is present and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -4718,9 +4718,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.007.RULE.108",
+      "refId": "CORE.COV.007.RULE.SYNTH108",
       "fields": {
-        "refId": "CORE.COV.007.RULE.108",
+        "refId": "CORE.COV.007.RULE.SYNTH108",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If Uninsured Motorist Bodily Injury (UMBI) coverage is present and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -4737,9 +4737,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.007.RULE.109",
+      "refId": "CORE.COV.007.RULE.SYNTH109",
       "fields": {
-        "refId": "CORE.COV.007.RULE.109",
+        "refId": "CORE.COV.007.RULE.SYNTH109",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Underinsured Motorist Bodily Injury (UIMBI) coverage is present",
@@ -4756,9 +4756,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.007.RULE.110",
+      "refId": "CORE.COV.007.RULE.SYNTH110",
       "fields": {
-        "refId": "CORE.COV.007.RULE.110",
+        "refId": "CORE.COV.007.RULE.SYNTH110",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Underinsured Motorist Bodily Injury (UIMBI) coverage is present",
@@ -4775,9 +4775,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.007.RULE.111",
+      "refId": "CORE.COV.007.RULE.SYNTH111",
       "fields": {
-        "refId": "CORE.COV.007.RULE.111",
+        "refId": "CORE.COV.007.RULE.SYNTH111",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If Underinsured Motorist Bodily Injury (UIMBI) coverage is present",
@@ -4794,9 +4794,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.008.RULE.112",
+      "refId": "CORE.COV.008.RULE.SYNTH112",
       "fields": {
-        "refId": "CORE.COV.008.RULE.112",
+        "refId": "CORE.COV.008.RULE.SYNTH112",
         "category": "PRODUCT",
         "subCategory": "",
         "condition": "",
@@ -4813,9 +4813,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.008.RULE.113",
+      "refId": "CORE.COV.009.008.RULE.SYNTH113",
       "fields": {
-        "refId": "CORE.COV.009.008.RULE.113",
+        "refId": "CORE.COV.009.008.RULE.SYNTH113",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage coverage is present and Stated Value is not present and the policy is not a reporting form policy",
@@ -4832,9 +4832,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.008.RULE.114",
+      "refId": "CORE.COV.009.008.RULE.SYNTH114",
       "fields": {
-        "refId": "CORE.COV.009.008.RULE.114",
+        "refId": "CORE.COV.009.008.RULE.SYNTH114",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 108 Custom Features Endorsement is added",
@@ -4851,9 +4851,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.115",
+      "refId": "CORE.COV.009.RULE.SYNTH115",
       "fields": {
-        "refId": "CORE.COV.009.RULE.115",
+        "refId": "CORE.COV.009.RULE.SYNTH115",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present and the policy is not a reporting form policy",
@@ -4870,9 +4870,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.002.RULE.116",
+      "refId": "CORE.COV.009.002.RULE.SYNTH116",
       "fields": {
-        "refId": "CORE.COV.009.002.RULE.116",
+        "refId": "CORE.COV.009.002.RULE.SYNTH116",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present",
@@ -4889,9 +4889,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.002.RULE.117",
+      "refId": "CORE.COV.009.002.RULE.SYNTH117",
       "fields": {
-        "refId": "CORE.COV.009.002.RULE.117",
+        "refId": "CORE.COV.009.002.RULE.SYNTH117",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If AC 302 AZ Full Safety Glass Endorsement is selected",
@@ -4908,9 +4908,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.118",
+      "refId": "CORE.COV.001.RULE.SYNTH118",
       "fields": {
-        "refId": "CORE.COV.001.RULE.118",
+        "refId": "CORE.COV.001.RULE.SYNTH118",
         "category": "FORMS",
         "subCategory": "Conditional Form",
         "condition": "If Liability coverage is present, the vehicle type is applicable as shown in the Vehicle Type Applicability Reference, and one or both of the following is/are true; 1) the Vehicle is 'Owned & Make Payments' and/or 2) the Policy has an Additional Insured(s)",
@@ -4927,9 +4927,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.119",
+      "refId": "CORE.COV.001.RULE.SYNTH119",
       "fields": {
-        "refId": "CORE.COV.001.RULE.119",
+        "refId": "CORE.COV.001.RULE.SYNTH119",
         "category": "FORMS",
         "subCategory": "Conditional Form",
         "condition": "If Liability coverage is present, the vehicle type is applicable as shown in the Vehicle Type Applicability Reference, and the Vehicle is Leased",
@@ -4946,9 +4946,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.120",
+      "refId": "CORE.COV.009.RULE.SYNTH120",
       "fields": {
-        "refId": "CORE.COV.009.RULE.120",
+        "refId": "CORE.COV.009.RULE.SYNTH120",
         "category": "FORMS",
         "subCategory": "Conditional Form",
         "condition": "If Physical Damage Coverage is present and the vehicle is designated as Owned and Make Payments",
@@ -4965,9 +4965,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.121",
+      "refId": "CORE.LOB.001.RULE.SYNTH121",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.121",
+        "refId": "CORE.LOB.001.RULE.SYNTH121",
         "category": "FORMS",
         "subCategory": "Conditional Form",
         "condition": "If Vehicle Usage is Business and the policy is not a Reporting Form policy",
@@ -4984,9 +4984,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.LOB.001.RULE.122",
+      "refId": "CORE.LOB.001.RULE.SYNTH122",
       "fields": {
-        "refId": "CORE.LOB.001.RULE.122",
+        "refId": "CORE.LOB.001.RULE.SYNTH122",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If AC 101 Business Use Endorsement is selected",
@@ -5003,9 +5003,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.123",
+      "refId": "CORE.COV.009.RULE.SYNTH123",
       "fields": {
-        "refId": "CORE.COV.009.RULE.123",
+        "refId": "CORE.COV.009.RULE.SYNTH123",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Liability or Physical Damage Coverage is present",
@@ -5022,9 +5022,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.124",
+      "refId": "CORE.COV.009.RULE.SYNTH124",
       "fields": {
-        "refId": "CORE.COV.009.RULE.124",
+        "refId": "CORE.COV.009.RULE.SYNTH124",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference and the policy is not a reporting form policy",
@@ -5041,9 +5041,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.125",
+      "refId": "CORE.COV.009.RULE.SYNTH125",
       "fields": {
-        "refId": "CORE.COV.009.RULE.125",
+        "refId": "CORE.COV.009.RULE.SYNTH125",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present (Collision and/or Other Than Collision), the vehicle is under active restoration or is a new build, and none of the following endorsements are selected: Stated Value; Special Build, and the policy is not a reporting form policy",
@@ -5060,9 +5060,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.126",
+      "refId": "CORE.COV.009.RULE.SYNTH126",
       "fields": {
-        "refId": "CORE.COV.009.RULE.126",
+        "refId": "CORE.COV.009.RULE.SYNTH126",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If AC 116 Vehicle Under Construction endorsement is selected",
@@ -5079,9 +5079,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.010.RULE.127",
+      "refId": "CORE.COV.009.010.RULE.SYNTH127",
       "fields": {
-        "refId": "CORE.COV.009.010.RULE.127",
+        "refId": "CORE.COV.009.010.RULE.SYNTH127",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If AC 116 Vehicle Under Construction endorsement is selected",
@@ -5098,9 +5098,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.128",
+      "refId": "CORE.COV.009.RULE.SYNTH128",
       "fields": {
-        "refId": "CORE.COV.009.RULE.128",
+        "refId": "CORE.COV.009.RULE.SYNTH128",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present (Collision and/or Other Than Collision), the vehicle is 10 model years in age or older, the policy is not a reporting form policy, and none of the following endorsements are selected: Stated Value; Special Build",
@@ -5117,9 +5117,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.129",
+      "refId": "CORE.COV.009.RULE.SYNTH129",
       "fields": {
-        "refId": "CORE.COV.009.RULE.129",
+        "refId": "CORE.COV.009.RULE.SYNTH129",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present (Collision and/or Other Than Collision) and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference, none of the other Motorsports Advantage endorsements (AC 125, AC 126, AC 127) is selected, and the policy is not a reporting form policy",
@@ -5136,9 +5136,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.130",
+      "refId": "CORE.COV.009.RULE.SYNTH130",
       "fields": {
-        "refId": "CORE.COV.009.RULE.130",
+        "refId": "CORE.COV.009.RULE.SYNTH130",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present (Collision and/or Other Than Collision), Liability Coverage is present, and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference, none of the other Motorsports Advantage endorsements (AC 115, AC 126, AC 127) is selected, and the policy is not a reporting form policy",
@@ -5155,9 +5155,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.131",
+      "refId": "CORE.COV.009.RULE.SYNTH131",
       "fields": {
-        "refId": "CORE.COV.009.RULE.131",
+        "refId": "CORE.COV.009.RULE.SYNTH131",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present (Collision and/or Other Than Collision), Liability Coverage is present, and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference, none of the other Motorsports Advantage endorsements (AC 115, AC 125, AC 127) is selected, and the policy is not a reporting form policy",
@@ -5174,9 +5174,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.132",
+      "refId": "CORE.COV.009.RULE.SYNTH132",
       "fields": {
-        "refId": "CORE.COV.009.RULE.132",
+        "refId": "CORE.COV.009.RULE.SYNTH132",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present (Collision and/or Other Than Collision), Liability Coverage is present, and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference, none of the other Motorsports Advantage endorsements (AC 115, AC 125, AC 126) is selected, and the policy is not a reporting form policy",
@@ -5193,9 +5193,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.010.RULE.133",
+      "refId": "CORE.COV.001.010.RULE.SYNTH133",
       "fields": {
-        "refId": "CORE.COV.001.010.RULE.133",
+        "refId": "CORE.COV.001.010.RULE.SYNTH133",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5215,9 +5215,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.011.RULE.134",
+      "refId": "CORE.COV.001.011.RULE.SYNTH134",
       "fields": {
-        "refId": "CORE.COV.001.011.RULE.134",
+        "refId": "CORE.COV.001.011.RULE.SYNTH134",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5237,9 +5237,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.004.RULE.135",
+      "refId": "CORE.COV.009.004.RULE.SYNTH135",
       "fields": {
-        "refId": "CORE.COV.009.004.RULE.135",
+        "refId": "CORE.COV.009.004.RULE.SYNTH135",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5259,9 +5259,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.004.RULE.136",
+      "refId": "CORE.COV.009.004.RULE.SYNTH136",
       "fields": {
-        "refId": "CORE.COV.009.004.RULE.136",
+        "refId": "CORE.COV.009.004.RULE.SYNTH136",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If the policy insures 6 or more vehicles with a total minimum value of $250,000; or any number of vehicles with a total minimum value of $500,000",
@@ -5278,9 +5278,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.009.RULE.137",
+      "refId": "CORE.COV.009.009.RULE.SYNTH137",
       "fields": {
-        "refId": "CORE.COV.009.009.RULE.137",
+        "refId": "CORE.COV.009.009.RULE.SYNTH137",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5300,9 +5300,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.010.RULE.138",
+      "refId": "CORE.COV.009.010.RULE.SYNTH138",
       "fields": {
-        "refId": "CORE.COV.009.010.RULE.138",
+        "refId": "CORE.COV.009.010.RULE.SYNTH138",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5322,9 +5322,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.006.RULE.139",
+      "refId": "CORE.COV.009.006.RULE.SYNTH139",
       "fields": {
-        "refId": "CORE.COV.009.006.RULE.139",
+        "refId": "CORE.COV.009.006.RULE.SYNTH139",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5344,9 +5344,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.011.RULE.140",
+      "refId": "CORE.COV.009.011.RULE.SYNTH140",
       "fields": {
-        "refId": "CORE.COV.009.011.RULE.140",
+        "refId": "CORE.COV.009.011.RULE.SYNTH140",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5366,9 +5366,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.012.RULE.141",
+      "refId": "CORE.COV.009.012.RULE.SYNTH141",
       "fields": {
-        "refId": "CORE.COV.009.012.RULE.141",
+        "refId": "CORE.COV.009.012.RULE.SYNTH141",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5388,9 +5388,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.013.RULE.142",
+      "refId": "CORE.COV.009.013.RULE.SYNTH142",
       "fields": {
-        "refId": "CORE.COV.009.013.RULE.142",
+        "refId": "CORE.COV.009.013.RULE.SYNTH142",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5410,9 +5410,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.014.RULE.143",
+      "refId": "CORE.COV.009.014.RULE.SYNTH143",
       "fields": {
-        "refId": "CORE.COV.009.014.RULE.143",
+        "refId": "CORE.COV.009.014.RULE.SYNTH143",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5432,9 +5432,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.015.RULE.144",
+      "refId": "CORE.COV.009.015.RULE.SYNTH144",
       "fields": {
-        "refId": "CORE.COV.009.015.RULE.144",
+        "refId": "CORE.COV.009.015.RULE.SYNTH144",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 115 Motorsports Advantage; AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5454,9 +5454,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.004.003.RULE.145",
+      "refId": "CORE.COV.004.003.RULE.SYNTH145",
       "fields": {
-        "refId": "CORE.COV.004.003.RULE.145",
+        "refId": "CORE.COV.004.003.RULE.SYNTH145",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 125 Motorsports Advantage + Autocross; AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5475,9 +5475,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.146",
+      "refId": "CORE.COV.009.RULE.SYNTH146",
       "fields": {
-        "refId": "CORE.COV.009.RULE.146",
+        "refId": "CORE.COV.009.RULE.SYNTH146",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If any of the following forms are selected: AC 125 Motorsports Advantage + Autocross; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5495,9 +5495,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.016.RULE.147",
+      "refId": "CORE.COV.009.016.RULE.SYNTH147",
       "fields": {
-        "refId": "CORE.COV.009.016.RULE.147",
+        "refId": "CORE.COV.009.016.RULE.SYNTH147",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If any of the following forms are selected: AC 126 Motorsports Advantage + HPDE; AC 127 Motorsports Advantage + Autocross + HPDE",
@@ -5515,9 +5515,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.023.RULE.148",
+      "refId": "CORE.COV.009.023.RULE.SYNTH148",
       "fields": {
-        "refId": "CORE.COV.009.023.RULE.148",
+        "refId": "CORE.COV.009.023.RULE.SYNTH148",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present (Collision and/or Other Than Collision), and none of the following endorsements are selected: Stated Value, Cherished Salvage, and Vehicle Under Construction, and the policy is not a reporting form policy",
@@ -5534,9 +5534,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.023.RULE.149",
+      "refId": "CORE.COV.009.023.RULE.SYNTH149",
       "fields": {
-        "refId": "CORE.COV.009.023.RULE.149",
+        "refId": "CORE.COV.009.023.RULE.SYNTH149",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If AC 128 Special Build is selected",
@@ -5553,9 +5553,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.150",
+      "refId": "CORE.COV.009.RULE.SYNTH150",
       "fields": {
-        "refId": "CORE.COV.009.RULE.150",
+        "refId": "CORE.COV.009.RULE.SYNTH150",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Physical Damage Coverage is present (Collision and/or Other Than Collision), and none of the following endorsements are selected: Cherished Salvage; Custom Features; Special Build; and Vehicle Under Construction, and the policy is not a reporting form policy",
@@ -5572,9 +5572,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.151",
+      "refId": "CORE.COV.009.RULE.SYNTH151",
       "fields": {
-        "refId": "CORE.COV.009.RULE.151",
+        "refId": "CORE.COV.009.RULE.SYNTH151",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If AC 129 Stated Value is selected",
@@ -5591,9 +5591,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.152",
+      "refId": "CORE.COV.001.RULE.SYNTH152",
       "fields": {
-        "refId": "CORE.COV.001.RULE.152",
+        "refId": "CORE.COV.001.RULE.SYNTH152",
         "category": "FORMS",
         "subCategory": "Conditional Form",
         "condition": "If Collision and Other Than Collision Coverage are present, and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -5610,9 +5610,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.009.RULE.153",
+      "refId": "CORE.COV.001.009.RULE.SYNTH153",
       "fields": {
-        "refId": "CORE.COV.001.009.RULE.153",
+        "refId": "CORE.COV.001.009.RULE.SYNTH153",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 124 Collector Camper Trailer Endorsement is selected",
@@ -5629,9 +5629,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.004.001.RULE.154",
+      "refId": "CORE.COV.004.001.RULE.SYNTH154",
       "fields": {
-        "refId": "CORE.COV.004.001.RULE.154",
+        "refId": "CORE.COV.004.001.RULE.SYNTH154",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 124 Collector Camper Trailer Endorsement is selected",
@@ -5648,9 +5648,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.005.RULE.155",
+      "refId": "CORE.COV.009.005.RULE.SYNTH155",
       "fields": {
-        "refId": "CORE.COV.009.005.RULE.155",
+        "refId": "CORE.COV.009.005.RULE.SYNTH155",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 124 Collector Camper Trailer Endorsement is selected",
@@ -5667,9 +5667,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.007.RULE.156",
+      "refId": "CORE.COV.009.007.RULE.SYNTH156",
       "fields": {
-        "refId": "CORE.COV.009.007.RULE.156",
+        "refId": "CORE.COV.009.007.RULE.SYNTH156",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 124 Collector Camper Trailer Endorsement is selected",
@@ -5686,9 +5686,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.RULE.157",
+      "refId": "CORE.COV.013.RULE.SYNTH157",
       "fields": {
-        "refId": "CORE.COV.013.RULE.157",
+        "refId": "CORE.COV.013.RULE.SYNTH157",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If the Product is Core and the policy includes at least one vehicle that is not a Camper Trailer",
@@ -5707,9 +5707,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.RULE.158",
+      "refId": "CORE.COV.013.RULE.SYNTH158",
       "fields": {
-        "refId": "CORE.COV.013.RULE.158",
+        "refId": "CORE.COV.013.RULE.SYNTH158",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5728,9 +5728,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.RULE.159",
+      "refId": "CORE.COV.013.RULE.SYNTH159",
       "fields": {
-        "refId": "CORE.COV.013.RULE.159",
+        "refId": "CORE.COV.013.RULE.SYNTH159",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5749,9 +5749,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.001.RULE.160",
+      "refId": "CORE.COV.013.001.RULE.SYNTH160",
       "fields": {
-        "refId": "CORE.COV.013.001.RULE.160",
+        "refId": "CORE.COV.013.001.RULE.SYNTH160",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5770,9 +5770,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.002.RULE.161",
+      "refId": "CORE.COV.013.002.RULE.SYNTH161",
       "fields": {
-        "refId": "CORE.COV.013.002.RULE.161",
+        "refId": "CORE.COV.013.002.RULE.SYNTH161",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5791,9 +5791,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.003.RULE.162",
+      "refId": "CORE.COV.013.003.RULE.SYNTH162",
       "fields": {
-        "refId": "CORE.COV.013.003.RULE.162",
+        "refId": "CORE.COV.013.003.RULE.SYNTH162",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5812,9 +5812,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.004.RULE.163",
+      "refId": "CORE.COV.013.004.RULE.SYNTH163",
       "fields": {
-        "refId": "CORE.COV.013.004.RULE.163",
+        "refId": "CORE.COV.013.004.RULE.SYNTH163",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5833,9 +5833,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.005.RULE.164",
+      "refId": "CORE.COV.013.005.RULE.SYNTH164",
       "fields": {
-        "refId": "CORE.COV.013.005.RULE.164",
+        "refId": "CORE.COV.013.005.RULE.SYNTH164",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5854,9 +5854,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.006.RULE.165",
+      "refId": "CORE.COV.013.006.RULE.SYNTH165",
       "fields": {
-        "refId": "CORE.COV.013.006.RULE.165",
+        "refId": "CORE.COV.013.006.RULE.SYNTH165",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5875,9 +5875,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.007.RULE.166",
+      "refId": "CORE.COV.013.007.RULE.SYNTH166",
       "fields": {
-        "refId": "CORE.COV.013.007.RULE.166",
+        "refId": "CORE.COV.013.007.RULE.SYNTH166",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5896,9 +5896,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.008.RULE.167",
+      "refId": "CORE.COV.013.008.RULE.SYNTH167",
       "fields": {
-        "refId": "CORE.COV.013.008.RULE.167",
+        "refId": "CORE.COV.013.008.RULE.SYNTH167",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5917,9 +5917,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.013.009.RULE.168",
+      "refId": "CORE.COV.013.009.RULE.SYNTH168",
       "fields": {
-        "refId": "CORE.COV.013.009.RULE.168",
+        "refId": "CORE.COV.013.009.RULE.SYNTH168",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 500 Collectible Personal Property Endorsement is selected",
@@ -5938,9 +5938,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.169",
+      "refId": "CORE.COV.009.RULE.SYNTH169",
       "fields": {
-        "refId": "CORE.COV.009.RULE.169",
+        "refId": "CORE.COV.009.RULE.SYNTH169",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Collision and/or Other Than Collision Coverage is present and the policy is not a reporting form policy",
@@ -5957,9 +5957,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.170",
+      "refId": "CORE.COV.009.RULE.SYNTH170",
       "fields": {
-        "refId": "CORE.COV.009.RULE.170",
+        "refId": "CORE.COV.009.RULE.SYNTH170",
         "category": "RATING",
         "subCategory": "Minimum / Additional / Return Premium",
         "condition": "If AC 110 Foreign Coverage Endorsement is selected and the policy is not PCS",
@@ -5976,9 +5976,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.021.RULE.171",
+      "refId": "CORE.COV.009.021.RULE.SYNTH171",
       "fields": {
-        "refId": "CORE.COV.009.021.RULE.171",
+        "refId": "CORE.COV.009.021.RULE.SYNTH171",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 110 Foreign Coverage Endorsement is selected",
@@ -5995,9 +5995,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.172",
+      "refId": "CORE.COV.009.RULE.SYNTH172",
       "fields": {
-        "refId": "CORE.COV.009.RULE.172",
+        "refId": "CORE.COV.009.RULE.SYNTH172",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If the vehicle type is applicable as shown in the Vehicle Type Applicability Reference; and the policy is not a Reporting Form Policy; and Collision Coverage is not selected",
@@ -6014,9 +6014,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.173",
+      "refId": "CORE.COV.009.RULE.SYNTH173",
       "fields": {
-        "refId": "CORE.COV.009.RULE.173",
+        "refId": "CORE.COV.009.RULE.SYNTH173",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If a Motorsports or Pro-Street vehicle has an engine size exceeding standard eligibility criteria, or is powered by nitrous oxide or brown alcohol, and the policy is not a reporting form policy",
@@ -6033,9 +6033,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.022.RULE.174",
+      "refId": "CORE.COV.009.022.RULE.SYNTH174",
       "fields": {
-        "refId": "CORE.COV.009.022.RULE.174",
+        "refId": "CORE.COV.009.022.RULE.SYNTH174",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 111 Limited Trailer and Paddock Collision Coverage is selected",
@@ -6052,9 +6052,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.175",
+      "refId": "CORE.COV.001.RULE.SYNTH175",
       "fields": {
-        "refId": "CORE.COV.001.RULE.175",
+        "refId": "CORE.COV.001.RULE.SYNTH175",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If AC 113 Traveling Collector and AC 400 Value-Added are not selected and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -6071,9 +6071,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.010.RULE.176",
+      "refId": "CORE.COV.001.010.RULE.SYNTH176",
       "fields": {
-        "refId": "CORE.COV.001.010.RULE.176",
+        "refId": "CORE.COV.001.010.RULE.SYNTH176",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 114 Legendary Ride Endorsement is selected",
@@ -6090,9 +6090,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.009.RULE.177",
+      "refId": "CORE.COV.009.009.RULE.SYNTH177",
       "fields": {
-        "refId": "CORE.COV.009.009.RULE.177",
+        "refId": "CORE.COV.009.009.RULE.SYNTH177",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 114 Legendary Ride Endorsement is selected",
@@ -6109,9 +6109,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.010.RULE.178",
+      "refId": "CORE.COV.009.010.RULE.SYNTH178",
       "fields": {
-        "refId": "CORE.COV.009.010.RULE.178",
+        "refId": "CORE.COV.009.010.RULE.SYNTH178",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 114 Legendary Ride Endorsement is selected",
@@ -6128,9 +6128,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.011.RULE.179",
+      "refId": "CORE.COV.009.011.RULE.SYNTH179",
       "fields": {
-        "refId": "CORE.COV.009.011.RULE.179",
+        "refId": "CORE.COV.009.011.RULE.SYNTH179",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 114 Legendary Ride Endorsement is selected",
@@ -6147,9 +6147,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.014.RULE.180",
+      "refId": "CORE.COV.009.014.RULE.SYNTH180",
       "fields": {
-        "refId": "CORE.COV.009.014.RULE.180",
+        "refId": "CORE.COV.009.014.RULE.SYNTH180",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 114 Legendary Ride Endorsement is selected",
@@ -6166,9 +6166,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.004.RULE.181",
+      "refId": "CORE.COV.009.004.RULE.SYNTH181",
       "fields": {
-        "refId": "CORE.COV.009.004.RULE.181",
+        "refId": "CORE.COV.009.004.RULE.SYNTH181",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 114 Legendary Ride Endorsement is selected",
@@ -6185,9 +6185,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.017.RULE.182",
+      "refId": "CORE.COV.009.017.RULE.SYNTH182",
       "fields": {
-        "refId": "CORE.COV.009.017.RULE.182",
+        "refId": "CORE.COV.009.017.RULE.SYNTH182",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 114 Legendary Ride Endorsement is selected",
@@ -6204,9 +6204,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.011.RULE.183",
+      "refId": "CORE.COV.001.011.RULE.SYNTH183",
       "fields": {
-        "refId": "CORE.COV.001.011.RULE.183",
+        "refId": "CORE.COV.001.011.RULE.SYNTH183",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 114 Legendary Ride Endorsement is selected",
@@ -6223,9 +6223,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.184",
+      "refId": "CORE.COV.001.RULE.SYNTH184",
       "fields": {
-        "refId": "CORE.COV.001.RULE.184",
+        "refId": "CORE.COV.001.RULE.SYNTH184",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If AC 114 Legendary Ride and AC 400 Value-Added are not selected and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -6242,9 +6242,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.010.RULE.185",
+      "refId": "CORE.COV.001.010.RULE.SYNTH185",
       "fields": {
-        "refId": "CORE.COV.001.010.RULE.185",
+        "refId": "CORE.COV.001.010.RULE.SYNTH185",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 113 Traveling Collector Endorsement is selected",
@@ -6261,9 +6261,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.011.RULE.186",
+      "refId": "CORE.COV.001.011.RULE.SYNTH186",
       "fields": {
-        "refId": "CORE.COV.001.011.RULE.186",
+        "refId": "CORE.COV.001.011.RULE.SYNTH186",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 113 Traveling Collector Endorsement is selected",
@@ -6280,9 +6280,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.010.RULE.187",
+      "refId": "CORE.COV.009.010.RULE.SYNTH187",
       "fields": {
-        "refId": "CORE.COV.009.010.RULE.187",
+        "refId": "CORE.COV.009.010.RULE.SYNTH187",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 113 Traveling Collector Endorsement is selected",
@@ -6299,9 +6299,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.011.RULE.188",
+      "refId": "CORE.COV.009.011.RULE.SYNTH188",
       "fields": {
-        "refId": "CORE.COV.009.011.RULE.188",
+        "refId": "CORE.COV.009.011.RULE.SYNTH188",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 113 Traveling Collector Endorsement is selected",
@@ -6318,9 +6318,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.014.RULE.189",
+      "refId": "CORE.COV.009.014.RULE.SYNTH189",
       "fields": {
-        "refId": "CORE.COV.009.014.RULE.189",
+        "refId": "CORE.COV.009.014.RULE.SYNTH189",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 113 Traveling Collector Endorsement is selected",
@@ -6337,9 +6337,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.004.RULE.190",
+      "refId": "CORE.COV.009.004.RULE.SYNTH190",
       "fields": {
-        "refId": "CORE.COV.009.004.RULE.190",
+        "refId": "CORE.COV.009.004.RULE.SYNTH190",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 113 Traveling Collector Endorsement is selected",
@@ -6356,9 +6356,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.009.RULE.191",
+      "refId": "CORE.COV.009.009.RULE.SYNTH191",
       "fields": {
-        "refId": "CORE.COV.009.009.RULE.191",
+        "refId": "CORE.COV.009.009.RULE.SYNTH191",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 113 Traveling Collector Endorsement is selected",
@@ -6375,9 +6375,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.192",
+      "refId": "CORE.COV.009.RULE.SYNTH192",
       "fields": {
-        "refId": "CORE.COV.009.RULE.192",
+        "refId": "CORE.COV.009.RULE.SYNTH192",
         "category": "FORMS",
         "subCategory": "Conditional Form",
         "condition": "If Liability is present and the vehicle type is applicable as shown in the Vehicle Type Applicability Reference",
@@ -6394,9 +6394,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.002.RULE.193",
+      "refId": "CORE.COV.002.RULE.SYNTH193",
       "fields": {
-        "refId": "CORE.COV.002.RULE.193",
+        "refId": "CORE.COV.002.RULE.SYNTH193",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 103 Collector Motorcycle Endorsement is selected",
@@ -6413,9 +6413,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.002.001.RULE.194",
+      "refId": "CORE.COV.002.001.RULE.SYNTH194",
       "fields": {
-        "refId": "CORE.COV.002.001.RULE.194",
+        "refId": "CORE.COV.002.001.RULE.SYNTH194",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If AC 103 Collector Motorcycle Endorsement is selected",
@@ -6432,9 +6432,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.002.RULE.195",
+      "refId": "CORE.COV.002.RULE.SYNTH195",
       "fields": {
-        "refId": "CORE.COV.002.RULE.195",
+        "refId": "CORE.COV.002.RULE.SYNTH195",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If a Bodily Injury Liability limit is selected and Motorcycle Passenger Liability Coverage is present",
@@ -6451,9 +6451,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.002.RULE.196",
+      "refId": "CORE.COV.002.RULE.SYNTH196",
       "fields": {
-        "refId": "CORE.COV.002.RULE.196",
+        "refId": "CORE.COV.002.RULE.SYNTH196",
         "category": "RATING",
         "subCategory": "Limits / Deductibles",
         "condition": "If a Liability CSL limit is selected and Motorcycle Passenger Liability Coverage is present",
@@ -6470,9 +6470,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.197",
+      "refId": "CORE.COV.009.RULE.SYNTH197",
       "fields": {
-        "refId": "CORE.COV.009.RULE.197",
+        "refId": "CORE.COV.009.RULE.SYNTH197",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If both Liability Coverage and Physical Damage Coverage are present (Value-Added cannot be added on a Liability-only policy)",
@@ -6489,9 +6489,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.RULE.198",
+      "refId": "CORE.COV.009.RULE.SYNTH198",
       "fields": {
-        "refId": "CORE.COV.009.RULE.198",
+        "refId": "CORE.COV.009.RULE.SYNTH198",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If the policy insures 6 or more vehicles with a total minimum value of $250,000; or any number of vehicles with a total minimum value of $500,000",
@@ -6508,9 +6508,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.RULE.199",
+      "refId": "CORE.COV.001.RULE.SYNTH199",
       "fields": {
-        "refId": "CORE.COV.001.RULE.199",
+        "refId": "CORE.COV.001.RULE.SYNTH199",
         "category": "FORMS",
         "subCategory": "Conditional Form",
         "condition": "If the policyholder is PCS (Permanent Change of Station)",
@@ -6527,9 +6527,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.006.RULE.200",
+      "refId": "CORE.COV.001.006.RULE.SYNTH200",
       "fields": {
-        "refId": "CORE.COV.001.006.RULE.200",
+        "refId": "CORE.COV.001.006.RULE.SYNTH200",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 402 Temporary Excess Worldwide Liability is selected",
@@ -6546,9 +6546,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.001.RULE.201",
+      "refId": "CORE.COV.009.001.RULE.SYNTH201",
       "fields": {
-        "refId": "CORE.COV.009.001.RULE.201",
+        "refId": "CORE.COV.009.001.RULE.SYNTH201",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6565,9 +6565,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.004.RULE.202",
+      "refId": "CORE.COV.009.004.RULE.SYNTH202",
       "fields": {
-        "refId": "CORE.COV.009.004.RULE.202",
+        "refId": "CORE.COV.009.004.RULE.SYNTH202",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6584,9 +6584,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.003.RULE.203",
+      "refId": "CORE.COV.009.003.RULE.SYNTH203",
       "fields": {
-        "refId": "CORE.COV.009.003.RULE.203",
+        "refId": "CORE.COV.009.003.RULE.SYNTH203",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6603,9 +6603,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.009.RULE.204",
+      "refId": "CORE.COV.009.009.RULE.SYNTH204",
       "fields": {
-        "refId": "CORE.COV.009.009.RULE.204",
+        "refId": "CORE.COV.009.009.RULE.SYNTH204",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6622,9 +6622,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.019.RULE.205",
+      "refId": "CORE.COV.009.019.RULE.SYNTH205",
       "fields": {
-        "refId": "CORE.COV.009.019.RULE.205",
+        "refId": "CORE.COV.009.019.RULE.SYNTH205",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6641,9 +6641,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.010.RULE.206",
+      "refId": "CORE.COV.001.010.RULE.SYNTH206",
       "fields": {
-        "refId": "CORE.COV.001.010.RULE.206",
+        "refId": "CORE.COV.001.010.RULE.SYNTH206",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6660,9 +6660,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.001.011.RULE.207",
+      "refId": "CORE.COV.001.011.RULE.SYNTH207",
       "fields": {
-        "refId": "CORE.COV.001.011.RULE.207",
+        "refId": "CORE.COV.001.011.RULE.SYNTH207",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6679,9 +6679,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.010.RULE.208",
+      "refId": "CORE.COV.009.010.RULE.SYNTH208",
       "fields": {
-        "refId": "CORE.COV.009.010.RULE.208",
+        "refId": "CORE.COV.009.010.RULE.SYNTH208",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6698,9 +6698,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.017.RULE.209",
+      "refId": "CORE.COV.009.017.RULE.SYNTH209",
       "fields": {
-        "refId": "CORE.COV.009.017.RULE.209",
+        "refId": "CORE.COV.009.017.RULE.SYNTH209",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6717,9 +6717,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.011.RULE.210",
+      "refId": "CORE.COV.009.011.RULE.SYNTH210",
       "fields": {
-        "refId": "CORE.COV.009.011.RULE.210",
+        "refId": "CORE.COV.009.011.RULE.SYNTH210",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6736,9 +6736,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.014.RULE.211",
+      "refId": "CORE.COV.009.014.RULE.SYNTH211",
       "fields": {
-        "refId": "CORE.COV.009.014.RULE.211",
+        "refId": "CORE.COV.009.014.RULE.SYNTH211",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6755,9 +6755,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.018.RULE.212",
+      "refId": "CORE.COV.009.018.RULE.SYNTH212",
       "fields": {
-        "refId": "CORE.COV.009.018.RULE.212",
+        "refId": "CORE.COV.009.018.RULE.SYNTH212",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6774,9 +6774,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.009.020.RULE.213",
+      "refId": "CORE.COV.009.020.RULE.SYNTH213",
       "fields": {
-        "refId": "CORE.COV.009.020.RULE.213",
+        "refId": "CORE.COV.009.020.RULE.SYNTH213",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 400 Value-Added is selected",
@@ -6793,9 +6793,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.012.RULE.214",
+      "refId": "CORE.COV.012.RULE.SYNTH214",
       "fields": {
-        "refId": "CORE.COV.012.RULE.214",
+        "refId": "CORE.COV.012.RULE.SYNTH214",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Liability or Physical Damage Coverage is present",
@@ -6813,9 +6813,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.012.001.RULE.215",
+      "refId": "CORE.COV.012.001.RULE.SYNTH215",
       "fields": {
-        "refId": "CORE.COV.012.001.RULE.215",
+        "refId": "CORE.COV.012.001.RULE.SYNTH215",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 501 Collector Vehicle Spare Parts or Tools Coverage Endorsement is selected",
@@ -6833,9 +6833,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.012.002.RULE.216",
+      "refId": "CORE.COV.012.002.RULE.SYNTH216",
       "fields": {
-        "refId": "CORE.COV.012.002.RULE.216",
+        "refId": "CORE.COV.012.002.RULE.SYNTH216",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 501 Collector Vehicle Spare Parts or Tools Coverage Endorsement is selected",
@@ -6853,9 +6853,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.012.003.RULE.217",
+      "refId": "CORE.COV.012.003.RULE.SYNTH217",
       "fields": {
-        "refId": "CORE.COV.012.003.RULE.217",
+        "refId": "CORE.COV.012.003.RULE.SYNTH217",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 501 Collector Vehicle Spare Parts or Tools Coverage Endorsement is selected",
@@ -6873,9 +6873,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.010.RULE.218",
+      "refId": "CORE.COV.010.RULE.SYNTH218",
       "fields": {
-        "refId": "CORE.COV.010.RULE.218",
+        "refId": "CORE.COV.010.RULE.SYNTH218",
         "category": "FORMS",
         "subCategory": "Optional Form",
         "condition": "If Other Than Collision Coverage is present",
@@ -6892,9 +6892,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.010.024.RULE.219",
+      "refId": "CORE.COV.010.024.RULE.SYNTH219",
       "fields": {
-        "refId": "CORE.COV.010.024.RULE.219",
+        "refId": "CORE.COV.010.024.RULE.SYNTH219",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If AC 00 42 Limited Earthquake Coverage Endorsement is selected",
@@ -6911,9 +6911,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.014.RULE.220",
+      "refId": "CORE.COV.014.RULE.SYNTH220",
       "fields": {
-        "refId": "CORE.COV.014.RULE.220",
+        "refId": "CORE.COV.014.RULE.SYNTH220",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If the Product is Core",
@@ -6930,9 +6930,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.RULE.221",
+      "refId": "CORE.COV.015.RULE.SYNTH221",
       "fields": {
-        "refId": "CORE.COV.015.RULE.221",
+        "refId": "CORE.COV.015.RULE.SYNTH221",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If the Product is Core",
@@ -6960,9 +6960,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.001.RULE.222",
+      "refId": "CORE.COV.015.001.RULE.SYNTH222",
       "fields": {
-        "refId": "CORE.COV.015.001.RULE.222",
+        "refId": "CORE.COV.015.001.RULE.SYNTH222",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Personal Injury Protection Coverage is selected",
@@ -6984,9 +6984,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.002.RULE.223",
+      "refId": "CORE.COV.015.002.RULE.SYNTH223",
       "fields": {
-        "refId": "CORE.COV.015.002.RULE.223",
+        "refId": "CORE.COV.015.002.RULE.SYNTH223",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Personal Injury Protection Coverage is selected",
@@ -7009,9 +7009,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.003.RULE.224",
+      "refId": "CORE.COV.015.003.RULE.SYNTH224",
       "fields": {
-        "refId": "CORE.COV.015.003.RULE.224",
+        "refId": "CORE.COV.015.003.RULE.SYNTH224",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Personal Injury Protection Coverage is selected",
@@ -7032,9 +7032,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.004.RULE.225",
+      "refId": "CORE.COV.015.004.RULE.SYNTH225",
       "fields": {
-        "refId": "CORE.COV.015.004.RULE.225",
+        "refId": "CORE.COV.015.004.RULE.SYNTH225",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Personal Injury Protection Coverage is selected",
@@ -7054,9 +7054,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.005.RULE.226",
+      "refId": "CORE.COV.015.005.RULE.SYNTH226",
       "fields": {
-        "refId": "CORE.COV.015.005.RULE.226",
+        "refId": "CORE.COV.015.005.RULE.SYNTH226",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Personal Injury Protection Coverage is selected",
@@ -7077,9 +7077,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.006.RULE.227",
+      "refId": "CORE.COV.015.006.RULE.SYNTH227",
       "fields": {
-        "refId": "CORE.COV.015.006.RULE.227",
+        "refId": "CORE.COV.015.006.RULE.SYNTH227",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Personal Injury Protection Coverage is selected",
@@ -7096,9 +7096,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.007.RULE.228",
+      "refId": "CORE.COV.015.007.RULE.SYNTH228",
       "fields": {
-        "refId": "CORE.COV.015.007.RULE.228",
+        "refId": "CORE.COV.015.007.RULE.SYNTH228",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Personal Injury Protection Coverage is selected",
@@ -7115,9 +7115,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.008.RULE.229",
+      "refId": "CORE.COV.015.008.RULE.SYNTH229",
       "fields": {
-        "refId": "CORE.COV.015.008.RULE.229",
+        "refId": "CORE.COV.015.008.RULE.SYNTH229",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Personal Injury Protection Coverage is selected",
@@ -7134,9 +7134,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.015.010.RULE.230",
+      "refId": "CORE.COV.015.010.RULE.SYNTH230",
       "fields": {
-        "refId": "CORE.COV.015.010.RULE.230",
+        "refId": "CORE.COV.015.010.RULE.SYNTH230",
         "category": "PRODUCT",
         "subCategory": "Conditional Coverage",
         "condition": "If Personal Injury Protection Coverage is selected",
@@ -7153,9 +7153,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.016.RULE.231",
+      "refId": "CORE.COV.016.RULE.SYNTH231",
       "fields": {
-        "refId": "CORE.COV.016.RULE.231",
+        "refId": "CORE.COV.016.RULE.SYNTH231",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If the Product is Core",
@@ -7172,9 +7172,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.017.RULE.232",
+      "refId": "CORE.COV.017.RULE.SYNTH232",
       "fields": {
-        "refId": "CORE.COV.017.RULE.232",
+        "refId": "CORE.COV.017.RULE.SYNTH232",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If the Product is Core",
@@ -7191,9 +7191,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.018.RULE.233",
+      "refId": "CORE.COV.018.RULE.SYNTH233",
       "fields": {
-        "refId": "CORE.COV.018.RULE.233",
+        "refId": "CORE.COV.018.RULE.SYNTH233",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If the Product is Core",
@@ -7210,9 +7210,9 @@
     },
     {
       "kind": "rule",
-      "refId": "CORE.COV.019.RULE.234",
+      "refId": "CORE.COV.019.RULE.SYNTH234",
       "fields": {
-        "refId": "CORE.COV.019.RULE.234",
+        "refId": "CORE.COV.019.RULE.SYNTH234",
         "category": "PRODUCT",
         "subCategory": "Optional Coverage",
         "condition": "If the Product is Core",
