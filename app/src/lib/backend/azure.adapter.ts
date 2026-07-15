@@ -11,7 +11,7 @@
 // document, odd = collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
-import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, ManagedUser, PortalPolicy, PortalSummary, TenantMember, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
+import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, DuckCreekExportResult, ManagedUser, PortalPolicy, PortalSummary, TenantMember, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
 import { MutationConflictError } from './types'
 import { mapServerVersionRow, type ServerVersionRow } from './versionRead'
 
@@ -515,6 +515,14 @@ export const adapter: BackendAdapter = {
       if (opts?.cursor)     params.set('cursor', opts.cursor)
       const qs = params.size > 0 ? `?${params}` : ''
       return api<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }>(`/tenant-admin/audit${qs}`)
+    },
+  },
+
+  export: {
+    async duckcreek(productId: string): Promise<DuckCreekExportResult> {
+      return api<DuckCreekExportResult>('/export/duckcreek', {
+        method: 'POST', body: JSON.stringify({ productId }),
+      })
     },
   },
 }

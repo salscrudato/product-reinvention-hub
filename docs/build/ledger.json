@@ -280,6 +280,18 @@
       "lesson": ""
     },
     {
+      "id": "XE-09",
+      "workstream": "BACKLOG",
+      "title": "HITL capture UI + override persistence + tenant mapping memory - CUT from P3 by operator directive ('NO HITL UI, NO override capture, NO tenant mapping memory'). The non-interactive gap report ships instead: the spec 5 17-row inventory classified MAPPED (source named) / DEFAULTED (spec rule named on each) / MISSING (blocks the export, flagged-not-dropped), attached to the export result as export-manifest.json gapReport + hitl[] and rendered read-only in DuckCreekExportPanel. Un-park trigger: operator prioritization; the capture UI would let a human resolve DEFAULTED/MISSING rows (esp. spec 5 row 1 base-manuscript ids for non-PA LOBs, row 6/7 form templates + merge maps) and persist per-tenant mappings",
+      "severity": "MED",
+      "effort": "M",
+      "phase": "P5",
+      "status": "OPEN",
+      "evidence": "P3 brief (trimmed scope); spec 5 inventory is the retained requirements list; gap classifier at shared/src/export/duckcreek/gap.ts with tests",
+      "test": "n/a while backlogged; the gap-report classifier tests pin the non-interactive contract",
+      "lesson": "Cut scope survives as a ledger row referencing the spec inventory - nothing is lost, nothing is silently dropped."
+    },
+    {
       "id": "VOICE-01",
       "workstream": "BACKLOG",
       "title": "Voice feature - PARKED to backlog by operator decision. Scope as parked: voice-driven product Q&A / dictation surface over the existing grounded copilot. No in-repo spec file exists (verified: zero voice docs); this entry IS the retained record. Trigger to un-park: operator prioritization after the DC export ships and the brief/history waves land",
@@ -298,7 +310,7 @@
       "P2_experience_brief": ["EX-01", "EX-02", "BR-01", "BR-02", "BR-03", "BR-04"],
       "P3_xml_export": ["XE-01", "XE-02", "XE-03", "XE-04", "XE-05", "XE-06", "XE-08", "EX-03"],
       "P4_history": ["HI-01", "HI-02", "HI-03", "HI-04"],
-      "P5_release_deferred": ["XE-07", "VOICE-01"]
+      "P5_release_deferred": ["XE-07", "XE-09", "VOICE-01"]
     },
     "held": [],
     "doneP1": ["RE-01", "RE-02", "RE-03", "RE-04"],
