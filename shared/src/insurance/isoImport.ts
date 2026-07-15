@@ -14,7 +14,7 @@
 import type {
   Status, ReviewStatus, Lifecycle, Requirement, Source,
   FormCategory, DynamicFieldType, RuleCategory, DynamicField,
-  RTTable, LDTable, RatingStep, CoverageTerm, TermKind,
+  RTTable, LDTable, LDRow, RatingStep, CoverageTerm, TermKind,
 } from '../types'
 import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
@@ -1511,6 +1511,110 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
   }
 }
 
+// ─── Concept-linked reference tables (signature-detected; D1/D2/D7) ────────────────
+// Real carrier specs park limit/deductible tables on a general "Rule References" sheet the
+// named LD parser never claims, marked "TABLE NAME:" in COLUMN 0 with no LDTable id. This
+// pass recovers them BY CONTENT SIGNATURE (never sheet name): a grid must carry >= 2 column-0
+// "TABLE NAME:" block markers AND not already be claimed by a named parser (the `consumed`
+// set). GL/IM/PR score zero markers (their LD blocks key on "LDTable.NNN" / "LDNNN") and their
+// LD sheet sits in `consumed`, so this pass is a strict no-op on them — verified by the
+// offline import:eval diff (extraEntityRate === 0).
+
+const TABLE_NAME_MARKER = /^TABLE NAME:/i
+const RULE_ID_MARKER    = /^RULE ID:/i
+
+interface ReferenceTableDraft {
+  baseName:    string        // raw table name — matching + state-suffix extraction
+  displayName: string        // group/version-qualified name (the minted LDTable.name)
+  state?:      string        // per-state family suffix ("- AZ")
+  group?:      string        // "GROUP 1" vehicle-group qualifier (dup disambiguation)
+  covCodes:    string[]      // marker-row column codes (BI/PD/CSL/…) for a limit matrix
+  kindHint:    TermKind
+  sourceRows:  string        // "start-end", 1-based, for provenance
+  rows:        LDRow[]       // distinct numeric option values (limit/deductible amounts)
+  backLinkWas: string        // the RULE ID line's value-column header
+}
+
+/** Scan every UNCLAIMED grid for "TABLE NAME:" reference-table blocks. Returns [] unless a
+ *  grid clears the >= 2-marker signature gate — so it never fires on a GL/IM/PR workbook. */
+function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, ctx: Ctx): ReferenceTableDraft[] {
+  const drafts: ReferenceTableDraft[] = []
+  for (const grid of grids) {
+    if (consumed.has(grid.sheet)) continue
+    if (IGNORE_SHEET.test(grid.sheet) || DECOY_SHEET.test(grid.sheet) || VERSION_SUFFIX.test(grid.sheet)) continue
+    const markerRows: number[] = []
+    for (let r = 0; r < grid.cells.length; r++) {
+      if (TABLE_NAME_MARKER.test(text(cell(grid, r, 0)))) markerRows.push(r)
+    }
+    if (markerRows.length < 2) continue            // signature gate
+    ctx.recognized.push(grid.sheet)
+    const nameCount = new Map<string, number>()
+    for (let i = 0; i < markerRows.length; i++) {
+      const start = markerRows[i]!
+      const end = (markerRows[i + 1] ?? grid.cells.length) - 1
+      const baseName = text(cell(grid, start, 0)).replace(/^TABLE NAME:\s*/i, '').trim()
+      if (!baseName) continue
+      // Column-code headers of a limit/deductible matrix live on the marker row (cols 2..33).
+      const mrow = row(grid, start)
+      const covCodes: string[] = []
+      for (let c = 2; c <= 33; c++) { const s = clean(mrow[c] ?? null); if (s && !covCodes.includes(s)) covCodes.push(s) }
+      // The "RULE ID:" line follows the marker; its col-1 cell is the value-column header.
+      const ridRow = row(grid, start + 1)
+      const hasRid = RULE_ID_MARKER.test(text(ridRow[0] ?? null))
+      const backLinkWas = hasRid ? clean(ridRow[1] ?? null) : ''
+      const dataStart = start + (hasRid ? 2 : 1)
+      const state = (baseName.match(/-\s*([A-Z]{2})\s*$/) ?? [])[1]
+      let group: string | undefined
+      const rows: LDRow[] = []
+      const seen = new Set<string>()
+      for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
+        const label = clean(cell(grid, r, 0))
+        const rawVal = cell(grid, r, 1)
+        if (!label && !clean(rawVal)) continue
+        if (!group) { const gm = label.match(/^GROUP \d[^:]*/i); if (gm) group = gm[0]!.trim() }
+        const num = parseNum(rawVal)
+        if (num !== null && !seen.has(String(num)) && rows.length < 40) {
+          seen.add(String(num))
+          rows.push({ label: label || String(num), value: num })
+        }
+      }
+      // Kind from the same "hay" the reference impl scans (name + back-link + codes).
+      const hay = `${baseName} ${backLinkWas} ${covCodes.join(' ')}`.toUpperCase()
+      const kindHint: TermKind = /DEDUCTIBLE/.test(hay) ? 'DEDUCTIBLE' : /\bLIMIT/.test(hay) ? 'LIMIT' : 'OPTION'
+      let displayName = baseName + (group ? ` [${group.replace(/\s+/g, ' ')}]` : '')
+      const n = (nameCount.get(displayName) ?? 0) + 1
+      nameCount.set(displayName, n)
+      if (n > 1) displayName = `${displayName} (v${n})`
+      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, backLinkWas })
+    }
+  }
+  return drafts
+}
+
+/** Mint a stable PREFIX.TBL.NNN reference-table entity per draft (source-row order). Aligned by
+ *  index with the drafts so linkReferenceTables can back-fill coverage/rule links. The refId is
+ *  SYNTHESIZED — mintedId:true flags it so it never reads as a source id (F25). */
+function mintReferenceTables(drafts: ReferenceTableDraft[], prefix: string): PlannedEntity[] {
+  return drafts.map((d, i) => {
+    const refId = `${prefix}.TBL.${String(i + 1).padStart(3, '0')}`
+    const data: LDTable = {
+      name: d.displayName,
+      rows: d.rows,
+      defaultValue: d.rows[0]?.value,
+      valueHeader: d.backLinkWas || undefined,
+      kindHint: d.kindHint,
+      state: d.state,
+      coverageCodes: d.covCodes.length ? d.covCodes : undefined,
+      coverageRefIds: [],
+      ruleRefIds: [],
+      backLinkWas: d.backLinkWas || undefined,
+      mintedId: true,
+      linkBasis: 'derived',
+    }
+    return { docId: refId, refId, label: `${refId} — ${d.displayName}`, data: data as unknown as Record<string, unknown> }
+  })
+}
+
 // ─── Orchestration ───────────────────────────────────────────────────────────────
 
 /** Map a set of parsed ISO template worksheets onto the canonical model. The grids
@@ -1554,6 +1658,17 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   const formRules = optGrid ? parseFormRules(optGrid, ctx) : []
   const ratingProgram = rateGrid ? parseRating(rateGrid, rtTables, productRefId, lobName, ctx) : null
 
+  // ── Concept-linked reference tables (D1): recover limit/deductible tables the named LD
+  //    parser never claimed. Runs AFTER every named parser so `consumed` is complete;
+  //    signature-gated (>= 2 col-0 "TABLE NAME:" markers) + consumed-skip ⇒ strict no-op on
+  //    GL/IM/PR. The original `ldTables` still feed the (untouched) PCM-A fold below. ──
+  const consumedSheets = new Set<string>(
+    [...ctx.recognized, ldGrid?.sheet, rtGrid?.sheet].filter((s): s is string => !!s),
+  )
+  const refDrafts = detectReferenceTables(grids, consumedSheets, ctx)
+  const refPrefix = refIdPrefix(productRefId ?? firstFw?.coverages[0]?.refId ?? '') || lob.prefix
+  const refTables = refDrafts.length ? mintReferenceTables(refDrafts, refPrefix) : []
+
   // ── Build PlannedEntity[] — one per detected product. ──
   const products: PlannedEntity[] = []
   if (fwResults) {
@@ -1588,8 +1703,14 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
 
   // Assemble coverage.terms from the LD tables and the rules that reference them
   // (ledger PCM-A). coverageRefIds are globally unique, so the flat union is safe
-  // in multi-product workbooks.
+  // in multi-product workbooks. NB: the fold runs over the ORIGINAL ldTables only — the
+  // minted reference tables derive their terms through the separate, signature-gated
+  // deriveTermsFromReferenceTables path so PCM-A output stays byte-identical.
   foldLdTermsIntoCoverages(allCoverages, rules, ldTables, ctx)
+
+  // Reference tables share a single home with the real LD tables so the UI ldTables→chip
+  // lookup and the golden both see them under their minted CORE.TBL refIds.
+  const allLdTables = [...ldTables, ...refTables]
 
   const dynFieldCount = forms.reduce((n, f) => n + ((f.data['dynamicFields'] as unknown[])?.length ?? 0), 0)
   const stepCount = ratingProgram ? (ratingProgram.data['steps'] as unknown[]).length : 0
@@ -1603,7 +1724,8 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     formRules: formRules.length,
     ratingSteps: stepCount,
     rtTables: rtTables.length,
-    ldTables: ldTables.length,
+    ldTables: allLdTables.length,
+    referenceTables: refTables.length,
   }
 
   const knownSheets = new Set(ctx.recognized)
@@ -1614,7 +1736,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     product,
     products,
     coverages: allCoverages,
-    forms, rules, formRules, ratingProgram, ldTables, rtTables,
+    forms, rules, formRules, ratingProgram, ldTables: allLdTables, rtTables,
     summary: {
       productName: product ? (product.data['name'] as string) : null,
       productRefId,

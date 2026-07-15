@@ -309,6 +309,71 @@ describe('mapIsoWorkbook — rules, form rules, rating, tables', () => {
     expect(occ.data['defaultValue']).toBe(300000)
     expect((occ.data['rows'] as unknown[])).toHaveLength(3)
   })
+  it('a GL "Limits and Deductibles" sheet is NOT re-minted as reference tables (double-parse guard)', () => {
+    // The GL LD blocks key on "LDTable.NNN" at col 0 ("TABLE NAME:" only sits at col 1) and the
+    // sheet is claimed by parseLdTables → the signature detector must produce zero minted tables.
+    expect(plan.summary.counts['referenceTables']).toBe(0)
+    expect(plan.ldTables.every(t => !(t.data as Record<string, unknown>)['mintedId'])).toBe(true)
+    expect(plan.ldTables.map(t => t.refId)).toEqual(['LDTable.001', 'LDTable.002'])
+  })
+})
+
+// ─── Signature-detected reference tables (D1/D7) ──────────────────────────────────
+// Real carrier specs park limit/deductible tables on a general sheet the named LD parser
+// never claims, marked "TABLE NAME:" in column 0 with no LDTable id. Detection is by CONTENT
+// SIGNATURE (>= 2 col-0 markers), never sheet name, and mints stable PREFIX.TBL.NNN ids.
+describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', 'X'],
+    ['Active', 'CORE.LOB.001', 'Core', 'Collector Auto', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Collector Auto', 'Bodily Injury', '', 'X'],
+    ['Active', 'CORE.COV.003', 'Core', 'Collector Auto', 'Property Damage', '', 'X'],
+    ['Active', 'CORE.COV.009', 'Core', 'Collector Auto', 'Collision', '', 'X'],
+    ['Active', 'CORE.COV.010', 'Core', 'Collector Auto', 'Other Than Collision', '', 'X'],
+  ])
+  // Signature sheet: two col-0 "TABLE NAME:" blocks, no LDTable ids (CORE style).
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI', 'BI', 'PD', 'PD'],
+    ['RULE ID:', 'Liability Limit: Available (thousands; $)', 'Available', 'Default', 'Available2', 'Default2'],
+    ['Single Limits ($)', 25, 'X', 'N/A', 'X', 'N/A'],
+    ['Single Limits ($)', 50, 'X', 'X', 'N/A', 'N/A'],
+    ['TABLE NAME: Physical Damage Deductibles - AZ', '', 'Collision', 'Other Than Collision (OTC)'],
+    ['RULE ID:', 'Deductible ($)'],
+    ['GROUP 1: All vehicles', 0, 'X'],
+    ['GROUP 1: All vehicles', 500, 'X'],
+  ])
+  // A single-marker grid must NOT be detected (below the >= 2 signature gate).
+  const single = g('Notes', [['TABLE NAME: Just One Block'], ['x', 1]])
+  const plan2 = mapIsoWorkbook([fw, refs, single])
+  const minted = plan2.ldTables.filter(t => (t.data as Record<string, unknown>)['mintedId'] === true)
+  const d = (i: number) => minted[i]!.data as Record<string, unknown>
+
+  it('detects >= 2 col-0 TABLE NAME blocks and mints stable PREFIX.TBL ids in source order', () => {
+    expect(plan2.summary.counts['referenceTables']).toBe(2)
+    expect(minted.map(t => t.refId)).toEqual(['CORE.TBL.001', 'CORE.TBL.002'])
+  })
+  it('infers term kind + per-state scope from the block signature', () => {
+    expect(d(0)['kindHint']).toBe('LIMIT')
+    expect(d(0)['state']).toBe('AZ')
+    expect(d(1)['kindHint']).toBe('DEDUCTIBLE')
+    expect(d(1)['state']).toBe('AZ')
+  })
+  it('captures the marker-row coverage codes and distinct numeric option values', () => {
+    expect(d(0)['coverageCodes']).toEqual(['BI', 'PD'])
+    expect((d(0)['rows'] as { value: number }[]).map(r => r.value)).toEqual([25, 50])
+    expect((d(1)['rows'] as { value: number }[]).map(r => r.value)).toEqual([0, 500])
+  })
+  it('a single-marker grid is NOT a reference-tables sheet (signature gate)', () => {
+    expect(minted).toHaveLength(2)
+    expect(plan2.summary.sheetsSkipped).toContain('Notes')
+  })
+  it('minting is stable: same input → same ids', () => {
+    const again = mapIsoWorkbook([fw, refs, single])
+    expect(again.ldTables.filter(t => (t.data as Record<string, unknown>)['mintedId']).map(t => t.refId))
+      .toEqual(['CORE.TBL.001', 'CORE.TBL.002'])
+  })
 })
 
 // ─── Real-template column fidelity (quirks confirmed against the shipped GL books) ─

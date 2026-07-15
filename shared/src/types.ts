@@ -277,6 +277,24 @@ export interface LDTable {
   /** Source value-column header ("AVAILABLE LIMITS" / "AVAILABLE DEDUCTIBLES") —
    *  explicit evidence of what the table enumerates (PCM-A term-kind inference). */
   valueHeader?:  string
+  // ── Concept-linker additions (present ONLY on minted reference tables, e.g. CORE.TBL.NNN,
+  //    recovered by signature from a sheet the named LD parser never claimed). Absent on
+  //    every GL/IM legacy LD table, so those serialize byte-identically. ──
+  /** Inferred term kind from the table's name/back-link/column-code signature. */
+  kindHint?:       TermKind
+  /** Per-state family suffix ("- AZ") — the state this table's terms are scoped to (D7). */
+  state?:          string
+  /** Verbatim column-code headers of a limit/deductible matrix (BI, PD, CSL, …) (D1/D7). */
+  coverageCodes?:  string[]
+  /** Coverage refIds this table's terms attach to (reconstructed by concept matching). */
+  coverageRefIds?: string[]
+  /** Rule refIds that cite this table (reconstructed by concept matching). */
+  ruleRefIds?:     string[]
+  /** The verbatim back-link cell the source carried (usually the value-column header). */
+  backLinkWas?:    string
+  /** True when this table's refId was SYNTHESIZED by the importer (never a source id). */
+  mintedId?:       boolean
+  linkBasis?:      LinkBasis
 }
 
 // rows layout is preserved as-is; lookup logic lives in the concrete getter
