@@ -1,5 +1,5 @@
 {
-  "$schema": "ledger entry: {id, title, class(SILENT_LOSS|GROUNDING|MULTIPLICITY|EVAL_GAP|PDF|PERF|ARCH_ESCALATION|GENERALIZATION), severity(BLOCKING|HIGH|MED|LOW), confidence 0-1, cost(S|M|L), status(FIXED_IH1|FIXED_IH2|FIXED_IH3|OPEN|RESOLVED_PRIOR|PARTIAL_OPEN|PARKED|ESCALATE|NOT_REPRODUCIBLE), priority(1=do first, null=done), evidence, fixture, lesson}. Generalization amendment (2026-07-14): every fix obeys the TWO-FIXTURE RULE (original red fixture + one structurally different fixture green for the same reason) and the anti-overfit rules (no fixture/carrier/sheet-name/row-count branching in generic code); Phase G items get G-prefixed ids from the assumption audit.",
+  "$schema": "ledger entry: {id, title, class(SILENT_LOSS|GROUNDING|MULTIPLICITY|EVAL_GAP|PDF|PERF|ARCH_ESCALATION|GENERALIZATION), severity(BLOCKING|HIGH|MED|LOW), confidence 0-1, cost(S|M|L), status(FIXED_IH1|FIXED_IH2|FIXED_IH3|FIXED_IH4|OPEN|RESOLVED_PRIOR|PARTIAL_OPEN|PARKED|ESCALATE|NOT_REPRODUCIBLE), priority(1=do first, null=done), evidence, fixture, lesson}. Generalization amendment (2026-07-14): every fix obeys the TWO-FIXTURE RULE (original red fixture + one structurally different fixture green for the same reason) and the anti-overfit rules (no fixture/carrier/sheet-name/row-count branching in generic code); Phase G items get G-prefixed ids from the assumption audit.",
   "generatedBy": "IH1 baseline-and-triage, 2026-07-14",
   "baselineSha": "2b1f893febdfbc93152f5e5681836420954d5713",
   "entries": [
@@ -342,6 +342,19 @@
       "evidence": "See F19. Atomicity is per envelope-chunk within one partition key (BATCH_OPS=96), matching documented batch_partial semantics.",
       "fixture": "n/a",
       "lesson": "Split read-side vs write-side before assuming either."
+    },
+    {
+      "id": "M1",
+      "title": "Mixed upload skips PDFs with a count-only warning — skipped documents never named in the bundle contract, never in the conservation ledger",
+      "class": "SILENT_LOSS",
+      "severity": "MED",
+      "confidence": 1.0,
+      "cost": "S",
+      "status": "FIXED_IH4",
+      "priority": null,
+      "evidence": "Phase M analysis (IH4): unified-import.js mixed branch warned 're-upload the N PDF(s)' (count, no names, sheet:null) and the skipped docs entered neither bundle.unresolved nor counts — a filter above the conservation ledger (F22's exact lesson) on the workbook path. No test anywhere asserted on mixed-upload. FIXED_IH4 (Tier 0): runBrainToBundle gains skippedDocuments (mixed branch passes routed.filingDocs names); each skipped doc lands in F13's exact judged contract shape — named importWarnings entry + bundle.unresolved {stage:'classify', kind:'unprocessed-document', name} + counts.proposed/unresolved incremented together; aggregate mixed-upload notice unchanged. Judge ACCEPT (7 probes): consumer sweep verified UnifiedImportModal:566/571/625/718/736 renders names, WarningsPanel groups by kind, conservationMetrics identity holds (import-eval-metrics.mts:151), importProduct persists plan entities only (no double-create on later re-upload), F23 run-results round-trips the shape; corpus probe: single-type CORE/GL/IM/PR bundles byte-identical (skippedDocuments empty). NOTE: the offline corpus request mixed-workbook-plus-pdf could not exercise this path pre-F27 (its 'PDF' is a ZIP — see F27); the unit fixtures use magic-valid synthetic PDFs.",
+      "fixture": "tests/import-brain/hardening-m1-mixed-visibility.test.ts — two structurally different locks (1 workbook + 2 PDFs multi-skip; 2-workbook merge + 1 PDF with duplicate-free merge), 2/2 red pre-fix",
+      "lesson": "F22's lesson generalizes across paths: ANY skip decision above the plan ledger must deposit named unresolved items into it. The mixed-upload seam was the workbook path's instance of the same hole the filing path (F13) had already closed."
     },
     {
       "id": "F25",

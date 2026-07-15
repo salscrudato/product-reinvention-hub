@@ -135,7 +135,7 @@ function mergeStructurals(workbooks) {
 
 // ─── Run the brain over a structural model and emit the plan bundle ───────────
 
-async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, res, isoGrids }) {
+async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, res, isoGrids, skippedDocuments }) {
   const brain = getImportBrain()
   if (typeof brain.runAdaptiveImportBrain !== 'function') {
     throw new Error('Import brain not available (build:import-brain may not have run).')
@@ -172,6 +172,18 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
     routerWarnings: routerWarnings || [],
     isoPlan,
   })
+
+  // M1 (Phase M): a mixed upload SKIPS its PDFs — that skip is a filter above the
+  // conservation ledger (F22's lesson), so every skipped document becomes a review
+  // citizen in F13's exact contract shape: a NAMED unresolved item plus a named
+  // warning, with proposed/unresolved counted together. The aggregate mixed-upload
+  // notice (why the skip happened) stays at the routing seam.
+  for (const name of (skippedDocuments || [])) {
+    bundle.importWarnings.push({ kind: 'unprocessed-document', sheet: null, row: null, field: null, detail: `${name} arrived in a mixed upload — not extracted (the workbook plan was produced); re-upload it separately for filing extraction.` })
+    bundle.unresolved.push({ stage: 'classify', kind: 'unprocessed-document', name, reason: 'mixed upload: workbooks were imported; this PDF was not extracted', citation: 'mixed-upload' })
+    bundle.counts.proposed += 1
+    bundle.counts.unresolved += 1
+  }
 
   // Completeness alert: a forms-only / rating-only upload cannot stand alone as a
   // product — tell the user what is likely missing (first-principles pillars).
@@ -278,6 +290,7 @@ async function unifiedImport(req, res) {
         lobRefIdHint: body.lobRefIdHint || routed.lobRefIdHint,
         edition:      routed.edition,
         routerWarnings: routed.warnings,
+        skippedDocuments: routed.filingDocs.map((d) => d.name),
         budget, res, isoGrids,
       })
       await persistIfRequested(wbBundle)
