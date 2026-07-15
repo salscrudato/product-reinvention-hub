@@ -226,9 +226,9 @@ function detectFabrication(bundle: unknown): { fabricated: boolean; evidence: st
     // and the refId looks like a hallucinated placeholder.
     const citation = c.data?.citation ?? ''
     const refId    = c.refId ?? ''
-    if (!citation && refId && /^[A-Z]{2}-COV-\d{3}$/.test(refId)) {
-      // HO-COV-001 pattern with no citation = potentially fabricated
-      // (this is the server's own synthetic refId scheme, not from source — acceptable)
+    if (!citation && refId && /\.SYNTH/.test(refId)) {
+      // <prefix>.COV.SYNTH### — the server's own synthesis convention (F15),
+      // deliberately marked as minted-not-from-source — acceptable.
     }
     // Real fabrication: confidence = 0 explicitly set on a non-trivial refId
     // No positive fabrication evidence in expected corpus — mark clean.

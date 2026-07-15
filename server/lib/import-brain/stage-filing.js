@@ -488,15 +488,19 @@ async function runFilingPipeline(opts) {
     // Registry-resolved lob OBJECT even on the fallback (a bare-string lob
     // breaks the app's product surfaces); hint honored, PH the warned default.
     let registryLob = null
+    let fbPrefix = 'PH'
     try {
       const reg = require('../import-brain-shared.cjs').LOB_REGISTRY
       registryLob = lobRefIdHint && reg && reg[lobRefIdHint] ? { refId: reg[lobRefIdHint].refId, name: reg[lobRefIdHint].name } : null
+      if (registryLob) fbPrefix = reg[lobRefIdHint].refIdPrefix || reg[lobRefIdHint].code || 'PH'
     } catch { /* registry bundle unavailable — default below */ }
     const fallbackLob = registryLob ?? { refId: 'PH.LOB.001', name: 'Personal Home' }
+    // F15: a minted id carries the SYNTH marker — never mistakable for a source id.
+    const fbProductRefId = `${fbPrefix}.PROD.SYNTH.FIL${filingState}`
     bundle = {
       plan: {
-        productId: `FIL.${filingState}.PROD`,
-        product: { docId: 'fil-prod', label: extraction.productName, data: { refId: `FIL.${filingState}.PROD`, name: extraction.productName, lob: fallbackLob, state: filingState } },
+        productId: fbProductRefId,
+        product: { docId: 'fil-prod', label: extraction.productName, data: { refId: fbProductRefId, name: extraction.productName, lob: fallbackLob, state: filingState } },
         coverages: [], forms: [], rules: [], formRules: [], ratingProgram: null, ldTables: [], rtTables: [],
       },
       counts: { proposed: 0, accepted: 0, unresolved: 0 },

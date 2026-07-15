@@ -846,12 +846,12 @@ function reconcileFiling(ex, opts = {}) {
   const targetForm = opts.targetForm ?? "HO3";
   const state = (ex.filingState || "NJ").toUpperCase();
   const token = opts.productToken ?? tokenOf(ex.baseFormNumber, state);
-  const productRefId = `FIL.${token}.PROD`;
-  const productId = productRefId;
   const hintedLob = opts.lobRefIdHint ? LOB_REGISTRY[opts.lobRefIdHint] ?? resolveLobByRefId(opts.lobRefIdHint) : void 0;
   const lobDef = hintedLob ?? DEFAULT_LOB;
   const lobDefaulted = !hintedLob;
   const prefix = lobDef.refIdPrefix || lobDef.code || "PH";
+  const productRefId = `${prefix}.PROD.SYNTH.${token}`;
+  const productId = productRefId;
   const unresolved = [];
   const ratingItems = [];
   const tableItems = [];
@@ -867,7 +867,7 @@ function reconcileFiling(ex, opts = {}) {
     if (!rule.table) return null;
     const parsed = parseFactorTable(rule.table);
     if (parsed.rows.length === 0) return null;
-    const refId = `FIL.${token}.RT.${rule.concept}`;
+    const refId = `${prefix}.RT.SYNTH.${token}.${rule.concept}`;
     const grid = toGridTable(`${rule.title}`, parsed, rule.table.valueColumn, rule.table.lookupKeys);
     rtTables.push({ docId: dashId(refId), refId, label: `${refId} \u2014 ${rule.title}`, data: { ...grid } });
     tableItems.push({ section: "tables", label: `${rule.title} (${parsed.rows.length} rows${parsed.skipped ? `, ${parsed.skipped} skipped` : ""})`, refId, docId: dashId(refId), confidence: rule.confidence, citation: rule.citation, detail: `${rule.table.layout} \xB7 value=${rule.table.valueColumn}` });
@@ -940,7 +940,7 @@ function reconcileFiling(ex, opts = {}) {
       unresolved.push({ stage: "manual", kind: "credit-cap", name: creditCapRule.title, reason: `No maximum-credit percentage stated for form ${targetForm}.`, citation: creditCapRule.citation });
     }
   }
-  const ratingProgramRefId = `FIL.${token}.RAT.1`;
+  const ratingProgramRefId = `${prefix}.RAT.SYNTH.${token}.1`;
   const ratingProgram = steps.length > 0 ? {
     docId: dashId(ratingProgramRefId),
     refId: ratingProgramRefId,
@@ -963,7 +963,7 @@ function reconcileFiling(ex, opts = {}) {
     const dedValues = distinctColumnValues(parsed, dedRule.table.columnKeys ? dedRule.table.keyColumns[1] ?? "deductible" : dedRule.table.valueColumn);
     const opts2 = (dedRule.table.columnKeys ?? dedValues).map(Number).filter(Number.isFinite);
     if (opts2.length) {
-      dedLdRefId = `FIL.${token}.LD.deductible`;
+      dedLdRefId = `${prefix}.LD.SYNTH.${token}.DEDUCTIBLE`;
       ldTables.push({
         docId: dashId(dedLdRefId),
         refId: dedLdRefId,
@@ -978,7 +978,7 @@ function reconcileFiling(ex, opts = {}) {
   let covNum = 0;
   for (const c of ex.policyForm.coverages.items) {
     covNum++;
-    const refId = `${prefix}.${token}.COV.${String(covNum).padStart(3, "0")}`;
+    const refId = `${prefix}.COV.SYNTH${String(covNum).padStart(3, "0")}`;
     const isDwelling = /coverage a\b|dwelling/i.test(c.name);
     const terms = isDwelling && dedLdRefId ? [{ id: "ded-allperil", kind: "DEDUCTIBLE", label: "All-perils deductible", ldTableRef: dedLdRefId, default: 500, basis: "per occurrence", notes: "Section I deductible (manual Rule 406)" }] : [];
     coverages.push({
@@ -1035,7 +1035,7 @@ function reconcileFiling(ex, opts = {}) {
   let ruNum = 0;
   const pushRule = (category, subCategory, condition, outcome, formNumbers, citation, confidence) => {
     ruNum++;
-    const refId = `${prefix}.${token}.RU.${String(ruNum).padStart(3, "0")}`;
+    const refId = `${prefix}.RU.SYNTH${String(ruNum).padStart(3, "0")}`;
     rules.push({
       docId: dashId(refId),
       refId,

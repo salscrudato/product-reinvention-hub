@@ -1,5 +1,5 @@
 {
-  "$schema": "ledger entry: {id, title, class(SILENT_LOSS|GROUNDING|MULTIPLICITY|EVAL_GAP|PDF|PERF|ARCH_ESCALATION|GENERALIZATION), severity(BLOCKING|HIGH|MED|LOW), confidence 0-1, cost(S|M|L), status(FIXED_IH1|FIXED_IH2|OPEN|RESOLVED_PRIOR|PARTIAL_OPEN|PARKED|ESCALATE|NOT_REPRODUCIBLE), priority(1=do first, null=done), evidence, fixture, lesson}. Generalization amendment (2026-07-14): every fix obeys the TWO-FIXTURE RULE (original red fixture + one structurally different fixture green for the same reason) and the anti-overfit rules (no fixture/carrier/sheet-name/row-count branching in generic code); Phase G items get G-prefixed ids from the assumption audit.",
+  "$schema": "ledger entry: {id, title, class(SILENT_LOSS|GROUNDING|MULTIPLICITY|EVAL_GAP|PDF|PERF|ARCH_ESCALATION|GENERALIZATION), severity(BLOCKING|HIGH|MED|LOW), confidence 0-1, cost(S|M|L), status(FIXED_IH1|FIXED_IH2|FIXED_IH3|OPEN|RESOLVED_PRIOR|PARTIAL_OPEN|PARKED|ESCALATE|NOT_REPRODUCIBLE), priority(1=do first, null=done), evidence, fixture, lesson}. Generalization amendment (2026-07-14): every fix obeys the TWO-FIXTURE RULE (original red fixture + one structurally different fixture green for the same reason) and the anti-overfit rules (no fixture/carrier/sheet-name/row-count branching in generic code); Phase G items get G-prefixed ids from the assumption audit.",
   "generatedBy": "IH1 baseline-and-triage, 2026-07-14",
   "baselineSha": "2b1f893febdfbc93152f5e5681836420954d5713",
   "entries": [
@@ -192,11 +192,11 @@
       "severity": "MED",
       "confidence": 1.0,
       "cost": "S",
-      "status": "OPEN",
-      "priority": 4,
-      "evidence": "unified-import.js:327/:344; stage-filing.js:432-433. Unlike stage-7's SYNTH convention, no marker distinguishes these from byte-for-byte source refIds",
-      "fixture": "none yet — IH2: assert synthesized ids carry a SYNTH marker or provenance flag",
-      "lesson": "One synthesis convention (SYNTH + registry prefix) exists — every id-minting path must use it."
+      "status": "FIXED_IH3",
+      "priority": null,
+      "evidence": "All 9 mint sites now follow the platform SYNTH convention (registry prefix + SYNTH marker, kind token in segment 2): reconcile.ts product/RT/RAT/LD/COV/RU, unified-import.js fallback coverage+product, stage-filing.js catch-fallback product. Judge ACCEPT after corpus probe: refIdSegmentKind classifies all 19 golden minted ids; 0 dangling internal refs; pre-fix HO-COV-001 parsed as a plausible SOURCE coverage id (the indistinguishability defect made concrete); $1,281 canary unchanged; no consumer detects FIL. prefix; filing bundles never flow through stage7 SYNTH cleanup",
+      "fixture": "shared/src/insurance/filing/reconcile-synth-ids.test.ts (two-fixture rule: NJ homeowners golden PH full-shape + WA Personal Auto minimal, different line/form/structure)",
+      "lesson": "One synthesis convention (SYNTH + registry prefix) exists — every id-minting path must use it. The kind token must live in segment 2 or the shared parser reads a minted id as garbage (or worse: HO-COV-001 read as a real source id)."
     },
     {
       "id": "F16",
@@ -340,11 +340,50 @@
       "evidence": "See F19. Atomicity is per envelope-chunk within one partition key (BATCH_OPS=96), matching documented batch_partial semantics.",
       "fixture": "n/a",
       "lesson": "Split read-side vs write-side before assuming either."
+    },
+    {
+      "id": "F25",
+      "title": "isoImport blank rule-ID synthesis mints <fwBase>.RULE.### without the SYNTH marker (workbook deterministic mapper)",
+      "class": "GROUNDING",
+      "severity": "LOW",
+      "confidence": 0.9,
+      "cost": "S",
+      "status": "OPEN",
+      "priority": 6,
+      "evidence": "shared/src/insurance/isoImport.ts:980 — rule rows with content but no rule-ID column value synthesize `${fwBase}.RULE.${seq}` ids that carry no SYNTH marker (refIdSegmentKind DOES parse them as 'rule'). Found by F15's hostile judge during the mint-site sweep; pre-existing, out of F15's filing-path scope",
+      "fixture": "none yet — assert isoImport-synthesized rule ids carry the SYNTH marker",
+      "lesson": "A mint-site sweep after fixing one path finds the paths the ledger missed — give judges the sweep mandate explicitly."
     }
   ],
   "summary": {
-    "fixedByIH1": ["F01", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F16"],
-    "openOrdered": ["PCM-A", "PCM-B", "F10", "F09", "F17", "F18", "F20", "F12", "F13", "F14", "F11", "F15"],
-    "resolvedPrior": ["F19", "PCM-C"]
+    "fixedByIH1": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F06",
+      "F07",
+      "F08",
+      "F16"
+    ],
+    "openOrdered": [
+      "PCM-A",
+      "PCM-B",
+      "F10",
+      "F09",
+      "F17",
+      "F18",
+      "F20",
+      "F12",
+      "F13",
+      "F14",
+      "F11",
+      "F15"
+    ],
+    "resolvedPrior": [
+      "F19",
+      "PCM-C"
+    ]
   }
 }

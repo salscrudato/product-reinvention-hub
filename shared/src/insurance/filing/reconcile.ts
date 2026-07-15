@@ -79,8 +79,6 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
   const targetForm = opts.targetForm ?? 'HO3'
   const state = (ex.filingState || 'NJ').toUpperCase()
   const token = opts.productToken ?? tokenOf(ex.baseFormNumber, state)
-  const productRefId = `FIL.${token}.PROD`
-  const productId = productRefId
   // F18: the line comes from the stage-0 router's content-derived hint,
   // resolved against the LOB registry — never re-hard-coded. No hint (or an
   // unresolvable one) falls back to the platform DEFAULT_LOB (Personal Home),
@@ -90,6 +88,13 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
   const lobDef = hintedLob ?? DEFAULT_LOB
   const lobDefaulted = !hintedLob
   const prefix = lobDef.refIdPrefix || lobDef.code || 'PH'
+  // F15: a filing's source documents assign NO ids, so every id here is MINTED —
+  // it must follow the platform's one synthesis convention (registry prefix +
+  // SYNTH marker, kind token in segment 2 so refIdSegmentKind parses it). The
+  // globally-unique filing token stays as a LATER segment where the collection
+  // is global (product, RT/LD tables, rating program).
+  const productRefId = `${prefix}.PROD.SYNTH.${token}`
+  const productId = productRefId
 
   const unresolved: UnresolvedItem[] = []
   const ratingItems: FilingReviewItem[] = []
@@ -110,7 +115,7 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
     if (!rule.table) return null
     const parsed = parseFactorTable(rule.table)
     if (parsed.rows.length === 0) return null
-    const refId = `FIL.${token}.RT.${rule.concept}`
+    const refId = `${prefix}.RT.SYNTH.${token}.${rule.concept}`
     const grid = toGridTable(`${rule.title}`, parsed, rule.table.valueColumn, rule.table.lookupKeys)
     rtTables.push({ docId: dashId(refId), refId, label: `${refId} — ${rule.title}`, data: { ...grid } })
     tableItems.push({ section: 'tables', label: `${rule.title} (${parsed.rows.length} rows${parsed.skipped ? `, ${parsed.skipped} skipped` : ''})`, refId, docId: dashId(refId), confidence: rule.confidence, citation: rule.citation, detail: `${rule.table.layout} · value=${rule.table.valueColumn}` })
@@ -201,7 +206,7 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
     }
   }
 
-  const ratingProgramRefId = `FIL.${token}.RAT.1`
+  const ratingProgramRefId = `${prefix}.RAT.SYNTH.${token}.1`
   const ratingProgram: PlannedEntity | null = steps.length > 0 ? {
     docId: dashId(ratingProgramRefId), refId: ratingProgramRefId, label: `${ratingProgramRefId} — rating program`,
     data: {
@@ -219,7 +224,7 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
     const dedValues = distinctColumnValues(parsed, dedRule.table.columnKeys ? (dedRule.table.keyColumns[1] ?? 'deductible') : (dedRule.table.valueColumn))
     const opts2 = (dedRule.table.columnKeys ?? dedValues).map(Number).filter(Number.isFinite)
     if (opts2.length) {
-      dedLdRefId = `FIL.${token}.LD.deductible`
+      dedLdRefId = `${prefix}.LD.SYNTH.${token}.DEDUCTIBLE`
       ldTables.push({
         docId: dashId(dedLdRefId), refId: dedLdRefId, label: `${dedLdRefId} — All-perils deductible options`,
         data: { name: 'All-perils deductible options', defaultValue: opts2.includes(500) ? 500 : opts2[0], rows: opts2.map(v => ({ label: `$${v.toLocaleString()}`, value: v })) } satisfies Omit<LDTable, never>,
@@ -234,7 +239,7 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
   let covNum = 0
   for (const c of ex.policyForm.coverages.items) {
     covNum++
-    const refId = `${prefix}.${token}.COV.${String(covNum).padStart(3, '0')}`
+    const refId = `${prefix}.COV.SYNTH${String(covNum).padStart(3, '0')}`
     const isDwelling = /coverage a\b|dwelling/i.test(c.name)
     const terms = isDwelling && dedLdRefId
       ? [{ id: 'ded-allperil', kind: 'DEDUCTIBLE' as const, label: 'All-perils deductible', ldTableRef: dedLdRefId, default: 500, basis: 'per occurrence', notes: 'Section I deductible (manual Rule 406)' }]
@@ -272,7 +277,7 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
   let ruNum = 0
   const pushRule = (category: 'PRODUCT' | 'FORMS' | 'RATING', subCategory: string, condition: string, outcome: string, formNumbers: string[], citation: string, confidence: number) => {
     ruNum++
-    const refId = `${prefix}.${token}.RU.${String(ruNum).padStart(3, '0')}`
+    const refId = `${prefix}.RU.SYNTH${String(ruNum).padStart(3, '0')}`
     rules.push({
       docId: dashId(refId), refId, label: `${refId} — ${subCategory}`,
       data: { refId, category, subCategory, condition, outcome, coverageRefIds: [], formNumbers, allStates: false, states: [state], ...gov },

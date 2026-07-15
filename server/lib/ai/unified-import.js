@@ -309,6 +309,9 @@ async function unifiedImport(req, res) {
     const fbHint = body.lobRefIdHint || routed.lobRefIdHint
     const fbLobDef = fbHint ? require('../import-brain-shared.cjs').LOB_REGISTRY?.[fbHint] : null
     const fbLob = fbLobDef ? { refId: fbLobDef.refId, name: fbLobDef.name } : { refId: 'PH.LOB.001', name: 'Personal Home' }
+    // F15: ids minted here have NO source counterpart — mark them with the
+    // platform SYNTH convention (registry prefix + SYNTH, kind in segment 2).
+    const fbPrefix = (fbLobDef && (fbLobDef.refIdPrefix || fbLobDef.code)) || 'PH'
     if (!fbLobDef) emit(res, { t: 'notice', level: 'warn', kind: 'lob-defaulted', message: `LOB undetected${fbHint ? ` (hint "${fbHint}" matched no registry line)` : ''} — defaulted to Personal Home; verify the product line.` })
 
     const deployment = HAIKU_OVERRIDE || fleet.resolveModel('BULK_VERIFY', { bypassDegrade: true })
@@ -335,9 +338,9 @@ async function unifiedImport(req, res) {
     emit(res, { t: 'tool', name: 'extract:coverages', phase: 'end', summary: `${rawCoverages.length} coverage(s) extracted` })
 
     const coverageEntities = rawCoverages.map((c, i) => {
-      const refId = `HO-COV-${String(i + 1).padStart(3, '0')}`
+      const refId = `${fbPrefix}.COV.SYNTH${String(i + 1).padStart(3, '0')}`
       return {
-        docId: refId.toLowerCase(),
+        docId: refId.replace(/\./g, '-').toLowerCase(),
         refId,
         label: String(c.name),
         data: {
@@ -355,7 +358,7 @@ async function unifiedImport(req, res) {
       }
     })
 
-    const productRefId = `FIL.${filingState}.PROD`
+    const productRefId = `${fbPrefix}.PROD.SYNTH.FIL${filingState}`
     const bundle = {
       plan: {
         productId: productRefId,
