@@ -466,6 +466,17 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
     expect(String(step['ratePlaceholderRef'])).toMatch(/CORE\.RTB\.\d+/)
     expect(plan2.summary.notices.some(n => n.code === 'rate_table_placeholders')).toBe(true)
   })
+
+  // ── Flag-not-invent notices/defects (R5) ──
+  it('flags unmatched rating groups as a notice + actionable defects (R5)', () => {
+    const n = plan2.summary.notices.find(x => x.code === 'rating_groups_unmatched')!
+    expect((n.data as { count: number }).count).toBe(1)
+    expect(plan2.summary.defects.some(d => d.code === 'rating_group_unmatched' && d.rawValue === 'Business Use')).toBe(true)
+  })
+  it('surfaces a reference_tables_linked summary + a D8 coverage-resolution notice', () => {
+    expect(plan2.summary.notices.some(n => n.code === 'reference_tables_linked')).toBe(true)
+    expect(plan2.summary.notices.some(n => n.code === 'rule_ref_resolved_to_coverage')).toBe(true)
+  })
 })
 
 // ─── Real-template column fidelity (quirks confirmed against the shipped GL books) ─

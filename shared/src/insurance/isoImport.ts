@@ -51,6 +51,7 @@ export interface UnmappedColumns { sheet: string; columns: string[] }
  *  the file's Data Validation vocab and has no canonical target — never silently coerced. */
 export interface ReviewDefect {
   code:           'unmapped_enum' | 'forms_applicability_merged'
+                  | 'rating_group_unmatched' | 'template_artifact_excluded'
   field?:         string
   rawValue?:      string
   rowRef?:        string
@@ -1669,14 +1670,14 @@ function linkReferenceTables(
   refTables: PlannedEntity[],
   coverages: PlannedEntity[],
   rules: PlannedEntity[],
-): { backLinked: number; covLinked: number; rulesLinked: number; resolvedToCoverage: number; unresolved: number } {
+): { backLinked: number; covLinked: number; rulesLinked: number; resolvedToCoverage: number; unresolved: number; resolvedRefs: string[]; unresolvedRefs: string[] } {
   // Always pull + clear the transient reference text (keeps every non-CORE golden clean).
   const refTexts = rules.map(r => {
     const t = r.data['_referenceText']
     delete r.data['_referenceText']
     return typeof t === 'string' ? t : ''
   })
-  const tally = { backLinked: 0, covLinked: 0, rulesLinked: 0, resolvedToCoverage: 0, unresolved: 0 }
+  const tally = { backLinked: 0, covLinked: 0, rulesLinked: 0, resolvedToCoverage: 0, unresolved: 0, resolvedRefs: [] as string[], unresolvedRefs: [] as string[] }
   if (!refTables.length) return tally
 
   const namedCovs: NamedCoverage[] = coverages.map(c => ({ refId: c.refId as string, name: String(c.data['name'] ?? '') }))
@@ -1721,8 +1722,10 @@ function linkReferenceTables(
     } else if (m.resolvedCoverageRefId) {
       rule.data['resolvedCoverageRefId'] = m.resolvedCoverageRefId
       tally.resolvedToCoverage++
+      if (!tally.resolvedRefs.includes(ref)) tally.resolvedRefs.push(ref)
     } else if (m.how === 'NO MATCHING TABLE IN SOURCE') {
       tally.unresolved++
+      if (!tally.unresolvedRefs.includes(ref)) tally.unresolvedRefs.push(ref)
     }
   }
   tally.backLinked = refTables.filter(t => (t.data['ruleRefIds'] as string[]).length > 0).length
@@ -1881,14 +1884,20 @@ function mintRatePlaceholders(ratingProgram: PlannedEntity | null, prefix: strin
   return placeholders
 }
 
-/** Count RATE-TABLE-NAME block markers on the rate-tables grid that yielded no usable table —
- *  template artifacts (a wrong-line example, blank-name skeletons) the mapper correctly excludes
- *  (D4). Surfaced as a notice so the exclusion is transparent, never silent. */
-function countRateTableArtifacts(grid: IsoGrid | undefined, tablesProduced: number): number {
-  if (!grid) return 0
-  let markers = 0
-  for (let r = 0; r < grid.cells.length; r++) if (RT_NAME_MARKER.test(norm(cell(grid, r, 0)))) markers++
-  return Math.max(0, markers - tablesProduced)
+/** Names of the RATE-TABLE-NAME block markers on the rate-tables grid that yielded no usable
+ *  table — template artifacts (a wrong-line example, blank-name skeletons) the mapper correctly
+ *  excludes (D4). Surfaced as a notice + defects so the exclusion is transparent, never silent. */
+function rateTableArtifacts(grid: IsoGrid | undefined, tablesProduced: number): string[] {
+  if (!grid) return []
+  const names: string[] = []
+  for (let r = 0; r < grid.cells.length; r++) {
+    if (!RT_NAME_MARKER.test(norm(cell(grid, r, 0)))) continue
+    const nm = clean(row(grid, r).slice(1).find(c => clean(c)) ?? null)
+    names.push(nm || '(blank skeleton)')
+  }
+  // Markers beyond the tables actually produced are the excluded artifacts (the common CORE
+  // case is tablesProduced === 0, so every marker is an artifact).
+  return tablesProduced >= names.length ? [] : names.slice(tablesProduced)
 }
 
 // ─── Orchestration ───────────────────────────────────────────────────────────────
@@ -2011,7 +2020,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   // template example + blank skeletons), so mint one placeholder per distinct factor the rating
   // algorithm names and flag the missing values. STRICTLY after parseRating (rtTables consumed).
   const ratePlaceholders = mintRatePlaceholders(ratingProgram, refPrefix, refTables.length > 0)
-  const excludedArtifacts = refTables.length > 0 ? countRateTableArtifacts(rtGrid, rtTables.length) : 0
+  const excludedArtifacts = refTables.length > 0 ? rateTableArtifacts(rtGrid, rtTables.length) : []
   if (ratePlaceholders.length > 0) {
     ctx.addNotice({
       code: 'rate_table_placeholders',
@@ -2019,12 +2028,49 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
       data: { count: ratePlaceholders.length },
     })
   }
-  if (excludedArtifacts > 0) {
+  if (excludedArtifacts.length > 0) {
     ctx.addNotice({
       code: 'template_artifacts_excluded',
-      message: `${excludedArtifacts} rate-table template artifact(s) excluded (blank-name skeletons and/or a wrong-line example) — no factor values were fabricated from them.`,
-      data: { count: excludedArtifacts },
+      message: `${excludedArtifacts.length} rate-table template artifact(s) excluded (blank-name skeletons and/or a wrong-line example) — no factor values were fabricated from them.`,
+      data: { count: excludedArtifacts.length, names: excludedArtifacts },
     })
+    for (const name of excludedArtifacts) {
+      ctx.addDefect({ code: 'template_artifact_excluded', field: 'rateTable', rawValue: name })
+    }
+  }
+
+  // ── Flag-not-invent: R5 notices/defects for the reconstructed link graph (CORE-gated). ──
+  if (refTables.length > 0) {
+    ctx.addNotice({
+      code: 'reference_tables_linked',
+      message: `${refTables.length} reference table(s) recovered by signature: ${refLinks.backLinked} back-linked to rules, ${refLinks.covLinked} linked to coverages, ${refLinks.rulesLinked} rule(s) carry table links, ${refLinks.resolvedToCoverage} reference(s) resolved to a coverage, ${refLinks.unresolved} unresolved.`,
+      data: { tables: refTables.length, backLinked: refLinks.backLinked, covLinked: refLinks.covLinked, rulesTableLinked: refLinks.rulesLinked, resolvedToCoverage: refLinks.resolvedToCoverage, unresolved: refLinks.unresolved },
+    })
+    if (refLinks.resolvedToCoverage > 0) {
+      ctx.addNotice({
+        code: 'rule_ref_resolved_to_coverage',
+        message: `${refLinks.resolvedToCoverage} rule reference(s) named a coverage rather than a table — resolved to a coverage link, not a failed match (D8): ${refLinks.resolvedRefs.slice(0, 8).join('; ')}.`,
+        data: { count: refLinks.resolvedToCoverage, refs: refLinks.resolvedRefs },
+      })
+    }
+    if (refLinks.unresolved > 0) {
+      ctx.addNotice({
+        code: 'unresolved_rule_refs',
+        message: `${refLinks.unresolved} rule reference(s) matched no table or coverage in the source — pull the referenced tables from the filings named in the rules SOURCE column: ${refLinks.unresolvedRefs.slice(0, 8).join('; ')}.`,
+        data: { count: refLinks.unresolved, refs: refLinks.unresolvedRefs },
+      })
+    }
+  }
+  if (ratingGroups.unmatchedNames.length > 0) {
+    const clean0 = (s: string) => s.replace(/\s*\(Excluding[^)]*\)\s*/i, '').trim()
+    ctx.addNotice({
+      code: 'rating_groups_unmatched',
+      message: `${ratingGroups.unmatchedNames.length} rating group(s) name no coverage in the hierarchy — add these coverages: ${ratingGroups.unmatchedNames.map(clean0).join('; ')}.`,
+      data: { count: ratingGroups.unmatchedNames.length, names: ratingGroups.unmatchedNames.map(clean0) },
+    })
+    for (const name of ratingGroups.unmatchedNames) {
+      ctx.addDefect({ code: 'rating_group_unmatched', field: 'ratingGroup', rawValue: clean0(name) })
+    }
   }
 
   // Reference tables share a single home with the real LD tables so the UI ldTables→chip
@@ -2055,7 +2101,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     ratingGroupsUnmatched: ratingGroups.unmatchedNames.length,
     formAnchorUpgrades: formUpgrades,
     ratePlaceholders: ratePlaceholders.length,
-    rateTemplateArtifactsExcluded: excludedArtifacts,
+    rateTemplateArtifactsExcluded: excludedArtifacts.length,
   }
 
   const knownSheets = new Set(ctx.recognized)
