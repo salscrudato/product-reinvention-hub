@@ -1,0 +1,2955 @@
+﻿<ManuScript>
+  <properties manuscriptID="BaseProduct" versionID="BaseProduct" versionDate="2006-07-06" version="1" boolean="1" fieldCache="1" caption="Base Product" inherited="Carrier_ProductBase_Data_3_0_0_0" inheritedPage="Carrier_ProductBase_Pages_3_0_0_0" image="" dataSchema="" cultureCode="en-US" cultureName="English (United States)">
+    <notes />
+    <keys>
+      <keyInfo name="lob" value="Line1" />
+      <keyInfo name="state" value="US" />
+      <keyInfo name="effectiveDateNew" value="2004-07-01" />
+      <keyInfo name="effectiveDateRenewal" value="2004-07-01" />
+      <keyInfo name="masterID" value="DuckCreekTech_Base_00_10" />
+      <keyInfo name="family" value="DCTTemplates" />
+      <keyInfo name="productCode" value="Pages" />
+      <keyInfo name="version" value="00.10.01" />
+    </keys>
+    <contexts inherited="DuckCreekTech_ProductBaseData_00_10">
+      <context />
+    </contexts>
+  </properties>
+  <model defaultValue="data.TotalResult">
+    <object id="data" abstract="1">
+      <object id="System" abstract="1">
+        <object id="Page" abstract="1">
+          <object id="PagePrivate" abstract="1">
+            <object id="AccountDetailPage" abstract="1">
+              <private id="AccountDetailPage.IsReadOnly" type="boolean" override="1">
+                <value idref="False" />
+                <misc>
+                  <if>
+                    <condition>
+                      <comparison compare="eq">
+                        <operand idref="PolicyAdminPrivate.IsLocked" type="boolean" />
+                        <operand idref="True" type="int" />
+                      </comparison>
+                    </condition>
+                    <then idref="True" />
+                  </if>
+                </misc>
+              </private>
+              <private id="AccountDetailPage.Show" type="boolean" override="1">
+                <value idref="AccountDetailPage.ShowBooleanLookup" />
+              </private>
+              <private id="AccountDetailPage.ShowBooleanLookup" type="boolean" override="1">
+                <value idref="True" />
+              </private>
+            </object>
+            <object id="PolicyDetailPage" abstract="1">
+              <private id="PolicyDetailPage.IsReadOnly" type="boolean" override="1">
+                <value idref="False" />
+                <misc>
+                  <if>
+                    <condition>
+                      <comparison compare="eq">
+                        <operand idref="PolicyAdminPrivate.IsLocked" type="boolean" />
+                        <operand idref="True" type="int" />
+                      </comparison>
+                    </condition>
+                    <then idref="True" />
+                  </if>
+                </misc>
+              </private>
+              <private id="PolicyDetailPage.Show" type="boolean" override="1">
+                <value idref="PolicyDetailPage.ShowBooleanLookup" />
+              </private>
+              <private id="PolicyDetailPage.ShowBooleanLookup" type="boolean" override="1">
+                <value idref="True" />
+              </private>
+            </object>
+            <object id="SubmissionDetailPage" abstract="1">
+              <private id="SubmissionDetailPage.IsReadOnly" type="boolean" override="1">
+                <value idref="False" />
+                <misc>
+                  <if>
+                    <condition>
+                      <comparison compare="eq">
+                        <operand idref="PolicyAdminPrivate.IsLocked" type="boolean" />
+                        <operand idref="True" type="int" />
+                      </comparison>
+                    </condition>
+                    <then idref="True" />
+                  </if>
+                </misc>
+              </private>
+              <private id="SubmissionDetailPage.Show" type="boolean" override="1">
+                <value idref="SubmissionDetailPage.ShowBooleanLookup" />
+              </private>
+              <private id="SubmissionDetailPage.ShowBooleanLookup" type="boolean" override="1">
+                <value idref="True" />
+              </private>
+            </object>
+          </object>
+        </object>
+        <object id="Global" abstract="1">
+          <object id="GlobalOutput" abstract="1">
+          </object>
+        </object>
+        <object id="Context" abstract="1">
+          <private id="Context.IsConsumer" caption="" type="boolean">
+            <value>
+              <comparison compare="contains">
+                <operand idref="Context.CurrentContext" type="string" />
+                <operand type="string" value="ConsumerUser" />
+              </comparison>
+            </value>
+          </private>
+          <private id="Context.IsNotConsumer" caption="" type="boolean">
+            <value>
+              <comparison compare="isnot">
+                <operand idref="Context.CurrentContext" type="string" />
+                <operand type="string" value="ConsumerUser" />
+              </comparison>
+            </value>
+          </private>
+        </object>
+        <object id="LocationSelect" abstract="1">
+          <object id="LocationSelectInput" abstract="1">
+            <public id="LocationSelectInput.LocationID" path="LocationID" type="string" comment="Shared" override="1">
+              <definition>
+                <caption value="Location" />
+                <options codeRef="LocationOutput.LocationID" captionRef="LocationPrivate.LocationSelectDescription" />
+                <readOnly idref="LocationSelectInput.ShowAllLocations" />
+                <maxLength value="33" />
+              </definition>
+              <rules>
+                <default idref="LocationGroup.DefaultID" />
+                <misc>
+                  <if>
+                    <condition>
+                      <comparison compare="eq">
+                        <operand idref="LocationSelectInput.LocationID" type="string" />
+                        <operand type="string" value="0" />
+                      </comparison>
+                    </condition>
+                    <then idref="LocationGroup.DefaultID" />
+                  </if>
+                </misc>
+              </rules>
+            </public>
+          </object>
+        </object>
+      </object>
+      <public id="data.TotalResult" path="TotalResult" type="int" comment="Shared" override="1">
+        <definition>
+          <caption value="Total Result" />
+          <formatMask idref="FormatMask.Premium" />
+          <maxLength idref="MaxLength.Value" />
+        </definition>
+        <rules>
+          <value idref="PolicyOutput.PremiumWritten" />
+          <affects>
+            <reference idref="PolicyOutput.Premium" effect="preEffect" />
+            <reference idref="PolicyPrivate.SetPremiumChange" effect="postEffect" />
+            <reference idref="PolicyOutput.PremiumPrior" effect="postEffect" />
+            <reference idref="PolicyAdminPrivate.TransactionProcessingCheck" effect="postEffect" />
+            <reference idref="PolicyPrivate.SetAuditCharge" effect="postEffect" />
+            <reference idref="PolicyPrivate.SetAuditPremium" effect="postEffect" />
+            <reference idref="PolicyPrivate.SetPremiumTerm" effect="postEffect" />
+          </affects>
+        </rules>
+      </public>
+      <object id="Policy" abstract="1">
+        <object id="Line" path="line[Line=&quot;Line1&quot;]" override="1">
+          <minOccurs value="1" />
+          <maxOccurs value="*" />
+          <object id="Risk" path="risk" override="1" caption="Risk">
+            <object id="Coverage_RiskA" path="coverage[Type=&quot;RiskA&quot;]">
+              <minOccurs value="1" />
+              <maxOccurs value="1" />
+              <public id="Coverage_RiskA.Premium" type="float" comment="" path="Premium">
+                <rules>
+                  <value>
+                    <if>
+                      <condition>
+                        <comparison compare="eq">
+                          <operand idref="RiskInput.Deleted" type="boolean" />
+                          <operand idref="True" type="int" />
+                        </comparison>
+                      </condition>
+                      <then value="0" />
+                      <else>
+                        <calculation>
+                          <argument op="eq" idref="Coverage_RiskA.BaseRate" type="int" />
+                          <argument op="multiply" idref="Coverage_RiskA.LimitFactor" type="float" />
+                          <argument op="multiply" round="1" roundType="round" type="int" value="-1" />
+                          <argument op="multiply" round="1" roundType="round" idref="PolicyOutput.TermFactor" type="float" />
+                        </calculation>
+                      </else>
+                    </if>
+                  </value>
+                </rules>
+                <definition>
+                  <caption value="Risk A Coverage" />
+                  <readOnly idref="True" />
+                  <formatMask idref="FormatMask.Premium" />
+                  <maxLength idref="MaxLength.Premium" />
+                </definition>
+              </public>
+              <private id="Coverage_RiskA.BaseRate" caption="" type="int">
+                <value value="25" />
+              </private>
+              <public id="Coverage_RiskA.Limit" path="Limit" type="int">
+                <definition>
+                  <caption value="Risk A Limit" />
+                  <options>
+                    <option value="100000" caption="$100,000" />
+                    <option value="200000" caption="$200,000" />
+                    <option value="300000" caption="$300,000" />
+                    <option value="400000" caption="$400,000" />
+                    <option value="500000" caption="$500,000" />
+                  </options>
+                </definition>
+                <rules>
+                  <default value="100000" />
+                </rules>
+              </public>
+              <private id="Coverage_RiskA.LimitFactor" caption="" type="float">
+                <value>
+                  <lookup>
+                    <tableRef value="RiskCoverageALimitFactor" />
+                    <fieldRef value="Value" />
+                    <keyRef idref="Coverage_RiskA.Limit" type="int" name="Risk A Limit" />
+                  </lookup>
+                </value>
+              </private>
+              <public id="Coverage_RiskA.PremiumFE" type="float" comment="" path="PremiumFE">
+                <rules>
+                  <default value="0" />
+                </rules>
+                <definition>
+                  <caption value="Coverage_ Risk A Premium FE" />
+                  <readOnly idref="True" />
+                  <formatMask idref="FormatMask.Premium" />
+                  <maxLength idref="MaxLength.Premium" />
+                </definition>
+              </public>
+            </object>
+            <object id="Coverage_RiskB" path="coverage[Type=&quot;RiskB&quot;]">
+              <minOccurs value="1" />
+              <maxOccurs value="1" />
+              <private id="Coverage_RiskB.BaseRate" caption="" type="int">
+                <value value="25" />
+              </private>
+              <public id="Coverage_RiskB.Limit" path="Limit" type="int">
+                <definition>
+                  <caption value="Risk B Limit" />
+                  <options>
+                    <option value="100000" caption="$100,000" />
+                    <option value="200000" caption="$200,000" />
+                    <option value="300000" caption="$300,000" />
+                    <option value="400000" caption="$400,000" />
+                    <option value="500000" caption="$500,000" />
+                  </options>
+                </definition>
+                <rules>
+                  <default value="100000" />
+                </rules>
+              </public>
+              <private id="Coverage_RiskB.LimitFactor" caption="" type="float">
+                <value>
+                  <lookup>
+                    <tableRef value="RiskCoverageBLimitFactor" />
+                    <fieldRef value="Value" />
+                    <keyRef idref="Coverage_RiskB.Limit" type="int" name="Risk B Limit" />
+                  </lookup>
+                </value>
+              </private>
+              <public id="Coverage_RiskB.Premium" type="float" comment="" path="Premium">
+                <rules>
+                  <value>
+                    <if>
+                      <condition>
+                        <comparison compare="eq">
+                          <operand idref="RiskInput.Deleted" type="boolean" />
+                          <operand idref="True" type="int" />
+                        </comparison>
+                      </condition>
+                      <then value="0" />
+                      <else>
+                        <calculation>
+                          <argument op="eq" idref="Coverage_RiskB.BaseRate" type="int" />
+                          <argument op="multiply" idref="Coverage_RiskB.LimitFactor" type="float" />
+                          <argument op="multiply" round="1" roundType="round" type="int" value="3" />
+                          <argument op="multiply" round="1" roundType="round" idref="PolicyOutput.TermFactor" type="float" />
+                        </calculation>
+                      </else>
+                    </if>
+                  </value>
+                </rules>
+                <definition>
+                  <caption value="Risk B Coverage" />
+                  <readOnly idref="True" />
+                  <formatMask idref="FormatMask.Premium" />
+                  <maxLength idref="MaxLength.Premium" />
+                </definition>
+              </public>
+              <public id="Coverage_RiskB.PremiumFE" type="float" comment="" path="PremiumFE">
+                <rules>
+                  <default value="0" />
+                </rules>
+                <definition>
+                  <caption value="Coverage_ Risk B Premium FE" />
+                  <readOnly idref="True" />
+                  <formatMask idref="FormatMask.Premium" />
+                  <maxLength idref="MaxLength.Premium" />
+                </definition>
+              </public>
+            </object>
+            <object id="RiskOutput" abstract="1">
+              <public id="RiskOutput.Premium" path="Premium" type="float" comment="Shared" override="1">
+                <definition>
+                  <caption value="Risk Premium" />
+                  <readOnly idref="True" />
+                  <formatMask idref="FormatMask.Premium" />
+                  <maxLength idref="MaxLength.Factor" />
+                </definition>
+                <rules>
+                  <value>
+                    <calculation>
+                      <argument op="eq" idref="RiskOutput.BasePremium" type="float" />
+                      <argument op="add" idref="Coverage_RiskA.Premium" type="float" />
+                      <argument op="add" idref="Coverage_RiskB.Premium" type="float" />
+                      <argument op="add" idref="Coverage_RiskA.PremiumFE" type="float" />
+                      <argument op="add" idref="Coverage_RiskB.PremiumFE" type="float" />
+                    </calculation>
+                  </value>
+                </rules>
+              </public>
+              <public id="RiskOutput.Description" path="exposure[Type=&quot;Description&quot;]/Description" type="string" comment="Shared" override="1">
+                <definition>
+                  <caption value="Description" />
+                  <maxLength idref="MaxLength.Description" />
+                </definition>
+                <rules>
+                  <default>
+                    <calculation>
+                      <argument op="eq" type="string" value="Risk " />
+                      <argument op="add" idref="RiskPrivate.CurrentIteration" type="float" />
+                    </calculation>
+                  </default>
+                </rules>
+              </public>
+              <public id="RiskOutput.BasePremium" path="BasePremium" type="float" comment="Shared" override="1" class="Premium">
+                <definition>
+                  <caption value="Base Premium" />
+                  <readOnly idref="True" />
+                  <formatMask idref="FormatMask.Premium" />
+                  <maxLength idref="MaxLength.Factor" />
+                </definition>
+                <rules>
+                  <value>
+                    <if>
+                      <condition idref="RiskInput.Deleted" />
+                      <then value="0" />
+                      <else>
+                        <calculation>
+                          <argument op="eq">
+                            <calculation>
+                              <argument op="eq" idref="RiskPrivate.InsurableAmountSelect" type="int" />
+                              <argument op="divide" type="int" value="100" />
+                            </calculation>
+                          </argument>
+                          <argument op="multiply" round="1" roundType="round" idref="RiskPrivate.RiskFactor" type="float" />
+                          <argument op="multiply" round="1" roundType="round" idref="PolicyOutput.TermFactor" type="float" />
+                        </calculation>
+                      </else>
+                    </if>
+                  </value>
+                  <affects>
+                    <reference idref="RiskOutput.ChangeSummaryDescription" effect="postEffect" />
+                  </affects>
+                </rules>
+              </public>
+              <public id="RiskOutput.ChangeSummaryDescription" path="@description" type="string">
+                <definition>
+                  <caption value="Change Summary Description" />
+                </definition>
+                <rules>
+                  <value idref="RiskOutput.Description" />
+                </rules>
+              </public>
+            </object>
+            <minOccurs value="1" />
+            <maxOccurs value="*" />
+            <relationships>
+              <relationship>
+                <relatedObject idref="Location" />
+                <foreignKey idref="RiskInput.LocationID" />
+              </relationship>
+            </relationships>
+            <object id="RiskPrivate" abstract="1">
+              <private id="RiskPrivate.CurrentIteration" caption="" type="float">
+                <value>
+                  <iterator type="float" scope="all" action="count" idref="Risk" />
+                </value>
+              </private>
+              <public id="RiskPrivate.RiskFactor" type="float" comment="" path="RiskFactor">
+                <rules>
+                  <value>
+                    <lookup>
+                      <tableRef value="RiskBaseFactor" />
+                      <fieldRef value="Value" />
+                      <keyRef idref="RiskPrivate.InsurableAmountSelect" type="int" name="Limit" />
+                    </lookup>
+                  </value>
+                </rules>
+              </public>
+              <private id="RiskPrivate.BelongsToSelectedLocation" type="boolean" override="1">
+                <value>
+                  <comparison compare="or">
+                    <comparison compare="eq">
+                      <operand idref="RiskInput.LocationID" type="string" />
+                      <operand idref="LocationSelectInput.LocationID" type="string" />
+                    </comparison>
+                    <operand idref="LocationSelectInput.ShowAllLocations" type="boolean" />
+                  </comparison>
+                </value>
+              </private>
+              <private id="RiskPrivate.InsurableAmountSelect" type="int" comment="" caption="Insurable Amount" path="InsurableAmountSelect">
+                <value>
+                  <if>
+                    <condition>
+                      <comparison compare="and">
+                        <operand idref="PolicyOutputNonShredded.AuditMode" type="boolean" />
+                        <comparison compare="ne">
+                          <operand idref="PolicyOutputNonShredded.CurrentTransaction" type="string" />
+                          <operand type="string" value="VoidFinalAudit" />
+                        </comparison>
+                      </comparison>
+                    </condition>
+                    <then idref="RiskInput.InsurableAmountAudit" />
+                    <else idref="RiskInput.InsurableAmount" />
+                  </if>
+                </value>
+              </private>
+            </object>
+            <object id="RiskInput" abstract="1">
+              <public id="RiskInput.Deleted" path="@deleted" type="boolean">
+                <definition>
+                  <caption value="Deleted" />
+                </definition>
+              </public>
+              <public id="RiskInput.InsurableAmountAudit" path="InsurableAmountAudit" type="int" class="InterimAudit">
+                <definition>
+                  <caption>
+                    <select idref="PolicyOutputNonShredded.LastTransactionType">
+                      <case type="string" value="Insurable Amount (Final)" select="FinalAudit" />
+                      <case type="string" value="Insurable Amount (Interim)" select="InterimAudit" />
+                      <otherwise idref="PolicyOutputNonShredded.LastTransactionType" type="string" />
+                    </select>
+                  </caption>
+                </definition>
+              </public>
+              <public id="RiskInput.InsurableAmount" path="InsurableAmount" type="int">
+                <definition>
+                  <readOnly>
+                    <comparison idref="PolicyOutputNonShredded.AuditMode" type="boolean" />
+                  </readOnly>
+                  <caption>
+                    <if>
+                      <condition idref="PolicyInput.IsAuditable" />
+                      <then value="Insurable Amount (Estimated)" />
+                      <else value="Insurable Amount" />
+                    </if>
+                  </caption>
+                </definition>
+              </public>
+              <public id="RiskInput.LocationID" path="LocationID" type="string" comment="Shared" override="1">
+                <definition>
+                  <caption value="Location" />
+                  <options codeRef="Location" captionRef="LocationInput.Description" />
+                  <maxLength value="33" />
+                </definition>
+                <rules>
+                  <default idref="LocationSelectInput.LocationID" />
+                </rules>
+              </public>
+            </object>
+          </object>
+          <object id="LinePrivate" abstract="1">
+            <private id="LinePrivate.TotalPremium" caption="" type="float">
+              <value>
+                <calculation>
+                  <argument op="eq" idref="Coverage_LineA.Premium" type="float" />
+                  <argument op="add" idref="Coverage_LineB.Premium" type="float" />
+                  <argument op="add" idref="LineOutput.TotalRiskPremium" type="float" />
+                  <argument op="add" idref="CovPortfolioDiscount.Premium" type="float" />
+                </calculation>
+              </value>
+            </private>
+            <private id="LinePrivate.TotalRiskCount" caption="" type="int">
+              <value>
+                <iterator type="int" scope="all" action="count" idref="Risk" />
+              </value>
+            </private>
+            <object id="LineManuScript" abstract="1">
+              <private id="ManuScriptEditingID" caption="" type="string">
+                <value value="" />
+              </private>
+            </object>
+          </object>
+          <object id="LineOutput" abstract="1">
+            <public id="LineOutput.Premium" path="Premium" type="float" comment="Shared" override="1">
+              <definition>
+                <caption value="Premium" />
+                <readOnly idref="True" />
+                <formatMask idref="FormatMask.Premium" />
+                <maxLength idref="MaxLength.Factor" />
+              </definition>
+              <rules>
+                <value>
+                  <calculation>
+                    <argument op="eq" idref="LinePrivate.TotalPremium" type="float" />
+                    <argument op="add" idref="CovPolicyMinimumOutput.Premium" type="float" />
+                  </calculation>
+                </value>
+              </rules>
+            </public>
+            <private id="LineOutput.PremiumTotal" type="float" comment="Shared" caption="Line Output Premium Total" override="1">
+              <value>
+                <calculation>
+                  <argument op="eq" idref="Coverage_LineA.Premium" type="float" />
+                  <argument op="add" idref="Coverage_LineB.Premium" type="float" />
+                  <argument op="add" idref="LineOutput.TotalRiskPremium" type="float" />
+                  <argument op="min" idref="CovPolicyMinimumOutput.Premium" type="float" />
+                </calculation>
+              </value>
+            </private>
+            <public id="LineOutput.TotalRiskPremium" type="float" comment="" path="TotalRiskPremium">
+              <rules>
+                <value>
+                  <iterator type="float" scope="all" action="sum" includeDeleted="1" idref="Risk">
+                    <reference idref="RiskOutput.Premium" type="float" />
+                  </iterator>
+                </value>
+              </rules>
+              <definition>
+                <caption value="Total Risk Premium" />
+                <maxLength idref="MaxLength.Premium" />
+                <formatMask idref="FormatMask.Premium" />
+              </definition>
+            </public>
+          </object>
+          <object id="LineCoverages" path="" override="1">
+            <minOccurs value="1" />
+            <maxOccurs value="1" />
+            <object id="Coverage_LineA" path="coverage[Type=&quot;LineA&quot;]">
+              <minOccurs value="1" />
+              <maxOccurs value="1" />
+              <public id="Coverage_LineA.Premium" path="Premium" type="float">
+                <definition>
+                  <caption value="Line A Premium" />
+                  <maxLength idref="MaxLength.Premium" />
+                  <formatMask idref="FormatMask.Premium" />
+                </definition>
+                <rules>
+                  <value>
+                    <calculation>
+                      <argument op="eq" idref="Coverage_LineA.BaseRate" type="int" />
+                      <argument op="multiply" round="1" roundType="round" idref="Coverage_LineA.LimitFactor" type="float" />
+                      <argument op="multiply" round="1" roundType="round" idref="PolicyOutput.TermFactor" type="float" />
+                    </calculation>
+                  </value>
+                </rules>
+              </public>
+              <private id="Coverage_LineA.BaseRate" caption="" type="int">
+                <value value="20" />
+              </private>
+              <public id="Coverage_LineA.Limit" path="Limit" type="string" class="InterimAudit">
+                <definition>
+                  <caption value="Line A Limit" />
+                  <options>
+                    <option value="100000" caption="100000" />
+                    <option value="200000" caption="200000" />
+                    <option value="300000" caption="300000" />
+                    <option value="400000" caption="400000" />
+                    <option value="500000" caption="500000" />
+                  </options>
+                </definition>
+                <rules>
+                  <default value="100000" />
+                </rules>
+              </public>
+              <private id="Coverage_LineA.LimitFactor" caption="" type="float">
+                <value>
+                  <lookup>
+                    <tableRef value="LineCoverageALimitFactor" />
+                    <fieldRef value="Value" />
+                    <keyRef idref="Coverage_LineA.Limit" type="string" name="Limit" />
+                  </lookup>
+                </value>
+              </private>
+            </object>
+            <object id="Coverage_LineB" path="coverage[Type=&quot;LineB&quot;]">
+              <minOccurs value="1" />
+              <maxOccurs value="1" />
+              <private id="Coverage_LineB.BaseRate" caption="" type="int">
+                <value value="15" />
+              </private>
+              <public id="Coverage_LineB.Limit" path="Limit" type="string" class="InterimAudit">
+                <definition>
+                  <caption value="Line B Limit" />
+                  <options>
+                    <option value="100000" caption="100000" />
+                    <option value="200000" caption="200000" />
+                    <option value="300000" caption="300000" />
+                    <option value="400000" caption="400000" />
+                    <option value="500000" caption="500000" />
+                  </options>
+                </definition>
+                <rules>
+                  <default value="100000" />
+                </rules>
+              </public>
+              <private id="Coverage_LineB.LimitFactor" caption="" type="float">
+                <value>
+                  <lookup>
+                    <tableRef value="LineCoverageALimitFactor" />
+                    <fieldRef value="Value" />
+                    <keyRef idref="Coverage_LineB.Limit" type="string" name="Limit" />
+                  </lookup>
+                </value>
+              </private>
+              <public id="Coverage_LineB.Premium" path="Premium" type="float">
+                <definition>
+                  <caption value="Line B Premium" />
+                  <maxLength idref="MaxLength.Premium" />
+                  <formatMask idref="FormatMask.Premium" />
+                </definition>
+                <rules>
+                  <value>
+                    <calculation>
+                      <argument op="eq" idref="Coverage_LineB.BaseRate" type="int" />
+                      <argument op="multiply" round="1" roundType="round" idref="Coverage_LineB.LimitFactor" type="float" />
+                      <argument op="multiply" round="1" roundType="round" idref="PolicyOutput.TermFactor" type="float" />
+                    </calculation>
+                  </value>
+                </rules>
+              </public>
+            </object>
+            <object id="CovPolicyMinimum" abstract="1">
+              <object id="CovPolicyMinimumOutput" abstract="1">
+                <public id="CovPolicyMinimumOutput.Premium" path="Premium" type="float" override="1">
+                  <definition>
+                    <caption value="Minimum Premium" />
+                    <maxLength idref="MaxLength.fValue" />
+                    <formatMask idref="FormatMask.Premium" />
+                  </definition>
+                  <rules>
+                    <affects>
+                      <reference idref="CovPolicyMinimumOutput.StatCodeAnnualStatementLOBCode" effect="postEffect" />
+                      <reference idref="CovPolicyMinimumOutput.StatCodeClass" effect="postEffect" />
+                      <reference idref="CovPolicyMinimumOutput.StatCodeSubline" effect="postEffect" />
+                    </affects>
+                    <value>
+                      <calculation>
+                        <argument op="eq" idref="CovPolicyMinimumPrivate.MinimumPolicyPremiumAmount" type="int" />
+                        <argument op="subtract" idref="LinePrivate.TotalPremium" type="float" />
+                        <argument op="min" type="int" value="0" />
+                      </calculation>
+                    </value>
+                  </rules>
+                </public>
+              </object>
+            </object>
+            <object id="CovPortfolioDiscount" path="coverage[Type=&quot;PortfolioDiscount&quot;]">
+              <minOccurs value="1" />
+              <maxOccurs value="1" />
+              <public id="CovPortfolioDiscount.Premium" path="Premium" type="float" override="1">
+                <definition>
+                  <caption value="Cov Portfolio Discount Premium" />
+                  <maxLength idref="MaxLength.fValue" />
+                  <formatMask idref="FormatMask.Premium" />
+                </definition>
+                <rules>
+                  <value>
+                    <calculation>
+                      <argument op="eq">
+                        <calculation>
+                          <argument op="eq" idref="Coverage_LineA.Premium" type="float" />
+                          <argument op="add" idref="Coverage_LineB.Premium" type="float" />
+                          <argument op="add" idref="LineOutput.TotalRiskPremium" type="float" />
+                        </calculation>
+                      </argument>
+                      <argument op="multiply" idref="PolicyOutputNonShredded.MultiplePolicyDiscountFactor" type="float" />
+                      <argument op="multiply" round="1" roundType="round" type="int" value="-1" />
+                    </calculation>
+                  </value>
+                </rules>
+              </public>
+            </object>
+          </object>
+        </object>
+        <object id="PolicyOutput" abstract="1">
+          <public id="PolicyOutput.Premium" type="float" path="Premium" override="1">
+            <rules>
+              <value>
+                <calculation>
+                  <argument op="eq" idref="PolicyPrivate.TotalLinePremium" type="float" />
+                </calculation>
+              </value>
+            </rules>
+            <definition>
+              <caption value="Full-Term Premium" />
+              <readOnly idref="True" />
+              <formatMask idref="FormatMask.Premium" />
+              <maxLength idref="MaxLength.Premium" />
+            </definition>
+            <worksheet>
+              <comparison idref="True" type="int" />
+            </worksheet>
+          </public>
+          <object id="PolicyOutputNonShredded" abstract="1">
+            <public id="PolicyOutputNonShredded.NumberOfPoliciesInPortfolio" type="int" comment="" path="NumberOfPoliciesInPortfolio">
+              <definition>
+                <readOnly idref="True" />
+              </definition>
+            </public>
+            <public id="PolicyOutputNonShredded.MultiplePolicyDiscountFactor" type="float" comment="" path="PolicyOutputNonShreddedMultiplePolicyDiscountFactor">
+              <rules>
+                <misc>
+                  <if>
+                    <condition idref="True" />
+                    <then value="0" />
+                  </if>
+                  <if>
+                    <condition>
+                      <comparison compare="gt">
+                        <operand idref="PolicyOutputNonShredded.NumberOfPoliciesInPortfolio" type="int" />
+                        <operand type="int" value="1" />
+                      </comparison>
+                    </condition>
+                    <then value=".05" />
+                  </if>
+                  <if>
+                    <condition>
+                      <comparison compare="gt">
+                        <operand idref="PolicyOutputNonShredded.NumberOfPoliciesInPortfolio" type="int" />
+                        <operand type="int" value="3" />
+                      </comparison>
+                    </condition>
+                    <then value=".10" />
+                  </if>
+                  <if>
+                    <condition>
+                      <comparison compare="gt">
+                        <operand idref="PolicyOutputNonShredded.NumberOfPoliciesInPortfolio" type="int" />
+                        <operand type="int" value="5" />
+                      </comparison>
+                    </condition>
+                    <then value=".15" />
+                  </if>
+                </misc>
+              </rules>
+            </public>
+            <private id="PolicyOutputNonShredded.AuditModeFalse" caption="" type="boolean">
+              <value>
+                <comparison compare="eq">
+                  <operand idref="PolicyOutputNonShredded.AuditMode" type="boolean" />
+                  <operand idref="False" type="int" />
+                </comparison>
+              </value>
+            </private>
+          </object>
+          <private id="PolicyOutput.SetStatusExpired" caption="" type="string">
+            <value value="Expired" />
+            <affects>
+              <reference idref="PolicyOutput.Status" effect="setValue" />
+            </affects>
+          </private>
+          <public id="PolicyOutput.AuditPremium" path="AuditPremium" type="float">
+            <definition>
+              <caption value="Audit Premium" />
+            </definition>
+          </public>
+          <public id="PolicyOutput.AuditCharge" path="AuditCharge" type="float">
+            <definition>
+              <caption value="Audit Charge" />
+            </definition>
+          </public>
+          <public id="PolicyOutput.PremiumTerm" path="PremiumTerm" type="float">
+            <definition>
+              <caption value="Premium Term" />
+            </definition>
+          </public>
+          <public id="PolicyOutput.PremiumWritten" path="PremiumWritten" type="float" override="1">
+            <definition>
+              <caption value="Premium Written" />
+              <formatMask idref="FormatMask.PremiumPennies" />
+              <maxLength idref="MaxLength.fValue" />
+              <readOnly idref="True" />
+            </definition>
+            <rules>
+              <value>
+                <calculation>
+                  <argument op="eq" idref="PolicyPrivate.PremiumWrittenRq" type="float" />
+                </calculation>
+              </value>
+            </rules>
+          </public>
+        </object>
+        <object id="PolicyPrivate" abstract="1">
+          <private id="PolicyPrivate.TotalLinePremium" caption="" type="float">
+            <value>
+              <iterator type="float" scope="all" action="sum" idref="Line">
+                <reference idref="LineOutput.Premium" type="float" />
+              </iterator>
+            </value>
+          </private>
+          <private id="PolicyPrivate.IsBindable" type="boolean" comment="" caption="Is Bindable" override="1">
+            <value idref="True" />
+            <misc>
+              <if>
+                <condition>
+                  <comparison compare="and">
+                    <comparison compare="eq">
+                      <operand idref="Coverage_LineA.Limit" type="string" />
+                      <operand type="int" value="500000" />
+                    </comparison>
+                    <comparison compare="eq">
+                      <operand idref="Context.IsAgent" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                  </comparison>
+                </condition>
+                <then idref="False" message="PolicyPrivate.IsBindableMsg1" />
+              </if>
+            </misc>
+          </private>
+          <private id="PolicyPrivate.IsEligible" type="boolean" comment="" caption="Is Eligible" override="1">
+            <value idref="True" />
+            <misc>
+              <if>
+                <condition>
+                  <comparison compare="le">
+                    <operand idref="LinePrivate.TotalRiskCount" type="int" />
+                    <operand type="int" value="0" />
+                  </comparison>
+                </condition>
+                <then idref="False" message="PolicyPrivate.IsEligibleMsg1" />
+              </if>
+              <if>
+                <condition>
+                  <comparison compare="eq">
+                    <operand idref="Coverage_LineB.Limit" type="string" />
+                    <operand type="int" value="500000" />
+                  </comparison>
+                </condition>
+                <then idref="False" message="PolicyPrivate.IsEligibleMsg2" />
+              </if>
+            </misc>
+          </private>
+          <private id="PolicyPrivate.PortfolioID" caption="" type="int">
+            <value>
+              <session sessionValue="portfolioID" />
+            </value>
+          </private>
+          <private id="PolicyPrivate.SetAuditPremium" type="float" comment="">
+            <affects>
+              <reference idref="PolicyOutput.AuditPremium" effect="setValue" />
+            </affects>
+            <value>
+              <request verb="SessionReconcile.setWrittenPremiumRq" get="transactions/@auditPremium">
+                <responsePath value="" />
+                <onFailure value="" />
+                <modifySession value="" />
+                <usesSession value="" />
+                <default value="-999999" />
+                <nameValues>
+                  <nameValue value="1" name="updateSession" dataType="attribute" />
+                  <nameValue value="Premium" name="premiumClass" dataType="attribute" />
+                  <nameValue idref="PolicyPrivate.WrittenPremiumRound" name="round" dataType="attribute" />
+                  <nameValue idref="PolicyPrivate.WrittenPremiumFactor" name="factor" dataType="attribute" />
+                  <nameValue idref="PolicyPrivate.WrittenPremiumPrecision" name="precision" dataType="attribute" />
+                </nameValues>
+              </request>
+            </value>
+          </private>
+          <private id="PolicyPrivate.SetAuditCharge" type="float" comment="">
+            <affects>
+              <reference idref="PolicyOutput.AuditCharge" effect="setValue" />
+            </affects>
+            <value>
+              <request verb="SessionReconcile.setWrittenPremiumRq" get="transactions/@auditCharge">
+                <responsePath value="" />
+                <onFailure value="" />
+                <modifySession value="" />
+                <usesSession value="" />
+                <default value="-999999" />
+                <nameValues>
+                  <nameValue value="1" name="updateSession" dataType="attribute" />
+                  <nameValue value="Premium" name="premiumClass" dataType="attribute" />
+                  <nameValue idref="PolicyPrivate.WrittenPremiumRound" name="round" dataType="attribute" />
+                  <nameValue idref="PolicyPrivate.WrittenPremiumFactor" name="factor" dataType="attribute" />
+                  <nameValue idref="PolicyPrivate.WrittenPremiumPrecision" name="precision" dataType="attribute" />
+                </nameValues>
+              </request>
+            </value>
+          </private>
+          <private id="PolicyPrivate.SetPremiumTerm" type="float" comment="">
+            <affects>
+              <reference idref="PolicyOutput.PremiumTerm" effect="setValue" />
+            </affects>
+            <value>
+              <request verb="SessionReconcile.setWrittenPremiumRq" get="transactions/@term">
+                <responsePath value="" />
+                <onFailure value="" />
+                <modifySession value="" />
+                <usesSession value="" />
+                <default value="-999999" />
+                <nameValues>
+                  <nameValue value="1" name="updateSession" dataType="attribute" />
+                  <nameValue value="Premium" name="premiumClass" dataType="attribute" />
+                  <nameValue idref="PolicyPrivate.WrittenPremiumRound" name="round" dataType="attribute" />
+                  <nameValue idref="PolicyPrivate.WrittenPremiumFactor" name="factor" dataType="attribute" />
+                  <nameValue idref="PolicyPrivate.WrittenPremiumPrecision" name="precision" dataType="attribute" />
+                </nameValues>
+              </request>
+            </value>
+          </private>
+          <private id="PolicyPrivate.ActiveAgencyId" caption="" type="string">
+            <value>
+              <request verb="Session.getPropertyRq" get="@value">
+                <responsePath value="" />
+                <onFailure value="" />
+                <modifySession value="" />
+                <usesSession value="" />
+                <default value="" />
+                <nameValues>
+                  <nameValue value="agencyId" name="name" dataType="attribute" />
+                </nameValues>
+              </request>
+            </value>
+          </private>
+          <private id="PolicyPrivate.SetPolicyNumber" type="string" override="1">
+            <value>
+              <if>
+                <condition>
+                  <comparison compare="and">
+                    <comparison compare="ne">
+                      <operand idref="PolicyOutput.PolicyNumber" type="string" />
+                      <operand type="string" value="" />
+                    </comparison>
+                    <comparison compare="is">
+                      <operand idref="Rules.PolicyIsInForce" type="boolean" />
+                      <operand idref="False" type="int" />
+                    </comparison>
+                  </comparison>
+                </condition>
+                <then idref="PolicyOutput.PolicyNumber" />
+                <else>
+                  <calculation>
+                    <argument op="eq" idref="PolicyPrivate.PolicyNumberLOBCode" type="string" />
+                    <argument op="add" idref="PolicyPrivate.GetPolicyNumber" type="string" />
+                    <argument op="add" type="string" value="P" />
+                    <argument op="add" idref="PolicyPrivate.EffectiveYear" type="int" />
+                  </calculation>
+                </else>
+              </if>
+            </value>
+            <affects>
+              <reference idref="PolicyOutput.PolicyNumber" effect="setValue" />
+            </affects>
+          </private>
+          <private id="PolicyPrivate.SetQuoteNumber" type="string" override="1">
+            <value>
+              <if>
+                <condition>
+                  <comparison compare="ne">
+                    <operand idref="PolicyOutput.QuoteNumber" type="string" />
+                    <operand type="string" value="" />
+                  </comparison>
+                </condition>
+                <then idref="PolicyOutput.QuoteNumber" />
+                <else>
+                  <calculation>
+                    <argument op="eq" idref="PolicyInput.LineOfBusiness" type="string" />
+                    <argument op="add" idref="PolicyPrivate.GetQuoteNumber" type="string" />
+                    <argument op="add" type="string" value="Q" />
+                    <argument op="add" idref="PolicyPrivate.EffectiveYear" type="int" />
+                  </calculation>
+                </else>
+              </if>
+            </value>
+            <affects>
+              <reference idref="PolicyOutput.QuoteNumber" effect="setValue" />
+              <reference idref="PolicyPrivate.SetPolicyNumberToQuoteNumber" effect="postEffect" />
+            </affects>
+          </private>
+          <private id="PolicyPrivate.SetPolicyNumberToQuoteNumber" type="string" override="1">
+            <value>
+              <if>
+                <condition>
+                  <comparison compare="eq">
+                    <operand idref="Rules.PolicyIsQuote" type="float" />
+                    <operand idref="False" type="int" />
+                  </comparison>
+                </condition>
+                <then idref="PolicyOutput.PolicyNumber" />
+                <else>
+                  <calculation>
+                    <argument op="eq" idref="PolicyOutput.QuoteNumber" type="string" />
+                  </calculation>
+                </else>
+              </if>
+            </value>
+            <affects>
+              <reference idref="PolicyOutput.PolicyNumber" effect="setValue" />
+            </affects>
+          </private>
+          <private id="PolicyPrivate.UpdateCurrentManuScriptID" caption="" type="string">
+            <value>
+              <session sessionValue="manuscriptID" />
+            </value>
+            <affects>
+              <reference idref="PolicyAdminOutputNonShredded.PolicyManuScriptID" effect="setValue" />
+            </affects>
+          </private>
+        </object>
+        <object id="PolicyInput" abstract="1">
+          <public id="PolicyInput.LineOfBusiness" type="string" path="LineOfBusiness" override="1">
+            <rules>
+              <value value="Line1" />
+            </rules>
+            <definition>
+              <caption value="Line of Business" />
+              <maxLength idref="MaxLength.sValue" />
+            </definition>
+          </public>
+          <public id="PolicyInput.Term" path="Term" type="int" override="1">
+            <definition>
+              <caption value="Term" />
+            </definition>
+            <rules>
+              <default value="12" />
+            </rules>
+          </public>
+          <public id="PolicyInput.AuditPeriod" path="AuditPeriod" type="string" override="1">
+            <definition>
+              <caption value="Audit Period" />
+              <options>
+                <option value="NA" caption="N/A" default="1" />
+                <option value="Annual" caption="Annual" />
+                <option value="SemiAnnual" caption="Semi-Annual" />
+                <option value="Quarterly" caption="Quarterly" />
+                <option value="Monthly" caption="Monthly" />
+              </options>
+              <maxLength value="12" />
+              <readOnly>
+                <comparison compare="eq">
+                  <operand idref="PolicyInput.IsAuditable" type="boolean" />
+                  <operand idref="False" type="int" />
+                </comparison>
+              </readOnly>
+            </definition>
+            <rules>
+              <default value="NA" />
+              <misc>
+                <if>
+                  <condition>
+                    <comparison compare="eq">
+                      <operand idref="PolicyInput.IsAuditable" type="boolean" />
+                      <operand idref="False" type="int" />
+                    </comparison>
+                  </condition>
+                  <then value="NA" />
+                </if>
+              </misc>
+            </rules>
+          </public>
+          <public id="PolicyInput.EffectiveDate" path="EffectiveDate" type="date" override="1">
+            <definition>
+              <caption value="Effective Date" />
+              <maxLength idref="MaxLength.Date" />
+            </definition>
+            <rules>
+              <default>
+                <if>
+                  <condition>
+                    <comparison compare="ne">
+                      <operand idref="PolicyPrivate.PropertyEffectiveDate" type="date" />
+                      <operand type="string" value="" />
+                    </comparison>
+                  </condition>
+                  <then idref="PolicyPrivate.PropertyEffectiveDate" />
+                  <else idref="DateTime.CurrentDate" />
+                </if>
+              </default>
+              <minimum value="1900-01-01" />
+              <maximum value="2075-01-01" />
+            </rules>
+          </public>
+        </object>
+      </object>
+      <table id="LineCoverageALimitFactor" tableType="local">
+        <fields>
+          <field type="int" name="Value" />
+        </fields>
+        <rowKeys name="Limit" type="string" find="eq">
+          <key value="100000" />
+          <key value="200000" />
+          <key value="300000" />
+          <key value="400000" />
+          <key value="500000" />
+        </rowKeys>
+        <data>
+          <row value="1.00" />
+          <row value="1.20" />
+          <row value="1.40" />
+          <row value="1.50" />
+          <row value="1.75" />
+        </data>
+      </table>
+      <object id="PolicyAdmin" abstract="1">
+        <object id="PolicyAdminOutput" abstract="1">
+          <object id="PolicyAdminOutputNonShredded" abstract="1">
+            <private id="PolicyAdminOutputNonShredded.ShowForm" caption="" type="boolean">
+              <value>
+                <iterator type="boolean" scope="all" action="count" idref="Location" />
+              </value>
+            </private>
+            <public id="PolicyAdminOutputNonShredded.FormsManuScriptID" type="string" path="FormsManuScriptID" override="1">
+              <definition>
+                <caption value="Forms Manuscript ID" />
+                <maxLength idref="MaxLength.sValue" />
+              </definition>
+              <rules>
+                <value idref="PolicyAdminOutputNonShredded.PolicyManuScriptID" />
+              </rules>
+            </public>
+            <public id="PolicyAdminOutputNonShredded.FormsManuScriptIDPrintJob" type="string" path="FormsManuScriptIDPrintJob" override="1">
+              <definition>
+                <caption value="Policy Admin Output Non Shredded Forms Manu Script ID Print Job" />
+                <maxLength idref="MaxLength.sValue" />
+              </definition>
+              <rules>
+                <value>
+                  <request verb="ManuScriptBroker.listRq" get="items/item/@id">
+                    <onFailure value="" />
+                    <modifySession value="" />
+                    <usesSession value="" />
+                    <default value="" />
+                    <nameValues>
+                      <nameValue value="" name="keys" dataType="element">
+                        <nameValue value="" name="key" dataType="element">
+                          <nameValue value="lob" name="name" dataType="attribute" />
+                          <nameValue value="Line1" name="value" dataType="attribute" />
+                          <nameValue value="=" name="operator" dataType="attribute" />
+                        </nameValue>
+                        <nameValue value="" name="key" dataType="element">
+                          <nameValue value="state" name="name" dataType="attribute" />
+                          <nameValue value="US" name="value" dataType="attribute" />
+                          <nameValue value="=" name="operator" dataType="attribute" />
+                        </nameValue>
+                        <nameValue value="" name="sort" dataType="element">
+                          <nameValue value="version" name="name" dataType="attribute" />
+                          <nameValue value="ascending" name="direction" dataType="attribute" />
+                        </nameValue>
+                      </nameValue>
+                    </nameValues>
+                  </request>
+                </value>
+              </rules>
+            </public>
+            <public id="PolicyAdminOutputNonShredded.UseDCTTasks" path="UseDCTTasks" type="boolean">
+              <definition>
+                <caption value="Use DCT Tasks" />
+              </definition>
+              <rules>
+                <default idref="True" />
+              </rules>
+            </public>
+          </object>
+        </object>
+        <object id="PolicyAdminPrivate" abstract="1">
+          <object id="TransactionProcessingPrivate" abstract="1" />
+        </object>
+        <object id="Transaction" abstract="1">
+          <object id="TransactionInput" abstract="1" />
+          <object id="TransactionPrivate" abstract="1">
+            <private id="TransactionPrivate.IsLastTransaction" caption="" type="boolean">
+              <value>
+                <comparison compare="eq">
+                  <operand idref="Transaction.CurrentIteration" type="int" />
+                  <operand idref="PolicyAdminPrivate.TransactionCount" type="int" />
+                </comparison>
+              </value>
+            </private>
+          </object>
+          <object id="Reasons_Session" path="reasons">
+            <minOccurs value="1" />
+            <maxOccurs value="1" />
+            <object id="Reason_Session" path="reason">
+              <minOccurs value="0" />
+              <maxOccurs value="*" />
+              <public id="Reason_Session.Code" path="Code" type="string">
+                <definition>
+                  <caption value="Code" />
+                </definition>
+              </public>
+              <public id="Reason_Session.Description" path="Description" type="string">
+                <definition>
+                  <caption value="Description" />
+                </definition>
+              </public>
+            </object>
+          </object>
+          <object id="TransactionOutput" abstract="1">
+            <public id="TransactionOutput.CancellationDate" path="CancellationDate" type="date">
+              <definition>
+                <caption value="Cancellation Date" />
+              </definition>
+            </public>
+            <public id="TransactionOutput.WaiveCharge" path="WaiveCharge" type="boolean">
+              <definition>
+                <caption value="Waive Charge" />
+              </definition>
+            </public>
+            <public id="TransactionOutput.StatusUserContext" path="StatusUserContext" type="string">
+              <definition>
+                <caption value="Status User Context" />
+                <maxLength idref="MaxLength.sValue" />
+              </definition>
+            </public>
+            <public id="TransactionOutput.CancelPendingDate" path="CancelPendingDate" type="date">
+              <definition>
+                <caption value="Cancel Pending Date" />
+              </definition>
+            </public>
+            <object id="TransactionOutputNonShredded" abstract="1">
+              <public id="TransactionOutputNonShredded.SourcePolicyID" path="SourcePolicyID" type="string">
+                <definition>
+                  <caption value="Source Policy ID" />
+                </definition>
+              </public>
+              <public id="TransactionOutputNonShredded.DestinationPolicyID" path="DestinationPolicyID" type="string">
+                <definition>
+                  <caption value="Destination Policy ID" />
+                </definition>
+              </public>
+            </object>
+          </object>
+        </object>
+      </object>
+      <object id="Account" abstract="1">
+        <object id="AccountInput" abstract="1">
+          <public id="AccountInput.Name" path="Name" type="string" override="1">
+            <definition>
+              <caption value="Name" />
+              <maxLength idref="MaxLength.Name" />
+              <required>
+                <comparison compare="eq">
+                  <operand idref="PolicyOutput.Status" type="string" />
+                  <operand type="string" value="Application" />
+                </comparison>
+              </required>
+            </definition>
+            <rules>
+              <affects>
+                <reference idref="PolicyPrivate.SetQuoteNumber" effect="postEffect" />
+              </affects>
+              <default value="Test Name" />
+            </rules>
+          </public>
+          <public id="AccountInput.Address1" path="address/Address1" type="string" override="1">
+            <definition>
+              <maxLength idref="MaxLength.Address" />
+              <caption value="Address 1" />
+              <required>
+                <comparison compare="eq">
+                  <operand idref="PolicyOutput.Status" type="string" />
+                  <operand type="string" value="Application" />
+                </comparison>
+              </required>
+            </definition>
+          </public>
+          <public id="AccountInput.City" path="address/City" type="string" override="1">
+            <definition>
+              <caption value="City" />
+              <maxLength idref="MaxLength.City" />
+              <required>
+                <comparison compare="eq">
+                  <operand idref="PolicyOutput.Status" type="string" />
+                  <operand type="string" value="Application" />
+                </comparison>
+              </required>
+            </definition>
+          </public>
+          <public id="AccountInput.State" path="address/State" type="string" override="1">
+            <definition>
+              <caption value="State" />
+              <maxLength idref="MaxLength.State" />
+              <options idref="StateAbbreviations" name="State" />
+              <formatMask value="blankOption:(select)" />
+              <required idref="True" />
+            </definition>
+            <rules>
+              <default value="MO" />
+            </rules>
+          </public>
+          <public id="AccountInput.ZipCode" path="address/ZipCode" type="string" override="1">
+            <definition>
+              <caption value="Zip Code" />
+              <maxLength idref="MaxLength.Zip" />
+              <formatMask idref="FormatMask.Zipcode" />
+              <required>
+                <comparison compare="or">
+                  <comparison compare="eq">
+                    <operand idref="PolicyOutput.Status" type="string" />
+                    <operand type="string" value="Application" />
+                  </comparison>
+                  <comparison compare="eq">
+                    <operand idref="Context.IsConsumer" type="boolean" />
+                    <operand idref="True" type="int" />
+                  </comparison>
+                </comparison>
+              </required>
+            </definition>
+          </public>
+          <public id="AccountInput.Email" path="Email" type="string" override="1">
+            <definition>
+              <caption value="E-mail Address" />
+              <maxLength idref="MaxLength.EMail" />
+              <required>
+                <comparison compare="eq">
+                  <operand idref="Context.IsConsumer" type="boolean" />
+                  <operand idref="True" type="int" />
+                </comparison>
+              </required>
+            </definition>
+          </public>
+          <public id="AccountInput.PrimaryPhone" path="PrimaryPhone" type="string" override="1">
+            <definition>
+              <caption value="Primary Phone" />
+              <formatMask idref="FormatMask.PhoneFax" />
+              <maxLength idref="MaxLength.PhoneFax" />
+              <required>
+                <comparison compare="eq">
+                  <operand idref="PolicyOutput.Status" type="string" />
+                  <operand type="string" value="Application" />
+                </comparison>
+              </required>
+            </definition>
+            <rules>
+              <default value="1234567890" />
+            </rules>
+          </public>
+        </object>
+        <object id="AccountPrivate" abstract="1">
+        </object>
+      </object>
+      <object id="Workflow" abstract="1">
+        <object id="Actions" abstract="1">
+          <object id="Refer" abstract="1" />
+          <object id="Decline" abstract="1" />
+          <object id="Approve" abstract="1" />
+          <object id="Pending" abstract="1" />
+          <object id="BindEndorsementScheduled" abstract="1">
+            <private id="BindEndorsementScheduled.Show" type="boolean" comment="" caption="Bind Endorsement Show" override="1">
+              <value>
+                <if>
+                  <condition>
+                    <comparison compare="and">
+                      <comparison compare="eq">
+                        <operand idref="PolicyAdminPrivate.IsNewTransACT" type="boolean" />
+                        <operand idref="True" type="int" />
+                      </comparison>
+                      <comparison compare="isnot">
+                        <operand idref="PolicyOutputNonShredded.LastTransactionType" type="string" />
+                        <operand type="string" value="FinalAudit,InterimAudit,RevisedFinalAudit,RevisedInterimAudit" />
+                      </comparison>
+                    </comparison>
+                  </condition>
+                  <then idref="BindEndorsementScheduled.ShowNewTransACT" />
+                  <else idref="BindEndorsementScheduled.ShowLegacyTransACT" />
+                </if>
+              </value>
+            </private>
+          </object>
+          <object id="BindEndorsement" abstract="1">
+            <private id="BindEndorsement.ShowNewTransACT" type="boolean" comment="" caption="Bind Endorsement Show" override="1">
+              <value>
+                <comparison compare="and">
+                  <comparison compare="eq">
+                    <operand idref="TransactionStatusCode.CanCommit" type="boolean" />
+                    <operand idref="True" type="int" />
+                  </comparison>
+                  <comparison compare="gt">
+                    <operand idref="PolicyAdminPrivate.TransactionCount" type="int" />
+                    <operand type="int" value="1" />
+                  </comparison>
+                </comparison>
+              </value>
+            </private>
+          </object>
+          <object id="Bind" abstract="1">
+            <private id="Bind.ShowNewTransACT" type="boolean" comment="" caption="Bind Show" override="1">
+              <value>
+                <comparison compare="eq">
+                  <operand idref="TransactionStatusCode.CanCommit" type="boolean" />
+                  <operand idref="True" type="int" />
+                </comparison>
+              </value>
+              <misc>
+                <if>
+                  <condition>
+                    <comparison compare="eq">
+                      <operand idref="PolicyOutputNonShredded.ApplicationCompleted" type="boolean" />
+                      <operand idref="False" type="int" />
+                    </comparison>
+                  </condition>
+                  <then idref="False" />
+                </if>
+                <if>
+                  <condition>
+                    <comparison compare="and">
+                      <comparison compare="and">
+                        <comparison compare="eq">
+                          <operand idref="PolicyOutputNonShredded.FormsCompleted" type="boolean" />
+                          <operand idref="False" type="int" />
+                        </comparison>
+                        <comparison compare="eq">
+                          <operand idref="PolicyAdminOutputNonShredded.UseDCTFormsAndMessages" type="boolean" />
+                          <operand idref="True" type="int" />
+                        </comparison>
+                      </comparison>
+                      <comparison compare="is">
+                        <operand idref="PolicyOutput.Status" type="string" />
+                        <operand type="string" value="Quote,Application" />
+                      </comparison>
+                    </comparison>
+                  </condition>
+                  <then idref="False" />
+                </if>
+                <if>
+                  <condition>
+                    <comparison compare="le">
+                      <operand idref="GetConsumerAccountInfo.ActivePolicyID" type="string" />
+                      <operand type="int" value="0" />
+                    </comparison>
+                  </condition>
+                  <then idref="False" />
+                </if>
+              </misc>
+            </private>
+            <private id="Bind.ShowConsumerCommit" caption="" type="boolean">
+              <value>
+                <comparison compare="and">
+                  <comparison compare="and">
+                    <comparison compare="and">
+                      <comparison compare="eq">
+                        <operand idref="PolicyAdminPrivate.IsNewTransACT" type="boolean" />
+                        <operand idref="True" type="int" />
+                      </comparison>
+                      <comparison compare="eq">
+                        <operand idref="Bind.ShowNewTransACT" type="boolean" />
+                        <operand idref="True" type="int" />
+                      </comparison>
+                    </comparison>
+                    <comparison compare="eq">
+                      <operand idref="Context.IsConsumer" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                  </comparison>
+                  <comparison compare="eq">
+                    <operand idref="GetConsumerAccountInfo.ShowCreateAccountButton" type="boolean" />
+                    <operand idref="False" type="int" />
+                  </comparison>
+                </comparison>
+              </value>
+            </private>
+            <private id="Bind.ShowStandardCommit" caption="" type="boolean">
+              <value>
+                <comparison compare="and">
+                  <comparison compare="and">
+                    <comparison compare="eq">
+                      <operand idref="PolicyAdminPrivate.IsNewTransACT" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                    <comparison compare="eq">
+                      <operand idref="Bind.ShowNewTransACT" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                  </comparison>
+                  <comparison compare="eq">
+                    <operand idref="Context.IsConsumer" type="boolean" />
+                    <operand idref="False" type="int" />
+                  </comparison>
+                </comparison>
+              </value>
+            </private>
+          </object>
+          <object id="SaveForLater" abstract="1">
+            <private id="SaveForLater.Show" caption="" type="boolean" override="1">
+              <value>
+                <comparison compare="and">
+                  <comparison compare="and">
+                    <comparison compare="and">
+                      <comparison compare="gt">
+                        <operand idref="ModifyProcessingData.TransactionCount" type="float" />
+                        <operand type="int" value="0" />
+                      </comparison>
+                      <comparison compare="eq">
+                        <operand idref="PolicyAdminPrivate.IsLocked" type="boolean" />
+                        <operand idref="False" type="int" />
+                      </comparison>
+                    </comparison>
+                    <comparison compare="eq">
+                      <operand idref="PolicyAdminPrivate.IsNewTransACT" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                  </comparison>
+                  <comparison compare="eq">
+                    <operand idref="Context.IsConsumer" type="boolean" />
+                    <operand idref="False" type="int" />
+                  </comparison>
+                </comparison>
+              </value>
+            </private>
+            <private id="SaveForLater.ShowForConsumers" caption="" type="boolean" override="1">
+              <value>
+                <comparison compare="and">
+                  <comparison compare="and">
+                    <comparison compare="and">
+                      <comparison compare="gt">
+                        <operand idref="ModifyProcessingData.TransactionCount" type="float" />
+                        <operand type="int" value="0" />
+                      </comparison>
+                      <comparison compare="eq">
+                        <operand idref="PolicyAdminPrivate.IsLocked" type="boolean" />
+                        <operand idref="False" type="int" />
+                      </comparison>
+                    </comparison>
+                    <comparison compare="eq">
+                      <operand idref="PolicyAdminPrivate.IsNewTransACT" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                  </comparison>
+                  <comparison compare="eq">
+                    <operand idref="Context.IsConsumer" type="boolean" />
+                    <operand idref="True" type="int" />
+                  </comparison>
+                </comparison>
+              </value>
+            </private>
+            <private id="SaveForLater.PolicyIsNewPending" caption="" type="boolean" path="PolicyIsNewPending">
+              <value>
+                <comparison compare="and">
+                  <comparison compare="eq">
+                    <operand idref="Transaction_Current.Type" type="string" />
+                    <operand type="string" value="New" />
+                  </comparison>
+                  <comparison compare="ne">
+                    <operand idref="Transaction_Current.State" type="string" />
+                    <operand type="string" value="committed" />
+                  </comparison>
+                </comparison>
+              </value>
+            </private>
+            <private id="SaveForLater.CheckIn" caption="" type="boolean" override="1">
+              <value>
+                <request verb="TransACT.checkinRq" get="@valid">
+                  <onFailure value="" />
+                  <modifySession value="" />
+                  <usesSession value="" />
+                  <default value="" />
+                </request>
+              </value>
+              <misc>
+                <if>
+                  <condition idref="SaveForLater.PolicyIsNewPending" />
+                  <then idref="SaveForLater.SetPolicyEffectiveDate" />
+                </if>
+              </misc>
+            </private>
+            <private id="SaveForLater.SetPolicyEffectiveDate" caption="" type="date">
+              <value idref="PolicyInput.EffectiveDate" />
+              <affects>
+                <reference idref="Transaction_Current.EffectiveDate" effect="setValue" />
+              </affects>
+            </private>
+            <private id="SaveForLater.PreEventField" caption="" type="string" override="1">
+              <value>
+                <if>
+                  <condition>
+                    <comparison compare="eq">
+                      <operand idref="SaveForLater.CheckIn" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                  </condition>
+                  <then value="" />
+                  <else value="It is not valid to unlock this policy at this time." />
+                </if>
+              </value>
+              <affects>
+                <reference idref="PolicyPrivate.UpdateCurrentManuScriptID" effect="preEffect" />
+              </affects>
+            </private>
+          </object>
+          <object id="ReturnToAdmin" abstract="1">
+            <private id="ReturnToAdmin.Show" caption="" type="boolean" override="1">
+              <value>
+                <comparison compare="and">
+                  <comparison compare="and">
+                    <comparison compare="eq">
+                      <operand idref="PolicyAdminPrivate.IsLocked" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                    <comparison compare="eq">
+                      <operand idref="PolicyAdminPrivate.IsNewTransACT" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                  </comparison>
+                  <comparison compare="eq">
+                    <operand idref="Context.IsConsumer" type="boolean" />
+                    <operand idref="False" type="int" />
+                  </comparison>
+                </comparison>
+              </value>
+            </private>
+          </object>
+        </object>
+      </object>
+      <table id="RiskCoverageBLimitFactor" tableType="local">
+        <fields>
+          <field type="int" name="Value" />
+        </fields>
+        <rowKeys name="Risk B Limit" type="int" find="eq">
+          <key value="100000" />
+          <key value="200000" />
+          <key value="300000" />
+          <key value="400000" />
+          <key value="500000" />
+        </rowKeys>
+        <data>
+          <row value="1.00" />
+          <row value="1.20" />
+          <row value="1.40" />
+          <row value="1.50" />
+          <row value="1.75" />
+        </data>
+      </table>
+      <table id="RiskCoverageALimitFactor" tableType="local">
+        <fields>
+          <field type="int" name="Value" />
+        </fields>
+        <rowKeys name="Risk A Limit" type="int" find="eq">
+          <key value="100000" />
+          <key value="200000" />
+          <key value="300000" />
+          <key value="400000" />
+          <key value="500000" />
+        </rowKeys>
+        <data>
+          <row value="1.00" />
+          <row value="1.20" />
+          <row value="1.40" />
+          <row value="1.50" />
+          <row value="1.75" />
+        </data>
+      </table>
+      <table id="RiskBaseFactor" tableType="local">
+        <fields>
+          <field type="int" name="Value" />
+        </fields>
+        <rowKeys name="Limit" type="int" find="interpolate">
+          <key value="0" />
+          <key value="5000" />
+          <key value="10000" />
+          <key value="15000" />
+          <key value="20000" />
+          <key value="5000" default="1" />
+        </rowKeys>
+        <data>
+          <row value="0.10" />
+          <row value="0.15" />
+          <row value="0.20" />
+          <row value="0.25" />
+          <row value="0.30" />
+          <row value="0.05" />
+        </data>
+      </table>
+      <table id="PostTaskOptions" tableType="local">
+        <fields>
+          <field type="int" name="ModifyTransactionOptions" />
+        </fields>
+        <rowKeys name="LOB" type="string" find="eq" pageKey="1">
+          <key value="Default" default="1" />
+        </rowKeys>
+        <rowKeys name="Modify Transaction Options" type="string" find="eq">
+          <key value="ReferTask" />
+          <key value="ApproveTask" />
+          <key value="DeclineTask" />
+          <key value="AbortTask" />
+          <key value="ScheduleTask" />
+          <key value="CloseTask" />
+          <key value="CommitTask" />
+        </rowKeys>
+        <data>
+          <row value="1" />
+          <row value="0" />
+          <row value="0" />
+          <row value="0" />
+          <row value="0" />
+          <row value="0" />
+          <row value="0" />
+        </data>
+      </table>
+      <table id="PostMessageOptions" tableType="local" override="1">
+        <fields>
+          <field type="int" name="ModifyTransactionOptions" />
+        </fields>
+        <rowKeys name="LOB" type="string" find="eq" pageKey="1">
+          <key value="Default" default="1" />
+        </rowKeys>
+        <rowKeys name="Modify Transaction Options" type="string" find="eq">
+          <key value="ReferMessage" />
+          <key value="ApproveMessage" />
+          <key value="DeclineMessage" />
+          <key value="AbortMessage" />
+          <key value="ScheduleMessage" />
+          <key value="CloseMessage" />
+          <key value="CommitMessage" />
+        </rowKeys>
+        <data>
+          <row value="0" />
+          <row value="1" />
+          <row value="1" />
+          <row value="1" />
+          <row value="1" />
+          <row value="0" />
+          <row value="1" />
+        </data>
+      </table>
+    </object>
+    <object id="TemporarySessionScratchPad" abstract="1">
+      <object id="MessageAndDiary" abstract="1">
+        <object id="StatusChangeMessages" abstract="1">
+          <object id="MessageDiary_Approve" abstract="1" />
+          <object id="MessageDiary_Refer" abstract="1">
+          </object>
+        </object>
+      </object>
+      <object id="Task" path="Task">
+        <minOccurs value="1" />
+        <maxOccurs value="1" />
+        <object id="StatusChangeTask">
+          <minOccurs value="1" />
+          <maxOccurs value="1" />
+          <private id="StatusChangeTask.Attach" caption="" type="string" comment="This grouping is externally called through TransACT">
+            <value>
+              <select idref="TransactionProcessingPrivate.TransactionStatus">
+                <case type="string" value="" select="Pending" />
+                <case type="string" value="" select="Approved" />
+                <case type="string" value="" select="Declined" />
+                <case idref="TaskDiary_Refer.Value" type="string" select="Referred" />
+                <case type="string" value="" select="Closed" />
+                <case type="string" value="" select="Committed" />
+                <case type="string" value="" select="Scheduled" />
+                <otherwise type="string" value="" />
+              </select>
+            </value>
+          </private>
+          <object id="TaskDiary_Refer">
+            <minOccurs value="1" />
+            <maxOccurs value="1" />
+            <private id="TaskDiary_Refer.Body" caption="" type="string">
+              <value>
+                <calculation>
+                  <argument op="eq" type="string" value="The transaction has been referred on " />
+                  <argument op="add" idref="DateTime.Today" type="date" />
+                  <argument op="add" type="string" value=". " />
+                  <argument op="add" idref="PolicyWorkflowDataInput.GeneralTaskRemarks" type="string" />
+                </calculation>
+              </value>
+            </private>
+            <private id="TaskDiary_Refer.PostTask" caption="" type="boolean">
+              <value>
+                <lookup>
+                  <tableRef value="PostTaskOptions" />
+                  <fieldRef value="ModifyTransactionOptions" />
+                  <keyRef idref="PolicyAdminPrivate.CurrentTransactionProductLOB" type="string" name="LOB" />
+                  <keyRef type="string" value="ReferTask" name="Modify Transaction Options" />
+                </lookup>
+              </value>
+            </private>
+            <private id="TaskDiary_Refer.Request" caption="" type="string">
+              <value>
+                <request verb="Task.addRq" get="@status">
+                  <responsePath value="" />
+                  <onFailure value="" />
+                  <modifySession value="" />
+                  <usesSession value="" />
+                  <default value="" />
+                  <nameValues>
+                    <nameValue value="" name="TaskRecord" dataType="element">
+                      <nameValue idref="PolicyPrivate.PolicyID" name="ObjectId" dataType="element" />
+                      <nameValue value="POL" name="ObjectTypeCode" dataType="element" />
+                      <nameValue idref="PolicyPrivate.ActiveAgencyId" name="EntityId" dataType="element" />
+                      <nameValue idref="TaskDiary_Refer.Subject" name="TaskTitle" dataType="element" />
+                      <nameValue value="GEN" name="TaskTypeCode" dataType="element" />
+                      <nameValue value="" name="TaskRequestData" dataType="element">
+                        <nameValue idref="TaskDiary_Refer.Body" name="Description" dataType="element" />
+                      </nameValue>
+                    </nameValue>
+                  </nameValues>
+                </request>
+              </value>
+            </private>
+            <private id="TaskDiary_Refer.Subject" caption="" type="string">
+              <value>
+                <calculation>
+                  <argument op="eq" type="string" value="Transaction Referred" />
+                </calculation>
+              </value>
+            </private>
+            <private id="TaskDiary_Refer.Value" caption="" type="string">
+              <value>
+                <if>
+                  <condition>
+                    <comparison compare="eq">
+                      <operand idref="TaskDiary_Refer.PostTask" type="boolean" />
+                      <operand idref="True" type="int" />
+                    </comparison>
+                  </condition>
+                  <then idref="TaskDiary_Refer.Request" />
+                  <else value="success" />
+                </if>
+              </value>
+            </private>
+          </object>
+        </object>
+      </object>
+    </object>
+    <messages>
+      <message name="PolicyPrivate.IsEligibleMsg2" flag="comment" category="(message)">The coverage B limit is equal to $500,000.</message>
+      <message name="PolicyPrivate.IsBindableMsg1" flag="comment" category="(message)">The coverage A limit is equal to $500,000.</message>
+      <message name="PolicyPrivate.IsEligibleMsg1" flag="comment" category="(message)">The number of risks has been reduced to 0.</message>
+    </messages>
+    <object id="_processingData" abstract="1">
+      <object id="PolicyWorkflowData" abstract="1">
+        <object id="PolicyWorkflowDataInput" abstract="1">
+          <public id="PolicyWorkflowDataInput.GeneralTaskRemarks" path="GeneralTaskRemarks" type="string">
+            <definition>
+              <caption value="General Task Remarks" />
+            </definition>
+          </public>
+        </object>
+        <object id="TransactionStatusCode" abstract="1" />
+      </object>
+    </object>
+    <object id="_temporaryData" abstract="1">
+    </object>
+    <object id="_consumerAccount" path="." document="_consumerAccount">
+      <minOccurs value="1" />
+      <maxOccurs value="1" />
+      <object id="GetConsumerAccountInfo">
+        <minOccurs value="1" />
+        <maxOccurs value="1" />
+        <private id="GetConsumerAccountInfo.getConsumerAccountInfoRq" caption="" type="string">
+          <value>
+            <request verb="CustomServer.processRq" get="@status">
+              <responsePath value="" />
+              <onFailure value="" />
+              <modifySession idref="False" />
+              <usesSession value="" />
+              <default value="failure" />
+              <nameValues>
+                <nameValue value="" name="customData" dataType="element" />
+                <nameValue value="" name="dataRequests" dataType="element" />
+                <nameValue value="" name="xsltRequests" dataType="element">
+                  <nameValue value="" name="Consumer.getConsumerAccountInfoRq" dataType="element">
+                    <nameValue idref="GetConsumerAccountInfo.ConsumerKeyFromMappedFields" name="consumerKey" dataType="attribute" />
+                    <nameValue value="_consumerAccount^ConsumerAccountInfo" name="responseSessionPath" dataType="attribute" />
+                  </nameValue>
+                </nameValue>
+              </nameValues>
+            </request>
+          </value>
+        </private>
+        <private id="GetConsumerAccountInfo.ShowPurchasePolicyButton" caption="" type="boolean">
+          <value>
+            <comparison compare="and">
+              <comparison compare="and">
+                <comparison compare="gt">
+                  <operand idref="ConsumerAccountInfo.ConsumerID" type="int" />
+                  <operand type="int" value="0" />
+                </comparison>
+                <comparison compare="gt">
+                  <operand idref="ConsumerAccountInfo.UserID" type="int" />
+                  <operand type="int" value="0" />
+                </comparison>
+              </comparison>
+              <comparison compare="le">
+                <operand idref="GetConsumerAccountInfo.ActivePolicyID" type="string" />
+                <operand type="int" value="0" />
+              </comparison>
+            </comparison>
+          </value>
+          <affects>
+            <reference idref="GetConsumerAccountInfo.getConsumerAccountInfoRq" effect="preEffect" />
+          </affects>
+        </private>
+        <public id="GetConsumerAccountInfo.ConsumerKeyFromMappedFields" path="ConsumerKeyFromMappedFields" type="string">
+          <definition>
+            <caption value="Consumer Key From Mapped Fields" />
+          </definition>
+          <rules>
+            <value>
+              <calculation>
+                <argument op="eq" idref="AccountInput.Name" type="string" />
+                <argument op="add" type="string" value="|" />
+                <argument op="add" idref="AccountInput.Email" type="string" />
+                <argument op="add" type="string" value="|" />
+                <argument op="add" idref="AccountInput.ZipCode" type="string" />
+              </calculation>
+            </value>
+          </rules>
+        </public>
+        <private id="GetConsumerAccountInfo.ShowCreateAccountButton" caption="" type="boolean">
+          <value>
+            <comparison compare="and">
+              <comparison compare="and">
+                <comparison compare="gt">
+                  <operand idref="ConsumerAccountInfo.ConsumerID" type="int" />
+                  <operand type="int" value="0" />
+                </comparison>
+                <comparison compare="le">
+                  <operand idref="ConsumerAccountInfo.UserID" type="int" />
+                  <operand type="int" value="0" />
+                </comparison>
+              </comparison>
+              <operand idref="Context.IsConsumer" type="boolean" />
+            </comparison>
+          </value>
+          <affects>
+            <reference idref="GetConsumerAccountInfo.getConsumerAccountInfoRq" effect="preEffect" />
+          </affects>
+        </private>
+        <public id="GetConsumerAccountInfo.ActivePolicyID" path="ActivePolicyID" type="string">
+          <definition>
+            <caption value="Active Policy ID" />
+          </definition>
+          <rules>
+            <value>
+              <session sessionValue="policyID" />
+            </value>
+          </rules>
+        </public>
+        <private id="GetConsumerAccountInfo.ShowCreateConsumerAccountButton" caption="" type="boolean">
+          <value>
+            <comparison compare="and">
+              <comparison compare="eq">
+                <operand idref="ConsumerAccountInfo.ConsumerID" type="int" />
+                <operand type="int" value="0" />
+              </comparison>
+              <comparison compare="eq">
+                <operand idref="Context.IsConsumer" type="boolean" />
+                <operand idref="False" type="int" />
+              </comparison>
+            </comparison>
+          </value>
+        </private>
+      </object>
+      <object id="ConsumerAccountInfo" path="ConsumerAccountInfo/Consumer.getConsumerAccountInfoRs/ConsumerAccount">
+        <minOccurs value="1" />
+        <maxOccurs value="1" />
+        <public id="ConsumerAccountInfo.ConsumerID" path="@ConsumerID" type="int">
+          <definition>
+            <caption value="Consumer ID" />
+          </definition>
+          <rules>
+            <default value="0" />
+          </rules>
+        </public>
+        <public id="ConsumerAccountInfo.UserID" path="@UserID" type="int">
+          <definition>
+            <caption value="User ID" />
+          </definition>
+          <rules>
+            <default value="0" />
+          </rules>
+        </public>
+        <public id="ConsumerAccountInfo.ConsumerKey" path="@ConsumerKey" type="string">
+          <definition>
+            <caption value="Consumer Key" />
+          </definition>
+        </public>
+      </object>
+      <object id="UserAccountInfo" path="useraccountinfo">
+        <minOccurs value="1" />
+        <maxOccurs value="1" />
+        <object id="UserAccountInfoInput">
+          <minOccurs value="1" />
+          <maxOccurs value="1" />
+          <public id="UserAccountInfoInput.UserName" path="UserName" type="string">
+            <definition>
+              <caption value="User Name" />
+              <maxLength value="50" />
+            </definition>
+          </public>
+          <public id="UserAccountInfoInput.Password" path="Password" type="string">
+            <definition>
+              <caption value="Password" />
+              <maxLength value="50" />
+              <formatMask value="hideOnEntry: ****************************************" />
+            </definition>
+          </public>
+        </object>
+        <object id="UserAccountInfoPrivate">
+          <minOccurs value="1" />
+          <maxOccurs value="1" />
+          <private id="UserAccountInfoPrivate.CreateAccountRq" caption="" type="string">
+            <value>
+              <request verb="Consumer.createAccountRq" get="@status">
+                <responsePath value="" />
+                <onFailure value="" />
+                <modifySession value="" />
+                <usesSession value="" />
+                <default value="" />
+                <nameValues>
+                  <nameValue idref="PolicyOutput.QuoteNumber" name="consumerQuoteNumber" dataType="attribute" />
+                  <nameValue idref="UserAccountInfoInput.UserName" name="userName" dataType="attribute" />
+                  <nameValue idref="UserAccountInfoInput.Password" name="password" dataType="attribute" />
+                </nameValues>
+              </request>
+            </value>
+          </private>
+          <private id="UserAccountInfoPrivate.ValidateUserNameRq" caption="" type="boolean">
+            <value>
+              <request verb="Consumer.validateUserNameRq" get="@validUserName">
+                <responsePath value="" />
+                <onFailure value="" />
+                <modifySession value="" />
+                <usesSession value="" />
+                <default idref="False" />
+                <nameValues>
+                  <nameValue idref="UserAccountInfoInput.UserName" name="userName" dataType="attribute" />
+                  <nameValue value="_consumerAccount^useraccountinfo/ValidationMessage" name="responseSessionPath" dataType="attribute" />
+                  <nameValue value="Consumer.validateUserNameRs/message" name="responseSelect" dataType="attribute" />
+                </nameValues>
+              </request>
+            </value>
+          </private>
+          <private id="UserAccountInfoPrivate.OkToCreateAccount" caption="" type="boolean">
+            <value>
+              <comparison compare="and">
+                <comparison compare="and">
+                  <operand idref="UserAccountInfoPrivate.ValidateUserNameRqCheck" type="boolean" />
+                  <operand idref="UserAccountInfoPrivate.ValidateUserName" type="boolean" />
+                </comparison>
+                <operand idref="UserAccountInfoPrivate.ValidatePassword" type="boolean" />
+              </comparison>
+            </value>
+            <affects>
+              <reference idref="UserAccountInfoPrivate.ClearValidationMessage" effect="preEffect" />
+              <reference idref="UserAccountInfoPrivate.getDocumentsRq" effect="postEffect" />
+            </affects>
+          </private>
+          <private id="UserAccountInfoPrivate.ValidatePassword" caption="" type="boolean" path="ValidatePassword">
+            <value>
+              <functionCall name="String.RegExMatch">
+                <parameterValue idref="UserAccountInfoInput.Password" type="string" />
+                <parameterValue type="string" value="^\S(.*\S)?$" />
+              </functionCall>
+            </value>
+            <affects>
+              <reference idref="UserAccountInfoPrivate.ValidatePasswordMessageCheck" effect="postEffect" />
+            </affects>
+          </private>
+          <private id="UserAccountInfoPrivate.ValidateUserName" caption="" type="boolean" path="ValidatePassword">
+            <value>
+              <functionCall name="String.RegExMatch">
+                <parameterValue idref="UserAccountInfoInput.UserName" type="string" />
+                <parameterValue type="string" value="^\S+$" />
+              </functionCall>
+            </value>
+            <affects>
+              <reference idref="UserAccountInfoPrivate.ValidateUserNameMessageCheck" effect="postEffect" />
+            </affects>
+          </private>
+          <private id="UserAccountInfoPrivate.SetUserNameRegExMessage" type="string" comment="">
+            <value value="User names cannot contain spaces. Please be sure your user name does not contain any blank spaces" />
+            <affects>
+              <reference idref="UserAccountInfoOutput.ValidationMessage" effect="setValue" />
+            </affects>
+          </private>
+          <private id="UserAccountInfoPrivate.SetPasswordRegExMessage" type="string" comment="">
+            <value value="Passwords cannot begin or end with spaces. Please be sure your password does not contain a blank space at the beginning or end." />
+            <affects>
+              <reference idref="UserAccountInfoOutput.ValidationMessage" effect="setValue" />
+            </affects>
+          </private>
+          <private id="UserAccountInfoPrivate.ValidateUserNameMessageCheck" caption="" type="boolean" path="ValidatePassword">
+            <value>
+              <if>
+                <condition>
+                  <comparison compare="and">
+                    <comparison compare="eq">
+                      <operand idref="UserAccountInfoPrivate.ValidateUserName" type="boolean" />
+                      <operand idref="False" type="int" />
+                    </comparison>
+                    <comparison compare="ne">
+                      <operand idref="UserAccountInfoInput.UserName" type="string" />
+                      <operand type="string" value="" />
+                    </comparison>
+                  </comparison>
+                </condition>
+                <then idref="UserAccountInfoPrivate.SetUserNameRegExMessage" />
+              </if>
+            </value>
+          </private>
+          <private id="UserAccountInfoPrivate.ValidatePasswordMessageCheck" caption="" type="boolean" path="ValidatePassword">
+            <value>
+              <if>
+                <condition>
+                  <comparison compare="and">
+                    <comparison compare="eq">
+                      <operand idref="UserAccountInfoPrivate.ValidatePassword" type="boolean" />
+                      <operand idref="False" type="int" />
+                    </comparison>
+                    <comparison compare="ne">
+                      <operand idref="UserAccountInfoInput.Password" type="string" />
+                      <operand type="string" value="" />
+                    </comparison>
+                  </comparison>
+                </condition>
+                <then idref="UserAccountInfoPrivate.SetPasswordRegExMessage" />
+              </if>
+            </value>
+          </private>
+          <private id="UserAccountInfoPrivate.ClearValidationMessage" caption="" type="string" path="ClearValidationMessage">
+            <value value="" />
+            <affects>
+              <reference idref="UserAccountInfoOutput.ValidationMessage" effect="setValue" />
+            </affects>
+          </private>
+          <private id="UserAccountInfoPrivate.ValidateUserNameRqCheck" caption="" type="boolean">
+            <value>
+              <if>
+                <condition>
+                  <comparison compare="ne">
+                    <operand idref="UserAccountInfoInput.UserName" type="string" />
+                    <operand type="string" value="" />
+                  </comparison>
+                </condition>
+                <then idref="UserAccountInfoPrivate.ValidateUserNameRq" />
+                <else idref="UserAccountInfoPrivate.ClearValidationMessage" />
+              </if>
+            </value>
+          </private>
+          <private id="UserAccountInfoPrivate.getDocumentsRq" caption="" type="string">
+            <value>
+              <request verb="Session.getDocumentRq" get="">
+                <responsePath value="" />
+                <onFailure value="" />
+                <modifySession value="" />
+                <usesSession value="" />
+                <default value="" />
+                <nameValues>
+                  <nameValue value="_consumerAccount" name="document" dataType="attribute" />
+                </nameValues>
+              </request>
+            </value>
+          </private>
+        </object>
+        <object id="UserAccountInfoOutput">
+          <minOccurs value="1" />
+          <maxOccurs value="1" />
+          <public id="UserAccountInfoOutput.ValidationMessage" path="ValidationMessage" type="string" alwaysRun="1">
+            <definition>
+              <readOnly idref="True" />
+            </definition>
+          </public>
+        </object>
+      </object>
+    </object>
+  </model>
+  <topics>
+    <topic name="MainInterview" abstract="1">
+      <page name="Account" validRef="AccountDetailPage.Show" caption="Account" prevPage="" override="1" ruleSet="" pageVersion="2" nextIndex="25">
+        <group object="data" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" style="" validRef="AccountDetailPage.InitializePage" showCaption="repeat" index="1">
+            <section direction="down" captionPosition="before" style="NoTable:" showCaption="repeat" index="2">
+              <group iterMax="*" iterStep="1" object="Account" index="3">
+                <section direction="down" captionPosition="before" style="NoTable:" caption="Applicant" readOnly="0" showCaption="repeat" index="4" capClass="x_Width150">
+                  <reference idref="PolicyPrivate.CheckPreTransactionProductActivities" compute="1" index="5" />
+                  <reference idref="PolicyPrivate.SetFieldOnAccountTab" compute="1" index="6" />
+                  <reference idref="AccountInput.Name" index="7" capClass="x_Width150" />
+                  <reference idref="AccountInput.Address1" index="8" />
+                  <reference idref="AccountInput.Address2" index="9" />
+                  <reference idref="AccountInput.City" compute="1" index="A" />
+                  <reference idref="AccountInput.State" compute="1" index="B" />
+                  <reference idref="AccountInput.ZipCode" index="C" />
+                  <reference idref="AccountInput.PrimaryPhone" index="D" />
+                  <reference idref="AccountInput.Email" index="E" />
+                </section>
+              </group>
+            </section>
+            <section direction="across" captionPosition="above" style="NoTable:" showCaption="repeat" index="F">
+              <reference idref="GlobalOutput.Spacer" index="10" />
+              <action command="goto" caption="Complete Data - Test" pageRef="CompleteTransactionDataCheck" topic="CompleteTransactionDataCheck" index="11" validRef="Context.IsNotConsumer">
+                <nameValues>
+                  <nameValue name="popUp" value="1" />
+                  <nameValue name="popUpWidth" value="500" />
+                  <nameValue name="popUpHeight" value="525" />
+                </nameValues>
+              </action>
+              <action command="goto" caption="Set Status Expired" preCommand="PolicyOutput.SetStatusExpired" index="12" validRef="Context.IsNotConsumer">
+                <nameValues />
+              </action>
+            </section>
+            <section direction="down" captionPosition="before" showCaption="repeat" index="13">
+              <reference idref="PolicyWorkflowDataInput.CheckedOutUser" index="14">
+                <nameValues>
+                  <nameValue value="1" name="readOnly" />
+                </nameValues>
+              </reference>
+            </section>
+            <action command="goto" caption="Start Data - Test" pageRef="StartTransactionDataCheck" topic="StartTransactionDataCheck" index="15" validRef="Context.IsNotConsumer">
+              <nameValues>
+                <nameValue name="popUp" value="1" />
+                <nameValue name="popUpWidth" value="500" />
+                <nameValue name="popUpHeight" value="550" />
+              </nameValues>
+            </action>
+          </section>
+        </group>
+        <nameValues>
+          <nameValue idref="AccountDetailPage.IsReadOnly" name="readOnly" />
+        </nameValues>
+      </page>
+      <page name="PolicyDetail" caption="Policy Info" validRef="PolicyDetailPage.Show" prevPage="Account" override="1" pageVersion="2" nextIndex="15">
+        <group object="Policy" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" validRef="PolicyDetailPage.InitializePage" showCaption="repeat" index="1">
+            <reference idref="PolicyInput.EffectiveDate" onBlur="1" index="2" />
+            <reference idref="PolicyInput.Term" onBlur="1" index="3" />
+            <reference idref="PolicyInput.ExpirationDate" compute="1" onBlur="1" index="4" />
+            <reference idref="PolicyOutput.TermFactor" compute="1" index="5" />
+            <reference idref="PolicyInput.Product" index="6" />
+            <reference idref="PolicyOutput.Description" index="7" />
+            <reference idref="PolicyInput.PrimaryRatingState" index="8" />
+            <reference idref="PolicyOutput.Premium" caption="Total Premium" index="9" />
+            <reference idref="PolicyOutput.PreviousPolicyNumber" index="A" />
+            <reference idref="PolicyOutput.PolicyNumber" index="B" />
+            <reference idref="PolicyOutput.QuoteNumber" index="C" />
+            <reference idref="PolicyInput.IsAuditable" onBlur="1" index="D" />
+            <reference idref="PolicyInput.AuditPeriod" compute="1" index="E" />
+          </section>
+        </group>
+        <nameValues>
+          <nameValue idref="PolicyDetailPage.IsReadOnly" name="readOnly" />
+        </nameValues>
+      </page>
+      <page name="Locations" caption="Locations" prevPage="PolicyDetail" pageVersion="2" nextIndex="11">
+        <group object="Location" iterMax="*" iterStep="1" index="0">
+          <tableLayout direction="across" captionPosition="above" showCaption="once" index="1" class="x_CellPaddingRight5">
+            <tableLayout direction="across" captionPosition="above" showCaption="once" index="A" class="x_CellPaddingRight5" validRef="False" />
+            <reference idref="LocationOutputNonShredded.Number" caption="Loc #" index="2" />
+            <reference idref="LocationInput.Address1" fldClass="x_InputWidth165" index="3" />
+            <reference idref="LocationInput.Address2" fldClass="x_InputWidth165" index="4" />
+            <reference idref="LocationInput.City" fldClass="x_InputWidth165" index="5" />
+            <reference idref="LocationInput.State" index="6" />
+            <reference idref="LocationInput.ZipCode" index="7" />
+            <action command="delete" caption="X" index="8">
+              <nameValues>
+                <nameValue value="decline.png" name="icon" />
+                <nameValue value="loneIcon" name="type" />
+                <nameValue value="Remove this location" name="qtip" />
+              </nameValues>
+            </action>
+          </tableLayout>
+          <action command="add" caption="Add Location" index="9">
+            <nameValues />
+          </action>
+        </group>
+        <nameValues>
+          <nameValue idref="PolicyAdminPrivate.IsLocked" name="readOnly" />
+        </nameValues>
+      </page>
+      <page name="AdditionalInsured" caption="Additional Insured" pageVersion="2" nextIndex="13" prevPage="Locations" validRef="False">
+        <group object="Account" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" showCaption="repeat" index="1">
+            <group iterMax="*" iterStep="1" object="AdditionalOtherInterest" index="2">
+              <grid direction="across" captionPosition="above" showCaption="once" index="3" readOnly="0">
+                <reference idref="AdditionalOtherInterestInput.Name" index="4" />
+                <reference idref="AdditionalOtherInterestInput.Address1" index="5" />
+                <reference idref="AdditionalOtherInterestInput.Address2" index="6" />
+                <reference idref="AdditionalOtherInterestInput.City" index="7" />
+                <reference idref="AdditionalOtherInterestInput.State" index="8" />
+                <reference idref="AdditionalOtherInterestInput.ZipCode" index="9" />
+                <action command="delete" caption="Delete" index="A">
+                  <nameValues />
+                </action>
+                <action command="custom" caption="Search" index="C">
+                  <nameValues>
+                    <nameValue value="partyStart:partySearch" name="postAction" />
+                  </nameValues>
+                </action>
+              </grid>
+              <action command="add" caption="Add Additional Insured" index="B">
+                <nameValues />
+              </action>
+            </group>
+          </section>
+        </group>
+        <nameValues />
+      </page>
+      <page name="ProductInformation" caption="Product Information" prevPage="AdditionalInsured" pageVersion="2" nextIndex="14">
+        <group object="Line" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" showCaption="repeat" index="1">
+            <section direction="down" captionPosition="before" showCaption="repeat" index="2">
+              <reference idref="Coverage_LineA.Limit" index="3" />
+              <reference idref="Coverage_LineB.Limit" index="4" />
+            </section>
+            <group iterMax="*" iterStep="1" object="Risk" validRef="RiskPrivate.BelongsToSelectedLocation" index="5">
+              <tableLayout direction="across" captionPosition="above" showCaption="repeat" index="6">
+                <reference idref="RiskOutput.Description" index="7" />
+                <reference idref="RiskInput.InsurableAmount" index="8" />
+                <reference idref="RiskInput.InsurableAmountAudit" index="9">
+                  <nameValues>
+                    <nameValue idref="PolicyOutputNonShredded.AuditModeFalse" name="eliminate" />
+                  </nameValues>
+                </reference>
+                <reference idref="Coverage_RiskA.Limit" index="A" />
+                <reference idref="Coverage_RiskB.Limit" index="B" />
+                <action command="markForDelete" caption="X" index="C">
+                  <nameValues>
+                    <nameValue value="decline.png" name="icon" />
+                    <nameValue value="loneIcon" name="type" />
+                    <nameValue value="Remove this risk" name="qtip" />
+                  </nameValues>
+                </action>
+              </tableLayout>
+              <action command="add" caption="Add Risk" index="D">
+                <nameValues />
+              </action>
+            </group>
+          </section>
+        </group>
+        <nameValues>
+          <nameValue idref="PolicyAdminPrivate.IsLocked" name="readOnly" />
+        </nameValues>
+      </page>
+      <page name="PolicySummary" caption="Policy Summary" prevPage="ProductInformation" calculate="2" idref="data.ExecuteTotalResult" pageVersion="2" nextIndex="18">
+        <group object="Policy" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" showCaption="repeat" index="1">
+            <reference idref="PolicyOutput.Premium" compute="1" index="2" />
+            <group iterMax="*" iterStep="1" object="Line" index="3">
+              <section direction="down" captionPosition="before" showCaption="repeat" index="4">
+                <reference idref="Coverage_LineA.Premium" index="5" />
+                <reference idref="Coverage_LineB.Premium" index="6" />
+                <group iterMax="*" iterStep="1" object="Risk" index="7">
+                  <section direction="down" captionPosition="above" style="ThinBorder:" showCaption="repeat" index="8">
+                    <section direction="across" captionPosition="above" style="NoTable:" showCaption="repeat" index="9">
+                      <reference idref="RiskOutput.Description" index="A" />
+                      <reference idref="RiskOutput.BasePremium" index="B" />
+                      <reference idref="Coverage_RiskA.Premium" index="C" />
+                      <reference idref="Coverage_RiskB.Premium" index="D" />
+                      <reference idref="RiskOutput.Premium" index="E" />
+                    </section>
+                  </section>
+                </group>
+                <reference idref="LineOutput.TotalRiskPremium" index="F" />
+                <reference idref="CovPortfolioDiscount.Premium" caption="Multiple Policy Discount" index="10" />
+                <reference idref="LineOutput.Premium" index="11" />
+              </section>
+            </group>
+          </section>
+        </group>
+        <nameValues>
+          <nameValue idref="True" name="readOnly" />
+        </nameValues>
+      </page>
+      <page name="SubmissionDetail" calculate="2" idref="data.SubmissionExecute" caption="Submission" validRef="SubmissionDetailPage.Show" prevPage="PolicySummary" override="1" ruleSet="" worksheet="True" pageVersion="2" nextIndex="71">
+        <group object="data" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" readOnly="1" showCaption="repeat" index="1">
+            <section direction="down" captionPosition="before" readOnly="1" showCaption="repeat" index="2">
+              <section direction="across" captionPosition="before" readOnly="1" showCaption="repeat" index="3">
+                <reference idref="AccountInput.Name" index="4" />
+                <section direction="across" captionPosition="before" readOnly="1" validRef="PolicyAdminPrivate.ShowCurrentTransactionLabel" showCaption="repeat" index="5">
+                  <section direction="across" captionPosition="before" readOnly="1" style="width:250:align:right:" showCaption="repeat" index="6">
+                    <reference idref="PolicyAdminOutputNonShredded.CurrentTransactionTypeLabel" compute="1" caption=" " index="7" />
+                  </section>
+                  <section direction="across" captionPosition="before" readOnly="1" showCaption="repeat" index="8">
+                    <reference idref="PolicyAdminOutputNonShredded.CurrentTransactionDateLabel" compute="1" caption=" /" index="9" />
+                  </section>
+                </section>
+              </section>
+            </section>
+            <section direction="down" captionPosition="before" validRef="PolicyAdminPrivate.ShowIncludeForms" showCaption="repeat" index="A">
+              <reference idref="PolicyAdminOutputNonShredded.UseDCTFormsAndMessages" onBlur="1" index="B" />
+            </section>
+            <section direction="down" captionPosition="before" validRef="PolicyPrivate.ShowWaiveChargeCheck_NewTransACT" showCaption="repeat" index="C">
+              <reference idref="PolicyWorkflowDataInput.WaiveChargeCheck" onBlur="1" index="D" />
+            </section>
+            <section direction="down" captionPosition="before" validRef="PolicyAdminPrivate.IsNotOSTTransaction" showCaption="repeat" index="E">
+              <section direction="down" captionPosition="before" validRef="PolicyAdminPrivate.PolicyHasNotBeenAudited" showCaption="repeat" index="F">
+                <section direction="across" captionPosition="above" style="align:right:" caption="Premiums" readOnly="1" showCaption="repeat" index="10">
+                  <reference idref="PolicyOutput.Premium" caption="Full Term" index="11" />
+                  <reference idref="PolicyOutput.PremiumWritten" index="12" />
+                  <reference idref="PolicyOutput.PremiumPrior" index="13" />
+                  <reference idref="PolicyOutput.PremiumChange" index="14" />
+                </section>
+              </section>
+              <section direction="down" captionPosition="before" validRef="PolicyAdminPrivate.ShowAuditPremiums_LegacyTransACT" showCaption="repeat" index="15">
+                <section direction="across" captionPosition="above" style="align:right:" caption="Premiums" readOnly="1" showCaption="repeat" index="16">
+                  <reference idref="PolicyOutput.Premium" caption="Full Term" index="17" />
+                  <reference idref="PolicyOutputNonShredded.DisplayPremiumWritten" compute="1" index="18" />
+                  <reference idref="PolicyOutputNonShredded.DisplayPremiumPrior" compute="1" index="19" />
+                  <reference idref="PolicyOutputNonShredded.DisplayPremiumChange" compute="1" index="1A" />
+                </section>
+              </section>
+              <section direction="down" captionPosition="before" validRef="PolicyAdminPrivate.ShowAuditPremiums_NewTransACT" showCaption="repeat" index="1B">
+                <section direction="across" captionPosition="above" style="align:right:" caption="Premiums" readOnly="1" showCaption="repeat" index="1C">
+                  <reference idref="GlobalOutput.Spacer" caption="Audit premiums will be determined after the transaction is completed." index="1D" />
+                </section>
+              </section>
+            </section>
+            <section direction="down" captionPosition="before" validRef="PolicyAdminOutputNonShredded.OSTTransaction" showCaption="repeat" index="1E">
+              <section direction="across" captionPosition="above" style="align:right:" caption="Premiums" readOnly="1" showCaption="repeat" index="1F">
+                <reference idref="Spacer" caption="Current transaction is out-of-sequence. Premiums will be determined after the transaction is committed." index="20" />
+              </section>
+            </section>
+            <section direction="down" captionPosition="before" style="NoTable" validRef="PolicyPrivate.ShowReasonForDeclination_LegacyTransACT" showCaption="repeat" index="21">
+              <reference idref="PolicyInput.ReasonForDeclination" index="22" />
+            </section>
+            <section direction="down" captionPosition="above" validRef="PolicyAdminPrivate.IsLegacyTransACT" showCaption="none" index="23">
+              <section direction="across" captionPosition="above" style="align:left:" showCaption="none" index="24">
+                <reference idref="GlobalOutput.Spacer" index="25" />
+                <action command="custom" caption="Refer" validRef="Refer.Show" preCommand="Transaction.SetStatusToReferred" index="26">
+                  <nameValues>
+                    <nameValue name="postAction" value="save" />
+                  </nameValues>
+                </action>
+                <action command="custom" validRef="Decline.Show" preCommand="Transaction.SetStatusToDeclined" caption="Decline" index="27">
+                  <nameValues>
+                    <nameValue name="postAction" value="save" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Approve" validRef="Approve.Show" preCommand="Transaction.SetStatusToApproved" index="28">
+                  <nameValues>
+                    <nameValue name="postAction" value="save" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Pending" validRef="Pending.Show" preCommand="Transaction.SetStatusToPending" index="29">
+                  <nameValues>
+                    <nameValue name="postAction" value="save" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Client Forms" validRef="False" index="2A">
+                  <nameValues />
+                  <request verb="ManuScript.printFormsRq">
+                    <nameValues>
+                      <nameValue idref="PolicyAdminOutputNonShredded.PolicyManuScriptID" name="manuscript" dataType="attribute" />
+                      <nameValue value="1" name="OnePDF" dataType="attribute" />
+                      <nameValue value="c:\temp\FormsOutput" name="OutputFile" dataType="attribute" />
+                    </nameValues>
+                  </request>
+                </action>
+                <action command="custom" validRef="Application.Show" postCommand="SubmissionDetailPage.ApplicationDataPostAction" pageRef="ApplicantInfo" topic="Application" index="2B">
+                  <nameValues>
+                    <nameValue name="caption" idref="Application.Caption" />
+                  </nameValues>
+                </action>
+                <action command="goto" caption="Reinsurance" pageRef="Reinsurance" validRef="PolicyPrivate.ShowReinsurance" topic="Reinsurance" index="2C">
+                  <nameValues />
+                </action>
+                <action command="custom" caption="Policy Forms" validRef="Rules.ShowPolicyForms" index="2D">
+                  <nameValues>
+                    <nameValue name="postAction" value="previewAsyncPrintJob" />
+                    <nameValue name="printJob" idref="PolicyOutputNonShredded.FormsPrintJob" />
+                    <nameValue name="printJobManuScript" idref="PolicyAdminOutputNonShredded.FormsManuScriptID" />
+                  </nameValues>
+                </action>
+                <action command="goto" validRef="Bind.Show" caption="Complete Issuance" index="2E">
+                  <nameValues>
+                    <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.AdminManuScriptID" />
+                  </nameValues>
+                  <request verb="ManuScript.getValueRq">
+                    <nameValues>
+                      <nameValue idref="PolicyAdminOutputNonShredded.PolicyManuScriptID" name="manuscript" dataType="attribute" />
+                      <nameValue value="PolicyAdminPrivate.SetStatusToIssueOrInForce" name="field" dataType="attribute" />
+                    </nameValues>
+                  </request>
+                </action>
+                <action command="custom" caption="Return To Admin" validRef="PolicyAdminPrivate.IsInPolicyAdmin" index="2F">
+                  <nameValues>
+                    <nameValue name="postAction" value="loadHistory" />
+                  </nameValues>
+                </action>
+                <action command="goto" caption="Complete Transaction" validRef="BindEndorsement.Show" preCommand="PolicyAdminPrivate.SetValidTransaction" index="30">
+                  <nameValues>
+                    <nameValue name="pageRef" value="" />
+                    <nameValue name="topic" value="" />
+                    <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.AdminManuScriptID" />
+                    <nameValue name="page" value="" />
+                    <nameValue name="postAction" idref="PolicyAdminPrivate.LoadHistoryIfOST" />
+                    <nameValue name="checkSave" idref="PolicyAdminOutputNonShredded.OSTTransaction" />
+                  </nameValues>
+                </action>
+                <action command="goto" caption="Complete Scheduled Transaction" validRef="BindEndorsementScheduled.Show" preCommand="PolicyAdminWorkflowPrivate.AutomaticCommitLastTransactionFuture" index="31">
+                  <nameValues>
+                    <nameValue name="pageRef" value="" />
+                    <nameValue name="topic" value="" />
+                    <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.AdminManuScriptID" />
+                    <nameValue name="page" value="" />
+                    <nameValue name="postAction" value="save,loadHistory" />
+                  </nameValues>
+                </action>
+              </section>
+            </section>
+            <section direction="down" captionPosition="above" validRef="PolicyAdminPrivate.IsNewTransACT" showCaption="none" index="32">
+              <section direction="across" captionPosition="above" style="align:left:" showCaption="none" index="33">
+                <reference idref="GlobalOutput.Spacer" caption=" " index="34" />
+                <action command="custom" validRef="Application.Show" postCommand="SubmissionDetailPage.ApplicationDataPostAction" pageRef="ApplicantInfo" topic="Application" index="35">
+                  <nameValues>
+                    <nameValue name="caption" idref="Application.Caption" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Refer" validRef="Refer.Show" pageRef="Refer" topic="Refer" index="36">
+                  <nameValues>
+                    <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.CurrentManuSciptID" />
+                    <nameValue name="popUp" value="1" />
+                    <nameValue name="popUpHeight" value="300" />
+                    <nameValue name="popUpWidth" value="300" />
+                  </nameValues>
+                </action>
+                <action command="custom" validRef="Decline.Show" caption="Decline" pageRef="Decline" topic="Decline" index="37">
+                  <nameValues>
+                    <nameValue name="popUp" value="1" />
+                    <nameValue name="popUpHeight" value="300" />
+                    <nameValue name="popUpWidth" value="300" />
+                    <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.CurrentManuSciptID" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Approve" validRef="Approve.Show" topic="Approve" pageRef="Approve" index="38">
+                  <nameValues>
+                    <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.CurrentManuSciptID" />
+                    <nameValue name="popUp" value="1" />
+                    <nameValue name="popUpHeight" value="300" />
+                    <nameValue name="popUpWidth" value="300" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Pending" validRef="Pending.Show" index="39">
+                  <nameValues>
+                    <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.AdminManuScriptID" />
+                  </nameValues>
+                  <request verb="TransACT.setStatusRq">
+                    <nameValues>
+                      <nameValue value="Pending" name="status" dataType="attribute" />
+                    </nameValues>
+                  </request>
+                </action>
+                <action command="custom" caption="Client Forms" validRef="False" index="3A">
+                  <nameValues />
+                  <request verb="ManuScript.printFormsRq">
+                    <nameValues>
+                      <nameValue idref="PolicyAdminOutputNonShredded.PolicyManuScriptID" name="manuscript" dataType="attribute" />
+                      <nameValue value="1" name="OnePDF" dataType="attribute" />
+                      <nameValue value="c:\temp\FormsOutput" name="OutputFile" dataType="attribute" />
+                    </nameValues>
+                  </request>
+                </action>
+                <action command="goto" caption="Reinsurance" validRef="PolicyPrivate.ShowReinsurance" pageRef="Reinsurance" topic="Reinsurance" index="3B">
+                  <nameValues />
+                </action>
+                <action command="custom" caption="Policy Forms" validRef="Rules.ShowPolicyForms" index="3C">
+                  <nameValues>
+                    <nameValue name="postAction" value="previewAsyncPrintJob" />
+                    <nameValue name="printJob" idref="PolicyOutputNonShredded.FormsPrintJob" />
+                    <nameValue name="printJobManuScript" idref="PolicyAdminOutputNonShredded.FormsManuScriptID" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Complete Issuance" validRef="Bind.ShowStandardCommit" manuscript="$doc:session^data/BindManuScriptID$" index="3D">
+                  <nameValues>
+                    <nameValue name="preEventField" value="Bind.PreEventField" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Complete Issuance" validRef="Bind.ShowConsumerCommit" index="3E">
+                  <nameValues>
+                    <nameValue name="preEventField" value="Bind.PreEventField" />
+                    <nameValue name="postAction" value="return" />
+                    <nameValue name="_returnPage" value="consumerDashboard" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Schedule" validRef="BindEndorsementScheduled.Show" pageRef="Schedule" topic="Schedule" index="3F">
+                  <nameValues>
+                    <nameValue name="pageRef" value="" />
+                    <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.CurrentManuSciptID" />
+                    <nameValue name="popUp" value="1" />
+                    <nameValue name="popUpHeight" value="300" />
+                    <nameValue name="popUpWidth" value="300" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Modify Reasons" pageRef="ReasonDetail" topic="ReasonDetail" validRef="ModifyReasons.Show" index="40">
+                  <nameValues>
+                    <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.AdminManuScriptID" />
+                    <nameValue name="popUp" value="1" />
+                    <nameValue name="popUpHeight" value="400" />
+                    <nameValue value="600" name="popUpWidth" />
+                  </nameValues>
+                </action>
+                <action command="custom" caption="Create Account" validRef="GetConsumerAccountInfo.ShowCreateAccountButton" pageRef="UserAccountInfo" topic="UserAccountInfo" index="44">
+                  <nameValues>
+                    <nameValue value="1" name="popUp" />
+                  </nameValues>
+                </action>
+                <action command="custom" topic="CreateConsumerAccount" pageRef="CreateConsumerAccount" index="46" caption="Create Consumer Account" validRef="GetConsumerAccountInfo.ShowCreateConsumerAccountButton">
+                  <nameValues>
+                    <nameValue value="1" name="popUp" />
+                  </nameValues>
+                </action>
+              </section>
+              <action command="custom" validRef="True" caption="Rating Worksheet" index="45">
+                <nameValues>
+                  <nameValue name="PDFPage" value="printJob:TestPolicyOutWorksheet" />
+                </nameValues>
+              </action>
+            </section>
+          </section>
+        </group>
+        <nameValues>
+          <nameValue idref="SubmissionDetailPage.IsReadOnly" name="readOnly" />
+        </nameValues>
+      </page>
+      <page name="RatingWorksheet" caption="Rating Worksheet" pageVersion="2" nextIndex="3" calculate="1" idref="data.SubmissionExecute" worksheet="True" validRef="False" prevPage="SubmissionDetail">
+        <group object="data" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" showCaption="repeat" index="1">
+            <reference idref="PolicyOutput.Premium" index="2" wsCond="True" />
+          </section>
+        </group>
+      </page>
+    </topic>
+    <topic name="ChangeSummary">
+      <page name="ChangeSummary" caption="Change Summary" pageVersion="2" nextIndex="34">
+        <group object="data" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" showCaption="repeat" index="1">
+            <group iterMax="*" iterStep="1" object="Account" index="2">
+              <section direction="down" captionPosition="before" showCaption="repeat" index="3">
+                <reference idref="AccountInput.Name" index="4" />
+                <reference idref="AccountInput.Address1" index="5" />
+                <reference idref="AccountInput.Address2" index="6" />
+                <reference idref="AccountInput.City" index="7" />
+                <reference idref="AccountInput.State" index="8" />
+                <reference idref="AccountInput.ZipCode" index="9" />
+                <reference idref="AccountInput.PrimaryPhone" index="A" />
+                <group iterMax="*" iterStep="1" object="Location" index="B">
+                  <section direction="down" captionPosition="before" showCaption="repeat" index="C" />
+                </group>
+              </section>
+            </group>
+            <group iterMax="*" iterStep="1" object="Policy" index="D">
+              <section direction="down" captionPosition="before" showCaption="repeat" index="E">
+                <group iterMax="*" iterStep="1" object="Line" index="F">
+                  <section direction="down" captionPosition="before" showCaption="repeat" index="10">
+                    <section direction="down" captionPosition="before" showCaption="repeat" index="11" />
+                    <group iterMax="*" iterStep="1" object="Risk" index="12">
+                      <section direction="across" captionPosition="above" showCaption="repeat" index="13">
+                        <reference idref="RiskOutput.Description" index="14" />
+                        <reference idref="RiskPrivate.InsurableAmountSelect" index="15" />
+                        <group iterMax="*" iterStep="1" object="Coverage_RiskA" index="16">
+                          <section direction="down" captionPosition="before" showCaption="repeat" index="17">
+                            <reference idref="Coverage_RiskA.Limit" index="18" />
+                          </section>
+                        </group>
+                        <group iterMax="*" iterStep="1" object="Coverage_RiskB" index="19">
+                          <section direction="down" captionPosition="before" showCaption="repeat" index="1A">
+                            <reference idref="Coverage_RiskB.Limit" index="1B" />
+                          </section>
+                        </group>
+                      </section>
+                    </group>
+                    <group iterMax="*" iterStep="1" object="Coverage_LineA" index="1C">
+                      <section direction="down" captionPosition="before" showCaption="repeat" index="1D">
+                        <reference idref="Coverage_LineA.Limit" index="1E" />
+                      </section>
+                    </group>
+                    <group iterMax="*" iterStep="1" object="Coverage_LineB" index="1F">
+                      <section direction="down" captionPosition="before" showCaption="repeat" index="20">
+                        <reference idref="Coverage_LineB.Limit" index="21" />
+                      </section>
+                    </group>
+                  </section>
+                </group>
+              </section>
+            </group>
+          </section>
+        </group>
+      </page>
+    </topic>
+    <topic name="StartTransactionDataCheck">
+      <page name="StartTransactionDataCheck" caption="Start Transaction Data Check" pageVersion="2" nextIndex="42">
+        <group object="data" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" readOnly="1" showCaption="repeat" index="1">
+            <group iterMax="*" iterStep="1" object="Policy" index="2">
+              <section direction="down" captionPosition="before" caption="Policy Data" style="widthC:250:" showCaption="repeat" index="3">
+                <reference idref="PolicyInput.EffectiveDate" index="4" />
+                <reference idref="PolicyInput.ExpirationDate" index="5" />
+                <reference idref="PolicyOutput.CancellationDate" index="6" />
+                <reference idref="PolicyWorkflowDataInput.RemoveMarkedForDeletedGroupsCheck" index="7" />
+              </section>
+            </group>
+            <group iterMax="*" iterStep="1" object="PolicyAdmin" index="8">
+              <section direction="down" captionPosition="before" showCaption="repeat" index="9">
+                <group iterMax="*" iterStep="1" object="Transaction" index="A">
+                  <section direction="down" captionPosition="before" validRef="TransactionPrivate.IsLastTransaction" caption="Transaction Data" showCaption="repeat" index="B">
+                    <section direction="across" captionPosition="above" style="ThinBorder:" showCaption="repeat" index="C">
+                      <reference idref="GlobalOutput.Spacer" index="D" />
+                      <section direction="down" captionPosition="before" style="width:200:" showCaption="repeat" index="E">
+                        <reference idref="TransactionInput.Type" index="F" />
+                        <reference idref="TransactionInput.EffectiveDate" index="10" />
+                        <reference idref="TransactionOutput.ScheduleDate" index="11" />
+                        <reference idref="TransactionInput.ExpirationDate" index="12" />
+                        <reference idref="TransactionOutput.CancellationDate" index="13" />
+                        <reference idref="TransactionOutput.CreatedDate" index="14" />
+                        <reference idref="TransactionOutput.CreatedUser" index="15" />
+                        <reference idref="TransactionOutput.State" index="16" />
+                        <reference idref="TransactionOutput.Status" index="17" />
+                      </section>
+                      <section direction="down" captionPosition="before" style="width:200:" showCaption="repeat" index="18">
+                        <reference idref="TransactionOutput.TermPremium" index="19" />
+                        <reference idref="TransactionOutput.PriorPremium" index="1A" />
+                        <reference idref="TransactionOutput.NewPremium" index="1B" />
+                        <reference idref="TransactionOutput.Charge" index="1C" />
+                        <reference idref="TransactionOutput.ProRateFactor" index="1D" />
+                        <reference idref="TransactionOutput.WaiveCharge" index="1E" />
+                        <reference idref="Transaction.HistoryID" index="1F" />
+                        <reference idref="TransactionOutput.PolicyManuScriptID" index="20" />
+                      </section>
+                    </section>
+                    <group iterMax="*" iterStep="1" object="Reasons_Session" index="21">
+                      <section direction="down" captionPosition="before" showCaption="repeat" index="22">
+                        <group iterMax="*" iterStep="1" object="Reason_Session" index="23">
+                          <section direction="down" captionPosition="before" caption="Reasons" showCaption="repeat" index="24">
+                            <reference idref="Reason_Session.Code" index="25" />
+                            <reference idref="Reason_Session.Description" index="26" />
+                          </section>
+                        </group>
+                      </section>
+                    </group>
+                  </section>
+                </group>
+              </section>
+            </group>
+            <section direction="down" captionPosition="before" readOnly="1" showCaption="repeat" index="27">
+              <reference idref="GlobalOutput.Spacer" index="28" />
+              <action command="goto" caption="Done" pageRef="Account" topic="MainInterview" index="29">
+                <nameValues>
+                  <nameValue name="popUp" value="2" />
+                  <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.PolicyManuScriptID" />
+                </nameValues>
+              </action>
+            </section>
+          </section>
+        </group>
+        <nameValues>
+          <nameValue idref="True" name="readOnly" />
+          <nameValue value="1" name="noHeader" />
+        </nameValues>
+      </page>
+    </topic>
+    <topic name="CompleteTransactionDataCheck">
+      <page name="CompleteTransactionDataCheck" caption="Complete Transaction Data Check" pageVersion="2" nextIndex="38">
+        <group object="data" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" readOnly="1" showCaption="repeat" index="1">
+            <group iterMax="*" iterStep="1" object="Policy" index="2">
+              <section direction="down" captionPosition="before" caption="Policy Data" style="widthC:250:" showCaption="repeat" index="3">
+                <reference idref="PolicyOutput.Status" index="4" />
+                <reference idref="PolicyOutput.PolicyNumber" index="5" />
+                <reference idref="PolicyOutput.InceptionDate" index="6" />
+                <reference idref="PolicyOutput.CancellationDate" index="7" />
+              </section>
+            </group>
+            <group iterMax="*" iterStep="1" object="PolicyAdmin" index="8">
+              <section direction="down" captionPosition="before" showCaption="repeat" index="9">
+                <group iterMax="*" iterStep="1" object="Transaction" index="A">
+                  <section direction="down" captionPosition="before" validRef="TransactionPrivate.IsLastTransaction" caption="Transaction Data" showCaption="repeat" index="B">
+                    <section direction="across" captionPosition="above" style="ThinBorder:" showCaption="repeat" index="C">
+                      <reference idref="GlobalOutput.Spacer" index="D" />
+                      <section direction="down" captionPosition="before" style="width:200:" showCaption="repeat" index="E">
+                        <reference idref="TransactionOutput.IssuedDate" index="F" />
+                        <reference idref="TransactionOutput.IssuedUser" index="10" />
+                        <reference idref="TransactionOutput.TransactionDate" index="11" />
+                        <reference idref="TransactionInput.EffectiveDate" index="12" />
+                        <reference idref="TransactionOutput.CancellationDate" index="13" />
+                        <reference idref="TransactionOutput.CancelPendingDate" index="14" />
+                        <reference idref="TransactionOutput.State" index="15" />
+                        <reference idref="TransactionOutput.Status" index="16" />
+                        <reference idref="TransactionOutput.StatusUser" index="17" />
+                        <reference idref="TransactionOutput.StatusUserContext" index="18" />
+                      </section>
+                      <section direction="down" captionPosition="before" style="width:200:" showCaption="repeat" index="19">
+                        <reference idref="TransactionOutput.TermPremium" index="1A" />
+                        <reference idref="TransactionOutput.PriorPremium" index="1B" />
+                        <reference idref="TransactionOutput.NewPremium" index="1C" />
+                        <reference idref="TransactionOutput.Charge" index="1D" />
+                        <reference idref="TransactionOutput.ProRateFactor" index="1E" />
+                        <reference idref="TransactionOutput.WaiveCharge" index="1F" />
+                        <reference idref="TransactionOutput.PolicyManuScriptID" index="20" />
+                        <reference idref="TransactionOutputNonShredded.SourcePolicyID" index="21" />
+                        <reference idref="TransactionOutputNonShredded.DestinationPolicyID" index="22" />
+                      </section>
+                    </section>
+                  </section>
+                </group>
+              </section>
+            </group>
+            <section direction="down" captionPosition="before" readOnly="1" showCaption="repeat" index="23">
+              <reference idref="GlobalOutput.Spacer" index="24" />
+              <action command="goto" caption="Done" pageRef="Account" topic="MainInterview" index="25">
+                <nameValues>
+                  <nameValue name="popUp" value="2" />
+                  <nameValue name="manuscript" idref="PolicyAdminOutputNonShredded.PolicyManuScriptID" />
+                </nameValues>
+              </action>
+            </section>
+          </section>
+        </group>
+        <nameValues>
+          <nameValue idref="True" name="readOnly" />
+          <nameValue value="1" name="noHeader" />
+        </nameValues>
+      </page>
+    </topic>
+    <topic name="UserAccountInfo" caption="User Account Info">
+      <page name="UserAccountInfo" caption="User Account Info" nextIndex="26" pageVersion="2" calculate="1" idref="UserAccountInfoPrivate.OkToCreateAccount">
+        <group object="UserAccountInfo" iterMax="*" iterStep="1" index="10">
+          <section direction="down" captionPosition="before" showCaption="repeat" index="11">
+            <reference idref="UserAccountInfoInput.UserName" onBlur="1" index="12" />
+            <reference idref="UserAccountInfoInput.Password" onBlur="1" index="13" />
+            <section direction="down" captionPosition="before" showCaption="none" index="19">
+              <reference idref="UserAccountInfoOutput.ValidationMessage" compute="1" index="15" />
+            </section>
+          </section>
+          <action command="custom" caption="OK" validRef="UserAccountInfoPrivate.OkToCreateAccount" preCommand="SaveForLater.CheckIn" topic="MainInterview" pageRef="SubmissionDetail" index="18">
+            <nameValues>
+              <nameValue value="consumerCreateAccount,consumerReLogin" name="postAction" />
+              <nameValue idref="PolicyOutput.QuoteNumber" name="_consumerQuoteNumber" />
+              <nameValue idref="UserAccountInfoInput.Password" name="_password" />
+              <nameValue idref="UserAccountInfoInput.UserName" name="_username" />
+              <nameValue value="interview" name="_target" />
+              <nameValue idref="True" name="_canSave" />
+              <nameValue idref="PolicyPrivate.PolicyID" name="_policyID" />
+              <nameValue value="2" name="popUp" />
+              <nameValue idref="PolicyOutput.PolicyNumber" name="_policyNumber" />
+            </nameValues>
+          </action>
+        </group>
+        <nameValues>
+          <nameValue idref="True" name="popUp" />
+          <nameValue idref="True" name="noHeader" />
+          <nameValue idref="True" name="calculate" />
+        </nameValues>
+      </page>
+    </topic>
+    <topic name="CreateConsumerAccount" caption="Create Consumer Account">
+      <page name="CreateConsumerAccount" caption="Create Consumer Account" pageVersion="2" nextIndex="6">
+        <group object="Account" iterMax="*" iterStep="1" index="0">
+          <section direction="down" captionPosition="before" showCaption="repeat" index="1" caption="Consumer Key Information">
+            <reference idref="AccountInput.Name" index="2">
+              <nameValues>
+                <nameValue idref="True" name="readOnly" />
+              </nameValues>
+            </reference>
+            <reference idref="AccountInput.ZipCode" index="3">
+              <nameValues>
+                <nameValue idref="True" name="readOnly" />
+              </nameValues>
+            </reference>
+            <reference idref="AccountInput.Email" index="4">
+              <nameValues>
+                <nameValue idref="True" name="readOnly" />
+              </nameValues>
+            </reference>
+            <action command="goto" index="5" pageRef="SubmissionDetail" topic="MainInterview" caption="Create Consumer Account">
+              <nameValues>
+                <nameValue value="2" name="popUp" />
+              </nameValues>
+              <request verb="Consumer.createConsumerAccountRq">
+                <nameValues>
+                  <nameValue idref="GetConsumerAccountInfo.ConsumerKeyFromMappedFields" name="consumerKey" dataType="attribute" />
+                </nameValues>
+              </request>
+            </action>
+          </section>
+        </group>
+      </page>
+    </topic>
+    <topic name="NewPageSet" abstract="1">
+    </topic>
+  </topics>
+  <documents>
+    <documentSet name="TestForm" paperBinNum="0" printDefault="Selected" prevPage="TestForm">
+      <scope name="Policy" increment="1" startIter="1" endIter="*" />
+      <document>
+        <subdoc name="DC01.pdf" path="" />
+      </document>
+      <merge>
+        <mergeField name="Endorsement Description" />
+        <mergeField name="Endorsement Explanation" />
+        <mergeField name="Endorsement Form Number" idref="data.TotalResult" dataField="EndorsementFormNumber" iter="1" formatValue="" />
+        <mergeField name="Policy Number" idref="PolicyOutput.PolicyNumber" dataField="PolicyNumber" iter="1" formatValue="" />
+        <mergeField name="Effective Date" idref="PolicyInput.EffectiveDate" dataField="EffectiveDate" iter="1" formatValue="" />
+        <mergeField name="Named Ins" idref="AccountInput.Name" dataField="NamedIns" iter="1" formatValue="" />
+      </merge>
+      <scope name="Account" increment="1" startIter="1" endIter="*" />
+    </documentSet>
+    <printJob name="_TransactionPrint">
+      <printJob name="FormTest" condition="PolicyAdminOutputNonShredded.ShowForm" prevPage="" idref="PolicyAdminOutputNonShredded.FormsManuScriptIDPrintJob" />
+      <printDoc name="TestForm" />
+    </printJob>
+    <printJob name="FormTest">
+      <printDoc name="TestForm" />
+    </printJob>
+    <documentSet name="TestPolicyOutWorksheet" paperBinNum="0" printDefault="Selected" prevPage="TestForm">
+      <scope name="Policy" increment="1" startIter="1" endIter="*" />
+      <document>
+        <subdoc name="TestPolicyMain.DOC" path="">
+          <subdoc name="TestPolicySub.doc" path="" condition="True" />
+        </subdoc>
+      </document>
+      <merge>
+        <mergeField name="PremiumOnly" idref="PolicyOutput.Premium" iter="1" formatSpecifier="formatField" formatValue="FormatMask.Premium" />
+        <mergeField name="PremiumWithWorksheet" idref="PolicyOutput.Premium" iter="1" wsCond="True" />
+      </merge>
+    </documentSet>
+  </documents>
+  <mapping mappingCount="24">
+    <reference mapId="clientName" name="Client Name" idref="AccountInput.Name" />
+    <reference mapId="policyStatus" name="Policy Status" idref="PolicyOutput.Status" />
+    <reference mapId="policyNumber" name="Policy Number" idref="PolicyOutput.PolicyNumber" />
+    <reference mapId="effectiveDate" name="Effective Date" idref="PolicyInput.EffectiveDate" />
+    <reference mapId="expirationDate" name="Expiration Date" idref="PolicyInput.ExpirationDate" />
+    <reference mapId="policyPremium" name="Policy Premium" idref="PolicyOutput.Premium" />
+    <reference mapId="address" name="Address" idref="AccountInput.Address1" />
+    <reference mapId="address2" name="Address2" idref="AccountInput.Address2" />
+    <reference mapId="city" name="City" idref="AccountInput.City" />
+    <reference mapId="state" name="State" idref="AccountInput.State" />
+    <reference mapId="zipCode" name="ZIP Code" idref="AccountInput.ZipCode" />
+    <reference mapId="phoneNumber" name="Phone Number" idref="AccountInput.PrimaryPhone" />
+    <reference mapId="faxNumber" name="Fax Number" idref="AccountInput.Fax" />
+    <reference mapId="producer" name="Producer" idref="ProducerInput.Name" />
+    <reference mapId="agency" name="Agency" idref="AgencyInput.Name" />
+    <reference mapId="description" name="Description" idref="PolicyOutputNonShredded.TransactionDescription" />
+    <reference mapId="transactionDate" name="TransactionDate" idref="PolicyOutput.TransactionDate" />
+    <reference mapId="description2" name="Description2" idref="PolicyOutput.Description" />
+    <reference mapId="partyLastNameOptional" name="Party Last Name (optional)" idref="" />
+    <reference mapId="partyFirstNameOptional" name="Party First Name (optional)" idref="" />
+    <reference mapId="partyMiddleNameOptional" name="Party Middle Name (optional)" idref="" />
+    <reference mapId="partyPrefixCodeOptional" name="Party Prefix Code (optional)" idref="" />
+    <reference mapId="partySuffixCodeOptional" name="Party Suffix Code (optional)" idref="" />
+    <reference mapId="quoteNumber" name="Quote Number" idref="PolicyOutput.QuoteNumber" />
+    <reference mapId="ConsumerKeyLastName" name="ConsumerKeyLastName" idref="AccountInput.Name" />
+    <reference mapId="ConsumerKeyEmail" name="ConsumerKeyEmail" idref="AccountInput.Email" />
+    <reference mapId="ConsumerKeyZip" name="ConsumerKeyZip" idref="AccountInput.ZipCode" />
+  </mapping>
+</ManuScript>

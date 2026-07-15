@@ -1,0 +1,5185 @@
+{
+ "_meta": {
+  "_about": "Machine-readable element index for the Duck Creek Policy Author XML (ManuScript) authoring format. Derived from real product files, not from the runtime .xsd. parents/children/attributes are observed (union across the sampled files); category is assigned; example_ref is the first-seen file:line.",
+  "_source_files": {
+   "SP1": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct.xml",
+   "SP3": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml",
+   "VAL": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_Validation_1_0_0.xml",
+   "BASE": "ManuScripts/DCTTemplates/Line1/US/BaseProduct.xml",
+   "FORMS": "ManuScripts/DCTTemplates/CPPForms/US-INH/DuckCreekTech_CommercialLines_Forms_US_10_0_0_0.xml",
+   "TAX": "ManuScripts/DCTTemplates/Product/AZ/DuckCreekTech_Product_Tax_AZ_00_00.xml",
+   "EDI": "ManuScripts/SampleEDIManuScript.xml"
+  },
+  "_categories": "structural | data | presentation | logic | reference | integration | forms | meta | annotations | unclassified",
+  "_element_count": 240
+ },
+ "elements": {
+  "AddressLine1": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11478"
+  },
+  "AddressLine2": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11479"
+  },
+  "Caption": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "ViewMap"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11623"
+  },
+  "City": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11480"
+  },
+  "Confidence": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct.xml:8741"
+  },
+  "Country": {
+   "category": "unclassified",
+   "count_total": 1,
+   "count_by_file": {
+    "SP3": 1
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11488"
+  },
+  "County": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11510"
+  },
+  "EffectiveDate": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "PartyInvolvement"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11594"
+  },
+  "EmailAddress": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "PartyEmail"
+   ],
+   "children": [],
+   "attributes": [
+    "idref",
+    "slideOut"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11456"
+  },
+  "GeocodeEventing": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "OnAcceptRunField",
+    "OnRejectRunField"
+   ],
+   "attributes": [
+    "rootGroupId",
+    "xpath"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11490"
+  },
+  "GeocodeMatchCode": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11487"
+  },
+  "GeocodeUS": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "AddressLine1",
+    "AddressLine2",
+    "City",
+    "StateProvince",
+    "PostalCode",
+    "PostalCodeBase",
+    "PostalCodeAddOn",
+    "Latitude",
+    "Longitude",
+    "GeocodeMatchCode",
+    "County",
+    "Confidence",
+    "Country"
+   ],
+   "attributes": [
+    "rootGroupId",
+    "xpath"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11477"
+  },
+  "Latitude": {
+   "category": "unclassified",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 4,
+    "SP1": 4
+   },
+   "parents": [
+    "GeocodeUS",
+    "ViewMap"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11485"
+  },
+  "Location": {
+   "category": "unclassified",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 4,
+    "SP1": 4
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "LocationStateCode",
+    "LocationAddressLine2",
+    "LocationCity",
+    "LocationPostalCode",
+    "LocationAddressLine1",
+    "LocationCountryCode",
+    "LocationId",
+    "LocationStateCodeNonUS",
+    "LocationPostalCodeExtension",
+    "LocationLatitude",
+    "LocationLongitude",
+    "LocationLockingTS"
+   ],
+   "attributes": [
+    "rootGroupId"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11433"
+  },
+  "LocationAddressLine1": {
+   "category": "unclassified",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref",
+    "slideOut"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11438"
+  },
+  "LocationAddressLine2": {
+   "category": "unclassified",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11434"
+  },
+  "LocationCity": {
+   "category": "unclassified",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11435"
+  },
+  "LocationCountryCode": {
+   "category": "unclassified",
+   "count_total": 3,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 1
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11583"
+  },
+  "LocationId": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11609"
+  },
+  "LocationLatitude": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11613"
+  },
+  "LocationLockingTS": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11615"
+  },
+  "LocationLongitude": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11614"
+  },
+  "LocationPostalCode": {
+   "category": "unclassified",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11437"
+  },
+  "LocationPostalCodeExtension": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11612"
+  },
+  "LocationStateCode": {
+   "category": "unclassified",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 4,
+    "SP1": 4
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11436"
+  },
+  "LocationStateCodeNonUS": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Location"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11611"
+  },
+  "Longitude": {
+   "category": "unclassified",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 4,
+    "SP1": 4
+   },
+   "parents": [
+    "GeocodeUS",
+    "ViewMap"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11486"
+  },
+  "ManuScript": {
+   "category": "structural",
+   "count_total": 7,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1,
+    "VAL": 1,
+    "FORMS": 1,
+    "TAX": 1,
+    "EDI": 1
+   },
+   "parents": [],
+   "children": [
+    "properties",
+    "model",
+    "topics",
+    "mapping",
+    "annotations",
+    "documents",
+    "schemaMaps",
+    "metaData",
+    "revisions",
+    "modelCollections"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1"
+  },
+  "Marker": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "ViewMap"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11624"
+  },
+  "NAICS": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11532"
+  },
+  "NAICS_desc": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11533"
+  },
+  "ObjectId": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "PartyInvolvement"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11592"
+  },
+  "ObjectReference": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "PartyInvolvement"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11595"
+  },
+  "ObjectTypeCode": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "PartyInvolvement"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11591"
+  },
+  "OnAcceptRunField": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeEventing"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11491"
+  },
+  "OnBase": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "key120",
+    "key110",
+    "key107",
+    "key108",
+    "key104",
+    "key118",
+    "key119"
+   ],
+   "attributes": [
+    "rootGroupId"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11641"
+  },
+  "OnRejectRunField": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeEventing"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11492"
+  },
+  "Party": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "PartyName",
+    "PartyCountryCode",
+    "PartyTypeCode",
+    "PartyCorrespondenceName",
+    "PartyId",
+    "PartyFirstName",
+    "PartyLegacyName"
+   ],
+   "attributes": [
+    "rootGroupId"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11464"
+  },
+  "PartyCorrespondenceName": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Party"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11571"
+  },
+  "PartyCountryCode": {
+   "category": "unclassified",
+   "count_total": 3,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 1
+   },
+   "parents": [
+    "Party"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11466"
+  },
+  "PartyEmail": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "EmailAddress"
+   ],
+   "attributes": [
+    "codeType",
+    "rootGroupId",
+    "typeCodes"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11455"
+  },
+  "PartyFirstName": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Party"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11574"
+  },
+  "PartyId": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Party"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11573"
+  },
+  "PartyInvolvement": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "ObjectTypeCode",
+    "ObjectId",
+    "RoleCode",
+    "EffectiveDate",
+    "ObjectReference"
+   ],
+   "attributes": [
+    "rootGroupId",
+    "importReturn"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11590"
+  },
+  "PartyLegacyName": {
+   "category": "unclassified",
+   "count_total": 1,
+   "count_by_file": {
+    "SP3": 1
+   },
+   "parents": [
+    "Party"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11572"
+  },
+  "PartyName": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "Party"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11465"
+  },
+  "PartyPhone": {
+   "category": "unclassified",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 4,
+    "SP1": 4
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "PhoneNumber",
+    "PhoneTypeCode",
+    "PhoneFormatCode",
+    "PhoneExtension",
+    "PhoneCountryCode",
+    "PhoneExtendedData",
+    "PartyPhoneId",
+    "PartyPhoneLockingTS",
+    "PrimaryIndicator"
+   ],
+   "attributes": [
+    "rootGroupId",
+    "codeType",
+    "typeCodes",
+    "xpath"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11446"
+  },
+  "PartyPhoneId": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "PartyPhone"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11659"
+  },
+  "PartyPhoneLockingTS": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "PartyPhone"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11661"
+  },
+  "PartyTypeCode": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "Party"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11570"
+  },
+  "PhoneCountryCode": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "PartyPhone"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11656"
+  },
+  "PhoneExtendedData": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "PartyPhone"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11658"
+  },
+  "PhoneExtension": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "PartyPhone"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11655"
+  },
+  "PhoneFormatCode": {
+   "category": "unclassified",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3
+   },
+   "parents": [
+    "PartyPhone"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11588"
+  },
+  "PhoneNumber": {
+   "category": "unclassified",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 4,
+    "SP1": 4
+   },
+   "parents": [
+    "PartyPhone"
+   ],
+   "children": [],
+   "attributes": [
+    "idref",
+    "slideOut"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11447"
+  },
+  "PhoneTypeCode": {
+   "category": "unclassified",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3
+   },
+   "parents": [
+    "PartyPhone"
+   ],
+   "children": [],
+   "attributes": [
+    "idref",
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11587"
+  },
+  "PostalCode": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11482"
+  },
+  "PostalCodeAddOn": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11484"
+  },
+  "PostalCodeBase": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11483"
+  },
+  "PrimaryIndicator": {
+   "category": "unclassified",
+   "count_total": 1,
+   "count_by_file": {
+    "SP3": 1
+   },
+   "parents": [
+    "PartyPhone"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11660"
+  },
+  "RoleCode": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "PartyInvolvement"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11593"
+  },
+  "StateProvince": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "GeocodeUS"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11481"
+  },
+  "ViewMap": {
+   "category": "integration",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "Latitude",
+    "Longitude",
+    "ZoomLevel",
+    "Caption",
+    "Marker"
+   ],
+   "attributes": [
+    "rootGroupId",
+    "xpath"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11619"
+  },
+  "ZoomLevel": {
+   "category": "unclassified",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "ViewMap"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11622"
+  },
+  "account_name": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11521"
+  },
+  "action": {
+   "category": "presentation",
+   "count_total": 138,
+   "count_by_file": {
+    "SP3": 51,
+    "SP1": 42,
+    "BASE": 41,
+    "EDI": 4
+   },
+   "parents": [
+    "group",
+    "section",
+    "tableLayout",
+    "grid"
+   ],
+   "children": [
+    "nameValues",
+    "request"
+   ],
+   "attributes": [
+    "command",
+    "caption",
+    "validRef",
+    "name",
+    "index",
+    "pageRef",
+    "showRef",
+    "topic",
+    "displayType",
+    "preCommand",
+    "postCommand",
+    "disabledRef",
+    "actClass",
+    "suppressAddAction",
+    "modelCollection",
+    "iconPosition",
+    "capClass",
+    "manuscript"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:53"
+  },
+  "affects": {
+   "category": "logic",
+   "count_total": 188,
+   "count_by_file": {
+    "SP3": 83,
+    "SP1": 62,
+    "BASE": 22,
+    "VAL": 21
+   },
+   "parents": [
+    "private",
+    "rules"
+   ],
+   "children": [
+    "reference"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1040"
+  },
+  "annotations": {
+   "category": "annotations",
+   "count_total": 5,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "VAL": 1,
+    "FORMS": 1,
+    "TAX": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [
+    "comments"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11716"
+  },
+  "annual_sales_usd": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11528"
+  },
+  "argument": {
+   "category": "logic",
+   "count_total": 462,
+   "count_by_file": {
+    "SP3": 202,
+    "SP1": 183,
+    "BASE": 66,
+    "VAL": 11
+   },
+   "parents": [
+    "calculation"
+   ],
+   "children": [
+    "calculation"
+   ],
+   "attributes": [
+    "op",
+    "type",
+    "idref",
+    "value",
+    "round",
+    "roundType"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:971"
+  },
+  "assets": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11553"
+  },
+  "assets_currency": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11554"
+  },
+  "calculation": {
+   "category": "logic",
+   "count_total": 147,
+   "count_by_file": {
+    "SP3": 65,
+    "SP1": 55,
+    "BASE": 22,
+    "VAL": 5
+   },
+   "parents": [
+    "value",
+    "else",
+    "default",
+    "caption",
+    "argument"
+   ],
+   "children": [
+    "argument"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:970"
+  },
+  "caption": {
+   "category": "presentation",
+   "count_total": 649,
+   "count_by_file": {
+    "SP3": 291,
+    "SP1": 247,
+    "BASE": 59,
+    "VAL": 25,
+    "EDI": 27
+   },
+   "parents": [
+    "definition",
+    "worksheet"
+   ],
+   "children": [
+    "lookup",
+    "if",
+    "calculation",
+    "select"
+   ],
+   "attributes": [
+    "value",
+    "idref",
+    "type"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:966"
+  },
+  "captionPath": {
+   "category": "integration",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "request"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:3218"
+  },
+  "case": {
+   "category": "logic",
+   "count_total": 74,
+   "count_by_file": {
+    "SP3": 33,
+    "SP1": 32,
+    "BASE": 9
+   },
+   "parents": [
+    "select"
+   ],
+   "children": [],
+   "attributes": [
+    "type",
+    "select",
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5361"
+  },
+  "ceo_name": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11526"
+  },
+  "ceo_title": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11527"
+  },
+  "city": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11537"
+  },
+  "colKeys": {
+   "category": "data",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "table"
+   ],
+   "children": [
+    "key"
+   ],
+   "attributes": [
+    "name",
+    "type",
+    "find"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:6481"
+  },
+  "comment": {
+   "category": "meta",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3
+   },
+   "parents": [
+    "comments"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11718"
+  },
+  "comments": {
+   "category": "meta",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3
+   },
+   "parents": [
+    "annotations"
+   ],
+   "children": [
+    "comment"
+   ],
+   "attributes": [
+    "idref",
+    "inherited"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11717"
+  },
+  "company_searchrecord": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "duns_number",
+    "account_name",
+    "dba",
+    "global_ult_duns_no",
+    "global_ult_duns_name",
+    "global_ult_duns_ctry",
+    "ceo_name",
+    "ceo_title",
+    "annual_sales_usd",
+    "total_employees",
+    "primary_sic_code",
+    "primary_sic_industry",
+    "NAICS",
+    "NAICS_desc",
+    "corp_phone",
+    "street_1",
+    "street_2",
+    "city",
+    "state",
+    "state_abbr",
+    "zip",
+    "country",
+    "website",
+    "companyid",
+    "score",
+    "fax",
+    "symbol",
+    "exchange",
+    "industry",
+    "gsubind",
+    "ownership",
+    "revenue",
+    "revenue_currency",
+    "assets",
+    "assets_currency",
+    "fein",
+    "marketcap",
+    "toplevel",
+    "sic_code8",
+    "sic_code8_description",
+    "marketcap_currency"
+   ],
+   "attributes": [
+    "rootGroupId",
+    "xpath"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11519"
+  },
+  "companyid": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11543"
+  },
+  "comparison": {
+   "category": "logic",
+   "count_total": 742,
+   "count_by_file": {
+    "SP3": 334,
+    "SP1": 295,
+    "BASE": 111,
+    "VAL": 2
+   },
+   "parents": [
+    "comparison",
+    "condition",
+    "value",
+    "worksheet",
+    "where",
+    "required",
+    "readOnly"
+   ],
+   "children": [
+    "operand",
+    "comparison"
+   ],
+   "attributes": [
+    "compare",
+    "idref",
+    "type"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1010"
+  },
+  "condition": {
+   "category": "logic",
+   "count_total": 259,
+   "count_by_file": {
+    "SP3": 135,
+    "SP1": 91,
+    "BASE": 31,
+    "VAL": 2
+   },
+   "parents": [
+    "if"
+   ],
+   "children": [
+    "comparison"
+   ],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1009"
+  },
+  "constant": {
+   "category": "logic",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 2
+   },
+   "parents": [
+    "group"
+   ],
+   "children": [],
+   "attributes": [
+    "name",
+    "value",
+    "id"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:428"
+  },
+  "context": {
+   "category": "meta",
+   "count_total": 3,
+   "count_by_file": {
+    "BASE": 1,
+    "VAL": 1,
+    "FORMS": 1
+   },
+   "parents": [
+    "contexts"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTTemplates/Line1/US/BaseProduct.xml:15"
+  },
+  "contexts": {
+   "category": "meta",
+   "count_total": 7,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1,
+    "VAL": 1,
+    "FORMS": 1,
+    "TAX": 1,
+    "EDI": 1
+   },
+   "parents": [
+    "properties"
+   ],
+   "children": [
+    "context"
+   ],
+   "attributes": [
+    "inherited"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:29"
+  },
+  "corp_phone": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11534"
+  },
+  "correction": {
+   "category": "meta",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 6
+   },
+   "parents": [
+    "corrections"
+   ],
+   "children": [],
+   "attributes": [
+    "operation",
+    "condition",
+    "message",
+    "direction"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1578"
+  },
+  "corrections": {
+   "category": "meta",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 6
+   },
+   "parents": [
+    "public"
+   ],
+   "children": [
+    "correction"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1577"
+  },
+  "country": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11541"
+  },
+  "customQuery": {
+   "category": "logic",
+   "count_total": 16,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3,
+    "VAL": 1,
+    "FORMS": 9
+   },
+   "parents": [
+    "iterator"
+   ],
+   "children": [],
+   "attributes": [
+    "idref",
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:6105"
+  },
+  "data": {
+   "category": "data",
+   "count_total": 28,
+   "count_by_file": {
+    "SP3": 11,
+    "SP1": 9,
+    "BASE": 6,
+    "VAL": 1,
+    "TAX": 1
+   },
+   "parents": [
+    "table"
+   ],
+   "children": [
+    "row"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5347"
+  },
+  "dateAdd": {
+   "category": "logic",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "value"
+   ],
+   "children": [
+    "dateArgument",
+    "dateUnit"
+   ],
+   "attributes": [
+    "subtract"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:10503"
+  },
+  "dateArgument": {
+   "category": "logic",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "dateAdd"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:10504"
+  },
+  "dateUnit": {
+   "category": "logic",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "dateAdd"
+   ],
+   "children": [],
+   "attributes": [
+    "value",
+    "unit"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:10505"
+  },
+  "dba": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11522"
+  },
+  "default": {
+   "category": "logic",
+   "count_total": 276,
+   "count_by_file": {
+    "SP3": 138,
+    "SP1": 105,
+    "BASE": 29,
+    "VAL": 4
+   },
+   "parents": [
+    "rules",
+    "request"
+   ],
+   "children": [
+    "calculation",
+    "if",
+    "functionCall",
+    "request"
+   ],
+   "attributes": [
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:969"
+  },
+  "definition": {
+   "category": "presentation",
+   "count_total": 627,
+   "count_by_file": {
+    "SP3": 280,
+    "SP1": 233,
+    "BASE": 61,
+    "VAL": 26,
+    "EDI": 27
+   },
+   "parents": [
+    "public"
+   ],
+   "children": [
+    "caption",
+    "maxLength",
+    "formatMask",
+    "readOnly",
+    "options",
+    "required"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:965"
+  },
+  "dependencies": {
+   "category": "logic",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 4,
+    "SP1": 4
+   },
+   "parents": [
+    "iterator",
+    "rules"
+   ],
+   "children": [
+    "dependency"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:2373"
+  },
+  "dependency": {
+   "category": "logic",
+   "count_total": 10,
+   "count_by_file": {
+    "SP3": 5,
+    "SP1": 5
+   },
+   "parents": [
+    "dependencies"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:2374"
+  },
+  "descriptor": {
+   "category": "structural",
+   "count_total": 28,
+   "count_by_file": {
+    "SP3": 14,
+    "SP1": 14
+   },
+   "parents": [
+    "descriptors",
+    "descriptor"
+   ],
+   "children": [
+    "descriptor"
+   ],
+   "attributes": [
+    "code"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:977"
+  },
+  "descriptors": {
+   "category": "structural",
+   "count_total": 16,
+   "count_by_file": {
+    "SP3": 8,
+    "SP1": 8
+   },
+   "parents": [
+    "public",
+    "object"
+   ],
+   "children": [
+    "descriptor"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:976"
+  },
+  "document": {
+   "category": "forms",
+   "count_total": 48,
+   "count_by_file": {
+    "SP3": 23,
+    "SP1": 23,
+    "BASE": 2
+   },
+   "parents": [
+    "documentSet"
+   ],
+   "children": [
+    "subdoc"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11080"
+  },
+  "documentSet": {
+   "category": "forms",
+   "count_total": 48,
+   "count_by_file": {
+    "SP3": 23,
+    "SP1": 23,
+    "BASE": 2
+   },
+   "parents": [
+    "documents"
+   ],
+   "children": [
+    "scope",
+    "document",
+    "merge"
+   ],
+   "attributes": [
+    "name",
+    "paperBinNum",
+    "printDefault",
+    "prevPage",
+    "caption",
+    "category",
+    "modelCollectionRef",
+    "viewModelRef",
+    "condition",
+    "inherited",
+    "override",
+    "topicRef",
+    "pageRef"
+   ],
+   "supports_abstract": false,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11078"
+  },
+  "documents": {
+   "category": "forms",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1,
+    "FORMS": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [
+    "documentSet",
+    "printJob"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11077"
+  },
+  "duns_number": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11520"
+  },
+  "else": {
+   "category": "logic",
+   "count_total": 94,
+   "count_by_file": {
+    "SP3": 43,
+    "SP1": 36,
+    "BASE": 13,
+    "VAL": 2
+   },
+   "parents": [
+    "if"
+   ],
+   "children": [
+    "calculation",
+    "lookup"
+   ],
+   "attributes": [
+    "idref",
+    "value",
+    "type"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1234"
+  },
+  "exchange": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11547"
+  },
+  "external": {
+   "category": "logic",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 4
+   },
+   "parents": [
+    "value"
+   ],
+   "children": [
+    "manuscriptName",
+    "referenceField",
+    "onFailure"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:4322"
+  },
+  "fax": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11545"
+  },
+  "fein": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11555"
+  },
+  "field": {
+   "category": "presentation",
+   "count_total": 196,
+   "count_by_file": {
+    "SP3": 177,
+    "SP1": 11,
+    "BASE": 6,
+    "VAL": 1,
+    "TAX": 1
+   },
+   "parents": [
+    "group",
+    "fields"
+   ],
+   "children": [
+    "nameValues"
+   ],
+   "attributes": [
+    "idref",
+    "id",
+    "groupId",
+    "copy",
+    "class",
+    "readOnlyRef",
+    "type",
+    "name",
+    "compute",
+    "index",
+    "onBlur",
+    "caption",
+    "showRef",
+    "hideRef",
+    "usePartyMappings",
+    "hoverHelp",
+    "removeZero",
+    "capClass"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:35"
+  },
+  "fieldRef": {
+   "category": "reference",
+   "count_total": 116,
+   "count_by_file": {
+    "SP3": 85,
+    "SP1": 24,
+    "BASE": 6,
+    "VAL": 1
+   },
+   "parents": [
+    "lookup"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1451"
+  },
+  "fields": {
+   "category": "structural",
+   "count_total": 28,
+   "count_by_file": {
+    "SP3": 11,
+    "SP1": 9,
+    "BASE": 6,
+    "VAL": 1,
+    "TAX": 1
+   },
+   "parents": [
+    "table"
+   ],
+   "children": [
+    "field"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5337"
+  },
+  "forceRerate": {
+   "category": "logic",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2
+   },
+   "parents": [
+    "rules"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:3312"
+  },
+  "foreignKey": {
+   "category": "structural",
+   "count_total": 3,
+   "count_by_file": {
+    "SP3": 1,
+    "BASE": 1,
+    "VAL": 1
+   },
+   "parents": [
+    "relationship"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1734"
+  },
+  "formatMask": {
+   "category": "presentation",
+   "count_total": 166,
+   "count_by_file": {
+    "SP3": 76,
+    "SP1": 71,
+    "BASE": 19
+   },
+   "parents": [
+    "definition",
+    "worksheet"
+   ],
+   "children": [
+    "select"
+   ],
+   "attributes": [
+    "idref",
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1115"
+  },
+  "functionCall": {
+   "category": "logic",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3,
+    "BASE": 2
+   },
+   "parents": [
+    "value",
+    "default"
+   ],
+   "children": [
+    "parameterValue"
+   ],
+   "attributes": [
+    "name"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:3013"
+  },
+  "global_ult_duns_ctry": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11525"
+  },
+  "global_ult_duns_name": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11524"
+  },
+  "global_ult_duns_no": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11523"
+  },
+  "grid": {
+   "category": "presentation",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 2,
+    "BASE": 1
+   },
+   "parents": [
+    "group"
+   ],
+   "children": [
+    "reference",
+    "action"
+   ],
+   "attributes": [
+    "direction",
+    "captionPosition",
+    "showCaption",
+    "readOnly",
+    "sort",
+    "index"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11829"
+  },
+  "group": {
+   "category": "presentation",
+   "count_total": 121,
+   "count_by_file": {
+    "SP3": 55,
+    "SP1": 26,
+    "BASE": 35,
+    "EDI": 5
+   },
+   "parents": [
+    "viewModel",
+    "section",
+    "page",
+    "group",
+    "tableLayout"
+   ],
+   "children": [
+    "field",
+    "action",
+    "section",
+    "group",
+    "tableLayout",
+    "grid",
+    "constant"
+   ],
+   "attributes": [
+    "iterMax",
+    "iterStep",
+    "object",
+    "id",
+    "objectRef",
+    "index",
+    "enableRecover",
+    "minEntriesMessage",
+    "maxEntriesMessage",
+    "class",
+    "entityName",
+    "prevalidate",
+    "validRef",
+    "restriction"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:34"
+  },
+  "gsubind": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11549"
+  },
+  "if": {
+   "category": "logic",
+   "count_total": 259,
+   "count_by_file": {
+    "SP3": 135,
+    "SP1": 91,
+    "BASE": 31,
+    "VAL": 2
+   },
+   "parents": [
+    "misc",
+    "value",
+    "default",
+    "caption"
+   ],
+   "children": [
+    "condition",
+    "then",
+    "else"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1008"
+  },
+  "industry": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11548"
+  },
+  "iterator": {
+   "category": "logic",
+   "count_total": 103,
+   "count_by_file": {
+    "SP3": 47,
+    "SP1": 40,
+    "BASE": 5,
+    "VAL": 2,
+    "FORMS": 9
+   },
+   "parents": [
+    "value"
+   ],
+   "children": [
+    "reference",
+    "subtotal",
+    "where",
+    "customQuery",
+    "dependencies"
+   ],
+   "attributes": [
+    "type",
+    "scope",
+    "action",
+    "idref",
+    "includeDeleted"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:994"
+  },
+  "key": {
+   "category": "data",
+   "count_total": 353,
+   "count_by_file": {
+    "SP3": 163,
+    "SP1": 140,
+    "BASE": 37,
+    "VAL": 12,
+    "TAX": 1
+   },
+   "parents": [
+    "rowKeys",
+    "colKeys"
+   ],
+   "children": [],
+   "attributes": [
+    "value",
+    "caption",
+    "default"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5341"
+  },
+  "key104": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "OnBase"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11646"
+  },
+  "key107": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "OnBase"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11644"
+  },
+  "key108": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "OnBase"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11645"
+  },
+  "key110": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "OnBase"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11643"
+  },
+  "key118": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "OnBase"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11647"
+  },
+  "key119": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "OnBase"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11648"
+  },
+  "key120": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "OnBase"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11642"
+  },
+  "keyInfo": {
+   "category": "meta",
+   "count_total": 66,
+   "count_by_file": {
+    "SP3": 11,
+    "SP1": 11,
+    "BASE": 8,
+    "VAL": 10,
+    "FORMS": 8,
+    "TAX": 8,
+    "EDI": 10
+   },
+   "parents": [
+    "keys"
+   ],
+   "children": [],
+   "attributes": [
+    "name",
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:17"
+  },
+  "keyRef": {
+   "category": "reference",
+   "count_total": 129,
+   "count_by_file": {
+    "SP3": 91,
+    "SP1": 30,
+    "BASE": 7,
+    "VAL": 1
+   },
+   "parents": [
+    "lookup"
+   ],
+   "children": [],
+   "attributes": [
+    "type",
+    "name",
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1452"
+  },
+  "keys": {
+   "category": "meta",
+   "count_total": 7,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1,
+    "VAL": 1,
+    "FORMS": 1,
+    "TAX": 1,
+    "EDI": 1
+   },
+   "parents": [
+    "properties"
+   ],
+   "children": [
+    "keyInfo"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:16"
+  },
+  "lookup": {
+   "category": "logic",
+   "count_total": 116,
+   "count_by_file": {
+    "SP3": 85,
+    "SP1": 24,
+    "BASE": 6,
+    "VAL": 1
+   },
+   "parents": [
+    "value",
+    "caption",
+    "else"
+   ],
+   "children": [
+    "keyRef",
+    "tableRef",
+    "fieldRef",
+    "manuscriptName"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1449"
+  },
+  "manuscriptName": {
+   "category": "reference",
+   "count_total": 14,
+   "count_by_file": {
+    "SP3": 9,
+    "SP1": 5
+   },
+   "parents": [
+    "lookup",
+    "external"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:3993"
+  },
+  "mapping": {
+   "category": "integration",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1,
+    "FORMS": 1,
+    "TAX": 1,
+    "EDI": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [
+    "reference"
+   ],
+   "attributes": [
+    "mappingCount"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11681"
+  },
+  "marketcap": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11556"
+  },
+  "marketcap_currency": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11560"
+  },
+  "maxLength": {
+   "category": "presentation",
+   "count_total": 214,
+   "count_by_file": {
+    "SP3": 86,
+    "SP1": 78,
+    "BASE": 33,
+    "VAL": 17
+   },
+   "parents": [
+    "definition"
+   ],
+   "children": [
+    "select"
+   ],
+   "attributes": [
+    "idref",
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1114"
+  },
+  "maxOccurs": {
+   "category": "structural",
+   "count_total": 333,
+   "count_by_file": {
+    "SP3": 160,
+    "SP1": 101,
+    "BASE": 20,
+    "VAL": 41,
+    "TAX": 4,
+    "EDI": 7
+   },
+   "parents": [
+    "object"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1177"
+  },
+  "maximum": {
+   "category": "logic",
+   "count_total": 3,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1
+   },
+   "parents": [
+    "rules"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:3388"
+  },
+  "merge": {
+   "category": "forms",
+   "count_total": 48,
+   "count_by_file": {
+    "SP3": 23,
+    "SP1": 23,
+    "BASE": 2
+   },
+   "parents": [
+    "documentSet"
+   ],
+   "children": [
+    "mergeField"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11083"
+  },
+  "mergeField": {
+   "category": "forms",
+   "count_total": 264,
+   "count_by_file": {
+    "SP3": 116,
+    "SP1": 140,
+    "BASE": 8
+   },
+   "parents": [
+    "merge"
+   ],
+   "children": [],
+   "attributes": [
+    "name",
+    "iter",
+    "formatValue",
+    "idref",
+    "readOnly",
+    "formatSpecifier",
+    "condition",
+    "format",
+    "dataField",
+    "wsCond",
+    "wsSuppressRound"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11084"
+  },
+  "message": {
+   "category": "logic",
+   "count_total": 6,
+   "count_by_file": {
+    "BASE": 3,
+    "VAL": 3
+   },
+   "parents": [
+    "messages"
+   ],
+   "children": [],
+   "attributes": [
+    "name",
+    "flag",
+    "category"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTTemplates/Line1/US/BaseProduct.xml:1833"
+  },
+  "messages": {
+   "category": "logic",
+   "count_total": 3,
+   "count_by_file": {
+    "BASE": 1,
+    "VAL": 1,
+    "TAX": 1
+   },
+   "parents": [
+    "model"
+   ],
+   "children": [
+    "message"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTTemplates/Line1/US/BaseProduct.xml:1832"
+  },
+  "metaData": {
+   "category": "meta",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [
+    "schemaGroups"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11727"
+  },
+  "minOccurs": {
+   "category": "structural",
+   "count_total": 333,
+   "count_by_file": {
+    "SP3": 160,
+    "SP1": 101,
+    "BASE": 20,
+    "VAL": 41,
+    "TAX": 4,
+    "EDI": 7
+   },
+   "parents": [
+    "object"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1176"
+  },
+  "minimum": {
+   "category": "logic",
+   "count_total": 3,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1
+   },
+   "parents": [
+    "rules"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:3387"
+  },
+  "misc": {
+   "category": "logic",
+   "count_total": 81,
+   "count_by_file": {
+    "SP3": 41,
+    "SP1": 30,
+    "BASE": 10
+   },
+   "parents": [
+    "private",
+    "rules"
+   ],
+   "children": [
+    "if"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1281"
+  },
+  "model": {
+   "category": "structural",
+   "count_total": 7,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1,
+    "VAL": 1,
+    "FORMS": 1,
+    "TAX": 1,
+    "EDI": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [
+    "object",
+    "messages"
+   ],
+   "attributes": [
+    "defaultValue"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:956"
+  },
+  "modelCollection": {
+   "category": "presentation",
+   "count_total": 9,
+   "count_by_file": {
+    "SP3": 9
+   },
+   "parents": [
+    "modelCollections"
+   ],
+   "children": [
+    "viewModel"
+   ],
+   "attributes": [
+    "name",
+    "enableAllMenuEntries",
+    "class",
+    "prevPage",
+    "caption",
+    "abstract",
+    "enableTVR",
+    "enforcePageOrder",
+    "override"
+   ],
+   "supports_abstract": true,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:32"
+  },
+  "modelCollections": {
+   "category": "presentation",
+   "count_total": 1,
+   "count_by_file": {
+    "SP3": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [
+    "modelCollection"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:31"
+  },
+  "modifySession": {
+   "category": "integration",
+   "count_total": 128,
+   "count_by_file": {
+    "SP3": 70,
+    "SP1": 44,
+    "BASE": 11,
+    "VAL": 3
+   },
+   "parents": [
+    "request"
+   ],
+   "children": [],
+   "attributes": [
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1024"
+  },
+  "nameValue": {
+   "category": "reference",
+   "count_total": 1102,
+   "count_by_file": {
+    "SP3": 516,
+    "SP1": 363,
+    "BASE": 158,
+    "VAL": 39,
+    "EDI": 26
+   },
+   "parents": [
+    "nameValues",
+    "nameValue",
+    "viewModel"
+   ],
+   "children": [
+    "nameValue"
+   ],
+   "attributes": [
+    "name",
+    "dataType",
+    "value",
+    "idref",
+    "type",
+    "query",
+    "override"
+   ],
+   "supports_abstract": false,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:55"
+  },
+  "nameValues": {
+   "category": "reference",
+   "count_total": 362,
+   "count_by_file": {
+    "SP3": 141,
+    "SP1": 142,
+    "BASE": 71,
+    "VAL": 3,
+    "EDI": 5
+   },
+   "parents": [
+    "request",
+    "action",
+    "reference",
+    "page",
+    "viewModel",
+    "section",
+    "field",
+    "tableLayout"
+   ],
+   "children": [
+    "nameValue"
+   ],
+   "attributes": [
+    "override"
+   ],
+   "supports_abstract": false,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:54"
+  },
+  "notes": {
+   "category": "meta",
+   "count_total": 6,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1,
+    "VAL": 1,
+    "TAX": 1,
+    "EDI": 1
+   },
+   "parents": [
+    "properties"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:3"
+  },
+  "object": {
+   "category": "structural",
+   "count_total": 547,
+   "count_by_file": {
+    "SP3": 238,
+    "SP1": 172,
+    "BASE": 79,
+    "VAL": 41,
+    "FORMS": 6,
+    "TAX": 4,
+    "EDI": 7
+   },
+   "parents": [
+    "object",
+    "model"
+   ],
+   "children": [
+    "private",
+    "public",
+    "object",
+    "minOccurs",
+    "maxOccurs",
+    "table",
+    "relationships",
+    "descriptors"
+   ],
+   "attributes": [
+    "id",
+    "abstract",
+    "path",
+    "override",
+    "document",
+    "fragment",
+    "cleanup",
+    "caption",
+    "share",
+    "persistedDocument"
+   ],
+   "supports_abstract": true,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:957"
+  },
+  "onFailure": {
+   "category": "integration",
+   "count_total": 131,
+   "count_by_file": {
+    "SP3": 72,
+    "SP1": 44,
+    "BASE": 11,
+    "VAL": 3,
+    "EDI": 1
+   },
+   "parents": [
+    "request",
+    "external"
+   ],
+   "children": [],
+   "attributes": [
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1023"
+  },
+  "operand": {
+   "category": "logic",
+   "count_total": 1070,
+   "count_by_file": {
+    "SP3": 486,
+    "SP1": 420,
+    "BASE": 160,
+    "VAL": 4
+   },
+   "parents": [
+    "comparison"
+   ],
+   "children": [],
+   "attributes": [
+    "type",
+    "idref",
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1011"
+  },
+  "option": {
+   "category": "presentation",
+   "count_total": 618,
+   "count_by_file": {
+    "SP3": 309,
+    "SP1": 284,
+    "BASE": 25
+   },
+   "parents": [
+    "options"
+   ],
+   "children": [],
+   "attributes": [
+    "value",
+    "caption",
+    "validRef",
+    "default"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1563"
+  },
+  "options": {
+   "category": "presentation",
+   "count_total": 52,
+   "count_by_file": {
+    "SP3": 24,
+    "SP1": 20,
+    "BASE": 8
+   },
+   "parents": [
+    "definition"
+   ],
+   "children": [
+    "option",
+    "request"
+   ],
+   "attributes": [
+    "validRef",
+    "idref",
+    "name",
+    "codeRef",
+    "captionRef",
+    "referenceListRef"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1562"
+  },
+  "otherwise": {
+   "category": "logic",
+   "count_total": 14,
+   "count_by_file": {
+    "SP3": 6,
+    "SP1": 6,
+    "BASE": 2
+   },
+   "parents": [
+    "select"
+   ],
+   "children": [],
+   "attributes": [
+    "type",
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5373"
+  },
+  "ownership": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11550"
+  },
+  "page": {
+   "category": "presentation",
+   "count_total": 33,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 16,
+    "BASE": 13,
+    "EDI": 2
+   },
+   "parents": [
+    "topic"
+   ],
+   "children": [
+    "group",
+    "nameValues",
+    "section"
+   ],
+   "attributes": [
+    "name",
+    "caption",
+    "pageVersion",
+    "prevPage",
+    "validRef",
+    "override",
+    "nextIndex",
+    "calculate",
+    "idref",
+    "metaPage",
+    "position",
+    "manuscriptIdRef",
+    "topicIdRef",
+    "pageIdRef",
+    "worksheet",
+    "ruleSet",
+    "debug"
+   ],
+   "supports_abstract": false,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11825"
+  },
+  "parameterValue": {
+   "category": "logic",
+   "count_total": 10,
+   "count_by_file": {
+    "SP3": 3,
+    "SP1": 3,
+    "BASE": 4
+   },
+   "parents": [
+    "functionCall"
+   ],
+   "children": [],
+   "attributes": [
+    "type",
+    "idref",
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:3014"
+  },
+  "primary_sic_code": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11530"
+  },
+  "primary_sic_industry": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11531"
+  },
+  "printDoc": {
+   "category": "forms",
+   "count_total": 52,
+   "count_by_file": {
+    "SP3": 25,
+    "SP1": 25,
+    "BASE": 2
+   },
+   "parents": [
+    "printJob"
+   ],
+   "children": [],
+   "attributes": [
+    "name"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11093"
+  },
+  "printJob": {
+   "category": "forms",
+   "count_total": 148,
+   "count_by_file": {
+    "SP3": 4,
+    "SP1": 4,
+    "BASE": 3,
+    "FORMS": 137
+   },
+   "parents": [
+    "printJob",
+    "documents"
+   ],
+   "children": [
+    "printJob",
+    "printDoc"
+   ],
+   "attributes": [
+    "name",
+    "condition",
+    "prevPage",
+    "idref",
+    "override"
+   ],
+   "supports_abstract": false,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11092"
+  },
+  "private": {
+   "category": "data",
+   "count_total": 968,
+   "count_by_file": {
+    "SP3": 521,
+    "SP1": 322,
+    "BASE": 76,
+    "VAL": 39,
+    "FORMS": 10
+   },
+   "parents": [
+    "object"
+   ],
+   "children": [
+    "value",
+    "affects",
+    "misc",
+    "worksheet"
+   ],
+   "attributes": [
+    "id",
+    "type",
+    "caption",
+    "path",
+    "override",
+    "comment",
+    "alwaysRun",
+    "class"
+   ],
+   "supports_abstract": false,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:992"
+  },
+  "properties": {
+   "category": "meta",
+   "count_total": 7,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1,
+    "VAL": 1,
+    "FORMS": 1,
+    "TAX": 1,
+    "EDI": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [
+    "keys",
+    "contexts",
+    "notes",
+    "writtenConfig",
+    "resourceState"
+   ],
+   "attributes": [
+    "manuscriptID",
+    "versionID",
+    "versionDate",
+    "version",
+    "boolean",
+    "fieldCache",
+    "cultureCode",
+    "cultureName",
+    "caption",
+    "inherited",
+    "image",
+    "dataSchema",
+    "shortCircuitCond",
+    "multiLanguages",
+    "usePersistedState",
+    "multiCurrency",
+    "inheritedPage",
+    "compiled"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:2"
+  },
+  "public": {
+   "category": "data",
+   "count_total": 656,
+   "count_by_file": {
+    "SP3": 294,
+    "SP1": 246,
+    "BASE": 63,
+    "VAL": 26,
+    "EDI": 27
+   },
+   "parents": [
+    "object"
+   ],
+   "children": [
+    "definition",
+    "rules",
+    "worksheet",
+    "descriptors",
+    "corrections"
+   ],
+   "attributes": [
+    "id",
+    "path",
+    "type",
+    "override",
+    "comment",
+    "class",
+    "index",
+    "alwaysRun"
+   ],
+   "supports_abstract": false,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:964"
+  },
+  "readOnly": {
+   "category": "presentation",
+   "count_total": 156,
+   "count_by_file": {
+    "SP3": 76,
+    "SP1": 66,
+    "BASE": 14
+   },
+   "parents": [
+    "definition"
+   ],
+   "children": [
+    "comparison"
+   ],
+   "attributes": [
+    "idref",
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1116"
+  },
+  "recordAction": {
+   "category": "integration",
+   "count_total": 40,
+   "count_by_file": {
+    "SP3": 20,
+    "SP1": 20
+   },
+   "parents": [
+    "recordActions"
+   ],
+   "children": [],
+   "attributes": [
+    "caption",
+    "execute",
+    "value",
+    "show"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11430"
+  },
+  "recordActions": {
+   "category": "integration",
+   "count_total": 20,
+   "count_by_file": {
+    "SP3": 10,
+    "SP1": 10
+   },
+   "parents": [
+    "schemaMap"
+   ],
+   "children": [
+    "recordAction"
+   ],
+   "attributes": [
+    "caption"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11429"
+  },
+  "reference": {
+   "category": "reference",
+   "count_total": 766,
+   "count_by_file": {
+    "SP3": 205,
+    "SP1": 246,
+    "BASE": 204,
+    "VAL": 46,
+    "FORMS": 33,
+    "EDI": 32
+   },
+   "parents": [
+    "affects",
+    "section",
+    "mapping",
+    "iterator",
+    "tableLayout",
+    "grid"
+   ],
+   "children": [
+    "nameValues"
+   ],
+   "attributes": [
+    "idref",
+    "effect",
+    "index",
+    "mapId",
+    "name",
+    "type",
+    "onBlur",
+    "compute",
+    "caption",
+    "fldClass",
+    "capClass",
+    "hoverHelp",
+    "wsCond"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1041"
+  },
+  "referenceField": {
+   "category": "reference",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 4
+   },
+   "parents": [
+    "external"
+   ],
+   "children": [],
+   "attributes": [
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:4324"
+  },
+  "relatedObject": {
+   "category": "structural",
+   "count_total": 3,
+   "count_by_file": {
+    "SP3": 1,
+    "BASE": 1,
+    "VAL": 1
+   },
+   "parents": [
+    "relationship"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1733"
+  },
+  "relationship": {
+   "category": "structural",
+   "count_total": 3,
+   "count_by_file": {
+    "SP3": 1,
+    "BASE": 1,
+    "VAL": 1
+   },
+   "parents": [
+    "relationships"
+   ],
+   "children": [
+    "relatedObject",
+    "foreignKey"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1732"
+  },
+  "relationships": {
+   "category": "structural",
+   "count_total": 4,
+   "count_by_file": {
+    "SP3": 2,
+    "BASE": 1,
+    "VAL": 1
+   },
+   "parents": [
+    "object"
+   ],
+   "children": [
+    "relationship"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1731"
+  },
+  "request": {
+   "category": "integration",
+   "count_total": 193,
+   "count_by_file": {
+    "SP3": 105,
+    "SP1": 68,
+    "BASE": 16,
+    "VAL": 3,
+    "EDI": 1
+   },
+   "parents": [
+    "value",
+    "action",
+    "options",
+    "default"
+   ],
+   "children": [
+    "nameValues",
+    "responsePath",
+    "onFailure",
+    "modifySession",
+    "usesSession",
+    "default",
+    "captionPath",
+    "valuePath"
+   ],
+   "attributes": [
+    "verb",
+    "get",
+    "validRef",
+    "integration"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:66"
+  },
+  "required": {
+   "category": "presentation",
+   "count_total": 25,
+   "count_by_file": {
+    "SP3": 10,
+    "SP1": 8,
+    "BASE": 7
+   },
+   "parents": [
+    "definition"
+   ],
+   "children": [
+    "comparison"
+   ],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:6681"
+  },
+  "resourceState": {
+   "category": "meta",
+   "count_total": 1,
+   "count_by_file": {
+    "TAX": 1
+   },
+   "parents": [
+    "properties"
+   ],
+   "children": [],
+   "attributes": [
+    "status",
+    "protected"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTTemplates/Product/AZ/DuckCreekTech_Product_Tax_AZ_00_00.xml:6"
+  },
+  "responsePath": {
+   "category": "integration",
+   "count_total": 129,
+   "count_by_file": {
+    "SP3": 71,
+    "SP1": 45,
+    "BASE": 9,
+    "VAL": 3,
+    "EDI": 1
+   },
+   "parents": [
+    "request"
+   ],
+   "children": [],
+   "attributes": [
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1022"
+  },
+  "revenue": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11551"
+  },
+  "revenue_currency": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11552"
+  },
+  "revisions": {
+   "category": "meta",
+   "count_total": 2,
+   "count_by_file": {
+    "FORMS": 1,
+    "TAX": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTTemplates/CPPForms/US-INH/DuckCreekTech_CommercialLines_Forms_US_10_0_0_0.xml:19"
+  },
+  "row": {
+   "category": "data",
+   "count_total": 343,
+   "count_by_file": {
+    "SP3": 159,
+    "SP1": 136,
+    "BASE": 35,
+    "VAL": 12,
+    "TAX": 1
+   },
+   "parents": [
+    "data"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5348"
+  },
+  "rowKeys": {
+   "category": "data",
+   "count_total": 32,
+   "count_by_file": {
+    "SP3": 12,
+    "SP1": 10,
+    "BASE": 8,
+    "VAL": 1,
+    "TAX": 1
+   },
+   "parents": [
+    "table"
+   ],
+   "children": [
+    "key"
+   ],
+   "attributes": [
+    "name",
+    "type",
+    "find",
+    "pageKey"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5340"
+  },
+  "rules": {
+   "category": "logic",
+   "count_total": 349,
+   "count_by_file": {
+    "SP3": 168,
+    "SP1": 140,
+    "BASE": 39,
+    "VAL": 1,
+    "EDI": 1
+   },
+   "parents": [
+    "public"
+   ],
+   "children": [
+    "value",
+    "default",
+    "affects",
+    "misc",
+    "forceRerate",
+    "dependencies",
+    "minimum",
+    "maximum"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:968"
+  },
+  "schemaGroup": {
+   "category": "structural",
+   "count_total": 184,
+   "count_by_file": {
+    "SP3": 92,
+    "SP1": 92
+   },
+   "parents": [
+    "schemaGroups"
+   ],
+   "children": [],
+   "attributes": [
+    "name"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11729"
+  },
+  "schemaGroups": {
+   "category": "structural",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "metaData"
+   ],
+   "children": [
+    "schemaGroup"
+   ],
+   "attributes": [
+    "manuscriptID"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11728"
+  },
+  "schemaMap": {
+   "category": "integration",
+   "count_total": 28,
+   "count_by_file": {
+    "SP3": 14,
+    "SP1": 14
+   },
+   "parents": [
+    "schemaMaps"
+   ],
+   "children": [
+    "recordActions",
+    "Location",
+    "PartyPhone",
+    "Party",
+    "GeocodeUS",
+    "GeocodeEventing",
+    "ViewMap",
+    "PartyEmail",
+    "company_searchrecord",
+    "PartyInvolvement",
+    "OnBase"
+   ],
+   "attributes": [
+    "name"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11428"
+  },
+  "schemaMaps": {
+   "category": "integration",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [
+    "schemaMap"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11427"
+  },
+  "scope": {
+   "category": "forms",
+   "count_total": 76,
+   "count_by_file": {
+    "SP3": 33,
+    "SP1": 40,
+    "BASE": 3
+   },
+   "parents": [
+    "documentSet",
+    "subdoc"
+   ],
+   "children": [],
+   "attributes": [
+    "name",
+    "increment",
+    "startIter",
+    "endIter",
+    "restriction"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11079"
+  },
+  "score": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11544"
+  },
+  "section": {
+   "category": "presentation",
+   "count_total": 125,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 48,
+    "BASE": 68,
+    "EDI": 7
+   },
+   "parents": [
+    "section",
+    "group",
+    "tableLayout",
+    "page"
+   ],
+   "children": [
+    "reference",
+    "section",
+    "action",
+    "group",
+    "tableLayout",
+    "nameValues"
+   ],
+   "attributes": [
+    "direction",
+    "captionPosition",
+    "showCaption",
+    "index",
+    "validRef",
+    "style",
+    "readOnly",
+    "caption",
+    "capClass",
+    "class",
+    "cc",
+    "fldClass",
+    "cellStyle"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11827"
+  },
+  "select": {
+   "category": "logic",
+   "count_total": 23,
+   "count_by_file": {
+    "SP3": 11,
+    "SP1": 10,
+    "BASE": 2
+   },
+   "parents": [
+    "value",
+    "maxLength",
+    "formatMask",
+    "caption"
+   ],
+   "children": [
+    "case",
+    "otherwise"
+   ],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5360"
+  },
+  "session": {
+   "category": "integration",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 2,
+    "BASE": 3,
+    "VAL": 1
+   },
+   "parents": [
+    "value"
+   ],
+   "children": [],
+   "attributes": [
+    "sessionValue"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:4379"
+  },
+  "sic_code8": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11558"
+  },
+  "sic_code8_description": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11559"
+  },
+  "state": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11538"
+  },
+  "state_abbr": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11539"
+  },
+  "street_1": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11535"
+  },
+  "street_2": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11536"
+  },
+  "subdoc": {
+   "category": "forms",
+   "count_total": 59,
+   "count_by_file": {
+    "SP3": 26,
+    "SP1": 30,
+    "BASE": 3
+   },
+   "parents": [
+    "document",
+    "subdoc"
+   ],
+   "children": [
+    "scope",
+    "subdoc"
+   ],
+   "attributes": [
+    "name",
+    "path",
+    "condition"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11081"
+  },
+  "subtotal": {
+   "category": "logic",
+   "count_total": 38,
+   "count_by_file": {
+    "SP3": 19,
+    "SP1": 19
+   },
+   "parents": [
+    "iterator"
+   ],
+   "children": [],
+   "attributes": [
+    "idref",
+    "type",
+    "subtotalRef"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:2345"
+  },
+  "summarize": {
+   "category": "logic",
+   "count_total": 8,
+   "count_by_file": {
+    "SP3": 4,
+    "SP1": 4
+   },
+   "parents": [
+    "worksheet"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1934"
+  },
+  "symbol": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11546"
+  },
+  "table": {
+   "category": "data",
+   "count_total": 28,
+   "count_by_file": {
+    "SP3": 11,
+    "SP1": 9,
+    "BASE": 6,
+    "VAL": 1,
+    "TAX": 1
+   },
+   "parents": [
+    "object"
+   ],
+   "children": [
+    "rowKeys",
+    "fields",
+    "data",
+    "colKeys"
+   ],
+   "attributes": [
+    "id",
+    "tableType",
+    "separator",
+    "override",
+    "comment"
+   ],
+   "supports_abstract": false,
+   "supports_override": true,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5336"
+  },
+  "tableLayout": {
+   "category": "presentation",
+   "count_total": 20,
+   "count_by_file": {
+    "SP1": 14,
+    "BASE": 3,
+    "EDI": 3
+   },
+   "parents": [
+    "group",
+    "section",
+    "tableLayout"
+   ],
+   "children": [
+    "reference",
+    "action",
+    "section",
+    "group",
+    "tableLayout",
+    "nameValues"
+   ],
+   "attributes": [
+    "direction",
+    "captionPosition",
+    "showCaption",
+    "caption",
+    "index",
+    "class",
+    "capClass",
+    "validRef",
+    "readOnly",
+    "applyHeader",
+    "style"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct.xml:162"
+  },
+  "tableRef": {
+   "category": "reference",
+   "count_total": 116,
+   "count_by_file": {
+    "SP3": 85,
+    "SP1": 24,
+    "BASE": 6,
+    "VAL": 1
+   },
+   "parents": [
+    "lookup"
+   ],
+   "children": [],
+   "attributes": [
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1450"
+  },
+  "then": {
+   "category": "logic",
+   "count_total": 259,
+   "count_by_file": {
+    "SP3": 135,
+    "SP1": 91,
+    "BASE": 31,
+    "VAL": 2
+   },
+   "parents": [
+    "if"
+   ],
+   "children": [],
+   "attributes": [
+    "idref",
+    "value",
+    "type",
+    "message"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1015"
+  },
+  "topic": {
+   "category": "presentation",
+   "count_total": 18,
+   "count_by_file": {
+    "SP3": 2,
+    "SP1": 8,
+    "BASE": 7,
+    "EDI": 1
+   },
+   "parents": [
+    "topics"
+   ],
+   "children": [
+    "page"
+   ],
+   "attributes": [
+    "name",
+    "abstract",
+    "caption"
+   ],
+   "supports_abstract": true,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11824"
+  },
+  "topics": {
+   "category": "presentation",
+   "count_total": 7,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1,
+    "BASE": 1,
+    "VAL": 1,
+    "FORMS": 1,
+    "TAX": 1,
+    "EDI": 1
+   },
+   "parents": [
+    "ManuScript"
+   ],
+   "children": [
+    "topic"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11823"
+  },
+  "toplevel": {
+   "category": "structural",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11557"
+  },
+  "total_employees": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11529"
+  },
+  "usesSession": {
+   "category": "integration",
+   "count_total": 128,
+   "count_by_file": {
+    "SP3": 70,
+    "SP1": 44,
+    "BASE": 11,
+    "VAL": 3
+   },
+   "parents": [
+    "request"
+   ],
+   "children": [],
+   "attributes": [
+    "value",
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1025"
+  },
+  "value": {
+   "category": "logic",
+   "count_total": 1156,
+   "count_by_file": {
+    "SP3": 619,
+    "SP1": 394,
+    "BASE": 96,
+    "VAL": 36,
+    "FORMS": 10,
+    "EDI": 1
+   },
+   "parents": [
+    "private",
+    "rules"
+   ],
+   "children": [
+    "comparison",
+    "request",
+    "if",
+    "calculation",
+    "lookup",
+    "iterator",
+    "select",
+    "written",
+    "session",
+    "functionCall",
+    "external",
+    "dateAdd"
+   ],
+   "attributes": [
+    "value",
+    "idref",
+    "resourceString"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:993"
+  },
+  "valuePath": {
+   "category": "integration",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "request"
+   ],
+   "children": [],
+   "attributes": [
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:3219"
+  },
+  "view": {
+   "category": "presentation",
+   "count_total": 23,
+   "count_by_file": {
+    "SP3": 23
+   },
+   "parents": [
+    "views"
+   ],
+   "children": [],
+   "attributes": [
+    "id",
+    "caption",
+    "default"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:132"
+  },
+  "viewModel": {
+   "category": "presentation",
+   "count_total": 28,
+   "count_by_file": {
+    "SP3": 28
+   },
+   "parents": [
+    "modelCollection"
+   ],
+   "children": [
+    "group",
+    "views",
+    "nameValues",
+    "nameValue"
+   ],
+   "attributes": [
+    "name",
+    "caption",
+    "navigable",
+    "showRef",
+    "readOnlyRef",
+    "ignorePageVisitedCheck",
+    "prevalidate",
+    "fieldValidations",
+    "menuDisplay",
+    "validateTransactionOnDisplay",
+    "class",
+    "viewRef",
+    "prevPage",
+    "readOnly",
+    "manuscriptIdRef",
+    "modelCollectionIdRef",
+    "viewModelIdRef",
+    "calculate",
+    "master",
+    "idref",
+    "disableNavigationRef",
+    "debug",
+    "worksheet",
+    "runTVR",
+    "usePartyMappings",
+    "captionIdRef"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:33"
+  },
+  "views": {
+   "category": "presentation",
+   "count_total": 24,
+   "count_by_file": {
+    "SP3": 24
+   },
+   "parents": [
+    "viewModel"
+   ],
+   "children": [
+    "view"
+   ],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:131"
+  },
+  "website": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11542"
+  },
+  "where": {
+   "category": "logic",
+   "count_total": 25,
+   "count_by_file": {
+    "SP3": 10,
+    "SP1": 6,
+    "FORMS": 9
+   },
+   "parents": [
+    "iterator"
+   ],
+   "children": [
+    "comparison"
+   ],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:2632"
+  },
+  "worksheet": {
+   "category": "presentation",
+   "count_total": 67,
+   "count_by_file": {
+    "SP3": 33,
+    "SP1": 33,
+    "BASE": 1
+   },
+   "parents": [
+    "public",
+    "private"
+   ],
+   "children": [
+    "comparison",
+    "caption",
+    "summarize",
+    "formatMask"
+   ],
+   "attributes": [
+    "suppress"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1127"
+  },
+  "written": {
+   "category": "logic",
+   "count_total": 14,
+   "count_by_file": {
+    "SP3": 7,
+    "SP1": 7
+   },
+   "parents": [
+    "value"
+   ],
+   "children": [
+    "writtenInfo",
+    "writtenRef",
+    "writtenRefPath"
+   ],
+   "attributes": [
+    "useShared",
+    "round",
+    "roundType"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:1339"
+  },
+  "writtenConfig": {
+   "category": "meta",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "properties"
+   ],
+   "children": [
+    "writtenRef",
+    "writtenInfo",
+    "writtenRefPath"
+   ],
+   "attributes": [
+    "round",
+    "roundType"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:4"
+  },
+  "writtenInfo": {
+   "category": "meta",
+   "count_total": 58,
+   "count_by_file": {
+    "SP3": 29,
+    "SP1": 29
+   },
+   "parents": [
+    "written",
+    "writtenConfig"
+   ],
+   "children": [],
+   "attributes": [
+    "type",
+    "infoType",
+    "idref",
+    "value"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:5"
+  },
+  "writtenRef": {
+   "category": "meta",
+   "count_total": 30,
+   "count_by_file": {
+    "SP3": 15,
+    "SP1": 15
+   },
+   "parents": [
+    "written",
+    "writtenConfig"
+   ],
+   "children": [],
+   "attributes": [
+    "idref",
+    "type",
+    "infoType"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:9"
+  },
+  "writtenRefPath": {
+   "category": "meta",
+   "count_total": 12,
+   "count_by_file": {
+    "SP3": 6,
+    "SP1": 6
+   },
+   "parents": [
+    "writtenConfig",
+    "written"
+   ],
+   "children": [],
+   "attributes": [
+    "idref",
+    "type",
+    "infoType",
+    "useXPath"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:6"
+  },
+  "zip": {
+   "category": "unclassified",
+   "count_total": 2,
+   "count_by_file": {
+    "SP3": 1,
+    "SP1": 1
+   },
+   "parents": [
+    "company_searchrecord"
+   ],
+   "children": [],
+   "attributes": [
+    "idref"
+   ],
+   "supports_abstract": false,
+   "supports_override": false,
+   "example_ref": "ManuScripts/DCTSampleProducts/Line1/US/DCT_SampleProduct_3_0_0_0.xml:11540"
+  }
+ }
+}
