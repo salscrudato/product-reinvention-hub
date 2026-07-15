@@ -8,7 +8,7 @@ import { createRequire } from 'module'
 const _require = createRequire(import.meta.url)
 const ts = _require('../../server/lib/ai/task-summary') as {
   _stripUncited: (raw: string, valid: Set<string>) => { summary: string; cited: string[] }
-  _bucketize: (tasks: Array<Record<string, unknown>>) => { open: unknown[]; overdue: unknown[]; next7: unknown[] }
+  _bucketize: (tasks: Array<Record<string, unknown>>) => { open: unknown[]; overdue: unknown[]; next7: unknown[]; dueToday: unknown[] }
 }
 
 describe('_stripUncited (grounded + cited invariant)', () => {
@@ -39,6 +39,15 @@ describe('_bucketize (deterministic counts)', () => {
   const past = '2020-01-01'
   const soon = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
   const far = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10)
+
+  it('dueToday (additive, brief-consumed): the next7 slice due exactly today', () => {
+    const { dueToday, next7 } = ts._bucketize([
+      { id: 'today', dueAt: today, done: false },
+      { id: 'soon', dueAt: soon, done: false },
+    ])
+    expect(dueToday).toHaveLength(1)
+    expect(next7).toHaveLength(2)
+  })
 
   it('buckets open / overdue / next-7 correctly', () => {
     const tasks = [

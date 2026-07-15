@@ -82,9 +82,10 @@ export default function Tasks() {
   const [arrivedBatch, setArrivedBatch] = useState<string | null>(null)
   const seedBatch = params.get('seedBatch')
 
-  // Filters
+  // Filters. `overdue` initializes from ?overdue=1 so the Home brief's overdue pill
+  // deep-links straight into the filtered board (mirrors the seedBatch URL pattern).
   const [mine, setMine]       = useState(false)
-  const [overdue, setOverdue] = useState(false)
+  const [overdue, setOverdue] = useState(() => params.get('overdue') === '1')
   const [typeFilter, setType] = useState<'' | TypeOfWork>('')
   const [phaseFilter, setPhase] = useState('')
   const [dispFilter, setDisp] = useState<'' | BoardDisposition>('')
