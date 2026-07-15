@@ -26,6 +26,9 @@ export type FilingDocRole = 'rateOrder' | 'manual' | 'policyForm' | 'other'
 export interface FilingDocClassification {
   name:       string          // the uploaded filename (for display + lineage)
   role:       FilingDocRole
+  /** F13: additional roles this SAME document genuinely fulfils (e.g. a manual
+   *  carrying a rate-order appendix). Never includes 'other' or the primary. */
+  secondaryRoles?: FilingDocRole[]
   cue:        string          // the structural cue that decided the role — a citation
   confidence: number          // 0..1
 }
@@ -153,10 +156,11 @@ export interface FilingExtraction {
 // proposed === accepted + unresolved.
 
 /** A rate-order variable or manual fact that could not be resolved to a concrete
- *  RT/LD/scalar source (multiplicative) or rate schedule / flat premium (additive). */
+ *  RT/LD/scalar source (multiplicative) or rate schedule / flat premium (additive).
+ *  'classify' entries (F13) are whole DOCUMENTS the extractors did not consume. */
 export interface UnresolvedItem {
-  stage:    'rateOrder' | 'manual' | 'policyForm'
-  kind:     string          // e.g. "multiplicative-step", "additive-step", "table"
+  stage:    'rateOrder' | 'manual' | 'policyForm' | 'classify'
+  kind:     string          // e.g. "multiplicative-step", "additive-step", "table", "unprocessed-document"
   name:     string
   reason:   string          // why it could not be resolved
   citation: string          // where it came from — always present

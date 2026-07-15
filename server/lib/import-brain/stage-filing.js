@@ -43,6 +43,9 @@ const CLASSIFY_TOOL = {
     type: 'object',
     properties: {
       role:       { type: 'string', enum: ['rateOrder', 'manual', 'policyForm', 'other'] },
+      // A document can genuinely BE more than one thing (a manual with an
+      // embedded rate-order appendix) — F13: multi-role must be expressible.
+      secondaryRoles: { type: 'array', items: { type: 'string', enum: ['rateOrder', 'manual', 'policyForm'] }, description: 'OPTIONAL: additional roles this same document genuinely fulfils (e.g. a manual containing a rate-order appendix).' },
       cue:        { type: 'string', description: 'Structural cue used (heading / rule number / page). REQUIRED.' },
       confidence: { type: 'number', description: '0..1 confidence.' },
     },
@@ -289,16 +292,38 @@ async function runFilingPipeline(opts) {
   emit({ t: 'tool', name: 'filing:classify', phase: 'end', summary: classifications.map(c => `${String(c.name).split(/[\\/]/).pop()} -> ${c.role}`).join(', ') })
   emit({ t: 'json', key: 'filing:classifications', value: classifications })
 
-  const roleOf = (role) => {
-    const idx = classifications.findIndex(c => c.role === role)
-    return idx !== -1 ? documents[idx] : null
+  // F13: role assignment is a PARTITION, not a lookup — every document lands
+  // in every bucket it was classified into (primary + secondary roles), and
+  // every document the extractors do not consume is surfaced later, never
+  // silently ignored.
+  const docsByRole = new Map()
+  classifications.forEach((c, i) => {
+    for (const role of [c.role, ...(Array.isArray(c.secondaryRoles) ? c.secondaryRoles : [])]) {
+      const list = docsByRole.get(role) ?? []
+      list.push(documents[i])
+      docsByRole.set(role, list)
+    }
+  })
+  const rateOrderDocs  = docsByRole.get('rateOrder') ?? []
+  const manualDocs     = docsByRole.get('manual') ?? []
+  const policyFormDocs = docsByRole.get('policyForm') ?? []
+  const policyFormDoc  = policyFormDocs[0] ?? null
+  // Documents that will NOT be extracted by any role loop — reported after
+  // reconcile as unprocessed (role 'other', and surplus rate orders: the rate
+  // order is ORDER-SEMANTIC, merging two would interleave two sequences).
+  const unprocessedDocs = []
+  for (const doc of docsByRole.get('other') ?? []) {
+    const cls = classifications.find(c => c.name === doc.name)
+    unprocessedDocs.push({ doc, role: 'other', cue: cls?.cue ?? '' })
   }
-  const rateOrderDoc  = roleOf('rateOrder')
-  const manualDoc     = roleOf('manual')
-  const policyFormDoc = roleOf('policyForm')
+  for (const doc of rateOrderDocs.slice(1)) {
+    const cls = classifications.find(c => c.name === doc.name)
+    unprocessedDocs.push({ doc, role: 'rateOrder', cue: `${cls?.cue ?? ''} — a rate order is order-semantic; only the first extracts` })
+  }
 
   // ── EXTRACT: rate order + manual + policy form IN PARALLEL (independent docs) ──
   const extractRateOrder = async () => {
+    const rateOrderDoc = rateOrderDocs[0]
     if (!rateOrderDoc) return { variables: [] }
     emit({ t: 'tool', name: 'filing:extract:rateOrder', phase: 'start' })
     const pdfText = rateOrderDoc.base64 ? extractText(rateOrderDoc.base64) : null
@@ -318,22 +343,34 @@ async function runFilingPipeline(opts) {
   }
 
   const extractManual = async () => {
-    if (!manualDoc) return { rules: [] }
+    if (manualDocs.length === 0) return { rules: [] }
     emit({ t: 'tool', name: 'filing:extract:manual', phase: 'start' })
-    const pdfText = manualDoc.base64 ? extractText(manualDoc.base64) : null
-    const block   = buildContentBlock(manualDoc, pdfText)
-    const ladder  = await extractWithLadder({
-      systemPrompt: EXTRACT_SYSTEM, tool: MANUAL_TOOL, block,
-      instruction: "Extract the manual's numbered rules — schemas + verbatim regions for tables, scalars for single facts. Remember: every rule MUST carry a citation (page + rule number).",
-      maxTokens: 16000, budget,
-      sanitize: sanitizeMnl, isEmpty: (r) => !r || r.rules.length === 0,
-      count: (r) => r?.rules?.length ?? 0, emit, label: 'manual-rules',
-    })
-    const mn = ladder.result ?? { rules: [] }
-    escalated = escalated || ladder.escalated
-    emit({ t: 'tool', name: 'filing:extract:manual', phase: 'end', summary: `${mn.rules.length} rule(s)${mn.note ? ` — ${mn.note}` : ''}` })
-    if (mn.note) emit({ t: 'notice', level: 'warn', kind: 'sanitize-note', message: `manual: ${mn.note}` })
-    return mn
+    // EVERY manual extracts (F13); with >1, each rule's citation is prefixed
+    // with its source document so merged provenance stays per-document.
+    const perDoc = await pMap(manualDocs, async (doc) => {
+      const pdfText = doc.base64 ? extractText(doc.base64) : null
+      const block   = buildContentBlock(doc, pdfText)
+      const ladder  = await extractWithLadder({
+        systemPrompt: EXTRACT_SYSTEM, tool: MANUAL_TOOL, block,
+        instruction: "Extract the manual's numbered rules — schemas + verbatim regions for tables, scalars for single facts. Remember: every rule MUST carry a citation (page + rule number).",
+        maxTokens: 16000, budget,
+        sanitize: sanitizeMnl, isEmpty: (r) => !r || r.rules.length === 0,
+        count: (r) => r?.rules?.length ?? 0, emit, label: `manual-rules:${doc.name}`,
+      })
+      escalated = escalated || ladder.escalated
+      const mn = ladder.result ?? { rules: [] }
+      if (mn.note) emit({ t: 'notice', level: 'warn', kind: 'sanitize-note', message: `manual (${doc.name}): ${mn.note}` })
+      return { doc, rules: mn.rules }
+    }, 2)
+    const rules = perDoc.flatMap(({ doc, rules: docRules }) =>
+      manualDocs.length > 1
+        ? docRules.map(r => ({ ...r, citation: `${doc.name} — ${r.citation}` }))
+        : docRules)
+    if (manualDocs.length > 1) {
+      emit({ t: 'notice', level: 'info', kind: 'multi-manual-merge', message: `${manualDocs.length} manual documents merged (${manualDocs.map(d => d.name).join(', ')}); each rule's citation names its source document.` })
+    }
+    emit({ t: 'tool', name: 'filing:extract:manual', phase: 'end', summary: `${rules.length} rule(s) from ${manualDocs.length} document(s)` })
+    return { rules }
   }
 
   // ── EXTRACT: policy form coverages (single-pass forced propose_coverages) ──
@@ -373,22 +410,30 @@ async function runFilingPipeline(opts) {
   let baseFormNumber = policyFormDoc ? policyFormDoc.name.replace(/\.[^.]+$/, '') : 'BASE'
 
   const extractPolicyForm = async () => {
-    if (!policyFormDoc) return []
+    if (policyFormDocs.length === 0) return []
     emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'start' })
-    const pdfText = policyFormDoc.base64 ? extractText(policyFormDoc.base64) : null
-    const block   = buildContentBlock(policyFormDoc, pdfText)
-    const ladder  = await extractWithLadder({
-      systemPrompt: COVERAGE_SYSTEM, tool: PROPOSE_COVERAGES_TOOL, block,
-      instruction: `Extract ALL coverages this policy form defines. Filing state: ${filingState}. Every coverage MUST carry a citation (page + section).`,
-      maxTokens: 8192, budget,
-      sanitize: (raw) => (Array.isArray(raw?.coverages) ? raw.coverages : []).filter(c => c && c.name && c.citation),
-      isEmpty: (r) => !r || r.length === 0,
-      count: (r) => r?.length ?? 0, emit, label: 'policy-form',
-    })
-    const rawCovs = ladder.result ?? []
-    escalated = escalated || ladder.escalated
+    // EVERY policy form extracts (F13); with >1, each coverage's citation is
+    // prefixed with its source document.
+    const perDoc = await pMap(policyFormDocs, async (doc) => {
+      const pdfText = doc.base64 ? extractText(doc.base64) : null
+      const block   = buildContentBlock(doc, pdfText)
+      const ladder  = await extractWithLadder({
+        systemPrompt: COVERAGE_SYSTEM, tool: PROPOSE_COVERAGES_TOOL, block,
+        instruction: `Extract ALL coverages this policy form defines. Filing state: ${filingState}. Every coverage MUST carry a citation (page + section).`,
+        maxTokens: 8192, budget,
+        sanitize: (raw) => (Array.isArray(raw?.coverages) ? raw.coverages : []).filter(c => c && c.name && c.citation),
+        isEmpty: (r) => !r || r.length === 0,
+        count: (r) => r?.length ?? 0, emit, label: `policy-form:${doc.name}`,
+      })
+      escalated = escalated || ladder.escalated
+      return { doc, covs: ladder.result ?? [] }
+    }, 2)
+    const rawCovs = perDoc.flatMap(({ doc, covs }) =>
+      policyFormDocs.length > 1
+        ? covs.map(c => ({ ...c, citation: `${doc.name} — ${c.citation}` }))
+        : covs)
     if (rawCovs[0]?.formNumbers?.[0]) baseFormNumber = rawCovs[0].formNumbers[0]
-    emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'end', summary: `${rawCovs.length} coverage(s)` })
+    emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'end', summary: `${rawCovs.length} coverage(s) from ${policyFormDocs.length} document(s)` })
     // formNumbers must ALWAYS be an array — reconcileFiling dereferences
     // c.formNumbers.length and a missing field crashes the whole reconcile.
     // F14: not-stated facts land as UNKNOWN / null — never a guessed value
@@ -459,6 +504,36 @@ async function runFilingPipeline(opts) {
       unresolved: [],
     }
   }
+  // ── F13 visibility: every document lands somewhere the reviewer can see ────
+  // Real classifications replace the 'unknown' placeholders normalizeBundle
+  // would otherwise mint, and unprocessed documents enter BOTH importWarnings
+  // and the conservation ledger (proposed/unresolved move together so
+  // proposed = accepted + unresolved keeps holding).
+  bundle.fingerprint = bundle.fingerprint || {}
+  // Keep the scalars normalizeBundle would have minted — pre-creating the
+  // fingerprint must never blank the container/format badges (judge-found).
+  if (!bundle.fingerprint.container) bundle.fingerprint.container = 'PDF'
+  if (!bundle.fingerprint.detectedFormat) bundle.fingerprint.detectedFormat = 'COMPANY_FILING_PDF'
+  if (!Array.isArray(bundle.fingerprint.lineGuesses)) bundle.fingerprint.lineGuesses = []
+  bundle.fingerprint.documentRoles = classifications.map(c => ({
+    documentName: c.name, role: c.role, confidence: c.confidence,
+    ...(Array.isArray(c.secondaryRoles) && c.secondaryRoles.length > 0 ? { secondaryRoles: c.secondaryRoles } : {}),
+  }))
+  if (unprocessedDocs.length > 0) {
+    bundle.importWarnings = Array.isArray(bundle.importWarnings) ? bundle.importWarnings : []
+    bundle.unresolved = Array.isArray(bundle.unresolved) ? bundle.unresolved : []
+    bundle.counts = bundle.counts || { proposed: 0, accepted: 0, unresolved: 0 }
+    for (const { doc, role, cue } of unprocessedDocs) {
+      bundle.importWarnings.push({ kind: 'unprocessed-document', sheet: null, row: null, field: null, detail: `${doc.name} classified "${role}" (${cue}) — not extracted; review it manually or re-upload it separately.` })
+      // UnresolvedItem contract: {stage, kind, name, reason, citation} — the
+      // review UI renders u.name, so the DOCUMENT NAME must live there.
+      bundle.unresolved.push({ stage: 'classify', kind: 'unprocessed-document', name: doc.name, reason: `document classified "${role}" was not extracted`, citation: cue || '(no structural cue)' })
+      bundle.counts.proposed += 1
+      bundle.counts.unresolved += 1
+    }
+    emit({ t: 'notice', level: 'warn', kind: 'unprocessed-document', message: `${unprocessedDocs.length} document(s) were not extracted (${unprocessedDocs.map(u => u.doc.name).join(', ')}) — surfaced in the review queue.` })
+  }
+
   emit({ t: 'tool', name: 'filing:reconcile', phase: 'end', summary: `${bundle.counts?.accepted ?? 0} accepted, ${bundle.counts?.unresolved ?? 0} unresolved` })
   emit({ t: 'json', key: 'filing:bundle', value: bundle })
 

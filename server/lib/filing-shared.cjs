@@ -125,9 +125,12 @@ function coerceStage(v) {
 }
 function sanitizeClassification(name, input) {
   const roleRaw = str(input?.role);
+  const role = ROLES.has(roleRaw) ? roleRaw : "other";
+  const secondaryRoles = (Array.isArray(input?.secondaryRoles) ? input.secondaryRoles : []).map((v) => str(v)).filter((r) => ROLES.has(r) && r !== "other" && r !== role);
   return {
     name,
-    role: ROLES.has(roleRaw) ? roleRaw : "other",
+    role,
+    ...secondaryRoles.length > 0 ? { secondaryRoles: [...new Set(secondaryRoles)] } : {},
     cue: str(input?.cue) || "No structural cue reported.",
     confidence: conf(input?.confidence)
   };

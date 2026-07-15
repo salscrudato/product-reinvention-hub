@@ -45,9 +45,16 @@ function coerceStage(v: unknown): RateOrderStage {
 
 export function sanitizeClassification(name: string, input: Record<string, unknown> | undefined): FilingDocClassification {
   const roleRaw = str(input?.role) as FilingDocRole
+  const role = ROLES.has(roleRaw) ? roleRaw : 'other'
+  // F13: multi-role documents are real (a manual with an embedded rate-order
+  // appendix) — keep validated secondary roles, deduped against the primary.
+  const secondaryRoles = (Array.isArray(input?.secondaryRoles) ? (input!.secondaryRoles as unknown[]) : [])
+    .map(v => str(v) as FilingDocRole)
+    .filter(r => ROLES.has(r) && r !== 'other' && r !== role)
   return {
     name,
-    role: ROLES.has(roleRaw) ? roleRaw : 'other',
+    role,
+    ...(secondaryRoles.length > 0 ? { secondaryRoles: [...new Set(secondaryRoles)] } : {}),
     cue: str(input?.cue) || 'No structural cue reported.',
     confidence: conf(input?.confidence),
   }

@@ -166,11 +166,11 @@
       "severity": "HIGH",
       "confidence": 1.0,
       "cost": "M",
-      "status": "OPEN",
-      "priority": 3,
-      "evidence": "stage-filing.js:291-297 roleOf() = classifications.findIndex(role)",
-      "fixture": "samples/hardening/mixed/mixed_requests.json filing-nj-pair (extend with a duplicate-role pair)",
-      "lesson": "Role assignment is a partition, not a lookup — every document must land somewhere visible."
+      "status": "FIXED_IH2",
+      "priority": null,
+      "evidence": "docsByRole PARTITION (primary + validated secondaryRoles — CLASSIFY_TOOL gained an optional secondaryRoles array so a manual with an embedded rate-order appendix is expressible; sanitizeClassification validates/dedupes, never 'other'/primary-dup). extractManual + extractPolicyForm loop over EVERY doc in their bucket (pMap 2), concatenating with per-document citation prefixes when >1 doc (byte-identical citations when exactly 1 — judge-verified). Rate order is ORDER-SEMANTIC: first extracts; every surplus rate-order doc + every 'other' doc lands in importWarnings AND bundle.unresolved as a contract-shaped UnresolvedItem {stage:'classify', kind:'unprocessed-document', name:<doc>} (judge REJECT #1: the first cut used the workbook unresolved shape → nameless in the review UI; also the pre-created fingerprint blanked container/detectedFormat — both fixed, fixture locks the contract shape + scalars). counts.proposed/unresolved move together (conservation preserved). fingerprint.documentRoles now carries REAL classifications (normalizeBundle no longer mints 'unknown'). RESIDUALS RECORDED: (a) reconcile manualByConcept is FIRST-WINS per concept — merged manuals with the same concept silently prefer the first doc (surface via per-doc citations; fix rides with F22's reconcile work); (b) two different-LINE manuals (NJ HO + WA Auto) merge into ONE product — honest per-doc provenance but architecturally a MULTI-PRODUCT SPLIT case: that is the ARCH_ESCALATION trigger boundary (sectioned-PDF document map NOT needed for two separate files — deferred with this written trigger).",
+      "fixture": "tests/import-brain/hardening-f13-role-partition.test.ts — 6 cases (two manuals w/ per-doc provenance, other-doc visibility in contract shape, real documentRoles + fingerprint scalars, multi-role secondaryRoles e2e, surplus rate order, dirty-input sanitize), content-keyed stub, 5/5 red pre-fix (two-fixture rule)",
+      "lesson": "Role assignment is a partition, not a lookup — every document must land somewhere visible. And 'visible' means the CONTRACT SHAPE the review surface actually renders."
     },
     {
       "id": "F14",
