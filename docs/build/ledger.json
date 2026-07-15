@@ -106,9 +106,9 @@
       "severity": "MED",
       "effort": "S",
       "phase": "P2",
-      "status": "SPEC_READY",
-      "evidence": "DEFAULTS_SPEC 1; current expanded default verified at app/src/components/product/ProductHierarchy.tsx:90,:175. Was P1 Step-4 scope; deferred to the implementing wave by the operator's docs-only directive.",
-      "test": "Initial render collapsed (aria-expanded=false); single-node toggle isolation; expand-all/collapse-all round-trip; axe green",
+      "status": "DONE",
+      "evidence": "DONE @ 771b353 + f2bd4d2 (p2/experience): ProductHierarchy.tsx useDisclosure(false) both node kinds; BulkExpandSignal epoch sweep from the Products toolbar (Expand/Collapse all, tree view); role=group removed from coverage uls (axe listitem fix found by the new test).",
+      "test": "app/src/components/product/ProductHierarchy.test.tsx: initial aria-expanded=false, single-node isolation, round-trip, epoch-0 fallback, axe both states — GREEN",
       "lesson": "A default is a product decision - it ships with the test that pins it, not as a style tweak."
     },
     {
@@ -118,10 +118,46 @@
       "severity": "MED",
       "effort": "S",
       "phase": "P2",
-      "status": "SPEC_READY",
-      "evidence": "DEFAULTS_SPEC 2; Sidebar already obeys the flag (app/src/components/shell/Sidebar.tsx:32) so no new UI wiring",
-      "test": "Flag default false; Sidebar hides without override, shows with tenant override true",
+      "status": "DONE",
+      "evidence": "DONE @ 32ee1ef (p2/experience): featureFlags.ts:62 defaultEnabled false + rebuilt server/lib/platform-shared.cjs; zero client wiring (Sidebar already obeys); unlock stays XE-08 (P3) via tenant override on the literal key page.dictionary.",
+      "test": "platform.test.ts default-false + reveal + floor precedence; NEW Sidebar.test.tsx hide/show + survives-reload-by-construction — GREEN",
       "lesson": "Hide-until-earned features need a server-owned unlock, or the hiding is theater."
+    },
+    {
+      "id": "EX-04",
+      "workstream": "EXPERIENCE",
+      "title": "Tasks board redesign (operator-added): per-project accent recast (--color-proj-1..5 categorical tokens, AA-documented, FNV-1a scoped custom properties), main-step cards (phase chip, checklist n/m, start→due runway micro-bar), unified column headers, L2-4 lineage in the focus-trapped drawer, dnd write path extracted pure + PINNED (column-only mutate)",
+      "severity": "MED",
+      "effort": "M",
+      "phase": "P2",
+      "status": "DONE",
+      "evidence": "DONE @ 7f2b93e. Judge SHIP 10/10. Tasks chunk 20.4/25 KB gz. NOTE: the wave brief's \"mutateBatch column plus order\" premise was stale — the historical write is a single {column} mutate; preserved byte-identically.",
+      "test": "boardDnd.test.ts payload byte-equality + Object.keys(data)===[column]; projectAccent tests; TasksBoard.axe (4 variants + full route)",
+      "lesson": "A stale premise in a brief is a spec bug — pin the ACTUAL behavior with a test, then record the discrepancy."
+    },
+    {
+      "id": "EX-05",
+      "workstream": "EXPERIENCE",
+      "title": "Claims insured-centric risk report v2 (operator-added): {reportVersion:2, plainSummary, protections, watchouts, actions} (insurerLens dropped), version-gated cache (v1 regenerates for everyone), premium Dialog surface w/ section-derived tone + per-item ask-the-copilot through the real grounded ask(); DeterminationCard untouched",
+      "severity": "MED",
+      "effort": "M",
+      "phase": "P2",
+      "status": "DONE",
+      "evidence": "DONE @ 871e11e. Judge 2 mediums fixed pre-commit (Map-seed version gate, bounded session cache). Claims chunk 11.8/25 KB gz.",
+      "test": "form-risk-report.test.ts (_clean, _isCacheCurrent v1-reject, schema contract, server/client version parity); riskReport.test.ts; RiskReportDialog.axe.test.tsx",
+      "lesson": "Tone derived from the SECTION, never the model — an honesty property you can't prompt for."
+    },
+    {
+      "id": "EX-06",
+      "workstream": "EXPERIENCE",
+      "title": "Responsiveness/perf pass (operator-added): audit + News feed render-stability (memo cards + useCallback handlers); documented non-actions (content-visibility vs paged feed, TaskCard memo vs dragHandle identity, ambient-animation pausing = foreign-surface recommendation)",
+      "severity": "MED",
+      "effort": "M",
+      "phase": "P2",
+      "status": "DONE",
+      "evidence": "DONE @ 72255d2. Budget: initial 145.8/175, CSS 18.8/25, worst chunk Builder 22.7/25; wave chunks Tasks 20.4 / Claims 11.8 / Home 9.2.",
+      "test": "Bundle budget in gate + existing suites green; render-stability reasoning recorded in p2-summary",
+      "lesson": "A perf pass that documents what it deliberately did NOT do is worth more than one that only lists wins."
     },
     {
       "id": "EX-03",
@@ -142,9 +178,9 @@
       "severity": "HIGH",
       "effort": "M",
       "phase": "P2",
-      "status": "SPEC_READY",
-      "evidence": "HOME_BRIEF_SPEC 1-2; anchors verified: taskSummary verb at server/lib/ai/index.js:58 with _stripUncited (task-summary.js:133); news docs at news/<urlHash> (refresh-news.js:349); webSearchScout honest-failure path (refresh-news.js:76-97)",
-      "test": "Cache day-rollover; strip-uncited headline; per-block failure isolation (200 with block status, 5xx only when all fail); VIEWER 200",
+      "status": "DONE",
+      "evidence": "DONE @ 08ade0a (p2/experience): server/lib/ai/daily-brief.js — composeTaskSummary reuse (extraction in task-summary.js, wire-identical), profile-matched news top-3, 4 deterministic counts, webSearchScout enrichment w/ honest unavailable stub, MID_REASONER headline w/ strip-uncited + scrubbed display text + deterministic cited fallback, per-tenant/UTC-day in-memory cache (zero Cosmos writes), per-block timeouts, 502 only on all-three-fail. Contract FROZEN in orchestration.md CONTRACTS.",
+      "test": "tests/server/daily-brief.test.ts (18): rollover w/ injected clock, pill order/truncation/tones/in-app targets, sanitizeExternalText jailbreak-inert, per-block isolation, _canForce matrix, scrubCitationTokens — GREEN",
       "lesson": "Compose from surfaces that already enforce grounding; the brief inherits their honesty instead of re-proving it."
     },
     {
@@ -154,9 +190,9 @@
       "severity": "HIGH",
       "effort": "M",
       "phase": "P2",
-      "status": "SPEC_READY",
-      "evidence": "HOME_BRIEF_SPEC 3-4; Home.tsx anchors: WaveformLoader :302, PriorityRail :385, PortfolioMetrics :389",
-      "test": "Skeleton->content no CLS; empty-tenant state; pill order + truncation; axe on new pills",
+      "status": "DONE",
+      "evidence": "DONE @ 08ade0a: app/src/components/home/DailyBriefCard.tsx in Home's empty branch — glass card, reserved min-h (no CLS), server-ordered pills, headline + kind-level source chips + computed label, tasks paragraph via StreamRenderer w/ live citation index, About-you news rows, labeled enrichment stub; session day-cache feeds PriorityRail's key (one model call/day). Tasks.tsx reads ?overdue=1 for the pill deep-link.",
+      "test": "DailyBriefCard.test.tsx (8): no-CLS, empty tenant, computed label, stub, rail feed, VIEWER, axe — GREEN",
       "lesson": ""
     },
     {
@@ -166,9 +202,9 @@
       "severity": "MED",
       "effort": "S",
       "phase": "P2",
-      "status": "SPEC_READY",
-      "evidence": "NEWS_TENANT_SPEC 1; standard adapter.db.mutate envelope write (audited)",
-      "test": "EDITOR saves, VIEWER blocked server-side; profile doc shape validation",
+      "status": "DONE",
+      "evidence": "DONE @ d6efd94: tenantProfile/main entity (shared TenantProfile type) + TenantAdmin Carrier Profile tab (per-tab gating: Members/Audit stay member:manage; profile readable by all staff, EDITOR+ saves via audited mutate w/ expectedRev; client maxLength caps). Server read seam server/lib/tenant-profile.js w/ _normalizeProfile sanitization gate (quotes/control chars stripped, hard caps).",
+      "test": "tenant-profile.test.ts + TenantProfileTab.test.tsx (envelope save, update rev, VIEWER read-only, axe) — GREEN",
       "lesson": ""
     },
     {
@@ -178,9 +214,9 @@
       "severity": "MED",
       "effort": "S",
       "phase": "P2",
-      "status": "SPEC_READY",
-      "evidence": "NEWS_TENANT_SPEC 2-3; anchors: scope composition refresh-news.js:307, products query :228-231, newsPrefs :289-291, matchToProductIds exported :359",
-      "test": "Fallback byte-parity fixture; profile-first composition; carrier tagging",
+      "status": "DONE",
+      "evidence": "DONE @ d6efd94: buildScope profile-first in refresh-news.js — absent profile BYTE-PARITY with the frozen historical literals; profile appends carrier→aliases→LOB captions→market→states→topics→products(cap 12) + frozen anti-narrowing sentence; newsPrefs append precedence untouched by construction; matchesCarrier WORD-BOUNDED tagging → additive matchedCarrier on the existing news write; News page About-you badge + relevance bump.",
+      "test": "refresh-news.test.ts additive describes: byte-parity fixtures, profile-first, thin profile, product cap, matchesCarrier incl. substring-in-word — GREEN",
       "lesson": "A profile may only ADD signal to the scout - narrowing below the portfolio scope turns personalization into censorship."
     },
     {
@@ -294,15 +330,54 @@
   ],
   "summary": {
     "byPhase": {
-      "P1_thisWave_docsOnly": ["RE-01", "RE-04", "RE-03"],
-      "P2_experience_brief": ["EX-01", "EX-02", "BR-01", "BR-02", "BR-03", "BR-04"],
-      "P3_xml_export": ["XE-01", "XE-02", "XE-03", "XE-04", "XE-05", "XE-06", "XE-08", "EX-03"],
-      "P4_history": ["HI-01", "HI-02", "HI-03", "HI-04"],
-      "P5_release_deferred": ["RE-02", "XE-07", "VOICE-01"]
+      "P1_thisWave_docsOnly": [
+        "RE-01",
+        "RE-04",
+        "RE-03"
+      ],
+      "P2_experience_brief": [
+        "EX-01",
+        "EX-02",
+        "EX-04",
+        "EX-05",
+        "EX-06",
+        "BR-01",
+        "BR-02",
+        "BR-03",
+        "BR-04"
+      ],
+      "P3_xml_export": [
+        "XE-01",
+        "XE-02",
+        "XE-03",
+        "XE-04",
+        "XE-05",
+        "XE-06",
+        "XE-08",
+        "EX-03"
+      ],
+      "P4_history": [
+        "HI-01",
+        "HI-02",
+        "HI-03",
+        "HI-04"
+      ],
+      "P5_release_deferred": [
+        "RE-02",
+        "XE-07",
+        "VOICE-01"
+      ]
     },
-    "held": ["RE-01", "RE-04"],
-    "parked": ["VOICE-01"],
-    "resolvedPrior": ["RE-03"],
+    "held": [
+      "RE-01",
+      "RE-04"
+    ],
+    "parked": [
+      "VOICE-01"
+    ],
+    "resolvedPrior": [
+      "RE-03"
+    ],
     "criticalPath": "XE-01 -> XE-02 -> XE-03 -> XE-04 (bundle) -> XE-05/XE-06 (two-way) ; DEFAULTS EX-02+XE-08 share the literal flag key 'page.dictionary'"
   }
 }
