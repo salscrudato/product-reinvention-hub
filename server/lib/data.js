@@ -224,7 +224,6 @@ function envelope(tid, payload, actor, source) {
   if (RESERVED_BASES.has(baseKey(path))) { const e = new Error('reserved_base'); e.code = 'RESERVED_BASE'; throw e }
   const data = { ...(payload.data || {}) }
   for (const k of RESERVED_ENVELOPE_KEYS) delete data[k]
-  const pk = pkFor(tid, path)
   const now = new Date().toISOString()
   return async () => {
     const current = await readEntity(tid, path)
@@ -248,49 +247,72 @@ function envelope(tid, payload, actor, source) {
       }
       if (!parent) { const e = new Error('invalid_parent'); e.code = 'INVALID_PARENT'; throw e }
     }
-    const rev = curRev + 1
-    // op:'update' is a PARTIAL update — shallow-merge the incoming fields onto the
-    // existing domain data so a caller that sends only what changed (e.g. the state-
-    // footprint editor sending just { states, allStates }) never wipes the rest of the
-    // document. Without this, an update REPLACES the whole doc: editing a product's
-    // footprint stripped its name/lob/lifecycle and corrupted it. create/delete keep
-    // prior semantics (create writes verbatim). Merge is shallow: a supplied key
-    // replaces its value wholesale (arrays/objects are not deep-merged); absent keys
-    // retain their prior value. The merged doc feeds the entity, the version diff, the
-    // search index and the grounding chunk so all four stay consistent.
-    const prevData = (op === 'update' && current && current.data && typeof current.data === 'object') ? current.data : {}
-    const mergedData = { ...prevData, ...data }
-    const entityData = { ...mergedData, rev, updatedAt: now, updatedBy: actor }
-    const common = { pk, tenantId: tid }
-    // Field diff (before/changed) is shared by the version record AND the audit event,
-    // so the audit trail itself carries what changed, not just that something changed.
-    const diff = op === 'delete' ? null : fieldDiff(current?.data, mergedData)
     // Tamper-evident hash chain: prevHash comes from the per-path chainHead doc
     // (null for the first event of a path); the event hash seals content + link.
     const head = await readChainHead(tid, path)
-    const auditBody = {
-      entityPath: path, entityType, op, actor, rev, at: now,
-      source: source || null, diff, prevHash: head?.hash ?? null,
-    }
-    const hash = computeAuditHash({ tenantId: tid, ...auditBody })
-    const ops = []
-    if (op === 'delete') ops.push({ operationType: 'Delete', id: idFor('ent', path) })
-    else ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ent', path), ...common, kind: 'entity', path, coll: collOf(path), entityType, rev, data: entityData, updatedAt: now } })
-    ops.push({ operationType: 'Create', resourceBody: { id: auditId(), ...common, kind: 'audit', ...auditBody, hash } })
-    ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ver', `${path}:${rev}`), ...common, kind: 'version', entityPath: path, rev, op, diff, actor, at: now } })
-    ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('idx', path), ...common, kind: 'searchIndex', entityPath: path, entityType, deleted: op === 'delete', text: searchText(mergedData), at: now } })
-    // chainHead anchor rides the SAME transactional batch; ifMatchETag serializes
-    // concurrent writers per path (see readChainHead).
-    const headOp = { operationType: 'Upsert', resourceBody: { id: idFor('chn', path), ...common, kind: 'chainHead', entityPath: path, hash, rev, at: now } }
-    if (head?.etag) headOp.ifMatchETag = head.etag
-    ops.push(headOp)
-    // grounding chunk (non-delete only; same pk → same Cosmos partition → atomic)
-    if (op !== 'delete') {
-      const chunkOp = buildChunkOp(entityType, path, mergedData, pk, tid, now)
-      if (chunkOp) ops.push(chunkOp)
-    }
-    return { pk, ops, rev }
+    // provenance rides through untouched: it is optional AI/voice-authoring attestation
+    // (fleet-sourced model id, citation refs, confidence, authoredBy) that assembleEnvelope
+    // conditionally seals into the audit hash (H4). Absent → legacy-identical hash.
+    return assembleEnvelope({ tid, path, entityType, op, data, actor, source, now, current, head, provenance: payload.provenance })
   }
+}
+
+// assembleEnvelope — the PURE, Cosmos-free core of the mutation envelope: given the
+// current entity + chainHead ALREADY READ, build the transactional op batch (entity +
+// audit + version + searchIndex + chainHead + optional grounding chunk). Extracted from
+// envelope()'s closure verbatim so BOTH write paths (mutate, mutateBatch) and the tests
+// exercise ONE code path — an imported entity's genesis version doc is produced here
+// exactly as an interactive create's. Deterministic in its inputs: no I/O, no clock
+// (`now` is passed in). `data` must already be envelope-key-stripped by the caller.
+function assembleEnvelope({ tid, path, entityType, op, data, actor, source, now, current, head, provenance }) {
+  const pk = pkFor(tid, path)
+  const common = { pk, tenantId: tid }
+  const curRev = current?.rev ?? 0
+  const rev = curRev + 1
+  // op:'update' is a PARTIAL update — shallow-merge the incoming fields onto the
+  // existing domain data so a caller that sends only what changed (e.g. the state-
+  // footprint editor sending just { states, allStates }) never wipes the rest of the
+  // document. Without this, an update REPLACES the whole doc: editing a product's
+  // footprint stripped its name/lob/lifecycle and corrupted it. create/delete/restore
+  // keep prior semantics (create/restore write verbatim — a restore is a full-state
+  // rewind, so it must REPLACE not merge). Merge is shallow: a supplied key replaces
+  // its value wholesale (arrays/objects are not deep-merged); absent keys retain their
+  // prior value. The merged doc feeds the entity, the version diff, the search index
+  // and the grounding chunk so all four stay consistent.
+  const prevData = (op === 'update' && current && current.data && typeof current.data === 'object') ? current.data : {}
+  const mergedData = { ...prevData, ...data }
+  const entityData = { ...mergedData, rev, updatedAt: now, updatedBy: actor }
+  // Field diff (before/changed) is shared by the version record AND the audit event,
+  // so the audit trail itself carries what changed, not just that something changed.
+  const diff = op === 'delete' ? null : fieldDiff(current?.data, mergedData)
+  const auditBody = {
+    entityPath: path, entityType, op, actor, rev, at: now,
+    source: source || null, diff, prevHash: head?.hash ?? null,
+    // Conditional: only a provenance-bearing write carries the key, so a write with
+    // NO provenance hashes byte-identically to before — the chain is NEVER forked.
+    // Today computeAuditHash ignores unknown keys (provenance is not yet in
+    // AUDIT_HASH_FIELDS); H4 adds CONDITIONAL sealing so a PRESENT provenance becomes
+    // tamper-evident while an ABSENT one keeps hashing identically.
+    ...(provenance != null ? { provenance } : {}),
+  }
+  const hash = computeAuditHash({ tenantId: tid, ...auditBody })
+  const ops = []
+  if (op === 'delete') ops.push({ operationType: 'Delete', id: idFor('ent', path) })
+  else ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ent', path), ...common, kind: 'entity', path, coll: collOf(path), entityType, rev, data: entityData, updatedAt: now } })
+  ops.push({ operationType: 'Create', resourceBody: { id: auditId(), ...common, kind: 'audit', ...auditBody, hash } })
+  ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('ver', `${path}:${rev}`), ...common, kind: 'version', entityPath: path, rev, op, diff, actor, at: now, ...(provenance != null ? { provenance } : {}) } })
+  ops.push({ operationType: 'Upsert', resourceBody: { id: idFor('idx', path), ...common, kind: 'searchIndex', entityPath: path, entityType, deleted: op === 'delete', text: searchText(mergedData), at: now } })
+  // chainHead anchor rides the SAME transactional batch; ifMatchETag serializes
+  // concurrent writers per path (see readChainHead).
+  const headOp = { operationType: 'Upsert', resourceBody: { id: idFor('chn', path), ...common, kind: 'chainHead', entityPath: path, hash, rev, at: now } }
+  if (head?.etag) headOp.ifMatchETag = head.etag
+  ops.push(headOp)
+  // grounding chunk (non-delete only; same pk → same Cosmos partition → atomic)
+  if (op !== 'delete') {
+    const chunkOp = buildChunkOp(entityType, path, mergedData, pk, tid, now)
+    if (chunkOp) ops.push(chunkOp)
+  }
+  return { pk, ops, rev }
 }
 
 // Commit one envelope with bounded retry on 412 (precondition failure on the
@@ -489,4 +511,4 @@ router.get('/audit/verify', requireCapability('audit:read'), requireTenant, asyn
   }
 })
 
-module.exports = Object.assign(router, { mutateInternal })
+module.exports = Object.assign(router, { mutateInternal, assembleEnvelope })
