@@ -36,7 +36,7 @@
     "Sheet \"Product Component Model\" col \"ID\": coverage id IM.COV068.26 is reused for different coverages (\"Job Site - Existing Building or Structure\" and \"Property Held at any Temporary Storage Location\") — kept the first; verify the source.",
     "Sheet \"Product Component Model\" col \"ID\": coverage id IM.COV087.12 is reused for different coverages (\"Processors\" and \"Property At Unnamed Processors\") — kept the first; verify the source.",
     "Sheet \"Product Component Model\" col \"ID\": coverage id IM.COV087.13 is reused for different coverages (\"Property in Processor's Care, Custody or Control\" and \"Property In Transit\") — kept the first; verify the source.",
-    "Framework sheet \"Product Component Model\": no explicit product (.PROD/.PRD) row — synthesized \"IM.PROD.001\" from coverage id prefix \"IM\"; code: product_synthesized.",
+    "Framework sheet \"Product Component Model\": no explicit product (.PROD/.PRD) row — synthesized \"IM.PROD.SYNTH001\" from coverage id prefix \"IM\"; code: product_synthesized.",
     "Sheet \"Product Component Model\" coverage IM.COV068.126 (\"Below Ground Water and Backup of Sewer and Drain\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
     "Sheet \"Product Component Model\" coverage IM.COV079.02 (\"Debris Removal\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",
     "Sheet \"Product Component Model\" coverage IM.COV080.02 (\"Debris Removal\"): named a sub-coverage but no parent coverage was found — imported as a top-level coverage.",

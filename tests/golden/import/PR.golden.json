@@ -7,9 +7,9 @@
   "entities": [
     {
       "kind": "product",
-      "refId": "PR.PROD.001",
+      "refId": "PR.PROD.SYNTH001",
       "fields": {
-        "refId": "PR.PROD.001",
+        "refId": "PR.PROD.SYNTH001",
         "name": "Monoline Building and Personal Property",
         "description": "",
         "marketSegment": "Commercial Lines / Property",

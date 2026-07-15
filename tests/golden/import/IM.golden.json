@@ -7,9 +7,9 @@
   "entities": [
     {
       "kind": "product",
-      "refId": "IM.PROD.001",
+      "refId": "IM.PROD.SYNTH001",
       "fields": {
-        "refId": "IM.PROD.001",
+        "refId": "IM.PROD.SYNTH001",
         "name": "Monoline Signs",
         "description": "",
         "marketSegment": "Commercial Lines / Property",
