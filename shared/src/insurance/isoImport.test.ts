@@ -332,6 +332,7 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
     ['Active', 'CORE.COV.003', 'Core', 'Collector Auto', 'Property Damage', '', 'X'],
     ['Active', 'CORE.COV.009', 'Core', 'Collector Auto', 'Collision', '', 'X'],
     ['Active', 'CORE.COV.010', 'Core', 'Collector Auto', 'Other Than Collision', '', 'X'],
+    ['Active', 'CORE.COV.020', 'Core', 'Collector Auto', 'Evacuation Expense', '', 'X'],
   ])
   // Signature sheet: two col-0 "TABLE NAME:" blocks, no LDTable ids (CORE style).
   const refs = g('Reference Data', [
@@ -344,11 +345,19 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
     ['GROUP 1: All vehicles', 0, 'X'],
     ['GROUP 1: All vehicles', 500, 'X'],
   ])
+  // Rules cite tables (and one coverage) by concept NAME, with blank RULE ID.
+  const rules = g('Rules Specifications', [
+    ['RULES'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RULE ID', 'RULE CATEGORY', 'RULE SUB-CATEGORY', 'RULE CONDITION', 'RULE OUTCOME', 'RULE REFERENCE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.COV.001', '', 'Product', 'Limits', 'If BI selected', 'A limit applies', 'Liability Limits', 'X'],
+    ['Active', 'CORE.COV.020', '', 'Product', 'Coverage', 'If requested', 'Evacuation applies', 'Evacuation Expense', 'X'],
+  ])
   // A single-marker grid must NOT be detected (below the >= 2 signature gate).
   const single = g('Notes', [['TABLE NAME: Just One Block'], ['x', 1]])
-  const plan2 = mapIsoWorkbook([fw, refs, single])
+  const plan2 = mapIsoWorkbook([fw, refs, rules, single])
   const minted = plan2.ldTables.filter(t => (t.data as Record<string, unknown>)['mintedId'] === true)
   const d = (i: number) => minted[i]!.data as Record<string, unknown>
+  const ruleOf = (frag: string) => plan2.rules.find(r => new RegExp(frag, 'i').test(String(r.data['outcome'])))!
 
   it('detects >= 2 col-0 TABLE NAME blocks and mints stable PREFIX.TBL ids in source order', () => {
     expect(plan2.summary.counts['referenceTables']).toBe(2)
@@ -370,9 +379,31 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
     expect(plan2.summary.sheetsSkipped).toContain('Notes')
   })
   it('minting is stable: same input → same ids', () => {
-    const again = mapIsoWorkbook([fw, refs, single])
+    const again = mapIsoWorkbook([fw, refs, rules, single])
     expect(again.ldTables.filter(t => (t.data as Record<string, unknown>)['mintedId']).map(t => t.refId))
       .toEqual(['CORE.TBL.001', 'CORE.TBL.002'])
+  })
+
+  // ── Linking (D2/D7/D8) ──
+  it('a Liability Limits matrix links to coverages via its header codes (BI→BI cov, PD→PD cov)', () => {
+    expect((d(0)['coverageRefIds'] as string[]).sort()).toEqual(['CORE.COV.001', 'CORE.COV.003'])
+  })
+  it('a Physical Damage Deductibles table links to Collision + Other Than Collision', () => {
+    expect((d(1)['coverageRefIds'] as string[]).sort()).toEqual(['CORE.COV.009', 'CORE.COV.010'])
+  })
+  it('a rule citing a table by concept name gains a tableRefIds link + back-links the table', () => {
+    const r = ruleOf('a limit applies')
+    expect(r.data['tableRefIds']).toEqual(['CORE.TBL.001'])
+    expect(r.data['tableLinkBasis']).toBe('derived')
+    expect((d(0)['ruleRefIds'] as string[])).toContain(r.refId)
+  })
+  it('D8: a rule reference that names a coverage resolves to it, not a failed table match', () => {
+    const r = ruleOf('Evacuation applies')
+    expect(r.data['resolvedCoverageRefId']).toBe('CORE.COV.020')
+    expect(r.data['tableRefIds']).toBeUndefined()
+  })
+  it('the transient _referenceText is cleared from every rule (no golden leak)', () => {
+    expect(plan2.rules.every(r => !('_referenceText' in r.data))).toBe(true)
   })
 })
 

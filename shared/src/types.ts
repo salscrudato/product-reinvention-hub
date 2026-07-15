@@ -216,6 +216,14 @@ export interface Rule extends GovernanceBlock, StateScope {
   ldTableRefText?: string
   coverageRefIds:  string[]
   formNumbers:     string[]
+  // ── Concept-linker additions (set ONLY on a concept-linked import, e.g. CORE) ──
+  /** Reference tables this rule cites, reconstructed by concept matching (D2). Array ⇒
+   *  golden-invisible; absent on GL/IM/PR rules. */
+  tableRefIds?:           string[]
+  tableLinkBasis?:        LinkBasis
+  /** D8: the rule reference named a COVERAGE, not a table — resolved to this coverage refId
+   *  (a coverage link + notice, never a failed match). */
+  resolvedCoverageRefId?: string
 }
 
 export interface FormRule extends GovernanceBlock {

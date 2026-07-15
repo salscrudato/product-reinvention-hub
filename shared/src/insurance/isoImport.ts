@@ -18,6 +18,11 @@ import type {
 } from '../types'
 import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
+import {
+  matchCoverageByName, matchRuleReferenceToTables, resolveCoverageCode,
+  physicalDamageCoverages, formTokens, FORM_TOKEN,
+  type NamedCoverage, type ConceptTable,
+} from './conceptMatch'
 
 // ─── Public shapes ─────────────────────────────────────────────────────────────
 
@@ -1082,6 +1087,10 @@ function parseRules(grid: IsoGrid, ctx: Ctx): PlannedEntity[] {
         // where the parsed table is LDTABLE.119) — the same cell's NAME is the
         // authoritative recovery channel for the term fold (PCM-A).
         ldTableRefText: extractTableRef(at(cells, 'reference')) ? clean(at(cells, 'reference')) : undefined,
+        // TRANSIENT: the raw RULE REFERENCE text, consumed + deleted by linkReferenceTables
+        // (concept rule→table matching, D2). Never reaches a plan/golden — so GL/IM/PR rules
+        // stay byte-identical whether or not their reference is a concept name.
+        _referenceText: clean(at(cells, 'reference')) || undefined,
         coverageRefIds: splitList(at(cells, 'ids')),
         formNumbers: forms,
         ...stateScope(cells, sc),
@@ -1532,6 +1541,7 @@ interface ReferenceTableDraft {
   kindHint:    TermKind
   sourceRows:  string        // "start-end", 1-based, for provenance
   rows:        LDRow[]       // distinct numeric option values (limit/deductible amounts)
+  rowLabels:   string[]      // every data-row col-0 label (sub-coverage-matrix name matching)
   backLinkWas: string        // the RULE ID line's value-column header
 }
 
@@ -1566,11 +1576,13 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
       const state = (baseName.match(/-\s*([A-Z]{2})\s*$/) ?? [])[1]
       let group: string | undefined
       const rows: LDRow[] = []
+      const rowLabels: string[] = []
       const seen = new Set<string>()
       for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
         const label = clean(cell(grid, r, 0))
         const rawVal = cell(grid, r, 1)
         if (!label && !clean(rawVal)) continue
+        if (label && !rowLabels.includes(label)) rowLabels.push(label)
         if (!group) { const gm = label.match(/^GROUP \d[^:]*/i); if (gm) group = gm[0]!.trim() }
         const num = parseNum(rawVal)
         if (num !== null && !seen.has(String(num)) && rows.length < 40) {
@@ -1585,7 +1597,7 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
       const n = (nameCount.get(displayName) ?? 0) + 1
       nameCount.set(displayName, n)
       if (n > 1) displayName = `${displayName} (v${n})`
-      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, backLinkWas })
+      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, rowLabels, backLinkWas })
     }
   }
   return drafts
@@ -1613,6 +1625,88 @@ function mintReferenceTables(drafts: ReferenceTableDraft[], prefix: string): Pla
     }
     return { docId: refId, refId, label: `${refId} — ${d.displayName}`, data: data as unknown as Record<string, unknown> }
   })
+}
+
+/** Reconstruct the implied links a human analyst would (D2/D7/D8): reference-table → coverage
+ *  (via header codes / physical-damage / sub-coverage-matrix rows / name / form tokens), and
+ *  rule → reference-table (concept match on the rule's free-text reference), with a rule →
+ *  coverage fallback when the reference names a coverage rather than a table (D8). Consumes +
+ *  clears the transient `_referenceText` on EVERY rule so GL/IM/PR stay byte-identical, then
+ *  no-ops when no reference tables were detected. Returns link tallies for the caller's notices.
+ *  `refDrafts` and `refTables` are index-aligned. */
+function linkReferenceTables(
+  refDrafts: ReferenceTableDraft[],
+  refTables: PlannedEntity[],
+  coverages: PlannedEntity[],
+  rules: PlannedEntity[],
+): { backLinked: number; covLinked: number; rulesLinked: number; resolvedToCoverage: number; unresolved: number } {
+  // Always pull + clear the transient reference text (keeps every non-CORE golden clean).
+  const refTexts = rules.map(r => {
+    const t = r.data['_referenceText']
+    delete r.data['_referenceText']
+    return typeof t === 'string' ? t : ''
+  })
+  const tally = { backLinked: 0, covLinked: 0, rulesLinked: 0, resolvedToCoverage: 0, unresolved: 0 }
+  if (!refTables.length) return tally
+
+  const namedCovs: NamedCoverage[] = coverages.map(c => ({ refId: c.refId as string, name: String(c.data['name'] ?? '') }))
+  const conceptTables: ConceptTable[] = refTables.map((t, i) => ({ refId: t.refId as string, baseName: refDrafts[i]!.baseName, state: refDrafts[i]!.state }))
+  const tableByRefId = new Map(refTables.map(t => [t.refId as string, t]))
+  // covsByForm: squished form number → the coverage refIds whose form list names it.
+  const covsByForm = new Map<string, string[]>()
+  for (const c of coverages) {
+    for (const f of ((c.data['formNumbers'] as string[] | undefined) ?? [])) {
+      const k = squishStr(f)
+      if (!k) continue
+      const list = covsByForm.get(k) ?? []
+      if (!list.includes(c.refId as string)) list.push(c.refId as string)
+      covsByForm.set(k, list)
+    }
+  }
+
+  // ── Reference-table → coverage links (D1/D7) ──
+  refDrafts.forEach((d, i) => {
+    const linked = new Set<string>()
+    if (/LIABILITY LIMITS/i.test(d.baseName)) {
+      for (const code of d.covCodes) for (const id of resolveCoverageCode(code, namedCovs)) linked.add(id)
+    } else if (/PHYSICAL DAMAGE DEDUCTIBLE/i.test(d.baseName)) {
+      for (const id of physicalDamageCoverages(namedCovs)) linked.add(id)
+    } else if (/SUB-?COVERAGE.*LIMIT/i.test(d.baseName)) {
+      for (const label of d.rowLabels) { const m = matchCoverageByName(label, namedCovs); if (m) linked.add(m.refId) }
+    } else {
+      const m = matchCoverageByName(d.baseName.replace(FORM_TOKEN, ' '), namedCovs)
+      if (m) linked.add(m.refId)
+      for (const ftk of formTokens(d.baseName)) for (const id of (covsByForm.get(squishStr(ftk)) ?? [])) linked.add(id)
+    }
+    refTables[i]!.data['coverageRefIds'] = [...linked]
+    if (linked.size) tally.covLinked++
+  })
+
+  // ── Rule → reference-table links (D2) + D8 coverage fallback ──
+  for (let i = 0; i < rules.length; i++) {
+    const ref = refTexts[i]!
+    if (!ref) continue
+    const rule = rules[i]!
+    const states = (rule.data['states'] as string[] | undefined) ?? []
+    const allStates = rule.data['allStates'] === true
+    const m = matchRuleReferenceToTables(ref, conceptTables, states, allStates, namedCovs)
+    if (m.tableRefIds.length) {
+      rule.data['tableRefIds'] = m.tableRefIds
+      rule.data['tableLinkBasis'] = 'derived'
+      tally.rulesLinked++
+      for (const tid of m.tableRefIds) {
+        const rr = tableByRefId.get(tid)?.data['ruleRefIds'] as string[] | undefined
+        if (rr && !rr.includes(rule.refId as string)) rr.push(rule.refId as string)
+      }
+    } else if (m.resolvedCoverageRefId) {
+      rule.data['resolvedCoverageRefId'] = m.resolvedCoverageRefId
+      tally.resolvedToCoverage++
+    } else if (m.how === 'NO MATCHING TABLE IN SOURCE') {
+      tally.unresolved++
+    }
+  }
+  tally.backLinked = refTables.filter(t => (t.data['ruleRefIds'] as string[]).length > 0).length
+  return tally
 }
 
 // ─── Orchestration ───────────────────────────────────────────────────────────────
@@ -1701,6 +1795,11 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   // Flat union of all coverages across all products (ordered by product then depth).
   const allCoverages: PlannedEntity[] = fwResults ? fwResults.flatMap(fw => fw.coverages) : []
 
+  // Reconstruct rule↔table↔coverage links by concept matching (D2/D7/D8). Clears the
+  // transient rule reference text on every workbook; only wires links when reference tables
+  // were detected (CORE signature) — GL/IM/PR are byte-identical.
+  const refLinks = linkReferenceTables(refDrafts, refTables, allCoverages, rules)
+
   // Assemble coverage.terms from the LD tables and the rules that reference them
   // (ledger PCM-A). coverageRefIds are globally unique, so the flat union is safe
   // in multi-product workbooks. NB: the fold runs over the ORIGINAL ldTables only — the
@@ -1726,6 +1825,11 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     rtTables: rtTables.length,
     ldTables: allLdTables.length,
     referenceTables: refTables.length,
+    referenceTablesBackLinked: refLinks.backLinked,
+    referenceTablesCovLinked: refLinks.covLinked,
+    rulesTableLinked: refLinks.rulesLinked,
+    rulesResolvedToCoverage: refLinks.resolvedToCoverage,
+    ruleRefsUnresolved: refLinks.unresolved,
   }
 
   const knownSheets = new Set(ctx.recognized)
