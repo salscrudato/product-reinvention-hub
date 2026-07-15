@@ -266,7 +266,11 @@ export const adapter: BackendAdapter = {
           if (!rawFetch) {
             rawFetch = (doc ? adapter.db.get<T>(path) : adapter.db.list<T>(path, query)) as Promise<T | T[]>
             pathFetches.set(key, rawFetch)
-            void rawFetch.finally(() => { if (pathFetches.get(key) === rawFetch) pathFetches.delete(key) })
+            // The cleanup side-chain must swallow the rejection itself — tick()
+            // awaits and handles the ORIGINAL promise, but `.finally()` returns a
+            // NEW promise whose rejection nobody awaits (this was the browser's
+            // "Uncaught (in promise): unauthenticated" console spam).
+            void rawFetch.finally(() => { if (pathFetches.get(key) === rawFetch) pathFetches.delete(key) }).catch(() => {})
           }
           const data = await rawFetch
           if (stopped) return
