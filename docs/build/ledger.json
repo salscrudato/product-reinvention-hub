@@ -238,21 +238,21 @@
       "severity": "HIGH",
       "effort": "S",
       "phase": "P1",
-      "status": "HELD",
-      "evidence": "This wave. Gate rides with the push (docs-only commits touch no code); stowaway-check + git commit --only per commit; docs/design-review/, docs/kurt-brief.md, hardening-corpus*, and the foreign deletion of docs/reference/DuckCreekXML.xml are OTHER LANES' worktree state - not committed here",
+      "status": "DONE",
+      "evidence": "SHIPPED + DEPLOYED: P1 commits 9b7e2bc/60cd792/21513a0 reached origin/main inside the IH4 batch push f67fbf0; pipeline run 2481 succeeded; operator lifted the hold ('Continue to finish and deploy'). Original hold record: docs-only commits behind stowaway-check + scoped pathspec; foreign worktree state (docs/design-review/, docs/kurt-brief.md, hardening-corpus*, the DuckCreekXML.xml deletion) never committed by this lane",
       "test": "n/a (docs)",
       "lesson": "Push=deploy makes 'when to push' an operator decision, not an agent convenience."
     },
     {
       "id": "RE-02",
       "workstream": "RELEASE",
-      "title": "IMPORT-CERTIFIED precondition: absent at HEAD (grep zero hits); P0/IH4 owns the stamp + the 13-commit IH3 push (origin/main at 7d78d90, HEAD 13 ahead). P2-P5 waves must re-check the stamp before building on import behavior",
+      "title": "IMPORT-CERTIFIED precondition: was absent at P1's baseline HEAD 1c47f25; P0/IH4 owned the stamp + the IH3 push. RESOLVED same day: IMPORT-CERTIFIED f67fbf0",
       "severity": "BLOCKING",
       "effort": "S",
       "phase": "P5",
-      "status": "OPEN",
-      "evidence": "docs/import-hardening/IH4_HANDOFF.md (tiered live gates, Phases W/P/M/G); import ledger 28/28 closed at docs/import-hardening/ledger.json",
-      "test": "Stamp present in orchestration.md + IH4's tiered live gates green",
+      "status": "DONE",
+      "evidence": "IMPORT-CERTIFIED f67fbf0 stamped in the orchestration.md IH row (close-out 4235df0): 37/37 ledger entries closed, Phase W/P/M gates GREEN, Phase G PROVEN on the frozen holdout (HOLDOUT_SHA d51e32f), pipeline run 2481 succeeded. P2-P5 may build on import behavior",
+      "test": "Stamp present in orchestration.md + IH4's tiered live gates green - both satisfied at f67fbf0",
       "lesson": "A precondition that is absent-but-overridden must stay on the books until it is absent-no-longer."
     },
     {
@@ -274,8 +274,8 @@
       "severity": "HIGH",
       "effort": "S",
       "phase": "P1",
-      "status": "HELD",
-      "evidence": "This wave's raw-material commit; spec citations resolve against these exact files. OLD-vs-UPDATED workbook diff recorded in XE-03 evidence and BASELINE.md 4 (no OLD workbooks exist in-repo or in history - the diff is brief-claim vs observed reality)",
+      "status": "DONE",
+      "evidence": "Committed at 9b7e2bc, on origin/main via the f67fbf0 batch (run 2481). Spec citations resolve against these exact files. OLD-vs-UPDATED workbook diff recorded in XE-03 evidence and BASELINE.md 4 (no OLD workbooks exist in-repo or in history - the diff is brief-claim vs observed reality)",
       "test": "XE-03's structural golden test consumes them",
       "lesson": ""
     },
@@ -294,13 +294,14 @@
   ],
   "summary": {
     "byPhase": {
-      "P1_thisWave_docsOnly": ["RE-01", "RE-04", "RE-03"],
+      "P1_thisWave_docsOnly": ["RE-01", "RE-04", "RE-03", "RE-02"],
       "P2_experience_brief": ["EX-01", "EX-02", "BR-01", "BR-02", "BR-03", "BR-04"],
       "P3_xml_export": ["XE-01", "XE-02", "XE-03", "XE-04", "XE-05", "XE-06", "XE-08", "EX-03"],
       "P4_history": ["HI-01", "HI-02", "HI-03", "HI-04"],
-      "P5_release_deferred": ["RE-02", "XE-07", "VOICE-01"]
+      "P5_release_deferred": ["XE-07", "VOICE-01"]
     },
-    "held": ["RE-01", "RE-04"],
+    "held": [],
+    "doneP1": ["RE-01", "RE-02", "RE-03", "RE-04"],
     "parked": ["VOICE-01"],
     "resolvedPrior": ["RE-03"],
     "criticalPath": "XE-01 -> XE-02 -> XE-03 -> XE-04 (bundle) -> XE-05/XE-06 (two-way) ; DEFAULTS EX-02+XE-08 share the literal flag key 'page.dictionary'"
