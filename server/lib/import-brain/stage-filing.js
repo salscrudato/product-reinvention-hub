@@ -187,25 +187,33 @@ async function forcedTool(deployment, systemPrompt, tools, toolName, contentBloc
 // — slow and wasteful); sonnet only runs if both come back empty.
 // `count` sizes a sanitized result so the race can prefer the richer extraction;
 // `rawCount` counts the model's PRE-sanitize items so silent citation-drops surface.
+// `heavyDoc` (a dense manual): the cheap haiku racer runs ONCE with no empty-retry — a wasted
+// ~5-minute re-read of the whole PDF — while opus keeps its retry as the authoritative rung; and
+// each rung emits a per-rung progress notice so a multi-minute opus read never looks hung.
 
-async function extractWithLadder({ systemPrompt, tool, block, instruction, maxTokens, budget, sanitize, isEmpty, count, emit, label }) {
+async function extractWithLadder({ systemPrompt, tool, block, instruction, maxTokens, budget, sanitize, isEmpty, count, emit, label, heavyDoc }) {
   const emitFn = typeof emit === 'function' ? emit : () => {}
   const sizeOf = typeof count === 'function' ? count : (r) => (isEmpty(r) ? 0 : 1)
+  const isDoc = !!(block && block.type === 'document')
   const rawItems = (raw) => {
     if (!raw || typeof raw !== 'object') return 0
     for (const v of Object.values(raw)) if (Array.isArray(v)) return v.length
     return 0
   }
-  const attempt = async (role) => {
+  const attempt = async (role, { allowRetry = true } = {}) => {
     let deployment
     try { deployment = resolveAnthropic(role, budget) } catch { return null }
+    // Progress: reading a native-PDF (vision) block can take minutes at opus; surface each rung
+    // so the UI shows forward motion instead of a hung tool.
+    if (isDoc) emitFn({ t: 'notice', level: 'info', kind: 'extract-progress', message: `${label ?? tool.name}: ${role} reading the document (a native-PDF read can take a few minutes)…` })
     let raw
     let callError = null
     try { raw = await forcedTool(deployment, systemPrompt, [tool], tool.name, block, instruction, maxTokens, budget) } catch (e) { raw = {}; callError = String(e && e.message || e).slice(0, 180) }
     // Models occasionally return an empty/under-filled tool call ({} or ancillary
     // fields without the primary array) — one retry with an explicit reminder
-    // recovers most of these.
-    if (!callError && rawItems(raw) === 0) {
+    // recovers most of these. Skipped for the cheap racer on a dense manual (allowRetry:false).
+    if (allowRetry && !callError && rawItems(raw) === 0) {
+      if (isDoc) emitFn({ t: 'notice', level: 'info', kind: 'extract-progress', message: `${label ?? tool.name}: ${role} empty — retrying once…` })
       const retryInstruction = `${instruction}\n\nIMPORTANT: your previous attempt returned an empty tool call. You MUST populate the primary array field of the tool with EVERY item found in the document (with citations). Do not summarize in "note" — fill the array.`
       try {
         const retry = await forcedTool(deployment, systemPrompt, [tool], tool.name, block, retryInstruction, maxTokens, budget)
@@ -226,8 +234,13 @@ async function extractWithLadder({ systemPrompt, tool, block, instruction, maxTo
     return { role, sanitized, before, after }
   }
 
-  if (block && block.type === 'document') {
-    const [a, b] = await Promise.all([attempt('BULK_VERIFY'), attempt('GROUNDED_CITED')])
+  if (isDoc) {
+    // Dense manual: the haiku racer gets NO empty-retry (a wasted whole-PDF re-read); opus keeps
+    // its retry. Non-heavy docs keep the prior behaviour (both racers retry once).
+    const [a, b] = await Promise.all([
+      attempt('BULK_VERIFY', { allowRetry: !heavyDoc }),
+      attempt('GROUNDED_CITED'),
+    ])
     const candidates = [a, b].filter(Boolean).filter(r => !isEmpty(r.sanitized))
     if (candidates.length > 0) {
       candidates.sort((x, y) => sizeOf(y.sanitized) - sizeOf(x.sanitized))
@@ -356,6 +369,7 @@ async function runFilingPipeline(opts) {
         maxTokens: 16000, budget,
         sanitize: sanitizeMnl, isEmpty: (r) => !r || r.rules.length === 0,
         count: (r) => r?.rules?.length ?? 0, emit, label: `manual-rules:${doc.name}`,
+        heavyDoc: true,   // dense rate manual — drop the cheap racer's empty-retry (latency)
       })
       escalated = escalated || ladder.escalated
       const mn = ladder.result ?? { rules: [] }
