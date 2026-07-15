@@ -270,10 +270,10 @@
       "severity": "MED",
       "confidence": 0.9,
       "cost": "S",
-      "status": "OPEN",
-      "priority": 4,
-      "evidence": "Judge-found during F12 review: app/src/lib/draft/cloneProduct.ts:111 and ScaffoldProductModal.tsx:162 mint copy ids from form.number only; envelope writes are Upsert (data.js:278) so the second edition silently overwrites the first IN THE CLONE. Same defect class as F12 in an untouched mechanism; reachable only since F12 made multi-edition forms persistable.",
-      "fixture": "none yet — clone a fixture product carrying two editions of one number; assert both survive in the copy",
+      "status": "FIXED_IH3",
+      "priority": null,
+      "evidence": "Judge-found during F12 review: app/src/lib/draft/cloneProduct.ts:111 and ScaffoldProductModal.tsx:162 mint copy ids from form.number only; envelope writes are Upsert (data.js:278) so the second edition silently overwrites the first IN THE CLONE. Same defect class as F12 in an untouched mechanism; reachable only since F12 made multi-edition forms persistable. || FIXED_IH3: both mint sites use the F12 (number, edition) copy id (blank edition degrades to number-only); judge ACCEPT after reader sweep — no consumer reconstructs forms/<draftId>__<number> (all read-back is productRefIds queries), deleteDraft cascade prefix-match survives, promotion never re-mints, validForms is a number-keyed chip filter unaffected by doc ids",
+      "fixture": "app/src/lib/draft/cloneProduct.test.ts (two dated editions both survive; edition + blank-edition pair stays distinct with F12 degradation)",
       "lesson": "When an identity fix lands, sweep every OTHER site that mints ids from the old identity."
     },
     {

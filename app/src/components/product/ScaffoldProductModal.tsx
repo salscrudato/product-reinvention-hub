@@ -158,8 +158,11 @@ export function ScaffoldProductModal({ onClose, onCreated }: Props) {
       // 2) Forms — draft-namespaced so they never touch the shared library.
       const validForms = new Set<string>()
       for (const f of chosenForms) {
+        // Copy identity is (number, edition) — F12/F21: a number-only id upserts
+        // both editions of one number to the same path, keeping only the last.
+        const copyId = f.edition ? `${f.number.replace(/\s+/g, '-')}__${f.edition.replace(/\s+/g, '-')}` : f.number.replace(/\s+/g, '-')
         await adapter.db.mutate({
-          op: 'create', path: `forms/${draftId}__${f.number.replace(/\s+/g, '-')}`, entityType: 'form', actor,
+          op: 'create', path: `forms/${draftId}__${copyId}`, entityType: 'form', actor,
           data: {
             number: f.number, name: f.name || f.number, edition: f.edition,
             category: f.category, claimsBasis: 'Occurrence', dynamic: false,

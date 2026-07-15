@@ -4,7 +4,8 @@
 // version + searchIndex + rev, atomically) — no bare Firestore writes. The clone is a
 // self-contained sandbox: coverages/rules/form-rules/rating live in the draft's own
 // sub-collections, and the source's forms are copied as draft-namespaced docs
-// (`forms/{draftId}__{number}`) linked via productRefIds = [draftId]. Nothing the
+// (`forms/{draftId}__{number}[__{edition}]`, identity = (number, edition) — F12/F21)
+// linked via productRefIds = [draftId]. Nothing the
 // source owns is mutated, so a launched product is never disturbed by cloning it.
 // Shared LD/RT rate tables are referenced (not copied) — they are a read-only library.
 // Provenance is stamped so the draft always shows what it was cloned from.
@@ -104,11 +105,14 @@ export async function cloneProductToDraft(
     written++
   }
   // Forms — draft-namespaced copies, re-linked to the draft. The source's forms are
-  // untouched (a different, un-namespaced doc id).
+  // untouched (a different, un-namespaced doc id). Copy identity is (number, edition)
+  // — F12/F21: envelope writes are upserts, so a number-only id keeps just the LAST
+  // edition of a multi-edition number. Blank edition degrades to the number-only id.
   for (const f of forms) {
     tick(f.number)
+    const copyId = f.edition ? `${f.number.replace(/\s+/g, '-')}__${f.edition.replace(/\s+/g, '-')}` : f.number.replace(/\s+/g, '-')
     await adapter.db.mutate({
-      op: 'create', path: `forms/${draftId}__${f.number.replace(/\s+/g, '-')}`,
+      op: 'create', path: `forms/${draftId}__${copyId}`,
       entityType: 'form', actor,
       data: { ...strip(f), productRefIds: [draftId], ...DRAFT_GOV },
     })
