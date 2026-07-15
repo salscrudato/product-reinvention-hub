@@ -1,0 +1,63 @@
+{
+  "runAt": "2026-07-15T12:46:30.508Z",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "tenant": "accenture-test",
+  "exit": {
+    "runs": 3,
+    "crashes": 0,
+    "fabrications": 0,
+    "sourceGaps": 0,
+    "formatsPassed": 3,
+    "formatsTotal": 3,
+    "roundTripOk": true,
+    "pass": true
+  },
+  "results": [
+    {
+      "id": "NJ-LEMONADE-1",
+      "format": "FILING_PDF",
+      "file": "C:\\Users\\salvatore.scrudato\\Desktop\\314358_InsurancePlatformsAI\\samples\\filings\\nj-lemonade-ho\\LEM 03 05 23 Lemonade Homeowners_FINAL.pdf",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 22,
+      "durationMs": 35572,
+      "notes": []
+    },
+    {
+      "id": "NJ-LEMONADE-2",
+      "format": "FILING_PDF",
+      "file": "C:\\Users\\salvatore.scrudato\\Desktop\\314358_InsurancePlatformsAI\\samples\\filings\\nj-lemonade-ho\\NJ HO Manual 02.27.24.pdf",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 0,
+      "durationMs": 284444,
+      "notes": [
+        "no coverages in plan",
+        "notice: manual-rules:C:\\Users\\salvatore.scrudato\\Desktop\\314358_InsurancePlatformsAI\\samples\\filings\\nj-lemonade-ho\\NJ HO Manual 02.27.24.pdf: GROUNDED_CITED returned no items — raw tool output 2 chars: {}",
+        "notice: manual (C:\\Users\\salvatore.scrudato\\Desktop\\314358_InsurancePlatformsAI\\samples\\filings\\nj-lemonade-ho\\NJ HO Manual 02.27.24.pdf): Extraction from Lemonade Insurance Company Homeowners Manual for State of New Jersey (ED. DEC 2023). All rules numbered and cited to specific pages and rule numbers. Tables returned as schemas with verbatim row regions for deterministic parsing. Base loss costs (26 rows per form) not individually itemized per user instruction not to transcribe table rows. ZIP code LCMF tables (Rule 2.A, 2.B) schematized with verbatim row regions spanning pages 1-11. Factor tables and scalar premiums/rates fully extracted with citations."
+      ]
+    },
+    {
+      "id": "NJ-LEMONADE-3",
+      "format": "FILING_PDF",
+      "file": "C:\\Users\\salvatore.scrudato\\Desktop\\314358_InsurancePlatformsAI\\samples\\filings\\nj-lemonade-ho\\NJ HO Rate Order of Calculations.pdf",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 0,
+      "durationMs": 70016,
+      "notes": [
+        "no coverages in plan",
+        "notice: rate-order: Rate order extracted from Lemonade Insurance Company State of New Jersey filing. Variables sequenced exactly as presented in the Rate Order of Calculations table on page 1. Rule 92 Maximum Credit and Rule 205 Minimum Premium apply to Adjusted Base Premium calculation.\""
+      ]
+    }
+  ]
+}
