@@ -290,6 +290,19 @@
       "lesson": "A filter above the conservation ledger is invisible to it — filters must run inside the ledger (filtered = unresolved) or be derived from the document itself."
     },
     {
+      "id": "F23",
+      "title": "Live-eval retry economics: a severed CORE run retries from SCRATCH (~110 min, ~$70/attempt); client timeout below server runtime guarantees fail-and-retry; a completed-but-unlistened run's bundle is unrecoverable",
+      "class": "EVAL_GAP",
+      "severity": "HIGH",
+      "confidence": 1.0,
+      "cost": "M",
+      "status": "OPEN",
+      "priority": 2,
+      "evidence": "Wave-1 live history (docs/import-hardening/RESULTS/wave1-live-attempts.md): attempt 1 timed out at the 45-min default while the server needed ~110; attempt 2 was severed by an unprompted App Service restart (00:00:28Z) mid-run; the eval's internal watchdog retry then ran a THIRD full import that COMPLETED server-side at 01:55:24Z ($70.03, 461 calls — spend telemetry intact) with no listener: the bundle was emitted to a dead SSE socket and is gone. A fourth attempt auto-spawned (timeout 100min < runtime 113min = guaranteed fail) and was killed manually. Fix direction: (a) persist the finished bundle server-side keyed by an idempotency/request id so a reconnecting client can fetch it (the run is request-bound today — ARCH_ESCALATION 'checkpoint/resume' trigger territory, but bundle-persistence alone is a small slice); (b) eval harness: default IMPORT_EVAL_TIMEOUT_MS must exceed observed CORE runtime (150min), and full-run retries should be OPT-IN for wave gates (a retry restarts a $70 run).",
+      "fixture": "none yet — server test: unifiedImport persists the bundle on completion; eval test: retry policy honors a max-attempts env",
+      "lesson": "For long-running jobs, the retry unit must be cheaper than the job — otherwise a retry is a bill, not a recovery. And a result computed with nobody listening must be persisted, not discarded."
+    },
+    {
       "id": "PCM-A",
       "title": "Attachment integrity broken at HEAD: imports persist coverage.terms=[] (never assembled from ldTables); UI counts cov.terms → Limits/Deductibles/Pricing render '–'",
       "class": "ARCH_ESCALATION",
