@@ -32,6 +32,8 @@ import {
   extrasMetrics, linkageMetrics, conservationMetrics, resolveProvenanceRows,
   type ProvenanceRow,
 } from './lib/import-eval-metrics.mts'
+// F23: durable run results — recover a finished bundle after a severed stream.
+import { resolveRetryPolicy, recoverRunResult, mintRunId } from './lib/run-recovery.mts'
 
 const __dir   = dirname(fileURLToPath(import.meta.url))
 const REPO    = resolve(__dir, '..')
@@ -46,7 +48,13 @@ const MODE_LIVE    = process.argv.includes('--live')
 // Use it to iterate on scoring/canonicalization; confirm with --live when done.
 const MODE_RESCORE = process.argv.includes('--rescore')
 // IMPORT_EVAL_ONLY=GL,IM limits the run to specific format ids (CI slicing).
-const EVAL_TIMEOUT_MS = Number(process.env.IMPORT_EVAL_TIMEOUT_MS) || 2_700_000
+// F23: the default stream timeout must EXCEED observed CORE runtime (~110–113 min
+// measured; wave-1 attempt 1 died to a 45-min default, attempt 2-retry to a 100-min
+// override). 150 min, overridable.
+const EVAL_TIMEOUT_MS = Number(process.env.IMPORT_EVAL_TIMEOUT_MS) || 9_000_000
+// F23: how long to poll the durable result after a severed stream (the server may
+// still be computing headless). Default 45 min.
+const RESULT_WAIT_MS = Number(process.env.IMPORT_EVAL_RESULT_WAIT_MS) || 2_700_000
 const ONLY = (process.env.IMPORT_EVAL_ONLY || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
 
 const F1_TARGET       = 0.95
@@ -282,23 +290,33 @@ interface LiveResult {
   summaryCounts: Record<string, number> | null
 }
 
-// Dev is a shared, continuously-deployed environment: a deploy restarts the app and
-// severs in-flight SSE ("fetch: terminated"). Retry the whole import a few times,
-// pausing so the restarted app warms up.
+// F23: a severed stream is recovered from the DURABLE run result, never by
+// blindly re-running (a CORE re-run is a ~$70 bill). The run id makes the
+// server persist the finished bundle; on stream loss we poll for it. Full
+// re-runs are OPT-IN via IMPORT_EVAL_MAX_ATTEMPTS (default 1).
 async function postImport(token: string, files: string[], lobHint?: string, timeoutMs = EVAL_TIMEOUT_MS): Promise<LiveResult> {
+  const { maxAttempts } = resolveRetryPolicy(process.env)
+  const runId = mintRunId('eval')
   let last: LiveResult = { bundle: null, errors: ['not attempted'], spend: null, notices: [], stage4: null, summaryCounts: null }
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    last = await postImportOnce(token, files, lobHint, timeoutMs)
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    last = await postImportOnce(token, files, lobHint, timeoutMs, runId)
     if (last.bundle || last.errors.length === 0) return last
-    const transient = last.errors.some(e => /terminated|fetch failed|ECONNRESET|socket|other side closed/i.test(e))
+    const transient = last.errors.some(e => /terminated|fetch failed|ECONNRESET|socket|other side closed|stalled/i.test(e))
     if (!transient) return last
-    log(`    transient stream failure (attempt ${attempt}/3): ${last.errors[0]} — retrying in 45s`)
-    await new Promise(r => setTimeout(r, 45_000))
+    log(`    stream lost (${last.errors[0]}) — polling the durable result for run ${runId} (up to ${Math.round(RESULT_WAIT_MS / 60000)} min)`)
+    const recovered = await recoverRunResult({ baseUrl: BASE_URL, token, runId, log, pollIntervalMs: 60_000, maxWaitMs: RESULT_WAIT_MS })
+    if (recovered) {
+      last.bundle = recovered.bundle
+      last.errors = []
+      last.notices.push(`[info/f23-recovery] bundle recovered from the durable run result (run ${runId}); stage4/summary SSE inputs degrade to n/a`)
+      return last
+    }
+    if (attempt < maxAttempts) log(`    no persisted result — full re-run ${attempt + 1}/${maxAttempts} (opt-in via IMPORT_EVAL_MAX_ATTEMPTS)`)
   }
   return last
 }
 
-async function postImportOnce(token: string, files: string[], lobHint?: string, timeoutMs = 2_700_000): Promise<LiveResult> {
+async function postImportOnce(token: string, files: string[], lobHint?: string, timeoutMs = EVAL_TIMEOUT_MS, runId?: string): Promise<LiveResult> {
   const documents = files.map(f => ({
     name: basename(f),
     base64: readFileSync(f).toString('base64'),
@@ -322,7 +340,7 @@ async function postImportOnce(token: string, files: string[], lobHint?: string, 
     const res = await fetch(`${BASE_URL}/api/ai/unifiedImport`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ documents, lobRefIdHint: lobHint }),
+      body: JSON.stringify({ documents, lobRefIdHint: lobHint, ...(runId ? { runId } : {}) }),
       signal: controller.signal,
     })
     if (!res.ok) { out.errors.push(`HTTP ${res.status}`); return out }
@@ -343,6 +361,10 @@ async function postImportOnce(token: string, files: string[], lobHint?: string, 
             name?: string; phase?: string; summary?: string; level?: string; kind?: string
           }
           if (evt.t === 'json' && evt.key === 'bundle') out.bundle = evt.value
+          if (evt.t === 'json' && evt.key === 'run:persisted') {
+            const p = evt.value as { runId?: string; ok?: boolean; reason?: string }
+            log(`    [${elapsed()}] durable result ${p.ok ? 'persisted' : `NOT persisted (${p.reason})`} (run ${p.runId})`)
+          }
           if (evt.t === 'json' && (evt.key === 'brain:spend' || evt.key === 'import:spend')) out.spend = evt.value
           // F20 conservation: stage-4 candidate count / stage-6 summary counts.
           if (evt.t === 'json' && evt.key === 'brain:stage4') out.stage4 = evt.value as LiveResult['stage4']

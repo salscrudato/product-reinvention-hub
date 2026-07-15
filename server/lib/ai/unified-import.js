@@ -17,8 +17,10 @@
 // through the app's standard adapter.db.mutate path (importPlan()).
 
 const { hasCapability } = require('../authz')
+const { resolveTenantForPrincipal } = require('../auth')
 const fleet = require('../fleet')
 const { sse, emit, _forcedToolCall, _extractPdfText, _findSampleFile, getImportBrain, getStageFiling } = require('./_shared')
+const { persistRunResult, fetchRunResult, sanitizeRunId } = require('./run-results')
 const fs = require('fs')
 
 const HAIKU_OVERRIDE = process.env.AZURE_FOUNDRY_HAIKU_DEPLOYMENT || ''
@@ -191,6 +193,19 @@ async function unifiedImport(req, res) {
   const body = req.body || {}
   sse(res)
 
+  // F23: a client-supplied run id makes the finished bundle DURABLE — persisted
+  // server-side at completion (run-results.js) so a severed stream costs a
+  // reconnect, not a $70 re-run. Opt-in: no run id, no persistence.
+  const runId = sanitizeRunId(body.runId)
+  const runTenant = resolveTenantForPrincipal(req.user)
+  if (runId) emit(res, { t: 'json', key: 'run:id', value: { runId } })
+  const persistIfRequested = async (bundle) => {
+    if (!runId || !bundle) return
+    const r = await persistRunResult({ tenantId: runTenant, runId, bundle })
+    if (!r.ok) console.warn(`[unifiedImport] run ${runId}: bundle persistence failed (${r.reason})`)
+    emit(res, { t: 'json', key: 'run:persisted', value: { runId, ok: r.ok, ...(r.ok ? {} : { reason: r.reason }) } })
+  }
+
   // SSE keepalive: Azure App Service closes connections idle >~230s; long stage-4
   // extractions can be silent longer than that. Comment lines (":hb") are protocol
   // no-ops every client ignores. Cleared on end/close.
@@ -213,11 +228,12 @@ async function unifiedImport(req, res) {
   try {
     // ── Legacy/back-compat: pre-built structural model (harness, older clients) ──
     if (body.structural && typeof body.structural === 'object') {
-      await runBrainToBundle({
+      const bundle = await runBrainToBundle({
         structural:   body.structural,
         lobRefIdHint: body.lobRefIdHint,
         budget, res,
       })
+      await persistIfRequested(bundle)
       emit(res, { t: 'done' }); return res.end()
     }
 
@@ -257,13 +273,14 @@ async function unifiedImport(req, res) {
       }
       const structural = mergeStructurals(routed.workbooks)
       const isoGrids = routed.workbooks.flatMap(w => Array.isArray(w.isoGrids) ? w.isoGrids : [])
-      await runBrainToBundle({
+      const wbBundle = await runBrainToBundle({
         structural,
         lobRefIdHint: body.lobRefIdHint || routed.lobRefIdHint,
         edition:      routed.edition,
         routerWarnings: routed.warnings,
         budget, res, isoGrids,
       })
+      await persistIfRequested(wbBundle)
       emitSpend(res, budget)
       emit(res, { t: 'done' }); return res.end()
     }
@@ -290,6 +307,7 @@ async function unifiedImport(req, res) {
       const planCoverages = (Array.isArray(bundle?.plan?.coverages) ? bundle.plan.coverages : [])
         .map((e) => ({ refId: e.data?.refId ?? e.refId ?? '', name: e.data?.name ?? e.label ?? '', formNumbers: e.data?.formNumbers ?? [] }))
       emit(res, { t: 'json', key: 'bundle', value: bundle })
+      await persistIfRequested(bundle)
       emit(res, { t: 'token', v: JSON.stringify({ coverages: planCoverages }) })
       emitSpend(res, budget)
       emit(res, { t: 'done' }); return res.end()
@@ -402,6 +420,7 @@ async function unifiedImport(req, res) {
     }
 
     emit(res, { t: 'json', key: 'bundle', value: bundle })
+    await persistIfRequested(bundle)
     emit(res, { t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
     emitSpend(res, budget)
     emit(res, { t: 'done' })
@@ -426,4 +445,19 @@ function emitSpend(res, budget) {
   emit(res, { t: 'json', key: 'import:spend', value: spend })
 }
 
-module.exports = { unifiedImport }
+// F23: fetch a persisted run result. Read-shaped, but scoped like the import
+// itself (product:write) — the bundle IS the import output. Tenant comes from
+// the JWT, never the body: one tenant can never read another's result.
+async function unifiedImportResult(req, res) {
+  if (!hasCapability(req.user, 'product:write')) {
+    return res.status(403).json({ error: 'forbidden', need: 'product:write', have: req.user.role })
+  }
+  const runId = sanitizeRunId((req.body || {}).runId)
+  if (!runId) return res.status(400).json({ error: 'invalid_run_id' })
+  const r = await fetchRunResult({ tenantId: resolveTenantForPrincipal(req.user), runId })
+  if (r.status === 'ok') return res.json({ runId, finishedAt: r.envelope.finishedAt, bundle: r.envelope.bundle })
+  if (r.status === 'storage_not_configured') return res.status(503).json({ error: 'storage_not_configured', detail: 'Set AZURE_BLOB_CONNECTION to enable durable run results.' })
+  return res.status(404).json({ error: 'result_not_found', runId })
+}
+
+module.exports = { unifiedImport, unifiedImportResult }

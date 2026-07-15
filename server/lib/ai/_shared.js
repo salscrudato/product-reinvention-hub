@@ -15,7 +15,12 @@ function sse(res) {
   res.setHeader('Connection', 'keep-alive')
   res.flushHeaders?.()
 }
-const emit = (res, ev) => res.write(`data: ${JSON.stringify(ev)}\n\n`)
+// F23: a dead socket must never kill the run — the pipeline continues headless
+// to completion so the finished bundle can be PERSISTED (run-results.js) instead
+// of dying with the stream that carried it.
+const emit = (res, ev) => {
+  try { res.write(`data: ${JSON.stringify(ev)}\n\n`) } catch { /* listener gone — run continues */ }
+}
 
 // ─── fetchWithRetry: exp backoff + jitter on 408/429/5xx ─────────────────────
 async function fetchWithRetry(url, opts, { maxAttempts = 3, timeoutMs = 90_000 } = {}) {

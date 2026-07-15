@@ -10,7 +10,7 @@ const { summarizeProduct } = require('./summarize-product')
 const { scaffoldProduct }  = require('./scaffold-product')
 const { draftRule }        = require('./draft-rule')
 const { analyzeClaim }     = require('./analyze-claim')
-const { unifiedImport }    = require('./unified-import')
+const { unifiedImport, unifiedImportResult } = require('./unified-import')
 const { registerReindexRoute } = require('./reindex-product')
 const { identifyBaseForm } = require('./identify-base-form')
 const { proposeMapping }   = require('./propose-mapping')
@@ -30,8 +30,10 @@ router.post('/:name', requireCapability('ai:invoke'), requireTenant, async (req,
   const tid = resolveTenantForPrincipal(req.user)
   // Per-tenant MONTHLY AI budget throttle — layered ON TOP of the global cost breaker
   // (fleet.guard, still checked inside each handler). Import is EXEMPT (no-cap invariant):
-  // it is metered but never throttled here.
-  if (name !== 'unifiedImport') {
+  // it is metered but never throttled here. unifiedImportResult is part of the same
+  // path (F23 recovery fetch, zero AI calls) — a 429 here would break exactly the
+  // reconnect the persistence exists for.
+  if (name !== 'unifiedImport' && name !== 'unifiedImportResult') {
     try {
       const b = await metering.checkTenantBudget(tid)
       if (!b.ok) return res.status(429).json({ error: 'tenant_ai_budget_exhausted', used: b.used, budget: b.budget })
@@ -41,6 +43,8 @@ router.post('/:name', requireCapability('ai:invoke'), requireTenant, async (req,
   return metering.withTenant(tid, () => {
     // identifyBaseForm has its own AI-not-configured fallback (regex extraction still works).
     if (name === 'identifyBaseForm') return identifyBaseForm(req, res)
+    // F23 recovery fetch: no AI involved — must work even when AI is unconfigured.
+    if (name === 'unifiedImportResult') return unifiedImportResult(req, res)
     if (!fleet.isConfigured()) return res.status(503).json({ error: 'ai_not_configured', name })
     if (name === 'chat')            return chat(req, res)
     if (name === 'summarizeProduct') return summarizeProduct(req, res)

@@ -32,6 +32,8 @@ import { fileURLToPath } from 'url'
 import ExcelJS from 'exceljs'
 import { mapIsoWorkbook } from '@pf/shared'
 import type { IsoCell, IsoGrid, ImportPlan } from '@pf/shared'
+// F23: durable run results — recover a finished bundle after a severed stream.
+import { resolveRetryPolicy, recoverRunResult, mintRunId } from './lib/run-recovery.mts'
 
 const __dir   = dirname(fileURLToPath(import.meta.url))
 const REPO    = resolve(__dir, '..')
@@ -103,18 +105,32 @@ function coveragesFromTokens(tokens: string[]): Array<{ refId?: string; name?: s
   } catch { return [] }
 }
 
-// Dev deploys restart the app mid-stream ("fetch: terminated"); retry transient
-// stream failures with a warm-up pause so shared-environment churn doesn't read
-// as an import failure.
+// F23: a severed unifiedImport stream is recovered from the DURABLE run result
+// (the run id makes the server persist the finished bundle), never by blindly
+// re-running. Full re-runs are OPT-IN via IMPORT_EVAL_MAX_ATTEMPTS (default 1).
+// Non-import SSE paths keep a single attempt (they are cheap and idempotent).
+const LIVE_RESULT_WAIT_MS = Number(process.env.IMPORT_EVAL_RESULT_WAIT_MS) || 1_800_000
 async function readSse(path: string, bodyData: unknown, token: string, timeoutMs = 60_000): Promise<SseResult> {
+  const isImport = path.includes('/ai/unifiedImport')
+  const { maxAttempts } = resolveRetryPolicy(process.env)
+  const runId = isImport ? mintRunId('live') : null
+  const body = runId ? { ...(bodyData as Record<string, unknown>), runId } : bodyData
   let last: SseResult | null = null
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    last = await readSseOnce(path, bodyData, token, timeoutMs)
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    last = await readSseOnce(path, body, token, timeoutMs)
     if (last.ok || last.bundle) return last
     const transient = last.errors.some(e => /terminated|fetch failed|ECONNRESET|socket|other side closed/i.test(e))
-    if (!transient) return last
-    log(`    transient stream failure (attempt ${attempt}/3) — retrying in 45s`)
-    await new Promise(r => setTimeout(r, 45_000))
+    if (!transient || !runId) return last
+    log(`    stream lost (${last.errors[0]}) — polling the durable result for run ${runId}`)
+    const recovered = await recoverRunResult({ baseUrl: BASE_URL, token, runId, log, pollIntervalMs: 60_000, maxWaitMs: LIVE_RESULT_WAIT_MS })
+    if (recovered) {
+      last.bundle = recovered.bundle
+      last.errors = []
+      last.ok = true
+      last.notices.push(`[f23-recovery] bundle recovered from the durable run result (run ${runId})`)
+      return last
+    }
+    if (attempt < maxAttempts) log(`    no persisted result — full re-run ${attempt + 1}/${maxAttempts} (opt-in via IMPORT_EVAL_MAX_ATTEMPTS)`)
   }
   return last!
 }
