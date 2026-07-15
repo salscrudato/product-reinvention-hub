@@ -1,11 +1,11 @@
 {
   "generatedBy": "scripts/import-enumerate.mjs (offline, stubbed AI)",
   "headSha": null,
-  "runs": 24,
-  "completed": 24,
+  "runs": 25,
+  "completed": 25,
   "unhandled": 0,
   "withErrors": 1,
-  "stubAiCalls": 1026,
+  "stubAiCalls": 1034,
   "results": [
     {
       "id": "workbooks/20ISOFormsGL.xlsx",
@@ -74,7 +74,7 @@
         "accepted": 816,
         "unresolved": 0
       },
-      "durationMs": 4169
+      "durationMs": 1488
     },
     {
       "id": "workbooks/20ISOFrameworkGL.xlsx",
@@ -143,7 +143,7 @@
         "accepted": 106,
         "unresolved": 0
       },
-      "durationMs": 102
+      "durationMs": 48
     },
     {
       "id": "workbooks/20ISOPricingGL.xlsx",
@@ -212,7 +212,7 @@
         "accepted": 5,
         "unresolved": 0
       },
-      "durationMs": 2111
+      "durationMs": 1287
     },
     {
       "id": "workbooks/20ISORulesGL.xlsx",
@@ -281,7 +281,7 @@
         "accepted": 442,
         "unresolved": 0
       },
-      "durationMs": 100
+      "durationMs": 80
     },
     {
       "id": "workbooks/Inland_Marine_Rules_Repository__SECURA__Master.xlsx",
@@ -358,7 +358,7 @@
         "accepted": 786,
         "unresolved": 0
       },
-      "durationMs": 336
+      "durationMs": 250
     },
     {
       "id": "workbooks/Product_Component_Model_Framework_Coverages_1.xlsx",
@@ -433,7 +433,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 392
+      "durationMs": 195
     },
     {
       "id": "workbooks/Product_Framework__SECURA__Inland_Marine.xlsx",
@@ -502,7 +502,7 @@
         "accepted": 799,
         "unresolved": 0
       },
-      "durationMs": 142
+      "durationMs": 108
     },
     {
       "id": "workbooks/Property_Rating_Repository__Master.xlsx",
@@ -571,7 +571,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 233
+      "durationMs": 112
     },
     {
       "id": "workbooks/sampleGLforms.xlsx",
@@ -640,7 +640,7 @@
         "accepted": 816,
         "unresolved": 0
       },
-      "durationMs": 1386
+      "durationMs": 902
     },
     {
       "id": "workbooks/sampleGLframework.xlsx",
@@ -709,7 +709,7 @@
         "accepted": 106,
         "unresolved": 0
       },
-      "durationMs": 49
+      "durationMs": 41
     },
     {
       "id": "workbooks/sampleGLpricing.xlsx",
@@ -778,7 +778,7 @@
         "accepted": 5,
         "unresolved": 0
       },
-      "durationMs": 2313
+      "durationMs": 1138
     },
     {
       "id": "workbooks/sampleGLrules.xlsx",
@@ -847,7 +847,7 @@
         "accepted": 442,
         "unresolved": 0
       },
-      "durationMs": 90
+      "durationMs": 68
     },
     {
       "id": "workbooks/sampleIMframework.xlsx",
@@ -916,7 +916,7 @@
         "accepted": 799,
         "unresolved": 0
       },
-      "durationMs": 112
+      "durationMs": 105
     },
     {
       "id": "workbooks/sampleIMrules.xlsx",
@@ -985,7 +985,7 @@
         "accepted": 786,
         "unresolved": 0
       },
-      "durationMs": 111
+      "durationMs": 84
     },
     {
       "id": "workbooks/samplePRframework.xlsx",
@@ -1052,7 +1052,7 @@
         "accepted": 2453,
         "unresolved": 0
       },
-      "durationMs": 497
+      "durationMs": 303
     },
     {
       "id": "workbooks/samplePRrating.xlsx",
@@ -1121,7 +1121,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 242
+      "durationMs": 94
     },
     {
       "id": "adversarial/1._Product_Framework_-_SECURA_-_Property",
@@ -1167,7 +1167,7 @@
         "unaccountedDelta": null
       },
       "counts": null,
-      "durationMs": 6
+      "durationMs": 4
     },
     {
       "id": "adversarial/Insurance_Product___Process_Value_Explorer_Export.xlsx",
@@ -1251,7 +1251,7 @@
         "accepted": 0,
         "unresolved": 0
       },
-      "durationMs": 72
+      "durationMs": 61
     },
     {
       "id": "adversarial/Product_Component_Model_Framework_Coverages.xlsx",
@@ -1326,7 +1326,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 260
+      "durationMs": 224
     },
     {
       "id": "adversarial/Product_Framework__SECURA__Property_RF.xlsm",
@@ -1393,7 +1393,7 @@
         "accepted": 2453,
         "unresolved": 0
       },
-      "durationMs": 3272
+      "durationMs": 2181
     },
     {
       "id": "mixed/mixed-workbook-plus-pdf",
@@ -1469,7 +1469,7 @@
         "accepted": 106,
         "unresolved": 0
       },
-      "durationMs": 136
+      "durationMs": 83
     },
     {
       "id": "mixed/multi-workbook-merge",
@@ -1557,7 +1557,7 @@
         "accepted": 1369,
         "unresolved": 0
       },
-      "durationMs": 4015
+      "durationMs": 2325
     },
     {
       "id": "mixed/exact-dup-pair",
@@ -1646,7 +1646,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 347
+      "durationMs": 339
     },
     {
       "id": "mixed/filing-nj-pair",
@@ -1720,7 +1720,87 @@
         "accepted": 0,
         "unresolved": 0
       },
-      "durationMs": 48
+      "durationMs": 36
+    },
+    {
+      "id": "mixed/filing-two-manuals",
+      "files": [
+        "NJ_HO_Manual_02_27_24.pdf",
+        "PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf"
+      ],
+      "completed": true,
+      "harnessError": null,
+      "unhandled": false,
+      "errors": [],
+      "notices": [],
+      "stage0": {
+        "workbooks": [
+          {
+            "name": "NJ_HO_Manual_02_27_24.pdf",
+            "kind": "XLSX",
+            "sheets": 0,
+            "skippedHiddenSheets": []
+          },
+          {
+            "name": "PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf",
+            "kind": "CSV",
+            "sheets": 1,
+            "skippedHiddenSheets": []
+          }
+        ],
+        "filingDocs": [],
+        "unknown": [],
+        "lobRefIdHint": null,
+        "lobSource": null,
+        "edition": null,
+        "warnings": [
+          {
+            "kind": "grid-truncated",
+            "doc": "PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf",
+            "detail": "Sheet \"PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf\": 12869 rows exceed the 2000-row embed cap — the tail (10869 row(s)) IS extracted via continuation windows."
+          }
+        ]
+      },
+      "stage4": {
+        "entityCount": 0,
+        "flagged": 0
+      },
+      "summaryCounts": {
+        "sheetsTotal": 1,
+        "sheetsClassified": 0,
+        "sheetsIgnored": 1,
+        "columnsTotal": 0,
+        "columnsMapped": 0,
+        "columnsUnmapped": 0,
+        "rowsExtracted": 0,
+        "rowsInReview": 0,
+        "validatorDiscrepancies": 0,
+        "entitiesProduced": 0
+      },
+      "planCounts": {
+        "products": 0,
+        "coverages": 0,
+        "forms": 0,
+        "rules": 0,
+        "formRules": 0,
+        "ldTables": 0,
+        "rtTables": 0,
+        "ratingProgram": 0
+      },
+      "conservation": {
+        "stage4Candidates": 0,
+        "planEntities": 0,
+        "flagged": 0,
+        "reviewQueue": null,
+        "bundleUnresolved": 0,
+        "unaccountedDelta": 0
+      },
+      "counts": {
+        "proposed": 0,
+        "accepted": 0,
+        "unresolved": 0
+      },
+      "durationMs": 36
     }
   ]
 }

@@ -34,6 +34,14 @@
         "samples/hardening/pdf/NJ_HO_Manual_02_27_24.pdf",
         "samples/hardening/pdf/NJ_HO_Rate_Order_of_Calculations.pdf"
       ]
+    },
+    {
+      "id": "filing-two-manuals",
+      "purpose": "Two MANUALS from different lines in one request (NJ homeowners + WA personal auto) — role assignment is a partition, not a lookup (ledger F13); the second manual must land visibly (extracted or unresolved), never silently dropped",
+      "files": [
+        "samples/hardening/pdf/NJ_HO_Manual_02_27_24.pdf",
+        "samples/hardening/pdf/PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf"
+      ]
     }
   ]
 }
