@@ -370,6 +370,19 @@
       "lesson": "A join that adopts identity must also adopt MULTIPLICITY: when the oracle folds N source rows into one entity, every row-slice the extractor emitted belongs inside that entity, not beside it. An eval gate is only as good as the runs it has scored — this defect was invisible until the first gated live run of the format that has formRules."
     },
     {
+      "id": "F29",
+      "title": "The F23 recovery classifier misses the client's own hard-timeout abort — a paid run's persisted bundle is abandoned unclaimed, and the run id dies with the client process",
+      "class": "EVAL_GAP",
+      "severity": "HIGH",
+      "confidence": 1.0,
+      "cost": "S",
+      "status": "FIXED_IH4",
+      "priority": null,
+      "evidence": "Bitten live by the wave-3 Tier-2 CORE run (2026-07-15): the 150-min hard timer fired during conflict resolution (1618 fields, ~27 min of legitimately silent compute — which also explains wave-1's 'F24?' unexplained silence: it followed the same 'resolving N conflicted field(s)' marker) and aborted with 'This operation was aborted' — a message the OLD inline transient regex did not match, so the recovery poll never armed and the eval recorded ✗ CORE while the server computed on headless and persisted the bundle. This was F23's own recorded non-blocking follow-up ('a hard-timeout abort message doesn't match the transient regex'), promoted to a ledger item by a live bite. Compounding: the run id was minted in-process and never logged — the durable-result KEY died with the client; the blob had to be found by listing import-results/accenture-test/ in the storage account. || FIXED_IH4 (Tier 0): (1) transient classification extracted to run-recovery.mts as isTransientStreamError (exported, fixture-locked with every stream-loss shape observed across waves 1-3 incl. both abort shapes; structural refusals stay non-transient) and the hard timer now aborts with a descriptive recoverable message; (2) the run id is logged AT MINT with the exact recovery incantation; (3) IMPORT_EVAL_RECOVER_RUN=<runId> scores a persisted bundle through the IDENTICAL eval path without posting a new import — the recovery is now an operation, not an archaeology.",
+      "fixture": "tests/import-brain/hardening-f23-client-recovery.test.ts 'F29: isTransientStreamError' (every observed loss shape transient; refusals not) — red pre-fix by construction (the wave-3 abort string is a case)",
+      "lesson": "A recovery mechanism is only as good as its trigger: enumerate the CLIENT's own give-up shapes as recoverable, not just the network's. And any durable-result key must be durable itself — log it the moment it is minted."
+    },
+    {
       "id": "F27",
       "title": "The hardening pdf corpus is not PDF — every file is an export rasterization artifact (ZIP-of-JPEG scans / plain text); the offline filing and mixed fixtures never exercised the filing path",
       "class": "EVAL_GAP",

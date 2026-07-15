@@ -27,6 +27,19 @@ export function mintRunId(prefix = 'eval'): string {
   return `${prefix}-${randomUUID()}`
 }
 
+/** Stream failures the durable result can recover from (ledger F29). The client's
+ *  own timers count: a hard-timeout abort ("This operation was aborted") is a
+ *  CLIENT giving up on the socket, not a server verdict — the run computes on
+ *  headless and the bundle is exactly what the endpoint recovers. Wave-3's CORE
+ *  run paid for this lesson: the abort message missed the old inline regex, the
+ *  recovery poll never armed, and the finished bundle sat unclaimed in Blob.
+ *  A false-positive here merely wastes one poll cycle; a false negative
+ *  abandons a paid run. Structural refusals (4xx answers) are handled inside
+ *  recoverRunResult, not here. */
+export function isTransientStreamError(message: string): boolean {
+  return /terminated|fetch failed|ECONNRESET|socket|other side closed|stalled|abort|timeout|timed out/i.test(message)
+}
+
 export interface RecoverOptions {
   baseUrl: string
   token: string

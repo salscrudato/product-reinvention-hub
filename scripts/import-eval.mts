@@ -33,7 +33,7 @@ import {
   type ProvenanceRow,
 } from './lib/import-eval-metrics.mts'
 // F23: durable run results — recover a finished bundle after a severed stream.
-import { resolveRetryPolicy, recoverRunResult, mintRunId } from './lib/run-recovery.mts'
+import { resolveRetryPolicy, recoverRunResult, mintRunId, isTransientStreamError } from './lib/run-recovery.mts'
 
 const __dir   = dirname(fileURLToPath(import.meta.url))
 const REPO    = resolve(__dir, '..')
@@ -297,11 +297,17 @@ interface LiveResult {
 async function postImport(token: string, files: string[], lobHint?: string, timeoutMs = EVAL_TIMEOUT_MS): Promise<LiveResult> {
   const { maxAttempts } = resolveRetryPolicy(process.env)
   const runId = mintRunId('eval')
+  // F29: the run id is the durable-result KEY — log it at mint, so a dead client
+  // process never takes the key to its grave (wave-3 CORE: the id lived only in
+  // process memory and the paid bundle had to be found by listing Blob storage).
+  log(`    run id ${runId} (durable-result key — recover with IMPORT_EVAL_RECOVER_RUN=${runId})`)
   let last: LiveResult = { bundle: null, errors: ['not attempted'], spend: null, notices: [], stage4: null, summaryCounts: null }
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     last = await postImportOnce(token, files, lobHint, timeoutMs, runId)
     if (last.bundle || last.errors.length === 0) return last
-    const transient = last.errors.some(e => /terminated|fetch failed|ECONNRESET|socket|other side closed|stalled/i.test(e))
+    // F29: classification lives in run-recovery (exported, fixture-locked) — the
+    // old inline regex missed the hard-timeout abort and abandoned a paid run.
+    const transient = last.errors.some(e => isTransientStreamError(e))
     if (!transient) return last
     log(`    stream lost (${last.errors[0]}) — polling the durable result for run ${runId} (up to ${Math.round(RESULT_WAIT_MS / 60000)} min)`)
     const recovered = await recoverRunResult({ baseUrl: BASE_URL, token, runId, log, pollIntervalMs: 60_000, maxWaitMs: RESULT_WAIT_MS })
@@ -323,7 +329,10 @@ async function postImportOnce(token: string, files: string[], lobHint?: string, 
     mediaType: f.endsWith('.pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   }))
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  // F29: the hard timer's abort carries a message the transient classifier
+  // recognizes — a client timeout is a recoverable stream loss (the server
+  // computes on headless), never a structural failure.
+  const timer = setTimeout(() => controller.abort(new Error(`client stream timeout after ${Math.round(timeoutMs / 60000)} min — socket abandoned, durable result recoverable`)), timeoutMs)
   // Stall watchdog: the server emits an SSE heartbeat (`:hb`) every 15s
   // (server/lib/ai/unified-import.js). A dev deploy can sever the connection
   // without a FIN reaching us, leaving read() hung on a half-open socket until
@@ -554,7 +563,20 @@ if (MODE_RESCORE) {
     if (files.length !== fmt.files.length) { log(`  ⚠ ${fmt.id}: missing sample file(s), skipped`); continue }
     const golden = JSON.parse(readFileSync(goldenPath, 'utf8')) as GoldenSet
     const t0 = Date.now()
-    const live = await postImport(token, files, fmt.lobHint)
+    // F29: recover-and-score mode — a paid run whose client died is not re-run,
+    // its persisted bundle is fetched by run id and scored through the identical
+    // path. Combine with IMPORT_EVAL_ONLY=<fmt> (one run id keys one run).
+    let live: LiveResult
+    const recoverRun = process.env.IMPORT_EVAL_RECOVER_RUN
+    if (recoverRun) {
+      log(`    recover mode: fetching durable result for run ${recoverRun} (no new import posted)`)
+      const recovered = await recoverRunResult({ baseUrl: BASE_URL, token, runId: recoverRun, log, pollIntervalMs: 60_000, maxWaitMs: RESULT_WAIT_MS })
+      live = recovered
+        ? { bundle: recovered.bundle, errors: [], spend: null, notices: [`[info/f29-recovery] scored from the durable run result (run ${recoverRun}); stage4/summary SSE inputs degrade to n/a`], stage4: null, summaryCounts: null }
+        : { bundle: null, errors: [`durable result for run ${recoverRun} not recoverable`], spend: null, notices: [], stage4: null, summaryCounts: null }
+    } else {
+      live = await postImport(token, files, fmt.lobHint)
+    }
     const durationMs = Date.now() - t0
     if (live.errors.length > 0 || !live.bundle) {
       anyFail = true

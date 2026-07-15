@@ -79,3 +79,40 @@ describe('F23: recoverRunResult', () => {
     expect(r).toBeNull()
   })
 })
+
+// ─── F29: the transient classifier must never abandon a paid run ─────────────────
+// Wave-3 CORE (2026-07-15): the 150-min hard timer aborted with "This operation
+// was aborted" — the old INLINE regex in import-eval missed it, the recovery poll
+// never armed, and the finished ~$70 bundle sat unclaimed in Blob (recovered
+// manually by listing the container). The classifier now lives here, exported and
+// locked: every stream-loss shape observed across waves 1-3 must classify
+// transient (recoverable); structural refusals must not.
+import { isTransientStreamError } from '../../scripts/lib/run-recovery.mts'
+
+describe('F29: isTransientStreamError', () => {
+  it('classifies every observed stream-loss shape as recoverable', () => {
+    for (const msg of [
+      'fetch: This operation was aborted',                                        // wave-3: hard-timer DOMException
+      'client stream timeout after 150 min — socket abandoned, durable result recoverable', // new descriptive abort
+      'socket stalled (no SSE heartbeat for 90s)',                                // stall watchdog
+      'fetch: terminated',                                                        // wave-2: transport death
+      'fetch failed',                                                             // wave-2: reconnect re-POSTs
+      'read ECONNRESET',
+      'other side closed',
+      'The operation timed out',
+    ]) {
+      expect(isTransientStreamError(msg), `must be transient: ${msg}`).toBe(true)
+    }
+  })
+
+  it('never classifies structural refusals as recoverable', () => {
+    for (const msg of [
+      'HTTP 403',
+      'HTTP 401',
+      'No documents or structural model supplied.',
+      'bootstrap login failed: HTTP 500',
+    ]) {
+      expect(isTransientStreamError(msg), `must NOT be transient: ${msg}`).toBe(false)
+    }
+  })
+})
