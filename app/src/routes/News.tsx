@@ -10,7 +10,7 @@
 // (adapter.db.setNewsPins), NOT the mutate() envelope. The agent instruction lives in the
 // same newsPrefs doc and still saves via mutate() (its long-standing path). All backend
 // access goes through the adapter seam — the app never imports firebase/* directly.
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   IconNews, IconRefresh, IconExternalLink, IconSparkle, IconProduct, IconStates,
@@ -306,7 +306,7 @@ function ArticleImage({
 
 // ─── Featured hero card (editorial lead) ────────────────────────────────────────
 
-function HeroCard({
+const HeroCard = memo(function HeroCard({
   item, pinned, onTogglePin, onCopy,
 }: {
   item: FeedItem
@@ -502,11 +502,11 @@ function HeroCard({
       </div>
     </article>
   )
-}
+})
 
 // ─── Compact horizontal card ─────────────────────────────────────────────────────
 
-function CompactCard({
+const CompactCard = memo(function CompactCard({
   item, pinned, onTogglePin, onCopy,
 }: {
   item: FeedItem
@@ -686,7 +686,7 @@ function CompactCard({
       )}
     </article>
   )
-}
+})
 
 // ─── Loading skeletons ───────────────────────────────────────────────────────────
 
@@ -1021,7 +1021,7 @@ export default function News() {
     }
   }
 
-  async function togglePin(hash: string) {
+  const togglePin = useCallback(async (hash: string) => {
     if (!user) { toast.error('Sign in to pin articles'); return }
     const prev = pinnedHashes
     const next = prev.includes(hash) ? prev.filter(h => h !== hash) : [...prev, hash]
@@ -1033,9 +1033,9 @@ export default function News() {
       setPinned(prev)   // revert on failure
       toast.error('Could not update pin')
     }
-  }
+  }, [user, pinnedHashes])
 
-  async function copyLink(url: string) {
+  const copyLink = useCallback(async (url: string) => {
     try {
       if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(url)
@@ -1043,7 +1043,7 @@ export default function News() {
     } catch {
       toast.error('Could not copy link')
     }
-  }
+  }, [])
 
   async function refresh() {
     setRefreshing(true)
