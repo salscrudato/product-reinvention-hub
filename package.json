@@ -6,7 +6,7 @@
     "dev": "pnpm --filter app dev",
     "test": "pnpm test:unit",
     "test:unit": "vitest run && pnpm --filter functions test",
-    "test:gates": "vitest run tests/server/tenant-isolation.test.ts",
+    "test:gates": "vitest run tests/server/tenant-isolation.test.ts tests/server/hitl.test.ts",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "build:serff": "pnpm dlx esbuild@0.25.5 shared/src/serff/api-server.ts --bundle --format=cjs --platform=node --target=node20 --outfile=server/lib/serff-shared.cjs",

@@ -263,9 +263,29 @@ const RESERVED_ENVELOPE_KEYS = ['tenantId', 'pk', 'kind', 'coll', 'path']
 // chainHead that collides with a frozen filing's audit-chain anchor.
 const RESERVED_BASES = new Set(['filings'])
 
+// ─── HITL (H6): AI/voice-authored governed changes need a resolvable citation ──────
+// The "AI grounded + cited" invariant, enforced at the WRITE SEAM (not just in the import UI):
+// an AI- or voice-authored governed mutation must attest at least one RESOLVABLE citation, or
+// the envelope refuses it (422). "Resolvable" here = a non-empty, non-placeholder reference —
+// an empty or fabricated ('unknown'/'n/a'/…) citation is not grounding. Deep entity-resolution
+// of citations is the grounded authoring surface's job (import stage-5 deterministic resolver),
+// which runs BEFORE the write. Human edits + human-reviewed imports carry no such provenance and
+// are unaffected; a restore is authoredBy:'restore' (a deterministic rewind), also exempt.
+const AI_AUTHORED = new Set(['ai', 'voice'])
+const PLACEHOLDER_CITE = new Set(['', '-', 'n/a', 'na', 'none', 'unknown', 'tbd', 'null', 'todo'])
+const requiresCitation = (prov) => !!prov && AI_AUTHORED.has(prov.authoredBy)
+const hasResolvableCitation = (prov) => (Array.isArray(prov && prov.citations) ? prov.citations : [])
+  .some((c) => typeof c === 'string' && c.trim() && !PLACEHOLDER_CITE.has(c.trim().toLowerCase()))
+
 function envelope(tid, payload, actor, source) {
   const { op, path, entityType } = payload
   if (RESERVED_BASES.has(baseKey(path))) { const e = new Error('reserved_base'); e.code = 'RESERVED_BASE'; throw e }
+  // HITL floor: ANY AI/voice-authored governed change (create/update/delete) with no resolvable
+  // citation never auto-commits — the human/grounded surface must supply grounding, incl. the
+  // grounding for an AI-driven deletion. (A restore is authoredBy:'restore', not ai/voice.)
+  if (requiresCitation(payload.provenance) && !hasResolvableCitation(payload.provenance)) {
+    const e = new Error('citation_required'); e.code = 'CITATION_REQUIRED'; throw e
+  }
   const data = { ...(payload.data || {}) }
   for (const k of RESERVED_ENVELOPE_KEYS) delete data[k]
   const now = new Date().toISOString()
@@ -403,6 +423,7 @@ router.post('/mutate', requireCapability('product:write'), requireTenant, async 
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
+    if (e.code === 'CITATION_REQUIRED') return res.status(422).json({ error: 'citation_required', detail: 'an AI/voice-authored governed change must cite a resolvable source' })
     if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base' })
     res.status(500).json({ error: 'mutate_failed', detail: String(e.message || e) })
   }
@@ -441,6 +462,7 @@ router.post('/mutateBatch', requireCapability('product:write'), requireTenant, a
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
+    if (e.code === 'CITATION_REQUIRED') return res.status(422).json({ error: 'citation_required', detail: 'an AI/voice-authored governed change must cite a resolvable source' })
     if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base' })
     const partial = committedChunks > 0 && committedChunks < totalChunks
     res.status(500).json({ error: partial ? 'batch_partial' : 'batch_failed', committedChunks, totalChunks, detail: String(e.message || e) })
@@ -595,4 +617,4 @@ router.get('/audit/verify', requireCapability('audit:read'), requireTenant, asyn
   }
 })
 
-module.exports = Object.assign(router, { mutateInternal, assembleEnvelope, reconstructStateAtRev, scopeDoc })
+module.exports = Object.assign(router, { mutateInternal, assembleEnvelope, reconstructStateAtRev, scopeDoc, requiresCitation, hasResolvableCitation })
