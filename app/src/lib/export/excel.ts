@@ -36,11 +36,21 @@ const HAIR = { style: 'thin' as const, color: { argb: C.border } }
 
 // ─── Column model ────────────────────────────────────────────────────────────────
 
-interface Col { header: string; width: number; mono?: boolean; money?: boolean; align?: 'left' | 'right' | 'center' }
-type Cell = string | number | null
+export interface Col { header: string; width: number; mono?: boolean; money?: boolean; align?: 'left' | 'right' | 'center' }
+export type Cell = string | number | null
+
+/** Neutralize spreadsheet formula / CSV injection: a cell STRING beginning with = + - @
+ *  (or a leading tab/CR) is interpreted as a formula by Excel/Sheets and, worse, executes
+ *  when the sheet is re-exported to CSV. Prefix such a value with an apostrophe so it stays
+ *  LITERAL text. Numbers pass through untouched (money/number formats still apply). Every
+ *  data cell written by table() below goes through this, so no exported cell can execute. */
+export function safeCellValue(v: Cell): Cell {
+  if (typeof v !== 'string') return v
+  return /^[=+\-@\t\r\n]/.test(v) ? `'${v}` : v
+}
 
 /** Section title with an accent keyline beneath — the visual rhythm of every sheet. */
-function title(ws: ExcelJS.Worksheet, r: number, label: string, span: number): number {
+export function title(ws: ExcelJS.Worksheet, r: number, label: string, span: number): number {
   const cell = ws.getCell(r, 1)
   cell.value = label
   cell.font = { bold: true, size: 12, color: { argb: C.accent } }
@@ -51,8 +61,9 @@ function title(ws: ExcelJS.Worksheet, r: number, label: string, span: number): n
   return r + 2
 }
 
-/** Styled header + banded, bordered, formatted data rows. Returns the next free row. */
-function table(ws: ExcelJS.Worksheet, startRow: number, cols: Col[], rows: Cell[][]): number {
+/** Styled header + banded, bordered, formatted data rows. Returns the next free row.
+ *  Every data cell is passed through safeCellValue so a formula-injection string stays literal. */
+export function table(ws: ExcelJS.Worksheet, startRow: number, cols: Col[], rows: Cell[][]): number {
   const head = ws.getRow(startRow)
   head.height = 22
   cols.forEach((col, i) => {
@@ -68,7 +79,7 @@ function table(ws: ExcelJS.Worksheet, startRow: number, cols: Col[], rows: Cell[
     const banded = ri % 2 === 1
     cols.forEach((col, ci) => {
       const c = r.getCell(ci + 1)
-      c.value = row[ci] ?? ''
+      c.value = safeCellValue(row[ci] ?? '')
       if (banded) c.fill = solid(C.band)
       c.border = { bottom: HAIR }
       c.font = { size: 10, color: { argb: C.text }, ...(col.mono ? { name: MONO, size: 9.5 } : {}) }
@@ -83,7 +94,7 @@ function table(ws: ExcelJS.Worksheet, startRow: number, cols: Col[], rows: Cell[
   return startRow + rows.length + 3
 }
 
-function newSheet(wb: ExcelJS.Workbook, name: string, freezeRows = 0): ExcelJS.Worksheet {
+export function newSheet(wb: ExcelJS.Workbook, name: string, freezeRows = 0): ExcelJS.Worksheet {
   return wb.addWorksheet(name, {
     views: [{ showGridLines: false, ...(freezeRows ? { state: 'frozen', ySplit: freezeRows } : {}) }],
     properties: { defaultRowHeight: 16 },
@@ -298,7 +309,7 @@ function formsSheet(wb: ExcelJS.Workbook, items: ProductExport[]) {
 
 // ─── Public API ─────────────────────────────────────────────────────────────────
 
-async function download(wb: ExcelJS.Workbook, filename: string) {
+export async function download(wb: ExcelJS.Workbook, filename: string) {
   const buf = await wb.xlsx.writeBuffer()
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   const url = URL.createObjectURL(blob)

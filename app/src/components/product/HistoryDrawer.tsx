@@ -7,7 +7,7 @@
 // action only appears for legacy rows that have one — never invented.
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { IconRestore, IconChevronDown, IconChevronRight, IconSearch } from '../ui/icons'
+import { IconRestore, IconChevronDown, IconChevronRight, IconSearch, IconDownload } from '../ui/icons'
 import { Drawer } from '../ui/Drawer'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
@@ -99,11 +99,12 @@ function DiffView({ diff }: { diff: WithId<Version>['diff'] }) {
 }
 
 export function HistoryDrawer({ onClose }: Props) {
-  const { versions } = useProductCtx()
+  const { versions, pid } = useProductCtx()
   const { user } = useUser()
   const canEdit = canI(user, 'product:write')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [restoring, setRestoring] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
   const [confirmRestoreId, setConfirmRestoreId] = useState<string | null>(null)   // A5: inline restore confirm (no native window.confirm)
   const [filter, setFilter] = useState<string>('all')
   const [q, setQ] = useState('')
@@ -178,12 +179,33 @@ export function HistoryDrawer({ onClose }: Props) {
     }
   }
 
+  // Export the CURRENTLY-FILTERED history (what you see is what you export) to an XLSX.
+  // exceljs is heavy, so historyExcel is dynamic-imported — it stays a lazy chunk.
+  async function handleExport() {
+    const productId = pid || shown[0]?.productId || shown[0]?.entityPath.split('/')[1] || 'product'
+    setExporting(true)
+    try {
+      const { exportHistoryExcel } = await import('../../lib/export/historyExcel')
+      await exportHistoryExcel(shown, productId)
+      toast.success(`Exported ${shown.length} change${shown.length === 1 ? '' : 's'}`)
+    } catch { toast.error('Export failed') } finally { setExporting(false) }
+  }
+
   return (
     <Drawer open title="Change history" onClose={onClose} width="w-[480px]">
       <div className="flex flex-col gap-3">
-        {/* Search + entity filter */}
+        {/* Count + export the filtered history */}
         {all.length > 0 && (
           <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-faint">
+                {shown.length === all.length ? `${all.length} change${all.length === 1 ? '' : 's'}` : `${shown.length} of ${all.length} changes`}
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleExport} disabled={exporting} aria-label="Export change history as XLSX">
+                <IconDownload size={12} />
+                {exporting ? 'Exporting…' : 'Export'}
+              </Button>
+            </div>
             <div className="relative">
               <IconSearch size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint pointer-events-none" aria-hidden="true" />
               <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search changes, fields, people…"
