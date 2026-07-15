@@ -415,9 +415,17 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
 // Blanks/TBD get a prefixed SYNTH placeholder. Prefix comes from the LOB registry
 // hint (derived, never invented); never fabricates a real-looking refId.
 
-function synthesizeRefId(entity, lobRefIdHint, sheetCounter) {
+function synthesizeRefId(entity, lobRefIdHint, sheetCounter, sourcePrefix) {
   if (!entity.needsRefIdSynthesis) return
-  const prefix = typeof lobRefIdHint === 'string' ? (lobRefIdHint.split('.')[0] || 'XX') : 'XX'
+  // Prefix priority (ledger F30): the router's line hint, else the workbook's OWN
+  // scheme prefix read from sibling rows' real ids (a CORE workbook's blank-id
+  // rows synthesize CORE.RULE.SYNTH###), else the obviously-fake XX last resort.
+  // Derived, never invented — the first completed CORE live run minted 345
+  // XX-prefixed ids because the line was unregistered and the source's own
+  // prefix was ignored.
+  const prefix = (typeof lobRefIdHint === 'string' && lobRefIdHint.split('.')[0])
+    || sourcePrefix
+    || 'XX'
   const kindSuffix = { product: 'PROD', coverage: 'COV', form: 'FORM', rule: 'RULE', ratingProgram: 'PROG', ratingStep: 'STEP', rtTable: 'RT', ldTable: 'LD', dynamicField: 'DF', formRule: 'FR' }
   const suffix = kindSuffix[entity.kind] ?? 'ENT'
   const key = `${prefix}.${suffix}`
@@ -867,6 +875,23 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
 
   const sheetResults = await pMap(contentSheets, extractSheet, 2)
 
+  // Source-evidenced synthesis fallback (ledger F30): the workbook's own scheme
+  // prefix, read from the first real refId any sheet extracted — used when no
+  // LOB hint exists, so minted placeholders stay in the source's own scheme.
+  let sourcePrefix = null
+  for (const result of sheetResults) {
+    if (sourcePrefix || !result) continue
+    for (const entities of result.entities) {
+      for (const e of entities) {
+        if (e.needsRefIdSynthesis) continue
+        const rid = e.fields.find((f) => f.fieldName === 'refId')?.value
+        const m = typeof rid === 'string' ? rid.trim().match(/^([A-Za-z]{2,6})[.\-_ ]/) : null
+        if (m) { sourcePrefix = m[1].toUpperCase(); break }
+      }
+      if (sourcePrefix) break
+    }
+  }
+
   // Sequential post-pass in sheet order: synthesis (stable SYNTH numbering),
   // review flagging, multi-refId expansion, parent derivation.
   for (const result of sheetResults) {
@@ -876,7 +901,7 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     for (const entities of batches) {
       for (const entity of entities) {
         if (entity.needsRefIdSynthesis) {
-          synthesizeRefId(entity, lobRefIdHint, synthCounter)
+          synthesizeRefId(entity, lobRefIdHint, synthCounter, sourcePrefix)
           review.push({ kind: 'refid-synthesis-needed', sheetName: fp.sheetName, rowIndex: entity.sourceRowIndex, detail: `Row ${entity.sourceRowIndex} had no refId; synthesized placeholder — human review required.` })
         }
         if (entity.overallConfidence < CONFIDENCE_REVIEW) entity.reviewFlag = true
@@ -894,5 +919,5 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
 module.exports = {
   extractRows,
   // Test seams (hardening fixtures — pure helpers, no AI):
-  reconcileEntities, expandMultiRefIds, resolveConflicts, rowKind, parseExtraction,
+  reconcileEntities, expandMultiRefIds, resolveConflicts, rowKind, parseExtraction, synthesizeRefId,
 }

@@ -155,3 +155,56 @@ describe('F20: citation resolution against the source grid', () => {
     expect(r.checked).toBe(0)
   })
 })
+
+// ─── F30: extras measure FABRICATION, not golden blindness ───────────────────────
+// The first completed CORE live run scored extras 49.9% RED while precision on
+// golden-covered content was 1.000: all 345 "extras" were SYNTH-marked, citation-
+// resolved brain extractions from sheets the deterministic golden cannot parse
+// (234 real eligibility rules + 111 per-state factor tables, zero golden-name
+// collisions). The gate now reads fabricationExtraRate — extras that claim a
+// SOURCE-shaped id the golden has never seen — while SYNTH-marked minted ids are
+// reported (syntheticExtraRate), never gated. The offline zero-tolerance gate
+// stays on the TOTAL rate (same parser both sides ⇒ any extra is instability).
+describe('F30: extras split — fabrication gated, synthetic reported', () => {
+  const golden = [
+    { kind: 'rule', refId: 'CORE.RULE.SYNTH001', fields: {} },
+    { kind: 'coverage', refId: 'CORE.COV.001', fields: {} },
+  ]
+  it('a SYNTH-marked extra is reported, never gated as fabrication', () => {
+    const m = extrasMetrics([
+      { kind: 'rule', refId: 'CORE.RULE.SYNTH001', fields: {} },   // golden match
+      { kind: 'rule', refId: 'XX.RULE.SYNTH002', fields: {} },     // minted, golden-blind
+      { kind: 'rtTable', refId: 'XX.RT.SYNTH001', fields: {} },    // minted, golden-blind kind
+    ], golden)
+    expect(m.extraEntities).toBe(2)
+    expect(m.syntheticExtras).toBe(2)
+    expect(m.fabricationExtras).toBe(0)
+    expect(m.fabricationExtraRate).toBe(0)
+    expect(m.extraEntityRate).toBeCloseTo(2 / 3)                   // total rate unchanged (offline gate)
+  })
+  it('an extra claiming a SOURCE-shaped id the golden never saw stays gated', () => {
+    const m = extrasMetrics([
+      { kind: 'coverage', refId: 'CORE.COV.001', fields: {} },
+      { kind: 'coverage', refId: 'CORE.COV.999', fields: {} },     // claims a real-looking source id
+    ], golden)
+    expect(m.fabricationExtras).toBe(1)
+    expect(m.fabricationExtraRate).toBeCloseTo(0.5)
+    expect(m.syntheticExtras).toBe(0)
+  })
+  it('SYNTH matching is segment-anchored — a source id containing the word SYNTHETIC stays GATED (judge-demanded)', () => {
+    const m = extrasMetrics([
+      { kind: 'coverage', refId: 'CORE.COV.SYNTHETIC-LIABILITY-01', fields: {} }, // real source id, not a mint marker
+      { kind: 'coverage', refId: 'CORE.COVSYNTH.001', fields: {} },               // SYNTH not segment-leading either
+    ], golden)
+    expect(m.syntheticExtras).toBe(0)
+    expect(m.fabricationExtras).toBe(2)
+    // The actual minted shapes all stay on the reported side:
+    const minted = extrasMetrics([
+      { kind: 'rule', refId: 'XX.RULE.SYNTH001', fields: {} },
+      { kind: 'product', refId: 'PH.PROD.SYNTH.NJHO3', fields: {} },
+      { kind: 'rtTable', refId: 'PH.RT.SYNTH.NJHO3.BASE', fields: {} },
+    ], golden)
+    expect(minted.syntheticExtras).toBe(3)
+    expect(minted.fabricationExtras).toBe(0)
+  })
+})

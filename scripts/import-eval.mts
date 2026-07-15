@@ -502,7 +502,7 @@ if (MODE_RESCORE) {
       citRes = resolveProvenanceRows(dump.provenance, grids)
     }
     const pass = m.f1 >= F1_TARGET && m.numericExactRate >= NUMERIC_TARGET
-      && extras.extraEntityRate <= EXTRA_TARGET_LIVE
+      && extras.fabricationExtraRate <= EXTRA_TARGET_LIVE
       && linkage.parentResolutionRate === 1
       && linkage.parentEdgeRecall >= LINK_EDGE_TARGET
       && linkage.formAttachmentRecall >= LINK_EDGE_TARGET
@@ -510,7 +510,7 @@ if (MODE_RESCORE) {
       && (citRes?.citationResolvableRate == null || citRes.citationResolvableRate >= CITATION_RESOLVE_TARGET)
     if (!pass) anyFail = true
     results.push({ id: fmt.id, mode: 'rescore', ...m, extras, linkage, conservation, citationResolution: citRes, pass })
-    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | extras ${(extras.extraEntityRate * 100).toFixed(1)}% | link parent=${linkage.parentResolutionRate.toFixed(2)}/edges=${linkage.parentEdgeRecall.toFixed(2)}/forms=${linkage.formAttachmentRecall.toFixed(2)} | citRes ${citRes?.citationResolvableRate == null ? 'n/a' : citRes.citationResolvableRate.toFixed(3)} | loss ${conservation.lossDelta ?? 'n/a'}`)
+    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | extras fab=${(extras.fabricationExtraRate * 100).toFixed(1)}% synth=${(extras.syntheticExtraRate * 100).toFixed(1)}% | link parent=${linkage.parentResolutionRate.toFixed(2)}/edges=${linkage.parentEdgeRecall.toFixed(2)}/forms=${linkage.formAttachmentRecall.toFixed(2)} | citRes ${citRes?.citationResolvableRate == null ? 'n/a' : citRes.citationResolvableRate.toFixed(3)} | loss ${conservation.lossDelta ?? 'n/a'}`)
   }
 } else if (!MODE_LIVE) {
   section('OFFLINE: parse-stability diff vs golden')
@@ -616,7 +616,7 @@ if (MODE_RESCORE) {
       citRes = resolveProvenanceRows(b!.provenance!, grids)
     }
     const pass = m.f1 >= F1_TARGET && m.numericExactRate >= NUMERIC_TARGET && cit.entityCoverage >= CITATION_TARGET
-      && extras.extraEntityRate <= EXTRA_TARGET_LIVE
+      && extras.fabricationExtraRate <= EXTRA_TARGET_LIVE
       && linkage.parentResolutionRate === 1
       && linkage.parentEdgeRecall >= LINK_EDGE_TARGET
       && linkage.formAttachmentRecall >= LINK_EDGE_TARGET
@@ -624,7 +624,7 @@ if (MODE_RESCORE) {
       && (citRes?.citationResolvableRate == null || citRes.citationResolvableRate >= CITATION_RESOLVE_TARGET)
     if (!pass) anyFail = true
     results.push({ id: fmt.id, mode: 'live', ...m, ...cit, extras, linkage, conservation, citationResolution: citRes, spend: live.spend, durationMs, notices: live.notices, pass })
-    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | citations entity=${(cit.entityCoverage * 100).toFixed(0)}% prov=${(cit.provenanceCoverage * 100).toFixed(0)}% resolve=${citRes?.citationResolvableRate == null ? 'n/a' : (citRes.citationResolvableRate * 100).toFixed(1) + '%'} | extras ${(extras.extraEntityRate * 100).toFixed(1)}% | link parent=${linkage.parentResolutionRate.toFixed(2)} edges=${linkage.parentEdgeRecall.toFixed(2)} forms=${linkage.formAttachmentRecall.toFixed(2)} | loss ${conservation.lossDelta ?? 'n/a'} | ${Math.round(durationMs / 1000)}s`)
+    log(`  ${pass ? '✓' : '✗'} ${fmt.id}: F1 ${m.f1.toFixed(3)} (P ${m.precision.toFixed(3)} R ${m.recall.toFixed(3)}) | numeric ${m.numericExactRate.toFixed(3)} | citations entity=${(cit.entityCoverage * 100).toFixed(0)}% prov=${(cit.provenanceCoverage * 100).toFixed(0)}% resolve=${citRes?.citationResolvableRate == null ? 'n/a' : (citRes.citationResolvableRate * 100).toFixed(1) + '%'} | extras fab=${(extras.fabricationExtraRate * 100).toFixed(1)}% synth=${(extras.syntheticExtraRate * 100).toFixed(1)}% | link parent=${linkage.parentResolutionRate.toFixed(2)} edges=${linkage.parentEdgeRecall.toFixed(2)} forms=${linkage.formAttachmentRecall.toFixed(2)} | loss ${conservation.lossDelta ?? 'n/a'} | ${Math.round(durationMs / 1000)}s`)
   }
 }
 

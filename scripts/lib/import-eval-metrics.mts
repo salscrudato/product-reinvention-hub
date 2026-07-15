@@ -18,7 +18,21 @@ const key = (e: EvalEntity) => `${e.kind}|${e.refId}`
 
 export interface ExtrasMetrics {
   extraEntities: number
-  extraEntityRate: number            // extras / extracted (0 when nothing extracted)
+  extraEntityRate: number            // ALL extras / extracted — the offline gate (same parser both sides ⇒ 0)
+  /** Extras claiming a SOURCE-shaped id the golden doesn't know — the live
+   *  fabrication gate (ledger F30). An id the extraction says it READ from the
+   *  document but the golden has never seen is the true fabrication signal. */
+  fabricationExtras: number
+  fabricationExtraRate: number
+  /** SYNTH-marked extras: self-declared MINTED ids (platform convention) on
+   *  brain-only content — cited rows from sheets the deterministic golden does
+   *  not cover (the first completed CORE live run carried 345 of them: 234 real
+   *  eligibility rules + 111 per-state factor tables, all citation-resolved,
+   *  zero golden-name collisions). Gating these as "fabrication" makes the
+   *  metric a formula that lies on partially-covered formats (F20's own
+   *  lesson) — REPORTED, never gated. */
+  syntheticExtras: number
+  syntheticExtraRate: number
   extraByKind: Record<string, number>
   sampleExtras: Array<{ kind: string; refId: string }>
 }
@@ -26,11 +40,20 @@ export interface ExtrasMetrics {
 export function extrasMetrics(extracted: EvalEntity[], golden: EvalEntity[]): ExtrasMetrics {
   const gKeys = new Set(golden.map(key))
   const extras = extracted.filter(e => !gKeys.has(key(e)))
+  // Segment-anchored: the platform mints SYNTH### / SYNTH.<token> — a real source
+  // id containing the WORD "SYNTHETIC" must stay on the gated side (judge-demanded).
+  const isSynthMarked = (id: string) => /(^|\.)SYNTH(?:[^A-Za-z]|$)/i.test(id)
+  const synthetic = extras.filter(e => isSynthMarked(e.refId ?? ''))
+  const fabrication = extras.filter(e => !isSynthMarked(e.refId ?? ''))
   const extraByKind: Record<string, number> = {}
   for (const e of extras) extraByKind[e.kind] = (extraByKind[e.kind] ?? 0) + 1
   return {
     extraEntities: extras.length,
     extraEntityRate: extracted.length > 0 ? extras.length / extracted.length : 0,
+    fabricationExtras: fabrication.length,
+    fabricationExtraRate: extracted.length > 0 ? fabrication.length / extracted.length : 0,
+    syntheticExtras: synthetic.length,
+    syntheticExtraRate: extracted.length > 0 ? synthetic.length / extracted.length : 0,
     extraByKind,
     sampleExtras: extras.slice(0, 15).map(e => ({ kind: e.kind, refId: e.refId })),
   }

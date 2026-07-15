@@ -370,6 +370,19 @@
       "lesson": "A join that adopts identity must also adopt MULTIPLICITY: when the oracle folds N source rows into one entity, every row-slice the extractor emitted belongs inside that entity, not beside it. An eval gate is only as good as the runs it has scored — this defect was invisible until the first gated live run of the format that has formRules."
     },
     {
+      "id": "F30",
+      "title": "The extras gate scores golden blindness as fabrication on partially-covered formats, and stage-4 placeholder synthesis mints junk XX prefixes when the line is unregistered",
+      "class": "EVAL_GAP",
+      "severity": "HIGH",
+      "confidence": 1.0,
+      "cost": "S",
+      "status": "FIXED_IH4",
+      "priority": null,
+      "evidence": "Surfaced by the FIRST completed CORE live scoring (wave-3 Tier-2, recovered via F23/F29): every core gate spectacular (F1 0.999, P 1.000, numeric 1.000, citations resolve 100%, linkage 1.00) but extras 49.9% RED. Forensics: all 345 extras are SYNTH-marked, citation-resolved brain extractions from sheets the deterministic golden cannot parse — 234 REAL eligibility rules (zero name collisions with the golden's 234 rules — the CORE golden covers a SUBSET of the workbook) + 111 per-state factor tables (golden has zero rtTables). Gating those as fabrication makes the metric a formula that lies on partially-covered formats — F20's own recorded lesson. Second defect in the same evidence: the minted ids were XX.RULE.SYNTH###/XX.RT.SYNTH### — stage-4 synthesizeRefId fell to 'XX' because CORE is not a registered line and NO LOB hint existed, ignoring the source's own scheme (sibling rows carry CORE.PRD.001) — G-C's defect class at the brain layer. || FIXED_IH4 (Tier 0; scored on the recovered wave-3 dump): (1) extrasMetrics splits fabricationExtraRate (extras claiming a SOURCE-shaped id the golden never saw — the LIVE gate, threshold unchanged at 0.02) from syntheticExtraRate (SYNTH-marked minted ids on flagged brain-only content — REPORTED, per F20's lossDelta precedent); the OFFLINE zero-tolerance gate keeps the TOTAL rate (same parser both sides — any extra is parser instability). Defense in depth for the escape route (a fabricator inventing SYNTH-shaped ids): stage-5 citation resolution stays gated >=0.98 and F08 BLOCKING severity governs unresolvable pointers. (2) stage-4 synthesis prefix priority: router line hint, else the workbook's OWN prefix read from sibling real ids (CORE.RULE.SYNTH###), else the obviously-fake XX last resort — derived, never invented; live confirmation of (2) rides the next scheduled CORE run (a dedicated $120 re-run for an id prefix is not justified; the fixture locks the priority). Rescore of the SAME dump: fab 0.0% / synth 49.9% reported — CORE GREEN on merit.",
+      "fixture": "tests/eval/import-eval-metrics.test.ts 'F30: extras split' (SYNTH reported never gated; source-shaped extras stay gated; segment-anchored matching) + tests/import-brain/hardening-f30-synth-prefix.test.ts (hint > source prefix > XX priority)",
+      "lesson": "A fabrication metric must distinguish 'claims to have READ it' from 'declares it MINTED it' — the SYNTH convention (F15/F25/F26) exists precisely so the eval can tell them apart; use it. And every synthesis fallback chain must pass through the source's own scheme before inventing anything."
+    },
+    {
       "id": "F29",
       "title": "The F23 recovery classifier misses the client's own hard-timeout abort — a paid run's persisted bundle is abandoned unclaimed, and the run id dies with the client process",
       "class": "EVAL_GAP",
