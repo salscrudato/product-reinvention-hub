@@ -1,6 +1,17 @@
-# Wave-1 live CORE slice — attempt history (2026-07-14/15, tenant accenture-test, deployed sha dc7d2bd)
+# Live CORE slice — attempt history (2026-07-14/15, tenant accenture-test)
 
-Honest record; the successful Phase W live gate run happens on the wave-2 deploy.
+Honest record. Wave-1 attempts ran on deploy dc7d2bd; wave-2 attempt on 7d78d90 (run 2478).
+
+## Wave-2 attempt (IH3)
+
+| # | Window (UTC) | Outcome | Evidence |
+|---|---|---|---|
+| W2-1 | 03:01–04:42 | ✗ stream death at ~97 min (row ~1310/1455 of Core Forms; Rule References complete at 2146 — F09/F10 confirmed live again). `fetch: terminated`, then 3×45s reconnect re-POSTs all `fetch failed`. **The app did NOT restart**: platform docker/status logs show no container event after the 02:46Z deploy swap; `/api/health` 200 immediately after. Transport-level death (local network blip suspected), server likely computed on headless with no persistence deployed — bundle unrecoverable (F23's exact class, 3rd occurrence). Cost ~$60+. | `wave2-core-live.log`; `import_eval_results-CORE.json` failure record; App Service LogFiles pulled 04:55Z |
+
+Consequences: F23 (durable run results + opt-in retries + 150-min default) built and staged for wave 3;
+tiered-validation directive adopted (full CORE = final Phase W gate only, detached, F23 armed).
+
+## Wave-1 attempts (IH2)
 
 | # | Window (UTC) | Outcome | Evidence |
 |---|---|---|---|

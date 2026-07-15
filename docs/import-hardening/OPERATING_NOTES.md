@@ -1,42 +1,35 @@
 # IH operating notes (advisory; the eval is law; hard cap 40 lines)
 
-Created by IH2, 2026-07-14. Prune stale lines every self-tune.
+Created by IH2, 2026-07-14. Updated by IH3 (self-tune). Prune stale lines every self-tune.
 
-## Standing (from IH1 + orchestration; each also exists as a fixture or gate)
+## Standing (from IH1/IH2 + orchestration; each also exists as a fixture or gate)
 - Gate the exact sha you push: `node tools/verify-commit.mjs` (shared dirty tree lies).
-- Before EVERY commit: `node tools/stowaway-check.mjs <files…>`; commit with `git commit --only -- <files>`.
-- Touch server-consumed `shared/src/**` → rebuild + commit `server/lib/*-shared.cjs` (`pnpm build:import-brain` etc.).
-- F19/PCM-C are DISPROVEN — version WRITES work; never "fix" the write path. Gap is read-side (PCM-B).
-- Detached live runs: PowerShell Start-Process on CRLF/ASCII .cmd (Set-Content -Encoding Ascii); tee to log; never pipe a probe to head.
+- Before EVERY commit: `node tools/stowaway-check.mjs <files…>`; commit with `git commit --only -m "…" -- <files>` (flags BEFORE the `--`).
+- Touch server-consumed `shared/src/**` → rebuild + commit the bundle (`build:import-brain` / `build:filing`; BOTH when a file feeds both).
+- F19/PCM-C are DISPROVEN — version WRITES work; never "fix" the write path.
 - Live tests only in isolated tenants (accenture-test); never testco; tear down drafts.
-- `--rescore` re-scores the last extraction dump offline in seconds; server-side changes need fresh `--live`.
 - brain-routing.test.ts mocks server/lib/fleet — new fleet exports must be added to the mock.
-- Node 24 env artifacts: sources.test.ts resolveImageUrl + isoFixture snapshot churn are NOT regressions (verify via clean-tree stash).
+- vi.mock does NOT intercept lazy CJS requires (filing-shared.cjs) — rebuild the bundle or you test stale code.
+- Judges: synchronous, fresh-context, corpus-probe mandate; give them the mint-site/consumer SWEEP explicitly (F25/F26 were judge side-findings).
+- docs/audit/import_eval_results*.json + fidelity artifacts churn on every local run — commit only at wave tips with the diff explained; else `git checkout --`.
+- Goldens move ONLY in lockstep with the parse, as separate explained commits; regen surfaces UNRELATED drift (stale valueHeader/ldTableRefText in GL/IM) — leave it; tightening is a wave-boundary decision. Cross-era rescores (old dump vs new golden) false-miss.
 
 ## Generalization amendment (user directive, 2026-07-14 — BINDING)
 - TWO-FIXTURE RULE: every production fix needs the original red fixture PLUS one structurally
   different fixture passing for the same reason; otherwise presumed overfit.
 - Judge question 6 (every hostile review): "Does this diff encode knowledge of the fixture,
   or knowledge of the document structure and insurance meaning?"
-- Generic pipeline code must never branch on fixture/carrier/workbook filenames, exact sheet
-  names, exact row counts, exact expected values, one carrier/form-family, or a single exact
-  header string. Format specializations only behind an adapter/registry seam with a match
-  predicate, provenance, generic fallback, and a non-match test.
-- Prefer honest unresolved over unsupported canonical values; novel source fields must survive
-  even without a canonical destination. Origin taxonomy target: EXPLICIT / NORMALIZED /
-  DERIVED / DEFAULTED / SYNTHESIZED / MODEL_INFERRED.
-- Phase G (Generalization) runs AFTER W/P/M gates: G0 baseline → G1 assumption audit →
-  G2 frozen holdout suite (HOLDOUT_SHA) → G3 no-edit baseline → G4 failure clustering →
-  G5 fix loop → blind challenge. Final status vocabulary: PROVEN / PARTIALLY_PROVEN /
-  NOT_PROVEN / PARKED — never stronger than the evidence.
+- Generic pipeline code never branches on fixture/carrier/workbook filenames, exact sheet
+  names, exact row counts, exact expected values, or a single exact header string. Format
+  specializations only behind an adapter/registry seam with predicate, provenance, fallback, non-match test.
+- Prefer honest unresolved over unsupported canonical values; Phase G runs after W/P/M:
+  G0 baseline → G1 assumption audit → G2 frozen holdout (HOLDOUT_SHA) → G3 no-edit baseline →
+  G4 clusters → G5 fix loop → blind challenge. Final status: PROVEN / PARTIALLY_PROVEN / NOT_PROVEN / PARKED.
 
-## Learned this run (IH2, self-tune #1 after 5 iterations)
-- Give every judge a corpus-probe mandate — PCM-A's phantom-terms defect (22% of GL terms) was
-  invisible to synthetic fixtures and found only because the judge ran the real workbooks.
-- Real workbooks carry STALE table refs; a citation that doesn't resolve must abstain, and the
-  same source cell usually carries the recovery channel (locked: isoImport stale-ref fixture).
-- committed .cmd files get eol-normalized to LF on fresh checkout (silent no-op) — regenerate
-  via Set-Content -Encoding Ascii before each detached run; don't trust the checkout copy.
-- docs/audit/import_eval_results.json churns on every eval run — commit it only at wave tips.
-- Old extraction dumps (pre-IH1) legitimately FAIL the new rescore gates (extras 11-17%) —
-  evidence of the gates working, not a HEAD regression; replace dumps at wave live runs.
+## Tiered validation (user directive, 2026-07-15 — the full CORE run is the final gate, not the loop)
+- Tier 0 (free, offline): `pnpm import:eval` (parse-stability) / `--rescore`. ALL scoring/golden work.
+- Tier 1 (cheap, live): `IMPORT_EVAL_ONLY=GL --live` — live smoke for import-path/F23 changes.
+- Tier 2 (~$70/110min): full `--live` CORE, ONCE, as the FINAL Phase W gate, detached, F23 run-id
+  recovery armed, IMPORT_EVAL_MAX_ATTEMPTS=1. Overlap its wall-clock with push-free offline work;
+  watch via `az webapp log tail` (local detached log lags ~64KB). Only the PUSH is barred mid-run.
+- Log the tier used in each ledger evidence line. A full-run retry is a bill, not a recovery (F23).

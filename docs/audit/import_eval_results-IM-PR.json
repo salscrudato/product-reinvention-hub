@@ -1,0 +1,620 @@
+{
+  "runAt": "2026-07-14T22:10:20.311Z",
+  "mode": "rescore",
+  "baseUrl": null,
+  "targets": {
+    "f1": 0.95,
+    "numericExact": 0.98,
+    "citation": 1,
+    "extrasLive": 0.02,
+    "linkEdges": 0.98,
+    "citationResolve": 0.98
+  },
+  "results": [
+    {
+      "id": "IM",
+      "mode": "rescore",
+      "goldenFields": 19427,
+      "extractedFields": 27700,
+      "tp": 19417,
+      "fp": 8,
+      "fn": 10,
+      "precision": 0.9995881595881596,
+      "recall": 0.9994852524836567,
+      "f1": 0.999536703387213,
+      "numericTotal": 832,
+      "numericExact": 832,
+      "numericExactRate": 1,
+      "entityRecall": 1,
+      "diagnostics": {
+        "entityByKind": {
+          "product": {
+            "golden": 1,
+            "found": 1
+          },
+          "coverage": {
+            "golden": 798,
+            "found": 798
+          },
+          "rule": {
+            "golden": 752,
+            "found": 752
+          },
+          "ldTable": {
+            "golden": 34,
+            "found": 34
+          }
+        },
+        "missByField": {
+          "source": 4,
+          "requirement": 2,
+          "name": 1,
+          "description": 1,
+          "marketSegment": 1,
+          "status": 1
+        },
+        "sampleMisses": [
+          {
+            "kind": "product",
+            "refId": "IM.PROD.001",
+            "field": "name",
+            "golden": "Monoline Signs",
+            "extracted": "sample-IM-framework.xlsx + sample-IM-rules"
+          },
+          {
+            "kind": "product",
+            "refId": "IM.PROD.001",
+            "field": "description",
+            "golden": ""
+          },
+          {
+            "kind": "product",
+            "refId": "IM.PROD.001",
+            "field": "marketSegment",
+            "golden": "Commercial Lines / Property"
+          },
+          {
+            "kind": "product",
+            "refId": "IM.PROD.001",
+            "field": "status",
+            "golden": "ACTIVE",
+            "extracted": "DRAFT"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV079.02",
+            "field": "requirement",
+            "golden": "OPTIONAL",
+            "extracted": "MANDATORY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV044.03",
+            "field": "requirement",
+            "golden": "MANDATORY",
+            "extracted": "OPTIONAL"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV001.42",
+            "field": "source",
+            "golden": "BUREAU",
+            "extracted": "PROPRIETARY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV001.57",
+            "field": "source",
+            "golden": "BUREAU",
+            "extracted": "PROPRIETARY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV050.03",
+            "field": "source",
+            "golden": "PROPRIETARY",
+            "extracted": "BUREAU"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV050.18",
+            "field": "source",
+            "golden": "PROPRIETARY",
+            "extracted": "BUREAU"
+          }
+        ],
+        "extractedKinds": {
+          "product": 1,
+          "coverage": 1003,
+          "rule": 752,
+          "ldTable": 34
+        }
+      },
+      "extras": {
+        "extraEntities": 205,
+        "extraEntityRate": 0.11452513966480447,
+        "extraByKind": {
+          "coverage": 205
+        },
+        "sampleExtras": [
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH001"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH002"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH012"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH013"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH114"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH115"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH118"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH119"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH122"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH123"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH131"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH132"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH136"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH137"
+          },
+          {
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH168"
+          }
+        ]
+      },
+      "linkage": {
+        "parentWithRef": 705,
+        "parentResolved": 704,
+        "parentResolutionRate": 0.9985815602836879,
+        "goldenParentEdges": 704,
+        "parentEdgesReproduced": 704,
+        "parentEdgeRecall": 1,
+        "goldenFormEdges": 1483,
+        "formEdgesReproduced": 1483,
+        "formAttachmentRecall": 1,
+        "ldRefWithRef": 0,
+        "ldRefResolved": 0,
+        "ldTableRefResolutionRate": null,
+        "sampleMisses": [
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "IM.COV.SYNTH011",
+            "detail": "parentId \"IM.COV.SYNTH003\" resolves to no extracted coverage"
+          }
+        ]
+      },
+      "conservation": {
+        "stage4Candidates": null,
+        "planEntities": 1790,
+        "unresolvedCount": null,
+        "countsIdentityOk": null,
+        "lossDelta": null
+      },
+      "citationResolution": null,
+      "pass": false
+    },
+    {
+      "id": "PR",
+      "mode": "rescore",
+      "goldenFields": 26053,
+      "extractedFields": 38567,
+      "tp": 26021,
+      "fp": 2,
+      "fn": 32,
+      "precision": 0.9999231449102717,
+      "recall": 0.9987717345411277,
+      "f1": 0.9993471080728167,
+      "numericTotal": 603,
+      "numericExact": 603,
+      "numericExactRate": 1,
+      "entityRecall": 1,
+      "diagnostics": {
+        "entityByKind": {
+          "product": {
+            "golden": 1,
+            "found": 1
+          },
+          "coverage": {
+            "golden": 603,
+            "found": 603
+          },
+          "rule": {
+            "golden": 1608,
+            "found": 1608
+          }
+        },
+        "missByField": {
+          "requirement": 7,
+          "claimsBasis": 7,
+          "premiumGenerating": 7,
+          "source": 7,
+          "name": 1,
+          "description": 1,
+          "marketSegment": 1,
+          "status": 1
+        },
+        "sampleMisses": [
+          {
+            "kind": "product",
+            "refId": "PR.PROD.001",
+            "field": "name",
+            "golden": "Monoline Building and Personal Property",
+            "extracted": "sample-PR-framework.xlsx + sample-PR-rating"
+          },
+          {
+            "kind": "product",
+            "refId": "PR.PROD.001",
+            "field": "description",
+            "golden": ""
+          },
+          {
+            "kind": "product",
+            "refId": "PR.PROD.001",
+            "field": "marketSegment",
+            "golden": "Commercial Lines / Property"
+          },
+          {
+            "kind": "product",
+            "refId": "PR.PROD.001",
+            "field": "status",
+            "golden": "ACTIVE",
+            "extracted": "DRAFT"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV002.0",
+            "field": "requirement",
+            "golden": "OPTIONAL"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV002.0",
+            "field": "claimsBasis",
+            "golden": "Occurrence"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV002.0",
+            "field": "premiumGenerating",
+            "golden": true
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV002.0",
+            "field": "source",
+            "golden": "BUREAU"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PRCOV048.1",
+            "field": "requirement",
+            "golden": "OPTIONAL"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PRCOV048.1",
+            "field": "claimsBasis",
+            "golden": "Occurrence"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PRCOV048.1",
+            "field": "premiumGenerating",
+            "golden": true
+          },
+          {
+            "kind": "coverage",
+            "refId": "PRCOV048.1",
+            "field": "source",
+            "golden": "BUREAU"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV001.21",
+            "field": "requirement",
+            "golden": "OPTIONAL"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV001.21",
+            "field": "claimsBasis",
+            "golden": "Occurrence"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV001.21",
+            "field": "premiumGenerating",
+            "golden": true
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV001.21",
+            "field": "source",
+            "golden": "PROPRIETARY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV001.22",
+            "field": "requirement",
+            "golden": "OPTIONAL"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV001.22",
+            "field": "claimsBasis",
+            "golden": "Occurrence"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV001.22",
+            "field": "premiumGenerating",
+            "golden": true
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV001.22",
+            "field": "source",
+            "golden": "PROPRIETARY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV003.29",
+            "field": "requirement",
+            "golden": "OPTIONAL"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV003.29",
+            "field": "claimsBasis",
+            "golden": "Occurrence"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV003.29",
+            "field": "premiumGenerating",
+            "golden": true
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV003.29",
+            "field": "source",
+            "golden": "PROPRIETARY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV003.55",
+            "field": "requirement",
+            "golden": "OPTIONAL"
+          }
+        ],
+        "extractedKinds": {
+          "product": 1,
+          "coverage": 1063,
+          "rule": 1608
+        }
+      },
+      "extras": {
+        "extraEntities": 460,
+        "extraEntityRate": 0.1721556886227545,
+        "extraByKind": {
+          "coverage": 460
+        },
+        "sampleExtras": [
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH001"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH002"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH003"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH195"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH196"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH213"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH214"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH321"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH322"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH427"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH428"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH449"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH450"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH464"
+          },
+          {
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH465"
+          }
+        ]
+      },
+      "linkage": {
+        "parentWithRef": 901,
+        "parentResolved": 860,
+        "parentResolutionRate": 0.9544950055493896,
+        "goldenParentEdges": 517,
+        "parentEdgesReproduced": 517,
+        "parentEdgeRecall": 1,
+        "goldenFormEdges": 3072,
+        "formEdgesReproduced": 3072,
+        "formAttachmentRecall": 1,
+        "ldRefWithRef": 0,
+        "ldRefResolved": 0,
+        "ldTableRefResolutionRate": null,
+        "sampleMisses": [
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH034",
+            "detail": "parentId \"PR.COV.SYNTH004\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH285",
+            "detail": "parentId \"PR.COV.SYNTH281\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH308",
+            "detail": "parentId \"PR.COV.SYNTH304\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH333",
+            "detail": "parentId \"PR.COV.SYNTH323\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH452",
+            "detail": "parentId \"PR.COV.SYNTH451\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH503",
+            "detail": "parentId \"PR.COV.SYNTH501\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH520",
+            "detail": "parentId \"PR.COV.SYNTH501\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH532",
+            "detail": "parentId \"PR.COV.SYNTH526\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH573",
+            "detail": "parentId \"PR.COV.SYNTH571\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH574",
+            "detail": "parentId \"PR.COV.SYNTH571\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH815",
+            "detail": "parentId \"PR.COV.SYNTH814\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH816",
+            "detail": "parentId \"PR.COV.SYNTH814\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH817",
+            "detail": "parentId \"PR.COV.SYNTH814\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH818",
+            "detail": "parentId \"PR.COV.SYNTH814\" resolves to no extracted coverage"
+          },
+          {
+            "metric": "parentResolution",
+            "kind": "coverage",
+            "refId": "PR.COV.SYNTH819",
+            "detail": "parentId \"PR.COV.SYNTH814\" resolves to no extracted coverage"
+          }
+        ]
+      },
+      "conservation": {
+        "stage4Candidates": null,
+        "planEntities": 2672,
+        "unresolvedCount": null,
+        "countsIdentityOk": null,
+        "lossDelta": null
+      },
+      "citationResolution": null,
+      "pass": false
+    }
+  ]
+}
