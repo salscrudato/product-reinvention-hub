@@ -31641,7 +31641,8 @@
       "refId": "LD001",
       "fields": {
         "name": "Additional Acquired Property Coverage",
-        "defaultValue": 250000
+        "defaultValue": 250000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31649,7 +31650,8 @@
       "refId": "LD002",
       "fields": {
         "name": "Debris Removal Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31657,7 +31659,8 @@
       "refId": "LD003",
       "fields": {
         "name": "Preservation of Property of Expense Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31665,7 +31668,8 @@
       "refId": "LD004",
       "fields": {
         "name": "Pollutant Cleanup And Removal Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31673,7 +31677,8 @@
       "refId": "LD005",
       "fields": {
         "name": "Earned Charges Coverage",
-        "defaultValue": 5000
+        "defaultValue": 5000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31681,7 +31686,8 @@
       "refId": "LD006",
       "fields": {
         "name": "False Pretense Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31689,7 +31695,8 @@
       "refId": "LD007",
       "fields": {
         "name": "Newly Acquired Property Coverage",
-        "defaultValue": 50000
+        "defaultValue": 50000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31697,7 +31704,8 @@
       "refId": "LD008",
       "fields": {
         "name": "Newly Acquired Premises Coverage",
-        "defaultValue": 250000
+        "defaultValue": 250000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31705,7 +31713,8 @@
       "refId": "LD009",
       "fields": {
         "name": "Rewards - Return Of Stolen Property Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31713,7 +31722,8 @@
       "refId": "LD010",
       "fields": {
         "name": "Rewards - Information Leading to the Arrest and Conviction Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31721,7 +31731,8 @@
       "refId": "LD011",
       "fields": {
         "name": "Fire Extinguishing Systems Expense Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31729,7 +31740,8 @@
       "refId": "LD012",
       "fields": {
         "name": "Fire Department Service Charge Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31737,7 +31749,8 @@
       "refId": "LD013",
       "fields": {
         "name": "Protective and Display Materials Coverage",
-        "defaultValue": 5000
+        "defaultValue": 5000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31745,7 +31758,8 @@
       "refId": "LD014",
       "fields": {
         "name": "Inventory And Appraisal Expense Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31753,7 +31767,8 @@
       "refId": "LD015",
       "fields": {
         "name": "Electronic Equipment Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31761,7 +31776,8 @@
       "refId": "LD016",
       "fields": {
         "name": "Fuel, Accessories and Spare Parts Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31769,7 +31785,8 @@
       "refId": "LD017",
       "fields": {
         "name": "Contractual Penalties Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31777,7 +31794,8 @@
       "refId": "LD018",
       "fields": {
         "name": "Cargo Handling Equipment Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31785,7 +31803,8 @@
       "refId": "LD019",
       "fields": {
         "name": "Testing Coverage",
-        "defaultValue": 50000
+        "defaultValue": 50000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31793,7 +31812,8 @@
       "refId": "LD020",
       "fields": {
         "name": "Rewards Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31801,7 +31821,8 @@
       "refId": "LD021",
       "fields": {
         "name": "Fungi, Wet Rot and Dry Rot Coverage",
-        "defaultValue": 15000
+        "defaultValue": 15000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31809,7 +31830,8 @@
       "refId": "LD022",
       "fields": {
         "name": "Below Ground Water Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31817,7 +31839,8 @@
       "refId": "LD023",
       "fields": {
         "name": "Extra Expense Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31825,7 +31848,8 @@
       "refId": "LD024",
       "fields": {
         "name": "Business Personal Property Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31833,7 +31857,8 @@
       "refId": "LD025",
       "fields": {
         "name": "Expediting Expense Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31841,7 +31866,8 @@
       "refId": "LD026",
       "fields": {
         "name": "Valuable Papers And Records Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31849,7 +31875,8 @@
       "refId": "LD027",
       "fields": {
         "name": "Temporary Structures Expense Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31857,7 +31884,8 @@
       "refId": "LD028",
       "fields": {
         "name": "Trailers And Contents Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31865,7 +31893,8 @@
       "refId": "LD029",
       "fields": {
         "name": "Claims Preparation Coverage",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31873,7 +31902,8 @@
       "refId": "LD030",
       "fields": {
         "name": "Lawns, Trees, Shrubs And Plants Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits (Per Occurrence)"
       }
     },
     {
@@ -31881,7 +31911,8 @@
       "refId": "LD031",
       "fields": {
         "name": "Rental Reimbursement Coverage",
-        "defaultValue": 500
+        "defaultValue": 500,
+        "valueHeader": "Available Limits (Per Day)"
       }
     },
     {
@@ -31889,7 +31920,8 @@
       "refId": "LD032",
       "fields": {
         "name": "Ammonia Contamination Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31897,7 +31929,8 @@
       "refId": "LD033",
       "fields": {
         "name": "Hazardous Substance Coverage",
-        "defaultValue": 25000
+        "defaultValue": 25000,
+        "valueHeader": "Available Limits"
       }
     },
     {
@@ -31905,7 +31938,8 @@
       "refId": "LD034",
       "fields": {
         "name": "Employee Tools And Clothing Coverage",
-        "defaultValue": 1000
+        "defaultValue": 1000,
+        "valueHeader": "Available Limits (Per Employee)"
       }
     }
   ]

@@ -2352,6 +2352,7 @@
         "condition": "If Monoline Commercial General Liability is selected",
         "outcome": "Then Claim Basis is available and mandatory (See Table)",
         "ldTableRef": "LDTable.008",
+        "ldTableRefText": "Policy Claims Basis (LDTable.008)",
         "formNumbers": [
           "CG 00 01"
         ],
@@ -2391,6 +2392,7 @@
         "condition": "If Monoline Commercial General Liability is selected",
         "outcome": "Then an Occurrence Limit is available and mandatory (See Table)",
         "ldTableRef": "LDTable.001",
+        "ldTableRefText": "Occurrence Limits (LDTable.001)",
         "formNumbers": [
           "CG 00 01"
         ],
@@ -2411,6 +2413,7 @@
         "condition": "If Monoline Commercial General Liability is selected",
         "outcome": "Then a General Aggregate Limit is available and mandatory (See Table)",
         "ldTableRef": "LDTable.002",
+        "ldTableRefText": "General Aggregate Limits (LDTable.002)",
         "formNumbers": [
           "CG 00 01"
         ],
@@ -2431,6 +2434,7 @@
         "condition": "If Monoline Commercial General Liability is selected",
         "outcome": "Then Products Completed Aggregate Limit is available and optional (See Table)",
         "ldTableRef": "LDTable.006",
+        "ldTableRefText": "Products Completed Aggregate Limit (LDTable.006)",
         "formNumbers": [
           "CG 00 01"
         ],
@@ -2508,6 +2512,7 @@
         "condition": "If Damages to Premises Coverage is selected",
         "outcome": "Then Damage to Premises Coverage Limit is available (See Table)",
         "ldTableRef": "LDTable.013",
+        "ldTableRefText": "Damage to Premises Rented Limit (Table LDTable.013)",
         "formNumbers": [
           "CG 00 01"
         ],
@@ -2547,6 +2552,7 @@
         "condition": "If Medical Payments Coverage is selected",
         "outcome": "Then Medical Payments Limit is available and optional (See Table)",
         "ldTableRef": "LDTable.012",
+        "ldTableRefText": "Medical Payments Limit (LDTable.012)",
         "formNumbers": [
           "CG 00 01"
         ],
@@ -2757,6 +2763,7 @@
         "condition": "If a Deductible is selected for Monoline Commercial General Liability",
         "outcome": "Then a Deductible Type is available and mandatory (See Table)",
         "ldTableRef": "LDTable.122",
+        "ldTableRefText": "Policy Deductible Type (LDTable.122)",
         "formNumbers": [
           "CG 03 00"
         ],
@@ -2777,6 +2784,7 @@
         "condition": "If a Deductible is selected for Monoline Commercial General Liability",
         "outcome": "Then Policy Deductible applies to is available and mandatory (See Table)",
         "ldTableRef": "LDTable.123",
+        "ldTableRefText": "Policy Deductible Applies to (LDTable.123)",
         "formNumbers": [
           "CG 03 00"
         ],
@@ -2797,6 +2805,7 @@
         "condition": "If a Deductible is selected for Monoline Commercial General Liability",
         "outcome": "Then the Policy Deductible is available and mandatory (See Table)",
         "ldTableRef": "LDTable.005",
+        "ldTableRefText": "Policy Deductible (LDTable.005)",
         "formNumbers": [
           "CG 03 00"
         ],
@@ -3064,6 +3073,7 @@
         "condition": "If Bail Bonds Coverage is selected",
         "outcome": "Then Bail Bonds Coverage Limit is available and mandatory (See Table)",
         "ldTableRef": "LDTable.015",
+        "ldTableRefText": "Bail Bonds Limit (LDTable.015)",
         "formNumbers": [
           "CG 00 01"
         ],
@@ -3103,6 +3113,7 @@
         "condition": "If Loss of Wages Coverage is selected",
         "outcome": "Then Loss of Wages Coverage Limit is available and mandatory (See Table)",
         "ldTableRef": "LDTable.016",
+        "ldTableRefText": "Loss of Wages (LDTable.016)",
         "formNumbers": [
           "CG 00 01"
         ],
@@ -3665,6 +3676,7 @@
         "condition": "If Electronic Data Coverage is selected",
         "outcome": "Then Loss Of Electronic Data Coverage Limit is available and mandatory (See Table)",
         "ldTableRef": "LDTable.058",
+        "ldTableRefText": "Loss Of Electronic Data Limits (LDTable.058)",
         "formNumbers": [
           "CG 04 37"
         ],
@@ -3875,6 +3887,7 @@
         "condition": "If Employee Benefits Liability Coverage is selected",
         "outcome": "Then Employee Benefits Liability Coverage Limit is available and mandatory (See Table)",
         "ldTableRef": "LDTable.017",
+        "ldTableRefText": "Employee Benefits Limits (LDTable.017)",
         "formNumbers": [
           "CG 04 35 (CW)"
         ],
@@ -3895,6 +3908,7 @@
         "condition": "If Employee Benefits Liability Coverage is selected",
         "outcome": "Then Employee Benefits Liability Coverage Aggregate Limit is available and mandatory (See Table)",
         "ldTableRef": "LDTable.018",
+        "ldTableRefText": "Employee Benefits Aggregate Limits (LDTable.018)",
         "formNumbers": [
           "CG 04 35 (CW)"
         ],
@@ -3934,6 +3948,7 @@
         "condition": "If Employee Benefits Liability Coverage is selected",
         "outcome": "Then Employee Benefits Liability Coverage Each Employee Deductible is available and mandatory (See Table)",
         "ldTableRef": "LDTable.019",
+        "ldTableRefText": "Employee Benefits Deductible (LDTable.019)",
         "formNumbers": [
           "CG 04 35 (CW)"
         ],
@@ -9555,7 +9570,8 @@
       "kind": "ldTable",
       "refId": "LDTable.001",
       "fields": {
-        "name": "Occurrence Limits"
+        "name": "Occurrence Limits",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
@@ -9563,7 +9579,8 @@
       "refId": "LDTable.002",
       "fields": {
         "name": "General Aggregate Limits",
-        "defaultValue": 2000000
+        "defaultValue": 2000000,
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
@@ -9571,7 +9588,8 @@
       "refId": "LDTable.003",
       "fields": {
         "name": "OCP Occurrence Limit",
-        "defaultValue": 1000000
+        "defaultValue": 1000000,
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
@@ -9579,14 +9597,16 @@
       "refId": "LDTable.004",
       "fields": {
         "name": "OCP Aggregate Limit",
-        "defaultValue": 2000000
+        "defaultValue": 2000000,
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.005",
       "fields": {
-        "name": "Policy Deductible"
+        "name": "Policy Deductible",
+        "valueHeader": "AVAILABLE DEDUCTIBLES"
       }
     },
     {
@@ -9594,35 +9614,40 @@
       "refId": "LDTable.006",
       "fields": {
         "name": "Products Completed Aggregate Limit",
-        "defaultValue": 2000000
+        "defaultValue": 2000000,
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.007",
       "fields": {
-        "name": "Liquor Liability Each Common Cause"
+        "name": "Liquor Liability Each Common Cause",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.008",
       "fields": {
-        "name": "Policy Claims Basis"
+        "name": "Policy Claims Basis",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.009",
       "fields": {
-        "name": "Liquor Liability Aggregate Limit"
+        "name": "Liquor Liability Aggregate Limit",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.010",
       "fields": {
-        "name": "Liquor Liability Deductible"
+        "name": "Liquor Liability Deductible",
+        "valueHeader": "Available Deductible"
       }
     },
     {
@@ -9630,14 +9655,16 @@
       "refId": "LDTable.011",
       "fields": {
         "name": "Railroad Limits",
-        "defaultValue": 0
+        "defaultValue": 0,
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.012",
       "fields": {
-        "name": "Medical Payments Limit"
+        "name": "Medical Payments Limit",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
@@ -9645,49 +9672,56 @@
       "refId": "LDTable.013",
       "fields": {
         "name": "Damage to Premises Rented Limit",
-        "defaultValue": 100000
+        "defaultValue": 100000,
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.014",
       "fields": {
-        "name": "Personal And Advertising Injury Limit"
+        "name": "Personal And Advertising Injury Limit",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.015",
       "fields": {
-        "name": "Bail Bonds Limit"
+        "name": "Bail Bonds Limit",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.016",
       "fields": {
-        "name": "Loss of Wages"
+        "name": "Loss of Wages",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.017",
       "fields": {
-        "name": "Employee Benefits Liability Limits"
+        "name": "Employee Benefits Liability Limits",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.018",
       "fields": {
-        "name": "Employee Benefits Liability Aggregate Limits"
+        "name": "Employee Benefits Liability Aggregate Limits",
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.019",
       "fields": {
-        "name": "Employee Benefits Liability Deductible"
+        "name": "Employee Benefits Liability Deductible",
+        "valueHeader": "AVAILABLE DEDUCTIBLE"
       }
     },
     {
@@ -9695,7 +9729,8 @@
       "refId": "LDTable.020",
       "fields": {
         "name": "Product Recall",
-        "defaultValue": 100000
+        "defaultValue": 100000,
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
@@ -9703,14 +9738,16 @@
       "refId": "LDTable.021",
       "fields": {
         "name": "Stop Gap",
-        "defaultValue": 0
+        "defaultValue": 0,
+        "valueHeader": "AVAILABLE LIMITS"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.022",
       "fields": {
-        "name": "Limited Fungi Or Bacteria Aggregate Limit"
+        "name": "Limited Fungi Or Bacteria Aggregate Limit",
+        "valueHeader": "Limit"
       }
     },
     {
@@ -9738,7 +9775,8 @@
       "kind": "ldTable",
       "refId": "LDTable.061",
       "fields": {
-        "name": "Loss Of Electronic Data Limits"
+        "name": "Loss Of Electronic Data Limits",
+        "valueHeader": "Limit"
       }
     },
     {
@@ -9746,7 +9784,8 @@
       "refId": "LDTable.067",
       "fields": {
         "name": "Product Withdrawal Expenses Aggregate Limit",
-        "defaultValue": 100000
+        "defaultValue": 100000,
+        "valueHeader": "Limit"
       }
     },
     {
@@ -9754,7 +9793,8 @@
       "refId": "LDTable.068",
       "fields": {
         "name": "Additional Advertising Costs Aggregate Limit",
-        "defaultValue": 10000
+        "defaultValue": 10000,
+        "valueHeader": "Limit"
       }
     },
     {
@@ -9762,63 +9802,72 @@
       "refId": "LDTable.069",
       "fields": {
         "name": "Per Product Withdrawal Deductibles",
-        "defaultValue": 1000
+        "defaultValue": 1000,
+        "valueHeader": "Limit"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.070",
       "fields": {
-        "name": "Snow Plow Operations Occurrence Limit"
+        "name": "Snow Plow Operations Occurrence Limit",
+        "valueHeader": "Limit"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.071",
       "fields": {
-        "name": "Snow Plow Operations Aggregate Limit"
+        "name": "Snow Plow Operations Aggregate Limit",
+        "valueHeader": "Limit"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.086",
       "fields": {
-        "name": "Limited Pollution Occurrence Limit"
+        "name": "Limited Pollution Occurrence Limit",
+        "valueHeader": "Limit"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.087",
       "fields": {
-        "name": "Limited Pollution Aggregate Limit"
+        "name": "Limited Pollution Aggregate Limit",
+        "valueHeader": "Limit"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.117",
       "fields": {
-        "name": "Watercraft"
+        "name": "Watercraft",
+        "valueHeader": "Limit"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTABLE.119",
       "fields": {
-        "name": "Policy Deductible Type"
+        "name": "Policy Deductible Type",
+        "valueHeader": "AVAILABLE TYPE"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.120",
       "fields": {
-        "name": "Policy Deductible Applies to"
+        "name": "Policy Deductible Applies to",
+        "valueHeader": "Limit"
       }
     },
     {
       "kind": "ldTable",
       "refId": "LDTable.121",
       "fields": {
-        "name": "Medical Expense Limit"
+        "name": "Medical Expense Limit",
+        "valueHeader": "Limit"
       }
     },
     {
