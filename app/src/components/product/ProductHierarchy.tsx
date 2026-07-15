@@ -29,9 +29,11 @@ const DETAIL_TABS = [
   { key: 'rules',     label: 'Rules',     Icon: IconRule     },
 ] as const
 
-/** Toolbar-driven bulk signal (EX-01): each firing (a fresh epoch) sets every node's
- *  local open state to the mode. Nodes stay individually toggleable in between —
- *  per-node state remains the source of truth, the signal just sweeps it. */
+/** Toolbar-driven bulk signal (EX-01): each firing sets every node's local open state
+ *  to the mode. CONTRACT: `epoch` MUST increment on every firing (Products.tsx does
+ *  `epoch: b.epoch + 1` on each click) — the sweep is keyed on epoch alone, so a mode
+ *  change without a fresh epoch is deliberately ignored. Nodes stay individually
+ *  toggleable in between — per-node state remains the source of truth. */
 export interface BulkExpandSignal { mode: 'expand' | 'collapse'; epoch: number }
 
 /** One node's open state: collapsed by default (DEFAULTS_SPEC §1 — a default is a
@@ -41,6 +43,8 @@ function useDisclosure(bulk?: BulkExpandSignal) {
   const epoch = bulk?.epoch ?? 0
   useEffect(() => {
     if (epoch > 0) setOpen(bulk!.mode === 'expand')
+    // Keyed on epoch ALONE by contract (see BulkExpandSignal): mode travels with every
+    // fresh epoch, so depending on it would only re-fire the sweep spuriously.
   }, [epoch])   // eslint-disable-line react-hooks/exhaustive-deps
   return [open, setOpen] as const
 }

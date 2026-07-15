@@ -55,6 +55,11 @@ describe('ProductHierarchy — collapsed-by-default (EX-01)', () => {
     expect(states.every(s => s === 'false')).toBe(true)
   })
 
+  it('renders collapsed with NO bulk signal at all (the epoch-0 fallback)', () => {
+    mount(undefined)
+    expect(expandedStates().every(s => s === 'false')).toBe(true)
+  })
+
   it('toggling one product expands it WITHOUT expanding its sibling', () => {
     mount()
     fireEvent.click(screen.getByRole('button', { name: 'Expand Personal Home' }))
