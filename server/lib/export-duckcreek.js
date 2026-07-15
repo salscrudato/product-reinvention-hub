@@ -221,8 +221,7 @@ async function runDuckCreekExport(deps, tid, actor, input) {
  * served on GET /api/auth/me as user.flags). Flips only when not already true —
  * and ONLY callers of runDuckCreekExport's success path reach here.
  */
-async function flipDictionaryFlag(tid, actor) {
-  const pc = require('./platform-config')
+async function flipDictionaryFlag(tid, actor, pc = require('./platform-config')) {
   const flags = await pc.getEffectiveFlags(tid)
   if (flags['page.dictionary'] === true) return false
   await pc.setTenantConfig(tid, { flags: { 'page.dictionary': true } }, 'tenant', actor)
