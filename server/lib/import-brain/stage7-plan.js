@@ -206,12 +206,40 @@ function joinGroupWithIso(brainGroup, isoGroup, kindLabel, importWarnings, refId
     }
   }
 
-  // Brain-only leftovers: kept, flagged — never silently dropped.
+  // Leftovers. A formRule leftover whose refId already exists in the joined
+  // plan is a ROW-SLICE of that entity (sources encode one form rule as N rows,
+  // one per attached form; the mapper folds them, the brain extracts per row —
+  // ledger F28): fold it — array fields union (a cited value is never dropped),
+  // scalars gap-fill only (the joined identity wins). Appending it instead
+  // creates same-refId near-duplicates whose refId-keyed persist upserts are
+  // last-write-wins — silent attachment loss. Scoped to formRule: that is the
+  // one kind whose row-slice shape the deterministic mapper itself folds; for
+  // other kinds a same-refId duplicate stays warn-and-keep (a silent fold could
+  // hide a genuine authoring conflict the duplicate-refId check surfaces).
+  // Genuine no-counterpart leftovers: kept, flagged — never silently dropped.
+  const outByRefId = new Map()
+  for (const p of out) { if (p.refId && !outByRefId.has(p.refId)) outByRefId.set(p.refId, p) }
+  let leftover = 0
   for (const brainP of brainQueue) {
+    const host = kindLabel === 'formRule' && brainP.refId ? outByRefId.get(brainP.refId) : undefined
+    if (host) {
+      for (const [k, v] of Object.entries(brainP.data)) {
+        if (k === 'confidence' || k === 'citation' || k === 'consensus' || k === 'needsReview') continue
+        if (Array.isArray(v)) {
+          const existing = Array.isArray(host.data[k]) ? host.data[k] : []
+          const merged = [...existing]
+          for (const item of v) { if (!merged.some(m => m === item || JSON.stringify(m) === JSON.stringify(item))) merged.push(item) }
+          host.data[k] = merged
+        } else if (host.data[k] === undefined && v !== undefined) {
+          host.data[k] = v
+        }
+      }
+      continue
+    }
     brainP.data.needsReview = true
     out.push(brainP)
+    leftover += 1
   }
-  const leftover = brainQueue.length
   if (leftover > 0) {
     importWarnings.push({ kind: 'not-in-deterministic-map', sheet: null, row: null, field: kindLabel, detail: `${leftover} extracted ${kindLabel} entit(y|ies) have no counterpart in the deterministic template parse — kept with review flags.` })
   }

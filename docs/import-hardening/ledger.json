@@ -357,6 +357,19 @@
       "lesson": "F22's lesson generalizes across paths: ANY skip decision above the plan ledger must deposit named unresolved items into it. The mixed-upload seam was the workbook path's instance of the same hole the filing path (F13) had already closed."
     },
     {
+      "id": "F28",
+      "title": "formRule row-slices survive the ISO join as same-refId near-duplicates — form attachments silently lost at refId-keyed persist (last-write-wins)",
+      "class": "SILENT_LOSS",
+      "severity": "HIGH",
+      "confidence": 1.0,
+      "cost": "S",
+      "status": "FIXED_IH4",
+      "priority": null,
+      "evidence": "Found by the wave-3 Tier-1 GL live smoke (Tier 1, 2026-07-15) — the FIRST live GL run scored under F20's linkage gates: formAttachmentRecall 532/554 = 0.9603 < 0.98. Live dump forensics: 5 duplicate (kind,refId) groups, ALL formRule (GL.FORM.RU.007 x8, .018 x7, .154 x5, .021 x4, .238 x3) = 22 near-dups = exactly the 22 missing edges. Mechanism: sources encode one form rule as N rows (one per attached form); the mapper folds them (the golden's shape); stage-4 deterministic extraction emits one entity per row (correct provenance); joinGroupWithIso Pass-1 joined only the FIRST same-refId entity, the rest fell to the leftover pass as flagged same-refId near-duplicates. Pre-existing (no wave-3 commit touches this seam) — newly visible because no gated GL live run had ever completed. || FIXED_IH4 (Tier 0; live confirmation = post-push-2 GL re-smoke): a formRule leftover whose refId already exists in the joined plan FOLDS into that host — array fields union (a cited value is never dropped; a mapper-missed cited form is KEPT), scalars gap-fill only (joined identity wins); scoped to formRule (the one kind whose row-slice shape the mapper itself folds — a same-refId coverage duplicate stays warn-and-keep so authoring conflicts stay visible); genuine no-counterpart leftovers keep the flag+warning, now counted truthfully. Judge ACCEPT (consumer sweep: F17 edge-rewrite ordering safe, dangling-form check monotonic, duplicate-refId check still reachable for real dups, provenance built pre-join so folded slices keep their rows, counts post-fold exact; corpus probe: CORE/IM/PR goldens carry zero formRules — Tier-2 CORE gates unaffected). Judge quality note (non-blocking): the union's JSON.stringify dedupe is key-order-sensitive for OBJECT array items — safe for string formNumbers; upgrade to a deep-equality if an object array field ever folds.",
+      "fixture": "tests/import-brain/hardening-f28-rowslice-fold.test.ts — two structurally different locks (the GL live 8-slice shape; interleaved dup groups + cited extra form union + genuine leftover kept/warned), 2/2 red pre-fix ('expected 8 to be 1')",
+      "lesson": "A join that adopts identity must also adopt MULTIPLICITY: when the oracle folds N source rows into one entity, every row-slice the extractor emitted belongs inside that entity, not beside it. An eval gate is only as good as the runs it has scored — this defect was invisible until the first gated live run of the format that has formRules."
+    },
+    {
       "id": "F25",
       "title": "isoImport blank rule-ID synthesis mints <fwBase>.RULE.### without the SYNTH marker (workbook deterministic mapper)",
       "class": "GROUNDING",
