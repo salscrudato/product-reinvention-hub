@@ -7,7 +7,7 @@
 // integrity that governs edits lives in the Coverages editor). The product node
 // exposes all five detail views (Coverages · Pricing · Forms · States · Rules) and
 // each coverage deep-links into its Coverages / Forms / Rules detail.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   buildCoverageTree, resolveLob, productSegments,
@@ -29,12 +29,30 @@ const DETAIL_TABS = [
   { key: 'rules',     label: 'Rules',     Icon: IconRule     },
 ] as const
 
+/** Toolbar-driven bulk signal (EX-01): each firing (a fresh epoch) sets every node's
+ *  local open state to the mode. Nodes stay individually toggleable in between —
+ *  per-node state remains the source of truth, the signal just sweeps it. */
+export interface BulkExpandSignal { mode: 'expand' | 'collapse'; epoch: number }
+
+/** One node's open state: collapsed by default (DEFAULTS_SPEC §1 — a default is a
+ *  product decision), per-session only, swept by the bulk signal when it fires. */
+function useDisclosure(bulk?: BulkExpandSignal) {
+  const [open, setOpen] = useState(false)
+  const epoch = bulk?.epoch ?? 0
+  useEffect(() => {
+    if (epoch > 0) setOpen(bulk!.mode === 'expand')
+  }, [epoch])   // eslint-disable-line react-hooks/exhaustive-deps
+  return [open, setOpen] as const
+}
+
 interface ProductHierarchyProps {
   products:  WithId<Product>[]
   byProduct: Map<string, ProductInventory>
   loading:   boolean
   error:     string | null
   groupBy:   SegmentAxisId | 'none'
+  /** Optional expand-all/collapse-all sweep from the Products toolbar. */
+  bulk?:     BulkExpandSignal
 }
 
 function groupLabelFor(product: WithId<Product>, groupBy: SegmentAxisId | 'none'): string {
@@ -43,7 +61,7 @@ function groupLabelFor(product: WithId<Product>, groupBy: SegmentAxisId | 'none'
   return groupBy === 'vertical' ? seg.vertical : groupBy === 'family' ? seg.family : (seg.marketSegments[0] ?? '—')
 }
 
-export function ProductHierarchy({ products, byProduct, loading, error, groupBy }: ProductHierarchyProps) {
+export function ProductHierarchy({ products, byProduct, loading, error, groupBy, bulk }: ProductHierarchyProps) {
   if (loading) return <div className="flex flex-col gap-3">{[1, 2].map(i => <Skeleton key={i} className="h-40 rounded-[16px]" />)}</div>
   if (error) {
     return (
@@ -77,7 +95,7 @@ export function ProductHierarchy({ products, byProduct, loading, error, groupBy 
             </div>
           )}
           {ps.map(p => (
-            <ProductTree key={p.id} product={p} inv={byProduct.get(p.id)} />
+            <ProductTree key={p.id} product={p} inv={byProduct.get(p.id)} bulk={bulk} />
           ))}
         </section>
       ))}
@@ -85,9 +103,9 @@ export function ProductHierarchy({ products, byProduct, loading, error, groupBy 
   )
 }
 
-function ProductTree({ product, inv }: { product: WithId<Product>; inv: ProductInventory | undefined }) {
+function ProductTree({ product, inv, bulk }: { product: WithId<Product>; inv: ProductInventory | undefined; bulk?: BulkExpandSignal }) {
   const navigate = useNavigate()
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useDisclosure(bulk)
   const go = (sub: string) => navigate(`/app/products/${product.id}/${sub}`)
 
   const lob = resolveLob(product)
@@ -139,12 +157,13 @@ function ProductTree({ product, inv }: { product: WithId<Product>; inv: ProductI
             </div>
 
             {/* Coverage tree */}
-            <ul role="group" aria-label={`${product.name} coverages`} className="mt-1 flex flex-col">
+            {/* Plain <ul> — role="group" would strip the list semantics axe checks (listitem). */}
+            <ul aria-label={`${product.name} coverages`} className="mt-1 flex flex-col">
               {roots.length === 0 && orphans.length === 0 && (
                 <li className="text-sm text-faint py-2">No coverages yet.</li>
               )}
               {roots.map(node => (
-                <CoverageBranch key={node.coverage.id} node={node} productId={product.id} depth={0} />
+                <CoverageBranch key={node.coverage.id} node={node} productId={product.id} depth={0} bulk={bulk} />
               ))}
             </ul>
 
@@ -154,9 +173,9 @@ function ProductTree({ product, inv }: { product: WithId<Product>; inv: ProductI
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.07em] text-warn">
                   <IconWarning size={12} aria-hidden="true" /> Unlinked endorsements
                 </div>
-                <ul role="group" aria-label="Unlinked endorsements" className="mt-1 flex flex-col">
+                <ul aria-label="Unlinked endorsements" className="mt-1 flex flex-col">
                   {orphans.map(node => (
-                    <CoverageBranch key={node.coverage.id} node={node} productId={product.id} depth={0} orphan />
+                    <CoverageBranch key={node.coverage.id} node={node} productId={product.id} depth={0} orphan bulk={bulk} />
                   ))}
                 </ul>
               </div>
@@ -168,11 +187,11 @@ function ProductTree({ product, inv }: { product: WithId<Product>; inv: ProductI
   )
 }
 
-function CoverageBranch({ node, productId, depth, orphan = false }: {
-  node: CoverageNode<WithId<Coverage>, WithId<Form>>; productId: string; depth: number; orphan?: boolean
+function CoverageBranch({ node, productId, depth, orphan = false, bulk }: {
+  node: CoverageNode<WithId<Coverage>, WithId<Form>>; productId: string; depth: number; orphan?: boolean; bulk?: BulkExpandSignal
 }) {
   const navigate = useNavigate()
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useDisclosure(bulk)
   const { coverage, forms, children } = node
   const ref = coverage.refId ?? coverage.id
   const covLink = (tab: string) => navigate(`/app/products/${productId}/${tab}?cov=${encodeURIComponent(ref)}`)
@@ -219,11 +238,11 @@ function CoverageBranch({ node, productId, depth, orphan = false }: {
       </div>
 
       {hasChildren && open && (
-        <ul role="group" aria-label={`${coverage.name} sub-coverages`} className="flex flex-col">
+        <ul aria-label={`${coverage.name} sub-coverages`} className="flex flex-col">
           {children.map(child => (
             // A child's parent (this node) is present, so it is never itself "unlinked"
             // even when this node is the orphan root — only the top orphan flags it.
-            <CoverageBranch key={child.coverage.id} node={child} productId={productId} depth={depth + 1} orphan={false} />
+            <CoverageBranch key={child.coverage.id} node={child} productId={productId} depth={depth + 1} orphan={false} bulk={bulk} />
           ))}
         </ul>
       )}

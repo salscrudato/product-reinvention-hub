@@ -66,6 +66,10 @@ export default function Products() {
   // ALWAYS defaults to the Hierarchy view on load (per product direction);
   // ?view= (e.g. the post-promotion landing) switches it for this visit only.
   const [view, setView] = useState<ProductView>('tree')
+  // EX-01: the Hierarchy renders collapsed by default; this toolbar signal sweeps
+  // every node open/closed (each firing = a fresh epoch; nodes stay individually
+  // toggleable in between).
+  const [bulk, setBulk] = useState<{ mode: 'expand' | 'collapse'; epoch: number }>({ mode: 'collapse', epoch: 0 })
   const [deleteFor,  setDeleteFor]  = useState<WithId<Product> | null>(null)
   const [retireFor,  setRetireFor]  = useState<WithId<Product> | null>(null)
   const [showRetired, setShowRetired] = useState(false)
@@ -204,9 +208,23 @@ export default function Products() {
         }
       />
 
-      {/* View switch (Hierarchy · Cards) · smart realtime search */}
+      {/* View switch (Hierarchy · Cards) · expand/collapse sweep · smart realtime search */}
       <div className="flex flex-wrap items-center gap-3">
         <ViewSwitch view={view} onChange={setView} />
+        {view === 'tree' && (
+          <span className="inline-flex items-center gap-1" role="group" aria-label="Tree expansion">
+            <button type="button" onClick={() => setBulk(b => ({ mode: 'expand', epoch: b.epoch + 1 }))}
+              className="h-8 px-2.5 rounded-[8px] text-xs font-medium text-dim hover:text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+              style={{ border: '1px solid var(--color-border)' }}>
+              Expand all
+            </button>
+            <button type="button" onClick={() => setBulk(b => ({ mode: 'collapse', epoch: b.epoch + 1 }))}
+              className="h-8 px-2.5 rounded-[8px] text-xs font-medium text-dim hover:text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+              style={{ border: '1px solid var(--color-border)' }}>
+              Collapse all
+            </button>
+          </span>
+        )}
         <div className="relative flex-1 min-w-[220px]">
           <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
           <input
@@ -293,7 +311,7 @@ export default function Products() {
           ))}
         </div>
       ) : (
-        <ProductHierarchy products={visible} byProduct={inventory.byProduct} loading={inventory.loading} error={inventory.error} groupBy="none" />
+        <ProductHierarchy products={visible} byProduct={inventory.byProduct} loading={inventory.loading} error={inventory.error} groupBy="none" bulk={bulk} />
       )}
 
       {/* Retired products — shown when the toggle is open and at least one exists */}
