@@ -132,7 +132,7 @@ export function TaskLensPanel({ lens, pid, onNavigate }: {
                 <Row key={c.id}>
                   <span className="text-[12.5px] text-text flex-1 min-w-0 truncate"
                     style={c.parentId ? { paddingLeft: 12 } : undefined}>{c.name}</span>
-                  <Badge label={c.requirement === 'MANDATORY' ? 'Req.' : 'Opt.'} color={c.requirement === 'MANDATORY' ? 'purple' : 'default'} />
+                  <Badge label={c.requirement === 'MANDATORY' ? 'Req.' : c.requirement === 'UNKNOWN' ? '?' : 'Opt.'} color={c.requirement === 'MANDATORY' ? 'purple' : 'default'} />
                   {c.refId && <LinkChip label={c.refId}
                     to={productDeepLink(pid, { tab: 'coverages', ref: c.refId })} onNavigate={onNavigate} />}
                 </Row>

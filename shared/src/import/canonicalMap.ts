@@ -213,9 +213,9 @@ export const CANONICAL_MAP: Record<CanonicalEntityKind, CanonicalEntityDef> = {
         aliases: [],
       },
       {
-        field: 'requirement', role: 'stored', type: "'MANDATORY' | 'OPTIONAL'",
-        enumValues: ['MANDATORY', 'OPTIONAL'],
-        description: 'Whether the coverage is mandatory or optional.',
+        field: 'requirement', role: 'stored', type: "'MANDATORY' | 'OPTIONAL' | 'UNKNOWN'",
+        enumValues: ['MANDATORY', 'OPTIONAL', 'UNKNOWN'],
+        description: 'Whether the coverage is mandatory or optional. UNKNOWN when the source does not establish it (F14) — never a guessed value.',
         examples: ['Mandatory', 'Optional'],
         aliases: ['COVERAGE REQUIREMENT', 'REQUIREMENT', 'MANDATORY/ OPTIONAL', 'MANDATORY / OPTIONAL'],
       },
@@ -226,8 +226,8 @@ export const CANONICAL_MAP: Record<CanonicalEntityKind, CanonicalEntityDef> = {
         aliases: ['CLAIMS BASIS', 'CLAIMS\nBASIS', 'TRIGGER'],
       },
       {
-        field: 'premiumGenerating', role: 'stored', type: 'boolean',
-        description: 'Whether the coverage generates premium. Header may or may not carry a trailing "?".',
+        field: 'premiumGenerating', role: 'stored', type: 'boolean | null',
+        description: 'Whether the coverage generates premium. Header may or may not carry a trailing "?". null when the source does not state premium treatment (F14) — never a guessed boolean.',
         examples: ['Yes', 'No'],
         aliases: ['PREMIUM GENERATING', 'PREMIUM GENERATING?'],
       },

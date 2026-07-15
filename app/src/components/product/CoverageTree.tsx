@@ -58,7 +58,7 @@ function TreeCard({ cov, depth, canEdit, onTile, onEdit, onDelete }: {
         )}
         <span className="hidden lg:flex items-center gap-1 shrink-0">
           <Badge
-            label={cov.requirement === 'MANDATORY' ? 'Mandatory' : 'Optional'}
+            label={cov.requirement === 'MANDATORY' ? 'Mandatory' : cov.requirement === 'UNKNOWN' ? 'Req. unknown' : 'Optional'}
             color={cov.requirement === 'MANDATORY' ? 'purple' : 'default'}
           />
           {cov.premiumGenerating && <Badge label="Rated" color="good" />}

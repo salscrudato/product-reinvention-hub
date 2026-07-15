@@ -340,7 +340,7 @@ async function runFilingPipeline(opts) {
   // the original unifiedImport handler uses (haiku, forced propose_coverages tool).
   const PROPOSE_COVERAGES_TOOL = {
     name: 'propose_coverages',
-    description: 'Return the coverages the base form actually defines. Only include coverages the document describes — never invent a coverage, form, limit or requirement.',
+    description: 'Return the coverages the base form actually defines. Only include coverages the document describes — never invent a coverage, form, limit or requirement. A policy contract usually does NOT state product-level mandatory status or premium treatment: when the document does not establish a fact, say UNKNOWN — never guess.',
     input_schema: {
       type: 'object',
       properties: {
@@ -350,8 +350,8 @@ async function runFilingPipeline(opts) {
             type: 'object',
             properties: {
               name:              { type: 'string' },
-              requirement:       { type: 'string', enum: ['MANDATORY', 'OPTIONAL'] },
-              premiumGenerating: { type: 'boolean' },
+              requirement:       { type: 'string', enum: ['MANDATORY', 'OPTIONAL', 'UNKNOWN'], description: 'UNKNOWN when the document does not establish product-level mandatory status.' },
+              premiumGenerating: { type: 'string', enum: ['YES', 'NO', 'UNKNOWN'], description: 'UNKNOWN when the document does not state premium treatment.' },
               formNumbers:       { type: 'array', items: { type: 'string' } },
               confidence:        { type: 'number' },
               citation:          { type: 'string', description: 'REQUIRED.' },
@@ -390,10 +390,21 @@ async function runFilingPipeline(opts) {
     emit({ t: 'tool', name: 'filing:extract:policyForm', phase: 'end', summary: `${rawCovs.length} coverage(s)` })
     // formNumbers must ALWAYS be an array — reconcileFiling dereferences
     // c.formNumbers.length and a missing field crashes the whole reconcile.
+    // F14: not-stated facts land as UNKNOWN / null — never a guessed value
+    // (the old `!== false` turned an ABSENT premium marker into true).
+    const reqOf = (v) => {
+      const t = String(v ?? '').toUpperCase()
+      return t === 'MANDATORY' || t === 'OPTIONAL' ? t : 'UNKNOWN'
+    }
+    const pgOf = (v) => {
+      if (v === true || v === 'YES' || v === 'TRUE') return true
+      if (v === false || v === 'NO' || v === 'FALSE') return false
+      return null
+    }
     return rawCovs.map(c => ({
       name: c.name,
-      requirement: c.requirement,
-      premiumGenerating: c.premiumGenerating !== false,
+      requirement: reqOf(c.requirement),
+      premiumGenerating: pgOf(c.premiumGenerating),
       formNumbers: Array.isArray(c.formNumbers) ? c.formNumbers.filter(n => n && typeof n === 'string') : [],
       confidence: Number(c.confidence ?? 0.7),
       citation: c.citation,

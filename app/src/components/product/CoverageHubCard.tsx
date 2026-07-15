@@ -49,7 +49,7 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
               <span className="font-semibold text-[15px] text-text leading-snug truncate">{cov.name}</span>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <Badge label={cov.requirement === 'MANDATORY' ? 'Mandatory' : 'Optional'} color={cov.requirement === 'MANDATORY' ? 'purple' : 'default'} />
+              <Badge label={cov.requirement === 'MANDATORY' ? 'Mandatory' : cov.requirement === 'UNKNOWN' ? 'Req. unknown' : 'Optional'} color={cov.requirement === 'MANDATORY' ? 'purple' : 'default'} />
               {cov.premiumGenerating && <Badge label="Rated" color="good" />}
               {cov.source === 'PROPRIETARY' && <Badge label="Proprietary" color="warn" />}
               {cov.status !== 'ACTIVE' && <StatusPill status={cov.status} />}

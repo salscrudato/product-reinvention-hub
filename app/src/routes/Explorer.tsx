@@ -99,7 +99,7 @@ export default function Explorer() {
   // a product's line, a coverage's requirement.
   const toProdItem = (p: WithId<Product>): ColumnItem => ({ id: p.id, refId: p.refId, title: p.name, meta: p.lob?.name, hasChildren: true })
   const toCovItem  = (c: WithId<Coverage>, canDescend: boolean): ColumnItem => ({
-    id: c.id, refId: c.refId, title: c.name, meta: c.requirement === 'MANDATORY' ? 'Mandatory' : 'Optional', hasChildren: canDescend,
+    id: c.id, refId: c.refId, title: c.name, meta: c.requirement === 'MANDATORY' ? 'Mandatory' : c.requirement === 'UNKNOWN' ? 'Req. unknown' : 'Optional', hasChildren: canDescend,
   })
 
   // Columns are always a prefix: Products, then Coverages (once a product is picked),

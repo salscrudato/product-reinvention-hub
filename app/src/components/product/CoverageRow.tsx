@@ -23,7 +23,7 @@ export function CoverageRow({ cov, isEndorsement, canEdit, onTile, onEdit, onDel
         <span className="font-medium text-sm text-text truncate">{cov.name}</span>
         {cov.refId && <span className="hidden md:inline shrink-0"><RefChip id={cov.refId} /></span>}
         <span className="hidden lg:flex items-center gap-1.5 shrink-0">
-          <Badge label={cov.requirement === 'MANDATORY' ? 'Mandatory' : 'Optional'} color={cov.requirement === 'MANDATORY' ? 'purple' : 'default'} />
+          <Badge label={cov.requirement === 'MANDATORY' ? 'Mandatory' : cov.requirement === 'UNKNOWN' ? 'Req. unknown' : 'Optional'} color={cov.requirement === 'MANDATORY' ? 'purple' : 'default'} />
           {cov.premiumGenerating && <Badge label="Rated" color="good" />}
         </span>
       </div>

@@ -25,7 +25,7 @@ const HAIKU_OVERRIDE = process.env.AZURE_FOUNDRY_HAIKU_DEPLOYMENT || ''
 
 const _PROPOSE_COVERAGES = {
   name: 'propose_coverages',
-  description: 'Return the coverages the base form actually defines. Only include coverages the document describes — never invent a coverage, form, limit or requirement.',
+  description: 'Return the coverages the base form actually defines. Only include coverages the document describes — never invent a coverage, form, limit or requirement. When the document does not establish a fact (mandatory status, premium treatment), say UNKNOWN — never guess.',
   input_schema: {
     type: 'object',
     properties: {
@@ -35,8 +35,8 @@ const _PROPOSE_COVERAGES = {
           type: 'object',
           properties: {
             name:              { type: 'string' },
-            requirement:       { type: 'string', enum: ['MANDATORY', 'OPTIONAL'] },
-            premiumGenerating: { type: 'boolean' },
+            requirement:       { type: 'string', enum: ['MANDATORY', 'OPTIONAL', 'UNKNOWN'], description: 'UNKNOWN when the document does not establish product-level mandatory status.' },
+            premiumGenerating: { type: 'string', enum: ['YES', 'NO', 'UNKNOWN'], description: 'UNKNOWN when the document does not state premium treatment.' },
             formNumbers:       { type: 'array', items: { type: 'string' }, description: 'Form numbers exactly as printed. Only numbers present in the document.' },
             limitHint:         { type: 'string' },
             confidence:        { type: 'number', description: '0..1 confidence this coverage is correctly identified.' },
@@ -333,8 +333,11 @@ async function unifiedImport(req, res) {
           refId,
           name: String(c.name),
           formNumbers: Array.isArray(c.formNumbers) ? c.formNumbers.filter((n) => n && typeof n === 'string') : [],
-          premiumGenerating: c.premiumGenerating !== false,
-          requirement: c.requirement === 'OPTIONAL' ? 'OPTIONAL' : 'MANDATORY',
+          // F14: not-stated facts land as UNKNOWN / null — never a guessed value.
+          premiumGenerating: (c.premiumGenerating === true || c.premiumGenerating === 'YES') ? true
+                           : (c.premiumGenerating === false || c.premiumGenerating === 'NO') ? false
+                           : null,
+          requirement: c.requirement === 'OPTIONAL' ? 'OPTIONAL' : c.requirement === 'MANDATORY' ? 'MANDATORY' : 'UNKNOWN',
           confidence: typeof c.confidence === 'number' ? Math.max(0, Math.min(1, c.confidence)) : 0.7,
           citation: String(c.citation || ''),
         },

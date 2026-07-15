@@ -179,11 +179,11 @@
       "severity": "HIGH",
       "confidence": 1.0,
       "cost": "S",
-      "status": "OPEN",
-      "priority": 3,
-      "evidence": "stage-filing.js:341+ PROPOSE_COVERAGES_TOOL input_schema: requirement enum ['MANDATORY','OPTIONAL'] + premiumGenerating boolean, both required; unified-import.js:336-337 fallback coerces the same way",
-      "fixture": "samples/hardening/pdf/PP_00_01_06_98.pdf (auto base form that states neither)",
-      "lesson": "Every forced enum in a tool schema is an instruction to fabricate when the document is silent — UNKNOWN must be representable."
+      "status": "FIXED_IH2",
+      "priority": null,
+      "evidence": "Schema change end-to-end: Requirement type + 'UNKNOWN'; Coverage.premiumGenerating boolean|null (null = source never stated it — the origin marker); PROPOSE_COVERAGES_TOOL + legacy _PROPOSE_COVERAGES enums bumped (requirement +UNKNOWN; premiumGenerating boolean → REQUIRED enum YES/NO/UNKNOWN so the model must EXPLICITLY abstain — sounder than optional/nullable where silence is ambiguous); three sanitizers made honest (stage-filing '!== false'→true inversion killed; unified-import absent→MANDATORY killed; shared cleanCoverages junk→MANDATORY/bool()→false killed); canonicalMap contract + verification-prompt vocab; UNKNOWN findable in the coverages facet. JUDGE REJECT #1 (all four taken): 7th badge site Explorer.tsx meta; excel export fabricated 'No' for null premium (egress artifact) → 'Unknown'; CoverageEditDialog null→false collapse on unrelated save → null preserved until the switch is touched; ledger recorded. WORKBOOK-PATH RESIDUALS (out of this gate's scope — 'facts a POLICY CONTRACT does not state' is the filing path; workbooks have a requirement COLUMN — but same smell, Phase G1 audit items): isoImport.ts mapRequirement blank→MANDATORY; stage7-plan.js BOOLEANISH ''→false. Scaffold path deliberately unchanged (generative design flow from cited portfolio analogues + human review, not extraction-from-source).",
+      "fixture": "tests/import-brain/hardening-f14-unknown.test.ts — sanitizer unit (4 cases) + REAL-reconciler e2e (model abstention survives to bundle coverage entities), 5/5 red pre-fix (two-fixture rule)",
+      "lesson": "Every forced enum in a tool schema is an instruction to fabricate when the document is silent — UNKNOWN must be representable. And honesty must survive EGRESS: a UI badge, an Excel export, and an edit-dialog default can each re-fabricate what the schema fix abstained from."
     },
     {
       "id": "F15",

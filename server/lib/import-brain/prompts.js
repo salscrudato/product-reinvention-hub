@@ -204,7 +204,7 @@ For each produced entity, check ALL of the following:
    - form.category: BASE_COVERAGE | DECLARATIONS | ENDORSEMENT | EXCLUSION | AMENDATORY | POLICY_NOTICE
    - form.attachmentCondition: RULE | NONE
    - dynamicField.dataType: TEXT | CURRENCY | DATE | LIST | PERCENT
-   - coverage.requirement: MANDATORY | OPTIONAL
+   - coverage.requirement: MANDATORY | OPTIONAL | UNKNOWN (UNKNOWN = the source does not establish it)
    If a value is outside the set, flag as enum-out-of-range.
 
 4. TREE INTEGRITY: Every entity with a non-null parentId must have a matching parent entity (with that refId) in the same extraction. Flag orphans as orphan-coverage.

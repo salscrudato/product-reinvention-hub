@@ -16,8 +16,11 @@ import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
 type Draft = {
-  name: string; refId: string; requirement: 'MANDATORY' | 'OPTIONAL'
-  source: 'BUREAU' | 'PROPRIETARY'; claimsBasis: string; premiumGenerating: boolean
+  name: string; refId: string; requirement: 'MANDATORY' | 'OPTIONAL' | 'UNKNOWN'
+  // null = the source never stated premium treatment (F14): preserved on save
+  // until the user explicitly sets the switch — an unrelated rename must not
+  // silently persist `false`.
+  source: 'BUREAU' | 'PROPRIETARY'; claimsBasis: string; premiumGenerating: boolean | null
   parentId: string | null
 }
 
@@ -31,7 +34,7 @@ export function CoverageEditDialog({ cov, onClose }: { cov: WithId<Coverage> | n
   const [d, setD] = useState<Draft>(() => ({
     name: cov?.name ?? '', refId: cov?.refId ?? '',
     requirement: cov?.requirement ?? 'OPTIONAL', source: cov?.source ?? 'PROPRIETARY',
-    claimsBasis: cov?.claimsBasis ?? '', premiumGenerating: cov?.premiumGenerating ?? false,
+    claimsBasis: cov?.claimsBasis ?? '', premiumGenerating: cov ? (cov.premiumGenerating ?? null) : false,
     parentId: cov?.parentId ?? null,
   }))
   const [saving, setSaving] = useState(false)
@@ -77,7 +80,7 @@ export function CoverageEditDialog({ cov, onClose }: { cov: WithId<Coverage> | n
         // "Reload latest": fetch the server version into the form; user can re-apply their edits.
         const reload = async () => {
           const fresh = await adapter.db.get<WithId<Coverage>>(`products/${pid}/coverages/${cov.id}`)
-          if (fresh) setD({ name: fresh.name, refId: fresh.refId ?? '', requirement: fresh.requirement ?? 'OPTIONAL', source: fresh.source ?? 'PROPRIETARY', claimsBasis: fresh.claimsBasis ?? '', premiumGenerating: fresh.premiumGenerating ?? false, parentId: fresh.parentId ?? null })
+          if (fresh) setD({ name: fresh.name, refId: fresh.refId ?? '', requirement: fresh.requirement ?? 'OPTIONAL', source: fresh.source ?? 'PROPRIETARY', claimsBasis: fresh.claimsBasis ?? '', premiumGenerating: fresh.premiumGenerating ?? null, parentId: fresh.parentId ?? null })
           toast.info('Reloaded — review and save again.')
         }
         conflictToast({ reload, discard: onClose })
@@ -118,7 +121,7 @@ export function CoverageEditDialog({ cov, onClose }: { cov: WithId<Coverage> | n
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-dim">Requirement</span>
             <select className={field} value={d.requirement} onChange={e => set('requirement', e.target.value as Draft['requirement'])}>
-              <option value="MANDATORY">Mandatory</option><option value="OPTIONAL">Optional</option>
+              <option value="MANDATORY">Mandatory</option><option value="OPTIONAL">Optional</option><option value="UNKNOWN">Unknown (source did not state)</option>
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
@@ -146,11 +149,11 @@ export function CoverageEditDialog({ cov, onClose }: { cov: WithId<Coverage> | n
         <label className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-[10px] bg-raised cursor-pointer">
           <span className="flex flex-col">
             <span className="text-sm font-medium text-text">Premium generating</span>
-            <span className="text-xs text-dim">This coverage participates in rating.</span>
+            <span className="text-xs text-dim">{d.premiumGenerating == null ? 'Source did not state premium treatment — click to set it.' : 'This coverage participates in rating.'}</span>
           </span>
-          <button type="button" onClick={() => set('premiumGenerating', !d.premiumGenerating)} role="switch" aria-checked={d.premiumGenerating}
-            className="shrink-0 w-10 h-6 rounded-full p-0.5 transition-colors flex items-center" style={{ background: d.premiumGenerating ? 'var(--color-accent)' : 'var(--color-border-strong)' }}>
-            <span className="w-5 h-5 rounded-full bg-white transition-transform" style={{ transform: d.premiumGenerating ? 'translateX(16px)' : 'translateX(0)' }} />
+          <button type="button" onClick={() => set('premiumGenerating', d.premiumGenerating !== true)} role="switch" aria-checked={d.premiumGenerating === true}
+            className="shrink-0 w-10 h-6 rounded-full p-0.5 transition-colors flex items-center" style={{ background: d.premiumGenerating === true ? 'var(--color-accent)' : 'var(--color-border-strong)', opacity: d.premiumGenerating == null ? 0.6 : 1 }}>
+            <span className="w-5 h-5 rounded-full bg-white transition-transform" style={{ transform: d.premiumGenerating === true ? 'translateX(16px)' : 'translateX(0)' }} />
           </button>
         </label>
       </div>

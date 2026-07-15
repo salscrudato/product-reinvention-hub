@@ -69,6 +69,8 @@ const requirementFacet = (): FacetSchema<WithId<Coverage>>['facets'][number] => 
   options: [
     { value: 'MANDATORY', label: 'Included', token: 'Included', aliases: ['included', 'mandatory', 'base', 'core'] },
     { value: 'OPTIONAL',  label: 'Optional', token: 'Optional', aliases: ['optional', 'add-on', 'addon', 'endorsement'] },
+    // F14: imported coverages whose source did not state it must stay findable.
+    { value: 'UNKNOWN',   label: 'Unknown',  token: 'Unknown',  aliases: ['unknown', 'unstated', 'not stated'] },
   ],
   accessor: (c) => c.requirement,
 })
@@ -113,7 +115,7 @@ export function makeCoveragesFilterSchema(
       c.refId ?? '',
       c.claimsBasis,
       c.formNumbers.join(' '),
-      c.requirement === 'MANDATORY' ? 'included mandatory' : 'optional endorsement add-on',
+      c.requirement === 'MANDATORY' ? 'included mandatory' : c.requirement === 'UNKNOWN' ? 'requirement unknown' : 'optional endorsement add-on',
       c.premiumGenerating ? 'rated premium' : 'unrated non-rated',
       c.source === 'PROPRIETARY' ? 'proprietary' : 'bureau iso',
       STATUS_WORD[c.status] ?? '',

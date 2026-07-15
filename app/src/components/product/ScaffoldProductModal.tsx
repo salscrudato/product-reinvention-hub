@@ -395,7 +395,7 @@ function ScaffoldReview({ plan, name, setName, isOn, toggle, taskChecked, onTogg
             <>
               <span className="font-semibold text-[14px] text-text">{c.name}</span>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <Badge label={c.requirement === 'MANDATORY' ? 'Mandatory' : 'Optional'} color={c.requirement === 'MANDATORY' ? 'purple' : 'default'} />
+                <Badge label={c.requirement === 'MANDATORY' ? 'Mandatory' : c.requirement === 'UNKNOWN' ? 'Req. unknown' : 'Optional'} color={c.requirement === 'MANDATORY' ? 'purple' : 'default'} />
                 {c.premiumGenerating && <Badge label="Rated" color="good" />}
                 {c.formNumbers.map(fn => <RefChip key={fn} id={fn} tone="accent" />)}
               </div>

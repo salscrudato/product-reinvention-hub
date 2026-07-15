@@ -197,7 +197,10 @@ function frameworkSheet(wb: ExcelJS.Workbook, items: ProductExport[]) {
     for (const c of [...it.coverages].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))) {
       rows.push([
         it.product.name, c.refId ?? '', c.name, c.parentId ?? '(top-level)', c.requirement,
-        c.premiumGenerating ? 'Yes' : 'No', c.claimsBasis ?? '', c.source ?? '',
+        // null = the source never stated premium treatment (F14) — exporting
+        // 'No' would fabricate a fact in a data-egress artifact.
+        c.premiumGenerating == null ? 'Unknown' : c.premiumGenerating ? 'Yes' : 'No',
+        c.claimsBasis ?? '', c.source ?? '',
         (c.formNumbers ?? []).join(', '),
         c.allStates ? 'All' : (c.states ?? []).join(', '),
         (c.terms ?? []).map(t => `${t.label} (${t.kind}=${t.default})`).join('; '),

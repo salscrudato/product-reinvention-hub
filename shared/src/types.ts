@@ -11,7 +11,8 @@ export type ReviewStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'BUSINESS_REVIEW' | '
 // Platform plane: SUPPORT, SUPER_ADMIN.
 // ADMIN is kept as a legacy alias (normalized to TENANT_ADMIN at JWT decode in auth.js).
 export type Role = 'VIEWER' | 'UNDERWRITING' | 'COMPLIANCE' | 'CLAIMS' | 'ACTUARIAL' | 'ANALYST' | 'EDITOR' | 'TENANT_ADMIN' | 'ADMIN' | 'SUPPORT' | 'SUPER_ADMIN'
-export type Requirement  = 'MANDATORY' | 'OPTIONAL'
+// UNKNOWN = the source does not establish it (F14: never a guessed value).
+export type Requirement  = 'MANDATORY' | 'OPTIONAL' | 'UNKNOWN'
 export type Source       = 'BUREAU' | 'PROPRIETARY'
 export type TermKind     = 'LIMIT' | 'DEDUCTIBLE' | 'OPTION'
 
@@ -187,7 +188,8 @@ export interface Coverage extends GovernanceBlock, StateScope {
   order:             number
   requirement:       Requirement
   claimsBasis:       string
-  premiumGenerating: boolean
+  /** null = the source does not state premium treatment (F14 origin marker). */
+  premiumGenerating: boolean | null
   source:            Source
   formNumbers:       string[]
   terms:             CoverageTerm[]

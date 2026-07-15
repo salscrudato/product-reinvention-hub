@@ -22,7 +22,8 @@ import type { Requirement, FormCategory, AttachmentCondition } from '../types'
 export interface ProposedCoverage {
   name:              string
   requirement:       Requirement
-  premiumGenerating: boolean
+  /** null = the document does not state premium treatment (F14). */
+  premiumGenerating: boolean | null
   formNumbers:       string[]
   limitHint?:        string
   confidence:        number   // 0..1
@@ -132,10 +133,18 @@ export function cleanCoverages(input: Record<string, unknown> | undefined, text:
     const name = str(c.name)
     const citation = str(c.citation)
     if (!name || !citation) { dropped++; continue }               // citation is mandatory
+    // F14: a value the document does not state must land as UNKNOWN / null —
+    // an unrecognized token is NOT evidence of MANDATORY, and an absent premium
+    // marker is NOT evidence either way.
+    const reqTok = str(c.requirement).toUpperCase()
+    const pgRaw = c.premiumGenerating
+    const pgTok = typeof pgRaw === 'string' ? pgRaw.toUpperCase() : pgRaw
     items.push({
       name,
-      requirement:       str(c.requirement).toUpperCase() === 'OPTIONAL' ? 'OPTIONAL' : 'MANDATORY',
-      premiumGenerating: bool(c.premiumGenerating),
+      requirement:       reqTok === 'OPTIONAL' ? 'OPTIONAL' : reqTok === 'MANDATORY' ? 'MANDATORY' : 'UNKNOWN',
+      premiumGenerating: pgTok === true || pgTok === 'YES' || pgTok === 'TRUE' ? true
+                       : pgTok === false || pgTok === 'NO' || pgTok === 'FALSE' ? false
+                       : null,
       formNumbers:       strArr(c.formNumbers).filter(f => formAppearsInText(f, text)),   // drop invented form refs
       limitHint:         str(c.limitHint) || undefined,
       confidence:        conf(c.confidence),

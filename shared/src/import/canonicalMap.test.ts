@@ -57,8 +57,10 @@ describe('canonicalMap — completeness', () => {
 
   it('enum fields declare their closed value set', () => {
     // Spot-check the load-bearing enums exist with the right canonical values.
+    // UNKNOWN = the source does not establish it (F14) — a widened enum, not a
+    // weakened one: fabricating MANDATORY for unstated facts was the defect.
     expect(fieldsOf('coverage').find(f => f.field === 'requirement')!.enumValues)
-      .toEqual(['MANDATORY', 'OPTIONAL'])
+      .toEqual(['MANDATORY', 'OPTIONAL', 'UNKNOWN'])
     expect(fieldsOf('rule').find(f => f.field === 'category')!.enumValues)
       .toEqual(['PRODUCT', 'RATING', 'FORMS'])
     expect(fieldsOf('ratingStep').find(f => f.field === 'op')!.enumValues)
