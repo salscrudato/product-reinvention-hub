@@ -423,8 +423,9 @@ router.post('/mutate', requireCapability('product:write'), requireTenant, async 
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
-    if (e.code === 'CITATION_REQUIRED') return res.status(422).json({ error: 'citation_required', detail: 'an AI/voice-authored governed change must cite a resolvable source' })
+    if (e.code === 'CITATION_REQUIRED') { log.warn('data', 'hitl_citation_required', { tenantId: tid, path: payload && payload.path, source: '/api/db/mutate' }); return res.status(422).json({ error: 'citation_required', detail: 'an AI/voice-authored governed change must cite a resolvable source' }) }
     if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base' })
+    log.error('data', 'mutate_failed', { tenantId: tid, path: payload && payload.path, detail: String(e.message || e).slice(0, 200) })
     res.status(500).json({ error: 'mutate_failed', detail: String(e.message || e) })
   }
 })
@@ -462,9 +463,10 @@ router.post('/mutateBatch', requireCapability('product:write'), requireTenant, a
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
-    if (e.code === 'CITATION_REQUIRED') return res.status(422).json({ error: 'citation_required', detail: 'an AI/voice-authored governed change must cite a resolvable source' })
+    if (e.code === 'CITATION_REQUIRED') { log.warn('data', 'hitl_citation_required', { tenantId: tid, source: '/api/db/mutateBatch', count: payloads.length }); return res.status(422).json({ error: 'citation_required', detail: 'an AI/voice-authored governed change must cite a resolvable source' }) }
     if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base' })
     const partial = committedChunks > 0 && committedChunks < totalChunks
+    log.error('data', partial ? 'batch_partial' : 'batch_failed', { tenantId: tid, committedChunks, totalChunks, detail: String(e.message || e).slice(0, 200) })
     res.status(500).json({ error: partial ? 'batch_partial' : 'batch_failed', committedChunks, totalChunks, detail: String(e.message || e) })
   }
 })

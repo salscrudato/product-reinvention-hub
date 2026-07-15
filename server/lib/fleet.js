@@ -78,10 +78,12 @@ const SOFT_FRACTION = 0.8                                                       
 let windowStart    = Date.now()
 let windowSpendUsd = 0
 let callCount      = 0
+let trips          = 0   // times the hard ceiling DENIED a call this window
+let degrades       = 0   // times the soft threshold signalled degrade this window
 
 function rollWindow() {
   const now = Date.now()
-  if (now - windowStart >= WINDOW_MS) { windowStart = now; windowSpendUsd = 0; callCount = 0 }
+  if (now - windowStart >= WINDOW_MS) { windowStart = now; windowSpendUsd = 0; callCount = 0; trips = 0; degrades = 0 }
 }
 
 /** Pre-call gate. Returns { allow, degrade, reason }:
@@ -93,8 +95,11 @@ function rollWindow() {
 function guard(context) {
   rollWindow()
   if (context === IMPORT_CONTEXT) return { allow: true, degrade: false, reason: 'import_no_cap' }
-  if (windowSpendUsd >= CEILING_USD) return { allow: false, degrade: false, reason: 'ai_budget_ceiling' }
+  // Count trips/degrades so the guard's activity is OBSERVABLE (admin diagnostics read) —
+  // a fuzz/soak run can PROVE the ceiling fired instead of assuming it. Import is exempt above.
+  if (windowSpendUsd >= CEILING_USD) { trips += 1; return { allow: false, degrade: false, reason: 'ai_budget_ceiling' } }
   const degrade = windowSpendUsd >= CEILING_USD * SOFT_FRACTION
+  if (degrade) degrades += 1
   return { allow: true, degrade, reason: degrade ? 'ai_budget_soft' : 'ok' }
 }
 
@@ -111,6 +116,8 @@ function snapshot() {
     windowSpendUsd: Math.round(windowSpendUsd * 1e4) / 1e4,
     ceilingUsd: CEILING_USD,
     callCount,
+    trips,
+    degrades,
     windowRemainingMs: Math.max(0, WINDOW_MS - (Date.now() - windowStart)),
   }
 }

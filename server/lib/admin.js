@@ -22,6 +22,8 @@ const { MANAGED_TENANT_ROLES, findUser, signImpersonation, normalizeRole } = req
 const { requirePlatform, CAP_PLATFORM_TENANTS, CAP_PLATFORM_USERS, CAP_PLATFORM_IMPERSONATE, CAP_PLATFORM_AUDIT } = require('./authz')
 const platformConfig = require('./platform-config')
 const metering = require('./metering')
+const fleet = require('./fleet')
+const log = require('./log')
 
 const router = express.Router()
 
@@ -345,6 +347,20 @@ router.post('/tenants/:id/offboard', requirePlatform(CAP_PLATFORM_TENANTS), asyn
 router.get('/config/global', requirePlatform(CAP_PLATFORM_TENANTS), async (_req, res) => {
   const global = await platformConfig.getGlobalConfig()
   res.json({ ok: true, global, registry: platformConfig.FEATURE_FLAGS })
+})
+
+// ─── AI cost-guard diagnostics (process-wide, not tenant-scoped) ──────────────
+// Observability read of the in-process AI spend guard: window spend vs ceiling, call
+// count, and — the point — TRIPS (hard-ceiling denials) + DEGRADES (soft-threshold
+// signals) this window. Lets ops / a fuzz-soak run PROVE the guard fired instead of
+// assuming it (the import path is exempt from the guard, so it never contributes trips).
+router.get('/ai/cost-guard', requirePlatform(CAP_PLATFORM_TENANTS), (_req, res) => {
+  try {
+    res.json({ ok: true, costGuard: fleet.snapshot() })
+  } catch (e) {
+    log.error('admin', 'cost_guard_read_failed', { detail: String(e.message || e).slice(0, 200) })
+    res.status(500).json({ error: 'cost_guard_read_failed' })
+  }
 })
 
 router.put('/config/global', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
