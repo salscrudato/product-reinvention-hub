@@ -78,6 +78,15 @@ steps:
       npm ci --omit=dev --prefix server || npm install --omit=dev --prefix server
     displayName: 'Install host deps (Express + Cosmos, prod only)'
 
+  # Deploy gate: the enterprise security invariants that the @pf/shared canary step cannot see
+  # (see the `test:gates` script in package.json). These are supertest/pure tests against the
+  # real Express host (Cosmos absent → guards fire pre-I/O), so they need the server host deps
+  # installed just above. A red gate BLOCKS the deploy. (Root vitest + supertest come from the
+  # pnpm install above.) Scoped to deterministic, self-contained gate files — NOT the whole
+  # tests/server suite, whose module-global metering state is order-coupled across files.
+  - script: pnpm test:gates
+    displayName: 'Gate: enterprise security invariants (tenant isolation; grows with HITL + cost guard)'
+
   - script: |
       set -e
       DEST="$(Build.BinariesDirectory)"

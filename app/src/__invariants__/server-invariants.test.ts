@@ -87,9 +87,12 @@ describe('DEF-0003 — parentId must resolve to an existing same-tenant entity',
     expect(dataJs).toMatch(/data\.parentId\s*&&\s*op\s*!==\s*'delete'/)
     expect(dataJs).toMatch(/INVALID_PARENT/)
   })
-  it('parent resolution goes through readEntity (which enforces r.tenantId === tid)', () => {
+  it('parent resolution goes through readEntity (which enforces the same-tenant scope)', () => {
     expect(dataJs).toMatch(/parent\s*=\s*await readEntity\(tid,/)
-    expect(dataJs).toMatch(/r\.tenantId === tid \? r : null/)
+    // The tenant-scope drop was extracted to scopeDoc (H6) — readEntity routes through it,
+    // and scopeDoc keeps the exact `doc.tenantId === tid ? doc : null` semantics.
+    expect(dataJs).toMatch(/return scopeDoc\(r, tid\)/)
+    expect(dataJs).toMatch(/scopeDoc = \(doc, tid\) => \(doc && doc\.tenantId === tid \? doc : null\)/)
   })
 })
 

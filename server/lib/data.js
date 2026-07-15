@@ -47,6 +47,11 @@ const collOf = (path) => segs(path).slice(0, -1).join('/')
 const idFor = (prefix, key) => `${prefix}:${String(key).replace(/[/\\?#]/g, '~')}`
 const auditId = () => `aud:${Date.now().toString(36)}-${crypto.randomUUID()}`
 const searchText = (data) => Object.values(data || {}).filter((v) => typeof v === 'string').join(' ').slice(0, 4000)
+// scopeDoc: defense-in-depth tenant drop. A doc read from `${tid}|base` should already belong
+// to tid (the pk embeds the tenant), but a cross-tenant doc is dropped to null here too, so an
+// isolation break needs BOTH the partition key AND this check to fail. The single source of the
+// read-side tenant boundary — readEntity/readChainHead both go through it (H6).
+const scopeDoc = (doc, tid) => (doc && doc.tenantId === tid ? doc : null)
 const fieldDiff = (prev, next) => {
   const before = {}; const changed = {}
   const keys = new Set([...Object.keys(prev || {}), ...Object.keys(next || {})])
@@ -83,7 +88,7 @@ function reconstructStateAtRev(currentData, versionsByRev, currentRev, targetRev
 async function readEntity(tid, path) {
   try {
     const r = (await storeFor(tid).item(idFor('ent', path), pkFor(tid, path)).read()).resource
-    return r && r.tenantId === tid ? r : null // defense-in-depth
+    return scopeDoc(r, tid) // defense-in-depth: cross-tenant doc → null
   } catch { return null }
 }
 
@@ -95,8 +100,8 @@ async function readEntity(tid, path) {
 // the loser's whole batch aborts with 412 and the envelope rebuilds from fresh state.
 async function readChainHead(tid, path) {
   try {
-    const r = (await storeFor(tid).item(idFor('chn', path), pkFor(tid, path)).read()).resource
-    return r && r.tenantId === tid ? { hash: r.hash, etag: r._etag } : null
+    const r = scopeDoc((await storeFor(tid).item(idFor('chn', path), pkFor(tid, path)).read()).resource, tid)
+    return r ? { hash: r.hash, etag: r._etag } : null
   } catch { return null }
 }
 
@@ -590,4 +595,4 @@ router.get('/audit/verify', requireCapability('audit:read'), requireTenant, asyn
   }
 })
 
-module.exports = Object.assign(router, { mutateInternal, assembleEnvelope, reconstructStateAtRev })
+module.exports = Object.assign(router, { mutateInternal, assembleEnvelope, reconstructStateAtRev, scopeDoc })
