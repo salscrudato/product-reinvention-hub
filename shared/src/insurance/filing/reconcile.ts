@@ -333,7 +333,7 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
 
   const plan: ImportPlan = {
     productId, product, products: [product], coverages, forms, rules, formRules: [],
-    ratingProgram, ldTables, rtTables, summary,
+    ratingProgram, ldTables, rtTables, ratePlaceholders: [], summary,
   }
 
   // ── Review sections + the conservation count ──

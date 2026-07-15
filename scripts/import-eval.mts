@@ -162,6 +162,7 @@ function planToGolden(plan: ImportPlan, format: string, files: string[]): Golden
   push('formRule', plan.formRules as never[])
   push('ldTable', plan.ldTables as never[])
   push('rtTable', plan.rtTables as never[])
+  push('ratePlaceholder', plan.ratePlaceholders as never[])
   return { format, generatedFrom: files.map(f => basename(f)), entities }
 }
 

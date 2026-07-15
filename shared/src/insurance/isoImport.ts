@@ -109,6 +109,10 @@ export interface ImportPlan {
   ratingProgram:  PlannedEntity | null
   ldTables:       PlannedEntity[]
   rtTables:       PlannedEntity[]
+  /** Minted rate-table placeholders (PREFIX.RTB.NNN) — one per distinct factor/rate the rating
+   *  algorithm names, when the actual rate values are not present in the source (D4). Empty on
+   *  every workbook whose rate tables ARE present. */
+  ratePlaceholders: PlannedEntity[]
   summary:        ImportSummary
 }
 
@@ -1840,6 +1844,53 @@ function upgradeFormAnchors(forms: PlannedEntity[], coverages: PlannedEntity[], 
   return upgraded
 }
 
+/** Mint one PREFIX.RTB.NNN placeholder per distinct factor/rate the rating algorithm names, and
+ *  link every step that uses it (step.ratePlaceholderRef). Marks the gap explicitly — the actual
+ *  factor VALUES are not in the source (D4: the rate-table area held only a wrong-line template
+ *  example + blank skeletons). Runs STRICTLY AFTER parseRating has consumed the real rtTables, so
+ *  it cannot perturb RatingStep.source.ref (the field the evaluator reads). Never invents values.
+ *  Signature-gated → empty on GL/IM/PR. */
+function mintRatePlaceholders(ratingProgram: PlannedEntity | null, prefix: string, refTablesPresent: boolean): PlannedEntity[] {
+  if (!ratingProgram || !refTablesPresent) return []
+  const steps = ratingProgram.data['steps'] as RatingStep[]
+  const byName = new Map<string, { name: string; stepIds: string[] }>()
+  for (const s of steps) {
+    const n = String(s.label ?? '').replace(/\s+/g, ' ').trim()
+    if (!/factor|rate|charge|premium|credit|surcharge|discount/i.test(n)) continue
+    const k = n.toUpperCase()
+    const entry = byName.get(k) ?? { name: n, stepIds: [] }
+    entry.stepIds.push(s.id)
+    byName.set(k, entry)
+  }
+  const placeholders: PlannedEntity[] = []
+  const stepToRtb = new Map<string, string>()
+  let seq = 0
+  for (const { name, stepIds } of byName.values()) {
+    const refId = `${prefix}.RTB.${String(++seq).padStart(3, '0')}`
+    for (const sid of stepIds) stepToRtb.set(sid, refId)
+    placeholders.push({
+      docId: refId, refId, label: `${refId} — ${name}`,
+      data: {
+        name, status: 'PLACEHOLDER',
+        note: 'PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column',
+        stepRefIds: stepIds, mintedId: true,
+      },
+    })
+  }
+  for (const s of steps) { const rtb = stepToRtb.get(s.id); if (rtb) s.ratePlaceholderRef = rtb }
+  return placeholders
+}
+
+/** Count RATE-TABLE-NAME block markers on the rate-tables grid that yielded no usable table —
+ *  template artifacts (a wrong-line example, blank-name skeletons) the mapper correctly excludes
+ *  (D4). Surfaced as a notice so the exclusion is transparent, never silent. */
+function countRateTableArtifacts(grid: IsoGrid | undefined, tablesProduced: number): number {
+  if (!grid) return 0
+  let markers = 0
+  for (let r = 0; r < grid.cells.length; r++) if (RT_NAME_MARKER.test(norm(cell(grid, r, 0)))) markers++
+  return Math.max(0, markers - tablesProduced)
+}
+
 // ─── Orchestration ───────────────────────────────────────────────────────────────
 
 /** Map a set of parsed ISO template worksheets onto the canonical model. The grids
@@ -1956,6 +2007,26 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   // Upgrade line-level form anchors to the coverages the hierarchy's form lists name (D6). CORE-gated.
   const formUpgrades = upgradeFormAnchors(forms, allCoverages, refTables.length > 0)
 
+  // Rate-table placeholders (D4): the rate-table area held no usable factor tables (a wrong-line
+  // template example + blank skeletons), so mint one placeholder per distinct factor the rating
+  // algorithm names and flag the missing values. STRICTLY after parseRating (rtTables consumed).
+  const ratePlaceholders = mintRatePlaceholders(ratingProgram, refPrefix, refTables.length > 0)
+  const excludedArtifacts = refTables.length > 0 ? countRateTableArtifacts(rtGrid, rtTables.length) : 0
+  if (ratePlaceholders.length > 0) {
+    ctx.addNotice({
+      code: 'rate_table_placeholders',
+      message: `${ratePlaceholders.length} rate-table placeholder(s) minted — the rating algorithm names these factors but their VALUES are not in the source; pull them from the rate filings named in the rules SOURCE column.`,
+      data: { count: ratePlaceholders.length },
+    })
+  }
+  if (excludedArtifacts > 0) {
+    ctx.addNotice({
+      code: 'template_artifacts_excluded',
+      message: `${excludedArtifacts} rate-table template artifact(s) excluded (blank-name skeletons and/or a wrong-line example) — no factor values were fabricated from them.`,
+      data: { count: excludedArtifacts },
+    })
+  }
+
   // Reference tables share a single home with the real LD tables so the UI ldTables→chip
   // lookup and the golden both see them under their minted CORE.TBL refIds.
   const allLdTables = [...ldTables, ...refTables]
@@ -1983,6 +2054,8 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     ratingGroupsMatched: ratingGroups.matched,
     ratingGroupsUnmatched: ratingGroups.unmatchedNames.length,
     formAnchorUpgrades: formUpgrades,
+    ratePlaceholders: ratePlaceholders.length,
+    rateTemplateArtifactsExcluded: excludedArtifacts,
   }
 
   const knownSheets = new Set(ctx.recognized)
@@ -1994,6 +2067,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     products,
     coverages: allCoverages,
     forms, rules, formRules, ratingProgram, ldTables: allLdTables, rtTables,
+    ratePlaceholders,
     summary: {
       productName: product ? (product.data['name'] as string) : null,
       productRefId,

@@ -243,7 +243,7 @@ describe('UnifiedProposalBundle invariants', () => {
       product: minimalProduct,
       products: [minimalProduct],
       coverages: [], forms: [], rules: [], formRules: [],
-      ratingProgram: null, ldTables: [], rtTables: [],
+      ratingProgram: null, ldTables: [], rtTables: [], ratePlaceholders: [],
       summary: {
         productName: 'GL Test', productRefId: 'GL.PROD.TEST', lobName: 'General Liability',
         counts: { coverages: 3, forms: 2 },

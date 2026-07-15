@@ -129,6 +129,7 @@ export function buildEmptyBundle(
     ratingProgram: null,
     ldTables:      [],
     rtTables:      [],
+    ratePlaceholders: [],
     summary:       emptySummary,
   }
 

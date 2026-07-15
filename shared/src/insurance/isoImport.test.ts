@@ -316,6 +316,10 @@ describe('mapIsoWorkbook — rules, form rules, rating, tables', () => {
     expect(plan.ldTables.every(t => !(t.data as Record<string, unknown>)['mintedId'])).toBe(true)
     expect(plan.ldTables.map(t => t.refId)).toEqual(['LDTable.001', 'LDTable.002'])
   })
+  it('mints NO rate-table placeholders on a GL workbook (its rate tables are present)', () => {
+    expect(plan.ratePlaceholders).toEqual([])
+    expect(plan.summary.counts['ratePlaceholders'] ?? 0).toBe(0)
+  })
 })
 
 // ─── Signature-detected reference tables (D1/D7) ──────────────────────────────────
@@ -451,6 +455,16 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
     const bu = rgOf('Business Use')
     expect(bu.matchBasis).toBe('unmatched')
     expect(bu.coverageRefIds).toEqual([])
+  })
+
+  // ── Rate-table placeholders (D4) ──
+  it('mints rate-table placeholders for the factors the algorithm names + links the steps', () => {
+    expect(plan2.ratePlaceholders.length).toBeGreaterThan(0)
+    expect(plan2.ratePlaceholders.every(p => p.data['status'] === 'PLACEHOLDER' && p.data['mintedId'] === true)).toBe(true)
+    expect(plan2.ratePlaceholders.every(p => /\.RTB\.\d+$/.test(p.refId!))).toBe(true)
+    const step = (plan2.ratingProgram!.data['steps'] as Array<Record<string, unknown>>).find(s => /Base Rate/i.test(String(s['label'])))!
+    expect(String(step['ratePlaceholderRef'])).toMatch(/CORE\.RTB\.\d+/)
+    expect(plan2.summary.notices.some(n => n.code === 'rate_table_placeholders')).toBe(true)
   })
 })
 
