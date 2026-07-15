@@ -843,7 +843,8 @@ function toGridTable(name, parsed, valueColumn, lookupKeys) {
   return { name, columns: parsed.columns, rows: parsed.rows, dimensions, valueColumn };
 }
 function reconcileFiling(ex, opts = {}) {
-  const targetForm = opts.targetForm ?? "HO3";
+  const targetForm = (opts.targetForm ?? ex.baseFormNumber ?? "").trim() || "HO3";
+  const targetFormDefaulted = !(opts.targetForm ?? "").trim() && !(ex.baseFormNumber ?? "").trim();
   const state = (ex.filingState || "NJ").toUpperCase();
   const token = opts.productToken ?? tokenOf(ex.baseFormNumber, state);
   const hintedLob = opts.lobRefIdHint ? LOB_REGISTRY[opts.lobRefIdHint] ?? resolveLobByRefId(opts.lobRefIdHint) : void 0;
@@ -877,9 +878,14 @@ function reconcileFiling(ex, opts = {}) {
   }
   const steps = [];
   let order = 0;
-  const vars = ex.rateOrder.variables.filter((v) => v.forms.map((f) => f.toUpperCase()).includes(targetForm.toUpperCase()));
-  const varsFiltered = ex.rateOrder.variables.length - vars.length;
-  const targetFormWarning = varsFiltered > 0 ? [`${varsFiltered} rate-order variable(s) matched no "${targetForm}" form column and were NOT imported \u2014 the rate order likely belongs to a different form (base form ${ex.baseFormNumber}); the rating program is incomplete until the target form is set correctly.`] : [];
+  const vars = [];
+  for (const v of ex.rateOrder.variables) {
+    if (v.forms.some((f) => formMatchesTarget(f, targetForm))) {
+      vars.push(v);
+      continue;
+    }
+    unresolved.push(unres(v, `Applies to form(s) ${v.forms.join(", ") || "(none listed)"} \u2014 not the target form "${targetForm}"${opts.targetForm ? "" : ` (the filing's base form)`}; excluded from this product's rating program.`));
+  }
   for (const v of vars) {
     const concept = matchConcept(v.name);
     const rule = concept ? manualByConcept.get(concept.key) : void 0;
@@ -919,9 +925,11 @@ function reconcileFiling(ex, opts = {}) {
     }
   }
   let minimumPremium = 0;
+  let minPremResolved = false;
   if (minPremRule) {
     const scalar = pickFormScalar(minPremRule, targetForm);
     if (scalar != null) {
+      minPremResolved = true;
       minimumPremium = scalar;
       order++;
       steps.push({ id: `s${order}`, order, label: `Minimum premium (Rule ${minPremRule.ruleNumber})`, op: "MIN_FLOOR", source: { type: "CONST", value: scalar }, roundTo: 0 });
@@ -1081,7 +1089,8 @@ function reconcileFiling(ex, opts = {}) {
     warnings: [
       // A defaulted line is a WARNED default, never a silent one (F18).
       ...lobDefaulted ? [`LOB undetected${opts.lobRefIdHint ? ` (hint "${opts.lobRefIdHint}" matched no registry line)` : ""} \u2014 defaulted to ${DEFAULT_LOB.name} (the platform default); verify the product line.`] : [],
-      ...targetFormWarning,
+      // A defaulted target form is a WARNED default too (F22).
+      ...targetFormDefaulted && ex.rateOrder.variables.length > 0 ? [`No base form number extracted \u2014 the rate order was read for the "${targetForm}" column (the platform fallback); verify the target form.`] : [],
       ...unresolved.map((u) => `UNRESOLVED [${u.stage}/${u.kind}] ${u.name}: ${u.reason} (cited: ${u.citation})`)
     ],
     unmappedColumns: [],
@@ -1110,9 +1119,10 @@ function reconcileFiling(ex, opts = {}) {
     rules: sectionOf(ruleItems),
     rating: sectionOf(ratingItems)
   };
-  const proposed = vars.length + ex.policyForm.coverages.items.length + ex.policyForm.forms.items.length + ex.policyForm.rules.items.length + ex.manual.rules.filter((r) => r.ruleDraft).length;
+  const proposed = ex.rateOrder.variables.length + ex.policyForm.coverages.items.length + ex.policyForm.forms.items.length + ex.policyForm.rules.items.length + ex.manual.rules.filter((r) => r.ruleDraft).length + (minPremRule ? 1 : 0) + (creditCapRule ? 1 : 0);
   const stepsFromVars = steps.filter((s) => s.op !== "MIN_FLOOR").length;
-  const counts = { proposed, accepted: stepsFromVars + coverages.length + forms.length + rules.length, unresolved: unresolved.length };
+  const acceptedProgramRules = (minPremRule && minPremResolved ? 1 : 0) + (creditCapRule && creditFloor !== void 0 ? 1 : 0);
+  const counts = { proposed, accepted: stepsFromVars + coverages.length + forms.length + rules.length + acceptedProgramRules, unresolved: unresolved.length };
   return { plan, filingState: state, baseFormNumber: ex.baseFormNumber, baseFormEdition: ex.baseFormEdition, review, unresolved, counts };
 }
 function stepReview(v, detail) {
@@ -1126,7 +1136,20 @@ function sectionOf(items, note) {
 }
 function formCode(s) {
   const m = s.match(/\d+/g);
-  return m ? parseInt(m[m.length - 1], 10) : null;
+  if (!m) return null;
+  for (const run of m) {
+    const n = parseInt(run, 10);
+    if (n !== 0) return n;
+  }
+  return 0;
+}
+function formMatchesTarget(form, target) {
+  const f = form.trim().toUpperCase();
+  const t = target.trim().toUpperCase();
+  if (!f || !t) return false;
+  if (f === t) return true;
+  const fc = formCode(f), tc = formCode(t);
+  return fc !== null && tc !== null && fc === tc;
 }
 function pickFormScalar(rule, form) {
   const scalars = rule.scalars ?? [];

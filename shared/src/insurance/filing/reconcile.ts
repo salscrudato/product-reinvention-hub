@@ -37,7 +37,10 @@ import { LOB_REGISTRY, resolveLobByRefId, DEFAULT_LOB } from '../lobRegistry'
 // ─── options + small helpers ────────────────────────────────────────────────────────
 
 export interface ReconcileOptions {
-  /** Which rate-order form column to build the product for (default 'HO3', the base form). */
+  /** Which rate-order form column to build the product for. Defaults to the FILING'S OWN
+   *  base form number (F22) — cross-notation matched by numeric form code, the same bridge
+   *  pickFormScalar uses ("HO3" and "LEM 03" both resolve to code 3). 'HO3' is only the
+   *  last-resort fallback when the extraction carries no base form, and it is warned. */
   targetForm?: string
   /** Namespace token for globally-unique table + product refIds (default derived from the base
    *  form + state, e.g. "LEM03NJ"). RT/LD tables are a global collection, so this keeps a
@@ -76,7 +79,11 @@ function toGridTable(name: string, parsed: ParsedTable, valueColumn: string, loo
 // ─── the reconcile ────────────────────────────────────────────────────────────────
 
 export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {}): FilingImportPlan {
-  const targetForm = opts.targetForm ?? 'HO3'
+  // F22: the target form is the filing's own base form, never a hard-coded line
+  // assumption. 'HO3' survives only as a warned last resort (no caller value, no
+  // extracted base form) — the same warned-default pattern as the LOB fallback.
+  const targetForm = (opts.targetForm ?? ex.baseFormNumber ?? '').trim() || 'HO3'
+  const targetFormDefaulted = !(opts.targetForm ?? '').trim() && !(ex.baseFormNumber ?? '').trim()
   const state = (ex.filingState || 'NJ').toUpperCase()
   const token = opts.productToken ?? tokenOf(ex.baseFormNumber, state)
   // F18: the line comes from the stage-0 router's content-derived hint,
@@ -125,17 +132,16 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
   }
 
   // ── Walk the rate order, in order, for the target form → rating steps + unresolved ──
+  // F22: the form filter runs INSIDE the conservation ledger. A variable whose
+  // form columns don't cover the target form becomes an UNRESOLVED item with its
+  // citation — visible, counted, never silently dropped.
   const steps: RatingStep[] = []
   let order = 0
-  const vars = ex.rateOrder.variables.filter(v => v.forms.map(f => f.toUpperCase()).includes(targetForm.toUpperCase()))
-  // Interim honesty for ledger F22: a non-HO3 filing's rate-order variables
-  // match no 'HO3' column and were filtered out ABOVE the conservation ledger —
-  // a correctly-labeled product with a silently empty rating program. Until
-  // targetForm is threaded from the base form / line, say so loudly.
-  const varsFiltered = ex.rateOrder.variables.length - vars.length
-  const targetFormWarning = varsFiltered > 0
-    ? [`${varsFiltered} rate-order variable(s) matched no "${targetForm}" form column and were NOT imported — the rate order likely belongs to a different form (base form ${ex.baseFormNumber}); the rating program is incomplete until the target form is set correctly.`]
-    : []
+  const vars: RateOrderVariable[] = []
+  for (const v of ex.rateOrder.variables) {
+    if (v.forms.some(f => formMatchesTarget(f, targetForm))) { vars.push(v); continue }
+    unresolved.push(unres(v, `Applies to form(s) ${v.forms.join(', ') || '(none listed)'} — not the target form "${targetForm}"${opts.targetForm ? '' : ` (the filing's base form)`}; excluded from this product's rating program.`))
+  }
 
   for (const v of vars) {
     const concept = matchConcept(v.name)
@@ -183,9 +189,11 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
 
   // ── Minimum premium (MIN_FLOOR) from the min-premium rule, for the target form ──
   let minimumPremium = 0
+  let minPremResolved = false
   if (minPremRule) {
     const scalar = pickFormScalar(minPremRule, targetForm)
     if (scalar != null) {
+      minPremResolved = true
       minimumPremium = scalar
       order++; steps.push({ id: `s${order}`, order, label: `Minimum premium (Rule ${minPremRule.ruleNumber})`, op: 'MIN_FLOOR', source: { type: 'CONST', value: scalar }, roundTo: 0 })
       ratingItems.push({ section: 'rating', label: `Minimum premium → MIN_FLOOR $${scalar}`, confidence: minPremRule.confidence, citation: minPremRule.citation, detail: `MIN_FLOOR CONST(${scalar})` })
@@ -312,7 +320,8 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
     warnings: [
       // A defaulted line is a WARNED default, never a silent one (F18).
       ...(lobDefaulted ? [`LOB undetected${opts.lobRefIdHint ? ` (hint "${opts.lobRefIdHint}" matched no registry line)` : ''} — defaulted to ${DEFAULT_LOB.name} (the platform default); verify the product line.`] : []),
-      ...targetFormWarning,
+      // A defaulted target form is a WARNED default too (F22).
+      ...(targetFormDefaulted && ex.rateOrder.variables.length > 0 ? [`No base form number extracted — the rate order was read for the "${targetForm}" column (the platform fallback); verify the target form.`] : []),
       ...unresolved.map(u => `UNRESOLVED [${u.stage}/${u.kind}] ${u.name}: ${u.reason} (cited: ${u.citation})`),
     ],
     unmappedColumns: [],
@@ -336,18 +345,26 @@ export function reconcileFiling(ex: FilingExtraction, opts: ReconcileOptions = {
     rating:    sectionOf(ratingItems),
   }
 
-  // Conservation: every rate-order variable (target form) became a step or an unresolved item,
-  // and every policy-form coverage/form/rule + manual eligibility draft landed as an entity.
+  // Conservation: EVERY rate-order variable became a step or an unresolved item (the
+  // target-form filter runs inside the ledger — F22), and every policy-form
+  // coverage/form/rule + manual eligibility draft landed as an entity.
   // The appended MIN_FLOOR is a manual-rule product-level attribute (not a rate-order variable),
   // so it is excluded from both sides of the ledger. proposed === accepted + unresolved.
+  // The two program-level manual rules (minimum premium, maximum credit) are proposals
+  // too: accepted when they produce the MIN_FLOOR step / creditFloor attribute,
+  // unresolved otherwise — they must not sit outside the ledger (a min-premium rule
+  // with no floor for the target form used to break proposed === accepted + unresolved).
   const proposed =
-    vars.length +
+    ex.rateOrder.variables.length +
     ex.policyForm.coverages.items.length +
     ex.policyForm.forms.items.length +
     ex.policyForm.rules.items.length +
-    ex.manual.rules.filter(r => r.ruleDraft).length
+    ex.manual.rules.filter(r => r.ruleDraft).length +
+    (minPremRule ? 1 : 0) +
+    (creditCapRule ? 1 : 0)
   const stepsFromVars = steps.filter(s => s.op !== 'MIN_FLOOR').length
-  const counts = { proposed, accepted: stepsFromVars + coverages.length + forms.length + rules.length, unresolved: unresolved.length }
+  const acceptedProgramRules = (minPremRule && minPremResolved ? 1 : 0) + (creditCapRule && creditFloor !== undefined ? 1 : 0)
+  const counts = { proposed, accepted: stepsFromVars + coverages.length + forms.length + rules.length + acceptedProgramRules, unresolved: unresolved.length }
 
   return { plan, filingState: state, baseFormNumber: ex.baseFormNumber, baseFormEdition: ex.baseFormEdition, review, unresolved, counts }
 }
@@ -363,10 +380,27 @@ function unres(v: RateOrderVariable, reason: string): UnresolvedItem {
 function sectionOf(items: FilingReviewItem[], note?: string): FilingReviewSection { return note ? { items, note } : { items } }
 
 /** The numeric form code shared across a filing's naming conventions — the rate order writes
- *  "HO3", the manual writes "LEM 03", but both resolve to code 3. */
+ *  "HO3", the manual writes "LEM 03", the policy form footer writes "LEM 03 05 23"
+ *  (number + edition glued): all resolve to code 3. The code is the FIRST NON-ZERO digit
+ *  run — leading "00" runs are ISO padding ("PP 00 01" → 1) and trailing runs are edition
+ *  dates ("05 23"), never the form family. */
 function formCode(s: string): number | null {
   const m = s.match(/\d+/g)
-  return m ? parseInt(m[m.length - 1]!, 10) : null
+  if (!m) return null
+  for (const run of m) { const n = parseInt(run, 10); if (n !== 0) return n }
+  return 0
+}
+
+/** Whether a rate-order variable's form label covers the target form: exact match
+ *  (case-insensitive) first, then the numeric form-code bridge — the same
+ *  cross-notation join pickFormScalar uses ("HO3" ↔ "LEM 03" ↔ "HO 00 03"). */
+function formMatchesTarget(form: string, target: string): boolean {
+  const f = form.trim().toUpperCase()
+  const t = target.trim().toUpperCase()
+  if (!f || !t) return false
+  if (f === t) return true
+  const fc = formCode(f), tc = formCode(t)
+  return fc !== null && tc !== null && fc === tc
 }
 
 /** Pick a manual scalar for a specific form (min premium per form / max-credit per form),

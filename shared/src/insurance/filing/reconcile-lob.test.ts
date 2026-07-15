@@ -60,15 +60,23 @@ describe('F18: filing reconciliation follows the LOB hint', () => {
     expect(plan.counts.proposed).toBe(plan.counts.accepted + plan.counts.unresolved)
   })
 
-  it("non-HO3 rate-order variables warn LOUDLY when the targetForm filter drops them (ledger F22 interim)", () => {
+  it('PP 00 01 rate-order variables ENTER the ledger under a PP 00 01 base form (ledger F22 full fix)', () => {
     const ex = minimalExtraction()
     ;(ex.rateOrder as { variables: unknown[] }).variables = [
       { name: 'Base Rate', op: 'ADD', stage: 'BASE_LOSS_COST', forms: ['PP 00 01'], confidence: 0.9, citation: 'p.3' },
       { name: 'Territory Factor', op: 'MUL', stage: 'FACTOR', forms: ['PP 00 01'], confidence: 0.9, citation: 'p.4' },
     ]
     const plan = reconcileFiling(ex, { lobRefIdHint: 'PA.LOB.001' })
-    // Interim honesty: the variables are still dropped (full fix = ledger F22,
-    // thread targetForm) but the drop is LOUD and names the cause.
-    expect(plan.plan.summary.warnings.some(w => /2 rate-order variable\(s\)/.test(w) && /NOT imported/.test(w))).toBe(true)
+    // Full fix (supersedes the interim aggregate warning): the target form is the
+    // filing's own base form, so both variables MATCH and enter the conservation
+    // ledger. With no manual tables to resolve against they land UNRESOLVED with
+    // table-resolution reasons — visible and counted, never form-filtered above
+    // the ledger.
+    expect(plan.counts.proposed).toBe(3)          // 2 variables + 1 coverage
+    expect(plan.counts.proposed).toBe(plan.counts.accepted + plan.counts.unresolved)
+    const names = plan.unresolved.map(u => u.name)
+    expect(names).toContain('Base Rate')
+    expect(names).toContain('Territory Factor')
+    for (const u of plan.unresolved) expect(u.reason).not.toMatch(/target form/i)
   })
 })
