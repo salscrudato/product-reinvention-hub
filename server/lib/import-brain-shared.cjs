@@ -3041,7 +3041,7 @@ function parseRules(grid, ctx) {
       if (!hasContent) continue;
       synthSeq += 1;
       const fwBase = (clean(at(cells, "ids")) || "RULE").split(/[\s,;]+/)[0];
-      id = `${fwBase}.RULE.${String(synthSeq).padStart(3, "0")}`;
+      id = `${fwBase}.RULE.SYNTH${String(synthSeq).padStart(3, "0")}`;
     }
     const forms = splitList(at(cells, "forms"));
     const existing = byId.get(id);

@@ -348,11 +348,24 @@
       "severity": "LOW",
       "confidence": 0.9,
       "cost": "S",
-      "status": "OPEN",
-      "priority": 6,
-      "evidence": "shared/src/insurance/isoImport.ts:980 — rule rows with content but no rule-ID column value synthesize `${fwBase}.RULE.${seq}` ids that carry no SYNTH marker (refIdSegmentKind DOES parse them as 'rule'). Found by F15's hostile judge during the mint-site sweep; pre-existing, out of F15's filing-path scope",
-      "fixture": "none yet — assert isoImport-synthesized rule ids carry the SYNTH marker",
+      "status": "FIXED_IH3",
+      "priority": null,
+      "evidence": "shared/src/insurance/isoImport.ts:980 — rule rows with content but no rule-ID column value synthesize `${fwBase}.RULE.${seq}` ids that carry no SYNTH marker (refIdSegmentKind DOES parse them as 'rule'). Found by F15's hostile judge during the mint-site sweep; pre-existing, out of F15's filing-path scope || FIXED_IH3: blank-RULE-ID synthesis mints ${fwBase}.RULE.SYNTH### (one-line mint change); judge ACCEPT — refIdSegmentKind behavior byte-identical to old shape (segment-2 keyed), no join parses rule refId shape, only tests/golden/import/CORE.golden.json pins the old ids (regenerated in lockstep as a separate commit). Judge erratum: old ids parse as 'coverage' (fwBase is a coverage id), not 'rule' as this entry originally claimed. Judge side-findings for the ledger: isoImport.ts:699 synthesizes ${prefix}.PROD.001 unmarked (F26 candidate); lobRegistry synthesizeRefId mints unmarked line-shaped ids but has no deployed production caller",
+      "fixture": "shared/src/insurance/isoImport.test.ts 'blank RULE ID synthesis carries the SYNTH marker (F25)' (marker + stability + spacer-skip + real-source-ids-untouched)",
       "lesson": "A mint-site sweep after fixing one path finds the paths the ledger missed — give judges the sweep mandate explicitly."
+    },
+    {
+      "id": "F26",
+      "title": "isoImport synthesizes ${prefix}.PROD.001 (no SYNTH marker) when a framework sheet has no explicit PROD row",
+      "class": "GROUNDING",
+      "severity": "LOW",
+      "confidence": 0.85,
+      "cost": "S",
+      "status": "OPEN",
+      "priority": 7,
+      "evidence": "shared/src/insurance/isoImport.ts:699 — product_synthesized warnOnce exists (grounding trail), but the id itself is byte-identical to a real source id; the brain path's sibling for the same situation mints ${prefix}.PROD.SYNTH001 (stage7-plan.js:315). Found by F25's hostile judge. Blast radius is wider than a rename: product refIds anchor golden matching, plan.productId, and hierarchy attachment — needs its own analysis; do not bundle into a marker-rename commit.",
+      "fixture": "none yet — assert a PROD-row-less framework synthesizes a marked product id AND goldens/joins survive",
+      "lesson": "The same synthesis convention must hold for every entity kind, not just the one the ledger item named."
     }
   ],
   "summary": {

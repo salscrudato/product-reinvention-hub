@@ -971,13 +971,15 @@ function parseRules(grid: IsoGrid, ctx: Ctx): PlannedEntity[] {
       // condition/outcome. Rather than drop all of them (parseRules would return 0),
       // synthesize a stable id from the framework/coverage id and a running sequence,
       // but ONLY for rows that actually carry rule content (a category, sub-category,
-      // condition or outcome). Blank/spacer rows are still skipped.
+      // condition or outcome). Blank/spacer rows are still skipped. The minted id
+      // carries the platform SYNTH marker (F25) — it is NOT a source identifier and
+      // must never read as one.
       const hasContent = !!(clean(at(cells, 'category')) || clean(at(cells, 'subCategory')) ||
         clean(at(cells, 'condition')) || clean(at(cells, 'outcome')))
       if (!hasContent) continue
       synthSeq += 1
       const fwBase = (clean(at(cells, 'ids')) || 'RULE').split(/[\s,;]+/)[0]
-      id = `${fwBase}.RULE.${String(synthSeq).padStart(3, '0')}`
+      id = `${fwBase}.RULE.SYNTH${String(synthSeq).padStart(3, '0')}`
     }
     const forms = splitList(at(cells, 'forms'))
     const existing = byId.get(id)

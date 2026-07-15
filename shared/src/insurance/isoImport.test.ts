@@ -199,6 +199,37 @@ describe('mapIsoWorkbook — forms + dynamic fields', () => {
   })
 })
 
+describe('mapIsoWorkbook — blank RULE ID synthesis carries the SYNTH marker (F25)', () => {
+  // Some workbooks (the Hagerty CORE spec shape) declare a RULE ID column but never
+  // populate it. The synthesized ids are MINTED, not read from source — they must
+  // carry the platform SYNTH marker so no reader mistakes them for source refIds.
+  const blankIdRules = g('CORE Rules Specifications', [
+    ['RULES SPECIFICATIONS'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LOB', 'COVERAGE', 'SUB-COVERAGE', 'RULE ID',
+     'RULE CATEGORY', 'RULE SUB-CATEGORY', 'FORM NUMBER', 'RULE CONDITION', 'RULE OUTCOME', 'RULE REFERENCE', 'ALL ACTIVE STATES'],
+    ['Active', 'GL.COV.002', 'Monoline GL', 'CGL', 'BI', '', '', 'Product', 'Limits', 'CG 00 01', 'If A', 'Then B', '', 'X'],
+    ['Active', 'GL.COV.003', 'Monoline GL', 'CGL', 'PD', '', '', 'Product', 'Defaults', 'CG 00 02', 'If C', 'Then D', '', 'X'],
+    ['Active', '', '', '', '', '', '', '', '', '', '', '', '', ''],   // spacer — still skipped
+  ])
+  const synthPlan = mapIsoWorkbook([framework, blankIdRules])
+
+  it('synthesized rule ids carry the SYNTH marker and stay stable/sequential', () => {
+    expect(synthPlan.rules.length).toBe(2)
+    for (const r of synthPlan.rules) {
+      expect(String(r.refId)).toMatch(/\.SYNTH/)
+      expect(String(r.refId)).toMatch(/\.RULE\.SYNTH\d{3}$/)
+    }
+    // Stable sequence, keyed off the framework id the row cites.
+    expect(synthPlan.rules[0]!.refId).toBe('GL.COV.002.RULE.SYNTH001')
+    expect(synthPlan.rules[1]!.refId).toBe('GL.COV.003.RULE.SYNTH002')
+  })
+
+  it('rows with a REAL source rule id keep it byte-for-byte (no marker injected)', () => {
+    expect(plan.rules.some(r => r.refId === 'GL.RU.004')).toBe(true)
+    for (const r of plan.rules) expect(String(r.refId)).not.toMatch(/SYNTH/)
+  })
+})
+
 describe('mapIsoWorkbook — rules, form rules, rating, tables', () => {
   it('extracts LD refs + coverage refs from rules', () => {
     expect(plan.rules).toHaveLength(1)
