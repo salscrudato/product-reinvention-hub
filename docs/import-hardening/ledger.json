@@ -488,34 +488,19 @@
     }
   ],
   "summary": {
-    "fixedByIH1": [
-      "F01",
-      "F02",
-      "F03",
-      "F04",
-      "F05",
-      "F06",
-      "F07",
-      "F08",
-      "F16"
-    ],
-    "openOrdered": [
-      "PCM-A",
-      "PCM-B",
-      "F10",
-      "F09",
-      "F17",
-      "F18",
-      "F20",
-      "F12",
-      "F13",
-      "F14",
-      "F11",
-      "F15"
-    ],
-    "resolvedPrior": [
-      "F19",
-      "PCM-C"
+    "recomputedBy": "IH4 close-out, 2026-07-15",
+    "fixedByIH1": ["F01", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F16"],
+    "fixedByIH2": ["F09", "F10", "F11", "F12", "F13", "F14", "F17", "F18", "F20", "PCM-A", "PCM-B"],
+    "fixedByIH3": ["F15", "F21", "F22", "F23", "F25", "F26"],
+    "fixedByIH4": ["M1", "F27", "F28", "F29", "F30", "G-A", "G-B", "G-C", "G-D"],
+    "resolvedPrior": ["F19", "PCM-C"],
+    "openOrdered": [],
+    "watch": [
+      "F24? — RESOLVED as expected compute: wave-1's unexplained 32-min stage-4 silence followed the same 'resolving N conflicted field(s)' marker wave-3 measured at ~27+ min for 1618 fields; conflict resolution emits no progress events (candidate ergonomics follow-up: per-N progress ticks)",
+      "checkpoint/resume (ARCH_ESCALATION, in F23 evidence) — a mid-computation App Service restart still kills a run; bundle persistence deliberately does not cover it",
+      "GL/IM golden tightening beyond the IH4 lockstep is complete as of the new era (valueHeader/ldTableRefText now in goldens)",
+      "boolean|null honesty for form booleans (G-D PARK; trigger: any consumer distinguishing stated-false from unstated)",
+      "import-results blob lifecycle rule (ops action, G1-8) + browser runId minting (successor slice, G1-9)"
     ]
   }
 }

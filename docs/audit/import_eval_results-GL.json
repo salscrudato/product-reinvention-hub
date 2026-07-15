@@ -1,24 +1,27 @@
 {
-  "runAt": "2026-07-14T05:44:43.542Z",
-  "mode": "offline",
-  "baseUrl": null,
+  "runAt": "2026-07-15T07:52:32.930Z",
+  "mode": "live",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
   "targets": {
     "f1": 0.95,
     "numericExact": 0.98,
-    "citation": 1
+    "citation": 1,
+    "extrasLive": 0.02,
+    "linkEdges": 0.98,
+    "citationResolve": 0.98
   },
   "results": [
     {
       "id": "GL",
-      "mode": "offline",
+      "mode": "live",
       "goldenFields": 5466,
-      "extractedFields": 5466,
-      "tp": 5466,
-      "fp": 0,
-      "fn": 0,
-      "precision": 1,
-      "recall": 1,
-      "f1": 1,
+      "extractedFields": 7782,
+      "tp": 5442,
+      "fp": 31,
+      "fn": 24,
+      "precision": 0.9943358304403435,
+      "recall": 0.995609220636663,
+      "f1": 0.9949721181095165,
       "numericTotal": 116,
       "numericExact": 116,
       "numericExactRate": 1,
@@ -50,18 +53,438 @@
             "found": 4
           }
         },
-        "missByField": {},
-        "sampleMisses": [],
+        "missByField": {
+          "claimsBasis": 7,
+          "formNumbers": 5,
+          "mandatory": 5,
+          "description": 1,
+          "marketSegment": 1,
+          "allStates": 1,
+          "lifecycle": 1,
+          "reviewStatus": 1,
+          "reviewer": 1,
+          "source": 1
+        },
+        "sampleMisses": [
+          {
+            "kind": "product",
+            "refId": "GL.PROD.001",
+            "field": "description",
+            "golden": ""
+          },
+          {
+            "kind": "product",
+            "refId": "GL.PROD.001",
+            "field": "marketSegment",
+            "golden": "Commercial Lines / Casualty"
+          },
+          {
+            "kind": "product",
+            "refId": "GL.PROD.001",
+            "field": "allStates",
+            "golden": true,
+            "extracted": false
+          },
+          {
+            "kind": "product",
+            "refId": "GL.PROD.001",
+            "field": "lifecycle",
+            "golden": "DRAFT"
+          },
+          {
+            "kind": "product",
+            "refId": "GL.PROD.001",
+            "field": "reviewStatus",
+            "golden": "NOT_STARTED"
+          },
+          {
+            "kind": "product",
+            "refId": "GL.PROD.001",
+            "field": "reviewer",
+            "golden": ""
+          },
+          {
+            "kind": "coverage",
+            "refId": "GL.COV.010",
+            "field": "claimsBasis",
+            "golden": "Claims-made",
+            "extracted": "CLAIMS_MADE"
+          },
+          {
+            "kind": "coverage",
+            "refId": "GL.COV.035",
+            "field": "claimsBasis",
+            "golden": "Claims-made",
+            "extracted": "CLAIMS_MADE"
+          },
+          {
+            "kind": "coverage",
+            "refId": "GL.COV.002.008",
+            "field": "claimsBasis",
+            "golden": "Claims-made",
+            "extracted": "CLAIMS_MADE"
+          },
+          {
+            "kind": "coverage",
+            "refId": "GL.COV.003.020",
+            "field": "source",
+            "golden": "BUREAU",
+            "extracted": "PROPRIETARY"
+          },
+          {
+            "kind": "coverage",
+            "refId": "GL.COV.004.007",
+            "field": "claimsBasis",
+            "golden": "Claims-made",
+            "extracted": "CLAIMS_MADE"
+          },
+          {
+            "kind": "coverage",
+            "refId": "GL.COV.004.009",
+            "field": "claimsBasis",
+            "golden": "Claims-made",
+            "extracted": "CLAIMS_MADE"
+          },
+          {
+            "kind": "coverage",
+            "refId": "GL.COV.005.011",
+            "field": "claimsBasis",
+            "golden": "Claims-made",
+            "extracted": "CLAIMS_MADE"
+          },
+          {
+            "kind": "coverage",
+            "refId": "GL.COV.010.001",
+            "field": "claimsBasis",
+            "golden": "Claims-made",
+            "extracted": "CLAIMS_MADE"
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.007",
+            "field": "formNumbers",
+            "golden": [
+              "CG 01 27",
+              "CG 01 28",
+              "CG 01 41",
+              "CG 01 55",
+              "CG 01 65",
+              "CG 26 19",
+              "CG 26 26",
+              "CG 26 37"
+            ],
+            "extracted": [
+              "CG 26 37"
+            ]
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.007",
+            "field": "mandatory",
+            "golden": true
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.018",
+            "field": "formNumbers",
+            "golden": [
+              "CG 04 35",
+              "CG 26 67",
+              "CG 27 16",
+              "CG 27 19",
+              "CG 27 21",
+              "CG 27 50",
+              "CG 32 98"
+            ],
+            "extracted": [
+              "CG 32 98"
+            ]
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.018",
+            "field": "mandatory",
+            "golden": true
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.021",
+            "field": "formNumbers",
+            "golden": [
+              "CG 04 40",
+              "CG 04 41",
+              "CG 04 42",
+              "CG 04 44"
+            ],
+            "extracted": [
+              "CG 04 44"
+            ]
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.021",
+            "field": "mandatory",
+            "golden": true
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.154",
+            "field": "formNumbers",
+            "golden": [
+              "CG 27 15",
+              "CG 27 17",
+              "CG 27 18",
+              "CG 27 20",
+              "CG 32 99"
+            ],
+            "extracted": [
+              "CG 32 99"
+            ]
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.154",
+            "field": "mandatory",
+            "golden": true
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.238",
+            "field": "formNumbers",
+            "golden": [
+              "CG 34 28",
+              "CG 34 31",
+              "CG 40 10"
+            ],
+            "extracted": [
+              "CG 40 10"
+            ]
+          },
+          {
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.238",
+            "field": "mandatory",
+            "golden": true
+          }
+        ],
         "extractedKinds": {
           "product": 1,
           "coverage": 105,
-          "rule": 146,
-          "formRule": 259,
+          "rule": 157,
+          "formRule": 281,
           "ldTable": 37,
           "rtTable": 4
         }
       },
-      "pass": true
+      "provenanceCoverage": 1,
+      "entityCoverage": 1,
+      "provenanceRows": 21345,
+      "extras": {
+        "extraEntities": 11,
+        "extraEntityRate": 0.018803418803418803,
+        "extraByKind": {
+          "rule": 11
+        },
+        "sampleExtras": [
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH001"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH002"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH003"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH004"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH005"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH006"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH007"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH008"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH009"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH010"
+          },
+          {
+            "kind": "rule",
+            "refId": "GL.RULE.SYNTH011"
+          }
+        ]
+      },
+      "linkage": {
+        "parentWithRef": 88,
+        "parentResolved": 88,
+        "parentResolutionRate": 1,
+        "goldenParentEdges": 88,
+        "parentEdgesReproduced": 88,
+        "parentEdgeRecall": 1,
+        "goldenFormEdges": 554,
+        "formEdgesReproduced": 532,
+        "formAttachmentRecall": 0.9602888086642599,
+        "ldRefWithRef": 15,
+        "ldRefResolved": 12,
+        "ldTableRefResolutionRate": 0.8,
+        "sampleMisses": [
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.007",
+            "detail": "form \"CG 01 27\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.007",
+            "detail": "form \"CG 01 28\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.007",
+            "detail": "form \"CG 01 41\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.007",
+            "detail": "form \"CG 01 55\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.007",
+            "detail": "form \"CG 01 65\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.007",
+            "detail": "form \"CG 26 19\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.007",
+            "detail": "form \"CG 26 26\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.018",
+            "detail": "form \"CG 04 35\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.018",
+            "detail": "form \"CG 26 67\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.018",
+            "detail": "form \"CG 27 16\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.018",
+            "detail": "form \"CG 27 19\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.018",
+            "detail": "form \"CG 27 21\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.018",
+            "detail": "form \"CG 27 50\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.021",
+            "detail": "form \"CG 04 40\" not attached in extraction"
+          },
+          {
+            "metric": "formAttachmentRecall",
+            "kind": "formRule",
+            "refId": "GL.FORM.RU.021",
+            "detail": "form \"CG 04 41\" not attached in extraction"
+          }
+        ]
+      },
+      "conservation": {
+        "stage4Candidates": 1627,
+        "planEntities": 585,
+        "unresolvedCount": 3,
+        "countsIdentityOk": true,
+        "lossDelta": 1039
+      },
+      "citationResolution": {
+        "checked": 20233,
+        "resolved": 20233,
+        "citationResolvableRate": 1,
+        "sampleMisses": []
+      },
+      "spend": {
+        "spendUsd": 4.1569,
+        "calls": 112,
+        "noCap": true,
+        "byDeployment": {
+          "claude-haiku-4-5": {
+            "calls": 30,
+            "inputTokens": 57414,
+            "outputTokens": 102988,
+            "usd": 0.4578832
+          },
+          "gpt-5-mini": {
+            "calls": 29,
+            "inputTokens": 49670,
+            "outputTokens": 104808,
+            "usd": 0.18259380000000003
+          },
+          "gpt-5.1": {
+            "calls": 32,
+            "inputTokens": 263741,
+            "outputTokens": 48866,
+            "usd": 1.3776150000000003
+          },
+          "claude-opus-4-8": {
+            "calls": 21,
+            "inputTokens": 67229,
+            "outputTokens": 15071,
+            "usd": 2.13876
+          }
+        }
+      },
+      "durationMs": 1024581,
+      "notices": [],
+      "pass": false
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "runAt": "2026-07-14T23:45:11.396Z",
+  "runAt": "2026-07-15T12:05:20.881Z",
   "mode": "offline",
   "baseUrl": null,
   "targets": {
@@ -14,9 +14,9 @@
     {
       "id": "GL",
       "mode": "offline",
-      "goldenFields": 5466,
+      "goldenFields": 5515,
       "extractedFields": 5515,
-      "tp": 5466,
+      "tp": 5515,
       "fp": 0,
       "fn": 0,
       "precision": 1,
@@ -67,6 +67,10 @@
       "extras": {
         "extraEntities": 0,
         "extraEntityRate": 0,
+        "fabricationExtras": 0,
+        "fabricationExtraRate": 0,
+        "syntheticExtras": 0,
+        "syntheticExtraRate": 0,
         "extraByKind": {},
         "sampleExtras": []
       },
@@ -109,9 +113,9 @@
     {
       "id": "IM",
       "mode": "offline",
-      "goldenFields": 19427,
+      "goldenFields": 19461,
       "extractedFields": 19461,
-      "tp": 19427,
+      "tp": 19461,
       "fp": 0,
       "fn": 0,
       "precision": 1,
@@ -152,6 +156,10 @@
       "extras": {
         "extraEntities": 0,
         "extraEntityRate": 0,
+        "fabricationExtras": 0,
+        "fabricationExtraRate": 0,
+        "syntheticExtras": 0,
+        "syntheticExtraRate": 0,
         "extraByKind": {},
         "sampleExtras": []
       },
@@ -213,6 +221,10 @@
       "extras": {
         "extraEntities": 0,
         "extraEntityRate": 0,
+        "fabricationExtras": 0,
+        "fabricationExtraRate": 0,
+        "syntheticExtras": 0,
+        "syntheticExtraRate": 0,
         "extraByKind": {},
         "sampleExtras": []
       },
@@ -274,6 +286,10 @@
       "extras": {
         "extraEntities": 0,
         "extraEntityRate": 0,
+        "fabricationExtras": 0,
+        "fabricationExtraRate": 0,
+        "syntheticExtras": 0,
+        "syntheticExtraRate": 0,
         "extraByKind": {},
         "sampleExtras": []
       },

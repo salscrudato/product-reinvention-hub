@@ -1,0 +1,502 @@
+
+── LIVE: https://app-prodhub-dev.azurewebsites.net ──
+  ✓ authenticated (tenant=accenture-test)
+    [1s] brain:stage0:route — Routing 1 artifact(s)
+    [15s] brain:stage1:classify — Classifying 9 sheet(s)
+    [31s] brain:stage2:headerLock — Locking headers for 8 sheet(s)
+    [38s] brain:stage3:columnMap — Mapping columns for 8 sheet(s)
+    [131s] brain:stage4:extract — Extracting rows
+    [131s] brain:stage4:extract — Core Framework: deterministic extraction (114 rows)
+    [291s] brain:stage4:extract — Core Rules Specifications: deterministic extraction (234 rows)
+    [330s] brain:stage4:extract — Core Forms Specifications: rows 41-44 of 1455 extracted
+    [333s] brain:stage4:extract — Core Forms Specifications: rows 32-35 of 1455 extracted
+    [335s] brain:stage4:extract — Core Forms Specifications: rows 14-17 of 1455 extracted
+    [335s] brain:stage4:extract — Core Forms Specifications: rows 5-8 of 1455 extracted
+    [336s] brain:stage4:extract — Core Forms Specifications: rows 36-40 of 1455 extracted
+    [341s] brain:stage4:extract — Core Forms Specifications: rows 27-31 of 1455 extracted
+    [341s] brain:stage4:extract — Core Forms Specifications: rows 23-26 of 1455 extracted
+    [345s] brain:stage4:extract — Core Forms Specifications: rows 0-4 of 1455 extracted
+    [346s] brain:stage4:extract — Core Forms Specifications: rows 9-13 of 1455 extracted
+    [399s] brain:stage4:extract — Core Forms Specifications: rows 50-51 of 1455 extracted
+    [403s] brain:stage4:extract — Core Forms Specifications: rows 52-53 of 1455 extracted
+    [403s] brain:stage4:extract — Core Forms Specifications: rows 45-47 of 1455 extracted
+    [405s] brain:stage4:extract — Core Forms Specifications: rows 18-20 of 1455 extracted
+    [415s] brain:stage4:extract — Core Forms Specifications: rows 48-49 of 1455 extracted
+    [416s] brain:stage4:extract — Core Forms Specifications: rows 21-22 of 1455 extracted
+    [505s] brain:stage4:extract — Rule References: rows 0-19 of 2146 extracted
+    [508s] brain:stage4:extract — Rule References: rows 20-39 of 2146 extracted
+    [513s] brain:stage4:extract — Rule References: rows 40-59 of 2146 extracted
+    [533s] brain:stage4:extract — Rule References: rows 60-79 of 2146 extracted
+    [543s] brain:stage4:extract — Rule References: rows 80-99 of 2146 extracted
+    [545s] brain:stage4:extract — Rule References: rows 100-119 of 2146 extracted
+    [559s] brain:stage4:extract — Core Forms Specifications: rows 59-62 of 1455 extracted
+    [576s] brain:stage4:extract — Rule References: rows 120-139 of 2146 extracted
+    [576s] brain:stage4:extract — Rule References: rows 140-159 of 2146 extracted
+    [580s] brain:stage4:extract — Core Forms Specifications: rows 63-67 of 1455 extracted
+    [580s] brain:stage4:extract — Rule References: rows 160-179 of 2146 extracted
+    [593s] brain:stage4:extract — Core Forms Specifications: rows 68-71 of 1455 extracted
+    [605s] brain:stage4:extract — Rule References: rows 200-219 of 2146 extracted
+    [607s] brain:stage4:extract — Rule References: rows 180-199 of 2146 extracted
+    [615s] brain:stage4:extract — Rule References: rows 220-239 of 2146 extracted
+    [618s] brain:stage4:extract — Core Forms Specifications: rows 95-98 of 1455 extracted
+    [622s] brain:stage4:extract — Core Forms Specifications: rows 72-76 of 1455 extracted
+    [626s] brain:stage4:extract — Core Forms Specifications: rows 81-85 of 1455 extracted
+    [630s] brain:stage4:extract — Core Forms Specifications: rows 90-94 of 1455 extracted
+    [631s] brain:stage4:extract — Core Forms Specifications: rows 99-103 of 1455 extracted
+    [635s] brain:stage4:extract — Rule References: rows 260-279 of 2146 extracted
+    [636s] brain:stage4:extract — Core Forms Specifications: rows 77-80 of 1455 extracted
+    [637s] brain:stage4:extract — Rule References: rows 240-259 of 2146 extracted
+    [639s] brain:stage4:extract — Core Forms Specifications: rows 57-58 of 1455 extracted
+    [642s] brain:stage4:extract — Core Forms Specifications: rows 54-56 of 1455 extracted
+    [646s] brain:stage4:extract — Core Forms Specifications: rows 86-89 of 1455 extracted
+    [652s] brain:stage4:extract — Rule References: rows 280-299 of 2146 extracted
+    [660s] brain:stage4:extract — Core Forms Specifications: rows 104-107 of 1455 extracted
+    [669s] brain:stage4:extract — Rule References: rows 300-319 of 2146 extracted
+    [674s] brain:stage4:extract — Rule References: rows 320-339 of 2146 extracted
+    [691s] brain:stage4:extract — Rule References: rows 340-359 of 2146 extracted
+    [707s] brain:stage4:extract — Rule References: rows 360-379 of 2146 extracted
+    [712s] brain:stage4:extract — Rule References: rows 380-399 of 2146 extracted
+    [722s] brain:stage4:extract — Rule References: rows 400-419 of 2146 extracted
+    [746s] brain:stage4:extract — Rule References: rows 440-459 of 2146 extracted
+    [753s] brain:stage4:extract — Rule References: rows 420-439 of 2146 extracted
+    [758s] brain:stage4:extract — Rule References: rows 460-479 of 2146 extracted
+    [777s] brain:stage4:extract — Rule References: rows 480-499 of 2146 extracted
+    [787s] brain:stage4:extract — Rule References: rows 500-519 of 2146 extracted
+    [790s] brain:stage4:extract — Rule References: rows 520-539 of 2146 extracted
+    [810s] brain:stage4:extract — Rule References: rows 540-559 of 2146 extracted
+    [820s] brain:stage4:extract — Rule References: rows 560-579 of 2146 extracted
+    [821s] brain:stage4:extract — Rule References: rows 580-599 of 2146 extracted
+    [823s] brain:stage4:extract — Core Forms Specifications: rows 153-161 of 1455 extracted
+    [838s] brain:stage4:extract — Rule References: rows 600-619 of 2146 extracted
+    [843s] brain:stage4:extract — Core Forms Specifications: rows 122-125 of 1455 extracted
+    [843s] brain:stage4:extract — Core Forms Specifications: rows 131-134 of 1455 extracted
+    [848s] brain:stage4:extract — Rule References: rows 620-639 of 2146 extracted
+    [853s] brain:stage4:extract — Core Forms Specifications: rows 126-130 of 1455 extracted
+    [854s] brain:stage4:extract — Rule References: rows 640-659 of 2146 extracted
+    [861s] brain:stage4:extract — Core Forms Specifications: rows 140-143 of 1455 extracted
+    [865s] brain:stage4:extract — Core Forms Specifications: rows 113-116 of 1455 extracted
+    [866s] brain:stage4:extract — Rule References: rows 660-679 of 2146 extracted
+    [882s] brain:stage4:extract — Rule References: rows 680-699 of 2146 extracted
+    [889s] brain:stage4:extract — Core Forms Specifications: rows 144-148 of 1455 extracted
+    [894s] brain:stage4:extract — Rule References: rows 700-719 of 2146 extracted
+    [901s] brain:stage4:extract — Rule References: rows 720-739 of 2146 extracted
+    [915s] brain:stage4:extract — Core Forms Specifications: rows 149-152 of 1455 extracted
+    [915s] brain:stage4:extract — Core Forms Specifications: rows 117-119 of 1455 extracted
+    [916s] brain:stage4:extract — Core Forms Specifications: rows 108-110 of 1455 extracted
+    [916s] brain:stage4:extract — Rule References: rows 740-759 of 2146 extracted
+    [924s] brain:stage4:extract — Rule References: rows 760-779 of 2146 extracted
+    [930s] brain:stage4:extract — Core Forms Specifications: rows 111-112 of 1455 extracted
+    [932s] brain:stage4:extract — Rule References: rows 780-799 of 2146 extracted
+    [933s] brain:stage4:extract — Core Forms Specifications: rows 120-121 of 1455 extracted
+    [937s] brain:stage4:extract — Core Forms Specifications: rows 138-139 of 1455 extracted
+    [943s] brain:stage4:extract — Core Forms Specifications: rows 135-137 of 1455 extracted
+    [951s] brain:stage4:extract — Rule References: rows 800-819 of 2146 extracted
+    [957s] brain:stage4:extract — Rule References: rows 820-839 of 2146 extracted
+    [968s] brain:stage4:extract — Rule References: rows 840-859 of 2146 extracted
+    [981s] brain:stage4:extract — Rule References: rows 860-879 of 2146 extracted
+    [987s] brain:stage4:extract — Rule References: rows 880-899 of 2146 extracted
+    [998s] brain:stage4:extract — Rule References: rows 900-919 of 2146 extracted
+    [1018s] brain:stage4:extract — Rule References: rows 940-959 of 2146 extracted
+    [1021s] brain:stage4:extract — Rule References: rows 920-939 of 2146 extracted
+    [1033s] brain:stage4:extract — Rule References: rows 960-979 of 2146 extracted
+    [1049s] brain:stage4:extract — Rule References: rows 980-999 of 2146 extracted
+    [1050s] brain:stage4:extract — Rule References: rows 1000-1019 of 2146 extracted
+    [1065s] brain:stage4:extract — Rule References: rows 1020-1039 of 2146 extracted
+    [1086s] brain:stage4:extract — Rule References: rows 1060-1079 of 2146 extracted
+    [1088s] brain:stage4:extract — Rule References: rows 1040-1059 of 2146 extracted
+    [1102s] brain:stage4:extract — Rule References: rows 1080-1099 of 2146 extracted
+    [1107s] brain:stage4:extract — Core Forms Specifications: rows 167-170 of 1455 extracted
+    [1108s] brain:stage4:extract — Core Forms Specifications: rows 176-179 of 1455 extracted
+    [1115s] brain:stage4:extract — Rule References: rows 1120-1139 of 2146 extracted
+    [1117s] brain:stage4:extract — Core Forms Specifications: rows 162-166 of 1455 extracted
+    [1117s] brain:stage4:extract — Core Forms Specifications: rows 171-175 of 1455 extracted
+    [1120s] brain:stage4:extract — Rule References: rows 1100-1119 of 2146 extracted
+    [1134s] brain:stage4:extract — Rule References: rows 1140-1159 of 2146 extracted
+    [1144s] brain:stage4:extract — Core Forms Specifications: rows 194-197 of 1455 extracted
+    [1146s] brain:stage4:extract — Core Forms Specifications: rows 185-188 of 1455 extracted
+    [1147s] brain:stage4:extract — Rule References: rows 1160-1179 of 2146 extracted
+    [1151s] brain:stage4:extract — Rule References: rows 1180-1199 of 2146 extracted
+    [1153s] brain:stage4:extract — Core Forms Specifications: rows 189-193 of 1455 extracted
+    [1158s] brain:stage4:extract — Core Forms Specifications: rows 180-184 of 1455 extracted
+    [1161s] brain:stage4:extract — Core Forms Specifications: rows 207-211 of 1455 extracted
+    [1162s] brain:stage4:extract — Rule References: rows 1200-1219 of 2146 extracted
+    [1173s] brain:stage4:extract — Core Forms Specifications: rows 203-206 of 1455 extracted
+    [1184s] brain:stage4:extract — Rule References: rows 1240-1259 of 2146 extracted
+    [1186s] brain:stage4:extract — Rule References: rows 1220-1239 of 2146 extracted
+    [1189s] brain:stage4:extract — Core Forms Specifications: rows 198-202 of 1455 extracted
+    [1191s] brain:stage4:extract — Core Forms Specifications: rows 212-215 of 1455 extracted
+    [1197s] brain:stage4:extract — Rule References: rows 1260-1279 of 2146 extracted
+    [1222s] brain:stage4:extract — Rule References: rows 1280-1299 of 2146 extracted
+    [1227s] brain:stage4:extract — Rule References: rows 1300-1319 of 2146 extracted
+    [1244s] brain:stage4:extract — Rule References: rows 1320-1339 of 2146 extracted
+    [1256s] brain:stage4:extract — Rule References: rows 1340-1359 of 2146 extracted
+    [1264s] brain:stage4:extract — Rule References: rows 1360-1379 of 2146 extracted
+    [1276s] brain:stage4:extract — Rule References: rows 1380-1399 of 2146 extracted
+    [1289s] brain:stage4:extract — Rule References: rows 1400-1419 of 2146 extracted
+    [1303s] brain:stage4:extract — Rule References: rows 1420-1439 of 2146 extracted
+    [1313s] brain:stage4:extract — Rule References: rows 1440-1459 of 2146 extracted
+    [1321s] brain:stage4:extract — Core Forms Specifications: rows 216-220 of 1455 extracted
+    [1322s] brain:stage4:extract — Rule References: rows 1460-1479 of 2146 extracted
+    [1329s] brain:stage4:extract — Core Forms Specifications: rows 230-233 of 1455 extracted
+    [1337s] brain:stage4:extract — Rule References: rows 1480-1499 of 2146 extracted
+    [1345s] brain:stage4:extract — Core Forms Specifications: rows 221-224 of 1455 extracted
+    [1349s] brain:stage4:extract — Rule References: rows 1500-1519 of 2146 extracted
+    [1354s] brain:stage4:extract — Rule References: rows 1520-1539 of 2146 extracted
+    [1367s] brain:stage4:extract — Core Forms Specifications: rows 248-251 of 1455 extracted
+    [1372s] brain:stage4:extract — Core Forms Specifications: rows 243-247 of 1455 extracted
+    [1378s] brain:stage4:extract — Rule References: rows 1540-1559 of 2146 extracted
+    [1380s] brain:stage4:extract — Rule References: rows 1560-1579 of 2146 extracted
+    [1383s] brain:stage4:extract — Core Forms Specifications: rows 234-238 of 1455 extracted
+    [1390s] brain:stage4:extract — Rule References: rows 1580-1599 of 2146 extracted
+    [1392s] brain:stage4:extract — Core Forms Specifications: rows 257-260 of 1455 extracted
+    [1397s] brain:stage4:extract — Core Forms Specifications: rows 252-256 of 1455 extracted
+    [1402s] brain:stage4:extract — Core Forms Specifications: rows 225-227 of 1455 extracted
+    [1408s] brain:stage4:extract — Core Forms Specifications: rows 239-242 of 1455 extracted
+    [1410s] brain:stage4:extract — Core Forms Specifications: rows 261-265 of 1455 extracted
+    [1415s] brain:stage4:extract — Core Forms Specifications: rows 228-229 of 1455 extracted
+    [1416s] brain:stage4:extract — Rule References: rows 1620-1639 of 2146 extracted
+    [1419s] brain:stage4:extract — Rule References: rows 1600-1619 of 2146 extracted
+    [1426s] brain:stage4:extract — Rule References: rows 1640-1659 of 2146 extracted
+    [1454s] brain:stage4:extract — Rule References: rows 1660-1679 of 2146 extracted
+    [1467s] brain:stage4:extract — Rule References: rows 1680-1699 of 2146 extracted
+    [1468s] brain:stage4:extract — Rule References: rows 1700-1719 of 2146 extracted
+    [1469s] brain:stage4:extract — Core Forms Specifications: rows 268-269 of 1455 extracted
+    [1478s] brain:stage4:extract — Core Forms Specifications: rows 266-267 of 1455 extracted
+    [1493s] brain:stage4:extract — Rule References: rows 1720-1739 of 2146 extracted
+    [1507s] brain:stage4:extract — Rule References: rows 1740-1759 of 2146 extracted
+    [1508s] brain:stage4:extract — Rule References: rows 1760-1779 of 2146 extracted
+    [1532s] brain:stage4:extract — Rule References: rows 1780-1799 of 2146 extracted
+    [1552s] brain:stage4:extract — Rule References: rows 1820-1839 of 2146 extracted
+    [1553s] brain:stage4:extract — Rule References: rows 1800-1819 of 2146 extracted
+    [1579s] brain:stage4:extract — Rule References: rows 1840-1859 of 2146 extracted
+    [1597s] brain:stage4:extract — Rule References: rows 1860-1879 of 2146 extracted
+    [1605s] brain:stage4:extract — Rule References: rows 1880-1899 of 2146 extracted
+    [1627s] brain:stage4:extract — Rule References: rows 1900-1919 of 2146 extracted
+    [1631s] brain:stage4:extract — Core Forms Specifications: rows 275-278 of 1455 extracted
+    [1635s] brain:stage4:extract — Core Forms Specifications: rows 293-296 of 1455 extracted
+    [1641s] brain:stage4:extract — Core Forms Specifications: rows 270-274 of 1455 extracted
+    [1641s] brain:stage4:extract — Core Forms Specifications: rows 288-292 of 1455 extracted
+    [1646s] brain:stage4:extract — Rule References: rows 1920-1939 of 2146 extracted
+    [1650s] brain:stage4:extract — Core Forms Specifications: rows 297-301 of 1455 extracted
+    [1654s] brain:stage4:extract — Core Forms Specifications: rows 302-305 of 1455 extracted
+    [1655s] brain:stage4:extract — Rule References: rows 1940-1959 of 2146 extracted
+    [1660s] brain:stage4:extract — Core Forms Specifications: rows 279-283 of 1455 extracted
+    [1690s] brain:stage4:extract — Core Forms Specifications: rows 320-323 of 1455 extracted
+    [1691s] brain:stage4:extract — Rule References: rows 1980-1999 of 2146 extracted
+    [1692s] brain:stage4:extract — Rule References: rows 1960-1979 of 2146 extracted
+    [1692s] brain:stage4:extract — Core Forms Specifications: rows 284-287 of 1455 extracted
+    [1694s] brain:stage4:extract — Core Forms Specifications: rows 311-314 of 1455 extracted
+    [1709s] brain:stage4:extract — Rule References: rows 2000-2019 of 2146 extracted
+    [1714s] brain:stage4:extract — Core Forms Specifications: rows 306-310 of 1455 extracted
+    [1735s] brain:stage4:extract — Rule References: rows 2020-2039 of 2146 extracted
+    [1739s] brain:stage4:extract — Rule References: rows 2040-2059 of 2146 extracted
+    [1755s] brain:stage4:extract — Rule References: rows 2060-2079 of 2146 extracted
+    [1766s] brain:stage4:extract — Core Forms Specifications: rows 318-319 of 1455 extracted
+    [1768s] brain:stage4:extract — Core Forms Specifications: rows 315-317 of 1455 extracted
+    [1781s] brain:stage4:extract — Rule References: rows 2080-2099 of 2146 extracted
+    [1788s] brain:stage4:extract — Rule References: rows 2100-2119 of 2146 extracted
+    [1801s] brain:stage4:extract — Rule References: rows 2120-2139 of 2146 extracted
+    [1802s] brain:stage4:extract — Rule References: rows 2140-2145 of 2146 extracted
+    [1802s] brain:stage4:extract — Rule References: resolving 444 conflicted field(s) across 420 row(s)
+    [1830s] brain:stage4:extract — Core Forms Specifications: rows 324-332 of 1455 extracted
+    [1899s] brain:stage4:extract — Core Forms Specifications: rows 333-337 of 1455 extracted
+    [1914s] brain:stage4:extract — Core Forms Specifications: rows 342-346 of 1455 extracted
+    [1932s] brain:stage4:extract — Core Forms Specifications: rows 347-350 of 1455 extracted
+    [1933s] brain:stage4:extract — Core Forms Specifications: rows 338-341 of 1455 extracted
+    [1958s] brain:stage4:extract — Core Forms Specifications: rows 356-359 of 1455 extracted
+    [1997s] brain:stage4:extract — Core Forms Specifications: rows 360-364 of 1455 extracted
+    [2000s] brain:stage4:extract — Core Forms Specifications: rows 369-373 of 1455 extracted
+    [2001s] brain:stage4:extract — Core Forms Specifications: rows 354-355 of 1455 extracted
+    [2028s] brain:stage4:extract — Core Forms Specifications: rows 365-368 of 1455 extracted
+    [2044s] brain:stage4:extract — Core Forms Specifications: rows 351-353 of 1455 extracted
+    [2110s] brain:stage4:extract — Core Forms Specifications: rows 374-377 of 1455 extracted
+    [2153s] brain:stage4:extract — Core Forms Specifications: rows 387-391 of 1455 extracted
+    [2183s] brain:stage4:extract — Core Forms Specifications: rows 392-395 of 1455 extracted
+    [2186s] brain:stage4:extract — Core Forms Specifications: rows 383-386 of 1455 extracted
+    [2226s] brain:stage4:extract — Core Forms Specifications: rows 381-382 of 1455 extracted
+    [2256s] brain:stage4:extract — Core Forms Specifications: rows 401-404 of 1455 extracted
+    [2264s] brain:stage4:extract — Core Forms Specifications: rows 378-380 of 1455 extracted
+    [2264s] brain:stage4:extract — Core Rating Specifications  (3): deterministic extraction (655 rows)
+    [2264s] brain:stage4:extract — Core Forms Specifications: rows 396-400 of 1455 extracted
+    [2277s] brain:stage4:extract — Core Forms Specifications: rows 410-413 of 1455 extracted
+    [2322s] brain:stage4:extract — Core Forms Specifications: rows 419-422 of 1455 extracted
+    [2330s] brain:stage4:extract — Core Forms Specifications: rows 428-431 of 1455 extracted
+    [2340s] brain:stage4:extract — Core Forms Specifications: rows 423-427 of 1455 extracted
+    [2341s] brain:stage4:extract — Core Forms Specifications: rows 414-418 of 1455 extracted
+    [2358s] brain:stage4:extract — Core Forms Specifications: rows 408-409 of 1455 extracted
+    [2362s] brain:stage4:extract — Core Forms Specifications: rows 405-407 of 1455 extracted
+    [2439s] brain:stage4:extract — Core Rating Specifications: deterministic extraction (1310 rows)
+    [2482s] brain:stage4:extract — Core Forms Specifications: rows 432-436 of 1455 extracted
+    [2496s] brain:stage4:extract — Core Forms Specifications: rows 446-449 of 1455 extracted
+    [2517s] brain:stage4:extract — Core Forms Specifications: rows 459-467 of 1455 extracted
+    [2547s] brain:stage4:extract — Core Forms Specifications: rows 439-440 of 1455 extracted
+    [2557s] brain:stage4:extract — Core Forms Specifications: rows 455-458 of 1455 extracted
+    [2558s] brain:stage4:extract — Core Forms Specifications: rows 437-438 of 1455 extracted
+    [2564s] brain:stage4:extract — Core Forms Specifications: rows 444-445 of 1455 extracted
+    [2580s] brain:stage4:extract — Core Forms Specifications: rows 441-443 of 1455 extracted
+    [2605s] brain:stage4:extract — Core Forms Specifications: rows 482-485 of 1455 extracted
+    [2610s] brain:stage4:extract — Core Forms Specifications: rows 473-476 of 1455 extracted
+    [2621s] brain:stage4:extract — Core Forms Specifications: rows 477-481 of 1455 extracted
+    [2634s] brain:stage4:extract — Core Forms Specifications: rows 450-452 of 1455 extracted
+    [2640s] brain:stage4:extract — Core Forms Specifications: rows 453-454 of 1455 extracted
+    [2670s] brain:stage4:extract — Core Rate Tables: rows 0-15 of 16 extracted
+    [2689s] brain:stage4:extract — Core Forms Specifications: rows 468-470 of 1455 extracted
+    [2696s] brain:stage4:extract — IN Factor Review: rows 20-29 of 30 extracted
+    [2705s] brain:stage4:extract — IN Factor Review: rows 0-19 of 30 extracted
+    [2709s] brain:stage4:extract — Core Forms Specifications: rows 471-472 of 1455 extracted
+    [2784s] brain:stage4:extract — Core Forms Specifications: rows 500-503 of 1455 extracted
+    [2805s] brain:stage4:extract — Core Forms Specifications: rows 491-494 of 1455 extracted
+    [2849s] brain:stage4:extract — Core Forms Specifications: rows 498-499 of 1455 extracted
+    [2863s] brain:stage4:extract — Core Forms Specifications: rows 513-517 of 1455 extracted
+    [2865s] brain:stage4:extract — Core Forms Specifications: rows 509-512 of 1455 extracted
+    [2883s] brain:stage4:extract — Core Forms Specifications: rows 489-490 of 1455 extracted
+    [2892s] brain:stage4:extract — Core Forms Specifications: rows 495-497 of 1455 extracted
+    [2895s] brain:stage4:extract — Core Forms Specifications: rows 486-488 of 1455 extracted
+    [2900s] brain:stage4:extract — Core Forms Specifications: rows 518-521 of 1455 extracted
+    [2935s] brain:stage4:extract — Core Forms Specifications: rows 522-526 of 1455 extracted
+    [2950s] brain:stage4:extract — Core Forms Specifications: rows 507-508 of 1455 extracted
+    [2956s] brain:stage4:extract — Core Forms Specifications: rows 536-539 of 1455 extracted
+    [2959s] brain:stage4:extract — Core Forms Specifications: rows 504-506 of 1455 extracted
+    [2989s] brain:stage4:extract — Core Forms Specifications: rows 534-535 of 1455 extracted
+    [3000s] brain:stage4:extract — Core Forms Specifications: rows 531-533 of 1455 extracted
+    [3007s] brain:stage4:extract — Core Forms Specifications: rows 527-528 of 1455 extracted
+    [3024s] brain:stage4:extract — Core Forms Specifications: rows 529-530 of 1455 extracted
+    [3108s] brain:stage4:extract — Core Forms Specifications: rows 545-548 of 1455 extracted
+    [3115s] brain:stage4:extract — Core Forms Specifications: rows 549-553 of 1455 extracted
+    [3152s] brain:stage4:extract — Core Forms Specifications: rows 554-557 of 1455 extracted
+    [3173s] brain:stage4:extract — Core Forms Specifications: rows 543-544 of 1455 extracted
+    [3187s] brain:stage4:extract — Core Forms Specifications: rows 572-575 of 1455 extracted
+    [3201s] brain:stage4:extract — Core Forms Specifications: rows 563-566 of 1455 extracted
+    [3211s] brain:stage4:extract — Core Forms Specifications: rows 558-562 of 1455 extracted
+    [3231s] brain:stage4:extract — Core Forms Specifications: rows 540-542 of 1455 extracted
+    [3255s] brain:stage4:extract — Core Forms Specifications: rows 576-580 of 1455 extracted
+    [3275s] brain:stage4:extract — Core Forms Specifications: rows 567-569 of 1455 extracted
+    [3288s] brain:stage4:extract — Core Forms Specifications: rows 581-584 of 1455 extracted
+    [3306s] brain:stage4:extract — Core Forms Specifications: rows 570-571 of 1455 extracted
+    [3314s] brain:stage4:extract — Core Forms Specifications: rows 590-593 of 1455 extracted
+    [3339s] brain:stage4:extract — Core Forms Specifications: rows 585-587 of 1455 extracted
+    [3346s] brain:stage4:extract — Core Forms Specifications: rows 588-589 of 1455 extracted
+    [3438s] brain:stage4:extract — Core Forms Specifications: rows 599-602 of 1455 extracted
+    [3452s] brain:stage4:extract — Core Forms Specifications: rows 594-598 of 1455 extracted
+    [3455s] brain:stage4:extract — Core Forms Specifications: rows 603-607 of 1455 extracted
+    [3477s] brain:stage4:extract — Core Forms Specifications: rows 608-611 of 1455 extracted
+    [3529s] brain:stage4:extract — Core Forms Specifications: rows 612-616 of 1455 extracted
+    [3545s] brain:stage4:extract — Core Forms Specifications: rows 626-629 of 1455 extracted
+    [3574s] brain:stage4:extract — Core Forms Specifications: rows 617-620 of 1455 extracted
+    [3576s] brain:stage4:extract — Core Forms Specifications: rows 644-647 of 1455 extracted
+    [3588s] brain:stage4:extract — Core Forms Specifications: rows 624-625 of 1455 extracted
+    [3588s] brain:stage4:extract — Core Forms Specifications: rows 630-634 of 1455 extracted
+    [3595s] brain:stage4:extract — Core Forms Specifications: rows 635-638 of 1455 extracted
+    [3597s] brain:stage4:extract — Core Forms Specifications: rows 639-643 of 1455 extracted
+    [3629s] brain:stage4:extract — Core Forms Specifications: rows 621-623 of 1455 extracted
+    [3703s] brain:stage4:extract — Core Forms Specifications: rows 653-656 of 1455 extracted
+    [3705s] brain:stage4:extract — Core Forms Specifications: rows 648-652 of 1455 extracted
+    [3710s] brain:stage4:extract — Core Forms Specifications: rows 657-661 of 1455 extracted
+    [3711s] brain:stage4:extract — Core Forms Specifications: rows 662-665 of 1455 extracted
+    [3812s] brain:stage4:extract — Core Forms Specifications: rows 680-683 of 1455 extracted
+    [3823s] brain:stage4:extract — Core Forms Specifications: rows 675-679 of 1455 extracted
+    [3835s] brain:stage4:extract — Core Forms Specifications: rows 666-670 of 1455 extracted
+    [3846s] brain:stage4:extract — Core Forms Specifications: rows 698-701 of 1455 extracted
+    [3847s] brain:stage4:extract — Core Forms Specifications: rows 693-697 of 1455 extracted
+    [3853s] brain:stage4:extract — Core Forms Specifications: rows 689-692 of 1455 extracted
+    [3871s] brain:stage4:extract — Core Forms Specifications: rows 671-674 of 1455 extracted
+    [3917s] brain:stage4:extract — Core Forms Specifications: rows 711-715 of 1455 extracted
+    [3929s] brain:stage4:extract — Core Forms Specifications: rows 707-710 of 1455 extracted
+    [3939s] brain:stage4:extract — Core Forms Specifications: rows 684-686 of 1455 extracted
+    [3961s] brain:stage4:extract — Core Forms Specifications: rows 687-688 of 1455 extracted
+    [3962s] brain:stage4:extract — Core Forms Specifications: rows 716-719 of 1455 extracted
+    [4033s] brain:stage4:extract — Core Forms Specifications: rows 705-706 of 1455 extracted
+    [4053s] brain:stage4:extract — Core Forms Specifications: rows 702-704 of 1455 extracted
+    [4096s] brain:stage4:extract — Core Forms Specifications: rows 725-728 of 1455 extracted
+    [4097s] brain:stage4:extract — Core Forms Specifications: rows 734-737 of 1455 extracted
+    [4112s] brain:stage4:extract — Core Forms Specifications: rows 729-733 of 1455 extracted
+    [4158s] brain:stage4:extract — Core Forms Specifications: rows 743-746 of 1455 extracted
+    [4158s] brain:stage4:extract — Core Forms Specifications: rows 752-755 of 1455 extracted
+    [4165s] brain:stage4:extract — Core Forms Specifications: rows 723-724 of 1455 extracted
+    [4212s] brain:stage4:extract — Core Forms Specifications: rows 741-742 of 1455 extracted
+    [4212s] brain:stage4:extract — Core Forms Specifications: rows 720-722 of 1455 extracted
+    [4216s] brain:stage4:extract — Core Forms Specifications: rows 738-740 of 1455 extracted
+    [4235s] brain:stage4:extract — Core Forms Specifications: rows 750-751 of 1455 extracted
+    [4257s] brain:stage4:extract — Core Forms Specifications: rows 747-749 of 1455 extracted
+    [4263s] brain:stage4:extract — Core Forms Specifications: rows 770-773 of 1455 extracted
+    [4264s] brain:stage4:extract — Core Forms Specifications: rows 761-764 of 1455 extracted
+    [4344s] brain:stage4:extract — Core Forms Specifications: rows 768-769 of 1455 extracted
+    [4346s] brain:stage4:extract — Core Forms Specifications: rows 759-760 of 1455 extracted
+    [4370s] brain:stage4:extract — Core Forms Specifications: rows 756-758 of 1455 extracted
+    [4377s] brain:stage4:extract — Core Forms Specifications: rows 765-767 of 1455 extracted
+    [4412s] brain:stage4:extract — Core Forms Specifications: rows 774-782 of 1455 extracted
+    [4458s] brain:stage4:extract — Core Forms Specifications: rows 797-800 of 1455 extracted
+    [4469s] brain:stage4:extract — Core Forms Specifications: rows 792-796 of 1455 extracted
+    [4474s] brain:stage4:extract — Core Forms Specifications: rows 806-809 of 1455 extracted
+    [4483s] brain:stage4:extract — Core Forms Specifications: rows 788-791 of 1455 extracted
+    [4483s] brain:stage4:extract — Core Forms Specifications: rows 801-805 of 1455 extracted
+    [4527s] brain:stage4:extract — Core Forms Specifications: rows 783-785 of 1455 extracted
+    [4544s] brain:stage4:extract — Core Forms Specifications: rows 786-787 of 1455 extracted
+    [4601s] brain:stage4:extract — Core Forms Specifications: rows 819-823 of 1455 extracted
+    [4634s] brain:stage4:extract — Core Forms Specifications: rows 824-827 of 1455 extracted
+    [4656s] brain:stage4:extract — Core Forms Specifications: rows 815-818 of 1455 extracted
+    [4692s] brain:stage4:extract — Core Forms Specifications: rows 842-845 of 1455 extracted
+    [4702s] brain:stage4:extract — Core Forms Specifications: rows 837-841 of 1455 extracted
+    [4714s] brain:stage4:extract — Core Forms Specifications: rows 813-814 of 1455 extracted
+    [4722s] brain:stage4:extract — Core Forms Specifications: rows 833-836 of 1455 extracted
+    [4725s] brain:stage4:extract — Core Forms Specifications: rows 810-812 of 1455 extracted
+    [4728s] brain:stage4:extract — Core Forms Specifications: rows 828-832 of 1455 extracted
+    [4769s] brain:stage4:extract — Core Forms Specifications: rows 860-863 of 1455 extracted
+    [4778s] brain:stage4:extract — Core Forms Specifications: rows 855-859 of 1455 extracted
+    [4787s] brain:stage4:extract — Core Forms Specifications: rows 851-854 of 1455 extracted
+    [4863s] brain:stage4:extract — Core Forms Specifications: rows 849-850 of 1455 extracted
+    [4879s] brain:stage4:extract — Core Forms Specifications: rows 846-848 of 1455 extracted
+    [4943s] brain:stage4:extract — Core Forms Specifications: rows 887-890 of 1455 extracted
+    [4952s] brain:stage4:extract — Core Forms Specifications: rows 869-872 of 1455 extracted
+    [4952s] brain:stage4:extract — Core Forms Specifications: rows 882-886 of 1455 extracted
+    [4960s] brain:stage4:extract — Core Forms Specifications: rows 878-881 of 1455 extracted
+    [4968s] brain:stage4:extract — Core Forms Specifications: rows 896-899 of 1455 extracted
+    [4969s] brain:stage4:extract — Core Forms Specifications: rows 891-895 of 1455 extracted
+    [4971s] brain:stage4:extract — Core Forms Specifications: rows 873-877 of 1455 extracted
+    [4973s] brain:stage4:extract — Core Forms Specifications: rows 864-868 of 1455 extracted
+    [5069s] brain:stage4:extract — Core Forms Specifications: rows 905-908 of 1455 extracted
+    [5080s] brain:stage4:extract — Core Forms Specifications: rows 914-917 of 1455 extracted
+    [5090s] brain:stage4:extract — Core Forms Specifications: rows 909-913 of 1455 extracted
+    [5144s] brain:stage4:extract — Core Forms Specifications: rows 903-904 of 1455 extracted
+    [5146s] brain:stage4:extract — Core Forms Specifications: rows 932-935 of 1455 extracted
+    [5149s] brain:stage4:extract — Core Forms Specifications: rows 923-926 of 1455 extracted
+    [5150s] brain:stage4:extract — Core Forms Specifications: rows 900-902 of 1455 extracted
+    [5185s] brain:stage4:extract — Core Forms Specifications: rows 950-953 of 1455 extracted
+    [5194s] brain:stage4:extract — Core Forms Specifications: rows 941-944 of 1455 extracted
+    [5200s] brain:stage4:extract — Core Forms Specifications: rows 930-931 of 1455 extracted
+    [5203s] brain:stage4:extract — Core Forms Specifications: rows 936-940 of 1455 extracted
+    [5206s] brain:stage4:extract — Core Forms Specifications: rows 927-929 of 1455 extracted
+    [5220s] brain:stage4:extract — Core Forms Specifications: rows 921-922 of 1455 extracted
+    [5265s] brain:stage4:extract — Core Forms Specifications: rows 948-949 of 1455 extracted
+    [5270s] brain:stage4:extract — Core Forms Specifications: rows 918-920 of 1455 extracted
+    [5312s] brain:stage4:extract — Core Forms Specifications: rows 945-947 of 1455 extracted
+    [5360s] brain:stage4:extract — Core Forms Specifications: rows 968-971 of 1455 extracted
+    [5371s] brain:stage4:extract — Core Forms Specifications: rows 963-967 of 1455 extracted
+    [5392s] brain:stage4:extract — Core Forms Specifications: rows 954-958 of 1455 extracted
+    [5470s] brain:stage4:extract — Core Forms Specifications: rows 959-960 of 1455 extracted
+    [5491s] brain:stage4:extract — Core Forms Specifications: rows 961-962 of 1455 extracted
+    [5515s] brain:stage4:extract — Core Forms Specifications: rows 1004-1007 of 1455 extracted
+    [5525s] brain:stage4:extract — Core Forms Specifications: rows 986-989 of 1455 extracted
+    [5535s] brain:stage4:extract — Core Forms Specifications: rows 990-994 of 1455 extracted
+    [5541s] brain:stage4:extract — Core Forms Specifications: rows 981-985 of 1455 extracted
+    [5545s] brain:stage4:extract — Core Forms Specifications: rows 977-980 of 1455 extracted
+    [5574s] brain:stage4:extract — Core Forms Specifications: rows 995-998 of 1455 extracted
+    [5597s] brain:stage4:extract — Core Forms Specifications: rows 999-1001 of 1455 extracted
+    [5614s] brain:stage4:extract — Core Forms Specifications: rows 1002-1003 of 1455 extracted
+    [5625s] brain:stage4:extract — Core Forms Specifications: rows 972-974 of 1455 extracted
+    [5645s] brain:stage4:extract — Core Forms Specifications: rows 975-976 of 1455 extracted
+    [5705s] brain:stage4:extract — Core Forms Specifications: rows 1013-1016 of 1455 extracted
+    [5708s] brain:stage4:extract — Core Forms Specifications: rows 1022-1025 of 1455 extracted
+    [5708s] brain:stage4:extract — Core Forms Specifications: rows 1017-1021 of 1455 extracted
+    [5719s] brain:stage4:extract — Core Forms Specifications: rows 1008-1012 of 1455 extracted
+    [5829s] brain:stage4:extract — Core Forms Specifications: rows 1040-1043 of 1455 extracted
+    [5854s] brain:stage4:extract — Core Forms Specifications: rows 1053-1057 of 1455 extracted
+    [5883s] brain:stage4:extract — Core Forms Specifications: rows 1038-1039 of 1455 extracted
+    [5890s] brain:stage4:extract — Core Forms Specifications: rows 1035-1037 of 1455 extracted
+    [5902s] brain:stage4:extract — Core Forms Specifications: rows 1058-1061 of 1455 extracted
+    [5905s] brain:stage4:extract — Core Forms Specifications: rows 1026-1034 of 1455 extracted
+    [5907s] brain:stage4:extract — Core Forms Specifications: rows 1044-1048 of 1455 extracted
+    [5924s] brain:stage4:extract — Core Forms Specifications: rows 1067-1070 of 1455 extracted
+    [5928s] brain:stage4:extract — Core Forms Specifications: rows 1062-1066 of 1455 extracted
+    [5951s] brain:stage4:extract — Core Forms Specifications: rows 1071-1075 of 1455 extracted
+    [5968s] brain:stage4:extract — Core Forms Specifications: rows 1051-1052 of 1455 extracted
+    [5984s] brain:stage4:extract — Core Forms Specifications: rows 1049-1050 of 1455 extracted
+    [6017s] brain:stage4:extract — Core Forms Specifications: rows 1076-1077 of 1455 extracted
+    [6021s] brain:stage4:extract — Core Forms Specifications: rows 1078-1079 of 1455 extracted
+    [6060s] brain:stage4:extract — Core Forms Specifications: rows 1080-1088 of 1455 extracted
+    [6149s] brain:stage4:extract — Core Forms Specifications: rows 1089-1093 of 1455 extracted
+    [6155s] brain:stage4:extract — Core Forms Specifications: rows 1094-1097 of 1455 extracted
+    [6196s] brain:stage4:extract — Core Forms Specifications: rows 1130-1133 of 1455 extracted
+    [6201s] brain:stage4:extract — Core Forms Specifications: rows 1112-1115 of 1455 extracted
+    [6231s] brain:stage4:extract — Core Forms Specifications: rows 1121-1124 of 1455 extracted
+    [6261s] brain:stage4:extract — Core Forms Specifications: rows 1103-1104 of 1455 extracted
+    [6264s] brain:stage4:extract — Core Forms Specifications: rows 1101-1102 of 1455 extracted
+    [6266s] brain:stage4:extract — Core Forms Specifications: rows 1128-1129 of 1455 extracted
+    [6268s] brain:stage4:extract — Core Forms Specifications: rows 1098-1100 of 1455 extracted
+    [6281s] brain:stage4:extract — Core Forms Specifications: rows 1107-1109 of 1455 extracted
+    [6285s] brain:stage4:extract — Core Forms Specifications: rows 1105-1106 of 1455 extracted
+    [6291s] brain:stage4:extract — Core Forms Specifications: rows 1116-1118 of 1455 extracted
+    [6293s] brain:stage4:extract — Core Forms Specifications: rows 1110-1111 of 1455 extracted
+    [6301s] brain:stage4:extract — Core Forms Specifications: rows 1125-1127 of 1455 extracted
+    [6311s] brain:stage4:extract — Core Forms Specifications: rows 1119-1120 of 1455 extracted
+    [6348s] brain:stage4:extract — Core Forms Specifications: rows 1139-1142 of 1455 extracted
+    [6353s] brain:stage4:extract — Core Forms Specifications: rows 1134-1138 of 1455 extracted
+    [6364s] brain:stage4:extract — Core Forms Specifications: rows 1148-1151 of 1455 extracted
+    [6374s] brain:stage4:extract — Core Forms Specifications: rows 1143-1147 of 1455 extracted
+    [6485s] brain:stage4:extract — Core Forms Specifications: rows 1157-1160 of 1455 extracted
+    [6489s] brain:stage4:extract — Core Forms Specifications: rows 1152-1156 of 1455 extracted
+    [6500s] brain:stage4:extract — Core Forms Specifications: rows 1161-1165 of 1455 extracted
+    [6512s] brain:stage4:extract — Core Forms Specifications: rows 1184-1187 of 1455 extracted
+    [6528s] brain:stage4:extract — Core Forms Specifications: rows 1179-1183 of 1455 extracted
+    [6529s] brain:stage4:extract — Core Forms Specifications: rows 1166-1169 of 1455 extracted
+    [6530s] brain:stage4:extract — Core Forms Specifications: rows 1175-1178 of 1455 extracted
+    [6535s] brain:stage4:extract — Core Forms Specifications: rows 1170-1174 of 1455 extracted
+    [6572s] brain:stage4:extract — Core Forms Specifications: rows 1202-1205 of 1455 extracted
+    [6581s] brain:stage4:extract — Core Forms Specifications: rows 1193-1196 of 1455 extracted
+    [6590s] brain:stage4:extract — Core Forms Specifications: rows 1188-1192 of 1455 extracted
+    [6640s] brain:stage4:extract — Core Forms Specifications: rows 1200-1201 of 1455 extracted
+    [6646s] brain:stage4:extract — Core Forms Specifications: rows 1197-1199 of 1455 extracted
+    [6684s] brain:stage4:extract — Core Forms Specifications: rows 1215-1223 of 1455 extracted
+    [6741s] brain:stage4:extract — Core Forms Specifications: rows 1238-1241 of 1455 extracted
+    [6750s] brain:stage4:extract — Core Forms Specifications: rows 1229-1232 of 1455 extracted
+    [6755s] brain:stage4:extract — Core Forms Specifications: rows 1224-1228 of 1455 extracted
+    [6761s] brain:stage4:extract — Core Forms Specifications: rows 1233-1237 of 1455 extracted
+    [6763s] brain:stage4:extract — Core Forms Specifications: rows 1211-1214 of 1455 extracted
+    [6809s] brain:stage4:extract — Core Forms Specifications: rows 1206-1208 of 1455 extracted
+    [6827s] brain:stage4:extract — Core Forms Specifications: rows 1209-1210 of 1455 extracted
+    [6843s] brain:stage4:extract — Core Forms Specifications: rows 1256-1259 of 1455 extracted
+    [6853s] brain:stage4:extract — Core Forms Specifications: rows 1251-1255 of 1455 extracted
+    [6949s] brain:stage4:extract — Core Forms Specifications: rows 1260-1264 of 1455 extracted
+    [6951s] brain:stage4:extract — Core Forms Specifications: rows 1274-1277 of 1455 extracted
+    [6955s] brain:stage4:extract — Core Forms Specifications: rows 1269-1273 of 1455 extracted
+    [6961s] brain:stage4:extract — Core Forms Specifications: rows 1247-1250 of 1455 extracted
+    [6970s] brain:stage4:extract — Core Forms Specifications: rows 1242-1246 of 1455 extracted
+    [6991s] brain:stage4:extract — Core Forms Specifications: rows 1265-1268 of 1455 extracted
+    [7036s] brain:stage4:extract — Core Forms Specifications: rows 1283-1286 of 1455 extracted
+    [7052s] brain:stage4:extract — Core Forms Specifications: rows 1287-1291 of 1455 extracted
+    [7056s] brain:stage4:extract — Core Forms Specifications: rows 1292-1295 of 1455 extracted
+    [7125s] brain:stage4:extract — Core Forms Specifications: rows 1281-1282 of 1455 extracted
+    [7142s] brain:stage4:extract — Core Forms Specifications: rows 1278-1280 of 1455 extracted
+    [7189s] brain:stage4:extract — Core Forms Specifications: rows 1319-1322 of 1455 extracted
+    [7192s] brain:stage4:extract — Core Forms Specifications: rows 1314-1318 of 1455 extracted
+    [7193s] brain:stage4:extract — Core Forms Specifications: rows 1301-1304 of 1455 extracted
+    [7201s] brain:stage4:extract — Core Forms Specifications: rows 1305-1309 of 1455 extracted
+    [7205s] brain:stage4:extract — Core Forms Specifications: rows 1328-1331 of 1455 extracted
+    [7231s] brain:stage4:extract — Core Forms Specifications: rows 1323-1327 of 1455 extracted
+    [7241s] brain:stage4:extract — Core Forms Specifications: rows 1310-1313 of 1455 extracted
+    [7279s] brain:stage4:extract — Core Forms Specifications: rows 1299-1300 of 1455 extracted
+    [7307s] brain:stage4:extract — Core Forms Specifications: rows 1296-1298 of 1455 extracted
+    [7341s] brain:stage4:extract — Core Forms Specifications: rows 1341-1345 of 1455 extracted
+    [7362s] brain:stage4:extract — Core Forms Specifications: rows 1346-1349 of 1455 extracted
+    [7370s] brain:stage4:extract — Core Forms Specifications: rows 1332-1336 of 1455 extracted
+    [7390s] brain:stage4:extract — Core Forms Specifications: rows 1337-1340 of 1455 extracted
+    [7425s] brain:stage4:extract — Core Forms Specifications: rows 1364-1367 of 1455 extracted
+    [7444s] brain:stage4:extract — Core Forms Specifications: rows 1359-1363 of 1455 extracted
+    [7463s] brain:stage4:extract — Core Forms Specifications: rows 1355-1358 of 1455 extracted
+    [7512s] brain:stage4:extract — Core Forms Specifications: rows 1373-1376 of 1455 extracted
+    [7515s] brain:stage4:extract — Core Forms Specifications: rows 1382-1385 of 1455 extracted
+    [7520s] brain:stage4:extract — Core Forms Specifications: rows 1368-1372 of 1455 extracted
+    [7529s] brain:stage4:extract — Core Forms Specifications: rows 1377-1381 of 1455 extracted
+    [7533s] brain:stage4:extract — Core Forms Specifications: rows 1353-1354 of 1455 extracted
+    [7540s] brain:stage4:extract — Core Forms Specifications: rows 1386-1394 of 1455 extracted
+    [7541s] brain:stage4:extract — Core Forms Specifications: rows 1350-1352 of 1455 extracted
+    [7627s] brain:stage4:extract — Core Forms Specifications: rows 1400-1403 of 1455 extracted
+    [7658s] brain:stage4:extract — Core Forms Specifications: rows 1398-1399 of 1455 extracted
+    [7669s] brain:stage4:extract — Core Forms Specifications: rows 1413-1421 of 1455 extracted
+    [7688s] brain:stage4:extract — Core Forms Specifications: rows 1395-1397 of 1455 extracted
+    [7726s] brain:stage4:extract — Core Forms Specifications: rows 1409-1412 of 1455 extracted
+    [7737s] brain:stage4:extract — Core Forms Specifications: rows 1404-1408 of 1455 extracted
+    [7753s] brain:stage4:extract — Core Forms Specifications: rows 1436-1439 of 1455 extracted
+    [7772s] brain:stage4:extract — Core Forms Specifications: rows 1431-1435 of 1455 extracted
+    [7794s] brain:stage4:extract — Core Forms Specifications: rows 1427-1428 of 1455 extracted
+    [7810s] brain:stage4:extract — Core Forms Specifications: rows 1425-1426 of 1455 extracted
+    [7815s] brain:stage4:extract — Core Forms Specifications: rows 1422-1424 of 1455 extracted
+    [7816s] brain:stage4:extract — Core Forms Specifications: rows 1429-1430 of 1455 extracted
+    [7896s] brain:stage4:extract — Core Forms Specifications: rows 1448-1451 of 1455 extracted
+    [7898s] brain:stage4:extract — Core Forms Specifications: rows 1440-1443 of 1455 extracted
+    [7898s] brain:stage4:extract — Core Forms Specifications: rows 1444-1447 of 1455 extracted
+    [7910s] brain:stage4:extract — Core Forms Specifications: rows 1452-1454 of 1455 extracted
+    [7910s] brain:stage4:extract — Core Forms Specifications: resolving 1618 conflicted field(s) across 586 row(s)
+  ✗ CORE: fetch: This operation was aborted
+
+Results → docs/audit/import_eval_results-CORE.json
