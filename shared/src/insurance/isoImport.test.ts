@@ -405,6 +405,25 @@ describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
   it('the transient _referenceText is cleared from every rule (no golden leak)', () => {
     expect(plan2.rules.every(r => !('_referenceText' in r.data))).toBe(true)
   })
+
+  // ── Term derivation (D1/D7) ──
+  const termsOf = (refId: string) =>
+    (plan2.coverages.find(c => c.refId === refId)!.data['terms'] as Array<Record<string, unknown>>)
+  it('a LIMIT table yields per-state LIMIT terms on its coverages (the "no limits" fix)', () => {
+    const t = termsOf('CORE.COV.001').find(x => x['ldTableRef'] === 'CORE.TBL.001')!
+    expect(t['kind']).toBe('LIMIT')
+    expect(t['states']).toEqual(['AZ'])
+    expect(t['allStates']).toBe(false)
+    expect(t['options']).toEqual([25, 50])
+    expect(t['linkBasis']).toBe('derived')
+  })
+  it('a DEDUCTIBLE table yields DEDUCTIBLE terms on Collision + OTC', () => {
+    expect(termsOf('CORE.COV.009').some(x => x['kind'] === 'DEDUCTIBLE' && x['ldTableRef'] === 'CORE.TBL.002')).toBe(true)
+    expect(termsOf('CORE.COV.010').some(x => x['kind'] === 'DEDUCTIBLE')).toBe(true)
+  })
+  it('emits a reference_table_terms_derived notice distinct from the PCM-A ld_terms_folded', () => {
+    expect(plan2.summary.notices.some(n => n.code === 'reference_table_terms_derived')).toBe(true)
+  })
 })
 
 // ─── Real-template column fidelity (quirks confirmed against the shipped GL books) ─
@@ -548,6 +567,13 @@ describe('mapIsoWorkbook — LD term fold (PCM-A)', () => {
     // rules attach nothing).
     expect((n!.data as { termsAttached: number; unknownCoverageRefs: number }).termsAttached).toBe(4)
     expect((n!.data as { unknownCoverageRefs: number }).unknownCoverageRefs).toBe(1)
+  })
+
+  it('the signature-detected term derivation NEVER fires on a GL workbook (PCM-A byte-identical)', () => {
+    // No "TABLE NAME:" reference sheet → no minted tables → deriveTermsFromReferenceTables no-ops;
+    // the fold above stays the sole term source and its ld_terms_folded notice is unchanged.
+    expect(foldPlan.summary.notices.some(x => x.code === 'reference_table_terms_derived')).toBe(false)
+    expect(foldPlan.ldTables.every(t => !(t.data as Record<string, unknown>)['mintedId'])).toBe(true)
   })
 
   it('stale numeric refs recover via the NAME in the same reference cell; unresolvable refs emit NO term', () => {

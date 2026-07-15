@@ -184,6 +184,15 @@ export interface CoverageTerm {
   structure?:   LimitStructure | DeductibleStructure
   limitBasis?:  LimitBasis
   optionSet?:   StandardOption[]
+  // ── Concept-linker additions (set on terms DERIVED from a signature-detected reference
+  //    table, e.g. CORE; nested in coverage.terms → golden-invisible). ──
+  /** Per-state scope of this term when it came from a state-suffixed table family (D7). */
+  states?:      string[]
+  allStates?:   boolean
+  /** The matrix header code (BI/PD/CSL/…) this term's coverage resolved from, when applicable. */
+  coverageCode?: string
+  /** Provenance of the coverage↔term link. */
+  linkBasis?:   LinkBasis
 }
 
 export interface Coverage extends GovernanceBlock, StateScope {

@@ -1709,6 +1709,48 @@ function linkReferenceTables(
   return tally
 }
 
+/** Assemble coverage.terms from the LIMIT/DEDUCTIBLE reference tables and their reconstructed
+ *  coverage links (D1/D7) — this is what makes the user-reported "no limits or deductibles"
+ *  symptom disappear. Signature-gated (refTables is [] on GL/IM/PR), and SEPARATE from the
+ *  PCM-A fold (foldLdTermsIntoCoverages), which is left untouched so its output stays
+ *  byte-identical. One term per (coverage, table); state-suffixed families yield per-state
+ *  terms. Returns the number of coverage↔term links attached. */
+function deriveTermsFromReferenceTables(coverages: PlannedEntity[], refTables: PlannedEntity[]): number {
+  if (!refTables.length) return 0
+  const covByRefId = new Map(coverages.map(c => [c.refId as string, c]))
+  const dedup = new Set<string>()
+  let attached = 0
+  for (const table of refTables) {
+    const data = table.data as unknown as LDTable
+    if (data.kindHint !== 'LIMIT' && data.kindHint !== 'DEDUCTIBLE') continue   // terms only from limit/deductible tables
+    const covIds = data.coverageRefIds ?? []
+    if (!covIds.length) continue
+    const tableRefId = table.refId as string
+    for (const covId of covIds) {
+      const cov = covByRefId.get(covId)
+      if (!cov) continue
+      const key = `${covId}|${tableRefId}`
+      if (dedup.has(key)) continue
+      dedup.add(key)
+      const term: CoverageTerm = {
+        id: tableRefId.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        kind: data.kindHint,
+        label: data.name || tableRefId,
+        ldTableRef: tableRefId,                       // resolves in the UI — CORE.TBL is in plan.ldTables
+        options: (data.rows ?? []).map(r => r.value),
+        default: data.defaultValue ?? data.rows?.[0]?.value ?? 0,
+        basis: '',
+        states: data.state ? [data.state] : [],
+        allStates: !data.state,
+        linkBasis: 'derived',
+      }
+      ;(cov.data['terms'] as CoverageTerm[]).push(term)
+      attached++
+    }
+  }
+  return attached
+}
+
 // ─── Orchestration ───────────────────────────────────────────────────────────────
 
 /** Map a set of parsed ISO template worksheets onto the canonical model. The grids
@@ -1806,6 +1848,17 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   // minted reference tables derive their terms through the separate, signature-gated
   // deriveTermsFromReferenceTables path so PCM-A output stays byte-identical.
   foldLdTermsIntoCoverages(allCoverages, rules, ldTables, ctx)
+
+  // Assemble coverage terms from the signature-detected reference tables (D1/D7) — separate
+  // from the PCM-A fold above, gated on refTables so GL/IM/PR are untouched.
+  const derivedTerms = deriveTermsFromReferenceTables(allCoverages, refTables)
+  if (derivedTerms > 0) {
+    ctx.addNotice({
+      code: 'reference_table_terms_derived',
+      message: `${derivedTerms} coverage term(s) derived from ${refTables.length} signature-detected reference table(s) (limits/deductibles the named LD parser never claimed).`,
+      data: { terms: derivedTerms, tables: refTables.length },
+    })
+  }
 
   // Reference tables share a single home with the real LD tables so the UI ldTables→chip
   // lookup and the golden both see them under their minted CORE.TBL refIds.
