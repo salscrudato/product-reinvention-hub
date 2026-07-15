@@ -695,8 +695,11 @@ function parseFramework(
     productList = [...seenPrefixes.values()]
   } else {
     // Single product — synthesize (existing behavior, code: product_synthesized).
+    // F26: the id is MINTED, not read from source — it carries the platform SYNTH
+    // marker (same shape the brain path mints for the identical situation,
+    // stage7-plan.js), never a byte-shape identical to a real source id.
     const prefix = (drafts.length > 0 ? refIdPrefix(drafts[0]!.refId) : null) || 'XX'
-    const synthRefId = `${prefix}.PROD.001`
+    const synthRefId = `${prefix}.PROD.SYNTH001`
     const synthName  = productNameHint || ''
     ctx.warnOnce('product_synthesized', `Framework sheet "${grid.sheet}": no explicit product (.PROD/.PRD) row — synthesized "${synthRefId}" from coverage id prefix "${prefix}"; code: product_synthesized.`)
     productList = [{ refId: synthRefId, name: synthName }]

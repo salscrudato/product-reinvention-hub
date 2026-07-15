@@ -2708,7 +2708,7 @@ function parseFramework(grid, ctx, overlay) {
     productList = [...seenPrefixes.values()];
   } else {
     const prefix = (drafts.length > 0 ? refIdPrefix(drafts[0].refId) : null) || "XX";
-    const synthRefId = `${prefix}.PROD.001`;
+    const synthRefId = `${prefix}.PROD.SYNTH001`;
     const synthName = productNameHint || "";
     ctx.warnOnce("product_synthesized", `Framework sheet "${grid.sheet}": no explicit product (.PROD/.PRD) row \u2014 synthesized "${synthRefId}" from coverage id prefix "${prefix}"; code: product_synthesized.`);
     productList = [{ refId: synthRefId, name: synthName }];

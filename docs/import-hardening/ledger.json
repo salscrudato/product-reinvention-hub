@@ -363,10 +363,10 @@
       "severity": "LOW",
       "confidence": 0.85,
       "cost": "S",
-      "status": "OPEN",
-      "priority": 7,
-      "evidence": "shared/src/insurance/isoImport.ts:699 — product_synthesized warnOnce exists (grounding trail), but the id itself is byte-identical to a real source id; the brain path's sibling for the same situation mints ${prefix}.PROD.SYNTH001 (stage7-plan.js:315). Found by F25's hostile judge. Blast radius is wider than a rename: product refIds anchor golden matching, plan.productId, and hierarchy attachment — needs its own analysis; do not bundle into a marker-rename commit.",
-      "fixture": "none yet — assert a PROD-row-less framework synthesizes a marked product id AND goldens/joins survive",
+      "status": "FIXED_IH3",
+      "priority": null,
+      "evidence": "shared/src/insurance/isoImport.ts:699 — product_synthesized warnOnce exists (grounding trail), but the id itself is byte-identical to a real source id; the brain path's sibling for the same situation mints ${prefix}.PROD.SYNTH001 (stage7-plan.js:315). Found by F25's hostile judge. Blast radius is wider than a rename: product refIds anchor golden matching, plan.productId, and hierarchy attachment — needs its own analysis; do not bundle into a marker-rename commit. || FIXED_IH3 (validated Tier 0 offline): one-line mint change to ${prefix}.PROD.SYNTH001 (the stage7-plan.js:315 sibling shape). IM + PR products WERE this synthesis (no source PROD row) -> goldens renamed in lockstep, offline parse-stability gate F1 1.0000/extras 0/linkage 1.000 on all four formats; GL/CORE products are explicit source rows, untouched. Judge ACCEPT (empirical pre-fix/post-fix bundle probe; stage-7 walk: pre-fix the join PROPAGATED the fake-source id into plan.productId/productRefIds/tables - the bug amplified; post-fix identical marked ids, no remap; empty-plan SYNTH cleanup now correctly drops a mapper-synthesized product in a blank-template plan). Cross-era note: --rescore of pre-F26 IM/PR dumps shows a 1-entity product mismatch until the next live dump (same documented semantics as F25's caution).",
+      "fixture": "shared/src/insurance/isoImport.test.ts 'synthesized product ids carry the SYNTH marker (F26)' (PROD-row-less GL + glued-scheme IM + explicit-row inverse guard)",
       "lesson": "The same synthesis convention must hold for every entity kind, not just the one the ledger item named."
     }
   ],

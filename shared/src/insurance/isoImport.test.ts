@@ -230,6 +230,44 @@ describe('mapIsoWorkbook — blank RULE ID synthesis carries the SYNTH marker (F
   })
 })
 
+describe('mapIsoWorkbook — synthesized product ids carry the SYNTH marker (F26)', () => {
+  // A framework sheet with NO explicit PROD/PRD row synthesizes the product id
+  // from the coverage refId prefix. The id is MINTED, not read from source — it
+  // must carry the SYNTH marker (the stage-7 sibling mints ${prefix}.PROD.SYNTH001
+  // for the identical situation), never a byte-shape identical to a real source id.
+  it('a PROD-row-less GL framework synthesizes a MARKED product id and still attaches its tree', () => {
+    const noProdRow = g('GL Product Framework', [
+      ['PRODUCT FRAMEWORK - GENERAL LIABILITY'],
+      ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'FORM NUMBER(S)', 'EDITION DATE', 'CLAIMS BASIS', 'COVERAGE REQUIREMENT', 'PREMIUM GENERATING', 'BUREAU', 'PROPRIETARY', 'ALL ACTIVE STATES'],
+      ['Active', 'GL.COV.001', 'Monoline GL', 'Commercial General Liability', 'Premises Liability', '', 'CG 00 01', '04 13', 'Occurrence', 'Mandatory', 'Yes', 'Yes', 'No', 'X'],
+      ['Active', 'GL.COV.001.001', 'Monoline GL', 'Commercial General Liability', 'Premises Liability', 'Terrorism', 'CG 21 70', '01 15', 'Occurrence', 'Optional', 'No', 'Yes', 'No', 'X'],
+    ])
+    const p = mapIsoWorkbook([noProdRow])
+    expect(p.product!.refId).toBe('GL.PROD.SYNTH001')
+    expect(String(p.product!.refId)).toMatch(/\.SYNTH/)
+    // The synthesis stays a WARNED event, and the warning names the marked id.
+    expect(p.summary.warnings.some(w => /product_synthesized/.test(w) && /GL\.PROD\.SYNTH001/.test(w))).toBe(true)
+    // The coverage tree still attaches under the synthesized product.
+    expect(p.coverages.length).toBe(2)
+    expect(p.productId).toBe(p.product!.refId)
+  })
+
+  it('a glued-scheme (IM) coverage prefix synthesizes the same marked shape', () => {
+    const imNoProd = g('IM Framework', [
+      ['PRODUCT FRAMEWORK - INLAND MARINE'],
+      ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'FORM NUMBER(S)', 'EDITION DATE', 'CLAIMS BASIS', 'COVERAGE REQUIREMENT', 'PREMIUM GENERATING', 'BUREAU', 'PROPRIETARY', 'ALL ACTIVE STATES'],
+      ['Active', 'IM.COV044', 'IM Product', 'Inland Marine', 'Scheduled Property', '', 'IM 00 01', '01 15', 'Occurrence', 'Mandatory', 'Yes', 'Yes', 'No', 'X'],
+    ])
+    const p = mapIsoWorkbook([imNoProd])
+    expect(p.product!.refId).toBe('IM.PROD.SYNTH001')
+  })
+
+  it('an explicit PROD row keeps its byte-for-byte source id — no marker injected', () => {
+    expect(plan.products.some(pr => pr.refId === 'GL.PROD.001')).toBe(true)
+    for (const pr of plan.products) expect(String(pr.refId)).not.toMatch(/SYNTH/)
+  })
+})
+
 describe('mapIsoWorkbook — rules, form rules, rating, tables', () => {
   it('extracts LD refs + coverage refs from rules', () => {
     expect(plan.rules).toHaveLength(1)
