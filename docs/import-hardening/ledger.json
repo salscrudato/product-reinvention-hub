@@ -383,6 +383,58 @@
       "lesson": "A checksum verifies bytes, not meaning: corpus staging must verify MAGIC against the claimed type, or the eval quietly certifies fixtures that exercise nothing. An export pipeline is part of the evidence chain."
     },
     {
+      "id": "G-A",
+      "title": "Header alias matching is first-positional — the bare 'ID' alias collides with Idaho's state column; set-valued fields serialize in source column order",
+      "class": "GENERALIZATION",
+      "severity": "HIGH",
+      "confidence": 1.0,
+      "cost": "M",
+      "status": "FIXED_IH4",
+      "priority": null,
+      "evidence": "Phase G holdout v2-shuffled-columns (G3 no-edit baseline red at HOLDOUT_SHA d51e32f): with the state matrix left of the id column, mapColumns matched the 'ID' alias to Idaho's X-mark column — every coverage id read 'X', ids collided, the coverage set collapsed to 1 and product recognition failed. Any REAL workbook whose state matrix precedes its id column would misparse identically. || FIXED_IH4 (Tier 0): (1) alias-priority matching — the first ALIAS with a matching column wins (lists ordered most-specific-first), never the first column with any alias; (2) state-named columns whose DATA profile below the header is exclusively X/blank (stateMatrixExclusions) are excluded from field matching — by data profile, NOT header name: the first cut excluded by header name alone and ERASED every IM/PR coverage (the PCM template's id column is literally headed 'ID' = Idaho; 798+603 entities vanished) — caught by the golden DIFF, not the circular regen (F20's mirror lesson lived); (3) states/coverageParts/transactions are sorted — set semantics, serialization independent of source column order. Judge ACCEPT (all-blank-column exclusion walked: never load-bearing, unmapped columns stay transparent).",
+      "fixture": "samples/hardening/holdout/GL/v2-shuffled-columns.xlsx (frozen discovery lock) + shared/src/insurance/isoImport.test.ts 'header alias specificity + state-matrix profile (G-A)' (Idaho-hijack + PCM-ID-column rescue; red-verified pre-fix via stash)",
+      "lesson": "Generic single-word aliases collide with the world (US postal codes); specificity must beat position, and structural identity (a matrix of X-marks) must be decided by DATA, not header text. And: a golden regenerated around a regression proves nothing — always diff-explain the regen."
+    },
+    {
+      "id": "G-B",
+      "title": "Product/LOB row recognition and prefix resolution assume dot separators — dash-notation ids fall to the default line and product recognition fails",
+      "class": "GENERALIZATION",
+      "severity": "MED",
+      "confidence": 1.0,
+      "cost": "S",
+      "status": "FIXED_IH4",
+      "priority": null,
+      "evidence": "Phase G holdout v4-dashed-refids (G3 red): 'GL-PROD-001' was not recognized as a product row (dot-literal /\\.PROD\\./ regexes), and lobByPrefix dot-split resolved the dashed prefix to nothing — marketSegment fell to the PH default. Extracted ids WERE carried byte-for-byte (the invariant held); recognition was the gap. || FIXED_IH4 (Tier 0): separator classes [.\\-_ ] in the framework row-kind regexes, refIdPrefix, lobByPrefix, and the rating-program id derivation; refIdSegmentKind was already separator-agnostic (the fix aligns the remaining parsers with the registry's own standard, F05). Ids remain verbatim everywhere. Judge ACCEPT.",
+      "fixture": "samples/hardening/holdout/GL/v4-dashed-refids.xlsx (frozen) + isoImport.test.ts 'separator-agnostic identity recognition (G-B)' (dash-notation product row + line resolution; red-verified pre-fix)",
+      "lesson": "An id SCHEME has one authority (the registry, F05) — every ad-hoc parser that re-derives kind or prefix from an id must match the registry's separator tolerance or nuanced-notation sources silently misroute."
+    },
+    {
+      "id": "G-C",
+      "title": "SYNTH product minting derives its prefix from an unvalidated string slice — junk parses leak into minted identities (GL-COV-.PROD.SYNTH001, X.PROD.SYNTH001)",
+      "class": "GENERALIZATION",
+      "severity": "MED",
+      "confidence": 1.0,
+      "cost": "S",
+      "status": "FIXED_IH4",
+      "priority": null,
+      "evidence": "Phase G holdout v4/v2 coupling (G3 red): whenever product-row recognition failed, the F26 synthesis minted its marked id from whatever refIdPrefix returned on the first coverage draft — garbage in, marked garbage out. || FIXED_IH4 (Tier 0): the derived prefix must resolve via resolveLobByRefId; unresolvable prefixes fall to the platform default line's prefix with a LOUD warning (code product_synth_prefix_defaulted — the F18 warned-default pattern, matching filing reconcile's unresolvable-hint behavior). Judge ACCEPT ('XX' obviously-fake alternative weighed and rejected: a registry-valid warned default keeps every downstream refId parser working while the warning carries the doubt).",
+      "fixture": "isoImport.test.ts 'synthesized prefix is registry-validated (G-C)' (junk ZZZTOP.9 coverage id -> PH.PROD.SYNTH001 + warning; red-verified pre-fix)",
+      "lesson": "A minted identity is a CONTRACT — every derived component of it must be validated against the registry that owns the scheme, or the SYNTH marker ends up decorating garbage."
+    },
+    {
+      "id": "G-D",
+      "title": "The deterministic mapper fabricates canonical values from source silence: blank requirement -> MANDATORY, blank form category -> ENDORSEMENT marked exact:true, blank booleans -> silent defaults",
+      "class": "GENERALIZATION",
+      "severity": "HIGH",
+      "confidence": 1.0,
+      "cost": "M",
+      "status": "FIXED_IH4",
+      "priority": null,
+      "evidence": "G1 assumption audit (clusters REQUIREMENT/BOOLEAN/CATEGORY-SILENCE, recorded as F14's workbook-path residuals) confirmed red on never-seen bytes by holdout v5-blank-silence: 5 blanked coverage requirement cells all fabricated as MANDATORY; blank category fabricated as ENDORSEMENT carrying exact:true (bypassing the not-recognised warning). || FIXED_IH4 (Tier 0): mapRequirement blank/placeholder -> UNKNOWN (representable since F14; strict, no default); blank category keeps the documented ENDORSEMENT write-fallback but exact:false + a distinct 'blank FORM CATEGORY' warning; blank MANDATORY/DYNAMIC/ADMITTED cells (only where the column exists) keep their documented defaults but are WARNED per sheet/field (F18: a defaulted value is always a warned default). Honesty contract recorded in RESULTS/phaseg/g4-clusters.md BEFORE the fix; full boolean|null honesty (F14 premiumGenerating precedent) PARKED with written trigger: any consumer that must distinguish stated-false from unstated. Judge ACCEPT (rating canary never reads requirement; glRobustness canonical set unaffected — GL source carries no blank requirement cells; goldens regenerate in lockstep AFTER the in-flight CORE run scores, era-consistent). Real-data effect: the committed GL forms sheet DOES carry blank category cells — previously silently fabricated, now warned (isoFixture warning-count snapshot 9->10, updated in lockstep).",
+      "fixture": "samples/hardening/holdout/GL/v5-blank-silence.xlsx (frozen) + isoImport.test.ts 'no fabrication on silence (G-D)' (blank requirement -> UNKNOWN; blank category/mandatory warned; red-verified pre-fix)",
+      "lesson": "F14's lesson holds at every layer, including the deterministic one: silence in the source is a fact to preserve, not a blank to fill. Where the type can say UNKNOWN, say it; where it cannot yet, the default must be warned — and the type extension gets a written trigger."
+    },
+    {
       "id": "F25",
       "title": "isoImport blank rule-ID synthesis mints <fwBase>.RULE.### without the SYNTH marker (workbook deterministic mapper)",
       "class": "GROUNDING",

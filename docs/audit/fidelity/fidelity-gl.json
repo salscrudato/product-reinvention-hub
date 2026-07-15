@@ -47,13 +47,14 @@
     "Sheet \"GL Rating Tables\" row 183 col \"RATE TABLE ID\": table RTTable.004 appears more than once — rows merged.",
     "Sheet \"GL Rating Tables\" row 209 col \"RATE TABLE ID\": table RTTable.006 appears more than once — rows merged.",
     "Sheet \"GL Forms Specifications\" row 23 col \"FORM CATEGORY\": value \"Other Coverage Form\" not recognised — mapped to ENDORSEMENT, verify intent.",
+    "Sheet \"GL Forms Specifications\": blank FORM CATEGORY cell(s) — defaulted to ENDORSEMENT (the source did not state a category); verify intent.",
     "Sheet \"GL Optional Forms Rules\" row 13 col \"FORM RULE ID\": form rule GL.FORM.RU.007 appears on multiple rows — form numbers merged.",
     "Sheet \"GL Optional Forms Rules\" row 31 col \"FORM RULE ID\": form rule GL.FORM.RU.018 appears on multiple rows — form numbers merged.",
     "Sheet \"GL Optional Forms Rules\" row 40 col \"FORM RULE ID\": form rule GL.FORM.RU.021 appears on multiple rows — form numbers merged.",
     "Sheet \"GL Optional Forms Rules\" row 176 col \"FORM RULE ID\": form rule GL.FORM.RU.154 appears on multiple rows — form numbers merged.",
     "Sheet \"GL Optional Forms Rules\" row 264 col \"FORM RULE ID\": form rule GL.FORM.RU.238 appears on multiple rows — form numbers merged."
   ],
-  "warningCount": 9,
+  "warningCount": 10,
   "unmappedColumns": [
     {
       "sheet": "GL Product Framework",

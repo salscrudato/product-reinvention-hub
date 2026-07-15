@@ -1974,7 +1974,7 @@ var LOB_REGISTRY = {
 var DEFAULT_LOB = PH_LOB;
 function lobByPrefix(refId) {
   if (!refId) return void 0;
-  const prefix = refId.split(".")[0];
+  const prefix = refId.split(/[.\-_ \d]/)[0];
   return Object.values(LOB_REGISTRY).find((l) => l.prefix === prefix);
 }
 function resolveLobByRefId(refId) {
@@ -2224,7 +2224,9 @@ function mapReview(v) {
   return "NOT_STARTED";
 }
 function mapRequirement(v) {
-  return /optional/i.test(text(v)) ? "OPTIONAL" : "MANDATORY";
+  const t = text(v);
+  if (t === "" || isPlaceholder(t)) return "UNKNOWN";
+  return /optional/i.test(t) ? "OPTIONAL" : "MANDATORY";
 }
 function mapClaimsBasis(v) {
   const s = text(v);
@@ -2290,13 +2292,13 @@ function mapFormCategory(v, overlay) {
   if (FORM_CATEGORY_OUTLIERS.has(s)) {
     return { category: null, exact: false, outlier: true };
   }
-  if (s === "") return { category: "ENDORSEMENT", exact: true, outlier: false };
+  if (s === "") return { category: "ENDORSEMENT", exact: false, outlier: false };
   return { category: "ENDORSEMENT", exact: false, outlier: false };
 }
 function refIdPrefix(refId) {
-  const m = refId.match(/^([A-Za-z]{2,4})\.?(?:COV|PROD|LOB|RAT|RU|FORM)/i);
+  const m = refId.match(/^([A-Za-z]{2,4})[.\-_ ]?(?:COV|PROD|LOB|RAT|RU|FORM)/i);
   if (m) return m[1].toUpperCase();
-  return (refId.split(/[.\d]/).filter(Boolean)[0] ?? "").toUpperCase();
+  return (refId.split(/[.\-_\d]/).filter(Boolean)[0] ?? "").toUpperCase();
 }
 function dashId(refId) {
   return refId.replace(/\./g, "-");
@@ -2325,13 +2327,18 @@ function findHeaderRow(grid, aliasGroups, limit = 20) {
   }
   return bestScore >= 3 ? best : -1;
 }
-function mapColumns(header, fields) {
-  const heads = header.map(squish);
+function mapColumns(header, fields, exclude) {
+  const heads = header.map((h, i) => exclude?.has(i) ? "" : squish(h));
   const map = {};
   for (const [key, aliases] of Object.entries(fields)) {
-    const sq = aliases.map(squishStr);
-    const idx = heads.findIndex((h) => h !== "" && sq.includes(h));
-    if (idx >= 0) map[key] = idx;
+    for (const alias of aliases) {
+      const sq = squishStr(alias);
+      const idx = heads.findIndex((h) => h !== "" && h === sq);
+      if (idx >= 0) {
+        map[key] = idx;
+        break;
+      }
+    }
   }
   const STOP = /* @__PURE__ */ new Set(["THE", "A", "AN", "OF", "OR", "AND", "TO", "IN", "IS", "FOR", "ON", "AT", "BY"]);
   function sigWords(s) {
@@ -2368,9 +2375,26 @@ function stateColumns(header) {
   const allCol = header.findIndex((c) => /\bALL( ACTIVE)? STATES\b/.test(norm(c)));
   return { cols, allCol };
 }
+function stateMatrixExclusions(grid, hr, sc) {
+  const out = /* @__PURE__ */ new Set();
+  const limit = Math.min(grid.cells.length, hr + 1 + 400);
+  for (const s of sc.cols) {
+    let matrix = true;
+    for (let r = hr + 1; r < limit; r++) {
+      const v = text((grid.cells[r] ?? [])[s.col] ?? null);
+      if (v !== "" && !isX(v)) {
+        matrix = false;
+        break;
+      }
+    }
+    if (matrix) out.add(s.col);
+  }
+  if (sc.allCol >= 0) out.add(sc.allCol);
+  return out;
+}
 function stateScope(r, sc) {
   if (sc.allCol >= 0 && isX(r[sc.allCol] ?? null)) return { allStates: true, states: [] };
-  const states = sc.cols.filter((s) => isX(r[s.col] ?? null)).map((s) => s.code);
+  const states = sc.cols.filter((s) => isX(r[s.col] ?? null)).map((s) => s.code).sort();
   return states.length ? { allStates: false, states } : { allStates: true, states: [] };
 }
 function fillForward(r) {
@@ -2645,8 +2669,8 @@ function parseFramework(grid, ctx, overlay) {
   }
   ctx.recognized.push(grid.sheet);
   const header = row(grid, hr);
-  const col = mapColumns(header, effectiveFwFields);
   const sc = stateColumns(header);
+  const col = mapColumns(header, effectiveFwFields, stateMatrixExclusions(grid, hr, sc));
   const at = (r, k) => k in col ? r[col[k]] ?? null : null;
   const productRows = /* @__PURE__ */ new Map();
   let lobRefId = null;
@@ -2663,11 +2687,11 @@ function parseFramework(grid, ctx, overlay) {
     const subName = clean(at(cells, "subCoverage"));
     const prod = clean(at(cells, "product"));
     const lob = clean(at(cells, "lob"));
-    if (/\.(PROD|PRD|PRODUCT)\b|\.(PROD|PRD|PRODUCT)\./i.test(id)) {
+    if (/[.\-_ ](PROD|PRD|PRODUCT)(?:[.\-_ ]|\b)/i.test(id)) {
       if (!productRows.has(id)) productRows.set(id, { refId: id, name: prod || "" });
       continue;
     }
-    if (/\.LOB\b|\.LOB\./i.test(id)) {
+    if (/[.\-_ ]LOB(?:[.\-_ ]|\b)/i.test(id)) {
       if (!lobRefId) {
         lobRefId = id;
         lobName = lob || lobName;
@@ -2707,9 +2731,14 @@ function parseFramework(grid, ctx, overlay) {
     }
     productList = [...seenPrefixes.values()];
   } else {
-    const prefix = (drafts.length > 0 ? refIdPrefix(drafts[0].refId) : null) || "XX";
+    const derived = drafts.length > 0 ? refIdPrefix(drafts[0].refId) : "";
+    const lobDef = resolveLobByRefId(`${derived}.LOB.001`);
+    const prefix = lobDef?.refIdPrefix ?? DEFAULT_LOB.refIdPrefix;
     const synthRefId = `${prefix}.PROD.SYNTH001`;
     const synthName = productNameHint || "";
+    if (!lobDef) {
+      ctx.warnOnce("product_synth_prefix_defaulted", `Framework sheet "${grid.sheet}": coverage id prefix "${derived}" resolves to no registered line \u2014 synthesized product id uses the platform default line "${prefix}" (verify the line); code: product_synth_prefix_defaulted.`);
+    }
     ctx.warnOnce("product_synthesized", `Framework sheet "${grid.sheet}": no explicit product (.PROD/.PRD) row \u2014 synthesized "${synthRefId}" from coverage id prefix "${prefix}"; code: product_synthesized.`);
     productList = [{ refId: synthRefId, name: synthName }];
   }
@@ -2850,7 +2879,8 @@ function parseForms(grid, dynByForm, productRefId, ctx, overlay) {
   }
   ctx.recognized.push(grid.sheet);
   const header = row(grid, hr);
-  const col = mapColumns(header, effectiveFormFields);
+  const scEarly = stateColumns(header);
+  const col = mapColumns(header, effectiveFormFields, stateMatrixExclusions(grid, hr, scEarly));
   if (!("number" in col)) {
     ctx.warn(`Forms sheet "${grid.sheet}": no Form Number column \u2014 skipped.`);
     return [];
@@ -2871,8 +2901,8 @@ function parseForms(grid, dynByForm, productRefId, ctx, overlay) {
     const edition = clean(at(cells, "edition"));
     const key = edition ? `${numKey}__${edition.replace(/\s+/g, "-")}` : numKey;
     const scope = stateScope(cells, sc);
-    const coverageParts = partCols.filter((p) => isX(cells[p.col] ?? null)).map((p) => p.name);
-    const transactions = txnCols.filter((t) => isX(cells[t.col] ?? null)).map((t) => t.name);
+    const coverageParts = partCols.filter((p) => isX(cells[p.col] ?? null)).map((p) => p.name).sort();
+    const transactions = txnCols.filter((t) => isX(cells[t.col] ?? null)).map((t) => t.name).sort();
     const existing = byKey.get(key);
     if (existing) {
       const d = existing.data;
@@ -2899,10 +2929,25 @@ function parseForms(grid, dynByForm, productRefId, ctx, overlay) {
         rowRef: `${grid.sheet} row ${r + 1}`
       });
     } else if (!cat.exact) {
-      ctx.warnOnce(
-        `formcat:${norm(at(cells, "category"))}`,
-        `Sheet "${grid.sheet}" row ${r + 1} col "FORM CATEGORY": value "${clean(at(cells, "category"))}" not recognised \u2014 mapped to ENDORSEMENT, verify intent.`
-      );
+      if (clean(at(cells, "category")) === "") {
+        ctx.warnOnce(
+          `formcat:blank:${grid.sheet}`,
+          `Sheet "${grid.sheet}": blank FORM CATEGORY cell(s) \u2014 defaulted to ENDORSEMENT (the source did not state a category); verify intent.`
+        );
+      } else {
+        ctx.warnOnce(
+          `formcat:${norm(at(cells, "category"))}`,
+          `Sheet "${grid.sheet}" row ${r + 1} col "FORM CATEGORY": value "${clean(at(cells, "category"))}" not recognised \u2014 mapped to ENDORSEMENT, verify intent.`
+        );
+      }
+    }
+    for (const [fieldKey, label] of [["mandatory", "MANDATORY/ OPTIONAL"], ["dynamic", "DYNAMIC / STATIC"], ["admitted", "ADMITTED / NON-ADMITTED"]]) {
+      if (fieldKey in col && clean(at(cells, fieldKey)) === "") {
+        ctx.warnOnce(
+          `formblank:${fieldKey}:${grid.sheet}`,
+          `Sheet "${grid.sheet}": blank ${label} cell(s) \u2014 defaulted (${fieldKey === "admitted" ? "admitted=true" : `${fieldKey}=false`}); the source did not state them.`
+        );
+      }
     }
     byKey.set(key, {
       docId: key,
@@ -3024,7 +3069,8 @@ function parseRules(grid, ctx) {
   }
   ctx.recognized.push(grid.sheet);
   const header = row(grid, hr);
-  const col = mapColumns(header, RULE_FIELDS);
+  const scEarly = stateColumns(header);
+  const col = mapColumns(header, RULE_FIELDS, stateMatrixExclusions(grid, hr, scEarly));
   if (!("id" in col)) {
     ctx.warn(`Rules sheet "${grid.sheet}": no Rule ID column \u2014 skipped.`);
     return [];
@@ -3433,7 +3479,8 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
   }
   ctx.recognized.push(grid.sheet);
   const header = row(grid, hr);
-  const col = mapColumns(header, RATE_FIELDS);
+  const scEarly = stateColumns(header);
+  const col = mapColumns(header, RATE_FIELDS, stateMatrixExclusions(grid, hr, scEarly));
   if (!("stepId" in col) && !("algorithm" in col)) {
     ctx.warn(`Rating sheet "${grid.sheet}": no rating step columns \u2014 skipped.`);
     return null;
@@ -3479,7 +3526,7 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
     scopes.push(stateScope(cells, sc));
   }
   if (!steps.length) return null;
-  const refId = programRefId ?? `${(productRefId ?? "PROD").split(".")[0]}.RAT.1`;
+  const refId = programRefId ?? `${productRefId ? refIdPrefix(productRefId) || "PROD" : "PROD"}.RAT.1`;
   const scope = scopes.some((s) => s.allStates) || !scopes.length ? { allStates: true, states: [] } : { allStates: false, states: [...new Set(scopes.flatMap((s) => s.states))].sort() };
   const handled = new Set(Object.values(col).concat(sc.cols.map((s) => s.col), sc.allCol));
   ctx.recordUnmapped(grid.sheet, header, handled);

@@ -441,7 +441,9 @@ export const DEFAULT_LOB = PH_LOB
 
 function lobByPrefix(refId?: string | null): LobDefinition | undefined {
   if (!refId) return undefined
-  const prefix = refId.split('.')[0]
+  // Separator-agnostic (ledger G-B): "GL.PROD.001" and "GL-PROD-001" state the
+  // same line; glued forms ("PRCOV0010.0") already resolved via the digit split.
+  const prefix = refId.split(/[.\-_ \d]/)[0]
   return Object.values(LOB_REGISTRY).find(l => l.prefix === prefix)
 }
 

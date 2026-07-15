@@ -188,7 +188,8 @@ describe('mapIsoWorkbook — forms + dynamic fields', () => {
     const base = plan.forms.find(f => f.data['number'] === 'CG 00 01')!
     expect(base.data['category']).toBe('BASE_COVERAGE')
     expect(base.data['coverageParts']).toEqual(['COMMERCIAL GENERAL LIABILITY'])
-    expect(base.data['transactions']).toEqual(['SUBMISSION', 'RENEWAL'])
+    // Sorted: group membership is a SET — serialization is column-order-independent (G-A).
+    expect(base.data['transactions']).toEqual(['RENEWAL', 'SUBMISSION'])
     expect(base.data['productRefIds']).toEqual(['GL.PROD.001'])
 
     const poll = plan.forms.find(f => f.data['number'] === 'CG 00 40')!
@@ -515,5 +516,90 @@ describe('mapIsoWorkbook — summary', () => {
     ]))
     // "REVIEW STATUS"-style columns we don't consume show up as unmapped (transparency).
     expect(plan.summary.unmappedColumns.length).toBeGreaterThanOrEqual(0)
+  })
+})
+
+// ─── Phase G generalization locks (ledger G-A / G-B / G-C / G-D) ─────────────────
+// Permanent fixtures for the holdout-discovered defects: the frozen corpus at
+// samples/hardening/holdout/ is the discovery lock; these are the unit locks.
+
+describe('mapIsoWorkbook — header alias specificity + state-matrix profile (G-A)', () => {
+  it('an X-marked Idaho column left of the id column never hijacks the "ID" alias', () => {
+    const p = mapIsoWorkbook([g('GL Product Framework', [
+      ['PRODUCT FRAMEWORK'],
+      ['ID', 'STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'MANDATORY/ OPTIONAL'],
+      ['X', 'Active', 'GL.PROD.001', 'Monoline GL', '', '', ''],
+      ['', 'Active', 'GL.COV.001', 'Monoline GL', 'CGL', 'Premises Liability', 'Mandatory'],
+      ['X', 'Active', 'GL.COV.002', 'Monoline GL', 'CGL', 'Products Liability', 'Optional'],
+    ])])
+    expect(p.productId).toBe('GL.PROD.001')
+    expect(p.coverages.map(c => c.refId)).toEqual(['GL.COV.001', 'GL.COV.002'])
+  })
+
+  it('a PCM-style id column literally headed "ID" (Idaho) keeps working — data profile beats header name', () => {
+    const p = mapIsoWorkbook([g('Product Component Model', [
+      ['COMPONENT MODEL'],
+      ['STATUS', 'ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'MANDATORY/ OPTIONAL'],
+      ['Active', 'IM.PROD.001', 'Floater', '', '', ''],
+      ['Active', 'IM.COV.001', 'Floater', 'Inland Marine', 'Scheduled Equipment', 'Mandatory'],
+    ])])
+    expect(p.productId).toBe('IM.PROD.001')
+    expect(p.coverages.map(c => c.refId)).toEqual(['IM.COV.001'])
+  })
+})
+
+describe('mapIsoWorkbook — separator-agnostic identity recognition (G-B)', () => {
+  const p = mapIsoWorkbook([g('GL Product Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'MANDATORY/ OPTIONAL'],
+    ['Active', 'GL-PROD-001', 'Monoline GL', '', '', ''],
+    ['Active', 'GL-COV-001', 'Monoline GL', 'CGL', 'Premises Liability', 'Mandatory'],
+  ])])
+  it('recognizes a dash-notation product row and carries ids byte-for-byte', () => {
+    expect(p.productId).toBe('GL-PROD-001')
+    expect(p.coverages.map(c => c.refId)).toEqual(['GL-COV-001'])
+  })
+  it('resolves the line from the dashed prefix (never the PH default)', () => {
+    expect(p.product?.data['marketSegment']).toBe('Commercial Lines / Casualty')
+  })
+})
+
+describe('mapIsoWorkbook — synthesized prefix is registry-validated (G-C)', () => {
+  it('junk coverage ids never leak into the minted product id — warned platform default instead', () => {
+    const p = mapIsoWorkbook([g('Product Framework', [
+      ['PRODUCT FRAMEWORK'],
+      ['STATUS', 'ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'MANDATORY/ OPTIONAL'],
+      ['Active', 'ZZZTOP.9', 'Mystery Product', 'Unknown Line', 'Some Coverage', 'Mandatory'],
+    ])])
+    expect(p.productId).toBe('PH.PROD.SYNTH001')
+    expect(p.summary.warnings.some(w => /product_synth_prefix_defaulted/.test(w))).toBe(true)
+  })
+})
+
+describe('mapIsoWorkbook — no fabrication on silence (G-D)', () => {
+  const p = mapIsoWorkbook([
+    g('GL Product Framework', [
+      ['PRODUCT FRAMEWORK'],
+      ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'MANDATORY/ OPTIONAL'],
+      ['Active', 'GL.PROD.001', 'Monoline GL', '', '', ''],
+      ['Active', 'GL.COV.001', 'Monoline GL', 'CGL', 'Premises Liability', ''],
+      ['Active', 'GL.COV.002', 'Monoline GL', 'CGL', 'Products Liability', 'Optional'],
+    ]),
+    g('GL Forms Specifications', [
+      ['FORMS SPECIFICATIONS'],
+      ['PRODUCT FRAMEWORK ID', 'FORM NAME', 'FORM NUMBER', 'FORM EDITION DATE (MM YY)', 'FORM CATEGORY', 'MANDATORY/ OPTIONAL', 'DYNAMIC / STATIC'],
+      ['GL.COV.001', 'Some Form', 'CG 77 01', '04 13', '', '', 'Static'],
+    ]),
+  ])
+  it('a blank requirement cell maps to UNKNOWN, never a silent MANDATORY', () => {
+    const covOf = (refId: string) => p.coverages.find(c => c.refId === refId)!
+    expect(covOf('GL.COV.001').data['requirement']).toBe('UNKNOWN')
+    expect(covOf('GL.COV.002').data['requirement']).toBe('OPTIONAL')
+  })
+  it('blank category/mandatory cells keep their documented defaults but are WARNED', () => {
+    const form = p.forms.find(f => f.data['number'] === 'CG 77 01')!
+    expect(form.data['category']).toBe('ENDORSEMENT')
+    expect(p.summary.warnings.some(w => /blank FORM CATEGORY/.test(w))).toBe(true)
+    expect(p.summary.warnings.some(w => /blank MANDATORY/.test(w))).toBe(true)
   })
 })

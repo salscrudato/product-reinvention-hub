@@ -39,9 +39,12 @@
     "Framework sheet \"Product Component Model\": no explicit product (.PROD/.PRD) row — synthesized \"PR.PROD.SYNTH001\" from coverage id prefix \"PR\"; code: product_synthesized.",
     "Sheet \"Forms Library\" row 4 col \"FORM CATEGORY\": value \"Declaration/ Schedule\" not recognised — mapped to ENDORSEMENT, verify intent.",
     "Sheet \"Forms Library\" row 76 col \"FORM NUMBER\": form CP 04 10 appears on multiple rows — applicability merged.",
-    "Sheet \"Forms Library\" row 211 col \"FORM NUMBER\": form CP 01 20 appears on multiple rows — applicability merged."
+    "Sheet \"Forms Library\" row 211 col \"FORM NUMBER\": form CP 01 20 appears on multiple rows — applicability merged.",
+    "Sheet \"Forms Library\": blank FORM CATEGORY cell(s) — defaulted to ENDORSEMENT (the source did not state a category); verify intent.",
+    "Sheet \"Forms Library\": blank DYNAMIC / STATIC cell(s) — defaulted (dynamic=false); the source did not state them.",
+    "Sheet \"Forms Library\": blank ADMITTED / NON-ADMITTED cell(s) — defaulted (admitted=true); the source did not state them."
   ],
-  "warningCount": 5,
+  "warningCount": 8,
   "unmappedColumns": [
     {
       "sheet": "Product Component Model",

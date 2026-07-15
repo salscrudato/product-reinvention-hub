@@ -170,7 +170,13 @@ function mapReview(v: IsoCell): ReviewStatus {
   if (s.startsWith('IN PROGRESS') || s.startsWith('INITIAL') || s.startsWith('READY') || s.startsWith('TBD')) return 'IN_PROGRESS'
   return 'NOT_STARTED'
 }
-function mapRequirement(v: IsoCell): Requirement { return /optional/i.test(text(v)) ? 'OPTIONAL' : 'MANDATORY' }
+// G-D (fabrication-on-silence): a BLANK requirement cell is a fact the source did
+// not state — it maps to UNKNOWN (representable since F14), never a silent MANDATORY.
+function mapRequirement(v: IsoCell): Requirement {
+  const t = text(v)
+  if (t === '' || isPlaceholder(t)) return 'UNKNOWN'
+  return /optional/i.test(t) ? 'OPTIONAL' : 'MANDATORY'
+}
 function mapClaimsBasis(v: IsoCell): string {
   const s = text(v)
   if (/claim/i.test(s)) return 'Claims-made'
@@ -260,8 +266,10 @@ function mapFormCategory(
     return { category: null, exact: false, outlier: true }
   }
 
-  // Empty cell: blank → not an error, but not exact either
-  if (s === '') return { category: 'ENDORSEMENT', exact: true, outlier: false }
+  // Empty cell: the source did not state a category. The write-fallback stays
+  // ENDORSEMENT, but it is a WARNED default now (G-D) — exact:true here used to
+  // mint a fabricated value carrying a truth marker, silently.
+  if (s === '') return { category: 'ENDORSEMENT', exact: false, outlier: false }
 
   // Carrier-specific label not in canonical map and not a known outlier:
   // fold onto ENDORSEMENT with a warning (preserves backward compat for values
@@ -272,9 +280,11 @@ function mapFormCategory(
 /** The line prefix (LOB token) of a coverage refId. Tolerant of inconsistent source formatting:
  *  "PR.COV001.0", "PRCOV0010.0" and "GL.COV.001" all yield the leading line code (PR / PR / GL). */
 function refIdPrefix(refId: string): string {
-  const m = refId.match(/^([A-Za-z]{2,4})\.?(?:COV|PROD|LOB|RAT|RU|FORM)/i)
+  // Separator-agnostic (ledger G-B): "GL.COV.001", "GL-COV-001", "PRCOV0010.0"
+  // all yield the leading line code.
+  const m = refId.match(/^([A-Za-z]{2,4})[.\-_ ]?(?:COV|PROD|LOB|RAT|RU|FORM)/i)
   if (m) return m[1]!.toUpperCase()
-  return (refId.split(/[.\d]/).filter(Boolean)[0] ?? '').toUpperCase()
+  return (refId.split(/[.\-_\d]/).filter(Boolean)[0] ?? '').toUpperCase()
 }
 /** Firestore-safe doc id (matches the seed: dots → dashes). */
 function dashId(refId: string): string { return refId.replace(/\./g, '-') }
@@ -303,20 +313,29 @@ function findHeaderRow(grid: IsoGrid, aliasGroups: string[][], limit = 20): numb
   return bestScore >= 3 ? best : -1
 }
 
-/** Map each field key → the first column whose header matches one of its aliases
- *  (punctuation/whitespace-insensitive). A secondary fuzzy word-overlap pass handles
- *  novel templates whose header phrasing isn't in the alias list: if a column header
- *  shares at least half its significant words with an alias, it qualifies. Exact
- *  squish matches always win; fuzzy only fills unmapped keys. */
-function mapColumns(header: IsoCell[], fields: Record<string, string[]>): Record<string, number> {
-  const heads = header.map(squish)
+/** Map each field key → the column whose header matches its MOST SPECIFIC alias
+ *  (punctuation/whitespace-insensitive). Alias lists are ordered most-specific-first,
+ *  and the first ALIAS with a matching column wins — never the first column with any
+ *  alias: a bare generic like "ID" must not shadow "PRODUCT FRAMEWORK ID" just by
+ *  sitting further left (ledger G-A: Idaho's state column squishes to "ID" and
+ *  hijacked the id field whenever the state matrix preceded the id column).
+ *  `exclude` removes structurally-identified columns (the state matrix) from
+ *  matching entirely — a state-attachment column is never a field column.
+ *  A secondary fuzzy word-overlap pass handles novel templates whose header phrasing
+ *  isn't in the alias list: if a column header shares at least half its significant
+ *  words with an alias, it qualifies. Exact squish matches always win; fuzzy only
+ *  fills unmapped keys. */
+function mapColumns(header: IsoCell[], fields: Record<string, string[]>, exclude?: ReadonlySet<number>): Record<string, number> {
+  const heads = header.map((h, i) => (exclude?.has(i) ? '' : squish(h)))
   const map: Record<string, number> = {}
 
-  // Pass 1 — exact squish match (primary, fast).
+  // Pass 1 — exact squish match, alias-priority (most specific alias wins).
   for (const [key, aliases] of Object.entries(fields)) {
-    const sq = aliases.map(squishStr)
-    const idx = heads.findIndex(h => h !== '' && sq.includes(h))
-    if (idx >= 0) map[key] = idx
+    for (const alias of aliases) {
+      const sq = squishStr(alias)
+      const idx = heads.findIndex(h => h !== '' && h === sq)
+      if (idx >= 0) { map[key] = idx; break }
+    }
   }
 
   // Pass 2 — fuzzy word-overlap for unmapped keys (tolerates synonym phrasing).
@@ -354,9 +373,31 @@ function stateColumns(header: IsoCell[]): { cols: StateCol[]; allCol: number } {
   const allCol = header.findIndex(c => /\bALL( ACTIVE)? STATES\b/.test(norm(c)))
   return { cols, allCol }
 }
+/** State-named columns that are truly part of an X-marked state MATRIX, by DATA
+ *  profile: every non-blank cell below the header is an X mark. A header that merely
+ *  COLLIDES with a postal code (the PCM template's id column is literally "ID" —
+ *  Idaho) carries real data and must stay matchable as a field column (ledger G-A:
+ *  exclusion by header name alone erased the PCM id column and every IM/PR coverage
+ *  with it — caught by the golden diff, not the circular regen). */
+function stateMatrixExclusions(grid: IsoGrid, hr: number, sc: { cols: StateCol[]; allCol: number }): Set<number> {
+  const out = new Set<number>()
+  const limit = Math.min(grid.cells.length, hr + 1 + 400)
+  for (const s of sc.cols) {
+    let matrix = true
+    for (let r = hr + 1; r < limit; r++) {
+      const v = text((grid.cells[r] ?? [])[s.col] ?? null)
+      if (v !== '' && !isX(v)) { matrix = false; break }
+    }
+    if (matrix) out.add(s.col)
+  }
+  if (sc.allCol >= 0) out.add(sc.allCol)
+  return out
+}
 function stateScope(r: IsoCell[], sc: { cols: StateCol[]; allCol: number }): { allStates: boolean; states: string[] } {
   if (sc.allCol >= 0 && isX(r[sc.allCol] ?? null)) return { allStates: true, states: [] }
-  const states = sc.cols.filter(s => isX(r[s.col] ?? null)).map(s => s.code)
+  // Sorted: state applicability is a SET — its serialization must not depend on
+  // the source's column order (ledger G-A: a permuted state matrix reversed it).
+  const states = sc.cols.filter(s => isX(r[s.col] ?? null)).map(s => s.code).sort()
   return states.length ? { allStates: false, states } : { allStates: true, states: [] }
 }
 
@@ -618,8 +659,8 @@ function parseFramework(
   ctx.recognized.push(grid.sheet)
 
   const header = row(grid, hr)
-  const col = mapColumns(header, effectiveFwFields)
   const sc = stateColumns(header)
+  const col = mapColumns(header, effectiveFwFields, stateMatrixExclusions(grid, hr, sc))
   const at = (r: IsoCell[], k: string) => (k in col ? (r[col[k]] ?? null) : null)
 
   // Ordered map preserving first-occurrence order for display stability.
@@ -642,12 +683,15 @@ function parseFramework(
     const prod = clean(at(cells, 'product'))
     const lob  = clean(at(cells, 'lob'))
 
-    if (/\.(PROD|PRD|PRODUCT)\b|\.(PROD|PRD|PRODUCT)\./i.test(id)) {
+    // Separator-agnostic kind detection (ledger G-B): a source that writes its ids
+    // as "GL-PROD-001" is stating the same identity as "GL.PROD.001" — recognition
+    // must not hinge on the dot, while the id itself is carried byte-for-byte.
+    if (/[.\-_ ](PROD|PRD|PRODUCT)(?:[.\-_ ]|\b)/i.test(id)) {
       // Collect explicit product rows. First-seen per refId wins (deduplicates state-row repeats).
       if (!productRows.has(id)) productRows.set(id, { refId: id, name: prod || '' })
       continue
     }
-    if (/\.LOB\b|\.LOB\./i.test(id)) {
+    if (/[.\-_ ]LOB(?:[.\-_ ]|\b)/i.test(id)) {
       if (!lobRefId) { lobRefId = id; lobName = lob || lobName }
       continue
     }
@@ -698,9 +742,18 @@ function parseFramework(
     // F26: the id is MINTED, not read from source — it carries the platform SYNTH
     // marker (same shape the brain path mints for the identical situation,
     // stage7-plan.js), never a byte-shape identical to a real source id.
-    const prefix = (drafts.length > 0 ? refIdPrefix(drafts[0]!.refId) : null) || 'XX'
+    // G-C: the derived prefix must be a REGISTRY prefix — a junk id parse must
+    // never leak into a minted identity ("GL-COV-.PROD.SYNTH001", "X.PROD.SYNTH001").
+    // Unresolvable → the platform default line, WARNED (F18: a defaulted value is
+    // always a warned default).
+    const derived = drafts.length > 0 ? refIdPrefix(drafts[0]!.refId) : ''
+    const lobDef = resolveLobByRefId(`${derived}.LOB.001`)
+    const prefix = lobDef?.refIdPrefix ?? DEFAULT_LOB.refIdPrefix
     const synthRefId = `${prefix}.PROD.SYNTH001`
     const synthName  = productNameHint || ''
+    if (!lobDef) {
+      ctx.warnOnce('product_synth_prefix_defaulted', `Framework sheet "${grid.sheet}": coverage id prefix "${derived}" resolves to no registered line — synthesized product id uses the platform default line "${prefix}" (verify the line); code: product_synth_prefix_defaulted.`)
+    }
     ctx.warnOnce('product_synthesized', `Framework sheet "${grid.sheet}": no explicit product (.PROD/.PRD) row — synthesized "${synthRefId}" from coverage id prefix "${prefix}"; code: product_synthesized.`)
     productList = [{ refId: synthRefId, name: synthName }]
   }
@@ -821,7 +874,8 @@ function parseForms(
   if (hr < 0) { ctx.warn(`Forms sheet "${grid.sheet}": no recognizable header row — skipped.`); return [] }
   ctx.recognized.push(grid.sheet)
   const header = row(grid, hr)
-  const col = mapColumns(header, effectiveFormFields)
+  const scEarly = stateColumns(header)
+  const col = mapColumns(header, effectiveFormFields, stateMatrixExclusions(grid, hr, scEarly))
   if (!('number' in col)) { ctx.warn(`Forms sheet "${grid.sheet}": no Form Number column — skipped.`); return [] }
   const sc = stateColumns(header)
   const section = fillForward(row(grid, hr - 1))
@@ -848,8 +902,10 @@ function parseForms(
     const edition = clean(at(cells, 'edition'))
     const key = edition ? `${numKey}__${edition.replace(/\s+/g, '-')}` : numKey
     const scope = stateScope(cells, sc)
-    const coverageParts = partCols.filter(p => isX(cells[p.col] ?? null)).map(p => p.name)
-    const transactions = txnCols.filter(t => isX(cells[t.col] ?? null)).map(t => t.name)
+    // Sorted: X-marked group membership is a SET — serialization must not depend
+    // on the source's column order (ledger G-A, same rule as stateScope).
+    const coverageParts = partCols.filter(p => isX(cells[p.col] ?? null)).map(p => p.name).sort()
+    const transactions = txnCols.filter(t => isX(cells[t.col] ?? null)).map(t => t.name).sort()
 
     const existing = byKey.get(key)
     if (existing) {
@@ -880,10 +936,30 @@ function parseForms(
         rowRef:   `${grid.sheet} row ${r + 1}`,
       })
     } else if (!cat.exact) {
-      ctx.warnOnce(
-        `formcat:${norm(at(cells, 'category'))}`,
-        `Sheet "${grid.sheet}" row ${r + 1} col "FORM CATEGORY": value "${clean(at(cells, 'category'))}" not recognised — mapped to ENDORSEMENT, verify intent.`,
-      )
+      if (clean(at(cells, 'category')) === '') {
+        ctx.warnOnce(
+          `formcat:blank:${grid.sheet}`,
+          `Sheet "${grid.sheet}": blank FORM CATEGORY cell(s) — defaulted to ENDORSEMENT (the source did not state a category); verify intent.`,
+        )
+      } else {
+        ctx.warnOnce(
+          `formcat:${norm(at(cells, 'category'))}`,
+          `Sheet "${grid.sheet}" row ${r + 1} col "FORM CATEGORY": value "${clean(at(cells, 'category'))}" not recognised — mapped to ENDORSEMENT, verify intent.`,
+        )
+      }
+    }
+
+    // G-D: blank boolean cells are unstated facts — the documented defaults still
+    // apply (mandatory=false, dynamic=false, admitted=true) but always WARNED,
+    // never silent. Only cells whose COLUMN exists count (an absent column is a
+    // template shape, not a silent cell).
+    for (const [fieldKey, label] of [['mandatory', 'MANDATORY/ OPTIONAL'], ['dynamic', 'DYNAMIC / STATIC'], ['admitted', 'ADMITTED / NON-ADMITTED']] as const) {
+      if (fieldKey in col && clean(at(cells, fieldKey)) === '') {
+        ctx.warnOnce(
+          `formblank:${fieldKey}:${grid.sheet}`,
+          `Sheet "${grid.sheet}": blank ${label} cell(s) — defaulted (${fieldKey === 'admitted' ? 'admitted=true' : `${fieldKey}=false`}); the source did not state them.`,
+        )
+      }
     }
 
     byKey.set(key, {
@@ -958,7 +1034,8 @@ function parseRules(grid: IsoGrid, ctx: Ctx): PlannedEntity[] {
   if (hr < 0) { ctx.warn(`Rules sheet "${grid.sheet}": no recognizable header row — skipped.`); return [] }
   ctx.recognized.push(grid.sheet)
   const header = row(grid, hr)
-  const col = mapColumns(header, RULE_FIELDS)
+  const scEarly = stateColumns(header)
+  const col = mapColumns(header, RULE_FIELDS, stateMatrixExclusions(grid, hr, scEarly))
   if (!('id' in col)) { ctx.warn(`Rules sheet "${grid.sheet}": no Rule ID column — skipped.`); return [] }
   const sc = stateColumns(header)
   const at = (r: IsoCell[], k: string) => (k in col ? (r[col[k]] ?? null) : null)
@@ -1365,7 +1442,8 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
   if (hr < 0) { ctx.warn(`Rating sheet "${grid.sheet}": no recognizable header row — skipped.`); return null }
   ctx.recognized.push(grid.sheet)
   const header = row(grid, hr)
-  const col = mapColumns(header, RATE_FIELDS)
+  const scEarly = stateColumns(header)
+  const col = mapColumns(header, RATE_FIELDS, stateMatrixExclusions(grid, hr, scEarly))
   if (!('stepId' in col) && !('algorithm' in col)) { ctx.warn(`Rating sheet "${grid.sheet}": no rating step columns — skipped.`); return null }
   const sc = stateColumns(header)
   const at = (r: IsoCell[], k: string) => (k in col ? (r[col[k]] ?? null) : null)
@@ -1412,7 +1490,9 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
   }
   if (!steps.length) return null
 
-  const refId = programRefId ?? `${(productRefId ?? 'PROD').split('.')[0]}.RAT.1`
+  // Separator-agnostic prefix derivation (G-B): a dashed product id must not leak
+  // whole into the program id.
+  const refId = programRefId ?? `${productRefId ? refIdPrefix(productRefId) || 'PROD' : 'PROD'}.RAT.1`
   const scope = scopes.some(s => s.allStates) || !scopes.length
     ? { allStates: true, states: [] }
     : { allStates: false, states: [...new Set(scopes.flatMap(s => s.states))].sort() }
