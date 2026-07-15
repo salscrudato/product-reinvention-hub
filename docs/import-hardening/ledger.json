@@ -370,6 +370,19 @@
       "lesson": "A join that adopts identity must also adopt MULTIPLICITY: when the oracle folds N source rows into one entity, every row-slice the extractor emitted belongs inside that entity, not beside it. An eval gate is only as good as the runs it has scored — this defect was invisible until the first gated live run of the format that has formRules."
     },
     {
+      "id": "F27",
+      "title": "The hardening pdf corpus is not PDF — every file is an export rasterization artifact (ZIP-of-JPEG scans / plain text); the offline filing and mixed fixtures never exercised the filing path",
+      "class": "EVAL_GAP",
+      "severity": "HIGH",
+      "confidence": 1.0,
+      "cost": "S",
+      "status": "FIXED_IH4",
+      "priority": null,
+      "evidence": "Found by IH4 while extending the corpus baseline for M1: samples/hardening/pdf/*.pdf all carry PK\\x03\\x04 magic (ZIPs of 1.jpeg..N.jpeg page scans from the Claude.ai project-knowledge export) except PersonalAuto_WA_Rate_..._Version_2_11.pdf which is extracted plain TEXT. Consequence in the committed baseline: mixed/filing-nj-pair and mixed/filing-two-manuals routed EVERY document as a 0-sheet workbook (filingDocs: []), so the fixtures' stated purposes (F13 role partition, mixed-upload warning) were FALSE at HEAD — including IH3's filing-two-manuals corpus growth, which exercised nothing. The router itself behaved CORRECTLY throughout (magic-byte sniff beats the lying extension). PLACEMENT.md's md5 verification checked staged-copy integrity, not content-vs-extension truth. || FIXED_IH4 (Tier 0, corpus layer): filing-purpose requests repointed at REAL committed PDFs (samples/filings/nj-lemonade-ho pair; samples/iso/sample-PH-baseform-HO3.pdf for the mixed request); the true WA auto rate manual committed as samples/hardening/pdf/PersonalAuto_WA_Rate_Manual_v2_11_REAL.pdf (%PDF magic verified) so filing-two-manuals is a real two-line pair; the fakes KEPT and reclassified as adversarial extension-vs-content fixtures with a new adv-extension-lies-pdf request locking magic-over-extension routing; PLACEMENT.md rewritten to the truth. Regenerated baseline: 26/26 completed, filing path exercised offline for the first time (filingDocs populated, stub-AI docs land conserved as unresolved 2=2), mixed request shows M1's named-skip accounting (107=106+1). Phase P live probes now use real bytes (WA Form/Rule/Rate manuals from the operator's local additional_samples for live-only probes; committed files for anything reproducible).",
+      "fixture": "samples/hardening/mixed/mixed_requests.json (adv-extension-lies-pdf locks magic-over-extension; filing requests point at real PDFs) + RESULTS/corpus-baseline.json (filingDocs non-empty for filing requests — regression-visible on regeneration)",
+      "lesson": "A checksum verifies bytes, not meaning: corpus staging must verify MAGIC against the claimed type, or the eval quietly certifies fixtures that exercise nothing. An export pipeline is part of the evidence chain."
+    },
+    {
       "id": "F25",
       "title": "isoImport blank rule-ID synthesis mints <fwBase>.RULE.### without the SYNTH marker (workbook deterministic mapper)",
       "class": "GROUNDING",

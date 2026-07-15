@@ -3,9 +3,16 @@
   "requests": [
     {
       "id": "mixed-workbook-plus-pdf",
-      "purpose": "Mixed upload: workbook wins, PDFs dropped with the mixed-upload warning (unified-import.js dispatch)",
+      "purpose": "Mixed upload: workbook wins, the REAL PDF is skipped as a named, conserved unresolved item (ledger M1) with the mixed-upload warning (unified-import.js dispatch)",
       "files": [
         "samples/hardening/workbooks/20ISOFrameworkGL.xlsx",
+        "samples/iso/sample-PH-baseform-HO3.pdf"
+      ]
+    },
+    {
+      "id": "adv-extension-lies-pdf",
+      "purpose": "A '.pdf' whose bytes are a ZIP of JPEG page scans (project-knowledge export rasterization artifact — ledger F27): magic-byte routing must win over the extension; it parses as a 0-sheet container and must NEVER reach the filing path",
+      "files": [
         "samples/hardening/pdf/PP_00_01_06_98.pdf"
       ]
     },
@@ -29,18 +36,18 @@
     },
     {
       "id": "filing-nj-pair",
-      "purpose": "Two-PDF filing request (manual + rate order) — first-doc-per-role behavior fixture (ledger F13)",
+      "purpose": "Two-PDF filing request (manual + rate order) — first-doc-per-role behavior fixture (ledger F13). Uses the REAL PDFs in samples/filings/ — the samples/hardening/pdf/ copies are export rasterization artifacts, not PDFs (ledger F27)",
       "files": [
-        "samples/hardening/pdf/NJ_HO_Manual_02_27_24.pdf",
-        "samples/hardening/pdf/NJ_HO_Rate_Order_of_Calculations.pdf"
+        "samples/filings/nj-lemonade-ho/NJ HO Manual 02.27.24.pdf",
+        "samples/filings/nj-lemonade-ho/NJ HO Rate Order of Calculations.pdf"
       ]
     },
     {
       "id": "filing-two-manuals",
-      "purpose": "Two MANUALS from different lines in one request (NJ homeowners + WA personal auto) — role assignment is a partition, not a lookup (ledger F13); the second manual must land visibly (extracted or unresolved), never silently dropped",
+      "purpose": "Two MANUALS from different lines in one request (NJ homeowners + WA personal auto) — role assignment is a partition, not a lookup (ledger F13); the second manual must land visibly (extracted or unresolved), never silently dropped. Uses REAL PDFs (ledger F27)",
       "files": [
-        "samples/hardening/pdf/NJ_HO_Manual_02_27_24.pdf",
-        "samples/hardening/pdf/PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf"
+        "samples/filings/nj-lemonade-ho/NJ HO Manual 02.27.24.pdf",
+        "samples/hardening/pdf/PersonalAuto_WA_Rate_Manual_v2_11_REAL.pdf"
       ]
     }
   ]

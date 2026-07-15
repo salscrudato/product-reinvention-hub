@@ -1,8 +1,8 @@
 {
   "generatedBy": "scripts/import-enumerate.mjs (offline, stubbed AI)",
   "headSha": null,
-  "runs": 25,
-  "completed": 25,
+  "runs": 26,
+  "completed": 26,
   "unhandled": 0,
   "withErrors": 1,
   "stubAiCalls": 1034,
@@ -74,7 +74,7 @@
         "accepted": 816,
         "unresolved": 0
       },
-      "durationMs": 1488
+      "durationMs": 2410
     },
     {
       "id": "workbooks/20ISOFrameworkGL.xlsx",
@@ -143,7 +143,7 @@
         "accepted": 106,
         "unresolved": 0
       },
-      "durationMs": 48
+      "durationMs": 59
     },
     {
       "id": "workbooks/20ISOPricingGL.xlsx",
@@ -212,7 +212,7 @@
         "accepted": 5,
         "unresolved": 0
       },
-      "durationMs": 1287
+      "durationMs": 1495
     },
     {
       "id": "workbooks/20ISORulesGL.xlsx",
@@ -281,7 +281,7 @@
         "accepted": 442,
         "unresolved": 0
       },
-      "durationMs": 80
+      "durationMs": 90
     },
     {
       "id": "workbooks/Inland_Marine_Rules_Repository__SECURA__Master.xlsx",
@@ -358,7 +358,7 @@
         "accepted": 786,
         "unresolved": 0
       },
-      "durationMs": 250
+      "durationMs": 248
     },
     {
       "id": "workbooks/Product_Component_Model_Framework_Coverages_1.xlsx",
@@ -411,7 +411,7 @@
         "entitiesProduced": 0
       },
       "planCounts": {
-        "products": 1,
+        "products": 0,
         "coverages": 0,
         "forms": 0,
         "rules": 0,
@@ -422,18 +422,18 @@
       },
       "conservation": {
         "stage4Candidates": 0,
-        "planEntities": 1,
+        "planEntities": 0,
         "flagged": 0,
         "reviewQueue": null,
         "bundleUnresolved": 0,
-        "unaccountedDelta": -1
+        "unaccountedDelta": 0
       },
       "counts": {
-        "proposed": 1,
-        "accepted": 1,
+        "proposed": 0,
+        "accepted": 0,
         "unresolved": 0
       },
-      "durationMs": 195
+      "durationMs": 202
     },
     {
       "id": "workbooks/Product_Framework__SECURA__Inland_Marine.xlsx",
@@ -502,7 +502,7 @@
         "accepted": 799,
         "unresolved": 0
       },
-      "durationMs": 108
+      "durationMs": 106
     },
     {
       "id": "workbooks/Property_Rating_Repository__Master.xlsx",
@@ -571,7 +571,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 112
+      "durationMs": 117
     },
     {
       "id": "workbooks/sampleGLforms.xlsx",
@@ -640,7 +640,7 @@
         "accepted": 816,
         "unresolved": 0
       },
-      "durationMs": 902
+      "durationMs": 931
     },
     {
       "id": "workbooks/sampleGLframework.xlsx",
@@ -709,7 +709,7 @@
         "accepted": 106,
         "unresolved": 0
       },
-      "durationMs": 41
+      "durationMs": 26
     },
     {
       "id": "workbooks/sampleGLpricing.xlsx",
@@ -778,7 +778,7 @@
         "accepted": 5,
         "unresolved": 0
       },
-      "durationMs": 1138
+      "durationMs": 1097
     },
     {
       "id": "workbooks/sampleGLrules.xlsx",
@@ -847,7 +847,7 @@
         "accepted": 442,
         "unresolved": 0
       },
-      "durationMs": 68
+      "durationMs": 66
     },
     {
       "id": "workbooks/sampleIMframework.xlsx",
@@ -916,7 +916,7 @@
         "accepted": 799,
         "unresolved": 0
       },
-      "durationMs": 105
+      "durationMs": 80
     },
     {
       "id": "workbooks/sampleIMrules.xlsx",
@@ -985,7 +985,7 @@
         "accepted": 786,
         "unresolved": 0
       },
-      "durationMs": 84
+      "durationMs": 80
     },
     {
       "id": "workbooks/samplePRframework.xlsx",
@@ -1052,7 +1052,7 @@
         "accepted": 2453,
         "unresolved": 0
       },
-      "durationMs": 303
+      "durationMs": 339
     },
     {
       "id": "workbooks/samplePRrating.xlsx",
@@ -1121,7 +1121,7 @@
         "accepted": 1,
         "unresolved": 0
       },
-      "durationMs": 94
+      "durationMs": 72
     },
     {
       "id": "adversarial/1._Product_Framework_-_SECURA_-_Property",
@@ -1167,7 +1167,7 @@
         "unaccountedDelta": null
       },
       "counts": null,
-      "durationMs": 4
+      "durationMs": 2
     },
     {
       "id": "adversarial/Insurance_Product___Process_Value_Explorer_Export.xlsx",
@@ -1251,7 +1251,7 @@
         "accepted": 0,
         "unresolved": 0
       },
-      "durationMs": 61
+      "durationMs": 47
     },
     {
       "id": "adversarial/Product_Component_Model_Framework_Coverages.xlsx",
@@ -1304,7 +1304,7 @@
         "entitiesProduced": 0
       },
       "planCounts": {
-        "products": 1,
+        "products": 0,
         "coverages": 0,
         "forms": 0,
         "rules": 0,
@@ -1315,18 +1315,18 @@
       },
       "conservation": {
         "stage4Candidates": 0,
-        "planEntities": 1,
+        "planEntities": 0,
         "flagged": 0,
         "reviewQueue": null,
         "bundleUnresolved": 0,
-        "unaccountedDelta": -1
+        "unaccountedDelta": 0
       },
       "counts": {
-        "proposed": 1,
-        "accepted": 1,
+        "proposed": 0,
+        "accepted": 0,
         "unresolved": 0
       },
-      "durationMs": 224
+      "durationMs": 157
     },
     {
       "id": "adversarial/Product_Framework__SECURA__Property_RF.xlsm",
@@ -1393,19 +1393,20 @@
         "accepted": 2453,
         "unresolved": 0
       },
-      "durationMs": 2181
+      "durationMs": 1895
     },
     {
       "id": "mixed/mixed-workbook-plus-pdf",
       "files": [
         "20ISOFrameworkGL.xlsx",
-        "PP_00_01_06_98.pdf"
+        "sample-PH-baseform-HO3.pdf"
       ],
       "completed": true,
       "harnessError": null,
       "unhandled": false,
       "errors": [],
       "notices": [
+        "[warn/mixed-upload] Mixed upload: workbooks imported; PDFs skipped — upload them separately.",
         "[warn/incomplete-product] Product backbone imported. Likely missing: Forms Specifications (form numbers, editions, attachment conditions); Rules Specifications / Rules Repository; Rating Specifications / rate order of calculations + factor tables. Upload those artifacts to complete the product."
       ],
       "stage0": {
@@ -1415,20 +1416,25 @@
             "kind": "XLSX",
             "sheets": 4,
             "skippedHiddenSheets": []
-          },
-          {
-            "name": "PP_00_01_06_98.pdf",
-            "kind": "XLSX",
-            "sheets": 0,
-            "skippedHiddenSheets": []
           }
         ],
-        "filingDocs": [],
+        "filingDocs": [
+          {
+            "name": "sample-PH-baseform-HO3.pdf",
+            "needsVision": true
+          }
+        ],
         "unknown": [],
         "lobRefIdHint": "GL.LOB.001",
         "lobSource": "deterministic",
         "edition": null,
-        "warnings": []
+        "warnings": [
+          {
+            "kind": "pdf-vision-route",
+            "doc": "sample-PH-baseform-HO3.pdf",
+            "detail": "Text extraction yielded too little — routing to native-PDF vision extraction."
+          }
+        ]
       },
       "stage4": {
         "entityCount": 0,
@@ -1461,15 +1467,82 @@
         "planEntities": 106,
         "flagged": 0,
         "reviewQueue": null,
-        "bundleUnresolved": 0,
-        "unaccountedDelta": -106
+        "bundleUnresolved": 1,
+        "unaccountedDelta": -107
       },
       "counts": {
-        "proposed": 106,
+        "proposed": 107,
         "accepted": 106,
+        "unresolved": 1
+      },
+      "durationMs": 33
+    },
+    {
+      "id": "mixed/adv-extension-lies-pdf",
+      "files": [
+        "PP_00_01_06_98.pdf"
+      ],
+      "completed": true,
+      "harnessError": null,
+      "unhandled": false,
+      "errors": [],
+      "notices": [],
+      "stage0": {
+        "workbooks": [
+          {
+            "name": "PP_00_01_06_98.pdf",
+            "kind": "XLSX",
+            "sheets": 0,
+            "skippedHiddenSheets": []
+          }
+        ],
+        "filingDocs": [],
+        "unknown": [],
+        "lobRefIdHint": null,
+        "lobSource": null,
+        "edition": null,
+        "warnings": []
+      },
+      "stage4": {
+        "entityCount": 0,
+        "flagged": 0
+      },
+      "summaryCounts": {
+        "sheetsTotal": 0,
+        "sheetsClassified": 0,
+        "sheetsIgnored": 0,
+        "columnsTotal": 0,
+        "columnsMapped": 0,
+        "columnsUnmapped": 0,
+        "rowsExtracted": 0,
+        "rowsInReview": 0,
+        "validatorDiscrepancies": 0,
+        "entitiesProduced": 0
+      },
+      "planCounts": {
+        "products": 0,
+        "coverages": 0,
+        "forms": 0,
+        "rules": 0,
+        "formRules": 0,
+        "ldTables": 0,
+        "rtTables": 0,
+        "ratingProgram": 0
+      },
+      "conservation": {
+        "stage4Candidates": 0,
+        "planEntities": 0,
+        "flagged": 0,
+        "reviewQueue": null,
+        "bundleUnresolved": 0,
+        "unaccountedDelta": 0
+      },
+      "counts": {
+        "proposed": 0,
+        "accepted": 0,
         "unresolved": 0
       },
-      "durationMs": 83
+      "durationMs": 127
     },
     {
       "id": "mixed/multi-workbook-merge",
@@ -1557,7 +1630,7 @@
         "accepted": 1369,
         "unresolved": 0
       },
-      "durationMs": 2325
+      "durationMs": 2490
     },
     {
       "id": "mixed/exact-dup-pair",
@@ -1624,6 +1697,75 @@
         "entitiesProduced": 0
       },
       "planCounts": {
+        "products": 0,
+        "coverages": 0,
+        "forms": 0,
+        "rules": 0,
+        "formRules": 0,
+        "ldTables": 0,
+        "rtTables": 0,
+        "ratingProgram": 0
+      },
+      "conservation": {
+        "stage4Candidates": 0,
+        "planEntities": 0,
+        "flagged": 0,
+        "reviewQueue": null,
+        "bundleUnresolved": 0,
+        "unaccountedDelta": 0
+      },
+      "counts": {
+        "proposed": 0,
+        "accepted": 0,
+        "unresolved": 0
+      },
+      "durationMs": 310
+    },
+    {
+      "id": "mixed/filing-nj-pair",
+      "files": [
+        "NJ HO Manual 02.27.24.pdf",
+        "NJ HO Rate Order of Calculations.pdf"
+      ],
+      "completed": true,
+      "harnessError": null,
+      "unhandled": false,
+      "errors": [],
+      "notices": [
+        "[warn/unprocessed-document] 2 document(s) were not extracted (NJ HO Manual 02.27.24.pdf, NJ HO Rate Order of Calculations.pdf) — surfaced in the review queue."
+      ],
+      "stage0": {
+        "workbooks": [],
+        "filingDocs": [
+          {
+            "name": "NJ HO Manual 02.27.24.pdf",
+            "needsVision": true
+          },
+          {
+            "name": "NJ HO Rate Order of Calculations.pdf",
+            "needsVision": true
+          }
+        ],
+        "unknown": [],
+        "lobRefIdHint": null,
+        "lobSource": null,
+        "edition": null,
+        "warnings": [
+          {
+            "kind": "pdf-vision-route",
+            "doc": "NJ HO Manual 02.27.24.pdf",
+            "detail": "Text extraction yielded too little — routing to native-PDF vision extraction."
+          },
+          {
+            "kind": "pdf-vision-route",
+            "doc": "NJ HO Rate Order of Calculations.pdf",
+            "detail": "Text extraction yielded too little — routing to native-PDF vision extraction."
+          }
+        ]
+      },
+      "stage4": null,
+      "summaryCounts": null,
+      "planCounts": {
         "products": 1,
         "coverages": 0,
         "forms": 0,
@@ -1634,151 +1776,66 @@
         "ratingProgram": 0
       },
       "conservation": {
-        "stage4Candidates": 0,
+        "stage4Candidates": null,
         "planEntities": 1,
-        "flagged": 0,
+        "flagged": null,
         "reviewQueue": null,
-        "bundleUnresolved": 0,
-        "unaccountedDelta": -1
+        "bundleUnresolved": 2,
+        "unaccountedDelta": null
       },
       "counts": {
-        "proposed": 1,
-        "accepted": 1,
-        "unresolved": 0
-      },
-      "durationMs": 339
-    },
-    {
-      "id": "mixed/filing-nj-pair",
-      "files": [
-        "NJ_HO_Manual_02_27_24.pdf",
-        "NJ_HO_Rate_Order_of_Calculations.pdf"
-      ],
-      "completed": true,
-      "harnessError": null,
-      "unhandled": false,
-      "errors": [],
-      "notices": [],
-      "stage0": {
-        "workbooks": [
-          {
-            "name": "NJ_HO_Manual_02_27_24.pdf",
-            "kind": "XLSX",
-            "sheets": 0,
-            "skippedHiddenSheets": []
-          },
-          {
-            "name": "NJ_HO_Rate_Order_of_Calculations.pdf",
-            "kind": "XLSX",
-            "sheets": 0,
-            "skippedHiddenSheets": []
-          }
-        ],
-        "filingDocs": [],
-        "unknown": [],
-        "lobRefIdHint": null,
-        "lobSource": null,
-        "edition": null,
-        "warnings": []
-      },
-      "stage4": {
-        "entityCount": 0,
-        "flagged": 0
-      },
-      "summaryCounts": {
-        "sheetsTotal": 0,
-        "sheetsClassified": 0,
-        "sheetsIgnored": 0,
-        "columnsTotal": 0,
-        "columnsMapped": 0,
-        "columnsUnmapped": 0,
-        "rowsExtracted": 0,
-        "rowsInReview": 0,
-        "validatorDiscrepancies": 0,
-        "entitiesProduced": 0
-      },
-      "planCounts": {
-        "products": 0,
-        "coverages": 0,
-        "forms": 0,
-        "rules": 0,
-        "formRules": 0,
-        "ldTables": 0,
-        "rtTables": 0,
-        "ratingProgram": 0
-      },
-      "conservation": {
-        "stage4Candidates": 0,
-        "planEntities": 0,
-        "flagged": 0,
-        "reviewQueue": null,
-        "bundleUnresolved": 0,
-        "unaccountedDelta": 0
-      },
-      "counts": {
-        "proposed": 0,
+        "proposed": 2,
         "accepted": 0,
-        "unresolved": 0
+        "unresolved": 2
       },
-      "durationMs": 36
+      "durationMs": 28
     },
     {
       "id": "mixed/filing-two-manuals",
       "files": [
-        "NJ_HO_Manual_02_27_24.pdf",
-        "PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf"
+        "NJ HO Manual 02.27.24.pdf",
+        "PersonalAuto_WA_Rate_Manual_v2_11_REAL.pdf"
       ],
       "completed": true,
       "harnessError": null,
       "unhandled": false,
       "errors": [],
-      "notices": [],
+      "notices": [
+        "[warn/unprocessed-document] 2 document(s) were not extracted (NJ HO Manual 02.27.24.pdf, PersonalAuto_WA_Rate_Manual_v2_11_REAL.pdf) — surfaced in the review queue."
+      ],
       "stage0": {
-        "workbooks": [
+        "workbooks": [],
+        "filingDocs": [
           {
-            "name": "NJ_HO_Manual_02_27_24.pdf",
-            "kind": "XLSX",
-            "sheets": 0,
-            "skippedHiddenSheets": []
+            "name": "NJ HO Manual 02.27.24.pdf",
+            "needsVision": true
           },
           {
-            "name": "PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf",
-            "kind": "CSV",
-            "sheets": 1,
-            "skippedHiddenSheets": []
+            "name": "PersonalAuto_WA_Rate_Manual_v2_11_REAL.pdf",
+            "needsVision": true
           }
         ],
-        "filingDocs": [],
         "unknown": [],
         "lobRefIdHint": null,
         "lobSource": null,
         "edition": null,
         "warnings": [
           {
-            "kind": "grid-truncated",
-            "doc": "PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf",
-            "detail": "Sheet \"PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11.pdf\": 12869 rows exceed the 2000-row embed cap — the tail (10869 row(s)) IS extracted via continuation windows."
+            "kind": "pdf-vision-route",
+            "doc": "NJ HO Manual 02.27.24.pdf",
+            "detail": "Text extraction yielded too little — routing to native-PDF vision extraction."
+          },
+          {
+            "kind": "pdf-vision-route",
+            "doc": "PersonalAuto_WA_Rate_Manual_v2_11_REAL.pdf",
+            "detail": "Text extraction yielded too little — routing to native-PDF vision extraction."
           }
         ]
       },
-      "stage4": {
-        "entityCount": 0,
-        "flagged": 0
-      },
-      "summaryCounts": {
-        "sheetsTotal": 1,
-        "sheetsClassified": 0,
-        "sheetsIgnored": 1,
-        "columnsTotal": 0,
-        "columnsMapped": 0,
-        "columnsUnmapped": 0,
-        "rowsExtracted": 0,
-        "rowsInReview": 0,
-        "validatorDiscrepancies": 0,
-        "entitiesProduced": 0
-      },
+      "stage4": null,
+      "summaryCounts": null,
       "planCounts": {
-        "products": 0,
+        "products": 1,
         "coverages": 0,
         "forms": 0,
         "rules": 0,
@@ -1788,19 +1845,19 @@
         "ratingProgram": 0
       },
       "conservation": {
-        "stage4Candidates": 0,
-        "planEntities": 0,
-        "flagged": 0,
+        "stage4Candidates": null,
+        "planEntities": 1,
+        "flagged": null,
         "reviewQueue": null,
-        "bundleUnresolved": 0,
-        "unaccountedDelta": 0
+        "bundleUnresolved": 2,
+        "unaccountedDelta": null
       },
       "counts": {
-        "proposed": 0,
+        "proposed": 2,
         "accepted": 0,
-        "unresolved": 0
+        "unresolved": 2
       },
-      "durationMs": 36
+      "durationMs": 750
     }
   ]
 }

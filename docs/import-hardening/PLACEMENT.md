@@ -8,7 +8,7 @@ export's own inventory; every path below is checksum-verified against `CHECKSUMS
 |---|---|---|
 | `workbooks/` | 16 XLSX product workbooks: GL set (`20ISO*GL` ×4 + byte-identical `sampleGL*` ×4), IM (`sampleIM*` ×2, `Product_Framework__SECURA__Inland_Marine`, `Inland_Marine_Rules_Repository__SECURA__Master`), PR (`samplePR*` ×2, `Property_Rating_Repository__Master`), PCM coverages (`Product_Component_Model_Framework_Coverages_1`) | Happy-path + real-carrier structural variety for stages 0–7 |
 | `adversarial/` | `1._Product_Framework_-_SECURA_-_Property` (extensionless ZIP/OOXML that **fails full ExcelJS parse** — magic-byte routing + reader-error fixture), `Product_Framework__SECURA__Property_RF.xlsm` (macro container), `Insurance_Product___Process_Value_Explorer_Export.xlsx` (wrong-domain export), `Product_Component_Model_Framework_Coverages.xlsx` (byte-identical twin of the copy in `workbooks/` — exact-dup detection) | Router/reader robustness, dup detection, wrong-domain refusal |
-| `pdf/` | HO3 trio (`20BaseFormHO3Homeowners`, `samplePHbaseformHO3`, `Homeowners__HO3` — identical byte size 4,982,942, three distinct md5s: defeats size-based dedupe), NJ filing pair (`NJ_HO_Manual_02_27_24`, `NJ_HO_Rate_Order_of_Calculations`), `LEM_03_05_23_Lemonade_Homeowners_FINAL`, `PP_00_01_06_98` (Personal **Auto** base form — anti-HO3-hardcoding fixture, see ledger F18), `PersonalAuto_WA_Rate_Washington_Auto_Rate_Manual_Version_2_11` | Filing-path fixtures incl. non-PH lines |
+| `pdf/` | **⚠️ NOT PDFs (ledger F27, discovered 2026-07-15):** every `.pdf` staged from the project-knowledge export is a rasterization artifact — a ZIP of JPEG page scans (`PK\x03\x04` magic; the HO3 trio, NJ pair, LEM, `PP_00_01_06_98`) or extracted plain TEXT (`PersonalAuto_WA_Rate_..._Version_2_11`). They are kept as **adversarial extension-vs-content fixtures** (magic-byte routing must win — they parse as 0-sheet containers and must never reach the filing path). The ONE real PDF here is `PersonalAuto_WA_Rate_Manual_v2_11_REAL.pdf` (added by IH4 from the operator's local `samples/filings/additional_samples/`, the true bytes of the WA auto rate manual). Real filing-path fixtures live in `samples/filings/nj-lemonade-ho/` + `samples/iso/sample-PH-baseform-HO3.pdf` — the mixed requests below point at those. | Adversarial extension-vs-content (was: filing-path fixtures — that purpose was FALSE at HEAD, see F27) |
 | `mixed/` | `mixed_requests.json` — request-level combinations **referencing** files above (no binary duplication): workbook+PDF in one upload (mixed-upload warning path), multi-workbook merge, exact-dup pair in one request | Multi-document request semantics |
 | `manifest/` | `xlsx_ooxml_summary.json` — generated structural ground truth (see below) | Independent OOXML facts the pipeline must not silently lose |
 
@@ -36,7 +36,8 @@ file is a ZIP container whose full parse throws (`End of data reached`) — reco
   in the staged set (IH2: mutate one copy if near-dup detection needs a fixture).
 - `sampleGL{framework,rules,pricing,forms}` ≡ `20ISO{Framework,Rules,Pricing,Forms}GL`
   byte-for-byte (Tier B double-counts GL — do not treat as 8 independent workbooks).
-- HO3 PDF trio: same size, different content — keep all three.
+- HO3 PDF trio: same size, different content — keep all three. (F27: all three are
+  ZIP-of-JPEG rasterization artifacts, not PDFs — adversarial fixtures only.)
 
 ## Not committed
 
