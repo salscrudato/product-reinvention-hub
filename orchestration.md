@@ -114,7 +114,7 @@ worktree onto `origin/main` and re-gate before claiming.
 
 | Holder | Claimed at | State |
 |---|---|---|
-| — free — | — | released 2026-07-16 operator close-out: all agent lanes on origin/main |
+| — free — | — | released 2026-07-16 operator close-out "merge everything to main": all lanes incl. the 2 parked WIP commits (978c332, a8f24dc) are on `origin/main` @ 4982874; local `main` == `origin/main`; nothing left to merge |
 
 ## 📜 CONTRACTS (frozen at each wave's close; changing one later requires an orchestration note + a ledger item)
 
