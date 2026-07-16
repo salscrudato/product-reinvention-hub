@@ -6,6 +6,7 @@ another lane's tree; CE5 merges locally and reconciles shared files (ledger.json
 | lane | branch | worktree | owns | status |
 |---|---|---|---|---|
 | ce2 | ce/ce2-goldens | .claude/worktrees/ce2-goldens | golden2 schema + cell-enum + dual-family annotation factory + eval-v2 + mutation fuzz + expected-RED baseline; seals HOLDOUT2 | INFRA DONE (33 locks green, gate green); annotation run + baseline in progress |
+| ce3 | ce/ce3-brain | .claude/worktrees/ce3-brain | brain rewire: census into the run, workbook digest, windowed extraction + cache, sweeper 4.5, mapper items 14/15, link ladder (item 4), checkpoint/resume (item 10), observatory API, WORKBOOK_DIGEST fleet role | IN PROGRESS (base = local main after ce1+ce2 merges) |
 
 ## CE2 interfaces other lanes consume
 

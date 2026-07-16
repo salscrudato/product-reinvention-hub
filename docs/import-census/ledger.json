@@ -155,6 +155,14 @@
       "note": "hostile-review 15 findings; closed offline-accounting bind + hierarchy gate + file-level floor + anti-leakage widen/non-vacuous + both-empty guard + adjudicator-restrict + correlated-omission queue + col-cap + completeness report; 35 locks green",
       "commit": null,
       "ts": "2026-07-16T10:25:51.778Z"
+    },
+    {
+      "id": "CE3-S0",
+      "lane": "ce3-brain",
+      "status": "DONE",
+      "note": "Preconditions. Merged ce/ce1-census (clean) + ce/ce2-goldens (ONE add/add conflict: ledger.json, resolved as documented UNION 10+9 rows, UTF-16LE normalized to UTF-8) into LOCAL main (7a2a2ec, 17dbfbe); worktree ce3-brain on ce/ce3-brain @17dbfbe. CE2 STILL RUNNING at merge time (annotating hagerty-co-rv125, .progress writes 13s old): merged its COMMITTED harness (ce5c316); 7/8 goldens2 copied as untracked DATA (never commit); 8th golden + late ce2 commits re-sync owed before final eval2 board. Baseline gate GREEN (161 files/1786 tests). MEASURED CEILINGS on eval2 (probe vs goldens on disk): entityRecall gate 0.98 is structurally unreachable on all 4 full files (planToEntities cannot emit state/ratingStep/deductible/refId-null-subCoverage kinds: hagerty max 0.708, gl-2026 max 0.727, gl-base max 0.831, client-master max 0.857); hierarchyRecall likewise (parents are names, not entity refIds: gl-2026 78/78 namey, secura 83/83); fabrication offline 0.00 unreachable on sampled goldens (sourceRefTokens = annotated entity refIds only, all-lines emits 2500+ honest ids vs ~360 annotated). CE3 targets the prompt-named step-10 gates: unaccountedCells 0, substanceCoverage GE 0.985, countingInvariants clean, ldTableRef GE 0.95; the unreachable metrics get an impossibility proof in CE3_REPORT for CE5.",
+      "commit": null,
+      "ts": "2026-07-16T13:16:40.961Z"
     }
   ]
 }
