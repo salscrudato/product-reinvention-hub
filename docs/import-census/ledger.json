@@ -31,7 +31,7 @@
       "lane": "ce1-census",
       "status": "DONE",
       "note": "Cell census core (shared/src/import/census/): CellRecord (ref/type/fnv1a64 valueHash/verbatim raw-untrimmed capped 512+flag/merge anchor-span/format bold-filled-indent-topBorder/hidden), SheetCensus (dims/nonEmpty/headerSig+sampleHash fingerprint/TableRegions), gap segmentation (blank-run>=2 OR disjoint column band; single blank row does NOT split; header per region via the EXISTING stage-2 scorer), merge normalization (anchor carries value, shadows auto-accounted MERGE_SHADOW), accounting ledger (substanceCoverage=(FACT+SCHEMA)/(nonEmpty-NOISE-HEADER-MERGE_SHADOW), posts to unknown refs rejected, shadows immutable, conservation THROWS if broken). Server feeder collectRawCensusSheets + readWorkbookCensus in workbook.js (armor-first, one ExcelJS pass, live formatting + dataValidations). 23 unit tests incl. the merge double-count pin (hostile-review Q3). Smoke on real SECURA: 19,260 cells, conservation exact, Forms View - MTG hidden = 2,072 cells (prediction confirmed to the cell).",
-      "commit": null,
+      "commit": "c938f15",
       "ts": "2026-07-16T09:25:00Z"
     },
     {
@@ -39,7 +39,7 @@
       "lane": "ce1-census",
       "status": "DONE",
       "note": "Detectors a-i (census/detectors.ts, all pure + table-driven tests, 16 tests): (a) headerLockV2Signals (bold-over-plain formatting shift, string-over-numeric type shift, caller-supplied alias hits) + augmentHeaderCandidates (bounded bonuses over the EXISTING scorer output, clamped, re-sorted - feeds stage-2, never replaces); (b) repeatingParentRuns (>=35% consecutive-repeat columns); (c) staircaseHierarchy (real indent format first, leading-space ladder fallback); (d) formTokenCensus (FORM_TOKEN_GENERAL corpus grammar: 2-3 letters + 2-4 groups w/ alphabetic middle group variants + 3-4 digit block, unioned with conceptMatch carrier FORM_TOKEN, distinct counts = counting-invariant lower bounds); (e) stateLexicon (STATE_COLUMNS matrix vs STATE_LIST orientation, reuses layoutDetector lexicon); (f) idColumnProfile (dot-grammar shapes incl. IM.COV044.00 / PR.COV001.0, per-workbook prefix census); (g) nearDuplicateSheetClusters (headerSig basis + version-word name basis; REPORT ONLY, fold policy is CE3); (h) harvestAliasOverlay (Definitions sheets via existing parser + Data Validation list domains -> CensusAliasOverlay + schemaCellRefs for SCHEMA posting; backlog-15 groundwork); (i) hiddenSheetSubstance. Bridged through brain-server-entry (import-brain-shared.cjs rebuilt).",
-      "commit": null,
+      "commit": "c938f15",
       "ts": "2026-07-16T09:25:00Z"
     },
     {
@@ -47,8 +47,40 @@
       "lane": "ce1-census",
       "status": "DONE",
       "note": "cell-census.mjs CLI (crash-census discipline: child-process isolation, CELL_CENSUS_TIMEOUT_MS default 120s, zero model calls/network, findings-preserving markdown) run over all 10 corpus files: ZERO crashes, conservation EXACT everywhere. Baseline artifacts docs/import-census/BASELINE/*.census.json + CELL_CENSUS.md. Recorded findings F-C1..F-C8 incl.: PCM version trio clusters confirmed (counting-basis delta ~14 cells vs pack numbers), SECURA MTG 2,072 exact, SECURA Ref Connect Pull 3 stacked regions over 4,983x41, All Lines census costs 1.3GB child RSS (CLI-only; CE3 needs formatting-lite mode before live wiring). EXPECTATION FAILED HONESTLY: the predicted 148-col Client Master PCM does not exist in this corpus (observed 689x71 reported / 70 real; nothing exceeds 128 real cols) - the >128 embed-cap loss case is untestable here, CE3 needs a synthetic or the missing 11 reference workbooks. SEQUENCING NOTE: S7 committed before S6 (self-contained; S6 follows).",
-      "commit": null,
+      "commit": "740a463",
       "ts": "2026-07-16T09:25:00Z"
+    },
+    {
+      "id": "CE1-S6",
+      "lane": "ce1-census",
+      "status": "DONE",
+      "note": "consumedSpans instrumentation. ConsumedSpanRec + Ctx.consume() in isoImport (no-op unless a collector is passed as mapIsoWorkbook's new OPTIONAL third param); block-grain spans inside parseLdTables/parseRtTables (marker row -> block end, marker->value/comment cols) and detectReferenceTables (draft start..end); sheet-grain spans for framework/forms/dynamic/rules/formRules/rating (only when the parse produced output). PROOF output-identical (three independent): (1) tests/import/consumed-spans.test.ts serialize-diff bare-vs-instrumented on GL/IM/PR/CORE via the REAL server reader grids - 4/4 green in 21s; (2) --write-golden then git diff tests/golden/import = 0 lines, sha256s match committed bytes; (3) offline eval 4/4 F1=1.0 post-edit. PERF FINDING: the first test draft used the eval-style rowCount flatten and CORE walked 286s of PHANTOM cells per read (parse itself is 120ms) - rewrote against readWorkbookToStructural (true-extent), whole suite 21s; the import-eval.mts reader slowness is recorded as a CE2 note, not fixed here (eval2 namespace).",
+      "commit": "8a9f19c",
+      "ts": "2026-07-16T09:55:00Z"
+    },
+    {
+      "id": "CE1-S8",
+      "lane": "ce1-census",
+      "status": "DONE",
+      "note": "L1-L7 locks landed (L4 rode S3 in parser-armor.test.ts). tests/import/lock-candidates.test.ts (18 tests): L1 splitList table-driven incl. DOCUMENTED bare-space non-split; L2 header window row-5 pass / row-21 documented-skip-with-warning; L3 sentinel filter at BOTH layers with the mapper/stage7 divergence PINNED AS INTENTIONAL (mapper PLACEHOLDER keeps TBD/xxx/... alive - mapReview keys on TBD; stage7 PLACEHOLDER_RE routes them to unresolved); L5 two stacked RT tables + LD sheet with exact row attribution; L6 splitMultiRefId 3-refIds->3 byte-identical + DOCUMENTED dash-ids-do-not-tokenize; L7 CSV routes with NO isoGrids while XLSX carries them (fleet mocked per brain-routing pattern) - flips red the day CSV is wired into the oracle. Minimal seams: splitList + isPlaceholder exported from isoImport (behavior unchanged).",
+      "commit": "c07057e",
+      "ts": "2026-07-16T09:55:00Z"
+    },
+    {
+      "id": "CE1-S9",
+      "lane": "ce1-census",
+      "status": "DONE",
+      "note": "Property fuzz (fast-check ^4.9.0 added as root devDep - none existed anywhere per lockfile grep). census.property.test.ts: 3 properties x 600 total runs - (1) census never throws + accounting sums exactly to nonEmpty under arbitrary post sequences + coverage in [0,1]; (2) segmentation + full census deterministic under re-run, regions non-overlapping and inside trimmed extent; (3) workbook rollup + every detector survive arbitrary workbooks under shuffled sheet order. Generators cover random gaps, blank-row injections, phantom used-range tails, random merges, sentinel strings, synonym headers, whitespace values, verbatim-cap-length strings.",
+      "commit": "6e4f5ee",
+      "ts": "2026-07-16T09:55:00Z"
+    },
+    {
+      "id": "CE1-S10",
+      "lane": "ce1-census",
+      "status": "DONE",
+      "note": "Close: full gate green (typecheck+lint+test+build) + node scripts/check-bundle-budget.mjs green (app code untouched, proven anyway); bridges regenerated and committed (import-brain-shared.cjs); goldens byte-stable at close; CE1_REPORT.md written with hostile self-review (5 answers, incl. the two honest deviations: declaredCellCount as bytes-estimator not dimension-count, and the S6 lock reading grids via the server reader after measuring the 286s eval-flatten phantom walk); orchestration.md lane row appended. ZERO pushes (lane law: CE5 merges to LOCAL main).",
+      "commit": null,
+      "ts": "2026-07-16T10:15:00Z"
     }
   ]
 }
