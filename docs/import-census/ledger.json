@@ -181,6 +181,14 @@
       "ts": "2026-07-16T19:35:34.514Z"
     },
     {
+      "id": "CE3-S4",
+      "lane": "ce3-brain",
+      "status": "DONE",
+      "note": "CE2 re-sync (owed from CE3-S0). Merged ce/ce2-goldens tip e8834b7 into lane (269fe7a): 8/8 goldens2 now tracked (hagerty-co-rv125 was missing), expected-RED BASELINE_EVAL2.md final, 6 mutation fixtures, spend.json, REVIEW_QUEUE.md. ONE conflict: docs/orchestration.md lane-row table, resolved as union of both rows (documented, not silent); ledger.json auto-merged to the 23-row union. Untracked byte-identical golden copies removed pre-merge (verified same git hash-object as ce2 tip blobs); local eval2 output preserved as docs/audit/import_eval2_results.ce3-local.json (untracked). Session resume note: prior session's S2 conservation patch was NOT found on disk (no stash, no *.patch in worktree or scratchpads) - the approach is documented in CE3_REPORT sec 3 and will be re-derived where needed.",
+      "commit": "269fe7a",
+      "ts": "2026-07-16T20:30:00Z"
+    },
+    {
       "id": "CE3-S3",
       "lane": "ce3-brain",
       "status": "DONE",
