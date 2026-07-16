@@ -30,11 +30,36 @@ Thresholds (blocking): unaccountedEntityCells == 0 · substanceCoverage ≥ 0.98
 fabrication ≤ 0.00 offline / 0.02 live · parentResolutionRate == 1.00 · ldTableRefResolutionRate ≥
 0.95 · countingInvariants == 0 violations · needsReviewRate ≤ 0.10 (band).
 
-<!-- FILL: the per-golden eval2 table from `pnpm exec tsx scripts/import-eval2.mts --offline` -->
+Run 2026-07-16, all 8 goldens, `--offline` (`docs/audit/import_eval2_results.json`). **8/8 RED.**
 
-| golden | coverage | substanceCov | unaccEnt | entityRecall | countingInvariants | one-line cause |
+| golden | cov | substanceCov | unaccEnt | hierarchyRecall | golden-complete | counting-floor violations |
 |---|---|---|---|---|---|---|
-| _(filled by the baseline run)_ | | | | | | |
+| SECURA_Property | sampled | 15% | 564 | **0%** (0/83) | 24%¹ | product 1<12, **form 0<759**, refIds 0<104 |
+| All_Lines_Master | sampled | 16% | 503 | **0%** (0/127) | 9%¹ | product 1<10, form 0<259, **refIds 1608<2532** |
+| GL_2026_Example | full | 34% | 412 | **0%** (0/78) | 100% | product 1<6, coverage 124<152, form 0<30 |
+| CO_RV125_Rating | sampled | 0% | 384 | 0% (0/1) | 13%¹ | product 0<1, coverage 0<29, form 0<32 |
+| PCM_Coverages | sampled | 45% | 317 | n/a | 21%¹ | product 1<2, coverage 1<78, form 0<36 |
+| CO_EnthusiastPlus | full | 0% | 163 | n/a | 100% | **coverage 0<71** |
+| GL (base) | full | 9% | 59 | 16% (15/94) | 100% | coverage 105<106, form 0<29, refIds 18<22 |
+| Client_Master | full | 0% | 10 | n/a | 100% | product 1<4, coverage 0<3, form 0<13 |
+
+Every row also fails `numericFidelity` (0.000 — the numeric attributes the golden binds to entities do
+not survive onto them) and the zero-tolerance `unaccountedEntityCells == 0` gate. Fabrication is 0%
+across the board (source ids checked against the deterministic whole-workbook refId set, so a real id
+is never mis-flagged). ¹ Sampled goldens annotate a stratified subset of windows, so their
+golden-completeness is over the sampled scope, not a golden defect; the deterministic counting floors
+are computed from ALL cells regardless.
+
+### The three headline losses eval1 could not see
+
+1. **Forms are dropped wholesale.** SECURA extracts 0 of 759 distinct form tokens; All_Lines 0 of 259;
+   GL 0 of 29/30. The form column / hidden "Forms View - MTG" sheet never becomes form entities.
+2. **The hierarchy is flattened.** 0 of 127 (All_Lines) / 78 (GL_2026) / 83 (SECURA) golden
+   parent-edges reproduced; GL base only 15 of 94. Sub-coverages are promoted to top-level — the
+   governed Product > Coverage > Sub-Coverage tree is lost. `linkage2` alone was blind to this
+   (it only catches a dangling parentId, never a missing one); `hierarchyRecall` catches it.
+3. **Bulk refId loss.** All_Lines extracts 1608 of 2532 distinct source refIds — 924 governed ids
+   gone. CO_EnthusiastPlus / CO_RV125 extract 0 coverages from carrier config workbooks entirely.
 
 ## Known per-file red causes (from the offline mapper, measured pre-baseline)
 
@@ -52,10 +77,16 @@ Measured directly by running `mapIsoWorkbook` on the reference masters (2026-07-
 
 ## Mutation fuzz (generalization, exact expected goldens)
 
-`gl-2026-example` transformed six ways with computed golden transforms; scored offline. See
-`docs/audit/import_eval2_results.json` (rows with `__<mutation>` ids).
-
-<!-- FILL: mutation fuzz per-transform result line -->
+`gl-2026-example` transformed six ways with computed golden transforms (`--mutate`); scored offline
+against each transform's EXACT expected golden. All six — reorder-sheets, synonym-headers,
+inject-blank-rows, split-table, hide-sheet, dash-refids — score identically to the base (cov 34.1%,
+hier 0/78). Reading: the deterministic mapper is ROBUST to these benign layout transforms (it reads
+hidden sheets, tolerates blank rows and reordered/renamed columns), so the mutations create no NEW
+loss — but its structural baseline losses (forms 0<30, hierarchy 0/78) persist regardless, which is
+the point: benign generalization is fine; the losses are in what the mapper extracts, not how the
+source is arranged. (During development the identical fixtures on `gl-base` surfaced a real
+byte-faithfulness sensitivity — `dash-refids` degraded gl-base cov 8.8%→3.7% — confirming the fuzz
+CAN detect a mutation-induced regression when one exists.)
 
 ## Bottom line
 
