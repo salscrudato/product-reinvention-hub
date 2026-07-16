@@ -1577,6 +1577,9 @@ function mapManuscriptOverlay(xmlText, manifest, limits = DEFAULT_PARSE_LIMITS) 
     ratingProgram,
     ldTables: [],
     rtTables,
+    // Overlay round-trips carry their concrete RT tables; no placeholders are minted
+    // on this path (the concept-linker field is workbook-import-only).
+    ratePlaceholders: [],
     summary
   };
 }
