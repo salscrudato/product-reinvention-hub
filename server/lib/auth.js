@@ -84,7 +84,7 @@ function resolveTenantFromDomain(email) {
 // ─── Bootstrap admins (config/env only, never in the client bundle) ──────────
 // DEF-0041 (fail-closed, re-hardened after a regression): a bootstrap account
 // EXISTS only when its password is explicitly configured via env
-// (BOOTSTRAP_ADMIN_PASSWORD / BOOTSTRAP_SAL_PASSWORD in App Service config).
+// (BOOTSTRAP_ADMIN_PASSWORD in App Service config).
 // The well-known dev defaults are available ONLY behind the explicit opt-in
 // BOOTSTRAP_USERS_ENABLED=true (local dev + hardening/smoke.mjs — never set it in
 // a deployed environment). With neither set, loginBootstrap always returns 401.
@@ -97,11 +97,9 @@ function bootstrapAccount(envPassword, devDefault, name, email) {
 const BOOTSTRAP_ADMINS = {}
 {
   const admin = bootstrapAccount(process.env.BOOTSTRAP_ADMIN_PASSWORD, 'admin', 'Admin', 'admin@prodhub.local')
-  const sal = bootstrapAccount(process.env.BOOTSTRAP_SAL_PASSWORD, 'scrudato', 'Sal Scrudato', 'salvatore.scrudato@accenture.com')
   if (admin) BOOTSTRAP_ADMINS.admin = admin
-  if (sal) BOOTSTRAP_ADMINS.sal = sal
 }
-if (BOOTSTRAP_DEFAULTS_OK && (!process.env.BOOTSTRAP_ADMIN_PASSWORD || !process.env.BOOTSTRAP_SAL_PASSWORD)) {
+if (BOOTSTRAP_DEFAULTS_OK && !process.env.BOOTSTRAP_ADMIN_PASSWORD) {
   console.warn('[auth] SECURITY: BOOTSTRAP_USERS_ENABLED=true with default passwords — acceptable ONLY for local dev/smoke. Never set this in a deployed environment.')
 }
 
