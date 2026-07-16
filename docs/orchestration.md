@@ -6,7 +6,7 @@ another lane's tree; CE5 merges locally and reconciles shared files (ledger.json
 | lane | branch | worktree | owns | status |
 |---|---|---|---|---|
 | ce2 | ce/ce2-goldens | .claude/worktrees/ce2-goldens | golden2 schema + cell-enum + dual-family annotation factory + eval-v2 + mutation fuzz + expected-RED baseline; seals HOLDOUT2 | INFRA DONE (33 locks green, gate green); annotation run + baseline in progress |
-| ce3 | ce/ce3-brain | .claude/worktrees/ce3-brain | brain rewire: census into the run, workbook digest, windowed extraction + cache, sweeper 4.5, mapper items 14/15, link ladder (item 4), checkpoint/resume (item 10), observatory API, WORKBOOK_DIGEST fleet role | IN PROGRESS (base = local main after ce1+ce2 merges) |
+| ce3 | ce/ce3-brain | .claude/worktrees/ce3-brain | brain rewire: SHIPPED = Step 0 fleet reality (xai->deepseek probe-guard + WORKBOOK_DIGEST) + Step 8 observatory (importRun index/artifacts + 3 read routes + SSE builders + CE4 fixture). BLOCKED = Steps 5/6 mapper conservation (irreducible eval2-goldens-vs-app/src-fidelity-lock conflict on the SHARED corpus, sample-GL-framework==corpus GL by SHA256 — see CE3_REPORT sec 3; reverted byte-identical, adjudication owed to CE5). NOT BUILT = Steps 1-4/7/9 (live census wiring, digest, windowed extraction+cache, sweeper, checkpoint, hardening). | PARTIAL (base = local main after ce1+ce2 merges); zero pushes to origin from lane |
 
 ## CE2 interfaces other lanes consume
 

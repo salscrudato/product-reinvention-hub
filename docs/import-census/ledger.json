@@ -171,6 +171,22 @@
       "note": "Fleet reality (step 0). fleet.ts: EXTENDED_DEGRADE {VERIFY_XAI->VERIFY_DEEPSEEK} + degradedExtendedRole + WORKBOOK_DIGEST composite descriptor (primary DEEP_REASONER on /responses via external.foundry.deepReason, fallback GROUNDED_CITED chat) - no deployment id hardcoded anywhere. Probe guard lives in server/lib/import-brain/verify-lineage.js (NOT foundry.js - its allowlist clause is read-only): env opt-in FOUNDRY_ENABLE_XAI=1, process-lifetime 404/400 probe-death cache, injectable judge seam; 7 locks green (tests/import-brain/verify-lineage.test.ts). build:fleet bridge regenerated + committed. Full gate green (1793 tests). RECOMMENDATION FOR OPERATOR: deprovision grok-4.3 in foundry-prodhub-dev (registry + guard no longer route to it by default); also grok-4-20-reasoning remains an unreferenced deployment - both are deprovision candidates.",
       "commit": null,
       "ts": "2026-07-16T13:37:06.350Z"
+    },
+    {
+      "id": "CE3-S2",
+      "lane": "ce3-brain",
+      "status": "BLOCKED",
+      "note": "Steps 5/6/14/15 (mapper conservation) INVESTIGATED then REVERTED to byte-identical - irreducible constraint conflict found. Attempted conservation-driven extraction (harvest row residue, form refIds, multi-product, generic region extractor, content-signature routing, cell/name/token conservation entities) drove eval2 offline from 7/7 deep-red to gl-base GREEN on all four CE3 gates + gl-2026 1-cell-away + cov 88-100pct across files. BUT the approach mints entities into plan.coverages/forms, which BREAKS 3 FORBIDDEN app/src tests (fidelity/glRobustness/isoFixture) + shared isoImport.test + eval1 extras. ROOT CAUSE (verify-first, definitive): samples/iso/sample-PR-framework.xlsx is STRUCTURALLY IDENTICAL to the corpus Product_Framework_All_Lines_Master (PCM 19916, ROC 24674, Rules Repository 69942, Sheet1 2569 all match) - the SAME workbook is locked byte-for-byte by the app/src PR fidelity test AND demanded to mint 259+ form tokens / 2532 distinct refIds by the eval2 counting-invariant floors. These cannot both hold without editing app/src (FORBIDDEN, CE4-owns) or weakening a locked test (LAW). eval2 counting floors are irreconcilable with pre-existing app/src locks on the shared corpus. REVERTED isoImport.ts to HEAD (byte-identical); 143 previously-failing tests GREEN; four canaries exact; eval1 byte-identical. Modules removed (kept in local patch). RECOMMENDATION FOR CE5: adjudicate the CE2-goldens-vs-app/src conflict - either (a) relocate conservation entities to a SEPARATE plan field + census \u0007ccounted refs (eval2 --census scoring, keeps app/src green but counting floors still need entities), or (b) CE4 relaxes the app/src fidelity snapshots to allow additive conservation entities, or (c) accept the deterministic offline mapper cannot meet counting floors on the sampled masters and gate them to the LIVE brain+sweeper path (Steps 1-4, unbuilt). Step 0 fleet DONE (CE3-S1). Steps 1-4/7/8/9 (live census wiring, workbook digest, windowed extraction+cache, sweeper, checkpoint, observatory, hardening) NOT built - scoped for continuation.",
+      "commit": null,
+      "ts": "2026-07-16T19:35:34.514Z"
+    },
+    {
+      "id": "CE3-S3",
+      "lane": "ce3-brain",
+      "status": "DONE",
+      "note": "Step 8 observatory SHIPPED (server-side, NOT app/src-blocked). server/lib/ai/run-observatory.js: importRun index doc + per-stage Blob artifacts (run-results.js injectable-seam pattern, tenant-scoped, path-sanitized, honest storage_not_configured); listImportRuns newest-first capped, getImportRun, getStageArtifact; SSE builders brain:census/sweeper/cache/checkpoint (pinned shapes for the live stages to emit). Three GET routes in server/lib/ai/index.js (product:read + requireTenant + resolveTenantForPrincipal honors SUPER_ADMIN X-Tenant-Id): GET /api/ai/importRuns, /importRun/:runId, /importRun/:runId/artifact/:stage. Wired into unifiedImport run-close (persistImportRun + bundle artifact, best-effort, never fails the run). CE4 fixture docs/import-census/fixtures/importRun.fixture.json (contract for the Import Runs admin surface; CE4 copies into app/src - CE3 never writes app/src). 5 locks green (tests/import-brain/observatory.test.ts: persist/read tenant-scoped, newest-first+cross-tenant isolation, unconfigured-honest, traversal-refused, SSE shapes). 30-day TTL is a container-lifecycle TODO (R8).",
+      "commit": null,
+      "ts": "2026-07-16T19:44:21.362Z"
     }
   ]
 }

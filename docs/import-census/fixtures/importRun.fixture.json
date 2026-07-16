@@ -1,0 +1,69 @@
+{
+  "_note": "CE3 Step 8 fixture — the importRun observatory contract CE4 renders. CE4 copies this to app/src/fixtures/importRun.fixture.json (CE3 never writes under app/src). Shape mirrors GET /api/ai/importRun/:runId ({ run }) with an embedded sample of GET /api/ai/importRuns ({ runs }) and a stage artifact.",
+  "runs": [
+    {
+      "kind": "importRun",
+      "runId": "run-2026-07-16-secura-01",
+      "tenantId": "testco",
+      "updatedAt": "2026-07-16T18:12:44.010Z",
+      "startedAt": "2026-07-16T18:04:11.882Z",
+      "status": "ok",
+      "fileNames": ["Product_Framework_SECURA_Property.xlsx"],
+      "metrics": { "products": 12, "coverages": 86, "forms": 234, "rules": 2, "unresolved": 3, "importWarnings": 5 },
+      "spend": {
+        "spendUsd": 41.8732,
+        "calls": 1184,
+        "byDeployment": {
+          "claude-opus-4-8": { "calls": 96, "inputTokens": 812000, "outputTokens": 61000, "usd": 16.755 },
+          "claude-haiku-4-5": { "calls": 902, "inputTokens": 5400000, "outputTokens": 210000, "usd": 5.16 },
+          "gpt-5.1": { "calls": 178, "inputTokens": 1900000, "outputTokens": 90000, "usd": 6.78 },
+          "gpt-5.4-pro": { "calls": 8, "inputTokens": 220000, "outputTokens": 40000, "usd": 10.4 }
+        }
+      },
+      "checkpointRefs": [
+        "import-runs/testco/run-2026-07-16-secura-01/stage1.json",
+        "import-runs/testco/run-2026-07-16-secura-01/stage3.json"
+      ]
+    }
+  ],
+  "run": {
+    "kind": "importRun",
+    "runId": "run-2026-07-16-secura-01",
+    "tenantId": "testco",
+    "updatedAt": "2026-07-16T18:12:44.010Z",
+    "startedAt": "2026-07-16T18:04:11.882Z",
+    "status": "ok",
+    "fileNames": ["Product_Framework_SECURA_Property.xlsx"],
+    "metrics": { "products": 12, "coverages": 86, "forms": 234, "rules": 2, "unresolved": 3, "importWarnings": 5 },
+    "spend": {
+      "spendUsd": 41.8732,
+      "calls": 1184,
+      "byDeployment": {
+        "claude-opus-4-8": { "calls": 96, "inputTokens": 812000, "outputTokens": 61000, "usd": 16.755 },
+        "claude-haiku-4-5": { "calls": 902, "inputTokens": 5400000, "outputTokens": 210000, "usd": 5.16 },
+        "gpt-5.1": { "calls": 178, "inputTokens": 1900000, "outputTokens": 90000, "usd": 6.78 },
+        "gpt-5.4-pro": { "calls": 8, "inputTokens": 220000, "outputTokens": 40000, "usd": 10.4 }
+      }
+    },
+    "checkpointRefs": [
+      "import-runs/testco/run-2026-07-16-secura-01/stage1.json",
+      "import-runs/testco/run-2026-07-16-secura-01/stage3.json"
+    ]
+  },
+  "artifact": {
+    "runId": "run-2026-07-16-secura-01",
+    "tenantId": "testco",
+    "stage": "bundle",
+    "at": "2026-07-16T18:12:44.010Z",
+    "artifact": {
+      "metrics": { "products": 12, "coverages": 86, "forms": 234, "rules": 2, "unresolved": 3, "importWarnings": 5 },
+      "bundleCounts": { "proposed": 337, "accepted": 334, "unresolved": 3 }
+    }
+  },
+  "sseEvents": [
+    { "t": "json", "key": "brain:census", "value": { "perSheet": [{ "sheet": "Product Component Model", "nonEmpty": 6641, "hidden": false }, { "sheet": "Forms View - MTG", "nonEmpty": 2072, "hidden": true }] } },
+    { "t": "json", "key": "brain:sweeper", "value": { "sheet": "Ref Connect Pull", "swept": 573, "reviewed": 41 } },
+    { "t": "json", "key": "brain:cache", "value": { "hits": 214, "misses": 970 } },
+    { "t": "json", "key": "brain:checkpoint", "value": { "stage": "stage3", "sheet": "Product Component Model", "blobRef": "import-runs/testco/run-2026-07-16-secura-01/stage3.json" } }
+  ]
+}

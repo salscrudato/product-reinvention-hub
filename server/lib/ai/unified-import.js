@@ -21,6 +21,7 @@ const { resolveTenantForPrincipal } = require('../auth')
 const fleet = require('../fleet')
 const { sse, emit, _forcedToolCall, _extractPdfText, _findSampleFile, getImportBrain, getStageFiling } = require('./_shared')
 const { persistRunResult, fetchRunResult, sanitizeRunId } = require('./run-results')
+const observatory = require('./run-observatory')
 const fs = require('fs')
 
 const HAIKU_OVERRIDE = process.env.AZURE_FOUNDRY_HAIKU_DEPLOYMENT || ''
@@ -210,12 +211,41 @@ async function unifiedImport(req, res) {
   // reconnect, not a $70 re-run. Opt-in: no run id, no persistence.
   const runId = sanitizeRunId(body.runId)
   const runTenant = resolveTenantForPrincipal(req.user)
+  const runStartedAt = new Date().toISOString()
+  const runFileNames = (Array.isArray(body.documents) ? body.documents : []).map(d => String((d && d.name) || '')).filter(Boolean).slice(0, 20)
   if (runId) emit(res, { t: 'json', key: 'run:id', value: { runId } })
   const persistIfRequested = async (bundle) => {
     if (!runId || !bundle) return
     const r = await persistRunResult({ tenantId: runTenant, runId, bundle })
     if (!r.ok) console.warn(`[unifiedImport] run ${runId}: bundle persistence failed (${r.reason})`)
     emit(res, { t: 'json', key: 'run:persisted', value: { runId, ok: r.ok, ...(r.ok ? {} : { reason: r.reason }) } })
+    // CE3 Step 8 observatory: a compact, replayable index doc + the bundle as a
+    // stage artifact. Best-effort telemetry — never fails the run, never blocks.
+    try {
+      const plan = (bundle && bundle.plan) || {}
+      const metrics = {
+        products: (plan.products || []).length,
+        coverages: (plan.coverages || []).length,
+        forms: (plan.forms || []).length,
+        rules: (plan.rules || []).length,
+        unresolved: (bundle.unresolved || []).length,
+        importWarnings: (bundle.importWarnings || []).length,
+      }
+      await observatory.persistImportRun({
+        tenantId: runTenant, runId,
+        indexDoc: {
+          startedAt: runStartedAt,
+          status: 'ok',
+          fileNames: runFileNames,
+          metrics,
+          spend: { byDeployment: (budget && budget.byDeployment) || {}, spendUsd: Math.round(((budget && budget.spendUsd) || 0) * 1e4) / 1e4, calls: (budget && budget.calls) || 0 },
+          checkpointRefs: [],
+        },
+      })
+      await observatory.persistStageArtifact({ tenantId: runTenant, runId, stage: 'bundle', artifact: { metrics, bundleCounts: bundle.counts || null } })
+    } catch (e) {
+      console.warn(`[unifiedImport] run ${runId}: observatory persistence failed (${String(e && e.message).slice(0, 120)})`)
+    }
   }
 
   // SSE keepalive: Azure App Service closes connections idle >~230s; long stage-4
