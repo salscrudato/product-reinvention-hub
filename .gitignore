@@ -36,19 +36,5 @@ tmp*.md
 .DS_Store
 Thumbs.db
 
-# Codebase review pack — keep ONLY the markdown deliverables; ignore heavy/generated artifacts
-docs/review/*
-!docs/review/FUNCTIONAL_CODEBASE.md
-!docs/review/OBSERVATIONS.md
-!docs/review/ENHANCEMENT_BACKLOG.md
-!docs/review/COST_BASELINE.md
-!docs/review/COST_PROGRESS.md
-!docs/review/COST_REPORT.md
 docs/audit/import_live_results.json
 docs/audit/import_ledger.json
-
-# Client-proprietary sample workbooks used for local import eval only (never commit)
-additional_samples/
-
-# Headless orchestration session logs (local only)
-tools/orchestrate/run/
