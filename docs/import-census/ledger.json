@@ -1,0 +1,14 @@
+{
+  "pack": "census-era",
+  "created": "2026-07-16T00:00:00Z",
+  "rows": [
+    {
+      "id": "CE1-S1",
+      "lane": "ce1-census",
+      "status": "DONE",
+      "note": "Preconditions verified. Lineage reconciled: prompt said d28c8a1/feat-import-concept-linker; actual tip is main@0ad8689 (d28c8a1 IS an ancestor; concept-linker branch already merged). Worktree created from main. All 6 reference workbooks present (untracked client data in main tree, copied into worktree, MUST NEVER BE COMMITTED) + 4 hagerty fixtures (tracked). Model confirmed claude-fable-5, no fallback. Baseline gate GREEN on Node 24 after installing server/ npm deps (server is outside the pnpm workspace; fresh worktrees need npm install --prefix server): typecheck+lint pass, test 152 files / 1664 tests green in 115s, build green. fast-check absent everywhere (S9 adds root dev-dep). CRASH_CENSUS.md lives at docs/baseline/ not docs/reveng/ (prompt path stale). data.js validator is at :354-363 not :243 (drifted). CORPUS NOTE: 6 reference workbooks + 4 hagerty, NOT 17 (memory says 17 ref workbooks PENDING).",
+      "commit": null,
+      "ts": "2026-07-16T08:40:00Z"
+    }
+  ]
+}
