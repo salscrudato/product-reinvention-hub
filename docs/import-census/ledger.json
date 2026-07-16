@@ -1,0 +1,70 @@
+{
+  "schema": "ce-ledger/v1",
+  "note": "rows: {id,lane,status,note,commit,ts}; lanes reconciled by CE5 at merge",
+  "rows": [
+    {
+      "id": "CE2-A-setup",
+      "lane": "ce2",
+      "status": "DONE",
+      "note": "worktree ce2-goldens on ce/ce2-goldens @0ad8689; pnpm install ok; foundry 4-surface smoke green (opus/haiku-tool/gpt5.1/gpt5.4pro)",
+      "commit": "0ad8689",
+      "ts": "2026-07-16T08:26:10.706Z"
+    },
+    {
+      "id": "CE2-B-infra",
+      "lane": "ce2",
+      "status": "DONE",
+      "note": "golden2-schema + cell-enum + eval2-metrics + 26 locks green (incl anti-leakage); tiny.xlsx fixture",
+      "commit": null,
+      "ts": "2026-07-16T08:42:27.987Z"
+    },
+    {
+      "id": "CE2-C-annotate-harness",
+      "lane": "ce2",
+      "status": "TODO",
+      "note": "annotate-goldens.mts + cost probe",
+      "commit": null,
+      "ts": "2026-07-16T08:26:11.796Z"
+    },
+    {
+      "id": "CE2-D-annotate-corpus",
+      "lane": "ce2",
+      "status": "TODO",
+      "note": "8 files + 2 sealed holdouts + REVIEW_QUEUE",
+      "commit": null,
+      "ts": "2026-07-16T08:26:12.305Z"
+    },
+    {
+      "id": "CE2-E-eval2",
+      "lane": "ce2",
+      "status": "TODO",
+      "note": "import-eval2.mts + metric locks",
+      "commit": null,
+      "ts": "2026-07-16T08:26:12.818Z"
+    },
+    {
+      "id": "CE2-F-mutation",
+      "lane": "ce2",
+      "status": "TODO",
+      "note": "mutation fuzz on GL 2026 Example",
+      "commit": null,
+      "ts": "2026-07-16T08:26:13.324Z"
+    },
+    {
+      "id": "CE2-G-baseline",
+      "lane": "ce2",
+      "status": "TODO",
+      "note": "expected-red baseline + BASELINE_EVAL2.md",
+      "commit": null,
+      "ts": "2026-07-16T08:26:13.826Z"
+    },
+    {
+      "id": "CE2-H-close",
+      "lane": "ce2",
+      "status": "TODO",
+      "note": "CE2_REPORT.md + hostile self-review + gate green",
+      "commit": null,
+      "ts": "2026-07-16T08:26:14.386Z"
+    }
+  ]
+}
