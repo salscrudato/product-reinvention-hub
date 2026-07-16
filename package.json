@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
-    "dev": "pnpm --filter app dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:app": "pnpm --filter app dev",
     "test": "pnpm test:unit",
     "test:unit": "vitest run",
     "test:gates": "vitest run tests/server/tenant-isolation.test.ts tests/server/hitl.test.ts tests/server/cost-guard.test.ts",
