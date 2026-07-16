@@ -1,0 +1,114 @@
+[
+  {
+    "file": "hagerty/CO_EnthusiastPlus_Config_Template_Final.xlsx",
+    "status": "OK",
+    "sniff": {
+      "container": "ZIP",
+      "workbookKind": "XLSX"
+    },
+    "visibleSheets": 16,
+    "hiddenSheetsSkipped": 0,
+    "peakSheetCount": 16,
+    "peakCellCount": 2644,
+    "maxGrid": "46x18",
+    "phantom": {
+      "sheets": 2,
+      "clamped": 2,
+      "believed": 0
+    },
+    "lob": null,
+    "refIdSignals": 0,
+    "headerLock": {
+      "sheetsScored": 16,
+      "fastLocked": 11,
+      "bestScore": 1
+    },
+    "wallMs": 2706,
+    "peakRssMB": 108,
+    "orchWallMs": 3894
+  },
+  {
+    "file": "hagerty/CO_RV125_Rating_Config_Template.xlsm",
+    "status": "OK",
+    "sniff": {
+      "container": "ZIP",
+      "workbookKind": "XLSM"
+    },
+    "visibleSheets": 29,
+    "hiddenSheetsSkipped": 4,
+    "peakSheetCount": 33,
+    "peakCellCount": 84428,
+    "maxGrid": "636x28",
+    "phantom": {
+      "sheets": 1,
+      "clamped": 1,
+      "believed": 0
+    },
+    "lob": null,
+    "refIdSignals": 8,
+    "headerLock": {
+      "sheetsScored": 29,
+      "fastLocked": 23,
+      "bestScore": 1
+    },
+    "wallMs": 3495,
+    "peakRssMB": 332,
+    "orchWallMs": 4252
+  },
+  {
+    "file": "hagerty/OH_EnthusiastPlus_BRD.xlsx",
+    "status": "OK",
+    "sniff": {
+      "container": "ZIP",
+      "workbookKind": "XLSX"
+    },
+    "visibleSheets": 13,
+    "hiddenSheetsSkipped": 0,
+    "peakSheetCount": 13,
+    "peakCellCount": 8785,
+    "maxGrid": "145x43",
+    "phantom": {
+      "sheets": 2,
+      "clamped": 2,
+      "believed": 0
+    },
+    "lob": null,
+    "refIdSignals": 0,
+    "headerLock": {
+      "sheetsScored": 13,
+      "fastLocked": 6,
+      "bestScore": 0.999
+    },
+    "wallMs": 2987,
+    "peakRssMB": 163,
+    "orchWallMs": 4147
+  },
+  {
+    "file": "hagerty/PA_PROD_001_TableConfig.xlsx",
+    "status": "OK",
+    "sniff": {
+      "container": "ZIP",
+      "workbookKind": "XLSX"
+    },
+    "visibleSheets": 23,
+    "hiddenSheetsSkipped": 0,
+    "peakSheetCount": 23,
+    "peakCellCount": 941,
+    "maxGrid": "23x8",
+    "phantom": {
+      "sheets": 0,
+      "clamped": 0,
+      "believed": 0
+    },
+    "lob": null,
+    "refIdSignals": 0,
+    "headerLock": {
+      "sheetsScored": 23,
+      "fastLocked": 23,
+      "bestScore": 1
+    },
+    "wallMs": 2583,
+    "peakRssMB": 94,
+    "orchWallMs": 3131
+  }
+]

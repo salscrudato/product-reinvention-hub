@@ -1,0 +1,6 @@
+{
+  "hagerty/CO_EnthusiastPlus_Config_Template_Final.xlsx": ["trailing-space-name", "phantom-range", "ghost-sheet"],
+  "hagerty/OH_EnthusiastPlus_BRD.xlsx": ["special-char-name"],
+  "hagerty/CO_RV125_Rating_Config_Template.xlsm": ["macro-file", "hidden-sheet", "near-duplicate-sheets"],
+  "hagerty/PA_PROD_001_TableConfig.xlsx": ["name-31char-truncated", "near-duplicate-sheets"]
+}
