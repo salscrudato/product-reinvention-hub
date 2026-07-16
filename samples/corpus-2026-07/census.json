@@ -1,0 +1,914 @@
+[
+  {
+    "file": "hagerty/CO_EnthusiastPlus_Config_Template_Final.xlsx",
+    "sizeKB": 138,
+    "hasMacros": false,
+    "definedNames": 1,
+    "sheets": [
+      {
+        "name": "Default Limits",
+        "state": "visible",
+        "repR": 12,
+        "repC": 13,
+        "realR": 12,
+        "realC": 2,
+        "cells": 17,
+        "merges": 2
+      },
+      {
+        "name": "Coverage Names & Limit",
+        "state": "visible",
+        "repR": 34,
+        "repC": 4,
+        "realR": 34,
+        "realC": 4,
+        "cells": 59,
+        "merges": 0
+      },
+      {
+        "name": "Coverage Rules",
+        "state": "visible",
+        "repR": 56,
+        "repC": 18,
+        "realR": 46,
+        "realC": 18,
+        "cells": 203,
+        "merges": 5
+      },
+      {
+        "name": "UM Cov Rules Limits",
+        "state": "visible",
+        "repR": 19,
+        "repC": 16,
+        "realR": 18,
+        "realC": 16,
+        "cells": 146,
+        "merges": 5
+      },
+      {
+        "name": "Coverage Item",
+        "state": "visible",
+        "repR": 50,
+        "repC": 14,
+        "realR": 37,
+        "realC": 8,
+        "cells": 228,
+        "merges": 0
+      },
+      {
+        "name": "Factor Item ",
+        "state": "visible",
+        "repR": 40,
+        "repC": 8,
+        "realR": 39,
+        "realC": 8,
+        "cells": 140,
+        "merges": 0
+      },
+      {
+        "name": "Disc Surch on Dec",
+        "state": "visible",
+        "repR": 7,
+        "repC": 8,
+        "realR": 7,
+        "realC": 8,
+        "cells": 51,
+        "merges": 0
+      },
+      {
+        "name": "Ins Scoring",
+        "state": "visible",
+        "repR": 2,
+        "repC": 8,
+        "realR": 2,
+        "realC": 8,
+        "cells": 16,
+        "merges": 0
+      },
+      {
+        "name": "Symbol Rating",
+        "state": "visible",
+        "repR": 5,
+        "repC": 4,
+        "realR": 5,
+        "realC": 3,
+        "cells": 10,
+        "merges": 0
+      },
+      {
+        "name": "Driving Record",
+        "state": "visible",
+        "repR": 9,
+        "repC": 6,
+        "realR": 9,
+        "realC": 6,
+        "cells": 30,
+        "merges": 2
+      },
+      {
+        "name": "Claims Hx",
+        "state": "visible",
+        "repR": 11,
+        "repC": 6,
+        "realR": 7,
+        "realC": 6,
+        "cells": 20,
+        "merges": 0
+      },
+      {
+        "name": "Assessment",
+        "state": "visible",
+        "repR": 2,
+        "repC": 10,
+        "realR": 2,
+        "realC": 10,
+        "cells": 20,
+        "merges": 0
+      },
+      {
+        "name": "Pay Plans",
+        "state": "visible",
+        "repR": 7,
+        "repC": 1,
+        "realR": 5,
+        "realC": 1,
+        "cells": 5,
+        "merges": 0
+      },
+      {
+        "name": "Fees",
+        "state": "visible",
+        "repR": 5,
+        "repC": 2,
+        "realR": 5,
+        "realC": 2,
+        "cells": 8,
+        "merges": 0
+      },
+      {
+        "name": "Value-Added",
+        "state": "visible",
+        "repR": 30,
+        "repC": 18,
+        "realR": 30,
+        "realC": 18,
+        "cells": 3,
+        "merges": 0
+      },
+      {
+        "name": "Book Tranfer Prem Stab",
+        "state": "visible",
+        "repR": 2,
+        "repC": 1,
+        "realR": 2,
+        "realC": 1,
+        "cells": 2,
+        "merges": 0
+      }
+    ],
+    "peakRssMB": 97,
+    "status": "OK",
+    "wallMs": 2777,
+    "traits": [
+      "ghost-sheet",
+      "phantom-range",
+      "trailing-space-name"
+    ]
+  },
+  {
+    "file": "hagerty/CO_RV125_Rating_Config_Template.xlsm",
+    "sizeKB": 470,
+    "hasMacros": true,
+    "definedNames": 1,
+    "sheets": [
+      {
+        "name": "Program Version",
+        "state": "visible",
+        "repR": 112,
+        "repC": 14,
+        "realR": 100,
+        "realC": 13,
+        "cells": 311,
+        "merges": 45
+      },
+      {
+        "name": "Coverages",
+        "state": "visible",
+        "repR": 440,
+        "repC": 16,
+        "realR": 438,
+        "realC": 16,
+        "cells": 2367,
+        "merges": 157
+      },
+      {
+        "name": "Liab BI (2)",
+        "state": "visible",
+        "repR": 283,
+        "repC": 15,
+        "realR": 283,
+        "realC": 15,
+        "cells": 3321,
+        "merges": 0
+      },
+      {
+        "name": "Liab BI & PD (1)",
+        "state": "visible",
+        "repR": 281,
+        "repC": 15,
+        "realR": 281,
+        "realC": 15,
+        "cells": 3305,
+        "merges": 0
+      },
+      {
+        "name": "Liab PD (8)",
+        "state": "visible",
+        "repR": 282,
+        "repC": 15,
+        "realR": 282,
+        "realC": 15,
+        "cells": 3313,
+        "merges": 0
+      },
+      {
+        "name": "Med Payments (12)",
+        "state": "visible",
+        "repR": 276,
+        "repC": 15,
+        "realR": 276,
+        "realC": 15,
+        "cells": 3265,
+        "merges": 0
+      },
+      {
+        "name": "UM BI (20)",
+        "state": "hidden",
+        "repR": 88,
+        "repC": 15,
+        "realR": 88,
+        "realC": 15,
+        "cells": 854,
+        "merges": 0
+      },
+      {
+        "name": "UM BI (6)",
+        "state": "hidden",
+        "repR": 86,
+        "repC": 15,
+        "realR": 86,
+        "realC": 15,
+        "cells": 838,
+        "merges": 0
+      },
+      {
+        "name": "UM PD (52)",
+        "state": "visible",
+        "repR": 109,
+        "repC": 15,
+        "realR": 109,
+        "realC": 15,
+        "cells": 1017,
+        "merges": 0
+      },
+      {
+        "name": "MC Pass Liab (33)",
+        "state": "visible",
+        "repR": 283,
+        "repC": 15,
+        "realR": 283,
+        "realC": 15,
+        "cells": 3321,
+        "merges": 0
+      },
+      {
+        "name": "MC Pass Liab (163)",
+        "state": "visible",
+        "repR": 281,
+        "repC": 15,
+        "realR": 281,
+        "realC": 15,
+        "cells": 3305,
+        "merges": 0
+      },
+      {
+        "name": "Coverage Item",
+        "state": "visible",
+        "repR": 26,
+        "repC": 28,
+        "realR": 26,
+        "realC": 28,
+        "cells": 581,
+        "merges": 0
+      },
+      {
+        "name": "IM Policy Coverages",
+        "state": "visible",
+        "repR": 71,
+        "repC": 11,
+        "realR": 70,
+        "realC": 6,
+        "cells": 251,
+        "merges": 8
+      },
+      {
+        "name": "IM Features (R.M)",
+        "state": "visible",
+        "repR": 465,
+        "repC": 4,
+        "realR": 465,
+        "realC": 4,
+        "cells": 1153,
+        "merges": 205
+      },
+      {
+        "name": "IM Credits",
+        "state": "visible",
+        "repR": 243,
+        "repC": 4,
+        "realR": 241,
+        "realC": 4,
+        "cells": 585,
+        "merges": 121
+      },
+      {
+        "name": "IM Debits",
+        "state": "visible",
+        "repR": 255,
+        "repC": 4,
+        "realR": 255,
+        "realC": 4,
+        "cells": 600,
+        "merges": 128
+      },
+      {
+        "name": "COLL (4)",
+        "state": "visible",
+        "repR": 531,
+        "repC": 18,
+        "realR": 531,
+        "realC": 18,
+        "cells": 6257,
+        "merges": 0
+      },
+      {
+        "name": "OTC (5)",
+        "state": "visible",
+        "repR": 636,
+        "repC": 21,
+        "realR": 636,
+        "realC": 21,
+        "cells": 7925,
+        "merges": 0
+      },
+      {
+        "name": "Deductible Availability",
+        "state": "visible",
+        "repR": 178,
+        "repC": 11,
+        "realR": 177,
+        "realC": 10,
+        "cells": 1192,
+        "merges": 71
+      },
+      {
+        "name": "Event Coverages",
+        "state": "visible",
+        "repR": 15,
+        "repC": 6,
+        "realR": 15,
+        "realC": 5,
+        "cells": 51,
+        "merges": 9
+      },
+      {
+        "name": "Specialty Coverages",
+        "state": "visible",
+        "repR": 364,
+        "repC": 20,
+        "realR": 364,
+        "realC": 20,
+        "cells": 1725,
+        "merges": 72
+      },
+      {
+        "name": "Features",
+        "state": "visible",
+        "repR": 208,
+        "repC": 15,
+        "realR": 206,
+        "realC": 5,
+        "cells": 606,
+        "merges": 127
+      },
+      {
+        "name": "PV Documents",
+        "state": "visible",
+        "repR": 111,
+        "repC": 26,
+        "realR": 102,
+        "realC": 22,
+        "cells": 1621,
+        "merges": 0
+      },
+      {
+        "name": "Misc. Coverages",
+        "state": "hidden",
+        "repR": 64,
+        "repC": 11,
+        "realR": 64,
+        "realC": 11,
+        "cells": 246,
+        "merges": 28
+      },
+      {
+        "name": "DocPckt Documents",
+        "state": "visible",
+        "repR": 9,
+        "repC": 24,
+        "realR": 9,
+        "realC": 24,
+        "cells": 123,
+        "merges": 0
+      },
+      {
+        "name": "INS SCORE",
+        "state": "visible",
+        "repR": 38,
+        "repC": 10,
+        "realR": 38,
+        "realC": 10,
+        "cells": 172,
+        "merges": 6
+      },
+      {
+        "name": "State Region Table",
+        "state": "visible",
+        "repR": 77,
+        "repC": 11,
+        "realR": 77,
+        "realC": 11,
+        "cells": 285,
+        "merges": 24
+      },
+      {
+        "name": "Application Text",
+        "state": "visible",
+        "repR": 98,
+        "repC": 6,
+        "realR": 92,
+        "realC": 6,
+        "cells": 396,
+        "merges": 66
+      },
+      {
+        "name": "IM App Text",
+        "state": "visible",
+        "repR": 81,
+        "repC": 6,
+        "realR": 80,
+        "realC": 6,
+        "cells": 349,
+        "merges": 58
+      },
+      {
+        "name": "Coverage Rules",
+        "state": "visible",
+        "repR": 28,
+        "repC": 8,
+        "realR": 28,
+        "realC": 6,
+        "cells": 60,
+        "merges": 1
+      },
+      {
+        "name": "FLEX",
+        "state": "visible",
+        "repR": 74,
+        "repC": 15,
+        "realR": 74,
+        "realC": 15,
+        "cells": 541,
+        "merges": 0
+      },
+      {
+        "name": "NPO Mapping",
+        "state": "visible",
+        "repR": 118,
+        "repC": 14,
+        "realR": 118,
+        "realC": 14,
+        "cells": 1426,
+        "merges": 4
+      },
+      {
+        "name": "Coverages (Comp Coll)",
+        "state": "hidden",
+        "repR": 19,
+        "repC": 9,
+        "realR": 19,
+        "realC": 9,
+        "cells": 78,
+        "merges": 15
+      }
+    ],
+    "peakRssMB": 213,
+    "status": "OK",
+    "wallMs": 4687,
+    "traits": [
+      "hidden-sheet",
+      "macro-file",
+      "near-duplicate-sheets",
+      "phantom-range"
+    ]
+  },
+  {
+    "file": "hagerty/OH_EnthusiastPlus_BRD.xlsx",
+    "sizeKB": 231,
+    "hasMacros": false,
+    "definedNames": 1,
+    "sheets": [
+      {
+        "name": "Version History",
+        "state": "visible",
+        "repR": 11,
+        "repC": 8,
+        "realR": 7,
+        "realC": 8,
+        "cells": 23,
+        "merges": 2
+      },
+      {
+        "name": "Forms",
+        "state": "visible",
+        "repR": 51,
+        "repC": 42,
+        "realR": 51,
+        "realC": 42,
+        "cells": 1014,
+        "merges": 2
+      },
+      {
+        "name": "Policy UI",
+        "state": "visible",
+        "repR": 20,
+        "repC": 8,
+        "realR": 4,
+        "realC": 8,
+        "cells": 24,
+        "merges": 2
+      },
+      {
+        "name": "Cov_Names & Limit",
+        "state": "visible",
+        "repR": 145,
+        "repC": 9,
+        "realR": 145,
+        "realC": 9,
+        "cells": 614,
+        "merges": 58
+      },
+      {
+        "name": "Factors",
+        "state": "visible",
+        "repR": 40,
+        "repC": 9,
+        "realR": 40,
+        "realC": 9,
+        "cells": 193,
+        "merges": 10
+      },
+      {
+        "name": "Driver History Details",
+        "state": "visible",
+        "repR": 18,
+        "repC": 9,
+        "realR": 18,
+        "realC": 9,
+        "cells": 82,
+        "merges": 4
+      },
+      {
+        "name": "STP Rules",
+        "state": "visible",
+        "repR": 20,
+        "repC": 8,
+        "realR": 5,
+        "realC": 8,
+        "cells": 22,
+        "merges": 2
+      },
+      {
+        "name": "ASLOB",
+        "state": "visible",
+        "repR": 36,
+        "repC": 8,
+        "realR": 36,
+        "realC": 8,
+        "cells": 110,
+        "merges": 2
+      },
+      {
+        "name": "Fees, Factors, Assesment",
+        "state": "visible",
+        "repR": 28,
+        "repC": 11,
+        "realR": 24,
+        "realC": 11,
+        "cells": 93,
+        "merges": 2
+      },
+      {
+        "name": "Misc.",
+        "state": "visible",
+        "repR": 33,
+        "repC": 8,
+        "realR": 33,
+        "realC": 8,
+        "cells": 24,
+        "merges": 2
+      },
+      {
+        "name": "Other comms",
+        "state": "visible",
+        "repR": 88,
+        "repC": 43,
+        "realR": 88,
+        "realC": 43,
+        "cells": 1070,
+        "merges": 799
+      },
+      {
+        "name": "Renew",
+        "state": "visible",
+        "repR": 8,
+        "repC": 8,
+        "realR": 8,
+        "realC": 8,
+        "cells": 21,
+        "merges": 2
+      },
+      {
+        "name": "HDC",
+        "state": "visible",
+        "repR": 3,
+        "repC": 8,
+        "realR": 3,
+        "realC": 8,
+        "cells": 17,
+        "merges": 2
+      }
+    ],
+    "peakRssMB": 134,
+    "status": "OK",
+    "wallMs": 6976,
+    "traits": [
+      "phantom-range"
+    ]
+  },
+  {
+    "file": "hagerty/PA_PROD_001_TableConfig.xlsx",
+    "sizeKB": 28,
+    "hasMacros": false,
+    "definedNames": 0,
+    "sheets": [
+      {
+        "name": "TOC",
+        "state": "visible",
+        "repR": 23,
+        "repC": 8,
+        "realR": 23,
+        "realC": 8,
+        "cells": 110,
+        "merges": 0
+      },
+      {
+        "name": "TerritoryBaseRate_1",
+        "state": "visible",
+        "repR": 13,
+        "repC": 2,
+        "realR": 13,
+        "realC": 2,
+        "cells": 20,
+        "merges": 4
+      },
+      {
+        "name": "ProtectionClassConstructionFact",
+        "state": "visible",
+        "repR": 12,
+        "repC": 4,
+        "realR": 12,
+        "realC": 4,
+        "cells": 36,
+        "merges": 4
+      },
+      {
+        "name": "CoverageAKeyFactor_3",
+        "state": "visible",
+        "repR": 15,
+        "repC": 2,
+        "realR": 15,
+        "realC": 2,
+        "cells": 24,
+        "merges": 4
+      },
+      {
+        "name": "DeductibleFactors_4",
+        "state": "visible",
+        "repR": 15,
+        "repC": 3,
+        "realR": 15,
+        "realC": 3,
+        "cells": 36,
+        "merges": 4
+      },
+      {
+        "name": "CoverageCPercentageFactor_5",
+        "state": "visible",
+        "repR": 11,
+        "repC": 2,
+        "realR": 11,
+        "realC": 2,
+        "cells": 16,
+        "merges": 4
+      },
+      {
+        "name": "LiabilityIncreasedLimitCharges_",
+        "state": "visible",
+        "repR": 14,
+        "repC": 3,
+        "realR": 14,
+        "realC": 3,
+        "cells": 33,
+        "merges": 4
+      },
+      {
+        "name": "ScheduledPersonalPropertyClassR",
+        "state": "visible",
+        "repR": 14,
+        "repC": 2,
+        "realR": 14,
+        "realC": 2,
+        "cells": 22,
+        "merges": 4
+      },
+      {
+        "name": "EndorsementCreditFactors_8",
+        "state": "visible",
+        "repR": 11,
+        "repC": 2,
+        "realR": 11,
+        "realC": 2,
+        "cells": 16,
+        "merges": 4
+      },
+      {
+        "name": "TierFactor_9",
+        "state": "visible",
+        "repR": 11,
+        "repC": 2,
+        "realR": 11,
+        "realC": 2,
+        "cells": 16,
+        "merges": 4
+      },
+      {
+        "name": "WaterBackUpFlatPremium_10",
+        "state": "visible",
+        "repR": 11,
+        "repC": 2,
+        "realR": 11,
+        "realC": 2,
+        "cells": 16,
+        "merges": 4
+      },
+      {
+        "name": "TerritoryBaseRate_11",
+        "state": "visible",
+        "repR": 13,
+        "repC": 2,
+        "realR": 13,
+        "realC": 2,
+        "cells": 20,
+        "merges": 4
+      },
+      {
+        "name": "DriverClassFactor_12",
+        "state": "visible",
+        "repR": 11,
+        "repC": 2,
+        "realR": 11,
+        "realC": 2,
+        "cells": 16,
+        "merges": 4
+      },
+      {
+        "name": "BIPDLimitFactor_13",
+        "state": "visible",
+        "repR": 12,
+        "repC": 2,
+        "realR": 12,
+        "realC": 2,
+        "cells": 18,
+        "merges": 4
+      },
+      {
+        "name": "VehicleAgeFactor_14",
+        "state": "visible",
+        "repR": 11,
+        "repC": 2,
+        "realR": 11,
+        "realC": 2,
+        "cells": 16,
+        "merges": 4
+      },
+      {
+        "name": "MedicalPaymentsRatebyTerritory_",
+        "state": "visible",
+        "repR": 13,
+        "repC": 2,
+        "realR": 13,
+        "realC": 2,
+        "cells": 20,
+        "merges": 4
+      },
+      {
+        "name": "UMUIMRatebyTerritory_16",
+        "state": "visible",
+        "repR": 13,
+        "repC": 2,
+        "realR": 13,
+        "realC": 2,
+        "cells": 20,
+        "merges": 4
+      },
+      {
+        "name": "CollisionPremium_17",
+        "state": "visible",
+        "repR": 14,
+        "repC": 3,
+        "realR": 14,
+        "realC": 3,
+        "cells": 33,
+        "merges": 4
+      },
+      {
+        "name": "ComprehensivePremium_18",
+        "state": "visible",
+        "repR": 14,
+        "repC": 3,
+        "realR": 14,
+        "realC": 3,
+        "cells": 33,
+        "merges": 4
+      },
+      {
+        "name": "TierFactor_19",
+        "state": "visible",
+        "repR": 11,
+        "repC": 2,
+        "realR": 11,
+        "realC": 2,
+        "cells": 16,
+        "merges": 4
+      },
+      {
+        "name": "RentalReimbursementRate_20",
+        "state": "visible",
+        "repR": 11,
+        "repC": 2,
+        "realR": 11,
+        "realC": 2,
+        "cells": 16,
+        "merges": 4
+      },
+      {
+        "name": "TowingandLaborRate_21",
+        "state": "visible",
+        "repR": 11,
+        "repC": 2,
+        "realR": 11,
+        "realC": 2,
+        "cells": 16,
+        "merges": 4
+      },
+      {
+        "name": "Config",
+        "state": "visible",
+        "repR": 22,
+        "repC": 7,
+        "realR": 22,
+        "realC": 7,
+        "cells": 154,
+        "merges": 0
+      }
+    ],
+    "peakRssMB": 89,
+    "status": "OK",
+    "wallMs": 3350,
+    "traits": [
+      "name-31char-truncated",
+      "near-duplicate-sheets"
+    ]
+  }
+]
