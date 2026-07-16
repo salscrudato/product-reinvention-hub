@@ -1,8 +1,0 @@
-
-── LIVE: https://app-prodhub-dev.azurewebsites.net ──
-  ✓ authenticated (tenant=accenture-test)
-    recover mode: fetching durable result for run eval-fc23c0df-e53c-4ae7-88fa-ce7173f0c0ef (no new import posted)
-    run eval-fc23c0df-e53c-4ae7-88fa-ce7173f0c0ef: persisted bundle recovered after 1 poll(s)
-  ✗ CORE: F1 0.999 (P 1.000 R 0.999) | numeric 1.000 | citations entity=100% prov=100% resolve=100.0% | extras 49.9% | link parent=1.00 edges=1.00 forms=1.00 | loss n/a | 1s
-
-Results → docs/audit/import_eval_results-CORE.json
