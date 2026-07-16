@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Import Hardening Build Pack - IH Series</title>
+<style>
+:root{
+  --bg:#f5f6f8; --surface:rgba(255,255,255,.72); --surface-solid:#ffffff;
+  --ink:#111418; --ink-2:#5a626e; --line:rgba(17,20,24,.08);
+  --accent:#3e63dd; --accent-soft:rgba(62,99,221,.10);
+  --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  --shadow:0 8px 30px rgba(17,20,24,.06);
+}
+[data-theme="dark"]{
+  --bg:#0e1116; --surface:rgba(23,27,34,.72); --surface-solid:#161b22;
+  --ink:#e8eaee; --ink-2:#98a1ad; --line:rgba(232,234,238,.09);
+  --accent:#7a95ff; --accent-soft:rgba(122,149,255,.12);
+  --shadow:0 8px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg); color:var(--ink); letter-spacing:-.011em;
+  line-height:1.55; padding-bottom:80px;
+  transition:background .3s ease,color .3s ease;
+}
+.wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+header.hero{padding:56px 0 28px}
+.kicker{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:38px;font-weight:700;letter-spacing:-.03em;margin:10px 0 8px}
+.sub{color:var(--ink-2);font-size:16px;max-width:760px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent);border:1px solid transparent}
+.toggle{position:fixed;top:20px;right:24px;z-index:50;border:1px solid var(--line);background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--ink);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow);transition:transform .25s cubic-bezier(.34,1.4,.44,1)}
+.toggle:active{transform:scale(.94)}
+section{margin:44px 0}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
+.lede{color:var(--ink-2);font-size:14px;margin-bottom:18px;max-width:820px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.card{background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.34,1.4,.44,1)}
+.card:hover{transform:translateY(-2px)}
+.card h3{font-size:14px;font-weight:700;margin-bottom:5px}
+.card p{font-size:13px;color:var(--ink-2)}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--surface);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:12px 14px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td b{font-weight:650}
+.path{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.prompt-card{background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);margin:22px 0;overflow:hidden}
+.prompt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line)}
+.prompt-head .t{font-size:16px;font-weight:700}
+.prompt-head .m{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.model{font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;background:var(--accent);color:#fff}
+.mode{font-size:11px;font-weight:600;padding:5px 11px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.copy-btn{border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);font-size:12px;font-weight:600;border-radius:10px;padding:7px 14px;cursor:pointer;transition:transform .25s cubic-bezier(.34,1.4,.44,1),background .2s}
+.copy-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.copy-btn:active{transform:scale(.93)}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.62;padding:22px;white-space:pre-wrap;word-break:break-word;color:var(--ink);max-height:560px;overflow:auto}
+.note{font-size:13px;color:var(--ink-2);background:var(--accent-soft);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-top:14px}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink-2);font-size:12px}
+ol.op{margin:10px 0 0 20px;font-size:14px}
+ol.op li{margin-bottom:8px}
+</style>
+</head>
+<body>
+<button class="toggle" id="themeToggle" type="button">Dark</button>
+<div class="wrap">
+<header class="hero">
+  <div class="kicker">Product Reinvention Hub</div>
+  <h1>Import Hardening Build Pack</h1>
+  <p class="sub">IH Series: three prompts, one ledger-driven loop. Verify findings at HEAD, seed a hostile fixture corpus, iterate fixes with a decorrelated AI judge, and gate every phase on the eval. Workbooks first, PDFs second, mixed uploads last.</p>
+  <div class="chips">
+    <span class="chip">3 prompts: IH1 - IH3</span>
+    <span class="chip">Phase gates: W then P then M</span>
+    <span class="chip">Findings F01 - F20</span>
+    <span class="chip">20 workbook + 8 PDF fixtures</span>
+    <span class="chip">Fable 5 high, Opus 4.8 ultrathink, Haiku 4.5</span>
+  </div>
+</header>
+
+<section id="strategy">
+  <h2>Operating principles</h2>
+  <p class="lede">Five rules the pack enforces. They exist to keep the effort lean: the code may already be efficient, so nothing gets built without a red signal.</p>
+  <div class="grid">
+    <div class="card"><h3>Verify, then fix</h3><p>The external review is static and version-skewed (efb8828 vs 2b1f893). Every finding is a hypothesis until reproduced at current HEAD.</p></div>
+    <div class="card"><h3>Eval is law</h3><p>The fitness function decides what gets built, not the review. Metrics: F1, numeric, citations-that-resolve, linkage, conservation, precision-vs-extras.</p></div>
+    <div class="card"><h3>One writer, many readers</h3><p>Subagents investigate and judge in parallel; only the main agent edits files. This retires the shared-index git race class entirely.</p></div>
+    <div class="card"><h3>Monotonic corpus</h3><p>Every closed bug ships a permanent adversarial fixture. The eval only gets harder; regressions cannot reopen quietly.</p></div>
+    <div class="card"><h3>Escalate on evidence</h3><p>Big architecture (evidence IR, rating AST, sectioned PDF) unlocks only when a red fixture demands it or three bugs share it as root cause.</p></div>
+  </div>
+</section>
+
+<section id="models">
+  <h2>Model plan</h2>
+  <p class="lede">Pay for depth exactly where ambiguity lives. Cheap models everywhere else.</p>
+  <table>
+    <tr><th>Prompt</th><th>Model</th><th>Role</th><th>Why</th></tr>
+    <tr><td><b>IH1</b></td><td>Fable 5, effort HIGH</td><td>Baseline, findings matrix, corpus seed, P0 fixes</td><td>Highest-ambiguity pass; verification quality here de-risks the whole loop. High over medium: triage errors compound.</td></tr>
+    <tr><td><b>IH2</b></td><td>Opus 4.8 + ultrathink</td><td>The harden loop, phases W / P / M</td><td>Sustained deep iteration; proven runner for this repo's agent lanes.</td></tr>
+    <tr><td><b>IH3</b></td><td>Haiku 4.5</td><td>Cold verdict + evidence archive</td><td>Judgment over generation; no code edits allowed, so cheap and impartial.</td></tr>
+    <tr><td><b>Subagents</b></td><td>Haiku 4.5</td><td>Read-only investigators, hostile judge</td><td>Parallel, decorrelated, disposable context. Never writers.</td></tr>
+  </table>
+</section>
+<section id="placement">
+  <h2>Representative test set - placement map</h2>
+  <p class="lede">Deduped from the attachment set (14 files were double uploads). Stage everything into <span class="path">samples/hardening/_staging/</span> before IH1; the agent organizes and commits per this map.</p>
+  <table>
+    <tr><th>Tier</th><th>Repo path</th><th>Files</th><th>Purpose</th></tr>
+    <tr><td><b>A</b></td><td class="path">samples/ (existing)</td><td>The golden formats already wired into import-eval FORMATS</td><td>Regression baseline. Do not move; IH1 verifies paths at HEAD.</td></tr>
+    <tr><td><b>B</b></td><td class="path">samples/hardening/workbooks/</td><td>20ISOFrameworkGL, 20ISORulesGL, 20ISOPricingGL, 20ISOFormsGL; sampleGLframework / rules / pricing / forms; sampleIMframework / rules; samplePRframework / rating; Product_Framework__SECURA__Inland_Marine; Inland_Marine_Rules_Repository__SECURA__Master; Property_Rating_Repository__Master; Product_Component_Model_Framework_Coverages_1</td><td>Breadth corpus: ISO 4-file sets, per-LOB samples, real SECURA exports, PCM coverage framework.</td></tr>
+    <tr><td><b>C</b></td><td class="path">samples/hardening/adversarial/</td><td>Product_Framework__SECURA__Property_RF.xlsm (macro container); 1._Product_Framework_-_SECURA_-_Property (extensionless, magic-byte routing); Product_Component_Model_Framework_Coverages.xlsx (older near-duplicate: idempotency + dedupe pair with _1); Insurance_Product___Process_Value_Explorer_Export.xlsx (out-of-domain process taxonomy: must classify-and-decline, never import); plus fixtures generated in IH1/IH2 (multi-refId cell, two products in one workbook, preamble above header, dot-vs-dash refIds, 2000+ row unrecognized sheet)</td><td>Structural hostility and conservation traps.</td></tr>
+    <tr><td><b>D</b></td><td class="path">samples/hardening/pdf/</td><td>NJ_HO_Manual_02_27_24 (long manual); NJ_HO_Rate_Order_of_Calculations (rate order); PersonalAuto_WA_Rate_Manual_v2_11 (second manual, different LOB: two-docs-same-role fixture); 20BaseFormHO3Homeowners + samplePHbaseformHO3 + Homeowners__HO3 (edition/variant trio); PP_00_01_06_98 (PA policy form); LEM_03_05_23_Lemonade_Homeowners_FINAL (carrier form vs bureau)</td><td>Phase P corpus: long-document, role overlap, edition collisions, unknown-not-guessed contract facts.</td></tr>
+    <tr><td><b>E</b></td><td class="path">samples/hardening/mixed/pairs.json</td><td>Pairings manifest: Core workbook + NJ manual + rate order; GL 4-file set + HO3 base form (cross-LOB trap)</td><td>Phase M cross-artifact merge and conservation.</td></tr>
+    <tr><td><b>F</b></td><td class="path">samples/hardening/manifest/</td><td>xlsx_ooxml_summary.json - structural ground truth: 9 workbooks, 73 sheets, 16 hidden in Core, Rule References at 2280x34 visible</td><td>Assertion oracle for sheets, ranges, hidden state, merges. IH1 extends it to the remaining workbooks.</td></tr>
+    <tr><td><b>G</b></td><td class="path">tests/golden/import/adjudicated/</td><td>Small hand-checked truth slices, a few entities per format</td><td>Independent truth that breaks parser-golden circularity.</td></tr>
+    <tr><td><b>H</b></td><td class="path">docs/reference/</td><td>DuckCreekXML.xml</td><td>Export-format reference only. Not an import fixture.</td></tr>
+  </table>
+  <div class="note"><b>Dedupe outcome:</b> keep Coverages<b>_1</b> as the latest PCM framework; the older Coverages file becomes the idempotency pair in Tier C. The Value Explorer export is the task-seeding taxonomy workbook, kept only as an out-of-domain classifier fixture.</div>
+</section>
+
+<section id="operator">
+  <h2>Operator prep - run this before IH1</h2>
+  <ol class="op">
+    <li><b>Stage fixtures:</b> copy the deduped set above into <span class="path">[repo]/samples/hardening/_staging/</span> and drop <span class="path">xlsx_ooxml_summary.json</span> alongside.</li>
+    <li><b>Solo lane:</b> no other Claude Code agents on this checkout or on dev during IH2 live waves. Deploys sever SSE; the ~95 min CORE live run must not be interrupted.</li>
+    <li><b>Models:</b> IH1 on Fable 5 effort HIGH. IH2 on Opus 4.8 (ultrathink is in the prompt). IH3 on Haiku 4.5. Subagents default to Haiku.</li>
+    <li><b>Run order:</b> IH1, then a 5-minute ledger sanity read by you, then IH2, then IH3. Fresh session each.</li>
+  </ol>
+</section>
+<section id="prompts">
+  <h2>Prompts</h2>
+  <p class="lede">Copy/paste ready. Each is self-contained with DONE-WHEN criteria and a hostile self-review.</p>
+
+  <div class="prompt-card">
+    <div class="prompt-head">
+      <div class="t">IH1 - Baseline, findings matrix, corpus seed, P0 fixes</div>
+      <div class="m"><span class="model">Fable 5 - HIGH</span><span class="mode">Fresh session</span><button class="copy-btn" data-copy="p-ih1" type="button">Copy prompt</button></div>
+    </div>
+<pre id="p-ih1">Fresh session. You are IH1, the baseline-and-triage agent for the IMPORT HARDENING (IH) workstream on the Product Reinvention Hub. Mission: establish verified ground truth at current HEAD, seed the hardening test corpus, fix ONLY the confirmed P0 silent-loss defects, and hand a scored ledger to the loop agent (IH2). Verify in parallel with read-only subagents; edit as a single writer. Do not build architecture.
+
+READ FIRST, IN ORDER: CLAUDE.md; docs/orchestration.md; product_first_principles.md; docs/handoff/PCM_LINKAGE_AND_HISTORY_HANDOFF.md; docs/handoff/IMPORT_BRAIN_HANDOFF.md section 5; docs/audit/import_eval_iso_join_investigation.md.
+
+BINDING GROUND RULES:
+- Gate before every push: pnpm typecheck &amp;&amp; pnpm lint &amp;&amp; pnpm test &amp;&amp; pnpm build, plus node scripts/check-bundle-budget.mjs. Rating canaries stay green: PH $1,528 / PA $1,002 / GL $2,635 (values live in test files, never trusted from prompt text).
+- Push = auto-deploy to app-prodhub-dev (~7 min) and severs in-flight SSE. Batch pushes into waves.
+- Shared checkout: node tools/stowaway-check.mjs [paths] before EVERY commit; git commit --only [paths]; never git add -A. Foreign working-tree files are not yours to commit or revert.
+- Live tests only in tenant accenture-test (bootstrap admin/admin). Never touch testco. Never touch the user's own imported Core product. Tear down what you create.
+- Import runs under the IMPORT_CONTEXT no-cost-cap; telemetry is never bypassed.
+- Grounding invariants: every extracted field cited; refIds byte-for-byte or registry-derived; flagged-not-dropped; blank templates yield empty plans; refId and form-number chips are load-bearing UI.
+
+STEP 0 - STATE RECONCILIATION (cap 30 minutes):
+1. Record HEAD sha in docs/import-hardening/BASELINE.md. Prior review packets referenced commits efb8828 and 2b1f893; treat every packet line number as a navigation hint, never proof.
+2. Run git status and git log --oneline -10. If PCM handoff section 1 wave-0 work is still pending in the tree (workbook.js normalizeCellValue, stage-4 pooled ladder, instrumented import-eval, docs), gate and ship it as your first wave. If already shipped, record the sha.
+3. Verify PCM handoff outcomes at HEAD - do not assume: (a) attachment integrity: does a fresh CORE import link limits/deductibles/pricing/forms per coverage? (b) history/versioning: does HistoryDrawer show entries for edits and imports? (c) do scripts/import-verify.mts and linkage metrics inside scripts/import-eval.mts exist? Anything unfinished becomes a ledger item, not an assumption.
+
+STEP 1 - FINDINGS MATRIX (parallel, read-only):
+Spawn 4 read-only subagents (haiku; they never edit files). Split findings F01-F20 among them. Each returns per finding: verdict CONFIRMED_AT_HEAD, ALREADY_FIXED, CHANGED, or NOT_REPRODUCIBLE; file and line at HEAD; a one-line repro or disproof. You compile docs/import-hardening/BASELINE.md and docs/import-hardening/ledger.json.
+
+FINDINGS TO VERIFY:
+F01 Multi-refId contract conflict: the STAGE4 prompt tells models to split multi-refId cells into multiple entities, but reconcileEntities keys candidates by sourceRowIndex only, so same-row entities overwrite each other; expandMultiRefIds only works when the unsplit entity survives (stage4-extract.js).
+F02 Entity-kind disagreement between the two extractors resolves silently instead of entering the conflict ladder.
+F03 The judge sees candidates a/b/c only; a fourth ladder candidate is unreachable.
+F04 Stage-2 header re-score can use synthetic indices as absolute row indices against the real grid.
+F05 rowKind refId regex is narrow (.PROD / .LOB); misses PR.PROD001, IM.PROD044, CORE.PRD.001. Route through the LOB registry / shared identifier parser.
+F06 Stage-7 multiplicity collapse: productEntities[0] and programs[0] only; extra accepted products and rating programs vanish (conservation violation).
+F07 Stage-5 validator judges the extractor-supplied verbatim and never resolves citations against the authoritative grid; source-row counts init to zero so dropped-row checks are a no-op.
+F08 Validator findings carry no severity; a refId-mismatch merely sets reviewFlag while the entity remains auto-accepted.
+F09 Structural caps (2000 rows / 128 cols) truncate the AI path with no warning. Real case in the manifest: Core sheet "Rule References" is 2280x34 and VISIBLE. Core also carries 16 hidden sheets including a hidden 986x112 rating sheet - the hidden-sheet policy must be explicit and warned, not incidental.
+F10 Fixed 20-row stage-4 batches: no stop_reason / truncation detection, no dynamic split on wide sheets.
+F11 Name-only ISO join brittleness; exact-string form matching drops variants such as HO 3 vs HO-3.
+F12 Form identity is form number only; editions and jurisdictions collide (HO 00 03 10 00 vs 05 11 vs LEM 03 05 23).
+F13 Filing path takes the first document per role; multi-role documents and a second manual are ignored.
+F14 The policy-form extractor forces MANDATORY/OPTIONAL and premiumGenerating booleans the contract never states; UNKNOWN is unrepresentable.
+F15 The fallback path mints filename-derived ids (FIL.[state].PROD, HO-COV-###) that masquerade as source identifiers.
+F16 No runtime schema validation on model outputs; malformed JSON degrades to silent nulls.
+F17 refId remap does not rewrite the full relationship graph (parent links, rule targets, form attachments, table refs).
+F18 HO3 / Personal-Home hard-coding in filing reconciliation.
+F19 mutateBatch may skip version docs, leaving imported entities without version zero (PCM handoff section 3) - verify at HEAD.
+F20 Eval blind spots: forms unscored, no linkage/attachment metrics, no precision penalty for fabricated extras, goldens are parser-generated (circular truth).
+
+Priority-score every CONFIRMED item. Ledger entry schema: id, title, class (SILENT_LOSS, GROUNDING, MULTIPLICITY, EVAL_GAP, PDF, PERF, ARCH_ESCALATION), severity (BLOCKING, HIGH, MED, LOW), confidence 0-1, cost (S, M, L), status, evidence, fixture, lesson.
+
+STEP 2 - SEED THE TEST CORPUS:
+The operator staged fixtures under samples/hardening/_staging/ per the build pack placement map. Organize them into samples/hardening/{workbooks,adversarial,pdf,mixed,manifest}/ exactly per the map, write docs/import-hardening/PLACEMENT.md, and commit. Commit samples/hardening/manifest/xlsx_ooxml_summary.json as structural ground truth (9 workbooks, 73 sheets, hidden states, used ranges, header candidates) and extend it to the remaining staged workbooks with a small exceljs or openpyxl script. Then wire an OFFLINE ENUMERATION PASS: every file in workbooks/ and adversarial/ must run stages 0-7 to completion with zero unhandled errors and emit a conservation summary (candidates = accepted + merged + rejected + unresolved). Write per-file results to docs/import-hardening/RESULTS/corpus-baseline.json. Do NOT add the new corpus to the golden pass/fail gate yet - baseline first; IH2 gates it.
+
+STEP 3 - P0 FIXES (only items CONFIRMED_AT_HEAD with cost S or M; you are the only writer):
+One commit per fix; every fix ships a regression fixture that fails on the pre-fix sha.
+P0-1 (F01): pick ONE multi-ref strategy: models return the unsplit cell (optionally a refIds array); deterministic expansion happens exactly once post-consensus with occurrence keys and preserved evidence. Delete the split instruction from STAGE4_EXTRACT_SYSTEM.
+P0-2 (F02, F03): kind disagreement enters the conflict ladder; the judge receives every live candidate.
+P0-3 (F04): header re-score against the authoritative grid with absolute indices; add a preamble-above-header fixture.
+P0-4 (F05): refId kind inference through the shared LOB registry parser; add PR.PROD001 and CORE.PRD.001 cases.
+P0-5 (F06): conservation - extra products and programs become BLOCKING unresolved items with evidence, never dropped; assert conservation counts in tests.
+P0-6 (F07, F08 workbook side): deterministic citation resolver against the normalized grid; strict fields byte-compared; severity policy where BLOCKING (invalid pointer, fabricated strict id, unresolvable relation target) prevents auto-accept. Keep the LLM validator for semantics only.
+P0-7 (F16): runtime schema validation on every stage parse - reuse an existing repo validator util before adding zod; malformed output produces structured telemetry plus one targeted retry, never silent nulls.
+Anything larger (F09-F15, F17-F20 remainders) goes to the ledger with class and cost. Do not start them.
+
+STEP 4 - SHIP:
+Gate; wave push; confirm the pipeline green; update the IH workstream row in docs/orchestration.md with your sha. BASELINE.md, ledger.json, PLACEMENT.md, and corpus-baseline.json are all committed.
+
+DONE-WHEN:
+- BASELINE.md covers F01-F20 with verdicts plus file and line at HEAD.
+- ledger.json is seeded, priority-scored, machine-readable.
+- samples/hardening corpus committed with manifest; the offline enumeration pass runs and its baseline JSON is committed.
+- Every CONFIRMED P0 in Step 3 is fixed and locked by a fixture that fails on the pre-fix sha.
+- Golden formats still pass F1 at or above 0.95, numeric at or above 0.98, citations 100%; canaries green; gate green; deployed; nothing uncommitted.
+
+HOSTILE SELF-REVIEW (answer in BASELINE.md before finishing):
+1. Which finding did you accept without reproducing, and why is that safe?
+2. Can any model output still silently overwrite or drop an entity? Name the fixture that proves it cannot.
+3. Do your new fixtures fail on the pre-fix commit? Show the command you used.
+4. What is the most dangerous item you did NOT fix, and what is its ledger cost?
+5. If IH2 read only ledger.json, would it act correctly?</pre>
+  </div>
+  <div class="prompt-card">
+    <div class="prompt-head">
+      <div class="t">IH2 - The harden loop (workbooks, then PDFs, then mixed)</div>
+      <div class="m"><span class="model">Opus 4.8 - ultrathink</span><span class="mode">Fresh session</span><button class="copy-btn" data-copy="p-ih2" type="button">Copy prompt</button></div>
+    </div>
+<pre id="p-ih2">ultrathink. Fresh session. You are IH2, the harden-loop agent for the IH workstream. Mission: drive the import brain to enterprise-grade reliability across every format by iterating ledger items through one fixed loop until the phase gates hold. The eval is the arbiter: you build only what a red fixture demands. Simple beats clever; delete before you add.
+
+READ FIRST: docs/import-hardening/ledger.json; docs/import-hardening/BASELINE.md; docs/import-hardening/OPERATING_NOTES.md (create if absent); docs/import-hardening/PLACEMENT.md; then CLAUDE.md; docs/orchestration.md; product_first_principles.md; docs/handoff/IMPORT_BRAIN_HANDOFF.md section 5.
+
+BINDING GROUND RULES: gate before every push (pnpm typecheck &amp;&amp; pnpm lint &amp;&amp; pnpm test &amp;&amp; pnpm build, plus bundle budget); canaries PH $1,528 / PA $1,002 / GL $2,635 green; push = deploy (~7 min) and severs SSE, so batch pushes into waves; stowaway-check plus git commit --only, never git add -A; live tests only in accenture-test, tear down what you create, never touch testco or the user's Core product; IMPORT_CONTEXT no-cap with telemetry intact; grounding invariants (cited fields, byte-for-byte refIds, flagged-not-dropped, blank templates yield empty plans).
+
+THE LOOP (repeat until STOP):
+1. ORIENT: reload ledger.json and OPERATING_NOTES.md. Select the open item in the current phase with the highest severity x confidence divided by cost.
+2. REPRODUCE: produce a red signal BEFORE editing - a failing fixture, a failing eval metric, or a live repro in accenture-test. No red signal: mark NOT_REPRODUCIBLE with the disproof and move on. Never fix ghosts.
+3. FIX: minimal diff at the right layer. Never weaken a check, threshold, or golden to go green. Golden changes ride a separate commit with the diff explained.
+4. JUDGE: spawn a fresh hostile-reviewer subagent whose entire context is the diff, the invariants block, the item's acceptance line, and the five standing judge questions below. It never sees your rationale - decorrelated judgment, same principle as the pipeline's cross-family votes. REJECT means revise; two rejects parks the item as ESCALATE with both verdicts attached.
+5. GATE (fast, offline): typecheck, lint, test, build; canaries; offline eval slice (--rescore when the change is scoring-side, full offline when extraction-side); linkage and conservation metrics.
+6. COMMIT: stowaway-check, git commit --only, message "IH2 [ledger-id]: [title]".
+7. LEDGER: close the item with an evidence path, a one-line lesson, and the fixture id. Every closed bug class ships a permanent adversarial fixture. The corpus only grows.
+8. WAVE (every 3-5 closed items, or when a fix needs server-side proof): push, wait for deploy, run the phase live slice DETACHED (PowerShell Start-Process on a CRLF/ASCII .cmd written via Set-Content -Encoding Ascii; tee output to a log; watch with tail -f piped to grep --line-buffered that also matches FAILURE signatures; never pipe a probe to head). No pushes mid-live-run. Record results into docs/import-hardening/RESULTS/.
+9. SELF-TUNE (every 5 iterations): distill new lessons into OPERATING_NOTES.md, hard cap 40 lines, prune stale lines. Anything worth keeping forever must ALSO exist as a fixture or a gate. Notes are advisory; the eval is law.
+
+PHASES (hard gates, in order; do not start the next early):
+PHASE W - WORKBOOKS. Corpus: golden formats plus samples/hardening/workbooks plus adversarial. Gate: F1 at or above 0.95 for every format; numeric at or above 0.98; citations 100% AND resolving against source; attachment/linkage 100% where the source defines limits, deductibles, pricing, and forms; conservation balanced on every file; hidden-sheet and cap-truncation policy explicit and warned; zero unhandled stage errors - across TWO consecutive clean full runs (one full offline, one live CORE slice).
+PHASE P - PDFS. Corpus: samples/hardening/pdf. Gate: every fixture classified to the right role or roles, including the two-manuals case (NJ HO plus WA Auto) and any multi-role document; rate-order and manual-rule extractions 100% cited with citations that resolve; facts a policy contract does not state land as UNKNOWN or null with an origin marker, never guessed booleans (this is a schema change: red fixture, tool schema bump, sanitizer update, one commit); conservation balanced.
+PHASE M - MIXED. Corpus: samples/hardening/mixed pairings. Gate: cross-artifact merges accounted in the conservation ledger; no double-created entities; the review UI surfaces per-artifact completeness before persist.
+
+ARCH_ESCALATION RULE (anti-overengineering): ledger items classed ARCH_ESCALATION (evidence/assertion IR, FormSeries and FormEdition, rating expression AST, sectioned PDF document map, checkpoint/resume, global scheduler) may start ONLY when (a) a red fixture in the current phase cannot go green without one, or (b) three or more distinct closed bugs share it as root cause. Then build the smallest slice that flips the fixture, behind existing seams (adapter seam, stage-7 projection). Otherwise the item stays parked with its trigger condition written on it.
+
+TOOLS AT YOUR DISPOSAL - USE THEM:
+- Subagents: parallel read-only investigators on cheap models for code archaeology and log watching, plus the fresh-context hostile judge above. You are the ONLY writer. No subagent ever edits files - this retires the shared-index race class outright.
+- The platform as its own AI judge: for extraction-quality spot checks, drive the app's real endpoints in accenture-test (POST /api/ai/unifiedImport over SSE, POST /api/db/list, the import-verify script) instead of ad-hoc model calls. The pipeline's cross-family judges already exist; reuse them, never duplicate them.
+- Offline first: import_eval_extracted-*.json plus --rescore for cheap scoring iterations; --live only at wave boundaries, solo, detached.
+- Structural ground truth: samples/hardening/manifest/xlsx_ooxml_summary.json for sheet, range, hidden, and merge assertions. Do not re-derive what the manifest already states.
+
+STOP CONDITIONS:
+- SUCCESS: all three phase gates green with evidence; ledger P0/P1 empty or PARKED with written rationale and trigger.
+- DIMINISHING RETURNS: two consecutive iterations with zero movement on any gate metric - write docs/import-hardening/PARKED.md and stop.
+- SAFETY: iteration cap N_MAX=25 (raise only if gates are visibly converging). Never stop with a dirty tree.
+
+DONE-WHEN:
+- Phase W, P, and M gates green; evidence JSONs and screenshots in docs/import-hardening/RESULTS/.
+- Linkage, conservation, citation-resolution, and precision-versus-extras metrics wired into scripts/import-eval.mts pass/fail and the gate.
+- Ledger fully dispositioned; OPERATING_NOTES.md current; the corpus is larger than you found it.
+- Everything merged to main, pushed, deployed, pipeline green; the orchestration.md IH row updated with your final sha; every probe tenant and draft torn down.
+
+STANDING JUDGE QUESTIONS (hand these to every hostile review):
+1. Does this diff weaken any check, threshold, or golden to pass?
+2. Is every newly accepted value backed by a citation that resolves against the authoritative source?
+3. What entity, product, or row could this change silently drop?
+4. Is this fix at the right layer, or a patch over a projection?
+5. Which fixture keeps this fixed forever?
+
+HOSTILE SELF-REVIEW (append to docs/import-hardening/RESULTS/loop-summary.md at stop):
+1. Which gate metric moved least, and why?
+2. Which ARCH_ESCALATION trigger is closest to firing, and what is the smallest slice you would build?
+3. If the corpus doubled with unseen carrier formats tomorrow, which stage breaks first?
+4. What did the judge reject that you still believe was right?
+5. What would you DELETE from this pipeline? Lean counts.</pre>
+  </div>
+  <div class="prompt-card">
+    <div class="prompt-head">
+      <div class="t">IH3 - Cold verdict and evidence archive</div>
+      <div class="m"><span class="model">Haiku 4.5</span><span class="mode">Fresh session</span><button class="copy-btn" data-copy="p-ih3" type="button">Copy prompt</button></div>
+    </div>
+<pre id="p-ih3">Fresh session. You are IH3, the verdict agent for the IH workstream. You make the ship / no-ship call on cold evidence. You may run scripts and write docs; you may NOT edit product code. If a re-run fails, the verdict records NO-SHIP - you do not fix it.
+
+STEPS:
+1. COLD RE-RUN, all fresh, nothing cached: full gate (typecheck, lint, test, build, bundle budget, canaries); offline eval across every golden format plus the samples/hardening corpus; one live CORE slice; one live PDF slice; a fresh CORE import into accenture-test followed by the persist-side integrity walk (import-verify) and UI parity screenshots against the original defect report; one UI edit plus one import checked in HistoryDrawer; POST /api/db/audit/verify.
+2. VERDICT: write docs/import-hardening/VERDICT.md as a table - one row per DONE-WHEN criterion from IH1 and IH2, verdict SHIP or NO-SHIP per row, every row citing a fresh artifact from step 1 by path and timestamp. No cached or inherited evidence.
+3. ARCHIVE AND CLOSE: copy results JSONs, logs, and screenshots to docs/import-hardening/RESULTS/final-[date]/; update docs/orchestration.md with the final sha and a VERDICT link; tear down every probe tenant and draft, then prove it with a listing; write a successor handoff ONLY if any row is NO-SHIP.
+
+DONE-WHEN: VERDICT.md committed with all-fresh evidence; archive committed; orchestration.md updated; teardown proven.
+
+HOSTILE SELF-REVIEW (bottom of VERDICT.md):
+1. Which row's evidence is oldest, and did it come from your own run?
+2. Which single item would flip a SHIP to NO-SHIP if re-run once more?
+3. Is anything you executed still running, deployed mid-state, or undeleted?</pre>
+  </div>
+</section>
+
+<section id="runbook">
+  <h2>Runbook - the best setting for this work</h2>
+  <div class="grid">
+    <div class="card"><h3>Environment</h3><p>The existing dev lane: local checkout, deploys to app-prodhub-dev, tenant accenture-test. Fleet creds, eval harness, canaries, and the ADO pipeline are already wired there. A fresh environment costs more than it saves.</p></div>
+    <div class="card"><h3>Inner vs outer loop</h3><p>Offline eval (--rescore, extracted-JSON replays) is the inner loop measured in minutes. Live runs are the outer loop at wave boundaries only, detached, solo, with tee-to-log discipline.</p></div>
+    <div class="card"><h3>Why Excel first</h3><p>Both paths share stage machinery and fleet routing. Hardening workbooks first stabilizes the shared substrate, so Phase P failures are attributable to PDF logic, not a moving baseline. Mixed uploads last to catch interactions.</p></div>
+    <div class="card"><h3>Long-run discipline</h3><p>Bash background caps kill 10-minute-plus runs. Detach via PowerShell Start-Process on ASCII/CRLF .cmd files, log to file, monitor with a failure-aware tail.</p></div>
+    <div class="card"><h3>Agent economics</h3><p>Fable HIGH once for triage, Opus depth in the loop, Haiku for verdict and all subagents. Never burn Opus on log watching or code archaeology.</p></div>
+    <div class="card"><h3>Self-improvement, concretely</h3><p>Two mechanisms only: a monotonic fixture corpus (every bug becomes a permanent test) and a 40-line distilled OPERATING_NOTES.md the loop rereads. No meta-machinery.</p></div>
+  </div>
+</section>
+
+<footer>Import Hardening Build Pack - IH Series. Three prompts, one loop, eval as law. ASCII-clean, self-contained.</footer>
+</div>
+<script>
+(function(){
+  var t=document.getElementById('themeToggle');
+  t.addEventListener('click',function(){
+    var h=document.documentElement;
+    var d=h.getAttribute('data-theme')==='dark';
+    h.setAttribute('data-theme', d?'light':'dark');
+    t.textContent = d?'Dark':'Light';
+  });
+  var btns=document.querySelectorAll('.copy-btn');
+  for(var i=0;i<btns.length;i++){
+    btns[i].addEventListener('click',function(e){
+      var id=e.currentTarget.getAttribute('data-copy');
+      var txt=document.getElementById(id).innerText;
+      var done=function(btn){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o;},1400);};
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done.bind(null,e.currentTarget));
+      } else {
+        var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+        try{document.execCommand('copy');}catch(err){}
+        document.body.removeChild(ta);done(e.currentTarget);
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>

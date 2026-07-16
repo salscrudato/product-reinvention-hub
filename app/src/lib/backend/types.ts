@@ -81,6 +81,80 @@ export interface AuditSearchFilters {
   limit?: number; cursor?: string
 }
 
+// ─── Import pipeline telemetry (admin observability, server/lib/ai/run-trace.js) ──
+// One trace per unifiedImport run: ordered steps with timings, bounded stage
+// payloads, spend by deployment, escalations, notices and the final outcome.
+
+export type ImportRunStatus = 'running' | 'succeeded' | 'failed'
+
+export interface ImportRunStageSummary {
+  name: string                    // SSE tool-frame name, e.g. 'brain:stage1:classify'
+  stage: number | null            // pipeline stage number when the name carries one
+  status: 'running' | 'done' | 'error'
+  durationMs: number | null
+}
+
+export interface ImportRunStep extends ImportRunStageSummary {
+  startedAt: string
+  endedAt: string | null
+  detail: string | null           // start-frame summary
+  result: string | null           // end-frame summary
+  progress: string[]
+}
+
+export interface ImportRunOutcome {
+  productId: string | null
+  coverages: number; forms: number; rules: number; rtTables: number; ldTables: number
+  proposed: number | null; accepted: number | null; unresolved: number | null
+  reviewItems: number
+  completeness: string | null     // EMPTY | COMPLETE | PARTIAL | PARTIAL_NO_BACKBONE
+  importWarnings: number
+  detectedFormat: string | null
+}
+
+export interface ImportRunSpend {
+  spendUsd: number
+  calls: number
+  noCap?: boolean
+  byDeployment: Record<string, { calls: number; inputTokens: number; outputTokens: number; usd: number }>
+}
+
+export interface ImportRunDocument { name: string; sizeKB: number | null; mediaType: string | null }
+
+export interface ImportRunSummary {
+  runId: string
+  tenantId: string
+  actor: { uid: string | null; name: string | null; role: string | null } | null
+  sourceName: string | null
+  documents: ImportRunDocument[]
+  startedAt: string
+  finishedAt: string | null
+  durationMs: number | null
+  status: ImportRunStatus
+  needsReview: boolean
+  path: string | null             // workbook | filing | fallback | structural
+  spendUsd: number | null
+  calls: number
+  escalations: number
+  stages: ImportRunStageSummary[]
+  noticeCounts: { info: number; warn: number; error: number }
+  outcome: ImportRunOutcome | null
+  error: string | null
+}
+
+/** Bounded stage payload: `truncated` means large arrays were sampled
+ *  ({ __sample, totalItems, shownItems, items }) and `bytes` is the ORIGINAL size. */
+export interface ImportRunPayload { value: unknown; truncated: boolean; bytes: number }
+
+export interface ImportRunTrace extends Omit<ImportRunSummary, 'spendUsd' | 'calls' | 'escalations' | 'stages' | 'noticeCounts'> {
+  steps: ImportRunStep[]
+  outputs: Record<string, ImportRunPayload>
+  notices: Array<{ level: string; kind: string | null; message: string; at: string }>
+  escalations: Array<{ fromRole?: string; toRole?: string; deployment?: string; at: string }>
+  spend: ImportRunSpend | null
+  resultPersisted: { runId: string; ok: boolean; reason?: string } | null
+}
+
 export interface Session {
   user: AuthUser
   token: string
@@ -244,6 +318,10 @@ export interface BackendAdapter {
     impersonate(targetUid: string, tenantId: string, reason: string): Promise<{ token: string; expiresAt: string; subject: string; tenantId: string }>
     /** Platform audit viewer: server-filtered, cursor-paginated, read-only. */
     searchAudit(filters: AuditSearchFilters): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }>
+    /** Import pipeline telemetry: newest-first run summaries (optionally per tenant). */
+    listImportRuns(opts?: { limit?: number; tenant?: string }): Promise<{ runs: ImportRunSummary[]; storage: 'cosmos' | 'memory' }>
+    /** Full per-stage trace for one import run (404 → throws). */
+    getImportRun(runId: string): Promise<ImportRunTrace>
   }
   /** Policyholder portal (POLICYHOLDER persona only; every call is server-scoped to the
    *  JWT's uid + tenant — no identifiers cross the wire, so cross-policy/cross-tenant

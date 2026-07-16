@@ -1,0 +1,18 @@
+Hagerty Enthusiast+ Public Filing Research Packet - 2026-07-15
+
+Hagerty_Enthusiast_Plus_State_Status_2026-07-15.xlsx	29512 bytes
+README.md	3375 bytes
+corporate_evidence/Hagerty_2025_Form_10-K.pdf	2929705 bytes
+data/candidate_filing_manifest.csv	1070 bytes
+data/document_inventory.csv	1840 bytes
+data/retrieval_checklist.csv	12788 bytes
+data/source_manifest.csv	5356 bytes
+data/state_status.csv	37890 bytes
+forms_crosscheck/Hagerty_EDoc_Crosscheck.md	2324 bytes
+forms_crosscheck/Hagerty_EDoc_Inspected_Form_Leads.csv	1331 bytes
+known_serff_links.txt	957 bytes
+limitations_and_completion_path.md	3068 bytes
+records_requests/Colorado_Public_Records_Request.txt	2088 bytes
+records_requests/Wisconsin_Public_Records_Request.txt	2315 bytes
+reference_nonfiling/Motorsports_Advantage_Marketing_One_Pager.pdf	1302066 bytes
+research_findings.md	2631 bytes

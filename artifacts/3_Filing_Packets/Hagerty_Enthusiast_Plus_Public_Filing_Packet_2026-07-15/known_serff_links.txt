@@ -1,0 +1,23 @@
+HAGERTY ENTHUSIAST+ - KNOWN SERFF AND REGULATOR LINKS
+As of: 2026-07-15
+
+Official SERFF information:
+https://www.serff.com/serff_filing_access.htm
+
+Colorado SFA entry:
+https://filingaccess.serff.com/sfa/home/CO
+Colorado records guidance:
+https://dora.colorado.gov/public-information
+Colorado current-rate database:
+https://www.dora.state.co.us/pls/real/ins_raf_report.main
+
+Wisconsin rate/form filing guidance:
+https://oci.wi.gov/Pages/Companies/PolicyFormsRateFilingSearch.aspx
+Wisconsin records guidance:
+https://oci.wi.gov/Pages/AboutOCI/OpenRecords.aspx
+
+Candidate internal filing-summary links - LEADS ONLY; state/product mapping unconfirmed:
+https://filingaccess.serff.com/sfa/search/filingSummary.xhtml?filingId=134093487
+https://filingaccess.serff.com/sfa/search/filingSummary.xhtml?filingId=134444200
+
+Do not treat either internal ID as a Colorado or Wisconsin Enthusiast+ filing until the regulator portal or regulator records confirm the mapping.

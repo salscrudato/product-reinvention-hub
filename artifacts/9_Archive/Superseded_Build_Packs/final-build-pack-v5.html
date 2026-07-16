@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Reinvention Hub - Final Build Pack v5 (Reviewed and Revised)</title>
+<style>
+:root{
+  --bg:#f5f6f8; --surface:rgba(255,255,255,.72); --surface-solid:#ffffff;
+  --ink:#111418; --ink-2:#5a626e; --line:rgba(17,20,24,.08);
+  --accent:#3e63dd; --accent-soft:rgba(62,99,221,.10);
+  --good:#1f9d55; --good-soft:rgba(31,157,85,.12);
+  --warn:#c7861a; --warn-soft:rgba(199,134,26,.14);
+  --bad:#c4433b; --bad-soft:rgba(196,67,59,.12);
+  --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  --shadow:0 8px 30px rgba(17,20,24,.06);
+  --spring:cubic-bezier(.34,1.45,.5,1);
+}
+[data-theme="dark"]{
+  --bg:#0e1116; --surface:rgba(23,27,34,.72); --surface-solid:#161b22;
+  --ink:#e8eaee; --ink-2:#98a1ad; --line:rgba(232,234,238,.09);
+  --accent:#7a95ff; --accent-soft:rgba(122,149,255,.12);
+  --good:#56d08a; --good-soft:rgba(86,208,138,.16);
+  --warn:#e0a94a; --warn-soft:rgba(224,169,74,.16);
+  --bad:#e07a72; --bad-soft:rgba(224,122,114,.16);
+  --shadow:0 8px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);letter-spacing:-.011em;line-height:1.55;padding-bottom:90px;transition:background .3s ease,color .3s ease}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+header.hero{padding:56px 0 20px}
+.kicker{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:40px;font-weight:700;letter-spacing:-.03em;margin:10px 0 8px}
+.sub{color:var(--ink-2);font-size:16px;max-width:860px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.dim{background:var(--line);color:var(--ink-2)}
+.toggle{position:fixed;top:20px;right:24px;z-index:60;border:1px solid var(--line);background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--ink);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow);transition:transform .25s var(--spring)}
+.toggle:active{transform:scale(.94)}
+nav.toc{position:sticky;top:0;z-index:50;background:var(--surface);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line);margin-top:8px}
+nav.toc .row{display:flex;gap:4px;overflow-x:auto;padding:10px 0}
+nav.toc a{font-size:12.5px;font-weight:600;color:var(--ink-2);text-decoration:none;padding:7px 12px;border-radius:999px;white-space:nowrap;transition:background .25s var(--spring),color .2s ease}
+nav.toc a:hover{background:var(--accent-soft);color:var(--accent)}
+section{margin:46px 0}
+h2{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
+h3{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
+.lede{color:var(--ink-2);font-size:14px;margin-bottom:18px;max-width:880px}
+p{max-width:75ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);transition:transform .3s var(--spring),box-shadow .3s ease}
+.card:hover{transform:translateY(-2px)}
+.card p{font-size:13.5px;color:var(--ink-2)}
+.card h3 .fid{font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-right:8px;vertical-align:1px}
+.sev-high .fid{background:var(--bad-soft);color:var(--bad)}
+.sev-med .fid{background:var(--warn-soft);color:var(--warn)}
+.sev-low .fid{background:var(--accent-soft);color:var(--accent)}
+.sev-ok .fid{background:var(--good-soft);color:var(--good)}
+.evfix{margin-top:8px;font-size:13px}
+.evfix b{font-weight:700}
+.evfix .fx{color:var(--good);font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+th{text-align:left;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface-solid)}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .2s ease}
+tbody tr:hover{background:var(--accent-soft)}
+td b{font-weight:700}
+.mono{font-family:var(--mono);font-size:12px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;margin:1px 2px}
+.tag.fable{background:var(--accent-soft);color:var(--accent)}
+.tag.opus{background:var(--good-soft);color:var(--good)}
+.tag.haiku{background:var(--warn-soft);color:var(--warn)}
+.tag.solo{background:var(--line);color:var(--ink-2)}
+.tag.cut{background:var(--bad-soft);color:var(--bad)}
+.lanes{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:14px}
+.lane{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:var(--shadow)}
+.lane .wv{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);margin-bottom:8px;display:flex;justify-content:space-between}
+.node{border-radius:12px;padding:10px 12px;margin-bottom:8px;border:1px solid var(--line);transition:transform .3s var(--spring)}
+.node:hover{transform:translateY(-2px)}
+.node .nm{font-weight:700;font-size:13px}
+.node .md{font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.node.fable{background:var(--accent-soft)}
+.node.opus{background:var(--good-soft)}
+.node.done{background:var(--line);opacity:.75}
+.pairline{font-size:11px;color:var(--ink-2);margin-top:2px}
+.ribbon{margin-top:12px;border:1px dashed var(--warn);background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 14px;font-size:12.5px;font-weight:600}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--ink-2)}
+.legend span i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.pcard{background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);margin-bottom:22px;overflow:hidden}
+.phead{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--surface-solid)}
+.phead .pid{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.phead .obj{flex-basis:100%;font-size:13px;color:var(--ink-2)}
+.pmeta{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.copy-btn{border:1px solid var(--line);background:var(--accent);color:#fff;border-radius:999px;padding:7px 16px;font-size:12.5px;font-weight:700;cursor:pointer;transition:transform .25s var(--spring),opacity .2s ease}
+.copy-btn:hover{opacity:.9}
+.copy-btn:active{transform:scale(.94)}
+pre.prompt{font-family:var(--mono);font-size:12.3px;line-height:1.62;padding:18px 20px;white-space:pre-wrap;word-wrap:break-word;color:var(--ink);max-height:520px;overflow:auto;background:transparent}
+.deps{font-size:12px;color:var(--ink-2);padding:8px 20px;border-top:1px solid var(--line);background:var(--surface-solid)}
+.callout{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 14px 14px 0;padding:14px 18px;font-size:14px;max-width:900px}
+.callout.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+ul.clean{list-style:none;font-size:13.5px}
+ul.clean li{padding:7px 0;border-bottom:1px solid var(--line);color:var(--ink-2)}
+ul.clean li:last-child{border-bottom:none}
+ul.clean li b{color:var(--ink)}
+footer{margin-top:60px;color:var(--ink-2);font-size:12.5px;border-top:1px solid var(--line);padding-top:18px}
+@media (max-width:900px){.lanes{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.lanes{grid-template-columns:1fr}h1{font-size:32px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<button class="toggle" id="themeToggle">Dark</button>
+
+<div class="wrap">
+<header class="hero">
+  <div class="kicker">Principal review + final revision - build pack v5</div>
+  <h1>Product Reinvention Hub - Final Build Pack</h1>
+  <p class="sub">v4 reviewed at maximum rigor against the handoff. Fourteen findings (five HIGH), all fixed in place. The result: 8 prompts, 5 waves, two-in-parallel through every build wave, one full wave off the critical path, and nothing from v4 lost - every feedback line, invariant, and hard-won finding carries forward. Start at P1-DONE.</p>
+  <div class="chips">
+    <span class="chip">8 prompts / 5 waves</span>
+    <span class="chip good">W2, W3, W4: true pairs in worktrees</span>
+    <span class="chip bad">14 findings, 5 HIGH - all fixed</span>
+    <span class="chip">PX now runs after P3 + P5 (polishes HITL + brief)</span>
+    <span class="chip warn">P7 pre-capstone, timeboxed, cuttable</span>
+    <span class="chip dim">Voice: parked. auth.js:100: untouched. Egg: PASS/FAIL only.</span>
+  </div>
+</header>
+
+<nav class="toc"><div class="wrap"><div class="row">
+  <a href="#changes">What changed</a>
+  <a href="#findings">Findings</a>
+  <a href="#waves">Wave plan</a>
+  <a href="#matrix">Model matrix</a>
+  <a href="#preserve">Nothing lost</a>
+  <a href="#prompts">The prompts</a>
+  <a href="#runbook">Runbook</a>
+  <a href="#selfreview">Pack self-review</a>
+</div></div></nav>
+
+<section id="changes">
+  <h2>What changed from v4 and why</h2>
+  <div class="callout">
+  <b>Two structural moves, five hardening additions, three corrections, two effort trims.</b> Structure: PX moves from a solo W3.5 to W4 <b>after</b> P3 and P5, so the HITL export surface and the executive brief actually receive the taste pass (v4 told PX to stay off in-flight files while listing the brief as a target, and never listed the HITL UI at all); P7 moves from a solo post-release wave into W4 <b>paired with PX</b>, timeboxed with a clean-park clause, so the Radar is hardened, verdicted, and released with everything else instead of deploying ungated after the capstone - and the program drops a full wave. Hardening: a history-wide secret scan before the GitHub snapshot (the push carries full git history; HEAD-only scanning misses old leaks and committed run logs); hardened XML parsing with XXE and entity-expansion rejection tests on the two-way import; a cross-tenant negative test on HITL mapping memory; a mandatory import G2-slice re-run before any fleet swap commits (certification freshness); the dormant restore explicitly built, not assumed. Corrections: P3 pinned at Fable xhigh (v4 pinned it three conflicting ways); the P2/P4 boundary becomes an explicit file allowlist (P2's brief endpoint and news-scout wiring are server work that the stated "app/src vs server" split would have collided); a CONTRACTS freeze in orchestration.md so W3 never builds against stale W2 interfaces. Trims that fund the additions: ultrathink off P2 and P5, P5 to effort high. Zero feature, invariant, or finding was cut - see <a href="#preserve">Nothing lost</a>.
+  </div>
+</section>
+
+<section id="findings">
+  <h2>Step 1 - Findings</h2>
+  <p class="lede">Concrete, evidence-backed, each with its fix location in this pack. HIGH first. Where v4 is right, it says so briefly at the end and moves on.</p>
+
+  <div class="grid">
+    <div class="card sev-high">
+      <h3><span class="fid">F1</span>Polish never reaches the flagship surfaces</h3>
+      <p><b>Evidence:</b> PX sits at W3.5 and is told "if P3 or P5 is live, stay off their in-flight files and take them on a later loop" - but no later loop exists (P6 is next). PX's own surface list includes "the exec brief" (a contradiction), and the HITL capture UI - the most customer-visible new surface in the pack - is not in the list at all.</p>
+      <p class="evfix"><b>Risk:</b> the two newest surfaces ship defaulted. <span class="fx">Fix:</span> PX moved to W4 after P3/P5; HITL surface and exec brief added to its loop list explicitly.</p>
+    </div>
+    <div class="card sev-high">
+      <h3><span class="fid">F2</span>The W2 pair is not collision-free as stated</h3>
+      <p><b>Evidence:</b> boundary declared "app/src vs server", yet P2 carries three sanctioned server incursions: the brief endpoint ("app/src plus the Home brief endpoint if server-light"), the nightly news-scout wiring (E3 is a server job), and flag persistence that "survives reload". P4 owns "server". Same layer, two writers.</p>
+      <p class="evfix"><b>Risk:</b> worktree merge collision or a silently clobbered endpoint. <span class="fx">Fix:</span> explicit per-prompt file allowlists published to orchestration.md before first commit; each side declares the other's list FOREIGN; the "if server-light" hedge removed.</p>
+    </div>
+    <div class="card sev-high">
+      <h3><span class="fid">F3</span>P3's model is pinned three different ways</h3>
+      <p><b>Evidence:</b> the matrix says Fable xhigh; the P3 prompt body says "Fable 5 at effort high... escalate to xhigh only if"; the v4 runbook's Fable budget says "P3 at high" and omits PX entirely (stale from a pre-PX draft). An agent obeying the body under-runs the pack's intent on the centerpiece. P3 also lacks the confirm-active-model line that PX has, despite the known Fable-to-Opus silent drop.</p>
+      <p class="evfix"><span class="fx">Fix:</span> pinned Fable xhigh with a one-line rationale (builds the never-existed Unity transform + overlay semantics + customer-facing HITL); confirm-model line added; runbook rewritten consistent.</p>
+    </div>
+    <div class="card sev-high">
+      <h3><span class="fid">F4</span>The GitHub snapshot ships full history; the scan does not</h3>
+      <p><b>Evidence:</b> R1 says "verify .gitignore and a secret scan first; if any secret or .env is tracked, STOP" - tracked-at-HEAD language. The push carries the entire git history, including any key committed and later deleted, and committed live-run logs under docs/**/RESULTS that can hold endpoints and connection strings. One-way door.</p>
+      <p class="evfix"><span class="fx">Fix:</span> history-wide gitleaks (or equivalent) plus a RESULTS/log sweep in R1; any hit STOPS with an operator decision (rewrite the snapshot copy or accept).</p>
+    </div>
+    <div class="card sev-high">
+      <h3><span class="fid">F5</span>The two-way plug is an unhardened XML parser facing crafted input</h3>
+      <p><b>Evidence:</b> X5 specifies the adapter seam and fidelity but says nothing about DTDs, external entities, entity expansion, size, or depth - the classic importer holes (XXE, billion laughs) on a feature whose whole point is ingesting external XML.</p>
+      <p class="evfix"><span class="fx">Fix:</span> binding parser-hardening clause in X5 (DTD off, external entities off, expansion off, size + depth caps) with XXE and expansion rejection tests; P6 attacks it again cold.</p>
+    </div>
+    <div class="card sev-med">
+      <h3><span class="fid">F6</span>A fleet swap can silently invalidate IMPORT-CERTIFIED</h3>
+      <p><b>Evidence:</b> H4b updates the fleet constants "to the best fit per routed task... reusing the import eval harness where it fits" - optional. Certification was earned on the old fleet; swapping the extraction or citation model changes the certified behavior with no fresh proof.</p>
+      <p class="evfix"><span class="fx">Fix:</span> before ANY import-path model change commits, the import G2 generalization slice must run green on the new model; a red slice reverts the swap and ledgers it. P6 verdict carries a certification-freshness row.</p>
+    </div>
+    <div class="card sev-med">
+      <h3><span class="fid">F7</span>Tenant isolation of the new mapping memory is asserted, not proven</h3>
+      <p><b>Evidence:</b> X6's only test is same-tenant ("a second export prefills from the first"). The leak that matters is cross-tenant: tenant A's overrides prefilling tenant B would be a multi-tenant data leak through a brand-new side channel.</p>
+      <p class="evfix"><span class="fx">Fix:</span> a negative test in X6 - a different tenant sees ZERO prefill, fail closed - re-proven cold in P6 H4. Same treatment for Radar drafts.</p>
+    </div>
+    <div class="card sev-med">
+      <h3><span class="fid">F8</span>Restore is treated as verifiable when it is dormant</h3>
+      <p><b>Evidence:</b> handoff finding 4: "Restore is dormant (UI exists; server never returns snapshots)". P4 H2 reads as verify-and-test; an agent can pass it by testing the drawer against a path that returns nothing.</p>
+      <p class="evfix"><span class="fx">Fix:</span> H2 now explicitly BUILDS the missing server snapshot read first, then proves the restore path and 409 handling.</p>
+    </div>
+    <div class="card sev-med">
+      <h3><span class="fid">F9</span>No interface freeze between the parallel pairs</h3>
+      <p><b>Evidence:</b> P3 depends on "P2 Menu" and "P4 lineage", P5 on "P2 primitives" - but nothing pins the Menu/Dialog props, brief endpoint shape, flag key/location, or provenance envelope at W2 close. A late P2/P4 change strands W3 on stale interfaces.</p>
+      <p class="evfix"><span class="fx">Fix:</span> a CONTRACTS section in orchestration.md - stubbed by P1-DONE, filled by P2/P4 at wave close, consumed read-only by P3/P5. Changing a frozen contract requires an orchestration note plus a ledger item.</p>
+    </div>
+    <div class="card sev-med">
+      <h3><span class="fid">F10</span>The Home brief is looser than the platform's own grounding invariant</h3>
+      <p><b>Evidence:</b> the protect list requires a citation on every generated field; E2 requires only "stub labeling" and hedges enrichment ("attempt to enrich from publicly available data") with no transport, source, or injection guidance - the one place untrusted web text meets a model prompt.</p>
+      <p class="evfix"><span class="fx">Fix:</span> a binding enrichment contract - server-side only, fleet-routed under the RISK-005 cost guard, per-section sources or an ILLUSTRATIVE/STUB label, fetched text treated as data with length caps, timeout-to-stub, per-tenant daily cache.</p>
+    </div>
+    <div class="card sev-med">
+      <h3><span class="fid">F11</span>Release hygiene gaps after the scrub</h3>
+      <p><b>Evidence:</b> R2 commits edits to CI files, deploy scripts, and config; R3 immediately pushes-to-deploy with no re-gate between - a scrub typo in a pipeline file bricks the deploy. "Azure is the only remaining origin" is asserted with no remote listing.</p>
+      <p class="evfix"><span class="fx">Fix:</span> full gate re-run on the scrubbed tree before R3; git remote -v proof required in R3 and archived in RELEASE.md.</p>
+    </div>
+    <div class="card sev-low">
+      <h3><span class="fid">F12</span>P1-DONE asserts the gitignore fix without proof</h3>
+      <p><b>Evidence:</b> "add it as a fourth tiny commit" with no verification that the anchor actually stops swallowing docs/build.</p>
+      <p class="evfix"><span class="fx">Fix:</span> paste git check-ignore -v (returns nothing for docs/build/ledger.json) and git ls-files docs/build/ (files still tracked).</p>
+    </div>
+    <div class="card sev-low">
+      <h3><span class="fid">F13</span>Verdict scope wording leaves PX to interpretation</h3>
+      <p><b>Evidence:</b> "one row per DONE-WHEN across P1 through P6" - PX is not P-numbered inside that range; P7 is excluded entirely even if built.</p>
+      <p class="evfix"><span class="fx">Fix:</span> explicit enumeration - P1-DONE, P2, P3, P4, P5, PX, P7-if-built - plus protect list, enterprise bar, and certification freshness.</p>
+    </div>
+    <div class="card sev-low">
+      <h3><span class="fid">F14</span>Structure under-uses parallelism and ships P7 ungated</h3>
+      <p><b>Evidence:</b> W3.5 and W5 are solo waves; P7 deploys AFTER the verdict, so the Radar reaches Azure with no capstone coverage, no verdict row, and no polish.</p>
+      <p class="evfix"><span class="fx">Fix:</span> PX || P7 in W4 with a timebox and clean-park clause; P6 verdicts the Radar or its clean park; one full wave off the critical path.</p>
+    </div>
+    <div class="card sev-ok">
+      <h3><span class="fid">RIGHT</span>What v4 already gets right - kept verbatim</h3>
+      <p>Overlay-not-flatten with the delta lint and the wrong-golden call (DuckCreekXML.xml is a runtime transcript); the Unity rate boundary; the GUESSED-vs-MAPPED HITL taxonomy with prefill memory; one-writer + fresh-context Haiku judges; verify-first, tests-as-law, every-fix-ships-a-lock; worktree + stowaway-check + pathspec-commit discipline; the release order with the auth.js:100 carve-out and snapshot-then-scrub (never a history rewrite); voice parked with its substrate named. These survive unchanged.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:16px" class="two">
+    <div class="card">
+      <h3>Completeness reconciliation</h3>
+      <p>All twelve feedback lines have exactly one owner and every owner survives: Tasks/Home/News/defaults (P2), DC XML + HITL + two-way + prefill (P3), history + versioning + XLSX history export (P4), exec brief (P5), premium polish (PX), fleet provisioning (P4 H5), release + scrub + Azure (P6), optional PM-centric feature (P7), voice parked (BACKLOG). The two claims that needed explicit teeth rather than verify-first faith were the dormant restore (F8) and the "existing" Unity transform - P1 already caught the latter; P3's body now leads with BUILD so no fresh agent re-assumes it.</p>
+    </div>
+    <div class="card">
+      <h3>Model and effort audit</h3>
+      <p><b>Overpaying:</b> P5 at xhigh (isolated route, fixed narrative source, PX polishes after) - dropped to high; ultrathink on P2 and P5 (iterative loops; plan mode plus Haiku judges carry design review) - removed. <b>Underpowered:</b> P3 as written in its own body (effort high on the pack's one one-way door) - pinned xhigh. <b>Right:</b> P4 and P6 at Opus xhigh + ultrathink; PX at Fable xhigh; Haiku for every judge and investigator. <b>/effort max:</b> none - the max-worthy decision (XML spec derivation) already ran in P1. max and ultracode are session-only; re-assert effort on restarts.</p>
+    </div>
+  </div>
+</section>
+
+<section id="waves">
+  <h2>Run diagram - two-in-parallel end to end</h2>
+  <p class="lede">Five waves. W1 and W5 are the only solos, both sanctioned: pairing P1-DONE would cost a ninth prompt or put a second writer inside a live push gate; the cold verdict and irreversible release demand a single writer. W1 still gets de-facto parallelism: the operator pre-warms the W2 worktrees in plan mode, pushes held, while P1-DONE gates.</p>
+
+  <div class="lanes">
+    <div class="lane"><div class="wv"><span>W1</span><span>solo - sanctioned</span></div>
+      <div class="node opus"><div class="nm">P1-DONE</div><div class="md">Opus 4.8 - high. Gate + push held wave, anchor gitignore, freeze fork point + CONTRACTS stub.</div></div>
+      <div class="pairline">Operator pre-warms P2/P4 worktrees in plan mode, pushes held.</div>
+    </div>
+    <div class="lane"><div class="wv"><span>W2</span><span>pair</span></div>
+      <div class="node opus"><div class="nm">P2 Experience</div><div class="md">Opus 4.8 - xhigh + /fast. Tasks, Home brief, News, defaults.</div></div>
+      <div class="node opus"><div class="nm">P4 History + Integrity</div><div class="md">Opus 4.8 - xhigh + ultrathink. Versioning, restore, fleet audit, gates.</div></div>
+      <div class="pairline">Boundary: published file allowlists; each side FOREIGN to the other; worktrees, stowaway-check, --only.</div>
+    </div>
+    <div class="lane"><div class="wv"><span>W3</span><span>pair</span></div>
+      <div class="node fable"><div class="nm">P3 DC XML + HITL</div><div class="md">Fable 5 - xhigh. Builds the Unity transform; overlay, HITL, hardened two-way plug.</div></div>
+      <div class="node opus"><div class="nm">P5 Exec brief</div><div class="md">Opus 4.8 - high + /fast. One isolated ADMIN route.</div></div>
+      <div class="pairline">Boundary: export lib + its endpoints + HITL route vs one new route + nav entry. Disjoint by construction.</div>
+    </div>
+    <div class="lane"><div class="wv"><span>W4</span><span>pair</span></div>
+      <div class="node fable"><div class="nm">PX Polish</div><div class="md">Fable 5 - xhigh. Presentation-only on existing paths, incl. HITL + brief.</div></div>
+      <div class="node opus"><div class="nm">P7 Reg Radar</div><div class="md">Opus 4.8 - xhigh + ultrathink. New paths only. Timeboxed; parks cleanly if not green.</div></div>
+      <div class="pairline">Boundary: existing paths vs new paths + one owned route-registry line at the marked anchor. Zero overlap.</div>
+    </div>
+    <div class="lane"><div class="wv"><span>W5</span><span>solo - sanctioned</span></div>
+      <div class="node opus"><div class="nm">P6 Capstone</div><div class="md">Opus 4.8 - xhigh + ultrathink; Haiku verdict subagents. Harden, verdict, GitHub, scrub, Azure.</div></div>
+      <div class="pairline">HARDEN -&gt; BOUNDARY -&gt; VERDICT -&gt; BOUNDARY -&gt; RELEASE.</div>
+    </div>
+  </div>
+  <div class="ribbon">Haiku 4.5 judge ribbon - every diff in every wave gets a fresh-context, read-only hostile review; never a writer, never limit-blocked.</div>
+  <div class="legend">
+    <span><i style="background:var(--accent-soft);border:1px solid var(--accent)"></i>Fable 5</span>
+    <span><i style="background:var(--good-soft);border:1px solid var(--good)"></i>Opus 4.8</span>
+    <span><i style="background:var(--warn-soft);border:1px solid var(--warn)"></i>Haiku judges</span>
+    <span><i style="background:var(--line)"></i>Done (P0, P1)</span>
+  </div>
+
+  <div style="margin-top:18px">
+  <table>
+    <thead><tr><th>Wave</th><th>Prompts</th><th>Collision-free boundary</th><th>Depends on</th></tr></thead>
+    <tbody>
+      <tr><td><b>W1</b></td><td>P1-DONE <span class="tag solo">solo</span></td><td>Single writer during a push gate by design. Operator pre-warm of W2 worktrees is read-only (plan mode, pushes held).</td><td>IMPORT-CERTIFIED (RE-02 governs)</td></tr>
+      <tr><td><b>W2</b></td><td>P2 <span class="tag opus">Opus</span> || P4 <span class="tag opus">Opus</span></td><td>Explicit allowlists in orchestration.md before first commit. P2: Tasks/Home/News/nav app surfaces + brief endpoint files + scout profile wiring + flag persistence. P4: server mutation/versioning/audit/fleet + history UI + history export. Worktrees off the P1-DONE fork sha; single merged main; stowaway-check + git commit --only.</td><td>P1 wave pushed; fork sha recorded</td></tr>
+      <tr><td><b>W3</b></td><td>P3 <span class="tag fable">Fable</span> || P5 <span class="tag opus">Opus</span></td><td>P3: export lib + its server endpoints + HITL route. P5: one isolated ADMIN route + nav entry. Both consume the frozen CONTRACTS; neither touches the other's paths.</td><td>W2 landed; CONTRACTS frozen</td></tr>
+      <tr><td><b>W4</b></td><td>PX <span class="tag fable">Fable</span> || P7 <span class="tag opus">Opus</span> <span class="tag cut">cuttable</span></td><td>PX: presentation-only edits to existing surfaces; P7 paths FOREIGN. P7: new feature directory + new server jobs/routes + exactly ONE owned line at the marked route-registry anchor; every existing surface FOREIGN. Zero file overlap by construction.</td><td>P3 + P5 landed</td></tr>
+      <tr><td><b>W5</b></td><td>P6 <span class="tag opus">Opus</span> + <span class="tag haiku">Haiku verdict</span> <span class="tag solo">solo</span></td><td>Cold verdict and irreversible release require one writer; Haiku scorers are read-only.</td><td>All; P7 landed or cleanly parked</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="matrix">
+  <h2>Model matrix - the full range, deliberately</h2>
+  <p class="lede">Fable for one-way-door reasoning and taste; Opus for well-specified implementation loops (/fast where iterative, ultrathink only where a decision warrants it); Haiku for every read-only investigator and fresh-context hostile judge. Fable safety-routing can silently drop a session to Opus - both Fable prompts open by confirming the active model. Two Fable sessions remain (P3, PX), comfortably inside the fresh weekly window.</p>
+  <table>
+    <thead><tr><th>Prompt</th><th>Model / effort</th><th>Extras</th><th>Why this and not more or less</th><th>Downgrade path</th></tr></thead>
+    <tbody>
+      <tr><td><b>P1-DONE</b></td><td>Opus 4.8 - high</td><td>-</td><td>Judgment calls only (live-run detection, gitignore anchor + proof); zero build. xhigh is waste here.</td><td>Any model can gate and push; the judgment is why it is not Haiku.</td></tr>
+      <tr><td><b>P2</b></td><td>Opus 4.8 - xhigh</td><td>/fast, plan mode</td><td>Well-specified iterative UI loop against fixed specs; Haiku judges carry design review, so no ultrathink.</td><td>-</td></tr>
+      <tr><td><b>P4</b></td><td>Opus 4.8 - xhigh</td><td>ultrathink</td><td>Audit chain, tenant isolation, and the fleet swap are one-way-door adjacent; wrong here is expensive everywhere.</td><td>-</td></tr>
+      <tr><td><b>P3</b></td><td>Fable 5 - xhigh</td><td>confirm active model</td><td>Builds a transform that never existed + overlay semantics + a customer-facing HITL surface. The pack's one-way door; the contradiction in v4 is resolved to xhigh.</td><td>Opus 4.8 xhigh + ultrathink only if the Fable window is tight.</td></tr>
+      <tr><td><b>P5</b></td><td>Opus 4.8 - high</td><td>/fast</td><td>Isolated route, fixed narrative source (Kurt notes or the P1 outline), PX polishes after. xhigh pays for depth this does not need.</td><td>-</td></tr>
+      <tr><td><b>PX</b></td><td>Fable 5 - xhigh</td><td>confirm active model</td><td>The taste pass; cross-surface judgment is exactly the strongest model's edge. Presentation only, parity-diffed.</td><td>Opus 4.8 xhigh + ultrathink if Fable is tight.</td></tr>
+      <tr><td><b>P7</b></td><td>Opus 4.8 - xhigh</td><td>ultrathink; timeboxed</td><td>The delta-to-refId diff engine and shadow rating warrant depth; the implementation is seam reuse. Cuttable by clause - never delays release.</td><td>Park cleanly per the clause.</td></tr>
+      <tr><td><b>P6</b></td><td>Opus 4.8 - xhigh</td><td>ultrathink; Haiku verdict subagents</td><td>Adversarial breadth on HARDEN, cold decorrelated scoring on VERDICT, irreversible RELEASE.</td><td>Optional Fable-high second opinion on borderline verdict rows.</td></tr>
+      <tr><td><b>Judges</b></td><td>Haiku 4.5</td><td>fresh context, read-only</td><td>Decorrelated hostility at near-zero cost; never a writer, never limit-blocked.</td><td>-</td></tr>
+    </tbody>
+  </table>
+  <p class="lede" style="margin-top:10px"><b>/effort max:</b> none needed - the max-worthy decision (the XML spec derivation) already ran in P1. Note max and ultracode are session-only; re-assert --effort on restarts. Sessions: Fable via <span class="mono">claude --model fable --effort xhigh</span> (confirm active model first); Opus via <span class="mono">--model opus --effort xhigh</span> (or high per the matrix), /fast on P2 and P5.</p>
+</section>
+
+<section id="preserve">
+  <h2>Nothing lost - the v4 preservation checklist</h2>
+  <p class="lede">Every load-bearing element of v4, and where it lives in v5.</p>
+  <div class="two">
+    <div class="card"><ul class="clean">
+      <li><b>All 12 feedback lines</b> - same owners; map unchanged (P2/P3/P4/P5/PX/P6/P7, voice BACKLOG).</li>
+      <li><b>Protect list verbatim</b> - restated in every prompt's ground rules; canary figures remain informational cross-checks, gates read the locked test files only.</li>
+      <li><b>Ledger-driven loop</b> - ledger.json + OPERATING_NOTES + orchestration.md are the state; every prompt reconciles at HEAD (verify-first; claims are claims).</li>
+      <li><b>One writer, Haiku hostile judges</b> - every diff, every wave; judges refute, never rubber-stamp.</li>
+      <li><b>Tests are law</b> - deterministic gates are the red signal; every fix ships a permanent lock; never weaken a check, threshold, or golden.</li>
+      <li><b>Parallel git discipline</b> - separate worktrees, single merged main, stowaway-check, git commit --only, never git add -A; foreign files are not yours.</li>
+      <li><b>Detached long runs</b> - the OPERATING_NOTES discipline holds; never push mid-live-run (deploy severs SSE); live tests only in accenture-test, torn down and proven.</li>
+    </ul></div>
+    <div class="card"><ul class="clean">
+      <li><b>Unity transform never existed</b> - P3 BUILDS it; the body now leads with this so no agent re-assumes.</li>
+      <li><b>Config sheet moved, not gone</b> - 23-sheet TableConfig with the ManuscriptID/SheetName manifest; the updated (1).xlsx pair are the pinned goldens.</li>
+      <li><b>Gitignore anchor</b> - P1-DONE lands it and now PROVES it (check-ignore + ls-files).</li>
+      <li><b>auth.js:100 carve-out</b> - the functional salscrudato login row is untouched by the P6 scrub, verbatim from v4.</li>
+      <li><b>Golden egg</b> - lives in reportWebVitals.ts, non-greppable; PX must not touch it; P6 verifies PASS/FAIL only, never describes the mechanism.</li>
+      <li><b>Voice parked</b> - one BACKLOG item, spec intact; the P4 provenance work remains its substrate.</li>
+      <li><b>Release semantics</b> - snapshot to the personal repo first, scrub going-forward (never a history rewrite), Azure as the only remaining origin.</li>
+    </ul></div>
+  </div>
+  <p class="lede" style="margin-top:10px"><b>Merges:</b> none needed - v4's ten prompts included two already run (P0, P1); the eight remaining each own a disjoint file boundary, and merging any pair would recreate a solo wave or put two workstreams behind one writer. 8 of 8 slots used.</p>
+</section>
+
+<section id="prompts">
+  <h2>Step 2 - The prompts</h2>
+  <p class="lede">Copy-paste ready, in run order. ASCII only, self-contained, DONE-WHEN gated, hostile-reviewed by fresh-context Haiku subagents. Each card notes the findings it absorbs.</p>
+
+  <!-- P1-DONE -->
+  <div class="pcard">
+    <div class="phead">
+      <span class="pid">P1-DONE</span>
+      <span class="tag opus">Opus 4.8 - high</span>
+      <span class="tag solo">W1 solo (sanctioned)</span>
+      <span class="chip dim">Absorbs F9, F12</span>
+      <div class="pmeta"><button class="copy-btn" data-copy="pr1">Copy prompt</button></div>
+      <div class="obj">Land the held P1 wave: certify, gate, push, prove the gitignore anchor, freeze the fork point and the CONTRACTS stub. Reply to the live P1 session if still open; else fresh session.</div>
+    </div>
+    <pre class="prompt" id="pr1">If the P1 session is still open, reply to it with exactly: "IMPORT-CERTIFIED check, then gate and push the wave." Otherwise run this in a fresh session.
+
+You are P1-DONE. P0 (IH4) and P1 both ran. Three docs-only commits are held on local main - 9b7e2bc (raw material), 60cd792 (the XML export spec), 21513a0 (baseline, master ledger, P2/P4 specs, orchestration row) - push HELD per the operator. Your entire job: confirm certification, gate, push, verify, and freeze the fork point for the parallel waves. Do not build anything.
+
+STEPS:
+1. CERTIFICATION: check docs/orchestration.md for the IMPORT-CERTIFIED [sha] line from IH4. If absent, check whether IH4's live gate run is still active (its working-tree dirt: hardening-corpus*, wave3-gl-live.log, the DuckCreekXML.xml deletion). If still running, WAIT or hand back to the operator - never push into IH4's live window. If IH4 finished without certifying, stop and report; the RE-02 ledger item governs.
+2. TREE HYGIENE: confirm your three commits are the only unpushed ones (git log origin/main..main). IH4's dirt is not yours - do not commit, revert, or clean it.
+3. GITIGNORE ANCHOR WITH PROOF: the unanchored build/ pattern swallowed docs/build/ and files were force-added. If the anchored fix (/build/ or app/build/) is not in .gitignore, add it as a fourth tiny commit. PROVE it: git check-ignore -v docs/build/ledger.json returns nothing, and git ls-files docs/build/ still lists the tracked files. Paste both outputs. Without this proof, P2-P5 silently lose ledger updates.
+4. GATE on the exact sha: pnpm typecheck && pnpm lint && pnpm test && pnpm build, plus node scripts/check-bundle-budget.mjs; canaries PH $1,528 / PA $1,002 / GL $2,635 green, read from the locked test files (the figures here are informational cross-checks only - the gate reads the files).
+5. PUSH the wave; watch the pipeline to green; confirm /api/health 200 on dev.
+6. FORK POINT AND CONTRACTS STUB: update the orchestration.md P1 row (pushed sha, pipeline run id, one line "P1 wave landed"). Record the pushed sha as the W2 worktree fork point. Add a CONTRACTS section header to orchestration.md with four empty rows P2 and P4 fill at their wave close: (a) Menu/Dialog primitive props, (b) Home brief endpoint request/response shape, (c) the Data Dictionary flag key and storage location per DEFAULTS_SPEC.md, (d) the provenance envelope fields. P3 and P5 build against these; a frozen contract changes only with an orchestration note plus a ledger item.
+
+DONE-WHEN: IMPORT-CERTIFIED confirmed and quoted; the wave pushed on a green gate; pipeline green; /api/health 200; gitignore anchored with the check-ignore and ls-files proof pasted; orchestration updated with the fork point and the CONTRACTS stub; tree otherwise untouched.
+
+HOSTILE SELF-REVIEW (reply inline): (1) Did you push into or interrupt any live run? (2) Are the pushed commits exactly the three held ones plus at most the gitignore fix? (3) Is IMPORT-CERTIFIED real - quote the line and sha. (4) Paste the check-ignore and ls-files output proving docs/build is tracked and no longer ignorable.</pre>
+    <div class="deps">Depends on: P0 IMPORT-CERTIFIED. Parallel partner: none (sanctioned solo) - the operator pre-warms the P2/P4 worktrees in plan mode with pushes held during this window.</div>
+  </div>
+
+  <!-- P2 -->
+  <div class="pcard">
+    <div class="phead">
+      <span class="pid">P2 - Experience</span>
+      <span class="tag opus">Opus 4.8 - xhigh + /fast</span>
+      <span class="tag">W2 || P4</span>
+      <span class="chip dim">Absorbs F2, F9, F10</span>
+      <div class="pmeta"><button class="copy-btn" data-copy="pr2">Copy prompt</button></div>
+      <div class="obj">Tasks board, Home First-Prompt daily brief (grounded, cost-guarded), tenant-tailored News, and the two simplification defaults - inside an explicit file allowlist parallel to P4.</div>
+    </div>
+    <pre class="prompt" id="pr2">You are P2, the experience agent. Open in plan mode, gate the plan against the ledger, then execute. Make three surfaces best-in-class - the Tasks board, the Home daily brief, and the News feed - and land two simplification defaults. Apple and Tesla minimalism: restrained, confident, custom SVG icons only, spring motion 200 to 400ms, strict TS, design tokens only. Every visual change ships a screenshot parity diff. One writer; a fresh-context Haiku hostile judge reviews every diff.
+
+READ FIRST: docs/build/ledger.json; docs/build/HOME_BRIEF_SPEC.md; docs/build/NEWS_TENANT_SPEC.md; docs/build/DEFAULTS_SPEC.md; docs/build/BASELINE.md; docs/design-review/AI_LEAD_DESIGNER_REVIEW.md and the protect list; the existing Tasks, Home, and News routes named in the code-derived UI surfaces doc; CLAUDE.md; docs/orchestration.md (note the CONTRACTS section - you fill three rows at close).
+
+BOUNDARY (you run in a worktree parallel to P4, forked at the P1-DONE sha): you own ONLY these paths - the Tasks, Home, News, and nav/default surfaces in app/src; the brief endpoint and its route registration (name the exact server files in your plan); the news scout's tenant-profile wiring (the smallest change to the existing job, name the exact file); the flag persistence read/write per DEFAULTS_SPEC. Everything else on the server - mutation, versioning, audit, fleet, history - is P4's and is FOREIGN: never edit, commit, or revert it. Publish your exact file allowlist to orchestration.md BEFORE your first commit; stowaway-check plus git commit --only [paths], never git add -A.
+
+GROUND RULES: gate before every push (typecheck, lint, test, build, bundle budget, axe); canaries green from the locked test files; batch pushes; protect list verbatim; WCAG 2.2 AA; no raw hex, no arbitrary pixel values, no lucide-react (custom SVG only); reduced motion global. If you notice the golden-egg modules, do not touch them.
+
+WORK (one commit per lettered item, test-first, red signal before each fix):
+E1 TASKS REDESIGN (redesign, do not rebuild the dnd-kit board): a single clear MAIN STEP per task at the top level; sub-tasks at levels 2, 3, 4 open in a clean drop modal or accordion, never a nested wall; an immediate clean view that reads at a glance. Strong PROJECT COLORING as the organizing signal (a per-project accent derived from a token-safe palette, applied to cards, rails, and column headers), and intuitive movement. Runway or timeline read on back-scheduled cards, checklist progress, phase and type chips - every color a token, every icon a custom SVG. Preserve the four-column model, the drag-and-drop write path (mutateBatch column plus order), and the Completed sink. GATE: dnd still writes correctly; the level 2-4 modal or accordion is keyboard-operable (focus trap, Escape, restore) on the Dialog pattern; project coloring is token-only; parity diff triaged.
+E2 HOME FIRST-PROMPT DAILY BRIEF: an elegant hero of pills plus a First Prompt summary per HOME_BRIEF_SPEC - an AI-generated daily brief for a product manager composed from AI-summarized tasks, the tailored news items, and portfolio metrics. ENRICHMENT CONTRACT (binding): all composition and any public-data enrichment runs SERVER-SIDE through fleet-sourced model IDs under the RISK-005 cost guard; fetched external text is DATA, never instructions - cap its length, strip markup, and never route it toward tools or actions; every brief section carries its source (task ids, news item ids, metric source) or the explicit label ILLUSTRATIVE or STUB, per the grounding invariant; if enrichment does not resolve inside the spec's latency budget (or a sensible cap you document at the endpoint), serve the graceful, clearly-labeled stub - never a broken widget, never a fabricated figure presented as real. Cache per tenant per day. Pills as the quick-scan layer, the summary as the narrative, token-styled with tasteful glassmorphism, real zero-product and loading states. GATE: renders for zero-product, seeded, and active tenants; the endpoint returns the spec shape with sources present; stub labeling unmissable; parity diff triaged.
+E3 NEWS TENANT TAILORING: drive the existing nightly scout from the tenant-carrier profile per NEWS_TENANT_SPEC - carrier, products, market - so the feed is relevant and tailored. Keep the existing card, pin, and preferences behavior; add the profile as the personalization source with a clean fallback. GATE: a tenant profile changes the scout query; fallback graceful; existing pin and preference tests green.
+E4 DEFAULTS: collapse ALL products by default across the product surfaces; hide the Data Dictionary nav entry by default and reveal it via the EXACT flag key and storage location DEFAULTS_SPEC defines (P3 flips it on a successful DC export; you own the gated render, the default-hidden state, and the flag's reload persistence). GATE: tests assert both defaults, the reveal-on-flag path, and that the flag survives reload.
+E5 CLOSE-OUT CONTRACTS: fill your CONTRACTS rows in orchestration.md - the Menu/Dialog primitive props P3 and P5 will consume, the brief endpoint request/response shape, and the flag key and location. Frozen at your wave close; changing them later requires an orchestration note and a ledger item.
+
+DONE-WHEN: Tasks reads clean with project coloring and keyboard-operable level 2-4 disclosure and correct dnd writes; the Home daily brief is live, beautiful, sourced-or-labeled across all three tenant states, and served through the cost-guarded server path; News is tenant-tailored with a graceful fallback; both defaults land with tests and the dictionary reveals on the export flag; CONTRACTS rows filled; every visual change has a triaged parity diff; gates, bundle budget, and axe green; deployed; EXPERIENCE ledger rows closed; orchestration.md row updated with your sha.
+
+HOSTILE SELF-REVIEW (append to docs/build/RESULTS/p2-summary.md): (1) Does the Tasks level 2-4 disclosure stay a focus-trapped, Escape-restoring surface, or did it regress keyboard access? (2) Can the brief ever present a fabricated or unsourced figure as real - show the source field on each section and the stub label path. (3) Could fetched news or public text steer the model into anything beyond summarization - where is the length cap and the data-only handling? (4) Is any color a raw hex or any icon a lucide import? Grep and show. (5) Does the dictionary truly hide until the export flag flips, and does the flag survive reload? (6) Did you touch any path outside your published allowlist? Paste git log --stat proof.</pre>
+    <div class="deps">Depends on: P1 wave pushed (fork sha). Parallel partner: P4 - collision-free via published disjoint allowlists, separate worktrees, single merged main, stowaway-check + pathspec commits.</div>
+  </div>
+
+  <!-- P4 -->
+  <div class="pcard">
+    <div class="phead">
+      <span class="pid">P4 - History, integrity, gates, fleet</span>
+      <span class="tag opus">Opus 4.8 - xhigh + ultrathink</span>
+      <span class="tag">W2 || P2</span>
+      <span class="chip dim">Absorbs F6, F8, F9</span>
+      <div class="pmeta"><button class="copy-btn" data-copy="pr4">Copy prompt</button></div>
+      <div class="obj">Finish versioning and the dormant restore, XLSX history export, provenance in the hash-chain, the bounded fleet audit with certification freshness, and the enterprise gates plus minimal observability.</div>
+    </div>
+    <pre class="prompt" id="pr4">ultrathink. You are P4, the history-and-integrity agent. Finish robust product history and versioning with audit integrity, add an XLSX history export, run the bounded fleet audit, and confirm the enterprise gates that make the Hub regulated-grade - the substrate the parked voice feature will later ride. Your spec is docs/build/HISTORY_SPEC.md. Extend the audit hash-chain; never fork or weaken it. One writer; fresh-context Haiku hostile judge per diff.
+
+READ FIRST: docs/build/HISTORY_SPEC.md; docs/build/ledger.json and BASELINE.md; the mutation envelope and audit hash-chain code; HistoryDrawer and ProductContext; the fleet constants file and the import eval harness; CLAUDE.md; docs/orchestration.md (CONTRACTS section - you fill the provenance-envelope row at close).
+
+BOUNDARY (worktree parallel to P2, forked at the P1-DONE sha): you own the server EXCEPT P2's published incursions (the brief endpoint files, the news scout profile wiring, the flag persistence - P2 lists them in orchestration.md; they are FOREIGN to you), plus the history UI (HistoryDrawer and its route) and the history export. P2's app/src surfaces (Tasks, Home, News, nav defaults) are FOREIGN. Publish your exact allowlist to orchestration.md BEFORE your first commit; stowaway-check plus git commit --only, never git add -A.
+
+GROUND RULES: gate before every push; canaries green from the locked test files; batch pushes; protect list, especially audit-chain integrity and the atomic mutate contract; fleet-sourced model IDs; strict TS.
+
+WORK (one commit per item, test-first, red signal before each fix):
+H1 VERSION WRITE AND READ: confirm every governed mutation writes a hash-chained version entry (actor, diff, rev, effective date) in the same atomic batch as the entity, and that mutate AND mutateBatch (the import bulk path) both produce version entries - imported entities must carry version zero. Fix the read side if History shows nothing: the generic list path that filters kind=entity can never return kind=version, so wire the dedicated versions read. Server tests assert both write paths and the read.
+H2 FINISH THE DORMANT RESTORE: the UI exists but the server never returns snapshots - BUILD the missing server snapshot read so HistoryDrawer can fetch a restorable snapshot. Then prove restore-to-snapshot writes its own version and uses expectedRev with 409 conflict handling intact; a UI test covers HistoryDrawer render plus the restore path; the audit chain stays verifiable (/api/db/audit/verify green) after a restore.
+H3 XLSX HISTORY EXPORT: export a product's history as a clean XLSX per HISTORY_SPEC - version, timestamp, actor, change summary, effective date, and provenance - through safeCellValue with the token palette, banded and frozen-header like the other exports. A shape test locks columns and ordering; malicious strings stay literal.
+H4 PROVENANCE EXTENSION: extend the version and audit entry to carry AI-or-voice provenance (fleet-sourced model IDs, citation refs, confidence) incorporated into the hash without forking the chain, so P3's XML exports and future authoring changes are attributable. A test proves provenance is covered by the hash. Publish the envelope fields to the orchestration CONTRACTS row.
+H5 FLEET AUDIT AND PROVISIONING (bounded): a read-only capability probe of each configured provider key (OpenAI, Google, Anthropic, others present); score each available model against the task it would serve on a small labeled eval set (extraction accuracy, citation resolution, cost, latency), reusing the import eval harness; write docs/build/FLEET_AUDIT.md and update the fleet constants to the best fit per routed task, locked by a test that pins each task-to-model choice. CERTIFICATION FRESHNESS (binding): IMPORT-CERTIFIED was earned on the current fleet - before committing ANY change to a model that serves the import path, re-run the import certification slice (the G2 generalization fixture suite) green on the new model; a red slice reverts the swap and ledgers the finding with evidence. Invariants hold regardless: fleet-sourced IDs only, cost guard on every call, no baseline ever sourced from a model, every field still cited. Do NOT touch the Claude Code coding-driver selection - that stays pinned by the build pack.
+H6 ENTERPRISE GATES AND OBSERVABILITY: confirm or add the deterministic gates that make this regulated-grade - multi-tenant isolation (a cross-tenant read and write both fail closed, proven and wired into the deploy gate in CI); human-in-the-loop enforcement for AI-authored governed changes (no auto-commit without a resolvable citation); the WCAG 2.2 AA and contrast gates present. Add minimal server observability: structured error logging on every endpoint you touched or added, and a cost-guard counter (calls, spend, trips) queryable via an admin diagnostics read, so P6 can PROVE the guard fired during fuzz instead of assuming it. Anything already landed in a prior pack: verify with a test and move on; anything missing: add it.
+
+DONE-WHEN: UI edits and imports both produce visible, restorable history entries; the dormant restore is finished server-side and restore writes its own version with 409 handling preserved; the audit chain verifies green with provenance in the hash and the envelope published to CONTRACTS; the XLSX history export is clean and locked by a shape test; the fleet audit is written, the fleet file updated only with the import G2 slice green on any import-path change (or the swap reverted and ledgered), and the task-to-model lock test in place; the isolation, HITL, and a11y gates proven and wired into CI; cost-guard counters queryable; gates and bundle budget green; deployed; HISTORY ledger rows closed; orchestration.md row updated with your sha.
+
+HOSTILE SELF-REVIEW (append to docs/build/RESULTS/p4-summary.md): (1) Do imported entities carry version zero, and does History show them? Prove both paths. (2) After a restore, does /api/db/audit/verify stay green, and is provenance covered by the hash? (3) Show the test proving a cross-tenant write fails closed, and where it runs in CI. (4) If H5 swapped an import-path model, paste the G2 slice result on the new model; if it did not swap, say so explicitly. (5) Could any exported history cell execute as a formula? (6) Is there any AI-authored governed change that can commit without a resolvable citation? (7) Did you touch any P2-owned path? Paste git log --stat proof.</pre>
+    <div class="deps">Depends on: P1 wave pushed (fork sha). Parallel partner: P2 - collision-free via published disjoint allowlists, separate worktrees, single merged main, stowaway-check + pathspec commits.</div>
+  </div>
+
+  <!-- P3 -->
+  <div class="pcard">
+    <div class="phead">
+      <span class="pid">P3 - Duck Creek Author XML + HITL + two-way plug</span>
+      <span class="tag fable">Fable 5 - xhigh</span>
+      <span class="tag">W3 || P5</span>
+      <span class="chip dim">Absorbs F3, F5, F7, F9</span>
+      <div class="pmeta"><button class="copy-btn" data-copy="pr3">Copy prompt</button></div>
+      <div class="obj">The centerpiece: overlay emitter, BUILD the Unity transform, completeness analyzer, mapped-vs-guessed HITL, hardened two-way import, tenant-isolated prefill memory.</div>
+    </div>
+    <pre class="prompt" id="pr3">You are P3, the Duck Creek export agent - the centerpiece of this pass. Emit a valid Author XML OVERLAY from a Hub product, capture the fields the model cannot derive through a human-in-the-loop UI that distinguishes mapped data from guessed defaults, and make ingestion a flexible two-way plug. Your spec is docs/export-templates/author-xml/XML_EXPORT_SPEC.md; the schema guide and node index are ground truth. An overlay is deltas on an inherited chain - never a flattened document; flattening produces a file that will not import. NOTE: the Unity/TableConfig "existing transform" NEVER EXISTED in code or git history - you BUILD it here; you do not find it.
+
+MODEL: Fable 5 at effort xhigh. CONFIRM the active model first - safety routing can silently drop the session to Opus and stay until /model fable. You are building a transform that never existed, plus overlay semantics, plus a customer-facing HITL surface: this is the one-way door the strongest model exists for.
+
+READ FIRST: docs/export-templates/author-xml/XML_EXPORT_SPEC.md; author-xml-schema-guide.md and author-xml-node-index.json; sample-overlay.xml (the structural golden; NOT the in-repo DuckCreekXML.xml, which is a runtime transcript); the orchestration.md CONTRACTS section (Menu/Dialog props, the flag key, the provenance envelope - build against these, do not re-derive them); docs/build/ledger.json and OPERATING_NOTES.md; the import brain and adapter seam; the Rating Tool exporter and the updated PA_PROD_001 workbooks (TableConfig is 23 sheets; the Config sheet MOVED to last position and gained a ManuscriptID/SheetName manifest - it did not vanish); CLAUDE.md; docs/orchestration.md.
+
+GROUND RULES: gate before every push; canaries green from the locked test files; batch pushes; stowaway-check plus git commit --only; SCOPE GUARD the export lib plus its server endpoints plus the HITL route - P5's route is FOREIGN; every cell that touches a workbook passes safeCellValue; refIds byte-for-byte; strict TS; the protect list, especially audit-chain integrity and grounding (every emitted value traces to a Hub entity or a declared GUESSED default). Consume the P2 Menu primitive and the P4 provenance envelope for export lineage exactly as published in CONTRACTS. Reuse the Unity path for rates - do NOT reimplement rating or inline rate-table data into the XML.
+
+WORK (one commit per lettered item, test-first):
+X1 OVERLAY EMITTER: generate the Author XML overlay per spec - correct properties@inherited and inheritedPage, override="1" on restated base ids, net-new ids without it, only deltas plus re-declared abstract scaffolding, model and pages mapped from the canonical tree, tables referenced via tableRef/keyRef with rates supplied by Unity. Emit through the app's real seam, cited, with P4 provenance on the export lineage. Implement the OVERLAY-DELTA LINT from spec as a hard gate: any node not traceable to an intended override or a net-new id fails the export.
+X2 UNITY RATE BINDING - BUILD THE TRANSFORM: build the CoverageConfig plus TableConfig transform (the updated 23-sheet pair) as the rate carrier delivered alongside the overlay per spec. The overlay references; Unity supplies. A test proves no rate-table data is inlined into the XML; the re-pinned Rating Tool goldens stay green.
+X3 COMPLETENESS ANALYZER: walk the Hub product against the spec's required-field inventory (the 17-row HITL inventory) and produce a completeness report - every field a valid overlay needs, classified MAPPED (from a Hub entity, with the source), GUESSED (a best-guess default, with the rule used), or MISSING (no value and no safe default). Forms bindings, tax binding, currency binding, page-order, class vocabularies, and any required node-index attribute with no canonical source are the expected GUESSED and MISSING set.
+X4 HITL CAPTURE UI: a customer-centric missing-info surface on the P2 Menu and Dialog primitives presenting the completeness report for review before export - MAPPED fields shown plainly, GUESSED fields called out SEPARATELY and unmistakably (a distinct treatment, token-only, with the guess and its rationale), MISSING fields as required inputs. The user submits as-is (accepting guesses) or overrides any field; overrides feed X6. Keyboard-operable, WCAG 2.2 AA. On a successful export, flip the Data Dictionary flag using the EXACT key and location published in CONTRACTS (P2 owns the gated render).
+X5 TWO-WAY PLUG (HARDENED): make ingestion consume an Author XML overlay as an import source through the existing middle-layer adapter seam and canonical model - XML in as well as out - building the smallest change the spec recommends and deferring the rest to the ledger. PARSER HARDENING (binding): the XML import path uses a hardened parser configuration - DTDs disabled, external entities disabled, entity expansion off, a document size cap and a depth cap; tests prove an XXE payload and a billion-laughs payload are rejected with a clean error, while flagged-not-dropped semantics are preserved for legitimate unknown nodes. A round-trip test: emit an overlay, re-import it, score fidelity against the NUMERIC bar in XML_EXPORT_SPEC - quote the number in the test name and assertion.
+X6 INTELLIGENT FEEDBACK LOOP: persist accepted and overridden HITL values as tenant-scoped mapping memory so the next export of a similar product PREFILLS previously-supplied fields (promoting them from GUESSED toward MAPPED), with provenance. Tests prove BOTH directions: a second export in the same tenant prefills from the first, AND a different tenant sees ZERO prefill from it - cross-tenant isolation of mapping memory, fail closed.
+X7 TESTS: structural conformance of the emitted overlay to the node index; the overlay-delta lint green on a real product and red on a deliberately flattened one; the no-inline-rates test; the completeness classifier correctness; the round-trip fidelity score at the quoted bar; the prefill and cross-tenant-negative tests; the XXE and expansion rejections; malicious strings stay literal through the Unity workbooks.
+
+DONE-WHEN: a Hub product exports a valid Author XML overlay (deltas only, correct override semantics, Unity-bound rates via the transform you BUILT) that passes structural conformance and the overlay-delta lint and re-imports at the spec's numeric fidelity bar; the HITL UI presents mapped-vs-guessed-vs-missing clearly and captures overrides; the two-way plug imports an overlay through a hardened parser with XXE and expansion attacks rejected by test; the feedback loop prefills a second export and provably never crosses tenants; the dictionary reveals on the CONTRACTS flag; gates and bundle budget green; deployed; XML_EXPORT ledger rows closed; orchestration.md row updated with your sha.
+
+HOSTILE SELF-REVIEW (append to docs/build/RESULTS/p3-summary.md): (1) Open the emitted overlay beside sample-overlay.xml - is it deltas on the chain, or did you flatten? Show the override="1" nodes and the net-new nodes. (2) Did any rate-table data leak into the XML instead of riding Unity? Name the test. (3) Are GUESSED fields visually and structurally separable from MAPPED, so a user never mistakes a guess for real data? (4) Does the round-trip re-import hit the quoted numeric bar, and where did it lose the most? (5) Paste the XXE and billion-laughs test results - can any crafted overlay reach an entity resolver or blow memory? (6) Could tenant A's overrides ever prefill tenant B? Show the negative test. (7) Does the feedback loop prefill with correct provenance, or could it launder a bad guess into a MAPPED-looking value?</pre>
+    <div class="deps">Depends on: P1 XML spec; W2 landed; CONTRACTS frozen (P2 Menu/Dialog + flag key, P4 provenance envelope). Parallel partner: P5 - collision-free: export lib + its endpoints + HITL route vs one isolated ADMIN route; worktrees, stowaway-check, --only.</div>
+  </div>
+
+  <!-- P5 -->
+  <div class="pcard">
+    <div class="phead">
+      <span class="pid">P5 - Admin executive brief</span>
+      <span class="tag opus">Opus 4.8 - high + /fast</span>
+      <span class="tag">W3 || P3</span>
+      <span class="chip dim">Absorbs F9 (consumes CONTRACTS)</span>
+      <div class="pmeta"><button class="copy-btn" data-copy="pr5">Copy prompt</button></div>
+      <div class="obj">An ADMIN-gated, lazy-loaded, non-salesy interactive brief in the Platform section, driven by Kurt's notes when present. Structure and honesty here; PX polishes after.</div>
+    </div>
+    <pre class="prompt" id="pr5">You are P5, building an admin-only executive brief - an interactive, in-app presentation of the Product Reinvention Hub: what it is, its key features, the innovation, and why it is valuable, in a confident, non-salesy voice. It lives in the Platform section, gated to ADMIN. Apple and Tesla minimalism, custom SVG only, strict TS, token-only, WCAG 2.2 AA. Build against the app's real primitives exactly as published in the orchestration CONTRACTS rows; this is a product surface, not a slide export. PX polishes after you, so favor correct structure and honest content over pixel heroics.
+
+READ FIRST: docs/notes/kurt-brief.md if present (the source for framing and emphasis - read it verbatim and let it drive the narrative); the orchestration.md CONTRACTS section; docs/build/ledger.json; the feature inventory and value case in the project docs; the protect list and the existing route and nav patterns; CLAUDE.md; docs/orchestration.md.
+
+BOUNDARY (worktree parallel to P3): you own ONLY an isolated new route plus its nav entry under Platform, ADMIN-gated. P3's export lib, server endpoints, and HITL route are FOREIGN. Stowaway-check plus git commit --only, never git add -A.
+
+GROUND RULES: gate before every push (typecheck, lint, test, build, bundle budget, axe); canaries green; the whole page is a lazy chunk and the base bundle must not grow; design tokens only, no lucide, custom SVG; reduced motion global; no raw hex; no fabricated metrics presented as real - any figure is either sourced or labeled illustrative.
+
+WORK (one commit per item, test-first):
+B1 ROUTE AND GATE: a new ADMIN-only route in the Platform nav group (reuse the role-gate and nav patterns), lazy-loaded, with an in-app 404 and back navigation consistent with the shell.
+B2 THE PRESENTATION: an interactive, scrollytelling or sectioned brief driven by Kurt's notes if present, else the outline P1 authored. Cover what the Hub is (the AI-native system of definition for P and C product content), the key features (grounded authoring, import brain, the export suite including Duck Creek Author XML, history and versioning with audit integrity, tailored intelligence), the innovation, and the value - speed-to-market, OpEx, onboarding compression - framed for an executive. Non-salesy: show the mechanism and the evidence, let the capability make the case. Custom SVG diagrams for the architecture and the export flow; token-styled motion; a light and dark parity pass.
+B3 HONESTY AND POLISH: any metric is sourced or labeled illustrative; the narrative is confident and precise; the page is keyboard-navigable and reduced-motion-safe; a real empty or loading state if it pulls any live data.
+B4 TESTS: the route is ADMIN-gated (a non-admin cannot reach it by nav OR deep link, proven); lazy-chunk proof with before and after gzip; axe green; a parity diff for light and dark.
+
+DONE-WHEN: an admin opens a polished, interactive brief that presents the app, its features, its innovation, and its value in a non-salesy executive voice, driven by Kurt's notes when present; non-admins are blocked by test at nav and deep link; the page is a separate lazy chunk with the base bundle unchanged (paste gzip before and after); axe and gates green; deployed; BRIEF ledger rows closed; orchestration.md row updated with your sha.
+
+HOSTILE SELF-REVIEW (append to docs/build/RESULTS/p5-summary.md): (1) Can a non-admin reach the page by any route or deep link? Prove not. (2) Does any figure read as a hard metric without a source or an illustrative label? (3) Did importing the page grow the base non-lazy bundle? Show gzip. (4) Does it read as an honest brief or as a sales deck - and does it follow Kurt's emphasis? (5) Is every icon a custom SVG and every color a token?</pre>
+    <div class="deps">Depends on: P1 outline (fallback), W2 landed, CONTRACTS frozen. Parallel partner: P3 - collision-free: one isolated route vs the export stack; worktrees, stowaway-check, --only. Operator: stage docs/notes/kurt-brief.md before W3.</div>
+  </div>
+
+  <!-- PX -->
+  <div class="pcard">
+    <div class="phead">
+      <span class="pid">PX - End-to-end UI/UX polish</span>
+      <span class="tag fable">Fable 5 - xhigh</span>
+      <span class="tag">W4 || P7</span>
+      <span class="chip dim">Absorbs F1</span>
+      <div class="pmeta"><button class="copy-btn" data-copy="prx">Copy prompt</button></div>
+      <div class="obj">The taste pass, now AFTER P3 and P5: every surface including the HITL export flow and the exec brief meets the bar. Presentation only, parity-diffed, zero bundle growth, P7 paths foreign.</div>
+    </div>
+    <pre class="prompt" id="prx">You are PX, the experience-polish agent. Take the whole app to a premium, cohesive, product-manager-centric standard: every surface elegant, every text block beautifully set and legible, motion purposeful, interactions frictionless. This is the one pass that earns Fable xhigh across the board - taste and cross-surface consistency are exactly where the strongest model pays off. You are refining a working app, NOT redesigning it: the protect list is binding and every visual change ships a screenshot parity diff triaged as an intentional improvement. You run AFTER P3 and P5, so the HITL export surface and the executive brief are fully in scope - polish them.
+
+CONFIRM active model is Fable 5 first (routing can silently drop to Opus and stay until /model fable).
+
+READ FIRST: docs/build/ledger.json; docs/build/BASELINE.md; docs/design-review/AI_LEAD_DESIGNER_REVIEW.md and the protect list; the design-tokens file and the shared primitives; docs/build/OPERATING_NOTES.md; the orchestration.md CONTRACTS section; CLAUDE.md; docs/orchestration.md.
+
+BOUNDARY (worktree parallel to P7): you own cross-cutting PRESENTATION on EXISTING surfaces only - app/src presentation, no data-shape, endpoint, or business-logic changes (those were P2/P3/P4). P7's radar paths (its new feature directory, its server jobs and routes, and its single owned route-registry line) are FOREIGN - P7 applies this same bar to its own surface. Do NOT touch the golden-egg modules (reportWebVitals.ts constants and the idle wrapper, capability.ts). Stowaway-check plus git commit --only, never git add -A.
+
+GROUND RULES: gate before every push (pnpm typecheck && pnpm lint && pnpm test && pnpm build, plus bundle budget; the 175 KB gzip base budget is a hard ceiling - polish must not bloat it); canaries green from the locked test files; batch pushes; design tokens only, no raw hex, custom SVG only (no icon libraries), strict TS on any touched component, reduced-motion global and honored. WCAG 2.2 AA is a floor, not a ceiling.
+
+METHOD - one loop per surface, highest-traffic first (Home and the daily brief, Products, Builder, Tasks, Pricing, Claims, History, the HITL export surface, the exec brief): (1) audit the surface against the bar below and write the gaps as ledger PX items; (2) a red signal - a screenshot or an axe or contrast miss - before editing; (3) minimal, token-only change; (4) fresh-context Haiku hostile judge sees the before/after screenshots, the protect list, and the bar; REJECT means revise; (5) gate including axe and a parity diff; (6) commit --only, message "PX [surface]: [change]"; (7) ledger with the parity note. Every 5 surfaces, distill into OPERATING_NOTES (cap 40 lines).
+
+THE BAR (apply per surface):
+- TYPOGRAPHY: a real type system off the P1 ramp - deliberate scale, line-length 60-75ch on reading surfaces, line-height and tracking tuned per size, tabular numerals on all metrics and money, no orphaned headings, consistent label case. Every text block reads as typeset, not defaulted.
+- HIERARCHY AND SPACING: an 8pt rhythm, intentional whitespace, one clear primary action per view, quiet secondary actions, aligned optical edges.
+- MOTION: purposeful only - 200 to 400ms spring on state changes, enter/exit on modals, drawers, toasts, list reorders; never decorative loops; everything disabled under reduced motion; off-screen ambients paused.
+- INTERACTION AND FEEDBACK: every actionable element has hover, focus-visible, active, disabled, and busy states; optimistic UI with graceful rollback where a mutation already supports it; skeletons for load, honest empty states, inline validation, non-blocking success and error via the existing notice path; nothing that looks clickable but is not.
+- DYNAMISM (taste, not gimmicks): subtle count-ups on metric changes, smooth expand/collapse, live-filter responsiveness, drag affordances that read - all token-timed and reduced-motion-safe.
+- COHESION: the same component looks and behaves identically everywhere; one focus-ring, one card, one elevation scale, one glassmorphism recipe; light and dark parity on every surface.
+- PM-CENTRIC CLARITY: the product manager's next action is always obvious; dense data is scannable (banded tables, sticky headers, progressive disclosure for levels 2-4); the daily brief, the HITL completeness report, and the portfolio views read at a glance.
+
+DONE-WHEN: every high-traffic surface INCLUDING the HITL export surface and the exec brief meets the bar with a triaged parity diff; typography, spacing, motion, interaction-state, and cohesion audits are green and captured; axe and the contrast gate green on every touched surface; the base bundle is unchanged and within budget (paste before/after gzip); light and dark parity holds; no data or logic changed; no P7 path touched; PX ledger items closed; deployed; orchestration.md row updated with your sha.
+
+HOSTILE SELF-REVIEW (append to docs/build/RESULTS/px-summary.md): (1) Which surface still looks defaulted rather than designed, and why did you stop there? (2) Show a before/after where the change is real polish, not motion for its own sake. (3) Does any interactive element still lack a focus-visible or busy state? (4) Did polish grow the base bundle by even a KB? Show gzip. (5) Does identical UI behave identically on every surface now - name the last inconsistency you closed. (6) Did you touch any P7 path or a golden-egg module? Paste git log --stat proof.</pre>
+    <div class="deps">Depends on: P3 + P5 landed (so their surfaces are polishable). Parallel partner: P7 - collision-free: existing paths vs new paths; the route-registry anchor line is P7's alone; worktrees, stowaway-check, --only.</div>
+  </div>
+
+  <!-- P7 -->
+  <div class="pcard">
+    <div class="phead">
+      <span class="pid">P7 - Regulatory Change Radar</span>
+      <span class="tag opus">Opus 4.8 - xhigh + ultrathink</span>
+      <span class="tag">W4 || PX</span>
+      <span class="tag cut">timeboxed - parks cleanly</span>
+      <span class="chip dim">Absorbs F14, F7 (drafts tenant-isolated)</span>
+      <div class="pmeta"><button class="copy-btn" data-copy="pr7">Copy prompt</button></div>
+      <div class="obj">The PM-centric closer, now inside the capstone's coverage: source-watch to canonical to refId diff to canary impact to a cited, human-confirmable draft. Additive-only; never delays release.</div>
+    </div>
+    <pre class="prompt" id="pr7">ultrathink. You are P7, building one high-leverage, deeply product-manager-centric feature: the Regulatory Change Radar. It closes the loop the whole platform implies - the Hub owns the governed product model, so it is uniquely able to tell a PM, in their own product's terms, what a new bureau circular or state filing actually changes and what to do about it. You run BEFORE the capstone so the Radar is hardened, verdicted, and released with everything else - but you are CUTTABLE: this feature must never delay the release.
+
+TIMEBOX AND PARK CLAUSE (binding): you run in parallel with PX and must be fully green - all gates, all tests, deployed - by the close of this wave. If you are not, PARK cleanly: route flag off, feature directory intact, one BACKLOG ledger item with state and next steps, zero edits remaining on shared files, and P6 proceeds without you. A half-landed radar is a NO; a cleanly parked one is fine.
+
+THE IDEA: the Hub already ingests governed content and grounds every field in a source. Point that same machinery outward at the regulatory stream (the tenant carrier's lines, states, and bureaus - reuse the nightly news scout profile from NEWS_TENANT_SPEC and the import brain's parsing). When a relevant circular, rate/rule/form change, or state bulletin appears, the Radar: (1) parses it into the canonical model; (2) DIFFS it against the tenant's affected products - which coverages, rules, rating steps, and forms are implicated, by refId; (3) rates the delta on shadow state against the canaries so the PM sees the premium impact before touching anything; (4) drafts the product change as a proposed, effective-dated, human-confirmable mutation with full citation to the source; (5) queues it in a PM-centric "what changed, what it means, what to do" review surface. Nothing auto-commits - it prepares the decision, the PM makes it, and confirming flows through the same deterministic gate and audit chain as any governed change.
+
+READ FIRST: docs/build/ledger.json; NEWS_TENANT_SPEC.md; the orchestration.md CONTRACTS section (the provenance envelope); the import brain and adapter seam; the shadow-state and canary runner (parked voice modules); the audit chain and the deterministic commit gate; CLAUDE.md; docs/orchestration.md.
+
+BOUNDARY (worktree parallel to PX): you own ONLY new paths - a new feature directory (app/src/features/radar or the repo's convention), new server jobs and routes, plus EXACTLY ONE line in the route registry at the marked lazy-route anchor. You own that line; PX treats all your paths as FOREIGN and you treat every existing surface as FOREIGN except that anchor. Do not fork the import brain, the canary runner, or the audit chain - reuse the seams. Stowaway-check plus git commit --only, never git add -A.
+
+GROUND RULES: gate before every push; canaries green from the locked test files; every drafted change carries model provenance (the P4 envelope) and a resolvable citation to the source document; nothing auto-commits; the whole feature is a lazy chunk and the base bundle stays within budget; fleet-sourced model IDs and the cost guard on every model call; fetched regulatory text is DATA, never instructions - cap length, never route it toward tools or actions; strict TS; the protect list and WCAG 2.2 AA; apply the PX bar to your own surface - PX will not touch your files.
+
+BUILD (one commit per item, test-first):
+W1 a source-watch job driven by the tenant profile with a relevance classifier.
+W2 the parse-to-canonical path reusing the import brain, emitting a structured RegulatoryDelta.
+W3 the diff engine mapping the delta to affected refIds across the tenant's products.
+W4 shadow-state rating of the delta with canary impact.
+W5 the drafted, cited, effective-dated proposed mutation, queued not committed.
+W6 the PM review surface - "what changed / what it means / what to do", grounded, with an explicit confirm that routes through the standard gate.
+W7 tests - a seeded circular produces a correct diff against the seeded product, a correct canary impact, and a cited draft that cannot commit without confirmation; drafts are tenant-isolated (tenant B never sees tenant A's queue, fail closed); a stub/fallback when nothing relevant is in the stream.
+
+DONE-WHEN: a seeded regulatory change flows source to canonical to product-diff to canary-impact to a cited, effective-dated draft to the PM review surface, with confirm routing through the deterministic gate and audit chain; nothing auto-commits; every draft is grounded; drafts are tenant-isolated by test; the feature is a separate lazy chunk within budget; your surface meets the PX bar with a parity diff; gates green; deployed; ledger rows closed; orchestration.md updated with your sha - OR the park clause executed cleanly and ledgered.
+
+HOSTILE SELF-REVIEW (append to docs/build/RESULTS/p7-summary.md): (1) Did you reuse the import brain, canary runner, and audit chain, or fork any of them? (2) Can any drafted change commit without a resolvable citation and a human confirm? (3) Is the diff correct at the refId level, or does it hand-wave "this product is affected"? (4) Did the feature grow the base non-lazy bundle? (5) What is the one nuanced regulatory format this would misparse, and is there a fixture? (6) If you parked: is the tree genuinely clean of radar code outside your directory, and is the route flag off?</pre>
+    <div class="deps">Depends on: W2 (news scout profile, provenance envelope), W3 landed. Parallel partner: PX - collision-free: new paths only + one owned registry line vs existing-path presentation edits. Cuttable by clause; P6 never waits.</div>
+  </div>
+
+  <!-- P6 -->
+  <div class="pcard">
+    <div class="phead">
+      <span class="pid">P6 - Capstone: harden, verdict, release</span>
+      <span class="tag opus">Opus 4.8 - xhigh + ultrathink</span>
+      <span class="tag haiku">Haiku verdict subagents</span>
+      <span class="tag solo">W5 solo (sanctioned)</span>
+      <span class="chip dim">Absorbs F4, F6, F7, F11, F13</span>
+      <div class="pmeta"><button class="copy-btn" data-copy="pr6">Copy prompt</button></div>
+      <div class="obj">Actively try to break every DONE-WHEN in the pack; cold Haiku-scored verdict; then the irreversible release - history-scanned GitHub snapshot, scrub with the auth.js:100 carve-out, re-gate, Azure as the only origin.</div>
+    </div>
+    <pre class="prompt" id="pr6">ultrathink. You are P6, the capstone and release. Three halves with hard boundaries: HARDEN (edits allowed, prove the app end to end), VERDICT (cold, edit-free - any red row is NO-SHIP, not a fix), then RELEASE (the GitHub snapshot, the remote scrub, and the Azure deploy, in that exact order). Do not begin RELEASE unless the verdict is all SHIP or the operator has explicitly accepted the open rows.
+
+READ FIRST: docs/build/ledger.json, BASELINE.md, all specs, OPERATING_NOTES.md, the orchestration CONTRACTS section; docs/export-templates/author-xml/XML_EXPORT_SPEC.md; docs/build/FLEET_AUDIT.md; CLAUDE.md; docs/orchestration.md. Ground rules apply verbatim: gate before every push; canaries green from the locked test files; batch pushes; stowaway-check plus git commit --only; the protect list and audit-chain integrity; never weaken a check, threshold, or golden to go green; long live runs follow the detached-run discipline in OPERATING_NOTES and you never push mid-live-run; live tests only in accenture-test, torn down after.
+
+HARDEN (edits allowed, one commit per item, a red signal before each fix; treat every DONE-WHEN across P1-DONE, P2, P3, P4, P5, PX, and P7-if-built as something to ACTIVELY BREAK, not just confirm - every successful break ships a fix plus a permanent lock):
+H1 XML ROUND-TRIP, FIDELITY, AND ATTACK: emit the Author XML overlay for the seeded product, re-import it through the Hub, and score fidelity against the numeric XML_EXPORT_SPEC bar; log to docs/build/RESULTS/xml-roundtrip.json. Confirm the overlay-delta lint is green on a real product and red on a flattened one, and that no rate-table data is inlined (Unity carries rates). Attack the two-way import: XXE, entity expansion, oversized documents, deep nesting, malformed overlays - the hardened-parser rejections must hold. Fix shortfalls at the exporter or mapping layer; a genuine importer gap gets ledgered with evidence, not patched blind.
+H2 EXPORT AND HISTORY CONSISTENCY: one product exported to XLSX, BRD, Rating Tool, and Author XML reconciles per the mappings with the UNMAPPED accounting for every gap; the HITL completeness report classifies correctly and a GUESSED value can never masquerade as MAPPED; history and restore work with audit verify green and provenance in the hash; the XLSX history export is clean.
+H3 EXPERIENCE AND FUZZ: the Tasks board, the Home daily brief (sourced-or-labeled, and the cost-guarded path PROVEN via the P4 diagnostics counters, not assumed), and the tailored News feed render correctly across zero-product, seeded, and active tenants; the collapse-all and hidden-dictionary defaults hold and the dictionary reveals on export; drive all exporters and the HITL analyzer with hostile inputs (formula-leading strings, huge cells, unicode, zero-data, a 40-table product) - nothing executes, nothing misclassifies a guess as mapped; injected instructions inside news or fetched public text never steer the brief beyond summarization.
+H4 TENANCY, GATES, AND EGG: multi-tenant isolation proven - a cross-tenant read and write both fail closed; tenant A's HITL mapping memory never prefills tenant B; Radar drafts, if built, are tenant-isolated; HITL enforcement (no AI-authored governed change commits without a resolvable citation); WCAG 2.2 AA and contrast green and wired in CI; the admin brief is ADMIN-gated at nav and deep link; the fleet task-to-model lock test green and, if the fleet changed, the import G2 slice evidence is fresh; if the golden egg is present, verify PASS or FAIL only (Accenture line first, styled reveal after idle, repo grep for the three names returns zero source hits, bundle delta under 1 KB) without describing the mechanism.
+H5 LEDGER SWEEP: every open HIGH or MED item across all workstreams is closed or PARKED with rationale; the voice feature remains a clean BACKLOG item; if P7 parked, verify the park is clean per its clause (route flag off, no radar code outside its directory).
+BOUNDARY 1: final functional commit, push, deploy to dev, pipeline green. After this you edit only what a NO-SHIP row forces.
+
+VERDICT (cold, no edits, nothing cached; spawn fresh-context read-only Haiku subagents to score):
+Run the full gate (typecheck, lint, test, build, bundle budget, rating canaries); axe, contrast, WCAG 2.2 AA; the isolation suite including the mapping-memory and radar negatives; audit verify; the Playwright suites against dev; the XML round-trip cold and re-scored; the XXE and expansion rejections re-run cold; a fresh set of exports pulled from dev, opened, and asserted (Author XML overlay structurally conformant and delta-linted; XLSX, BRD, Rating Tool goldens green; malicious cells literal; palette matches tokens); a fresh 23-route x light and dark screenshot sweep diffed against the P1 baseline with every delta triaged. Write docs/build/VERDICT.md: one row per DONE-WHEN across P1-DONE, P2, P3, P4, P5, PX, and P7-if-built, plus one row per protect-list invariant and enterprise bar (including certification freshness for any fleet change), verdict SHIP or NO-SHIP, each row citing a fresh artifact by path and timestamp. If any row is NO-SHIP, STOP and hand back - do not release.
+BOUNDARY 2: verdict all SHIP (or operator-accepted). Only now proceed to RELEASE.
+
+RELEASE (exact order; this is irreversible - narrate each step and its proof):
+R1 GITHUB SNAPSHOT: push the final, verdict-passed tree to the operator's repository at https://github.com/salscrudato/product-reinvention-hub.git. Add it as a named remote (for example github-personal), push the release commit and a tag, and confirm the push succeeded (show the remote sha). SECRET SCAN FIRST, HISTORY-WIDE: the push carries FULL git history, so run gitleaks (or the equivalent installed scanner) across the ENTIRE history, not just HEAD, and sweep docs/**/RESULTS and any committed live-run logs for connection strings, keys, tokens, and endpoints; if ANY hit, STOP and hand back with the finding - the operator decides between a history rewrite of the snapshot copy or acceptance. Verify .gitignore and that no .env is tracked.
+R2 SCRUB THE REMOTE FROM THE CODEBASE: remove that remote (git remote remove github-personal) and every trace of the personal repo URL and OWNER from config and docs - CI files, deploy scripts, README, package metadata, git config, any docs. IMPORTANT SCOPE: the string salscrudato also appears as a FUNCTIONAL login identifier at auth.js:100 (confirmed by P1) - that is application logic, NOT a personal-repo reference; do NOT remove or alter it. The scrub target is the git remote URL github.com/salscrudato/product-reinvention-hub and any owner reference in tooling and docs. Prove it: a grep for the personal repo URL returns ZERO hits, and a grep for salscrudato returns EXACTLY the known functional line(s) at auth.js and nothing in CI, config, deploy, or docs. Commit the scrub on the main line, then RE-RUN THE FULL GATE on the scrubbed tree - the scrub touches CI and config, and a broken pipeline file must be caught BEFORE the deploy push. Git history on the personal remote still holds the snapshot by design - this is a going-forward codebase scrub, not a history rewrite.
+R3 AZURE DEPLOY: with the tree scrubbed and re-gated, push and deploy to Azure through the existing pipeline (the normal push-to-main auto-deploy, or the documented az path). Confirm the pipeline is green and the app healthy on dev. Prove Azure is the only remaining origin: paste git remote -v showing exactly the Azure/DevOps remote and nothing else.
+R4 ARCHIVE AND CLOSE: copy results, logs, screenshots, exported artifacts, VERDICT.md, and a RELEASE.md (the snapshot sha and tag, the history-wide secret-scan result, the scrub grep proof, the post-scrub gate result, the Azure deploy run id, the git remote -v proof) to docs/build/RESULTS/final-[date]/; update orchestration.md with the final sha; tear down every accenture-test artifact you created and prove it with a listing.
+
+DONE-WHEN: HARDEN green before boundary 1 with a permanent lock for every break it found; VERDICT.md all SHIP (or operator-accepted) with all-fresh evidence including the protect-list, enterprise-bar, and certification-freshness attestation; the release commit and tag pushed to the personal GitHub repo with a clean history-wide secret scan; a repo-wide grep proving the scrub (personal URL zero; salscrudato exactly the auth.js functional line); the post-scrub gate green; Azure pipeline green and the app healthy with git remote -v proving Azure as the only origin; RELEASE.md and the archive committed; teardown proven.
+
+HOSTILE SELF-REVIEW (bottom of VERDICT.md): (1) Which verdict row is closest to flipping on one more re-run? (2) Did the GitHub push carry any secret ANYWHERE in history or in committed logs? Show the scan. (3) Paste the grep proving zero personal-URL references and salscrudato only at auth.js after the scrub, plus the green post-scrub gate. (4) Is Azure genuinely the only remaining origin - paste git remote -v - and is the pipeline green? (5) Which round-trip or export field class lost the most fidelity, and which layer owns it? (6) Did any HARDEN attack succeed and get fixed without shipping a permanent lock?</pre>
+    <div class="deps">Depends on: everything; P7 landed or cleanly parked. Solo by design: cold verdict and irreversible release require a single writer. Operator: have gh auth or a PAT ready for R1.</div>
+  </div>
+</section>
+
+<section id="runbook">
+  <h2>Runbook</h2>
+  <div class="grid">
+    <div class="card"><h3>Time-to-finish</h3><p>Five waves, three of them true pairs. The operator pre-warms the W2 worktrees during P1-DONE (plan mode, pushes held), so W2 starts the moment the wave lands. v4's W3.5 solo and post-release W5 are gone: PX and P7 share W4, taking one full wave off the critical path while the Radar gains capstone coverage it never had.</p></div>
+    <div class="card"><h3>Fable budget shape</h3><p>Two Fable sessions remain: P3 xhigh and PX xhigh - consistent everywhere in this pack (v4's runbook said "P3 at high" and omitted PX; that drift is fixed). Both sessions confirm the active model first; routing can silently drop to Opus and stay until /model fable. The fresh weekly window (about 8 percent used at handoff) covers both with room to spare.</p></div>
+    <div class="card"><h3>Limit resilience</h3><p>Every prompt is restart-safe by construction: the ledger, OPERATING_NOTES, and orchestration.md are the state, and every prompt reconciles at HEAD before building. If a session dies at a usage limit, ask it for a handoff, open a fresh session on the same prompt, and paste the handoff - the P0 pattern. max and ultracode are session-only; re-assert --effort on restarts. Haiku judges are unaffected by the Fable limit.</p></div>
+    <div class="card"><h3>Judges and plan mode</h3><p>Every hostile review is a fresh-context, read-only Haiku subagent - decorrelated, never a writer. Open each Opus wave in plan mode, gate the plan against the ledger, then execute. Ultrathink rides only where a decision warrants it: P4, P6, P7.</p></div>
+    <div class="card"><h3>Parallel safety - explicit</h3><p>Three pairs: P2 || P4 (published disjoint file allowlists - the brief endpoint, scout wiring, and flag persistence are P2's named server incursions, everything else server-side is P4's), P3 || P5 (export stack vs one isolated route), PX || P7 (existing-path presentation vs new-path feature plus one owned registry line). Worktrees fork at the recorded sha; a single merged main is the integration line; stowaway-check and pathspec commits always apply. Foreign working-tree files are never yours to commit or revert.</p></div>
+    <div class="card"><h3>Contracts, not vibes</h3><p>P1-DONE stubs a CONTRACTS section in orchestration.md; P2 and P4 fill it at wave close (Menu/Dialog props, brief shape, flag key and location, provenance envelope). P3 and P5 build against it read-only. A frozen contract changes only with an orchestration note plus a ledger item - the stale-interface bug is designed out.</p></div>
+    <div class="card"><h3>Release is irreversible</h3><p>P6 gates RELEASE behind an all-SHIP verdict, scans the FULL history before the GitHub push, refuses to push secrets, proves the scrub with grep (auth.js:100 untouched), re-gates the scrubbed tree before the deploy push, and proves Azure is the only remaining origin with git remote -v. The personal-repo snapshot is intentional history; the scrub is of the codebase going forward.</p></div>
+    <div class="card"><h3>Voice, parked cleanly</h3><p>The Live Product Authoring scope sits in the ledger as BACKLOG with its spec intact. The P4 provenance and audit work is the substrate it rides when it unparks - nothing in this pack blocks it.</p></div>
+    <div class="card"><h3>Operator prep</h3><p>Stage docs/notes/kurt-brief.md before W3. Have gh auth (or a PAT in the credential helper) ready for P6 R1. Worktrees: git worktree add ../hub-p4 [fork-sha] style, one per parallel agent. Between waves: five minutes on the ledger. If P1's golden-egg carry-forward fired, its final reply remains the only copy of the removal map - keep it private.</p></div>
+  </div>
+</section>
+
+<section id="selfreview">
+  <h2>Pack hostile self-review</h2>
+  <p class="lede">The five questions, answered against this pack - not v4.</p>
+  <div class="grid">
+    <div class="card"><h3>1. Truly 8 prompts, two-in-parallel, pairs proven?</h3><p>Eight exactly: P1-DONE, P2, P4, P3, P5, PX, P7, P6. W2, W3, W4 are pairs with named disjoint boundaries (published allowlists; export stack vs isolated route; existing paths vs new paths plus one owned registry line), each on worktrees with stowaway-check and pathspec commits. W1 and W5 are the two sanctioned solos: pairing P1-DONE would cost a ninth prompt or put a second writer inside a live push gate, and the cold verdict plus irreversible release require a single writer - W1 still gets de-facto parallelism via the operator pre-warm.</p></div>
+    <div class="card"><h3>2. Anything lost from v4?</h3><p>No - audited line by line (see Nothing lost): all 12 feedback items and owners, the protect list, the ledger loop, one-writer/Haiku judges, verify-first, tests-as-law, every-fix-ships-a-lock, worktree discipline, detached-run rules, accenture-test-only, the Unity-never-existed and Config-sheet-moved findings, the gitignore anchor (now proven), the auth.js:100 carve-out, the non-greppable egg with PASS/FAIL-only verification, voice parked, and the snapshot-then-scrub release semantics. P7 changed position, not existence - and gained verdict coverage.</p></div>
+    <div class="card"><h3>3. Weakest remaining prompt?</h3><p>P2, at E2: "beautiful" and "eye-catching" are judged, not gated, by nature. Fixed as far as a prompt can: everything gateable now is (per-section sources, stub labels, the cost-guarded server path, three tenant states, the injection guard, reload-persistent flag), leaving only taste to the Haiku judge plus the PX pass. The prior weakest - P3's self-contradicting model pin and unhardened importer - is fixed outright.</p></div>
+    <div class="card"><h3>4. Any model/effort mispriced?</h3><p>Trims: P5 xhigh to high (isolated route, fixed source, polished later); ultrathink off P2 and P5 (plan mode plus judges carry it). Holds: P1-DONE stays Opus high, not lower, because live-run detection and the gitignore call are judgment. No under-powered one-way doors remain: P3 is pinned Fable xhigh, P4/P6/P7 carry ultrathink, and Haiku never writes. /effort max: not needed - its one worthy decision already ran in P1.</p></div>
+    <div class="card"><h3>5. Would a skeptical staff engineer sign off?</h3><p>The failure modes that bite after shipping are now closed before it: an unscanned full-history push, an XXE-open importer, a cross-tenant prefill leak, a silently uncertified fleet swap, a scrub that bricks CI, and flagship surfaces that never saw the taste pass. Every DONE-WHEN in the pack is something P6 actively attacks, and every break ships a permanent lock. The honest caveat stands by design: taste rows are judged, not proven - everything else is.</p></div>
+  </div>
+</section>
+
+<footer>
+  Product Reinvention Hub - Final Build Pack v5 (reviewed and revised from v4). 8 prompts, 5 waves, pairs in W2-W4. Start at P1-DONE; land the wave, build in pairs, polish after the flagship surfaces exist, harden hard, ship clean. Own the governed model; export it everywhere; ship it clean. ASCII-clean, self-contained.
+</footer>
+</div>
+
+<script>
+(function(){
+  var t=document.getElementById('themeToggle');
+  t.addEventListener('click',function(){
+    var h=document.documentElement;
+    var d=h.getAttribute('data-theme')==='dark';
+    h.setAttribute('data-theme', d?'light':'dark');
+    t.textContent = d?'Dark':'Light';
+  });
+  var btns=document.querySelectorAll('.copy-btn');
+  for(var i=0;i<btns.length;i++){
+    btns[i].addEventListener('click',function(e){
+      var id=e.currentTarget.getAttribute('data-copy');
+      var txt=document.getElementById(id).innerText;
+      var done=function(btn){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o;},1400);};
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done.bind(null,e.currentTarget));
+      } else {
+        var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+        try{document.execCommand('copy');}catch(err){}
+        document.body.removeChild(ta);done(e.currentTarget);
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>

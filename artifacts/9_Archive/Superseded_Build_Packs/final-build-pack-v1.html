@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Final Build Pack - Product Reinvention Hub</title>
+<style>
+:root{
+  --bg:#f6f6f8; --surface:rgba(255,255,255,.72); --surface-solid:#ffffff;
+  --text:#111114; --muted:#6e6e78; --line:rgba(17,17,20,.08);
+  --accent:#7c3aed; --accent-soft:rgba(124,58,237,.10); --accent-line:rgba(124,58,237,.28);
+  --good:#0f7b4d; --warn:#9a6700; --code-bg:#0f0f13; --code-text:#e8e8ee;
+  --radius:16px; --spring:cubic-bezier(.32,1.36,.45,1);
+}
+[data-theme="dark"]{
+  --bg:#0c0c0f; --surface:rgba(22,22,27,.72); --surface-solid:#16161b;
+  --text:#ececf1; --muted:#9a9aa5; --line:rgba(236,236,241,.09);
+  --accent:#a78bfa; --accent-soft:rgba(167,139,250,.12); --accent-line:rgba(167,139,250,.32);
+  --good:#4ade80; --warn:#fbbf24; --code-bg:#0a0a0d; --code-text:#e6e6ee;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.6 Inter,-apple-system,"SF Pro Text",Segoe UI,Roboto,sans-serif;
+  letter-spacing:-0.011em;transition:background .3s,color .3s}
+.wrap{max-width:1060px;margin:0 auto;padding:32px 24px 96px}
+header.hero{padding:56px 0 28px}
+h1{font-size:40px;line-height:1.12;margin:0 0 10px;font-weight:700;letter-spacing:-0.03em}
+h2{font-size:24px;margin:0 0 6px;letter-spacing:-0.02em}
+h3{font-size:17px;margin:22px 0 8px}
+p{margin:8px 0}
+.lede{color:var(--muted);max-width:78ch}
+.pill{display:inline-block;padding:5px 12px;border:1px solid var(--line);border-radius:999px;
+  background:var(--surface);backdrop-filter:blur(14px);font-size:12.5px;color:var(--muted);margin:0 6px 8px 0}
+.pill b{color:var(--text)}
+nav.toc{position:sticky;top:0;z-index:40;display:flex;gap:4px;flex-wrap:wrap;align-items:center;
+  padding:10px 12px;margin:8px -12px 28px;border:1px solid var(--line);border-radius:14px;
+  background:var(--surface);backdrop-filter:blur(18px) saturate(1.4)}
+nav.toc a{color:var(--muted);text-decoration:none;font-size:13px;padding:7px 11px;border-radius:9px;
+  transition:all .25s var(--spring)}
+nav.toc a:hover{color:var(--text);background:var(--accent-soft)}
+#themeToggle{margin-left:auto;border:1px solid var(--line);background:transparent;color:var(--muted);
+  border-radius:9px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;transition:all .25s var(--spring)}
+#themeToggle:hover{color:var(--text);border-color:var(--accent-line)}
+section{margin:44px 0}
+.card{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);
+  backdrop-filter:blur(16px);padding:22px 24px;margin:16px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.badge{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;padding:3px 9px;
+  border-radius:999px;border:1px solid var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+.badge.env{border-color:var(--line);color:var(--muted);background:transparent}
+ol.runbook{margin:6px 0 0;padding-left:22px}
+ol.runbook li{margin:10px 0}
+.prompt-card{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+  background:var(--surface-solid);margin:18px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.prompt-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 20px;
+  border-bottom:1px solid var(--line)}
+.prompt-head .title{font-weight:650;font-size:15px}
+.copy-btn{margin-left:auto;border:1px solid var(--accent-line);background:var(--accent-soft);
+  color:var(--accent);border-radius:9px;padding:7px 14px;font:inherit;font-size:13px;font-weight:600;
+  cursor:pointer;transition:transform .25s var(--spring),background .25s}
+.copy-btn:hover{transform:translateY(-1px)}
+.copy-btn.copied{background:var(--good);border-color:var(--good);color:#fff}
+pre{margin:0;padding:20px 22px;background:var(--code-bg);color:var(--code-text);overflow-x:auto;
+  font:12.5px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+footer{margin-top:64px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:18px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>Final Build Pack <span style="color:var(--accent)">R0 - R2</span></h1>
+  <p class="lede">Three prompts close the platform: R0 ships the customer experience wave including the import and filing agent view overhaul, R1 is the comprehensive ledger-driven review and hardening pass, R2 is judgment, evidence, and the books. Solo sessions, run in order, coordinated through the repo docs/orchestration.md.</p>
+  <div style="margin-top:14px">
+    <span class="pill"><b>3</b> prompts, sequential</span>
+    <span class="pill">Coordination: <b>docs/orchestration.md</b></span>
+    <span class="pill">Tail budget: <b>$80</b></span>
+    <span class="pill">ASCII verified</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#runbook">Runbook</a>
+  <a href="#budget">Budget</a>
+  <a href="#r0">R0 Experience</a>
+  <a href="#r1">R1 Review</a>
+  <a href="#r2">R2 Ship</a>
+  <a href="#notes">Decisions</a>
+  <button id="themeToggle" type="button">Dark</button>
+</nav>
+<section id="runbook">
+  <h2>Launch runbook</h2>
+  <p class="lede">One Claude Code terminal, fresh session per prompt, strictly in order. Every prompt follows the repo docs/orchestration.md: add a workstream row, append every push to the deploy log, gate before push, batch pushes. Each embeds a budget envelope with an 80 percent stop rule.</p>
+  <div class="card">
+    <ol class="runbook">
+      <li><b>R0:</b> Fable 5, effort <b>Medium</b>. The experience wave across seven surfaces including the import modal and the filing agent view. Wait for its workstream row to read done with a green pipeline run.</li>
+      <li><b>R1:</b> Fable 5, effort <b>High</b>. The comprehensive review; it refuses to start if any prior row is open or unpushed. Escalate to Max only if the isolation suite has open defects after two full fix waves.</li>
+      <li><b>R2:</b> Fable 5, effort <b>Medium</b>. Judgment, spot audits, evidence pack, close the books.</li>
+      <li><b>Discipline:</b> run <b>/cost</b> at every milestone; each prompt logs it to its execution log. Downshift mechanical sweeps with /model if an envelope tightens.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="budget">
+  <h2>Budget</h2>
+  <p class="lede">Tail envelopes below. Program flag, stated plainly: with earlier waves at estimate, total program spend lands near $175 to $195, past the original $150 cap. The overage buys the customer-facing polish wave and the exhaustive ship gate; R2 totals the real number in RELEASE.md.</p>
+  <div class="card">
+    <table>
+      <tr><th>Prompt</th><th>Scope</th><th>Model / effort</th><th>Envelope</th></tr>
+      <tr><td><b>R0</b></td><td>Home, Products, Explorer, Tasks, News, Claims, Import experience</td><td>Fable 5 Medium</td><td>$30</td></tr>
+      <tr><td><b>R1</b></td><td>Comprehensive review, harden, polish, live verify, thirteen axes</td><td>Fable 5 High</td><td>$38</td></tr>
+      <tr><td><b>R2</b></td><td>Hostile judgment, spot audits, evidence pack, close the books</td><td>Fable 5 Medium</td><td>$12</td></tr>
+      <tr><td colspan="3"><b>Tail total</b></td><td><b>$80</b></td></tr>
+    </table>
+  </div>
+</section>
+<section id="r0">
+  <h2>R0. Customer experience wave</h2>
+  <p class="lede">Seven surfaces: Home, Products, Explorer, Tasks, News, Claims Analysis, and the full import experience including the filing-upload agent view. Build, polish, verify live.</p>
+  <div class="prompt-card">
+    <div class="prompt-head"><span class="title">R0</span><span class="badge">Fable 5 Medium</span><span class="badge env">$30</span><button class="copy-btn" type="button" data-copy>Copy prompt</button></div>
+<pre>PROMPT R0: Customer experience wave across seven surfaces. Build, polish, verify live.
+Ultrathink. Fresh session. Orient (read once, work from notes): CLAUDE.md, AI_REVIEW.md,
+docs/orchestration.md (follow its rules; add a workstream row; append every push to the deploy
+log; respect in-progress rows), docs/audit/EXECUTION.md, the StreamRenderer component from F3,
+the UnifiedImportModal and agent pipeline view, the seeding review flow, the News agent path.
+
+AGENT VS FLEET: runtime model IDs only from shared/src/ai/fleet.ts and server/lib/fleet.js.
+Never add claude-fable-5 anywhere in the repo.
+INVARIANTS: adapter seam; atomic mutate envelope on every write; server-side authz + tenant
+isolation; AI grounded + cited, refIds verbatim; canaries HO-3, PA, GL exact from shared/src/
+rating tests only; design tokens only, no hex outside app/src/index.css; springs 200-400ms and
+prefers-reduced-motion respected everywhere; bundle 175 KB gz; axe green on changed surfaces.
+DISCIPLINE: enhance in place; do not fork components (upgrade StreamRenderer and the import
+modal, do not write parallel versions). Batch pushes into waves. BUDGET: envelope $30; /cost at
+milestones to EXECUTION.md; at 80 percent, finish the wave, commit, note remainder in your
+workstream row, stop.
+GATE: pnpm typecheck and pnpm lint and pnpm test and pnpm build.
+
+1) HOME.
+   a) Move Feedback out of the Intelligence nav group into the Platform panel at the sidebar
+      bottom; routes and deep links keep working via redirect.
+   b) Right pane (Priorities + Portfolio metrics): collapsible, COLLAPSED by default, state
+      persisted per user; an elegant edge affordance reopens it; content reflows to the freed
+      width; spring 200-400ms.
+   c) Priorities panel gains a grounded AI task summary: one tight paragraph synthesizing open,
+      overdue, and next-7-days tasks with citations to task refIds, on-demand with a subtle
+      refresh, cached per session, MID_REASONER role via the fleet.
+   d) AI response format, significant StreamRenderer upgrade: typographic hierarchy for grounded
+      answers (lead sentence, structured sections, refId chips inline, hoverable citation cards,
+      collapsible detail blocks, comparison tables and sparklines where the payload supports
+      them), fade-in on stream, interactive without being busy. Zero protocol changes; render
+      richer from existing events.
+   e) Streaming state: replace spinners with an AI-inspired waveform loader: a compact
+      horizontal sound wave of 5-7 bars, token accent color, subtle amplitude motion while
+      tokens stream, settling to rest on completion; pure CSS/SVG; reduced-motion swaps to a
+      calm static pulse. Use it for every grounded-answer wait state.
+   f) Remove the persistent top search input. Ctrl+F or Cmd+F opens the search overlay (command
+      palette style, centered, instant focus, esc closes); keep Ctrl+K as an alias; intercepting
+      browser find is a deliberate product choice. Focus trap tested; axe green.
+2) PRODUCTS. Keep the cards; make actions and layout intuitive: whole card clickable to open,
+   the five section chips deep-link into their tab, summary/archive/delete move into a kebab
+   with confirm on destructive; consistent hover and focus states; header stats stay. Search
+   becomes simple and intelligent: one field, instant fuzzy match across name, line, segment,
+   state, and refId, highlighted matches, keyboard up/down + enter, filter pills compose with
+   it, empty state suggests clearing filters.
+3) EXPLORER. One pass for simplicity and elegance: clearer column headers with counts, stronger
+   selected-state, breadcrumb always in sync, detail pane typography tightened, keyboard legend
+   as a discoverable hint, smooth column transitions, filter-every-column filters all three
+   panes. No information removed; navigation must feel inevitable.
+4) TASKS.
+   a) New-task and seeding modals: modern layout and spacing, fix scrolling overlap defects
+      (content never bleeds past the modal header or footer; sticky header and footer with one
+      interior scroll region), consistent fields, esc/enter behavior, focus trap.
+   b) ROOT-CAUSE the greyed-out Seed button: reproduce, find the disabled condition, fix it,
+      and make disabled states self-explanatory (a disabled Seed always shows why inline, for
+      example missing deadline or no phases selected). Regression-test the condition.
+   c) Seeding data made elite: the review plan captures the full task set with per-task default
+      duration (SLA days) EDITABLE inline before creation; edits recompute dependent dates
+      forward-only; per-task and per-phase deselection with live totals stays; created tasks
+      carry productId, projectId, seedRefId (idempotent re-seed) as built.
+   d) Task board pass: cleaner card hierarchy (title, path, owner, due, chips), tighter column
+      headers with counts, obvious drag affordance, calm overdue treatment, filters aligned
+      with the Products search pattern, mobile acceptable.
+5) NEWS. Seed a 5-day backfill of REAL P&amp;C-relevant market news through the existing agent
+   path (backfill = run curation for each of the past 5 days; never fabricate articles or
+   dates); tenant-scoped, idempotent. Every story renders an image: fetch og:image or lead
+   image from the source first; if absent, generate one via an image-capable deployment IF one
+   exists in the fleet (add the role to fleet files, never hardcode an ID); else fall back to
+   the branded gradient. Persist images to blob storage with cache headers; lazy-load; the feed
+   reads premium end to end (typography, spacing, source attribution, Why-this-matched intact).
+6) CLAIMS ANALYSIS. Response structure upgrade on the same StreamRenderer improvements: concise
+   verdict first (covered, not covered, or depends, with the controlling citation), Things to
+   Consider as tight scannable items, document and data citations grouped and deduplicated,
+   collapsible depth, the waveform loader during analysis, disclaimer footer kept. Answers get
+   shorter and clearer, not longer: cap the verdict block, push depth into collapsibles.
+7) IMPORT EXPERIENCE (modal + filing agent view).
+   a) Review step clarity: the warnings count becomes a first-class expandable panel: grouped
+      by type, severity-tinted, each warning in plain human language with the affected refId
+      and, where the brain provides one, the suggested action. Warnings are scannable in under
+      ten seconds; the 81-warnings case must feel organized, not alarming.
+   b) Review aesthetics at scale: entity sections (coverages, forms, rules, tables) as elegant
+      collapsible groups with counts and stage-glyph SVGs from the F1 icon registry; virtualize
+      long lists so a 1,707-entity review scrolls at 60fps; refId chips keep their mono style;
+      selected-vs-total state visible at a glance.
+   c) Write phase, perceived and real speed: replace the bare bar with a live write stream:
+      batch progress (chunk i of n), a soft ticker of the last written refIds, percent, and an
+      honest ETA from the observed write rate; the waveform loader as the live pulse. Real speed:
+      profile the write path and, within the atomic mutate envelope and its transactional batch
+      limits, use the largest safe batch chunking; never sacrifice atomicity, audit events, or
+      ordering for speed; record before/after wall time for the 1,707-item case in EXECUTION.md.
+   d) Filing-upload agent view, the showpiece: evolve the stage list into an agentic pipeline
+      constellation: each stage a node with a custom SVG glyph, model-role badge (ROUTER, BULK,
+      LADDER, VISION), live state (queued, thinking with the waveform, done with elapsed), and
+      animated edges that light as real events flow; the escalation ladder renders as a visible
+      hand-off animation (haiku to sonnet to opus) when and only when a real escalation event
+      fires; disagreement sparks where reconcile reports it; token and elapsed tickers from
+      real telemetry. Real events ONLY: idle looks idle; nothing animates without a backing
+      event; reduced-motion falls back to the existing stepper. Additive SSE fields allowed if
+      needed; note them in your workstream row; existing consumers untouched.
+   e) Both themes; hues stay within the token system (introduce at most two new semantic tokens
+      in index.css if warm/cool stage tints are needed); axe green on the modal.
+VERIFY LIVE per wave: walk Home (collapsed pane default, Ctrl+F overlay, task summary cites real
+task refIds, waveform during a real grounded stream), Products search and card actions, Explorer
+keyboard walk, create a project then seed with edited defaults and confirm board arrival and
+idempotent re-seed, News shows 5 days of pictured real stories, Claims returns the new format on
+a real loss description, and run one real workbook import plus one real filing PDF upload in an
+isolated tenant (never testco) watching the new agent view end to end. Console clean; canaries
+exact; teardown what you create.
+
+DONE-WHEN
+- All seven surfaces shipped as specified; seed button never silently disabled; scrolling
+  overlaps gone; 5-day pictured news backfill live; Ctrl+F overlay replaces the persistent bar;
+  the import review organizes warnings and scales to 1,707 entities; the write phase shows
+  honest batched progress with measured speedup recorded; the filing agent view animates only
+  real events and impresses in both themes.
+- Gate green; bundle within budget; git status clean; origin/main has the final sha, pipeline
+  green; workstream row done with final sha and last push logged.
+
+Finish with a hostile self-review: the one surface still below best-in-class and why; any place
+the waveform, constellation, or formatting upgrade added visual noise instead of clarity; and
+whether any animation can fire without a real backing event.</pre>
+  </div>
+</section>
+<section id="r1">
+  <h2>R1. Comprehensive review, harden, polish</h2>
+  <p class="lede">The last gate. Thirteen axes, exhaustive on security, money, audit chain, and import; sampled everywhere else; ledger-computed exit.</p>
+  <div class="prompt-card">
+    <div class="prompt-head"><span class="title">R1</span><span class="badge">Fable 5 High</span><span class="badge env">$38</span><button class="copy-btn" type="button" data-copy>Copy prompt</button></div>
+<pre>PROMPT R1: Comprehensive final pass. Review, harden, polish, verify live. Every axis. Ledger-driven.
+Ultrathink, and use your full reasoning budget: this is the last gate before the platform is called
+done, so the review must be genuinely exhaustive in coverage even though fixes are surgical. Fresh
+session. Solo agent, full repo. Everything is built and passed a first pass: F1-F5, task seeding,
+the build signature, the import brain, and the R0 experience wave. Orient (read once, work from
+notes): CLAUDE.md, AI_REVIEW.md, docs/orchestration.md (follow its rules; add a workstream row;
+verify all prior rows are done and PUSHED, and if anything is unpushed, gate and push it first),
+docs/audit/EXECUTION.md, the F1 share-link token note, the F3 additive-SSE note, the R0 row.
+
+AGENT VS FLEET: runtime model IDs only from shared/src/ai/fleet.ts and server/lib/fleet.js. Never
+add claude-fable-5 anywhere in the repo.
+INVARIANTS: adapter seam; atomic mutate envelope on every write; server-side authz + tenant
+isolation; AI grounded + cited, refIds and form numbers verbatim; canaries HO-3, PA, GL exact from
+shared/src/rating tests only, gating every deploy; design tokens only, no hex outside
+app/src/index.css; springs 200-400ms; bundle 175 KB gz; RISK-005 single-instance cost guard intact;
+RISK-013 build signature (Accenture-only server banner, personal mark client-only); never weaken a
+test or loosen a check to green a run; no drive-by rewrites.
+SCOPE DISCIPLINE (load-bearing): review is exhaustive; correction is minimal. Enhancement is CAPPED
+to findings that sit below the bar, and every UI/UX, CX, prompt, or agentic change must name the
+exact surface and the exact rule or defect it corrects. Taste-only changes are out of scope.
+DEPTH POLICY: go EXHAUSTIVE on security boundaries, money math, the audit chain, and the import
+brain. SAMPLE elsewhere (one representative entity deep, siblings smoke), but sample every axis.
+TOKEN DISCIPLINE: build the ledger once from a read-only review, then spend depth only where a
+finding warrants it. Batch fixes one push per wave. BUDGET: envelope $38; /cost at each wave
+boundary logged to EXECUTION.md; at 80 percent, finish the wave, commit, record open items, stop.
+GATE: pnpm typecheck and pnpm lint and pnpm test and pnpm build.
+
+METHOD: INVENTORY + BASELINE, then READ-ONLY REVIEW ACROSS ALL AXES, then LEDGER, then FIX/POLISH
+WAVE, then DEPLOY, then RE-TEST only failed rows. Exit ONLY when docs/audit/final_ledger.json
+COMPUTES zero open, or write a dated gap report. Deploys sever SSE: never test streaming during a
+pipeline run.
+
+A) INVENTORY + BASELINE. Enumerate every server route from server.js and every client route from
+   the router into final_ledger.json: id, axis, surface, check, expected, actual, status, wave.
+   Confirm gate green and canaries exact. The exit condition is COMPUTED from this file, never
+   asserted in prose.
+B) FUNCTIONALITY + DATA INTEGRITY (all four roles). Every primary journey completes. Auth floor on
+   all non-GET; malformed input 4xx not 5xx; one full CRUD cycle deep per entity family, siblings
+   smoke. Mutate envelope end to end: stale-rev 409, dangling-parent 422, optimistic concurrency
+   holds, hash-chained audit events write in the same batch and verify via /audit/verify across at
+   least eight write paths. LOB breadth: a product in PH, PA, GL, and one of IM/PR opens, computes,
+   and renders coverages, forms, rules, and rating without error.
+C) SECURITY + TENANT ISOLATION (EXHAUSTIVE). Two fresh tenants, never testco. Cross-tenant read and
+   write on every entity type; VIEWER attempting every write-shaped call including unifiedImport
+   and reindex; policyholder reaching outside their own policy; share-link seam: cross-tenant
+   replay, expired, revoked, tampered signature; visualizer SSE from the wrong tenant leaks
+   nothing; revoked jti 401; break-glass required for cross-tenant super_admin; the News backfill
+   and image-persist paths are tenant-scoped and write-gated. Every attack fails closed with the
+   correct status. gitleaks clean; no secret ever printed.
+D) ROBUSTNESS + RESILIENCE. Tab kill mid-import recovers; heartbeat loss graceful; every empty,
+   loading, and error state present and calm (including the waveform loader settle state); zero
+   500s on bad input; zero unhandled rejections; console clean across the full walk.
+E) PERFORMANCE + COST GUARD. Bundle within 175 KB gz AFTER the R0 wave (waveform, renderer,
+   constellation, and image handling included); cold-start first-paint and first-API recorded;
+   News images lazy-load with cache headers and do not degrade page performance; the 1,707-entity
+   import review scrolls smoothly and its write phase reflects the measured R0 speedup; 429s sane;
+   health truthful; RISK-005 verified under a burst; no N+1 on the heaviest lists.
+F) UI/UX + ACCESSIBILITY (bounded to the design language). Every surface: tokens only, zero hex
+   leak; dark parity exact; motion spring 200-400ms with reduced-motion respected (waveform swaps
+   to its static pulse; constellation falls back to the stepper); spacing, alignment, typography
+   consistent; visible focus states and full keyboard nav; axe green on every modal, the seeding
+   review, the import modal, and the Ctrl+F overlay (focus trap correct, esc closes, Ctrl+K alias
+   works); contrast AA; modals have zero scroll-overlap defects. Each finding names surface and
+   rule.
+G) CUSTOMER EXPERIENCE (PM primary; also tenant_admin, viewer, policyholder). Walk each journey
+   for friction, clarity, and copy voice. R0 acceptance is part of this axis: Home right pane
+   collapsed by default and persisted; the AI task summary cites real task refIds and matches the
+   board; grounded answers render in the upgraded format with working citation hovers and
+   collapsibles; Products search fuzzy-matches across name, line, segment, state, refId with
+   keyboard nav; card actions discoverable and destructive ones confirm; Explorer walk feels
+   inevitable; the Seed button is never disabled without an inline reason; seeding defaults are
+   editable and dates stay forward-only from tomorrow with idempotent re-seed linked to productId;
+   the task board reads clean; News shows 5 days of real, pictured, honestly dated stories; Claims
+   Analysis leads with a concise cited verdict; the import review makes 81 warnings scannable in
+   seconds and the filing agent view animates only real pipeline events. Viewer read-only reads
+   intentional; portal coherent on mobile. Every below-bar step is a concrete finding.
+H) AI PROMPTS + GROUNDING (per surface: grounded cited generation, each import-brain stage,
+   claims, portal advisor, ops copilot, the task summary, News curation). Grounding discipline:
+   real refIds, refuses ungrounded, zero fabrication; the News backfill contains no fabricated
+   articles or dates; the task summary never invents tasks. Injection resistance: one attempt per
+   surface changes nothing. Output compactness: tight schema, no prose bloat, grounding block as a
+   stable cacheable prefix. Correct model routing per fleet role, including any image role added
+   by R0 living only in fleet files. Escalation ladder escalates on low confidence and logs it.
+I) AGENTIC LAYER (real runs, not mocks). Import ensemble reconciles disagreement; adversarial
+   validator catches fabrication; no duplicate or wasted calls; telemetry truthful. Filing agent
+   view and visualizer: real events only, idle looks idle, the escalation hand-off animation fires
+   only on a real escalation event and matches the telemetry. Ops copilot grounded and
+   tenant-scoped. News nightly agent + backfill: idempotent, correctly dated.
+J) IMPORT BRAIN RE-VERIFY (not a full re-matrix). Isolated tenant, three formats live: multi-sheet
+   workbook, single-sheet with headers off row 1, CID-font PDF routed to vision. Extracted counts
+   SURVIVE into ACCEPTED counts; citations hold. One adversarial-cell file: zero fabrications. One
+   junk file: graceful user-facing failure, never a 500 or a hang.
+K) FILING + VERIFIER. Generate a filing end to end; verifier blocks a tampered field; record is
+   create-only; hashes cover content; provenance cited; canaries unaffected.
+L) IP + CONSISTENCY + CODE HEALTH. /pricing ROI matches the 25-35 / 10-15 / 15-20 bands; zero
+   client or pipeline names on any public surface. Build signature: server banner Accenture-only,
+   personal mark client-only base64, plaintext surname grep returns zero. Tokens only; no dead
+   code; no new lint disables; no weakened tests; no duplicate renderer or modal components
+   post-R0.
+M) FIX/POLISH WAVES. Group findings by root cause; fix ONE wave; a test or live evidence per fix;
+   gate; ONE commit, ONE push; confirm the pipeline run for your sha is green; re-run only failed
+   ledger rows. Canaries exact locally and live every wave.
+
+DONE-WHEN
+- final_ledger.json computes zero open across all axes, or a dated gap report names every open
+  item with root cause and risk.
+- Every below-bar finding fixed or explicitly accepted with a reason; R0 acceptance checks in G
+  all pass; extracted counts survive into accepted counts on all three re-verify formats.
+- Canaries exact throughout; git status clean; origin/main contains the final sha, pipeline green.
+- docs/audit/R1-REPORT.md: inventory counts, per-axis findings and dispositions, fixes by wave,
+  import re-verify and filing results, cost-guard and RISK-013 evidence, spend. Workstream row
+  done with the final sha and the last push logged.
+
+Finish with a hostile self-review: the three checks most likely to be theater and exactly what
+made each one real; the single surface a first-time customer would still stumble on; and the one
+file format most likely to break the import brain in production that this pass did not cover.</pre>
+  </div>
+</section>
+<section id="r2">
+  <h2>R2. Ship gate, judgment, evidence</h2>
+  <p class="lede">Consumes R1's ledger. Scores, spot audits, screenshot refresh, RELEASE.md, and the final spend number.</p>
+  <div class="prompt-card">
+    <div class="prompt-head"><span class="title">R2</span><span class="badge">Fable 5 Medium</span><span class="badge env">$12</span><button class="copy-btn" type="button" data-copy>Copy prompt</button></div>
+<pre>PROMPT R2: Final judgment + ship + evidence. Consume R1's ledger; do not re-test what it proved.
+Fresh session. PRECONDITION: R1's workstream row is done and final_ledger.json computes zero open
+(or you accept its gap report explicitly, naming each accepted risk). Orient: docs/audit/
+R1-REPORT.md, final_ledger.json, docs/orchestration.md, docs/audit/EXECUTION.md. TOKEN DISCIPLINE:
+R1's evidence is your input; verify by spot-check, not repetition. BUDGET: envelope $12; /cost per
+milestone to EXECUTION.md; 80 percent rule applies. GATE: pnpm typecheck and pnpm lint and pnpm
+test and pnpm build.
+
+A) HOSTILE REVIEW, judgment not testing. Score 1-5 with one line of evidence each: correctness,
+   security and isolation, AI grounding and prompt discipline, agentic soundness, import
+   robustness, performance and cost guard, UX polish and customer experience, accessibility,
+   operability, code health. Any axis below 4 gets a targeted fix (gate, one commit, one push,
+   verify green) or a written acceptance.
+B) SPOT AUDITS (cheap, high-signal): recompute two /pricing ROI scenarios by hand against the
+   value bands; replay one cross-tenant attack and one share-link replay from R1 to confirm still
+   closed; one grounded AI answer per surface spot-checked for real refIds, including the Home
+   task summary and a Claims verdict; rerun ONE import cell (the CID-font PDF) and confirm
+   accepted counts match R1; watch one real filing upload in the agent view and confirm every
+   animation maps to a real event and idle looks idle; News feed still pictured and honestly
+   dated.
+C) EVIDENCE PACK. Refresh review-packet screenshots via capture-current-state.mjs including the
+   new and changed routes (landing, pricing, share, portal, visualizer and filing agent view,
+   seeding review, Home with collapsed pane, Products, Explorer, task board, News, Claims
+   Analysis, import review and write phase); write docs/audit/RELEASE.md: scores, fixes made,
+   accepted risks, canary values, final sha, and a one-page GO or NO-GO verdict with reasons.
+D) CLOSE THE BOOKS. Archive docs/orchestration.md to docs/audit/orchestration-final.md with the
+   full workstream and deploy-log history; total all /cost figures from the execution logs
+   against the $150 cap and state the final number plainly, over or under. Everything committed
+   and pushed as ordinary commits on main; git status clean; origin/main holds the final sha with
+   a green pipeline run; workstream row done.
+
+Finish by stating the single weakest thing in the platform and the one prompt you would run next.</pre>
+  </div>
+</section>
+
+<section id="notes">
+  <h2>Decisions and flags</h2>
+  <div class="card">
+    <table>
+      <tr><th>Decision</th><th>Detail</th></tr>
+      <tr><td><b>Budget overage stated</b></td><td>Tail is $80; program total likely $175 to $195 against the original $150. R2 prints the true number in RELEASE.md.</td></tr>
+      <tr><td><b>Ctrl+F intercept</b></td><td>Deliberate product choice for a keyboard-first app; Ctrl+K stays as alias; focus trap and esc verified.</td></tr>
+      <tr><td><b>News honesty</b></td><td>The 5-day backfill runs real curation per day; fabricated articles or dates are forbidden. Image generation only via a fleet-registered role, never a hardcoded model ID.</td></tr>
+      <tr><td><b>Import speed boundary</b></td><td>Write-phase speedups stay inside the atomic mutate envelope and its transactional batch limits; atomicity, audit events, and ordering are never traded for speed. Before/after wall time recorded.</td></tr>
+      <tr><td><b>Real events only</b></td><td>The filing agent constellation and the visualizer never animate without a backing telemetry event; idle looks idle; reduced-motion falls back to the stepper.</td></tr>
+      <tr><td><b>Seed button</b></td><td>Root-cause fix required, plus a rule: any disabled primary action explains itself inline.</td></tr>
+      <tr><td><b>Model plan</b></td><td>R0 Medium, R1 High (Max only if the isolation suite stays red after two fix waves), R2 Medium.</td></tr>
+    </table>
+  </div>
+</section>
+
+<footer>
+  Final Build Pack. Product Reinvention Hub. Prepared 2026-07-14. Supersedes the Fable Era Build
+  Pack tail (F6/F7 and interim R-prompts). Three sequential solo prompts against the repo
+  docs/orchestration.md. ASCII-verified, token-themed, self-contained.
+</footer>
+
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+  var btn = document.getElementById('themeToggle');
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var theme = prefersDark ? 'dark' : 'light';
+  function apply() {
+    if (theme === 'dark') { root.setAttribute('data-theme', 'dark'); btn.textContent = 'Light'; }
+    else { root.removeAttribute('data-theme'); btn.textContent = 'Dark'; }
+  }
+  btn.addEventListener('click', function () {
+    theme = (theme === 'dark') ? 'light' : 'dark';
+    apply();
+  });
+  apply();
+
+  var buttons = document.querySelectorAll('[data-copy]');
+  for (var i = 0; i < buttons.length; i++) {
+    (function (b) {
+      b.addEventListener('click', function () {
+        var card = b.closest('.prompt-card');
+        if (!card) return;
+        var pre = card.querySelector('pre');
+        if (!pre) return;
+        var text = pre.textContent;
+        function done() {
+          var old = b.textContent;
+          b.textContent = 'Copied';
+          b.classList.add('copied');
+          setTimeout(function () { b.textContent = old; b.classList.remove('copied'); }, 1600);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+        } else { fallback(); }
+        function fallback() {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(ta);
+          done();
+        }
+      });
+    })(buttons[i]);
+  }
+})();
+</script>
+</body>
+</html>

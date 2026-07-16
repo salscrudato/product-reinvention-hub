@@ -57,6 +57,10 @@ const ALLOWLIST: Record<string, { count: number; why: string }> = {
     count: 1,
     why: 'Grounding-chunk REBUILD: derived retrieval data (same class as searchIndex), regenerated from audited entities. Not an entity write; carries no audit obligation.',
   },
+  'lib/ai/run-trace.js': {
+    count: 1,
+    why: 'Import-run telemetry (__system__ partition, same class as tenantMeter): per-run importRunTrace doc upsert — bounded stage timings/payloads/spend for the admin Import Runs surface. Derived observability record, best-effort by design; not a tenant entity, no version-history obligation. The import PLAN still persists only through the audited mutate envelope.',
+  },
 }
 
 function listSourceFiles(root: string): string[] {

@@ -1,0 +1,16 @@
+﻿Relative Path,Classification,Included?,Notes
+Hagerty_Enthusiast_Plus_State_Status_2026-07-15.xlsx,Principal workbook,Yes,"51-jurisdiction status, evidence and retrieval ledger."
+README.md,Packet documentation,Yes,"Scope, findings, limitations or access links."
+corporate_evidence/Hagerty_2025_Form_10-K.pdf,Corporate evidence,Yes,Issuer evidence; not a state product filing attachment.
+data/candidate_filing_manifest.csv,Structured research data,Yes,Public-source research metadata and status tracking.
+data/retrieval_checklist.csv,Structured research data,Yes,Public-source research metadata and status tracking.
+data/source_manifest.csv,Structured research data,Yes,Public-source research metadata and status tracking.
+data/state_status.csv,Structured research data,Yes,Public-source research metadata and status tracking.
+forms_crosscheck/Hagerty_EDoc_Crosscheck.md,Exclusion / crosscheck,Yes,Explains why public forms were not assigned to Drivers Edge Enthusiast+.
+forms_crosscheck/Hagerty_EDoc_Inspected_Form_Leads.csv,Exclusion / crosscheck,Yes,Explains why public forms were not assigned to Drivers Edge Enthusiast+.
+known_serff_links.txt,Packet documentation,Yes,"Scope, findings, limitations or access links."
+limitations_and_completion_path.md,Packet documentation,Yes,"Scope, findings, limitations or access links."
+records_requests/Colorado_Public_Records_Request.txt,Retrieval request,Yes,Draft request; not yet submitted by this packet.
+records_requests/Wisconsin_Public_Records_Request.txt,Retrieval request,Yes,Draft request; not yet submitted by this packet.
+reference_nonfiling/Motorsports_Advantage_Marketing_One_Pager.pdf,Non-filing reference,Yes,Marketing/reference material; do not treat as a filed form.
+research_findings.md,Packet documentation,Yes,"Scope, findings, limitations or access links."

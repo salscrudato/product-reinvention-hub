@@ -363,6 +363,35 @@ router.get('/ai/cost-guard', requirePlatform(CAP_PLATFORM_TENANTS), (_req, res) 
   }
 })
 
+// ─── import pipeline telemetry (run-trace.js) ─────────────────────────────────
+// Every unifiedImport run records a per-stage trace: timings, bounded stage
+// inputs/outputs, spend by deployment, escalations, notices, outcome. Read-only
+// observability of what the import brain actually did — the admin debugging view.
+router.get('/import/runs', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  try {
+    const runTrace = require('./ai/run-trace')
+    const limit = clampInt(req.query.limit, 50, PAGE_MAX)
+    const tenantId = req.query.tenant ? slug(req.query.tenant) : null
+    const runs = await runTrace.listRunTraces({ limit, tenantId })
+    res.json({ ok: true, runs, storage: runTrace.storageMode() })
+  } catch (e) {
+    log.error('admin', 'import_runs_read_failed', { detail: String(e.message || e).slice(0, 200) })
+    res.status(500).json({ error: 'import_runs_read_failed' })
+  }
+})
+
+router.get('/import/runs/:runId', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
+  try {
+    const runTrace = require('./ai/run-trace')
+    const run = await runTrace.getRunTrace(String(req.params.runId))
+    if (!run) return res.status(404).json({ error: 'run_not_found' })
+    res.json({ ok: true, run })
+  } catch (e) {
+    log.error('admin', 'import_run_read_failed', { detail: String(e.message || e).slice(0, 200) })
+    res.status(500).json({ error: 'import_run_read_failed' })
+  }
+})
+
 router.put('/config/global', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
   try {
     const merged = await platformConfig.setGlobalConfig({ flags: (req.body || {}).flags }, req.user)

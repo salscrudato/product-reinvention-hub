@@ -21,6 +21,7 @@ const { resolveTenantForPrincipal } = require('../auth')
 const fleet = require('../fleet')
 const { sse, emit, _forcedToolCall, _extractPdfText, _findSampleFile, getImportBrain, getStageFiling } = require('./_shared')
 const { persistRunResult, fetchRunResult, sanitizeRunId } = require('./run-results')
+const { createRunTrace } = require('./run-trace')
 const fs = require('fs')
 
 const HAIKU_OVERRIDE = process.env.AZURE_FOUNDRY_HAIKU_DEPLOYMENT || ''
@@ -135,7 +136,7 @@ function mergeStructurals(workbooks) {
 
 // ─── Run the brain over a structural model and emit the plan bundle ───────────
 
-async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, res, isoGrids, skippedDocuments }) {
+async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, send, isoGrids, skippedDocuments }) {
   const brain = getImportBrain()
   if (typeof brain.runAdaptiveImportBrain !== 'function') {
     throw new Error('Import brain not available (build:import-brain may not have run).')
@@ -144,7 +145,7 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
     structural,
     lobRefIdHint: lobRefIdHint || undefined,
     budget,
-    emit: (ev) => emit(res, ev),
+    emit: send,
   })
 
   // Deterministic ISO-family mapper as canonical-identity oracle: when the raw
@@ -156,14 +157,15 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
       const brainShared = require('../import-brain-shared.cjs')
       if (typeof brainShared.mapIsoWorkbook === 'function') {
         isoPlan = brainShared.mapIsoWorkbook(isoGrids)
-        emit(res, { t: 'tool', name: 'brain:stage7:isoJoin', phase: 'start', summary: `deterministic mapper: ${isoPlan?.coverages?.length ?? 0} coverages, ${isoPlan?.rules?.length ?? 0} rules` })
+        send({ t: 'tool', name: 'brain:stage7:isoJoin', phase: 'start', summary: `deterministic mapper: ${isoPlan?.coverages?.length ?? 0} coverages, ${isoPlan?.rules?.length ?? 0} rules` })
       }
     } catch (e) {
-      emit(res, { t: 'notice', level: 'info', message: `Deterministic ISO mapper skipped: ${String(e.message).slice(0, 120)}`, kind: 'iso-mapper' })
+      send({ t: 'notice', level: 'info', message: `Deterministic ISO mapper skipped: ${String(e.message).slice(0, 120)}`, kind: 'iso-mapper' })
       isoPlan = null
     }
   }
 
+  send({ t: 'tool', name: 'brain:stage7:plan', phase: 'start', summary: 'Assembling the reviewable import plan' })
   const { buildImportPlan } = require('../import-brain/stage7-plan')
   const bundle = buildImportPlan(brainOutput, {
     lobRefIdHint: lobRefIdHint || undefined,
@@ -172,6 +174,11 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
     routerWarnings: routerWarnings || [],
     isoPlan,
   })
+  send({ t: 'tool', name: 'brain:stage7:plan', phase: 'end', summary: `${bundle.counts?.accepted ?? 0} accepted, ${bundle.counts?.unresolved ?? 0} unresolved, ${bundle.importWarnings?.length ?? 0} warning(s)` })
+  send({ t: 'json', key: 'brain:stage7', value: {
+    counts: bundle.counts, completeness: bundle.completeness,
+    warnings: Array.isArray(bundle.importWarnings) ? bundle.importWarnings.length : 0,
+  } })
 
   // M1 (Phase M): a mixed upload SKIPS its PDFs — that skip is a filter above the
   // conservation ledger (F22's lesson), so every skipped document becomes a review
@@ -188,12 +195,12 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
   // Completeness alert: a forms-only / rating-only upload cannot stand alone as a
   // product — tell the user what is likely missing (first-principles pillars).
   if (bundle.completeness && bundle.completeness.assessment !== 'COMPLETE' && bundle.completeness.assessment !== 'EMPTY') {
-    emit(res, { t: 'notice', level: 'warn', kind: 'incomplete-product', message: bundle.completeness.guidance })
+    send({ t: 'notice', level: 'warn', kind: 'incomplete-product', message: bundle.completeness.guidance })
   }
 
   normalizeBundle(bundle, { container: 'XLSX', detectedFormat: 'ISO_WORKBOOK' })
-  emit(res, { t: 'json', key: 'bundle', value: bundle })
-  emit(res, { t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
+  send({ t: 'json', key: 'bundle', value: bundle })
+  send({ t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
   return bundle
 }
 
@@ -210,12 +217,23 @@ async function unifiedImport(req, res) {
   // reconnect, not a $70 re-run. Opt-in: no run id, no persistence.
   const runId = sanitizeRunId(body.runId)
   const runTenant = resolveTenantForPrincipal(req.user)
-  if (runId) emit(res, { t: 'json', key: 'run:id', value: { runId } })
+
+  // Run-trace telemetry: every SSE frame is observed BEFORE it hits the wire, so
+  // a finished (or crashed, or client-abandoned) run leaves a durable per-stage
+  // record for the admin Import Runs surface. Never throws, never gates the run.
+  const tracer = createRunTrace({
+    runId,
+    tenantId: runTenant,
+    actor: req.user ? { uid: req.user.uid, name: req.user.name, role: req.user.role } : null,
+  })
+  const send = (ev) => { tracer.observe(ev); emit(res, ev) }
+
+  if (runId) send({ t: 'json', key: 'run:id', value: { runId } })
   const persistIfRequested = async (bundle) => {
     if (!runId || !bundle) return
     const r = await persistRunResult({ tenantId: runTenant, runId, bundle })
     if (!r.ok) console.warn(`[unifiedImport] run ${runId}: bundle persistence failed (${r.reason})`)
-    emit(res, { t: 'json', key: 'run:persisted', value: { runId, ok: r.ok, ...(r.ok ? {} : { reason: r.reason }) } })
+    send({ t: 'json', key: 'run:persisted', value: { runId, ok: r.ok, ...(r.ok ? {} : { reason: r.reason }) } })
   }
 
   // SSE keepalive: Azure App Service closes connections idle >~230s; long stage-4
@@ -234,24 +252,26 @@ async function unifiedImport(req, res) {
   // actually hands off (see ai-call.js escalateAnthropic). Existing consumers
   // ignore unknown json keys; the agent visualizer renders the hand-off live.
   budget.onEscalation = (info) => {
-    try { emit(res, { t: 'json', key: 'brain:escalation', value: info }) } catch { /* stream closed */ }
+    try { send({ t: 'json', key: 'brain:escalation', value: info }) } catch { /* stream closed */ }
   }
 
   try {
     // ── Legacy/back-compat: pre-built structural model (harness, older clients) ──
     if (body.structural && typeof body.structural === 'object') {
+      tracer.setPath('structural')
+      tracer.setSource(body.structural.sourceName, [{ name: String(body.structural.sourceName || 'structural model'), mediaType: 'structural' }])
       const bundle = await runBrainToBundle({
         structural:   body.structural,
         lobRefIdHint: body.lobRefIdHint,
-        budget, res,
+        budget, send,
       })
       await persistIfRequested(bundle)
-      emit(res, { t: 'done' }); return res.end()
+      send({ t: 'done' }); return res.end()
     }
 
     const rawDocs = Array.isArray(body.documents) ? body.documents.filter((d) => d && d.name) : []
     if (rawDocs.length === 0) {
-      emit(res, { t: 'error', message: 'No documents or structural model supplied.' }); emit(res, { t: 'done' }); return res.end()
+      send({ t: 'error', message: 'No documents or structural model supplied.' }); send({ t: 'done' }); return res.end()
     }
 
     const docs = rawDocs.map((d) => {
@@ -264,24 +284,38 @@ async function unifiedImport(req, res) {
     }).filter((d) => d.base64 || d.text)
 
     if (docs.length === 0) {
-      emit(res, { t: 'error', message: 'No document content available (provide base64 or a named fixture).' })
-      emit(res, { t: 'done' }); return res.end()
+      send({ t: 'error', message: 'No document content available (provide base64 or a named fixture).' })
+      send({ t: 'done' }); return res.end()
     }
 
+    tracer.setSource(docs.map((d) => d.name).join(' + '), docs)
+
     // ── Stage 0: artifact router (magic bytes; LOB/edition from content) ──────
+    send({ t: 'tool', name: 'brain:stage0:route', phase: 'start', summary: `Routing ${docs.length} document(s) by content` })
     const { routeArtifacts } = require('../import-brain/stage0-router')
     const routed = await routeArtifacts({
       documents: docs,
       extractPdfText: _extractPdfText,
       budget,
-      emit: (ev) => emit(res, ev),
+      emit: send,
     })
+    send({ t: 'tool', name: 'brain:stage0:route', phase: 'end', summary: `${routed.workbooks.length} workbook(s), ${routed.filingDocs.length} filing PDF(s), ${routed.unknown.length} unrecognized` })
+    send({ t: 'json', key: 'brain:stage0', value: {
+      workbooks: routed.workbooks.map((w) => w.name),
+      filingDocs: routed.filingDocs.map((d) => d.name),
+      unknown: routed.unknown,
+      lobRefIdHint: routed.lobRefIdHint ?? null,
+      lobSource: routed.lobSource ?? null,
+      edition: routed.edition ?? null,
+      warnings: routed.warnings,
+    } })
 
     // ── Workbook path: adaptive brain over the merged structural model ────────
     if (routed.workbooks.length > 0) {
+      tracer.setPath('workbook')
       if (routed.filingDocs.length > 0) {
         routed.warnings.push({ kind: 'mixed-upload', detail: `Upload mixes workbooks and PDFs; the workbook plan was produced — re-upload the ${routed.filingDocs.length} PDF(s) separately for filing extraction.` })
-        emit(res, { t: 'notice', level: 'warn', message: 'Mixed upload: workbooks imported; PDFs skipped — upload them separately.', kind: 'mixed-upload' })
+        send({ t: 'notice', level: 'warn', message: 'Mixed upload: workbooks imported; PDFs skipped — upload them separately.', kind: 'mixed-upload' })
       }
       const structural = mergeStructurals(routed.workbooks)
       const isoGrids = routed.workbooks.flatMap(w => Array.isArray(w.isoGrids) ? w.isoGrids : [])
@@ -291,11 +325,11 @@ async function unifiedImport(req, res) {
         edition:      routed.edition,
         routerWarnings: routed.warnings,
         skippedDocuments: routed.filingDocs.map((d) => d.name),
-        budget, res, isoGrids,
+        budget, send, isoGrids,
       })
       await persistIfRequested(wbBundle)
-      emitSpend(res, budget)
-      emit(res, { t: 'done' }); return res.end()
+      emitSpend(send, budget)
+      send({ t: 'done' }); return res.end()
     }
 
     // ── Filing path: PDFs (text or native-PDF vision blocks) ──────────────────
@@ -304,6 +338,7 @@ async function unifiedImport(req, res) {
 
     const stageFiling = getStageFiling()
     if (routed.filingDocs.length > 0 && typeof stageFiling.runFilingPipeline === 'function') {
+      tracer.setPath('filing')
       const { bundle } = await stageFiling.runFilingPipeline({
         documents:        routed.filingDocs.map(d => ({ name: d.name, base64: d.base64, text: d.text })),
         productNameHint:  productName,
@@ -314,26 +349,27 @@ async function unifiedImport(req, res) {
         lobRefIdHint:     body.lobRefIdHint || routed.lobRefIdHint,
         budget,
         extractPdfText:   _extractPdfText,
-        emit:             (ev) => emit(res, ev),
+        emit:             send,
       })
       normalizeBundle(bundle, { documents: routed.filingDocs })
       const planCoverages = (Array.isArray(bundle?.plan?.coverages) ? bundle.plan.coverages : [])
         .map((e) => ({ refId: e.data?.refId ?? e.refId ?? '', name: e.data?.name ?? e.label ?? '', formNumbers: e.data?.formNumbers ?? [] }))
-      emit(res, { t: 'json', key: 'bundle', value: bundle })
+      send({ t: 'json', key: 'bundle', value: bundle })
       await persistIfRequested(bundle)
-      emit(res, { t: 'token', v: JSON.stringify({ coverages: planCoverages }) })
-      emitSpend(res, budget)
-      emit(res, { t: 'done' }); return res.end()
+      send({ t: 'token', v: JSON.stringify({ coverages: planCoverages }) })
+      emitSpend(send, budget)
+      send({ t: 'done' }); return res.end()
     }
 
     if (routed.workbooks.length === 0 && routed.filingDocs.length === 0) {
-      emit(res, { t: 'error', message: `No importable artifacts detected: ${routed.unknown.map(u => `${u.name} (${u.reason})`).join('; ') || 'unknown content'}` })
-      emit(res, { t: 'done' }); return res.end()
+      send({ t: 'error', message: `No importable artifacts detected: ${routed.unknown.map(u => `${u.name} (${u.reason})`).join('; ') || 'unknown content'}` })
+      send({ t: 'done' }); return res.end()
     }
 
     // ── Fallback: single-pass extraction (legacy robustness path) ─────────────
     const doc = docs[0]
-    emit(res, { t: 'tool', name: 'extract:coverages', phase: 'start', summary: doc.name })
+    tracer.setPath('fallback')
+    send({ t: 'tool', name: 'extract:coverages', phase: 'start', summary: doc.name })
 
     // F18: honor the content-derived line even on the fallback; PH stays the
     // WARNED platform default when no hint resolved.
@@ -343,7 +379,7 @@ async function unifiedImport(req, res) {
     // F15: ids minted here have NO source counterpart — mark them with the
     // platform SYNTH convention (registry prefix + SYNTH, kind in segment 2).
     const fbPrefix = (fbLobDef && (fbLobDef.refIdPrefix || fbLobDef.code)) || 'PH'
-    if (!fbLobDef) emit(res, { t: 'notice', level: 'warn', kind: 'lob-defaulted', message: `LOB undetected${fbHint ? ` (hint "${fbHint}" matched no registry line)` : ''} — defaulted to Personal Home; verify the product line.` })
+    if (!fbLobDef) send({ t: 'notice', level: 'warn', kind: 'lob-defaulted', message: `LOB undetected${fbHint ? ` (hint "${fbHint}" matched no registry line)` : ''} — defaulted to Personal Home; verify the product line.` })
 
     const deployment = HAIKU_OVERRIDE || fleet.resolveModel('BULK_VERIFY', { bypassDegrade: true })
     const pdfText = doc.base64 ? _extractPdfText(doc.base64) : null
@@ -366,7 +402,7 @@ async function unifiedImport(req, res) {
     const rawCoverages = (Array.isArray(extractedInput.coverages) ? extractedInput.coverages : [])
       .filter((c) => c && c.name && c.citation)
 
-    emit(res, { t: 'tool', name: 'extract:coverages', phase: 'end', summary: `${rawCoverages.length} coverage(s) extracted` })
+    send({ t: 'tool', name: 'extract:coverages', phase: 'end', summary: `${rawCoverages.length} coverage(s) extracted` })
 
     // Canonical case-preserving mint (BACKLOG_SEED item 1) — the old
     // .toLowerCase() stranded these ids outside the parentId validator's
@@ -436,22 +472,22 @@ async function unifiedImport(req, res) {
       coverages: coverageEntities.map((e) => ({ refId: e.refId, name: e.data.name, formNumbers: e.data.formNumbers })),
     }
 
-    emit(res, { t: 'json', key: 'bundle', value: bundle })
+    send({ t: 'json', key: 'bundle', value: bundle })
     await persistIfRequested(bundle)
-    emit(res, { t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
-    emitSpend(res, budget)
-    emit(res, { t: 'done' })
+    send({ t: 'token', v: JSON.stringify({ coverages: bundle.coverages }) })
+    emitSpend(send, budget)
+    send({ t: 'done' })
     res.end()
   } catch (err) {
-    emit(res, { t: 'error', message: `Import error: ${String((err && err.message) || err).slice(0, 220)}` })
-    emit(res, { t: 'done' })
+    send({ t: 'error', message: `Import error: ${String((err && err.message) || err).slice(0, 220)}` })
+    send({ t: 'done' })
     res.end()
   }
 }
 
 // Per-run spend telemetry for the non-brain paths (the brain emits its own
 // brain:spend event; this covers filing/fallback and is harmless to repeat).
-function emitSpend(res, budget) {
+function emitSpend(send, budget) {
   const spend = {
     spendUsd:     Math.round((budget.spendUsd || 0) * 1e4) / 1e4,
     calls:        budget.calls || 0,
@@ -459,7 +495,7 @@ function emitSpend(res, budget) {
     byDeployment: budget.byDeployment || {},
   }
   console.log(`[unifiedImport] run spend: $${spend.spendUsd} across ${spend.calls} call(s)`)
-  emit(res, { t: 'json', key: 'import:spend', value: spend })
+  send({ t: 'json', key: 'import:spend', value: spend })
 }
 
 // F23: fetch a persisted run result. Read-shaped, but scoped like the import

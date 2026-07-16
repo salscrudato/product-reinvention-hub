@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Hardening Build Pack v2 - UX Series + Export Suite</title>
+<style>
+:root{
+  --bg:#f5f6f8; --surface:rgba(255,255,255,.72); --surface-solid:#ffffff;
+  --ink:#111418; --ink-2:#5a626e; --line:rgba(17,20,24,.08);
+  --accent:#3e63dd; --accent-soft:rgba(62,99,221,.10);
+  --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  --shadow:0 8px 30px rgba(17,20,24,.06);
+}
+[data-theme="dark"]{
+  --bg:#0e1116; --surface:rgba(23,27,34,.72); --surface-solid:#161b22;
+  --ink:#e8eaee; --ink-2:#98a1ad; --line:rgba(232,234,238,.09);
+  --accent:#7a95ff; --accent-soft:rgba(122,149,255,.12);
+  --shadow:0 8px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);letter-spacing:-.011em;line-height:1.55;padding-bottom:80px;transition:background .3s ease,color .3s ease}
+.wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+header.hero{padding:56px 0 28px}
+.kicker{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:38px;font-weight:700;letter-spacing:-.03em;margin:10px 0 8px}
+.sub{color:var(--ink-2);font-size:16px;max-width:780px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.toggle{position:fixed;top:20px;right:24px;z-index:50;border:1px solid var(--line);background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--ink);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow);transition:transform .25s cubic-bezier(.34,1.4,.44,1)}
+.toggle:active{transform:scale(.94)}
+section{margin:44px 0}
+h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
+.lede{color:var(--ink-2);font-size:14px;margin-bottom:18px;max-width:820px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.card{background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.34,1.4,.44,1)}
+.card:hover{transform:translateY(-2px)}
+.card h3{font-size:14px;font-weight:700;margin-bottom:5px}
+.card p{font-size:13px;color:var(--ink-2)}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--surface);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:12px 14px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td b{font-weight:650}
+.path{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.prompt-card{background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);margin:22px 0;overflow:hidden}
+.prompt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line)}
+.prompt-head .t{font-size:16px;font-weight:700}
+.prompt-head .m{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.model{font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;background:var(--accent);color:#fff}
+.mode{font-size:11px;font-weight:600;padding:5px 11px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.copy-btn{border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);font-size:12px;font-weight:600;border-radius:10px;padding:7px 14px;cursor:pointer;transition:transform .25s cubic-bezier(.34,1.4,.44,1),background .2s}
+.copy-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.copy-btn:active{transform:scale(.93)}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.62;padding:22px;white-space:pre-wrap;word-break:break-word;color:var(--ink);max-height:560px;overflow:auto}
+.note{font-size:13px;color:var(--ink-2);background:var(--accent-soft);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-top:14px}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink-2);font-size:12px}
+ol.op{margin:10px 0 0 20px;font-size:14px}
+ol.op li{margin-bottom:8px}
+</style>
+</head>
+<body>
+<button class="toggle" id="themeToggle" type="button">Dark</button>
+<div class="wrap">
+<header class="hero">
+  <div class="kicker">Product Reinvention Hub</div>
+  <h1>Design Hardening Build Pack v2</h1>
+  <p class="sub">UX Series plus the Export Suite. Four prompts in sequence: Fable lays the foundations, mapping spec, and the golden egg; Opus 4.8 ultrathink runs the experience loop, builds the three-format export suite, and closes with a hardening pass and cold verdict - including the Hub-to-BRD-to-Hub round-trip proof the demo claim rests on.</p>
+  <div class="chips">
+    <span class="chip">4 prompts: UX1 - UX4</span>
+    <span class="chip">3 export formats: XLSX, Duck Creek BRD, Rating Tool</span>
+    <span class="chip">Round-trip gate: F1 at or above 0.95</span>
+    <span class="chip">Fable 5 xhigh, then Opus 4.8 ultrathink</span>
+    <span class="chip">Import hardening: complete (IH series)</span>
+  </div>
+</header>
+
+<section id="strategy">
+  <h2>Operating principles</h2>
+  <p class="lede">Carried from the IH and UX v1 packs, with one addition: templates are contracts.</p>
+  <div class="grid">
+    <div class="card"><h3>Templates are contracts</h3><p>The three committed workbooks define the export targets. Structure is read from the files at build and test time - sheet names, header rows, column order - never re-typed. Goldens diff against them.</p></div>
+    <div class="card"><h3>Tests and lint are law</h3><p>A rule you do not lint is a rule you do not have. Every closed item ships a permanent test or lint gate.</p></div>
+    <div class="card"><h3>Protect the identity</h3><p>Productization, not redesign. The eight protect-list invariants bind agent and judge alike.</p></div>
+    <div class="card"><h3>Conservation on the way out</h3><p>Flagged-not-dropped applies to exports exactly as to imports: every canonical entity is mapped or listed on an UNMAPPED appendix - never silently omitted.</p></div>
+    <div class="card"><h3>One writer, escalate on evidence</h3><p>Subagents investigate and judge; only the main agent edits. Parked items unlock on operator GO or a proven trigger.</p></div>
+  </div>
+</section>
+
+<section id="models">
+  <h2>Model plan</h2>
+  <p class="lede">Per operator direction: Fable first, Opus 4.8 ultrathink for everything after. Fable takes the one-way decisions and the ambiguity; Opus takes the sustained depth.</p>
+  <table>
+    <tr><th>Prompt</th><th>Model</th><th>Role</th><th>Why</th></tr>
+    <tr><td><b>UX1</b></td><td>Fable 5, /effort xhigh</td><td>Verify at HEAD, ledger, baseline, trust fixes, token foundations, export MAPPING spec, golden egg</td><td>The type ramp, the canonical-to-template mapping, and the egg burial are the hardest one-way calls. Fable authors the spec Opus implements against.</td></tr>
+    <tr><td><b>UX2</b></td><td>Opus 4.8, /effort xhigh + ultrathink</td><td>Experience loop: phases C / K / X</td><td>Sustained iteration across primitives, composition a11y, and the chat refactor.</td></tr>
+    <tr><td><b>UX3</b></td><td>Opus 4.8, /effort xhigh + ultrathink</td><td>Export Suite: elevate XLSX, add Duck Creek BRD and Rating Tool</td><td>Implements against Fable's MAPPING.md and the committed templates; depends on the UX2 Menu primitive.</td></tr>
+    <tr><td><b>UX4</b></td><td>Opus 4.8, /effort xhigh + ultrathink</td><td>Final hardening, round-trip proof, cold verdict, archive</td><td>Harden-then-verdict with a hard boundary. Opus buys the harden depth in the same session; the verdict half is cold and edit-free.</td></tr>
+    <tr><td><b>Subagents</b></td><td>Haiku 4.5</td><td>Read-only investigators, hostile judge</td><td>Parallel, decorrelated, disposable. Never writers.</td></tr>
+  </table>
+</section>
+
+<section id="protect">
+  <h2>Protect list - binding invariants</h2>
+  <p class="lede">Any diff that weakens one is an automatic judge REJECT.</p>
+  <table>
+    <tr><th>Invariant</th><th>Why it is load-bearing</th></tr>
+    <tr><td><b>Theme by value-override</b></td><td>Dark mode recasts token values; zero theme branches in components.</td></tr>
+    <tr><td><b>Documented AA math + ink-flip</b></td><td>Contrast rationale beside every token; no raw hex in .tsx; no hand-mirrored palettes.</td></tr>
+    <tr><td><b>Reduced motion, defense-in-depth</b></td><td>Governance means fewer loops, not removing the guarantee.</td></tr>
+    <tr><td><b>Dialog/Drawer focus contract</b></td><td>Focus-in, trap, Escape, restore-to-trigger, scroll-lock. The reference for Popover, Menu, palette.</td></tr>
+    <tr><td><b>RefChip refId invariant</b></td><td>Internal ids never chip; the pattern for citation and sample-data display rules.</td></tr>
+    <tr><td><b>Fail-safe AI rendering</b></td><td>Never a blank bubble; every notice kind resolves.</td></tr>
+    <tr><td><b>Grounded-cited refusal</b></td><td>Citation honesty builds on this, never around it.</td></tr>
+    <tr><td><b>StateTileMap keyboard bar</b></td><td>The internal gold standard for every roving-focus model.</td></tr>
+  </table>
+</section>
+
+<section id="inputs">
+  <h2>Inputs map</h2>
+  <table>
+    <tr><th>Artifact</th><th>Repo location</th><th>Role</th></tr>
+    <tr><td>AI_LEAD_DESIGNER_REVIEW.md</td><td class="path">docs/design-review/</td><td>The verified dossier - spec of record.</td></tr>
+    <tr><td>Coding-agent md + backlog xlsx</td><td class="path">docs/design-review/</td><td>Sequencing, non-goals, ledger seed.</td></tr>
+    <tr><td>E__OH_BRD.xlsx</td><td class="path">docs/export-templates/</td><td>E+ OH BRD (E+ Product): interfaces with Duck Creek, the target state for all templates. 13 sheets incl. Forms, Cov_Names &amp; Limit, Factors, STP Rules, Fees/Factors/Assesment, Version History.</td></tr>
+    <tr><td>PA_PROD_001_CoverageConfig.xlsx</td><td class="path">docs/export-templates/</td><td>Rating Tool coverage config: Coverage (RequirementID = refId), Config, InputFields sheets. Generated for the seeded PA product - a natural golden.</td></tr>
+    <tr><td>PA_PROD_001_TableConfig.xlsx</td><td class="path">docs/export-templates/</td><td>Rating Tool table config: TOC + Config + one block-layout sheet per rate table (ManuscriptID, MS Physical Path, key/value grids).</td></tr>
+    <tr><td>MAPPING.md</td><td class="path">docs/export-templates/ (authored by UX1)</td><td>Canonical model to template columns, both directions, with UNMAPPED lists. Fable writes it; Opus implements it.</td></tr>
+    <tr><td>Fresh screenshot baseline</td><td class="path">review-packet/screens-baseline-[date]/</td><td>Parity oracle, captured by UX1.</td></tr>
+    <tr><td>Workstream state</td><td class="path">docs/design-hardening/</td><td>ledger.json, BASELINE.md, OPERATING_NOTES.md, RESULTS/, VERDICT.md.</td></tr>
+  </table>
+</section>
+
+<section id="operator">
+  <h2>Operator prep - run this before UX1</h2>
+  <ol class="op">
+    <li><b>Stage inputs:</b> the two review files into <span class="path">docs/design-review/</span>; the three template workbooks into <span class="path">docs/export-templates/</span>.</li>
+    <li><b>Decisions (defaults set - override only if you disagree):</b> type ramp derived from the actual distribution; radius tiers from real clusters; one duration band 200/280/380; cmd/ctrl-F released to the browser; Rating Tool downloads as a two-file set unless UX3 justifies a zip; <b>testco product-name data repair still requires your written GO</b>.</li>
+    <li><b>Egg:</b> UX1 delivers the burial map and removal steps ONLY in its final session reply. Save that reply somewhere private - it is the only copy, by design.</li>
+    <li><b>Models:</b> UX1 Fable 5 at /effort xhigh; UX2-UX4 Opus 4.8 at /effort xhigh with ultrathink in the prompt; subagents Haiku. (Haiku could run UX4's cold verdict cheaper; Opus is your call and buys harden depth in the same session.)</li>
+    <li><b>Sequence:</b> strictly UX1, ledger sanity read, UX2, UX3, UX4 - fresh session each, single writer. UX3 consumes the UX2 Menu primitive.</li>
+  </ol>
+</section>
+<section id="prompts">
+  <h2>Prompts</h2>
+  <p class="lede">Copy/paste ready, in run order. Each is self-contained with DONE-WHEN criteria and a hostile self-review.</p>
+
+  <div class="prompt-card">
+    <div class="prompt-head">
+      <div class="t">UX1 - Trust fixes, token foundations, export mapping spec, golden egg</div>
+      <div class="m"><span class="model">Fable 5 - xhigh</span><span class="mode">Fresh session</span><button class="copy-btn" data-copy="p-ux1" type="button">Copy prompt</button></div>
+    </div>
+<pre id="p-ux1">Fresh session. You are UX1, the trust-and-foundations agent for the DESIGN HARDENING (UX) workstream on the Product Reinvention Hub. Mission: confirm the design review at current HEAD, seed the ledger, capture the screenshot baseline, land the trust fixes and dimensional token foundations, author the export mapping spec the Opus agents will implement against, and plant the golden egg. This is design-system productization, not a redesign. Verify in parallel with read-only subagents; edit as a single writer.
+
+READ FIRST, IN ORDER: CLAUDE.md; docs/orchestration.md; docs/design-review/AI_LEAD_DESIGNER_REVIEW.md (the adversarially verified dossier - your spec); docs/design-review/UI_UX_EXPORT_CX_REVIEW_FOR_CODING_AGENT.md (sequencing and non-goals); docs/design-review/UI_UX_EXPORT_CX_BACKLOG.xlsx (Roadmap, ExportFixSpec, AcceptanceTests - your ledger seed); the three templates in docs/export-templates/.
+
+BINDING GROUND RULES:
+- Gate before every push: pnpm typecheck &amp;&amp; pnpm lint &amp;&amp; pnpm test &amp;&amp; pnpm build, plus node scripts/check-bundle-budget.mjs (175 KB gzip is a frontend canary). Rating canaries PH $1,528 / PA $1,002 / GL $2,635 stay green.
+- Push = auto-deploy to app-prodhub-dev (~7 min). Batch pushes into waves.
+- Shared checkout: node tools/stowaway-check.mjs [paths] before EVERY commit; git commit --only [paths]; never git add -A.
+- SCOPE GUARD: frontend workstream - app/src plus app-side export code only. Server needs get ledgered, not made.
+- Live checks in tenant accenture-test. Stored-data repair on testco or any customer-facing tenant requires operator approval - see T1.
+- PROTECT LIST (binding on you and the judge): theme-by-value-override with zero theme branches in components; the documented AA contrast math and the on-accent ink-flip; the global reduced-motion guarantee; the Dialog/Drawer focus contract; the RefChip refId invariant; fail-safe bubble/notice rendering; grounded-cited AI refusal; the StateTileMap keyboard model. No raw hex in .tsx; no new arbitrary pixel values where a token exists.
+
+STEP 0 - VERIFY AT HEAD (cap 45 minutes):
+Record HEAD sha in docs/design-hardening/BASELINE.md. Spawn 3 read-only subagents (haiku) to spot-check every dossier Area 1-10 citation plus Appendix A: does each cited file:line still hold? Verdict per finding: CONFIRMED / ALREADY_FIXED / CHANGED. Honor Appendix C as settled law: do NOT wrap primitives in forwardRef (React 19 ref-as-prop; types-only fix via ComponentPropsWithRef); do NOT migrate the native SUPER_ADMIN select; do NOT rewrite Combobox listbox logic.
+
+STEP 1 - LEDGER + SCREENSHOT BASELINE:
+1. Transcribe the backlog Roadmap + ExportFixSpec + AcceptanceTests sheets plus dossier Appendix A into docs/design-hardening/ledger.json (id, area, title, severity, effort, phase C/K/X/E, status, evidence, test, lesson). CSV/JSON/PDF formats, sheet/column selection, and export progress UI enter as class ESCALATION, parked, trigger: operator GO. Duck Creek and Rating Tool exports are NOT parked - they are phase E, owned by UX3.
+2. Capture a fresh authenticated baseline of all 23 routes x light and dark with take-screenshots.mjs (auth-injection pattern: review-packet/capture-current-state.mjs) into review-packet/screens-baseline-[date]/. This is the parity oracle. The two known-stale legacy shots (double search, premium banner) are already resolved in code - record that, do not re-open them.
+
+STEP 2 - TRUST FIXES (one commit each, test-first):
+T1 Product-name mojibake (Area 1): reproduce the U+FFFD replacement character in the stored name; add a defensive guard at the shared name render seam so no high-salience surface (H1, breadcrumb, switcher, vitals, cards) ever renders U+FFFD - repair or flag, with tests covering a legitimate em dash (must pass through untouched), a corrupted value, and a plain name. Build the data-repair script and prove it on accenture-test through the real prod write path. Repair of testco or any customer-facing tenant: write it as a ledger item flagged OPERATOR-APPROVAL and do not run it.
+T2 Export correctness + hardening (Area 3, ExportFixSpec P0s): scope ldTables/rtTables to the owning product before building each ProductExport (kills the N-times duplication in portfolio exports); central safeCellValue() at the table() seam neutralizing leading = + - @ tab CR; generate the ARGB palette from the index.css tokens at build time (the hand-copied palette has already drifted on faint); empty RT tables render an intentional empty state, never a literal "(no columns)" header. KEEP the export menu - it gains Duck Creek and Rating Tool entries in UX3, so the dropdown now earns itself; do not convert it to a direct button. Workbook-inspection unit tests: a two-product portfolio with distinct tables emits each table once under its owner; malicious strings from filing text stay literal when parsed back; refId columns and filename sanitization intact.
+T3 Honesty weight (Area 8): SAMPLE badge at panel-header level on PortfolioMetrics (mirror the Pricing illustrative pill); an AI-summary marker on News paraphrases.
+T4 Citation gating (the trust slice of Area 7): chip styling AND navigation both gate on lookupEntry() resolving; unresolved brackets render muted plain text; remove the Explorer fallback on a miss. [1], [TBD], and [see below] must never become authoritative chips. Full chat-loop unification is UX2 Phase X - do not start it.
+
+STEP 3 - DIMENSIONAL TOKEN FOUNDATIONS (Area 2):
+D1 Type: derive the ramp from the ACTUAL 20-size distribution (Apple-adjacent, each size paired with a line-height) as Tailwind v4 @theme tokens; purge all 93 sub-pixel sizes FIRST as their own commit; codemod the top clusters; lint gate forbidding text-[Npx] outside a short documented allowlist; fix the misleading index.css:219 scale comment.
+D2 Radius: bind radius tokens into @theme first (the existing --radius-card is dead code), map the real clusters (6/7 xs, 8/9 sm, 10-12 md, 13/14 lg, 16+ xl), codemod.
+D3 Motion + widths: ONE duration band (keep --dur-1/2/3 = 200/280/380, delete 150/220/350), register as theme keys, lint-forbid raw duration-NNN; tokenize the five drawer widths (--w-drawer, --w-drawer-wide) and the 232px rail (--w-rail).
+After EACH of D1-D3: recapture the 46 screenshots, diff against the baseline, triage - every delta intentional, zero layout breaks. Attach the triaged diff summary to the commit.
+
+STEP 4 - EXPORT MAPPING SPEC (your groundwork for the Opus agents):
+Read the three committed templates programmatically and author docs/export-templates/MAPPING.md - the contract UX3 implements and UX4 audits:
+- E__OH_BRD.xlsx is the E+ OH BRD (E+ Product): it interfaces with Duck Creek and is the target state for all templates. Map canonical to BRD per sheet: forms to Forms (header row 4: CONTENT, FORM #, FORM TITLE, EFFECTIVE DATE, EXPIRATION DATE, Smart Comm and template id columns, ATTACHMENT RULES/BUSINESS RULES, FORM CATEGORY, APPLICABLE CW, STATE SPECIFIC, SHOW CONDITIONS, and the remaining state columns); coverages + L&amp;D typed options to Cov_Names &amp; Limit (DEFAULT LIMITS pairs and the section blocks below); rating factors to Factors (the FACTOR APPLICABILITY matrix: Factor, Factor Type, vehicle-class X columns) and to Fees, Factors, Assesment (keep the template's spelling byte-for-byte); rules to STP Rules; Version History gains an export-stamp row. State semantics: allStates maps to APPLICABLE CW = X; state lists map to STATE SPECIFIC plus the template's state convention.
+- PA_PROD_001_CoverageConfig.xlsx: Coverage sheet (RequirementID = refId BYTE-FOR-BYTE, CoverageName, Description, Path in the coverage[Type="..."] convention, CoverageType LineCoverages vs SubCoverage from the parentId tree, SubCoverages as the semicolon-joined child list, State, Transaction); Config sheet (LOB, ManuscriptID, ParentGroupID); InputFields sheet derived from L&amp;D typed options (FieldName, FieldID, FieldCaption, ValueType, ControlType Dropdown vs Textbox by option cardinality, FieldDefault).
+- PA_PROD_001_TableConfig.xlsx: TOC (Manuscript ID, Table Name, Complexity, State Applicable, Comment) + Config (TableName, EffectiveDate, EffectiveDateRenewal, IsVersion, ManuscriptID, SheetName, State Applicable) + one block-layout sheet per rt/ld table (MS Physical Path line, Manuscript ID line, Comments, table title line, then the key/value grid), sheet names in the template's CondensedName_N convention with the 31-char Excel limit handled deterministically.
+- For every direction include the UNMAPPED list: canonical fields with no template home, and template columns the canonical model cannot fill (these stay BLANK on export - never invented). Cite template cells (Sheet!Cell) for every mapping claim. Flag ambiguities with your recommendation - Opus should never have to guess.
+
+STEP 5 - GOLDEN EGG (own commit, mundane message):
+The operator's personal build signature, alongside - never replacing - the existing Accenture signature.
+- Console contract on app load, exact order: FIRST the existing line: Insurance Product Hub \u00B7 \u00A9 Accenture (glyphs U+00B7 and U+00A9; escapes used here only to keep this pack ASCII). THEN, after idle (requestIdleCallback, mirroring the existing signature's two-tier pattern - leave that egg untouched), an Apple-inspired reveal per the operator's reference image: a rounded indigo-to-violet gradient pill with white 600-weight text reading exactly: Engineered by Sal Scrudato in Hackensack - and beneath it, a muted quiet-gray secondary line reading exactly: for Lisa, and Sal "Tre" Scrudato III
+- Burial bar (this is a golden egg hunt - you are hiding it): the payload strings must be NON-GREPPABLE - a repo-wide search for Scrudato, Hackensack, or Lisa returns zero source hits. Assemble at runtime from at least three innocuous fragments spread across unrelated modules with misleading names and plausible decoy comments (cache salts, legacy locale shims, checksum vectors - or better ideas of your own); at least two encoding layers; at least one decoy trail that dead-ends. Be more creative than these minimums.
+- Constraints (non-negotiable): bundle delta under 1 KB gzip; no network calls; no timers beyond the idle callback; all gates stay green including your own new lint rules, the hex census, tests, and axe; nothing about it in docs, comments that reveal it, tests, or commit messages; the existing Accenture signature still fires first and unchanged.
+- Removal map: deliver the full burial map and step-by-step removal instructions ONLY in your final session reply to the operator. Never write them to the repo. Record only PASS in the ledger.
+
+STEP 6 - SHIP:
+Gate; wave push; pipeline green; update the UX workstream row in docs/orchestration.md with your sha. BASELINE.md, ledger.json, MAPPING.md, the baseline screenshots, and the new lint rules are all committed.
+
+DONE-WHEN:
+- BASELINE.md verdicts cover Areas 1-10 plus Appendix A at the recorded HEAD sha; ledger.json seeded and phased.
+- T1-T4 landed, each locked by tests that fail pre-fix; the testco repair exists only as an approval-flagged ledger item.
+- Zero sub-pixel text utilities remain; type, radius, and duration tokens live in @theme with lint gates; parity diffs for D1-D3 reviewed and attached.
+- MAPPING.md covers all three templates with cell-cited mappings and UNMAPPED lists in both directions.
+- The egg fires in a real browser in the correct order and styling; a repo-wide grep for the three names returns zero source hits; bundle delta recorded and under 1 KB; the removal map exists only in your final reply.
+- Full gate green including bundle budget; axe green; canaries green; deployed; nothing uncommitted.
+
+HOSTILE SELF-REVIEW (answer in BASELINE.md, except item 5 which goes only in your final reply):
+1. Which protect-list item did your changes come closest to violating, and how do you know they did not?
+2. Could a string starting with = still reach a workbook cell unescaped through ANY path? Name the test.
+3. Which MAPPING.md decision are you least confident in, and what did you recommend?
+4. Which screenshot deltas did you approve, and would a designer agree they are improvements?
+5. Could a teammate find the egg with grep, a minified-bundle string search, or by reading any single file? Walk the hunt as the hunter.</pre>
+  </div>
+  <div class="prompt-card">
+    <div class="prompt-head">
+      <div class="t">UX2 - The experience loop (primitives, composition a11y, experience)</div>
+      <div class="m"><span class="model">Opus 4.8 - xhigh + ultrathink</span><span class="mode">Fresh session</span><button class="copy-btn" data-copy="p-ux2" type="button">Copy prompt</button></div>
+    </div>
+<pre id="p-ux2">ultrathink. Fresh session. You are UX2, the experience-loop agent for the UX workstream. Mission: iterate ledger items through one fixed loop until the phase gates hold, turning local craft into governed primitives and completing the composition-level accessibility and experience work. Tests and lint rules are the law: a rule you do not lint is a rule you do not have. Productization, not redesign - the protect list is binding.
+
+READ FIRST: docs/design-hardening/ledger.json; docs/design-hardening/BASELINE.md; docs/design-hardening/OPERATING_NOTES.md (create if absent); docs/design-review/AI_LEAD_DESIGNER_REVIEW.md; the non-goals in docs/design-review/UI_UX_EXPORT_CX_REVIEW_FOR_CODING_AGENT.md; then CLAUDE.md; docs/orchestration.md.
+
+BINDING GROUND RULES: gate before every push (pnpm typecheck &amp;&amp; pnpm lint &amp;&amp; pnpm test &amp;&amp; pnpm build plus bundle budget, 175 KB gzip); canaries PH $1,528 / PA $1,002 / GL $2,635 green; batch pushes into waves; stowaway-check plus git commit --only, never git add -A; SCOPE GUARD app/src only (server needs get ledgered); the UX1 protect list verbatim; settled non-goals: no forwardRef wrapping, no native-select migration, no Combobox listbox rewrites. Do not touch the golden-egg modules if you happen to notice them; they pass every gate on their own.
+
+THE LOOP (repeat until STOP):
+1. ORIENT: reload ledger.json and OPERATING_NOTES.md. Take the open item in the current phase with the highest severity x confidence over effort.
+2. REPRODUCE: a red signal BEFORE editing - a failing unit or behavior test, an axe violation, a keyboard-smoke failure, or a screenshot demonstrating the defect. No red signal: NOT_REPRODUCIBLE with disproof, move on.
+3. FIX: minimal diff. New interaction behavior copies the app's own gold standards - Dialog for focus contracts, StateTileMap for roving keyboard models.
+4. JUDGE: spawn a fresh hostile-reviewer subagent whose entire context is the diff, the protect list, the item's acceptance line, and the five standing questions below. It never sees your rationale. REJECT means revise; two rejects parks the item ESCALATE with both verdicts attached.
+5. GATE (fast): typecheck, lint, test, build, bundle budget, axe; screenshot recapture plus parity diff for any visual change.
+6. COMMIT: stowaway-check, git commit --only, message "UX2 [ledger-id]: [title]".
+7. LEDGER: close with an evidence path, a one-line lesson, and the test or lint rule that locks it. Every closed item ships a permanent test or lint rule - never just a fix.
+8. WAVE (every 4-6 closed items): push, verify the deploy, run the Playwright suites against dev, record results into docs/design-hardening/RESULTS/.
+9. SELF-TUNE (every 5 iterations): distill lessons into OPERATING_NOTES.md, hard cap 40 lines, prune stale lines. Anything worth keeping forever must ALSO exist as a test or lint rule.
+
+PHASES (hard gates, in order; do not start the next early):
+PHASE C - PRIMITIVES. Build a headless Popover (trigger ref, anchored panel, outside-click, Escape, focus-return-to-trigger, portal and stacking) and a Menu on top (roving tabindex, arrow keys, Home/End; declare role=menu/menuitem ONLY with the full contract implemented); migrate ExportMenu (knowing UX3 adds Duck Creek and Rating Tool entries - build the menu real, not minimal), the Topbar user menu, SavedViews, and the ProductCard menu. Button gains loading (spinner, aria-busy, disabled, stable width) and the ~38 local busy patterns collapse onto it; Input error association (id on the message, aria-invalid, aria-describedby, role=alert); adopt the single focus-ring utility everywhere with one offset; Tabs to the APG pattern (roving tabindex, arrows, aria-controls, tabpanel; delete the dead children prop); Tooltip aria-describedby plus portal; Skeleton wrapped in role=status; every primitive root spreads className, style, and rest props. GATE: behavior tests per primitive on the Dialog.test pattern; every migrated menu closes on Escape and outside-click and returns focus to its trigger; axe green.
+PHASE K - COMPOSITION + SHELL. Skip-link plus focusable main (id, tabIndex -1) plus route-change focus keyed on the existing topSegment; aria-activedescendant for CommandPalette and Combobox (stable option ids; palette results get role=listbox/option); CommandPalette focus-restore on close (or refactor it onto Dialog); stop hijacking cmd/ctrl-F - keep cmd-K, make it non-toggling, skip editable targets; a token-pair WCAG contrast unit test wired into the gate (jsdom axe cannot check contrast; include the faint-on-raised floor from Appendix B); an in-app 404 inside the authenticated shell; breadcrumb and console labels from one shared source; a touch-target pass on Dialog/Drawer close, Combobox clear, and Topbar search. GATE: a Playwright keyboard-only smoke green against dev - load, skip to content, navigate sections, route-change focus lands, operate Tabs by arrow, open/close a menu and the palette with focus restored, native find works while editing.
+PHASE X - EXPERIENCE. Extract useChatStream(fnName, payloadBuilder) plus shared AssistantTurn, ToolChips, and retry/error handling; migrate Home and Claims onto them - Claims citations become navigable via the searchIndex resolver threaded into DeterminationCard, TOOL_LABELS moves to a shared module, Claims gains Retry through the NoticeBanner path. Zero-product onboarding: branch Home on settled products.length===0 (author, import, or explore card; composer demoted; suggested-prompt chips only when data exists); an Import a filing action on the Products hero deep-linking to Builder with the import modal pre-opened; resolve the FAB, toast, and composer corner collision. Motion governance: group the ~40 keyframes by intent, move literal durations onto the token band, IntersectionObserver-pause off-screen ambients, cap concurrent infinite loops; the pricing no-program state onto shared EmptyState with a correct glyph and an editor-only CTA; reserve the vivid gradient for primary moments; the show-count-only-when-more-than-1 and trailing-separator polish. GATE: a three-state Home journey test (zero-product, seeded, active); a chat parity test asserting Home and Claims share retry, error, tool-label, and citation behavior; reduced motion still global.
+
+ESCALATION RULE: parked ledger items (CSV/JSON/PDF formats, sheet and column selection, export progress UI, a spacing ramp beyond the width tokens, search-model IA changes) start ONLY on an operator GO written into the ledger, or when three closed items share one as root cause. Duck Creek and Rating Tool exports are NOT yours - they are UX3 phase E.
+
+STOP CONDITIONS: all three phase gates green with evidence and ledger HIGH/MED items in phases C/K/X dispositioned; or two consecutive iterations with zero movement on any gate - write docs/design-hardening/PARKED.md and stop; safety cap N_MAX=25; never stop with a dirty tree.
+
+DONE-WHEN:
+- Phase C, K, and X gates green; the Playwright keyboard smoke, three-state journey, and chat parity suites exist and pass against dev; the contrast unit test is in the gate.
+- No hand-rolled menu dismissal remains in migrated surfaces; no declared ARIA role anywhere without its full keyboard contract.
+- Ledger phases C/K/X dispositioned; OPERATING_NOTES.md current; every closed item locked by a test or lint rule.
+- Merged, pushed, deployed, pipeline green; the orchestration.md UX row updated with your final sha; RESULTS/ populated.
+
+STANDING JUDGE QUESTIONS (hand these to every hostile review):
+1. Does this diff violate the protect list, or introduce raw hex, an arbitrary pixel value, or a second pattern for an already-solved problem?
+2. Is every declared ARIA role backed by its full keyboard contract?
+3. Where does focus go on open, on close, and on Escape - and does it return to the trigger?
+4. Does identical-looking UI behave identically everywhere it appears?
+5. Which test or lint rule keeps this fixed forever?
+
+HOSTILE SELF-REVIEW (append to docs/design-hardening/RESULTS/loop-summary.md at stop):
+1. Which primitive migration was riskiest, and what did its parity diff show?
+2. What still looks clickable but is not, anywhere in the app?
+3. If a new surface were added tomorrow, which of your rules would it break first - and would lint catch it?
+4. What did the judge reject that you still believe was right?
+5. What would you DELETE from the UI layer? Lean counts.</pre>
+  </div>
+  <div class="prompt-card">
+    <div class="prompt-head">
+      <div class="t">UX3 - Export Suite: elevate XLSX, add Duck Creek (BRD) and Rating Tool</div>
+      <div class="m"><span class="model">Opus 4.8 - xhigh + ultrathink</span><span class="mode">Fresh session</span><button class="copy-btn" data-copy="p-ux3" type="button">Copy prompt</button></div>
+    </div>
+<pre id="p-ux3">ultrathink. Fresh session. You are UX3, the export-suite agent for the UX workstream. Mission: keep and elevate the current Excel export, then add two downstream-format exporters - Export to Duck Creek (the E+ OH BRD workbook) and Export to Rating Tool (the CoverageConfig + TableConfig pair) - so the Hub exports product definitions into the maintenance formats the customer already uses, positioning the Hub as the system of definition. The committed templates are the contract; docs/export-templates/MAPPING.md (authored by UX1) is your spec. Flagged-not-dropped applies to exports exactly as it does to imports: nothing is silently omitted.
+
+READ FIRST: docs/export-templates/MAPPING.md; the three templates in docs/export-templates/ (E__OH_BRD.xlsx - the E+ OH BRD, E+ Product, interfaces with Duck Creek, the target state for all templates; PA_PROD_001_CoverageConfig.xlsx; PA_PROD_001_TableConfig.xlsx); docs/design-hardening/ledger.json and OPERATING_NOTES.md; app/src/lib/export/excel.ts; CLAUDE.md; docs/orchestration.md.
+
+BINDING GROUND RULES: gate before every push (pnpm typecheck &amp;&amp; pnpm lint &amp;&amp; pnpm test &amp;&amp; pnpm build plus bundle budget); canaries green; waves; stowaway-check plus git commit --only; SCOPE GUARD app-side - exporters are client-side exceljs like the current one; every cell passes through safeCellValue (from UX1); palette only from the token-generated constants; refIds byte-for-byte everywhere; the protect list verbatim. Template structure is READ from the committed files at build and test time - never re-typed by hand.
+
+WORK (one commit per lettered item, test-first):
+E1 - ELEVATE THE CURRENT XLSX (keep it; zero format or data-shape changes): an elegance pass only - consistent banded tables, the token-generated palette, frozen header rows, autofilter on data sheets, measured column widths, tabular number formats, an aligned cover stat strip, intentional empty states. Lock with a shape test: pre and post workbooks contain identical sheet names, headers, and cell VALUES - only styling differs.
+E2 - EXPORT TO DUCK CREEK (BRD): generate a workbook matching E__OH_BRD structure exactly - all 13 sheets with byte-equal names (Version History, Forms, Policy UI, Cov_Names &amp; Limit, Factors, Driver History Details, STP Rules, ASLOB, Fees + Factors + Assesment [keep the template's exact spelling], Misc., Other comms, Renew, HDC); each sheet's title, instruction, and header rows copied from the committed template, data written beneath the real header rows. Mapping per MAPPING.md: forms to the Forms grid (CONTENT, FORM #, FORM TITLE, effective/expiration dates, attachment/business rules, FORM CATEGORY, APPLICABLE CW, STATE SPECIFIC, SHOW CONDITIONS, and the remaining columns); coverages and L&amp;D options to Cov_Names &amp; Limit; rating factors to the Factors applicability matrix and the Fees sheet; rules to STP Rules; a Version History row stamped with export date and Hub product revision. State semantics: allStates renders APPLICABLE CW = X; state lists render STATE SPECIFIC per the template convention. Template columns the canonical model cannot fill stay BLANK - never invented. Canonical data with no BRD home lands on ONE appended UNMAPPED appendix sheet (refId, kind, field, value, reason) so conservation holds: every canonical entity is mapped or listed.
+E3 - EXPORT TO RATING TOOL: a two-workbook set per product mirroring the PA_PROD_001 pair. CoverageConfig: Coverage sheet (RequirementID = refId byte-for-byte, CoverageName, Description, Path in the template's coverage[Type="..."] convention, CoverageType LineCoverages vs SubCoverage from the parentId tree, SubCoverages as the semicolon-joined child list, State from stateApplicability, Transaction); Config sheet (LOB, ManuscriptID, ParentGroupID per template); InputFields sheet derived from L&amp;D typed options (FieldName, FieldID, FieldCaption, ValueType, ControlType Dropdown vs Textbox by option cardinality, FieldDefault). TableConfig: TOC (Manuscript ID, Table Name, Complexity, State Applicable, Comment) and Config (TableName, EffectiveDate, EffectiveDateRenewal, IsVersion, ManuscriptID, SheetName, State Applicable) enumerating every rt/ld table, plus one block-layout sheet per table (MS Physical Path line, Manuscript ID line, Comments, table title line, then the key/value grid from the table's actual dimensions), sheet names in the template's CondensedName_N convention with the 31-character Excel limit handled deterministically. Delivery: a two-file download unless you can justify a zip in one ledger line.
+E4 - MENU + UX: ExportMenu on the UX2 Menu primitive gains the two entries - Export to Excel, Export to Duck Creek (BRD), Export to Rating Tool - each with a one-line "what you'll get" description; Button loading during generation; sanitized filenames per format.
+E5 - TESTS (the contract): structural golden diffs - generated BRD vs the committed template: sheet names, header rows, and column order byte-equal; generated Rating Tool pair FROM THE SEEDED PA.PROD.001 vs the committed PA_PROD_001 fixtures: structure byte-equal, RequirementIDs byte-equal, content spot-rows compared with documented deltas allowed; malicious strings stay literal through all three exporters; a zero-data product exports intentional empties in every format.
+
+DONE-WHEN:
+- All three exports generate cleanly from BOTH a seeded product and a freshly imported product in accenture-test.
+- Structural goldens green against the committed templates; the UNMAPPED appendix present and accurate; no template text re-typed anywhere in source.
+- Menu a11y green (Escape, outside-click, focus-return, arrow keys); loading states on all three actions.
+- Gates plus bundle budget green; deployed; ledger phase E rows closed with evidence; orchestration.md UX row updated with your sha.
+
+HOSTILE SELF-REVIEW (append to docs/design-hardening/RESULTS/loop-summary.md):
+1. Which canonical field has no home in ANY of the three formats - and is it on the UNMAPPED sheet?
+2. Open the generated BRD beside the template: what is the first difference a Hagerty PM would notice?
+3. Could any exported cell execute as a formula anywhere? Name the test that proves not.
+4. What breaks first on a product with 40 rating tables - sheet naming, the TOC, or memory - and how do you know?
+5. Did you re-type ANY template text instead of reading it from the committed file?</pre>
+  </div>
+  <div class="prompt-card">
+    <div class="prompt-head">
+      <div class="t">UX4 - Final hardening, round-trip proof, cold verdict</div>
+      <div class="m"><span class="model">Opus 4.8 - xhigh + ultrathink</span><span class="mode">Fresh session</span><button class="copy-btn" data-copy="p-ux4" type="button">Copy prompt</button></div>
+    </div>
+<pre id="p-ux4">ultrathink. Fresh session. You are UX4, the final hardening-and-verdict agent for the UX workstream. Two halves with a hard boundary: HARDEN, where you may edit, then VERDICT, which is cold and edit-free - anything red after the boundary is a NO-SHIP row, not a fix.
+
+READ FIRST: docs/design-hardening/ledger.json, BASELINE.md, OPERATING_NOTES.md; docs/export-templates/MAPPING.md; CLAUDE.md; docs/orchestration.md. Ground rules from UX1 apply verbatim (gate, canaries, waves, stowaway-check plus --only, SCOPE GUARD app-side, protect list).
+
+HARDEN (edits allowed, one commit per item):
+H1 - EXPORT FUZZ: drive all three exporters with hostile inputs - formula-leading strings (= + - @ tab CR), 10,000-character cells, unicode-heavy names, a zero-data product, a 40-table product. Parse every output back: valid workbooks, literal text everywhere, sheet-name collisions handled.
+H2 - ROUND-TRIP PROOF (the demo claim, tested end-to-end now that the IH series is complete): export the seeded PA product to Duck Creek BRD, import that workbook through the hardened import brain (IMPORT_TENANT=accenture-test), and score the re-imported product against the source: F1 at or above 0.95, refIds byte-exact at 100%, linkage metrics green. Log to docs/design-hardening/RESULTS/roundtrip.json. Fix shortfalls at the right layer - mapping or exporter here; if the gap is importer-side, do NOT touch server code: ledger it for the IH lane with the evidence attached.
+H3 - CROSS-FORMAT CONSISTENCY: one product exported to all three formats; entity counts and refIds reconcile per MAPPING.md; the UNMAPPED appendix accounts for every gap; no format invents data another format lacks.
+H4 - EGG VERIFICATION (record PASS or FAIL only - never describe the mechanism anywhere): in a real Chrome session the console shows the Accenture line first and the styled reveal after idle; a repo-wide grep for the three payload names returns zero source hits; bundle delta under 1 KB; the existing Accenture signature intact; no doc, test, or commit references.
+H5 - LEDGER SWEEP: every remaining open HIGH or MED item from UX1-UX3 is closed or PARKED with rationale and trigger.
+BOUNDARY: final commit, push, deploy, pipeline green. After this line you edit nothing.
+
+VERDICT (cold, no edits, nothing cached):
+Full gate (typecheck, lint, test, build, bundle budget, rating canaries); the axe suite and token-pair contrast test; the Playwright keyboard-only smoke, three-state journey, and chat parity suites against dev; a fresh screenshot sweep of all 23 routes x light/dark diffed against the UX1 baseline with every delta triaged intentional or regression; a fresh two-product portfolio XLSX plus a BRD plus a Rating Tool pair pulled from dev, opened, and asserted (tables once under their owner, malicious cells literal, palette matches tokens, structural goldens green); the round-trip re-run cold and re-scored.
+Write docs/design-hardening/VERDICT.md as a table: one row per DONE-WHEN criterion from UX1 through UX4, PLUS one row per protect-list invariant, verdict SHIP or NO-SHIP, every row citing a fresh artifact from this half by path and timestamp.
+ARCHIVE AND CLOSE: results, logs, screenshots, and all exported workbooks to docs/design-hardening/RESULTS/final-[date]/; docs/orchestration.md updated with the final sha and a VERDICT link; every accenture-test artifact you created torn down and proven with a listing; a successor handoff ONLY if any row is NO-SHIP.
+
+DONE-WHEN: H1-H5 green before the boundary; the round-trip meets thresholds in BOTH halves; VERDICT.md committed with all-fresh evidence including the protect-list attestation; archive committed; teardown proven.
+
+HOSTILE SELF-REVIEW (bottom of VERDICT.md):
+1. Which round-trip field class lost the most fidelity, and which layer owns it?
+2. Which verdict row is closest to flipping on one more re-run?
+3. Does anything you archived reveal the egg mechanism?
+4. What did you fix in HARDEN that UX1-UX3 should have caught - and which gate catches it now?</pre>
+  </div>
+</section>
+
+<section id="runbook">
+  <h2>Runbook</h2>
+  <div class="grid">
+    <div class="card"><h3>Environment</h3><p>Same dev lane: local checkout, app-prodhub-dev, accenture-test tenant. Playwright suites and screenshot capture run against dev after wave deploys via the auth-injection pattern.</p></div>
+    <div class="card"><h3>Frontend canaries</h3><p>Bundle budget (175 KB gzip), axe, the contrast unit test, screenshot parity, structural export goldens, and the rating canaries riding in pnpm test.</p></div>
+    <div class="card"><h3>Round-trip proof</h3><p>With import hardening complete, UX4 closes the loop: Hub to BRD to Hub re-import at F1 0.95+, refIds byte-exact. That is the system-of-definition claim, tested.</p></div>
+    <div class="card"><h3>Sequence discipline</h3><p>Strictly UX1 to UX4, single writer, fresh sessions. UX3 consumes the UX2 Menu primitive; UX4's verdict half is edit-free by construction.</p></div>
+    <div class="card"><h3>Egg discipline</h3><p>Non-greppable payload, under 1 KB, all gates green, Accenture line always first, removal map only in UX1's final reply. UX4 verifies PASS/FAIL without describing the mechanism.</p></div>
+    <div class="card"><h3>Data repair discipline</h3><p>The U+FFFD guard ships unconditionally; the repair script is proven on accenture-test; customer-facing tenants repair only on written operator GO.</p></div>
+  </div>
+</section>
+
+<footer>Design Hardening Build Pack v2 - UX Series + Export Suite. Four prompts, one loop, templates as contracts. ASCII-clean, self-contained.</footer>
+</div>
+<script>
+(function(){
+  var t=document.getElementById('themeToggle');
+  t.addEventListener('click',function(){
+    var h=document.documentElement;
+    var d=h.getAttribute('data-theme')==='dark';
+    h.setAttribute('data-theme', d?'light':'dark');
+    t.textContent = d?'Dark':'Light';
+  });
+  var btns=document.querySelectorAll('.copy-btn');
+  for(var i=0;i<btns.length;i++){
+    btns[i].addEventListener('click',function(e){
+      var id=e.currentTarget.getAttribute('data-copy');
+      var txt=document.getElementById(id).innerText;
+      var done=function(btn){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o;},1400);};
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done.bind(null,e.currentTarget));
+      } else {
+        var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+        try{document.execCommand('copy');}catch(err){}
+        document.body.removeChild(ta);done(e.currentTarget);
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>

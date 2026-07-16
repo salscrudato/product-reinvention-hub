@@ -1,7 +1,7 @@
 // Admin (/app/admin) — PLATFORM console (SUPER_ADMIN and SUPPORT only).
 // Cross-tenant: tenant management, global user management, platform audit, AI cost.
 // TENANT_ADMIN users are redirected to /app/tenant-admin (self-service org console).
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { IconShield, IconPlus, IconUserX, IconSearch, IconFileClock, IconWarning, IconLayers, IconTable, IconEdit } from '../components/ui/icons'
 import { adapter, getSuperAdminTenant } from '../lib/backend'
@@ -40,6 +40,11 @@ interface AiUsageDoc {
 
 type SeedReportDoc = SeedReport & { id: string }
 
+// Import pipeline telemetry is its own lazy chunk: the run inspector (pipeline
+// flow, waterfall, payload renderers) is heavy relative to the console shell and
+// only loads when the tab is opened — keeps the Admin route chunk in budget.
+const ImportRunsTab = lazy(() => import('../components/admin/ImportRunsTab'))
+
 function toMillis(v: unknown): number | null {
   if (v == null) return null
   if (typeof v === 'number') return v
@@ -73,6 +78,7 @@ export default function Admin() {
           { id: 'tenants',  label: 'Tenants'      },
           { id: 'users',    label: 'Users'       },
           { id: 'data',     label: 'Data'         },
+          { id: 'imports',  label: 'Import Runs'  },
           { id: 'audit',    label: 'Audit Log'    },
           { id: 'seed',     label: 'Seed Report'  },
           { id: 'ai-cost',  label: 'AI Cost'      },
@@ -83,6 +89,7 @@ export default function Admin() {
       {tab === 'tenants'  && <TenantsTab />}
       {tab === 'users'    && <UsersTab />}
       {tab === 'data'     && <DataTab />}
+      {tab === 'imports'  && <Suspense fallback={<Skeleton className="h-64" />}><ImportRunsTab /></Suspense>}
       {tab === 'audit'    && <AuditTab />}
       {tab === 'seed'     && <SeedTab />}
       {tab === 'ai-cost'  && <AiCostTab />}

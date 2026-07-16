@@ -11,7 +11,7 @@
 // document, odd = collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
-import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, DraftDedupMatch, DuckCreekExportResult, ManagedUser, PortalPolicy, PortalSummary, PortfolioPulse, TenantMember, TenantMembership, TenantResolveResult, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
+import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, DraftDedupMatch, DuckCreekExportResult, ImportRunSummary, ImportRunTrace, ManagedUser, PortalPolicy, PortalSummary, PortfolioPulse, TenantMember, TenantMembership, TenantResolveResult, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
 import { MutationConflictError } from './types'
 import { mapServerVersionRow, type ServerVersionRow } from './versionRead'
 
@@ -500,6 +500,17 @@ export const adapter: BackendAdapter = {
     },
     async searchAudit(filters: AuditSearchFilters): Promise<{ events: AuditSearchEvent[]; cursor: string | null; hasMore: boolean }> {
       return api('/admin/audit/search', { method: 'POST', body: JSON.stringify(filters) })
+    },
+    async listImportRuns(opts?: { limit?: number; tenant?: string }): Promise<{ runs: ImportRunSummary[]; storage: 'cosmos' | 'memory' }> {
+      const params = new URLSearchParams()
+      if (opts?.limit)  params.set('limit', String(opts.limit))
+      if (opts?.tenant) params.set('tenant', opts.tenant)
+      const qs = params.size > 0 ? `?${params}` : ''
+      return api<{ runs: ImportRunSummary[]; storage: 'cosmos' | 'memory' }>(`/admin/import/runs${qs}`)
+    },
+    async getImportRun(runId: string): Promise<ImportRunTrace> {
+      const { run } = await api<{ ok: boolean; run: ImportRunTrace }>(`/admin/import/runs/${encodeURIComponent(runId)}`)
+      return run
     },
   },
 
