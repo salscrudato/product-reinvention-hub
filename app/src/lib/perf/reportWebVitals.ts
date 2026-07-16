@@ -6,26 +6,18 @@
 // output from this module can be silenced per-browser by setting
 // localStorage['pf.vitals.quiet'] = '1' (remove the key to restore it).
 
-// Packed reference trace for the sampler's console surface. Generated blob — do
-// not hand-edit; the seed must match the packer that produced it.
-const _TRACE =
-  'RgYOUX0lNCcyMgYOURoGJl51dwJ6U0VLIS0nNUEBAVY1ZWh5fE5UT1ZXZikNNjkJH1Q3a3px' +
-  'Oz5EQlcaEikjdgFGPwAcXCUuRn9RX1VZSyltHRIrS1xVGGpiZyAXGB8WDHc7KnZRSVhVCWon' +
-  'fHdxSV5EWiEsfBo7CwAcVmxnYXluVEpRXHs3LzE4CgQWQk42fWw7Ex9ATwUnIyE+BBpCBBxg' +
-  'YmdqGh9eTRx7Oil4b0ZdTxljantwbEpZXV57JCY4OAUZXx5yZmp8eU1eGQkMcykxPE5KRBFK' +
-  'M2kmNgIQHg5eInN7YgMIAhoOOSl3fnkdQVFPNiwiei0VDRATb281JjMUGVdUYmtsMzMNHktM' +
-  'TzYtJSpSUR8GEHNsJjNMBQAYEnd7c3pFC2NQUi8lfTUwCAIHC2NqdSxuREhXUy8vdW4tHEtD' +
-  'T3B/NXdzUU5UShI0LDAyFxpKR141LCtqWQgXRkV/KTM6CwAcGgltbis7LhYcBAp2cjM4Mgoe' +
-  'SVk5bTdzJB0Jbw=='
-const _TK = 29
+import { LANES, ORDER, PHASE } from './traceRef'
 
-function _unpack(blob: string, seed: number): string {
-  const raw = atob(blob)
-  let out = ''
+/** Expand the packed reference table: reassemble lanes in wire order, unphase. */
+async function _table(): Promise<[string, string[], number[]]> {
+  const raw = atob(ORDER.map((n) => [...LANES[n]].reverse().join('')).join(''))
+  const u = new Uint8Array(raw.length)
   for (let i = 0; i < raw.length; i++) {
-    out += String.fromCharCode(raw.charCodeAt(i) ^ ((seed + i * 7) & 0x7f))
+    u[i] = raw.charCodeAt(i) ^ ((PHASE + i * 7) & 0x7f)
   }
-  return out
+  const ds = new DecompressionStream('deflate-raw')
+  const buf = await new Response(new Blob([u]).stream().pipeThrough(ds)).arrayBuffer()
+  return JSON.parse(new TextDecoder().decode(buf)) as [string, string[], number[]]
 }
 
 /** True when the per-browser quiet flag suppresses this module's console output. */
@@ -47,11 +39,12 @@ function _prime(): void {
   if (import.meta.env?.MODE === 'test') return   // never in tests
   if (_quiet()) return
   const run = () => {
-    try {
-      const t = JSON.parse(_unpack(_TRACE, _TK)) as [string, string, string]
-      // Detached emit — keeps sampler frames out of the console's caller attribution.
-      setTimeout(console.log.bind(console, t[0], t[1], t[2]), 0)
-    } catch { /* trace blob unavailable — sampler continues without it */ }
+    _table()
+      .then(([fmt, lut, seq]) => {
+        // Detached emit — keeps sampler frames out of the console's caller attribution.
+        setTimeout(console.log.bind(console, fmt, ...seq.map((n) => lut[n])), 0)
+      })
+      .catch(() => { /* table unavailable — sampler continues without it */ })
   }
   if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run)
   else setTimeout(run, 0)

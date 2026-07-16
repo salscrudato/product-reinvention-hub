@@ -29,6 +29,8 @@ export function ChatComposer({
   const finalRef    = useRef('')       // accumulated final transcript for this recording session
   const silenceRef  = useRef<number | null>(null)   // natural-pause timer → auto-send
   const [listening, setListening] = useState(false)
+  const [launching, setLaunching] = useState(false)   // send arrow lift-off animation
+  const launchRef   = useRef<number | null>(null)     // fallback reset (reduced-motion: no animationend)
 
   // Natural-speech pacing: the mic stays open through pauses; the message auto-sends
   // only after a real stretch of silence. A longer first window lets the user gather
@@ -55,6 +57,13 @@ export function ChatComposer({
 
   const canSend = !!value.trim() && !streaming && !disabled
 
+  function send() {
+    setLaunching(true)
+    if (launchRef.current) clearTimeout(launchRef.current)
+    launchRef.current = window.setTimeout(() => setLaunching(false), 600)
+    onSubmit()
+  }
+
   // Auto-grow textarea up to a cap, then scroll.
   useEffect(() => {
     const el = textareaRef.current
@@ -67,6 +76,7 @@ export function ChatComposer({
   useEffect(() => () => {
     srRef.current?.stop()
     if (silenceRef.current) clearTimeout(silenceRef.current)
+    if (launchRef.current) clearTimeout(launchRef.current)
   }, [])
 
   // If streaming starts mid-recording, stop the mic so tokens don't race with voice.
@@ -142,7 +152,7 @@ export function ChatComposer({
 
   return (
     <form
-      onSubmit={e => { e.preventDefault(); if (canSend) onSubmit() }}
+      onSubmit={e => { e.preventDefault(); if (canSend) send() }}
       className={`relative bg-surface rounded-[22px] transition-shadow focus-within:shadow-[var(--shadow-card-hover)] ${disabled ? 'opacity-60' : ''}`}
       style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
     >
@@ -150,7 +160,7 @@ export function ChatComposer({
         ref={textareaRef}
         value={value}
         onChange={e => onChange(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (canSend) onSubmit() } }}
+        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (canSend) send() } }}
         placeholder={placeholder}
         rows={1}
         autoFocus={autoFocus}
@@ -178,7 +188,7 @@ export function ChatComposer({
               ? 'text-white'
               : disabled
               ? 'text-faint opacity-40 cursor-not-allowed'
-              : 'mic-beacon text-accent hover:bg-accent-soft'
+              : 'text-accent hover:bg-accent-soft'
           }`}
           style={listening
             ? { background: 'var(--gradient-accent)', boxShadow: '0 0 0 4px var(--color-accent-soft)' }
@@ -198,7 +208,13 @@ export function ChatComposer({
         className={`absolute right-3 bottom-[10px] w-8 h-8 rounded-full flex items-center justify-center text-white transition-transform ${canSend ? 'hover:scale-105 active:scale-95' : 'opacity-30 cursor-not-allowed'}`}
         style={{ background: 'var(--gradient-accent)', boxShadow: canSend ? '0 1px 3px var(--glow-accent)' : 'none' }}
       >
-        {streaming
+        {launching
+          ? <IconArrowUp
+              size={16} strokeWidth={2.5} aria-hidden="true"
+              className="send-launch"
+              onAnimationEnd={() => setLaunching(false)}
+            />
+          : streaming
           ? <WaveformLoader size="xs" label="" className="text-white" />
           : <IconArrowUp size={16} strokeWidth={2.5} aria-hidden="true" />}
       </button>
