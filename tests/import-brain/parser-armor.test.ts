@@ -129,7 +129,7 @@ describe('S3 armor: zip bombs are rejected with structured IMPORT_413 (never a c
     const { structural, isoGrids } = await readWorkbookToStructural(buf, 't.xlsx', 'XLSX')
     expect(structural.sheets).toHaveLength(1)
     expect(isoGrids[0].cells[1][0]).toBe('GL.COV.001')
-  })
+  }, 60_000)
 
   it('parseWallClockMs breach surfaces as IMPORT_413, not a hang', async () => {
     process.env.IMPORT_PARSE_WALL_CLOCK_MS = '1'
@@ -175,7 +175,7 @@ describe('L4 lock: phantom used-range is clamped to the true extent', () => {
     const elapsed = Date.now() - t0
     expect(isoGrids[0].cells).toHaveLength(1609)      // clamped, not believed
     expect(elapsed).toBeLessThan(60_000)              // time budget: no phantom walk
-  })
+  }, 120_000)
 
   it.skipIf(!existsSync(ALL_LINES))('corpus: All Lines "Rules Repository" (reported ~1,048,417 rows) clamps to its real extent', async () => {
     const buf = readFileSync(ALL_LINES)

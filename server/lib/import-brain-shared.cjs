@@ -3183,6 +3183,8 @@ var Ctx = class {
   recognized = [];
   defects = [];
   notices = [];
+  /** consumedSpans collector (CE1-S6): null = instrumentation off (default). */
+  spans = null;
   warned = /* @__PURE__ */ new Set();
   /** De-duplicated warning (keeps the summary readable when a value recurs on 100s of rows). */
   warnOnce(key, msg) {
@@ -3199,6 +3201,10 @@ var Ctx = class {
   }
   addNotice(n) {
     this.notices.push(n);
+  }
+  /** Record a consumed rectangle (no-op unless a collector was supplied). */
+  consume(sheet, rowStart, rowEnd, colStart, colEnd, reason) {
+    if (this.spans && rowEnd >= rowStart) this.spans.push({ sheet, rowStart, rowEnd, colStart, colEnd, reason });
   }
   recordUnmapped(sheet, header, handled) {
     const labels = [];
@@ -4049,7 +4055,8 @@ function parseLdTables(grid, ctx) {
     if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} (LD marker): table ${refId} appears more than once \u2014 rows merged.`);
     if (!entry.name) entry.name = name;
     if (!entry.valueHeader) entry.valueHeader = valueHeader;
-    for (let dr = headerR + 1; dr < rows.length; dr++) {
+    let dr = headerR + 1;
+    for (; dr < rows.length; dr++) {
       if (LD_MARKER.test(norm2(cell(grid, dr, markerCol)))) break;
       const raw = cell(grid, dr, valueCol);
       const label = clean(raw);
@@ -4059,6 +4066,7 @@ function parseLdTables(grid, ctx) {
       entry.rows.push({ label, value: num, constraintNote: note || void 0 });
       if (/default/i.test(note)) entry.defaultValue = num;
     }
+    ctx.consume(grid.sheet, r, dr - 1, markerCol, Math.max(valueCol, commentCol, markerCol), `ld-table:${refId}`);
     tables.set(refId, entry);
   }
   return [...tables.entries()].map(([refId, t]) => ({
@@ -4107,7 +4115,8 @@ function parseRtTables(grid, ctx) {
     const entry = tables.get(refId) ?? { name: pendingName, columns, rows: [], colIdx };
     if (tables.has(refId)) ctx.warnOnce(`duprt:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} col "RATE TABLE ID": table ${refId} appears more than once \u2014 rows merged.`);
     if (!entry.name) entry.name = pendingName;
-    for (let dr = headerR + 1; dr < rows.length; dr++) {
+    let dr = headerR + 1;
+    for (; dr < rows.length; dr++) {
       const f = norm2(cell(grid, dr, 0));
       if (RT_NAME_MARKER.test(f) || RT_ID_MARKER.test(f)) break;
       const cells = row(grid, dr);
@@ -4120,6 +4129,7 @@ function parseRtTables(grid, ctx) {
       });
       entry.rows.push(rec);
     }
+    ctx.consume(grid.sheet, r, dr - 1, 0, colIdx.length ? Math.max(...colIdx) : 0, `rt-table:${refId}`);
     tables.set(refId, entry);
   }
   return [...tables.entries()].map(([refId, t]) => ({
@@ -4347,6 +4357,7 @@ function detectReferenceTables(grids, consumed, ctx) {
       const n = (nameCount.get(displayName) ?? 0) + 1;
       nameCount.set(displayName, n);
       if (n > 1) displayName = `${displayName} (v${n})`;
+      ctx.consume(grid.sheet, start, Math.min(end, grid.cells.length - 1), 0, covCodes.length ? 33 : 1, `reference-table:${displayName}`);
       drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, optionValues, rowLabels, backLinkWas });
     }
   }
@@ -4630,8 +4641,9 @@ function rateTableArtifacts(grid) {
   }
   return artifacts;
 }
-function mapIsoWorkbook(grids, overlay) {
+function mapIsoWorkbook(grids, overlay, consumedSpans) {
   const ctx = new Ctx();
+  ctx.spans = consumedSpans ?? null;
   const fwGrid = selectFrameworkSheet(grids, ctx);
   const formGrid = findSheet(grids, /forms specifications?|forms library/i, /dynamic/i);
   const dynGrid = findSheet(grids, /forms dynamic|dynamic data/i);
@@ -4660,6 +4672,19 @@ function mapIsoWorkbook(grids, overlay) {
   const refDrafts = detectReferenceTables(grids, consumedSheets, ctx);
   const refPrefix = refIdPrefix(productRefId ?? firstFw?.coverages[0]?.refId ?? "") || lob.prefix;
   const refTables = refDrafts.length ? mintReferenceTables(refDrafts, refPrefix) : [];
+  if (ctx.spans) {
+    const gridSpan = (g, used, reason) => {
+      if (!g || !used || g.cells.length === 0) return;
+      const cols = g.cells.reduce((m, r) => Math.max(m, r?.length ?? 0), 0);
+      ctx.consume(g.sheet, 0, g.cells.length - 1, 0, Math.max(0, cols - 1), reason);
+    };
+    gridSpan(fwGrid, !!fwResults && fwResults.length > 0, "framework-sheet");
+    gridSpan(formGrid, forms.length > 0, "forms-sheet");
+    gridSpan(dynGrid, Object.keys(dynByForm).length > 0, "dynamic-fields-sheet");
+    gridSpan(ruleGrid, rules.length > 0, "rules-sheet");
+    gridSpan(optGrid, formRules.length > 0, "form-rules-sheet");
+    gridSpan(rateGrid, !!ratingProgram, "rating-sheet");
+  }
   const products = [];
   if (fwResults) {
     for (const fw of fwResults) {
