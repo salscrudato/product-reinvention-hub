@@ -36,5 +36,3 @@ tmp*.md
 .DS_Store
 Thumbs.db
 
-docs/audit/import_live_results.json
-docs/audit/import_ledger.json
