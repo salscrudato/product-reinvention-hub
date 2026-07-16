@@ -1,5 +1,5 @@
 {
-  "runAt": "2026-07-15T12:05:20.881Z",
+  "runAt": "2026-07-15T18:22:44.215Z",
   "mode": "offline",
   "baseUrl": null,
   "targets": {
@@ -248,16 +248,16 @@
     {
       "id": "CORE",
       "mode": "offline",
-      "goldenFields": 4132,
-      "extractedFields": 4132,
-      "tp": 4132,
+      "goldenFields": 5065,
+      "extractedFields": 5065,
+      "tp": 5065,
       "fp": 0,
       "fn": 0,
       "precision": 1,
       "recall": 1,
       "f1": 1,
-      "numericTotal": 112,
-      "numericExact": 112,
+      "numericTotal": 159,
+      "numericExact": 159,
       "numericExactRate": 1,
       "entityRecall": 1,
       "diagnostics": {
@@ -273,6 +273,14 @@
           "rule": {
             "golden": 234,
             "found": 234
+          },
+          "ldTable": {
+            "golden": 51,
+            "found": 51
+          },
+          "ratePlaceholder": {
+            "golden": 123,
+            "found": 123
           }
         },
         "missByField": {},
@@ -280,7 +288,9 @@
         "extractedKinds": {
           "product": 1,
           "coverage": 112,
-          "rule": 234
+          "rule": 234,
+          "ldTable": 51,
+          "ratePlaceholder": 123
         }
       },
       "extras": {

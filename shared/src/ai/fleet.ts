@@ -102,6 +102,46 @@ export const DEPLOY_GPT      = FLEET_REGISTRY.VISION.deploymentName           //
 export const DEPLOY_GPT_MINI = FLEET_REGISTRY.CHEAP_GENERAL.deploymentName   // 'gpt-5-mini'
 export const DEPLOY_EMBED    = FLEET_REGISTRY.EMBED.deploymentName            // 'text-embedding-3-small'
 
+// ─── Extended deployments (specialty surfaces, 2026-07-15 fleet expansion) ────
+// Deployments outside the chat/embed ModelRole router: each rides a DIFFERENT API
+// surface on the same Foundry resource + key. Kept separate from FLEET_REGISTRY so
+// the ModelRole union (and every Record<ModelRole, …> consumer) is untouched.
+// Ready-to-use callers live in server/lib/external/foundry.js.
+
+/** Which HTTP surface an extended deployment answers on (all same resource + key):
+ *  openai-responses  → POST {endpoint}/openai/v1/responses           (gpt-*-pro REJECT chat/completions)
+ *  openai-chat       → POST {endpoint}/openai/v1/chat/completions
+ *  openai-embeddings → POST {endpoint}/openai/v1/embeddings
+ *  cohere-rerank     → POST {endpoint}/providers/cohere/v2/rerank
+ *  mistral-ocr       → POST {endpoint}/providers/mistral/azure/ocr */
+export type ExtendedSurface =
+  | 'openai-responses' | 'openai-chat' | 'openai-embeddings' | 'cohere-rerank' | 'mistral-ocr'
+
+export interface ExtendedDeployment {
+  readonly deploymentName: string
+  readonly surface:        ExtendedSurface
+  readonly roleLabel:      string
+}
+
+export const EXTENDED_DEPLOYMENTS = {
+  /** Deliberate deep reasoning for the hardest import disambiguation. Quality ≫ latency. */
+  DEEP_REASONER:   { deploymentName: 'gpt-5.4-pro',              surface: 'openai-responses',  roleLabel: 'Deep escalation reasoning — GPT-5.4-pro' },
+  /** Cross-vendor verify panel, third model lineage (decorrelates Claude+GPT errors). */
+  VERIFY_XAI:      { deploymentName: 'grok-4.3',                 surface: 'openai-chat',       roleLabel: 'Verify panel — Grok 4.3' },
+  /** Cross-vendor verify panel, fourth model lineage. */
+  VERIFY_DEEPSEEK: { deploymentName: 'DeepSeek-V4-Pro',          surface: 'openai-chat',       roleLabel: 'Verify panel — DeepSeek V4 Pro' },
+  /** Fast multimodal tier (page classification, vision-ladder steps). */
+  FAST_GENERAL:    { deploymentName: 'gpt-5.4-mini',             surface: 'openai-chat',       roleLabel: 'Fast general / vision — GPT-5.4-mini' },
+  /** Higher-fidelity query-time embeddings (write-time bulk stays on EMBED). */
+  EMBED_QUALITY:   { deploymentName: 'text-embedding-3-large',   surface: 'openai-embeddings', roleLabel: 'Quality retrieval embeddings — text-embedding-3-large' },
+  /** Cross-encoder rerank over hybrid retrieval results (citation precision). */
+  RERANK:          { deploymentName: 'Cohere-rerank-v4.0-pro',   surface: 'cohere-rerank',     roleLabel: 'RAG rerank — Cohere Rerank v4 pro' },
+  /** Document OCR → markdown with native tables (the 0-char-PDF import fix). */
+  DOC_OCR:         { deploymentName: 'mistral-document-ai-2512', surface: 'mistral-ocr',       roleLabel: 'Document OCR — Mistral Document AI' },
+} as const satisfies Record<string, ExtendedDeployment>
+
+export type ExtendedRole = keyof typeof EXTENDED_DEPLOYMENTS
+
 // ─── Fleet pricing (for cost accounting / spend ceilings) ─────────────────────
 // USD per 1M tokens. Illustrative list-price estimates — the cost GUARD only needs a
 // conservative order-of-magnitude to enforce a spend ceiling, not billing-grade exactness.
@@ -119,6 +159,17 @@ export const FLEET_PRICING: Readonly<Record<string, FleetPricing>> = {
   [DEPLOY_GPT_MINI]: { inputPerMTok:  0.30, outputPerMTok:  1.60 },
   // Embeddings bill input tokens only (no completion) — the output tier is 0.
   [DEPLOY_EMBED]:    { inputPerMTok:  0.02, outputPerMTok:  0.00 },
+  // Extended deployments (2026-07-15). Conservative order-of-magnitude estimates — the
+  // guard needs a ceiling, not billing exactness. Rerank + OCR bill per-search/per-page,
+  // not per-token; their entries approximate that as an input-token rate so record() still
+  // moves the spend window (callers pass a nominal token count).
+  [EXTENDED_DEPLOYMENTS.DEEP_REASONER.deploymentName]:   { inputPerMTok: 20.00, outputPerMTok: 150.00 },
+  [EXTENDED_DEPLOYMENTS.VERIFY_XAI.deploymentName]:      { inputPerMTok:  3.00, outputPerMTok:  15.00 },
+  [EXTENDED_DEPLOYMENTS.VERIFY_DEEPSEEK.deploymentName]: { inputPerMTok:  1.50, outputPerMTok:   6.00 },
+  [EXTENDED_DEPLOYMENTS.FAST_GENERAL.deploymentName]:    { inputPerMTok:  0.30, outputPerMTok:   1.60 },
+  [EXTENDED_DEPLOYMENTS.EMBED_QUALITY.deploymentName]:   { inputPerMTok:  0.13, outputPerMTok:   0.00 },
+  [EXTENDED_DEPLOYMENTS.RERANK.deploymentName]:          { inputPerMTok:  2.00, outputPerMTok:   0.00 },
+  [EXTENDED_DEPLOYMENTS.DOC_OCR.deploymentName]:         { inputPerMTok:  3.00, outputPerMTok:   0.00 },
 } as const
 
 /** Estimate USD cost for a call. Unknown deployment names fall back to the priciest tier

@@ -2,6 +2,8 @@
 
 pnpm monorepo: `app/` (React/Vite) · `shared/` (types, rating, seed) · `server/` (Azure App
 Service host: Express + Cosmos + Foundry AI + Blob) · `functions/` (AI plumbing — reference only, not deployed).
+External data-source clients (SEC EDGAR, TX DOI filings, VIN decode, hazards, geocode, specialty
+AI surfaces) live in `server/lib/external/` — see its README before adding any new upstream call.
 Azure backend: the app talks to a same-origin `/api/*` host — JWT auth, Cosmos data, Foundry
 Claude AI, Blob storage.
 

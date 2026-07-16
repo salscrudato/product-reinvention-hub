@@ -15,6 +15,7 @@ build/
 .env.*.local
 *.local
 apikeys.md
+keys.md
 tmp_key.md
 tmp_acn_secrets.md
 model_secrets.md

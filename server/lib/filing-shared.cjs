@@ -1110,6 +1110,7 @@ function reconcileFiling(ex, opts = {}) {
     ratingProgram,
     ldTables,
     rtTables,
+    ratePlaceholders: [],
     summary
   };
   const review = {
