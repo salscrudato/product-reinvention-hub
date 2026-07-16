@@ -1,0 +1,18 @@
+{
+  "wave": "A",
+  "archiveRoot": "C:/Users/salvatore.scrudato/hub-archive/2026-07-16",
+  "items": [
+    { "path": "hardening-corpus.zip", "action": "delete", "reason": "s16 DELETE: corpus zip export - already absent at cleanse start, recorded for the map" },
+    { "path": "hardening-corpus", "action": "delete", "reason": "s16 DELETE: unzipped corpus export duplicating samples/ + docs content (README_CORPUS confirms it is an export, tiers repo-native)" },
+    { "path": "docs/review", "action": "delete", "reason": "s16 DELETE: 43MB heavy PNG/PDF/mjs capture artifacts (SCREENSHOTS.pdf, shots/, screens-after/, _capture.mjs); all gitignored/untracked; the six allow-listed *.md deliverables no longer exist" },
+    { "path": "firestore-debug.log", "action": "delete", "reason": "s16 DELETE: Firebase debug log - already absent, recorded for the map" },
+    { "path": "build", "action": "delete", "reason": "s16 DELETE: stray root build/ mockups (gtm-tracker-mockup.html, product-process-template.json); gitignored; not referenced by any script (docs/build is a different, kept path)" },
+    { "path": "snowchat", "action": "delete", "reason": "s16 DELETE: legacy non-workspace cruft - already removed in f90e30c, recorded for the map" },
+    { "path": "Sal_Scrudato Policy.pdf", "action": "delete", "reason": "s16 DELETE: personal document - already absent, recorded for the map" },
+    { "path": ".firebase", "action": "delete", "reason": "s16 DELETE: Firebase deploy cache - already absent (Azure cutover), recorded for the map" },
+    { "path": "test-results", "action": "delete", "reason": "s16 DELETE: Playwright artifacts - already absent, recorded for the map" },
+    { "path": "tools/orchestrate/run", "action": "delete", "reason": "s16 DELETE: headless orchestration session logs (gitignored, local only)" },
+    { "path": "CHECKSUMS.md5", "action": "delete", "reason": "s16 DELETE: checksum sidecar for the removed hardening-corpus export (tracked)" },
+    { "path": "README_CORPUS.md", "action": "delete", "reason": "s16 DELETE: readme sidecar for the removed hardening-corpus export (tracked)" }
+  ]
+}

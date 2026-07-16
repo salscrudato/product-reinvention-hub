@@ -1,0 +1,11 @@
+{
+  "wave": "2-functions",
+  "archiveRoot": "C:/Users/salvatore.scrudato/hub-archive/2026-07-16",
+  "items": [
+    {
+      "path": "functions",
+      "action": "archive",
+      "reason": "F7: reference-only AI plumbing, never deployed; unwired from workspace+gate in 51ff5b5 with gate green before removal; node_modules and lib (regenerable) stripped before archiving"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "wave": "B",
+  "archiveRoot": "C:/Users/salvatore.scrudato/hub-archive/2026-07-16",
+  "items": [
+    { "path": "docs/audit/import_eval_extracted-CORE.json", "action": "delete", "reason": "s16 DELETE: regenerable import-eval extraction dump (written by scripts/import-eval.mts:594; tracked, recoverable from history)" },
+    { "path": "docs/audit/import_eval_extracted-GL.json", "action": "delete", "reason": "s16 DELETE: regenerable import-eval extraction dump (tracked, recoverable from history)" },
+    { "path": "docs/audit/import_eval_extracted-IM.json", "action": "delete", "reason": "s16 DELETE: regenerable import-eval extraction dump (tracked, recoverable from history)" },
+    { "path": "docs/audit/import_eval_extracted-PR.json", "action": "delete", "reason": "s16 DELETE: regenerable import-eval extraction dump (tracked, recoverable from history)" },
+    { "path": "docs/audit/import_eval_results-CORE.json", "action": "delete", "reason": "s16 DELETE: regenerable eval results JSON (written by scripts/import-eval.mts:633)" },
+    { "path": "docs/audit/import_eval_results-GL.json", "action": "delete", "reason": "s16 DELETE: regenerable eval results JSON" },
+    { "path": "docs/audit/import_eval_results-IM-PR.json", "action": "delete", "reason": "s16 DELETE: regenerable eval results JSON" },
+    { "path": "docs/audit/import_eval_results-IM.json", "action": "delete", "reason": "s16 DELETE: regenerable eval results JSON" },
+    { "path": "docs/audit/import_eval_results-PR.json", "action": "delete", "reason": "s16 DELETE: regenerable eval results JSON" },
+    { "path": "docs/audit/import_eval_results.json", "action": "delete", "reason": "s16 DELETE: regenerable eval results JSON" },
+    { "path": "docs/audit/filing_live_results.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript (written by scripts/filing-live.mts:200)" },
+    { "path": "docs/audit/import_live_results-addl.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript" },
+    { "path": "docs/audit/import_live_results-adv.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript" },
+    { "path": "docs/audit/import_live_results-none.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript" },
+    { "path": "docs/audit/import_live_results-pdf-roundtrip.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript" },
+    { "path": "docs/audit/import_live_results-pdf.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript" },
+    { "path": "docs/audit/import_live_results.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript (gitignored/untracked)" },
+    { "path": "docs/audit/ops_live_results.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript" },
+    { "path": "docs/audit/portal_live_results.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript" },
+    { "path": "docs/audit/seed_v2_live_results.json", "action": "delete", "reason": "s16 DELETE: regenerable live-run transcript" },
+    { "path": "docs/build/wave1-core-live-attempt1-aborted45min.log", "action": "delete", "verifyIdenticalTo": "docs/import-hardening/RESULTS/wave1-core-live-attempt1-aborted45min.log", "reason": "s16 DELETE: byte-identical copy of docs/import-hardening/RESULTS/ original (sha256-verified by purge-wave)" },
+    { "path": "docs/build/wave1-core-live.log", "action": "delete", "verifyIdenticalTo": "docs/import-hardening/RESULTS/wave1-core-live.log", "reason": "s16 DELETE: byte-identical copy of docs/import-hardening/RESULTS/ original (sha256-verified)" },
+    { "path": "docs/build/wave2-core-live.log", "action": "delete", "verifyIdenticalTo": "docs/import-hardening/RESULTS/wave2-core-live.log", "reason": "s16 DELETE: byte-identical copy of docs/import-hardening/RESULTS/ original (sha256-verified)" },
+    { "path": "docs/build/phasew-offline-run.md", "action": "delete", "verifyIdenticalTo": "docs/import-hardening/RESULTS/phasew-offline-run.md", "reason": "s16 DELETE: byte-identical copy of docs/import-hardening/RESULTS/ original (sha256-verified); corpus-baseline.json and wave1-live-attempts.md DIFFER and are kept" }
+  ]
+}
