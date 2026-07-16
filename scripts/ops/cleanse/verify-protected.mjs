@@ -44,6 +44,11 @@ const ALLOWED = [
   /^package\.json$/,            // Phase 2 unwire (scripts only)
   /^pnpm-workspace\.yaml$/,     // Phase 2 unwire (workspace list only)
   /^samples\/corpus-2026-07\//, // Phase 4 additive staging folder
+  // Foreign edits found mid-run (boot-signature easter-egg removal, authored outside
+  // this session) and committed as found work in bd75eef at the user's explicit
+  // direction during the Phase 1 hand-off. Not a cleanse purge action.
+  /^app\/src\/lib\/capability\.ts$/,
+  /^app\/src\/lib\/perf\/reportWebVitals\.ts$/,
 ]
 
 const pathspec = PROTECTED.map(p => `"${p}"`).join(' ')
