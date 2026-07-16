@@ -15,9 +15,11 @@
   --color-text:        #131318;
   --color-dim:         #5B5C6B;
   /* Third text tier — the faintest legible grey. Darkened to clear WCAG AA (≥4.5:1
-     on page/surface/raised) so hint text, legends, timestamps and placeholders
-     stay readable; still visibly lighter than `dim` to preserve the hierarchy. */
-  --color-faint:       #6B6D7E;
+     on page/surface/raised/hover AND on the `--color-chip` count-badge wash over any
+     of them — the chip-on-raised composite was the binding case) so hint text,
+     legends, timestamps and placeholders stay readable; still visibly lighter than
+     `dim` to preserve the hierarchy. */
+  --color-faint:       #646575;
 
   /* Accent — Accenture-inspired violet. `accent` reads AA (6.1:1) on white for
      text/icons/borders; `bright` is the signature stop (glows + gradient start);
@@ -35,18 +37,24 @@
   --color-on-accent:     #FFFFFF;
 
   /* Success green — darkened from #059669 (3.4–3.8:1, below WCAG AA on every
-     surface) to clear AA as *body text*, not just as icons/dots: it now reads
-     4.96–5.48:1 on page/surface/raised. Batch-2 surfaces (Rules "No violations",
-     the Admin audit before/after diff, Claims) render it as small text, so the
-     earlier "icons-only, fix before body copy" caveat had to be resolved. Still a
-     recognisable emerald and distinct from the violet accent. */
-  --color-good:        #047857;
-  --color-warn:        #B45309;
+     surface) to clear AA as *body text*, not just as icons/dots — including on its
+     own `--color-good-soft` badge wash over the darkest badge host (raised). Batch-2
+     surfaces (Rules "No violations", the Admin audit before/after diff, Claims)
+     render it as small text, so the earlier "icons-only, fix before body copy"
+     caveat had to be resolved. Still a recognisable emerald and distinct from the
+     violet accent. */
+  --color-good:        #047454;
+  /* Caution amber — darkened from #B45309 (3.98:1 on its own warn-badge wash over
+     raised, below WCAG AA) so warn badge/pill text clears 4.5:1 on every real badge
+     host (page/surface/raised) and as plain text on hover. Same hue family. */
+  --color-warn:        #A54C08;
   /* Danger red — darkened from #DC2626 (4.37:1 on raised, below WCAG AA) to clear AA
      as body text on every surface (page/surface/raised all ≥ 4.5:1). Still a
      recognisable danger red; distinct from the violet accent. */
   --color-danger:      #B91C1C;
-  --color-info:        #2563EB;
+  /* Info blue — darkened from #2563EB (4.20:1 on its own info-soft wash over raised)
+     so LOB / IN_PROGRESS badge text clears 4.5:1 on every badge host. Same family. */
+  --color-info:        #235EDE;
 
   /* State-scope map — semantic tile tokens so the map renders with zero raw hex.
      `tile-oos` is the out-of-scope fill (a neutral grey sitting between `hover`
@@ -58,13 +66,15 @@
   /* Import pipeline stage tints (R0) — the TWO new semantic hues for the agent
      constellation: WARM marks the escalation ladder's hand-off lane (haiku →
      sonnet → opus), COOL marks the adversarial validator lane. Both AA-safe as
-     small text on surface; soft/line companions follow the accent convention. */
-  --color-stage-warm:      #B45309;
-  --color-stage-warm-soft: rgba(180,83,9,.09);
-  --color-stage-warm-line: rgba(180,83,9,.28);
-  --color-stage-cool:      #0E7490;
-  --color-stage-cool-soft: rgba(14,116,144,.09);
-  --color-stage-cool-line: rgba(14,116,144,.28);
+     small text on every surface AND on their own soft washes over page/surface/
+     raised (the wash-over-raised composite was the binding case); soft/line
+     companions follow the accent convention and track the foreground rgb. */
+  --color-stage-warm:      #A54C08;
+  --color-stage-warm-soft: rgba(165,76,8,.09);
+  --color-stage-warm-line: rgba(165,76,8,.28);
+  --color-stage-cool:      #0D6F8A;
+  --color-stage-cool-soft: rgba(13,111,138,.09);
+  --color-stage-cool-line: rgba(13,111,138,.28);
 
   /* Apple-inspired UI type: genuine San Francisco on Apple devices, Inter Variable
      (tuned below to San-Francisco-like single-story glyphs) everywhere else. */
@@ -86,17 +96,17 @@
   /* ── Semantic status soft tints ─────────────────────────────────────────────
      Badge backgrounds (.10) and interactive wash (.08/.14) aligned to AA-safe
      foreground tokens. danger-* uses the darkened #B91C1C base. */
-  --color-good-soft:    rgba(4,120,87,.10);
+  --color-good-soft:    rgba(4,116,84,.10);
   /* good-line — the border that pairs with good-soft on a "done / satisfied" chip
      (claims checklist, home cockpit). A token so the green tint adapts per theme
      instead of a hard-coded rgba in the component. */
-  --color-good-line:    rgba(4,120,87,.18);
+  --color-good-line:    rgba(4,116,84,.18);
   --color-danger-badge: rgba(185,28,28,.10);
   --color-danger-hover: rgba(185,28,28,.08);
   --color-danger-press: rgba(185,28,28,.14);
   --color-danger-line:  rgba(185,28,28,.20);
-  --color-warn-badge:   rgba(180,83,9,.10);
-  --color-info-soft:    rgba(37,99,235,.08);
+  --color-warn-badge:   rgba(165,76,8,.10);
+  --color-info-soft:    rgba(35,94,222,.08);
 
   /* ── UI micro-tints ─────────────────────────────────────────────────────────
      Count-badge chip bg (.06), table zebra stripe (.018), ghost list-row hover (.02). */
@@ -123,13 +133,15 @@
      the board renders ONE stop at a time (it is scoped to a single project, and the
      project NAME always accompanies the accent — identity is never color-alone).
      AA math, validated (WCAG small-text, worst light surface #F3F3F8):
-       cyan 5.05 · fuchsia 5.72 · olive 6.40 · indigo 7.15 · rose 5.46  — all ≥4.5:1.
+       cyan 5.19 · fuchsia 5.72 · olive 6.40 · indigo 7.15 · rose 5.46  — all ≥4.5:1,
+     including on each stop's own -soft wash composited over raised (the cyan stop
+     was darkened a step to clear that composite; the token-contrast gate enforces it).
      Families deliberately avoid the semantic hues (accent violet, good green, info
      blue, warn amber, danger red) so a project accent can never impersonate a
      disposition or status. Noted deviation: the cyan stop's OKLCH chroma (0.087)
      sits just under the categorical-chart floor (0.1) — accepted because stops are
      never simultaneous series and the name is the primary identity carrier. */
-  --color-proj-1: #0B7285;  --color-proj-1-soft: rgba(11,114,133,.09);  --color-proj-1-line: rgba(11,114,133,.28);
+  --color-proj-1: #0B7083;  --color-proj-1-soft: rgba(11,112,131,.09);  --color-proj-1-line: rgba(11,112,131,.28);
   --color-proj-2: #A21CAF;  --color-proj-2-soft: rgba(162,28,175,.08);  --color-proj-2-line: rgba(162,28,175,.26);
   --color-proj-3: #3F6212;  --color-proj-3-soft: rgba(63,98,18,.09);    --color-proj-3-line: rgba(63,98,18,.28);
   --color-proj-4: #4338CA;  --color-proj-4-soft: rgba(67,56,202,.08);   --color-proj-4-line: rgba(67,56,202,.26);
@@ -189,8 +201,8 @@
      Paired with their foreground tokens (`--color-danger`, `--color-warn`).
      danger-soft updated to match the darkened #B91C1C danger foreground. */
   --color-danger-soft: rgba(185,28,28,.06);
-  --color-warn-soft:   rgba(180,83,9,.08);
-  --color-warn-line:   rgba(180,83,9,.20);
+  --color-warn-soft:   rgba(165,76,8,.08);
+  --color-warn-line:   rgba(165,76,8,.20);
 
   /* ── Product workspace hero gradient ────────────────────────────────────────
      A subtle accent wash behind the hero header card — same hue family as the
@@ -273,10 +285,11 @@ html[data-theme="dark"] {
   --color-border:        rgba(255,255,255,.10);
   --color-border-strong: rgba(255,255,255,.16);
 
-  /* Ink — three tiers, all AA (text 16:1, dim 8:1, faint 5.8:1 on surface). */
+  /* Ink — three tiers, all AA (text 16:1, dim 8:1, faint 6:1 on surface; faint
+     lightened a step so it also clears the chip-wash-over-raised composite). */
   --color-text:  #F2F2F6;
   --color-dim:   #ADAEBE;
-  --color-faint: #90919F;
+  --color-faint: #9495A3;
 
   /* Accent — LIGHT violet so `text-accent` / borders / icons read AA on dark
      (8.1:1 on surface). Bright + strong stay saturated for glows/gradients.
@@ -289,10 +302,11 @@ html[data-theme="dark"] {
   --color-on-accent:     #16082B;
 
   /* Status — the 400-level tints (AA as body text on dark: good 9.4, warn 10.9,
-     danger 6.6, info 7.2 on surface). */
+     danger 7, info 7.2 on surface). Danger is lightened one step past the 400 so
+     it also clears 4.5:1 on its own press wash over raised (the binding case). */
   --color-good:   #34D399;
   --color-warn:   #FBBF24;
-  --color-danger: #F87171;
+  --color-danger: #F98383;
   --color-info:   #60A5FA;
 
   /* State-scope map — a mid-dark out-of-scope tile (distinct from surface) + amber peril. */
@@ -308,12 +322,14 @@ html[data-theme="dark"] {
   --color-stage-cool-line: rgba(34,211,238,.32);
 
   /* Per-project accents — 400-level recasts, re-validated on the worst dark surface
-     (#1E1E27): cyan 6.81 · fuchsia 6.72 · lime 10.96 · indigo 5.54 · pink 6.24 — all
-     ≥4.5:1 small-text AA. Same five families as light; dark mode recasts by value. */
+     (#1E1E27): cyan 6.81 · fuchsia 6.72 · lime 10.96 · indigo 5.66 · pink 6.24 — all
+     ≥4.5:1 small-text AA, including on each stop's own -soft wash composited over
+     raised (indigo lightened a step to clear that composite; gate-enforced). Same
+     five families as light; dark mode recasts by value. */
   --color-proj-1: #06B6D4;  --color-proj-1-soft: rgba(6,182,212,.13);    --color-proj-1-line: rgba(6,182,212,.32);
   --color-proj-2: #E879F9;  --color-proj-2-soft: rgba(232,121,249,.13);  --color-proj-2-line: rgba(232,121,249,.32);
   --color-proj-3: #A3E635;  --color-proj-3-soft: rgba(163,230,53,.12);   --color-proj-3-line: rgba(163,230,53,.30);
-  --color-proj-4: #818CF8;  --color-proj-4-soft: rgba(129,140,248,.14);  --color-proj-4-line: rgba(129,140,248,.34);
+  --color-proj-4: #838EF8;  --color-proj-4-soft: rgba(131,142,248,.14);  --color-proj-4-line: rgba(131,142,248,.34);
   --color-proj-5: #F472B6;  --color-proj-5-soft: rgba(244,114,182,.13);  --color-proj-5-line: rgba(244,114,182,.32);
 
   /* Elevation — neutral dark shadows (violet glow reads as noise on black). */
@@ -323,13 +339,13 @@ html[data-theme="dark"] {
   /* Semantic soft tints — rebased on the 400-level foregrounds so they read on dark. */
   --color-good-soft:    rgba(52,211,153,.14);
   --color-good-line:    rgba(52,211,153,.30);
-  --color-danger-badge: rgba(248,113,113,.18);
-  --color-danger-hover: rgba(248,113,113,.12);
-  --color-danger-press: rgba(248,113,113,.22);
-  --color-danger-line:  rgba(248,113,113,.32);
+  --color-danger-badge: rgba(249,131,131,.18);
+  --color-danger-hover: rgba(249,131,131,.12);
+  --color-danger-press: rgba(249,131,131,.22);
+  --color-danger-line:  rgba(249,131,131,.32);
   --color-warn-badge:   rgba(251,191,36,.18);
   --color-info-soft:    rgba(96,165,250,.16);
-  --color-danger-soft:  rgba(248,113,113,.12);
+  --color-danger-soft:  rgba(249,131,131,.12);
   --color-warn-soft:    rgba(251,191,36,.12);
   --color-warn-line:    rgba(251,191,36,.32);
 
