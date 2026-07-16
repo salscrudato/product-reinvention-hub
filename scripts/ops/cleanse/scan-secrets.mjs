@@ -36,15 +36,18 @@ const PATTERNS = [
   [/\bsk-[A-Za-z0-9_-]{20,}/, 'sk-style-api-key'],
   [/\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}/, 'jwt'],
   [/[A-Za-z0-9+/]{86}==/, 'cosmos-master-key-shape'],
-  [/(api[_-]?key|secret|token|password|passwd|connection[_-]?string)\s*[:=]\s*["'][^"']{12,}["']/i, 'assigned-secret-literal'],
+  // bare "token" is a UI concept in this codebase (design tokens, form-token chips) - require
+  // a credential-flavored prefix so 'token: "var(--color-x)"' style literals do not hit.
+  [/(api[_-]?key|secret|(api|access|auth|bearer)[_-]?token|password|passwd|connection[_-]?string)\s*[:=]\s*["'][^"']{12,}["']/i, 'assigned-secret-literal'],
   [/(AZURE|COSMOS|FOUNDRY|BLOB|STORAGE)[A-Z_]*(KEY|SECRET|TOKEN|CONN)[A-Z_]*\s*[:=]\s*\S{12,}/, 'env-style-secret-value'],
 ]
 
 // Lines that are clearly placeholders / env reads, not values.
-const BENIGN = /process\.env|import\.meta\.env|YOUR_|<[A-Za-z_ -]+>|\bexample\b|\bredacted\b|\bplaceholder\b|\*\*\*|xxxx/i
+// sha512/integrity: npm lockfile subresource hashes match the base64-key shape but are public.
+const BENIGN = /process\.env|import\.meta\.env|YOUR_|<[A-Za-z_ -]+>|\bexample\b|\bredacted\b|\bplaceholder\b|\*\*\*|xxxx|integrity|sha512-|sha384-|\bfake[-_']|\bstub[-_']|\bdummy[-_']|\$cfg\[|\$env:|data:image\//i
 
 const BINARY_EXT = /\.(png|jpg|jpeg|gif|ico|pdf|xlsx|xlsm|docx|zip|woff2?|ttf|eot|mp4|webm|svg)$/i
-const SKIP_PATH = /^(node_modules|\.git|dist|build|coverage|test-results)\/|\/(node_modules|dist|build)\//
+const SKIP_PATH = /^(node_modules|\.git|dist|build|coverage|test-results)\/|\/(node_modules|dist|build)\/|package-lock\.json$|pnpm-lock\.yaml$|yarn\.lock$/
 
 let files
 if (ALL) {
