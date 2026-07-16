@@ -45,6 +45,173 @@ function sniffContainer(buf, mediaType) {
   return { container: 'UNKNOWN', workbookKind: null }
 }
 
+// ─── ZIP pre-inspection (RISK R5 / CRASH_CENSUS F-3) ──────────────────────────
+// ExcelJS materializes the WHOLE decompressed workbook before any clamp runs — a
+// crafted high-ratio zip turns a small upload into multi-GB RSS on the single-
+// instance host. This walker reads ONLY the OOXML central directory (EOCD → CEN,
+// declared sizes; nothing is inflated) and enforces layered ceilings BEFORE
+// wb.xlsx.load. Env-tunable; breach throws a structured IMPORT_413 error, which
+// stage0-router surfaces as an honest notice (never a crash).
+
+function envInt(name, dflt) {
+  const v = Number(process.env[name])
+  return Number.isFinite(v) && v > 0 ? Math.floor(v) : dflt
+}
+
+function importZipLimits() {
+  return {
+    totalUncompressedBytes:   envInt('IMPORT_ZIP_MAX_UNCOMPRESSED_BYTES', 314572800), // 300 MB
+    entryCount:               envInt('IMPORT_ZIP_MAX_ENTRIES', 2000),
+    perEntryCompressionRatio: envInt('IMPORT_ZIP_MAX_ENTRY_RATIO', 400),
+    declaredCellCount:        envInt('IMPORT_ZIP_MAX_DECLARED_CELLS', 3000000),
+    parseWallClockMs:         envInt('IMPORT_PARSE_WALL_CLOCK_MS', 180000),
+  }
+}
+
+// The compression-ratio ceiling only applies to entries at least this large:
+// tiny XML parts (content types, shared styles) legitimately deflate >100x, but a
+// bomb needs BULK. Entries below the floor are still counted toward the total-
+// bytes and cell-count ceilings, so splitting a bomb into small entries walks
+// into entryCount/totalUncompressedBytes instead.
+const RATIO_FLOOR_BYTES = 4 * 1024 * 1024
+
+// Conservative lower bound for one declared cell's XML footprint
+// (`<c r="A1"><v>1</v></c>` ≈ 24 bytes). declaredCellCount is enforced as
+// ceil(declared uncompressed bytes of xl/worksheets/*.xml ÷ 24) — deliberately
+// NOT from the <dimension> element: whole-column-formatted sheets DECLARE
+// 1,048,576 phantom rows (SECURA Property RF, All Lines Rules Repository) while
+// their sheet XML stays small; a dimension-based count would reject exactly the
+// legitimate files the used-range clamp exists to save. Phantom rows add no XML
+// bytes, bombs do — bytes are the honest signal at pre-inspection time.
+const MIN_BYTES_PER_CELL = 24
+const SHEET_XML_RE = /^xl\/worksheets\/[^/]+\.xml$/i
+
+function import413(reason, detail, limits, observed) {
+  const err = new Error(`IMPORT_413 ${reason}: ${detail}`)
+  err.code = 'IMPORT_413'
+  err.reason = reason
+  err.limits = { ...limits, observed }
+  return err
+}
+
+function readUInt64LE(buf, off) {
+  // Number (not BigInt): real workbook sizes fit 2^53 comfortably; a bomb
+  // declaring more just reads as a huge number and breaches the ceiling anyway.
+  return buf.readUInt32LE(off) + buf.readUInt32LE(off + 4) * 0x100000000
+}
+
+/**
+ * Walk the OOXML container's central directory from the raw buffer. Pure reads —
+ * no inflation, no ExcelJS. Returns per-entry declared sizes; throws IMPORT_413
+ * on any ceiling breach, or a plain Error when the buffer is not a readable zip.
+ *
+ * @param {Buffer} buf
+ * @param {{ limits?: object }} [opts]  test override for the ceilings
+ * @returns {{ entries: Array<{name: string, compressedBytes: number, uncompressedBytes: number}>,
+ *             entryCount: number, totalUncompressedBytes: number, declaredCellEstimate: number }}
+ */
+function inspectOoxmlContainer(buf, opts = {}) {
+  const limits = { ...importZipLimits(), ...(opts.limits || {}) }
+
+  // 1. EOCD: scan back for PK\x05\x06 (max comment 65535 bytes + 22-byte record).
+  const minEocd = 22
+  if (!buf || buf.length < minEocd) throw new Error('not a zip container (too small)')
+  let eocd = -1
+  const scanFloor = Math.max(0, buf.length - (65535 + minEocd))
+  for (let i = buf.length - minEocd; i >= scanFloor; i--) {
+    if (buf[i] === 0x50 && buf[i + 1] === 0x4b && buf[i + 2] === 0x05 && buf[i + 3] === 0x06) { eocd = i; break }
+  }
+  if (eocd < 0) throw new Error('not a zip container (no end-of-central-directory record)')
+
+  let entryCount = buf.readUInt16LE(eocd + 10)
+  let cdSize     = buf.readUInt32LE(eocd + 12)
+  let cdOffset   = buf.readUInt32LE(eocd + 16)
+
+  // ZIP64: the 16-bit/32-bit fields saturate; the real values live in the ZIP64
+  // EOCD record found via its locator (PK\x06\x07, 20 bytes, just before EOCD).
+  if (entryCount === 0xffff || cdSize === 0xffffffff || cdOffset === 0xffffffff) {
+    const loc = eocd - 20
+    if (loc >= 0 && buf.readUInt32LE(loc) === 0x07064b50) {
+      const z64Off = readUInt64LE(buf, loc + 8)
+      if (z64Off + 56 <= buf.length && buf.readUInt32LE(z64Off) === 0x06064b50) {
+        entryCount = readUInt64LE(buf, z64Off + 32)
+        cdSize     = readUInt64LE(buf, z64Off + 40)
+        cdOffset   = readUInt64LE(buf, z64Off + 48)
+      }
+    }
+  }
+
+  if (entryCount > limits.entryCount) {
+    throw import413('entryCount', `zip declares ${entryCount} entries (ceiling ${limits.entryCount})`, limits, { entryCount })
+  }
+  if (cdOffset >= buf.length || cdOffset + cdSize > buf.length) {
+    throw new Error('corrupt zip: central directory outside the buffer')
+  }
+
+  // 2. CEN walk: declared compressed/uncompressed sizes per entry.
+  const entries = []
+  let p = cdOffset
+  let totalUncompressedBytes = 0
+  let sheetXmlBytes = 0
+  for (let n = 0; n < entryCount; n++) {
+    if (p + 46 > buf.length || buf.readUInt32LE(p) !== 0x02014b50) {
+      throw new Error(`corrupt zip: bad central-directory entry at ${p}`)
+    }
+    let compressedBytes   = buf.readUInt32LE(p + 20)
+    let uncompressedBytes = buf.readUInt32LE(p + 24)
+    const nameLen  = buf.readUInt16LE(p + 28)
+    const extraLen = buf.readUInt16LE(p + 30)
+    const cmtLen   = buf.readUInt16LE(p + 32)
+    const name = buf.toString('utf8', p + 46, p + 46 + nameLen)
+
+    // ZIP64 extra field (id 0x0001) carries the real sizes when saturated.
+    if (compressedBytes === 0xffffffff || uncompressedBytes === 0xffffffff) {
+      let e = p + 46 + nameLen
+      const eEnd = e + extraLen
+      while (e + 4 <= eEnd) {
+        const id = buf.readUInt16LE(e); const sz = buf.readUInt16LE(e + 2)
+        if (id === 0x0001) {
+          let f = e + 4
+          if (uncompressedBytes === 0xffffffff && f + 8 <= eEnd) { uncompressedBytes = readUInt64LE(buf, f); f += 8 }
+          if (compressedBytes === 0xffffffff && f + 8 <= eEnd) { compressedBytes = readUInt64LE(buf, f); f += 8 }
+          break
+        }
+        e += 4 + sz
+      }
+    }
+
+    totalUncompressedBytes += uncompressedBytes
+    if (SHEET_XML_RE.test(name)) sheetXmlBytes += uncompressedBytes
+
+    if (uncompressedBytes >= RATIO_FLOOR_BYTES) {
+      const ratio = uncompressedBytes / Math.max(1, compressedBytes)
+      if (ratio > limits.perEntryCompressionRatio) {
+        throw import413('perEntryCompressionRatio',
+          `entry "${name}" declares ${uncompressedBytes} bytes from ${compressedBytes} compressed (ratio ${Math.round(ratio)}, ceiling ${limits.perEntryCompressionRatio})`,
+          limits, { name, compressedBytes, uncompressedBytes, ratio: Math.round(ratio) })
+      }
+    }
+
+    entries.push({ name, compressedBytes, uncompressedBytes })
+    p += 46 + nameLen + extraLen + cmtLen
+  }
+
+  if (totalUncompressedBytes > limits.totalUncompressedBytes) {
+    throw import413('totalUncompressedBytes',
+      `zip declares ${totalUncompressedBytes} uncompressed bytes (ceiling ${limits.totalUncompressedBytes})`,
+      limits, { totalUncompressedBytes })
+  }
+
+  const declaredCellEstimate = Math.ceil(sheetXmlBytes / MIN_BYTES_PER_CELL)
+  if (declaredCellEstimate > limits.declaredCellCount) {
+    throw import413('declaredCellCount',
+      `worksheet XML declares ~${declaredCellEstimate} cells from ${sheetXmlBytes} bytes (ceiling ${limits.declaredCellCount}; estimate = bytes / ${MIN_BYTES_PER_CELL})`,
+      limits, { sheetXmlBytes, declaredCellEstimate })
+  }
+
+  return { entries, entryCount, totalUncompressedBytes, declaredCellEstimate }
+}
+
 // ─── ExcelJS → grids → StructuralModel ────────────────────────────────────────
 
 function colLetterToIndex(letters) {
@@ -92,8 +259,30 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
     throw new Error('exceljs is not installed in the server host (npm install --prefix server)')
   }
 
+  // Armor BEFORE materialization: ceilings are enforced on declared central-
+  // directory sizes; a breach throws IMPORT_413 and ExcelJS never runs.
+  inspectOoxmlContainer(buf)
+
   const wb = new ExcelJS.Workbook()
-  await wb.xlsx.load(buf)
+  // Wall-clock ceiling on the parse itself. Honest limitation: a rejection
+  // cannot abort ExcelJS's CPU-bound work mid-flight (no worker isolation here);
+  // it bounds how long the pipeline WAITS and surfaces a structured notice
+  // instead of hanging the run. CRASH_CENSUS-style child-process isolation is
+  // the harness-side complement.
+  const limits = importZipLimits()
+  let wallTimer
+  try {
+    await Promise.race([
+      wb.xlsx.load(buf),
+      new Promise((_, reject) => {
+        wallTimer = setTimeout(
+          () => reject(import413('parseWallClockMs', `workbook parse exceeded ${limits.parseWallClockMs}ms`, limits, { parseWallClockMs: limits.parseWallClockMs })),
+          limits.parseWallClockMs)
+      }),
+    ])
+  } finally {
+    clearTimeout(wallTimer)
+  }
 
   const grids = []
   const hiddenGrids = []
@@ -147,4 +336,32 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
   return { structural, skippedHiddenSheets, isoGrids }
 }
 
-module.exports = { sniffContainer, readWorkbookToStructural }
+// ─── Workbook signal collection (CRASH_CENSUS F-0 residual) ──────────────────
+// Harvest refId tokens + sheet names from a StructuralModel for deterministic LOB
+// inference. This is the SEAM-FREE home of the collector: stage0-router.js keeps
+// an internal copy (that module requires ./ai-call, an AI seam offline harnesses
+// must not touch) — the two are pinned together by tests/import-brain so the
+// crash-census replica could die. Cap 500 refIds: a signal sample, not a census.
+function collectWorkbookSignals(structural, REFID_TOKEN) {
+  const refIds = []
+  const sheetNames = []
+  for (const fp of (structural.sheets || [])) {
+    sheetNames.push(fp.sheetName)
+    const rows = fp.cells || []
+    for (const row of rows) {
+      for (const cell of row) {
+        if (typeof cell !== 'string') continue
+        const m = cell.match(new RegExp(REFID_TOKEN.source, 'gi'))
+        if (m) refIds.push(...m)
+        if (refIds.length > 500) break
+      }
+      if (refIds.length > 500) break
+    }
+  }
+  return { refIds, sheetNames }
+}
+
+module.exports = {
+  sniffContainer, readWorkbookToStructural,
+  inspectOoxmlContainer, importZipLimits, collectWorkbookSignals,
+}
