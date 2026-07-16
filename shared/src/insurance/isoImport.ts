@@ -17,6 +17,7 @@ import type {
   RTTable, LDTable, LDRow, RatingStep, RatingGroupSummary, CoverageTerm, TermKind,
 } from '../types'
 import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
+import { refIdToDocId } from './refId'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
 import {
   matchCoverageByName, matchRuleReferenceToTables, resolveCoverageCode,
@@ -307,8 +308,9 @@ function refIdPrefix(refId: string): string {
   if (m) return m[1]!.toUpperCase()
   return (refId.split(/[.\-_\d]/).filter(Boolean)[0] ?? '').toUpperCase()
 }
-/** Firestore-safe doc id (matches the seed: dots → dashes). */
-function dashId(refId: string): string { return refId.replace(/\./g, '-') }
+/** Firestore-safe doc id (matches the seed: dots → dashes) — the canonical mint
+ *  now lives in refId.ts (BACKLOG_SEED item 1); this alias keeps call sites stable. */
+const dashId = refIdToDocId
 /** Pull an LD/RT table ref out of a free-text "rule reference" cell. */
 function extractTableRef(v: IsoCell): string | undefined {
   const m = text(v).match(/\b((?:LD|RT)Table\.\w+)/i)

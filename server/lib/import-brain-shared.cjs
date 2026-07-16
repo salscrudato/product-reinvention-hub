@@ -26,12 +26,14 @@ __export(brain_server_entry_exports, {
   MAX_EMBED_ROWS: () => MAX_EMBED_ROWS,
   SURFACED_COLUMNS: () => SURFACED_COLUMNS,
   buildStructuralModel: () => buildStructuralModel,
+  dashId: () => dashId,
   fingerprintGrid: () => fingerprintGrid,
   inferLob: () => inferLob,
   mapIsoWorkbook: () => mapIsoWorkbook,
   normalizeCellValue: () => normalizeCellValue,
   pickBestHeaderRow: () => pickBestHeaderRow,
   refIdSegmentKind: () => refIdSegmentKind,
+  refIdToDocId: () => refIdToDocId,
   resolveLobByRefId: () => resolveLobByRefId,
   scoreHeaderCandidates: () => scoreHeaderCandidates,
   synthesizeRefId: () => synthesizeRefId
@@ -2026,6 +2028,12 @@ function synthesizeRefId(lob, kind, seq, parentSeq) {
   return lob.refIdScheme.synthesize(kind, seq, parentSeq);
 }
 
+// shared/src/insurance/refId.ts
+function refIdToDocId(refId) {
+  return refId.replace(/\./g, "-");
+}
+var dashId = refIdToDocId;
+
 // shared/src/insurance/coverageHierarchy.ts
 function nameKey(s) {
   return s.toUpperCase().replace(/\s+/g, " ").trim();
@@ -2496,9 +2504,7 @@ function refIdPrefix(refId) {
   if (m) return m[1].toUpperCase();
   return (refId.split(/[.\-_\d]/).filter(Boolean)[0] ?? "").toUpperCase();
 }
-function dashId(refId) {
-  return refId.replace(/\./g, "-");
-}
+var dashId2 = refIdToDocId;
 function extractTableRef(v) {
   const m = text(v).match(/\b((?:LD|RT)Table\.\w+)/i);
   return m ? m[1] : void 0;
@@ -2793,7 +2799,7 @@ function finalizeCoverages(resolved, draftByRefId, at, sheetName, ctx) {
     const draft = draftByRefId.get(rc.refId);
     const cells = draft.cells;
     return {
-      docId: dashId(rc.refId),
+      docId: dashId2(rc.refId),
       refId: rc.refId,
       label: `${rc.refId} \u2014 ${rc.name}`,
       data: {
@@ -3293,7 +3299,7 @@ function parseRules(grid, ctx) {
       continue;
     }
     byId.set(id, {
-      docId: dashId(id),
+      docId: dashId2(id),
       refId: id,
       label: `${id} \u2014 ${clean(at(cells, "subCategory"))}`,
       data: {
@@ -3361,7 +3367,7 @@ function parseFormRules(grid, ctx) {
       continue;
     }
     byId.set(id, {
-      docId: dashId(id),
+      docId: dashId2(id),
       refId: id,
       label: `${id} \u2014 ${clean(at(cells, "condition")).slice(0, 40)}`,
       data: {
@@ -3740,7 +3746,7 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
   const handled = new Set(Object.values(col).concat(sc.cols.map((s) => s.col), sc.allCol));
   ctx.recordUnmapped(grid.sheet, header, handled);
   return {
-    docId: dashId(refId),
+    docId: dashId2(refId),
     refId,
     label: `${refId} \u2014 rating program`,
     data: {
@@ -4296,12 +4302,14 @@ function mapIsoWorkbook(grids, overlay) {
   MAX_EMBED_ROWS,
   SURFACED_COLUMNS,
   buildStructuralModel,
+  dashId,
   fingerprintGrid,
   inferLob,
   mapIsoWorkbook,
   normalizeCellValue,
   pickBestHeaderRow,
   refIdSegmentKind,
+  refIdToDocId,
   resolveLobByRefId,
   scoreHeaderCandidates,
   synthesizeRefId

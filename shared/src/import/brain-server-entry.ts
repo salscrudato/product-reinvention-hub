@@ -16,6 +16,11 @@ export { normalizeCellValue } from './structure/sentinels'
 // LOB inference for the router's line-of-business hint: refIds are DERIVED from the
 // registry (prefix match / signal inference) — never invented by a model.
 export { LOB_REGISTRY, resolveLobByRefId, inferLob, synthesizeRefId, refIdSegmentKind } from '../insurance/lobRegistry'
+// THE canonical refId -> docId mint (BACKLOG_SEED item 1 / R1): case-preserving
+// dot->dash. Server minters (stage7-plan, unified-import fallback) MUST use this —
+// the lowercasing variants they carried produced parents the data.js validator
+// could never resolve (422 INVALID_PARENT silent child drop).
+export { refIdToDocId, dashId } from '../insurance/refId'
 // Deterministic ISO-family mapper: the canonical-identity oracle for recognized
 // template workbooks. Stage 7 joins its registry-derived refIds/order/hierarchy
 // with the brain's cited extraction (mapper = identity, brain = provenance).
