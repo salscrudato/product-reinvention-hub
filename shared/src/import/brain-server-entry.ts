@@ -21,6 +21,15 @@ export { LOB_REGISTRY, resolveLobByRefId, inferLob, synthesizeRefId, refIdSegmen
 // the lowercasing variants they carried produced parents the data.js validator
 // could never resolve (422 INVALID_PARENT silent child drop).
 export { refIdToDocId, dashId } from '../insurance/refId'
+// Cell census (CE1): the deterministic conservation layer. workbook.js feeds
+// RawCensusSheet from live ExcelJS worksheets; everything else is pure here.
+export {
+  buildSheetCensus, buildWorkbookCensus, fnv1a64, segmentTableRegions,
+  createAccounting, post, postSpan, rollupSheet, rollupWorkbook,
+  headerLockV2Signals, augmentHeaderCandidates, repeatingParentRuns,
+  staircaseHierarchy, formTokenCensus, stateLexicon, idColumnProfile,
+  nearDuplicateSheetClusters, harvestAliasOverlay, hiddenSheetSubstance,
+} from './census'
 // Deterministic ISO-family mapper: the canonical-identity oracle for recognized
 // template workbooks. Stage 7 joins its registry-derived refIds/order/hierarchy
 // with the brain's cited extraction (mapper = identity, brain = provenance).

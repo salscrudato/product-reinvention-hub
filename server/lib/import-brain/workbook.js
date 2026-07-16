@@ -336,6 +336,79 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
   return { structural, skippedHiddenSheets, isoGrids }
 }
 
+// ─── Cell-census feeding (CE1-S4) ─────────────────────────────────────────────
+// The census needs what only the LIVE ExcelJS worksheet has: formatting (bold /
+// fill / indent / top border), merge ranges, sheet visibility, data validations.
+// This collector walks each worksheet ONCE into the pure RawCensusSheet contract
+// (shared/src/import/census); the census itself is built by the bridged pure
+// module. Read-only: no ExcelJS write API is ever touched.
+
+function collectRawCensusSheets(wb) {
+  const sheets = []
+  for (const ws of wb.worksheets) {
+    const hidden = ws.state === 'hidden' || ws.state === 'veryHidden'
+    // True extent (same discipline as readWorkbookToStructural: rowCount lies).
+    let lastRow = 0
+    let lastCol = 0
+    ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+        if (cell.value !== null && cell.value !== undefined) {
+          if (rowNumber > lastRow) lastRow = rowNumber
+          if (colNumber > lastCol) lastCol = colNumber
+        }
+      })
+    })
+    const cells = []
+    for (let r = 1; r <= lastRow; r++) {
+      const rowObj = ws.getRow(r)
+      const arr = new Array(lastCol).fill(null)
+      for (let c = 1; c <= lastCol; c++) {
+        const cell = rowObj.getCell(c)
+        const v = cell.value
+        if (v === null || v === undefined) continue
+        arr[c - 1] = {
+          v,
+          bold: !!(cell.font && cell.font.bold),
+          filled: !!(cell.fill && cell.fill.type === 'pattern' && cell.fill.pattern && cell.fill.pattern !== 'none'),
+          indent: (cell.alignment && Number(cell.alignment.indent)) || 0,
+          topBorder: !!(cell.border && cell.border.top && cell.border.top.style),
+        }
+      }
+      cells.push(arr)
+    }
+    const validations = []
+    const dvModel = ws.dataValidations && ws.dataValidations.model
+    if (dvModel && typeof dvModel === 'object') {
+      for (const [ref, rule] of Object.entries(dvModel)) {
+        if (rule && rule.type) {
+          validations.push({ ref, type: String(rule.type), formulae: Array.isArray(rule.formulae) ? rule.formulae.map(String) : [] })
+        }
+      }
+    }
+    sheets.push({ name: ws.name, hidden, cells, merges: getMergedRanges(ws), validations })
+  }
+  return sheets
+}
+
+/**
+ * Full read-only cell census of a workbook buffer: armor first, one ExcelJS
+ * load, RawCensusSheet collection, pure census build via the bridge.
+ * @param {Buffer} buf
+ * @param {string} sourceName
+ * @returns {Promise<{ raws: object[], census: object }>}
+ */
+async function readWorkbookCensus(buf, sourceName) {
+  let ExcelJS
+  try { ExcelJS = require('exceljs') } catch {
+    throw new Error('exceljs is not installed in the server host (npm install --prefix server)')
+  }
+  inspectOoxmlContainer(buf)
+  const wb = new ExcelJS.Workbook()
+  await wb.xlsx.load(buf)
+  const raws = collectRawCensusSheets(wb)
+  return { raws, census: brainShared.buildWorkbookCensus(raws, sourceName) }
+}
+
 // ─── Workbook signal collection (CRASH_CENSUS F-0 residual) ──────────────────
 // Harvest refId tokens + sheet names from a StructuralModel for deterministic LOB
 // inference. This is the SEAM-FREE home of the collector: stage0-router.js keeps
@@ -364,4 +437,5 @@ function collectWorkbookSignals(structural, REFID_TOKEN) {
 module.exports = {
   sniffContainer, readWorkbookToStructural,
   inspectOoxmlContainer, importZipLimits, collectWorkbookSignals,
+  collectRawCensusSheets, readWorkbookCensus,
 }
