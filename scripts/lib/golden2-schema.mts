@@ -253,3 +253,63 @@ export function validateGolden2File(obj: unknown): ValidationResult {
     || typeof c.distinctRefIds !== 'number') errors.push('missing/invalid counts{}')
   return { ok: errors.length === 0, errors }
 }
+
+// ─── Mutation golden transforms (PURE; the computable expected results for the fuzz) ──
+// Each transform has a matching workbook mutation in import-eval2.mts (--mutate). Because
+// the golden transform is a pure function, the EXPECTED golden for a mutated workbook is
+// exact — so scoring the pipeline on the mutation is a precise generalization test.
+
+/** Shift a bare A1 ref's ROW down by n when its row index (0-based) >= atRow0. */
+export function shiftRefRow(ref: string, atRow0: number, n: number): string {
+  const rc = refToRC(ref)
+  if (!rc) return ref
+  return rc.row >= atRow0 ? rcToRef(rc.row + n, rc.col) : ref
+}
+function shiftCitation(cit: string, sheetName: string, atRow0: number, n: number): string {
+  const s = splitCitation(cit)
+  if (!s || s.sheet !== sheetName) return cit
+  return `${s.sheet}!${shiftRefRow(s.ref, atRow0, n)}`
+}
+
+/** (1) Reorder sheets — cells are sheet-relative, so ONLY the sheet array order changes. */
+export function mutReorderSheets(golden: Golden2File, order?: number[]): Golden2File {
+  const g = structuredClone(golden)
+  const idx = order && order.length === g.sheets.length ? order : [...g.sheets.keys()].reverse()
+  g.sheets = idx.map(i => g.sheets[i]!)
+  return g
+}
+
+/** (2) Synonym-map headers — header cell VALUES change in the workbook, but the golden stores
+ *  no values and a renamed header is still a HEADER, so the golden is UNCHANGED. */
+export function mutSynonymHeaders(golden: Golden2File): Golden2File { return structuredClone(golden) }
+
+/** (3)/(4) Inject n blank rows at atRow0 in one sheet (also models a table split across a gap):
+ *  every cell/citation at or below atRow0 shifts down by n. */
+export function mutInjectBlankRows(golden: Golden2File, sheetName: string, atRow0: number, n: number): Golden2File {
+  const g = structuredClone(golden)
+  for (const sh of g.sheets) {
+    if (sh.name !== sheetName) continue
+    for (const c of sh.cells) c.ref = shiftRefRow(c.ref, atRow0, n)
+    for (const e of sh.entities) e.citations = e.citations.map(cit => shiftCitation(cit, sheetName, atRow0, n))
+  }
+  return g
+}
+
+/** (5) Hide one substance sheet — a lossless pipeline must still read it. */
+export function mutHideSheet(golden: Golden2File, sheetName: string): Golden2File {
+  const g = structuredClone(golden)
+  for (const sh of g.sheets) if (sh.name === sheetName) sh.hidden = true
+  return g
+}
+
+/** (6) Dash the refIds (GL.COV.001 -> GL-COV-001) — byte-faithful extraction must preserve the
+ *  new form. Entity refIds/parentRefs change; distinct-id CARDINALITY (counts) is unchanged. */
+export function mutDashRefIds(golden: Golden2File): Golden2File {
+  const g = structuredClone(golden)
+  const dash = (s: string | null) => (s == null ? s : s.replace(/\./g, '-'))
+  for (const sh of g.sheets) for (const e of sh.entities) { e.refId = dash(e.refId); e.parentRef = dash(e.parentRef) }
+  return g
+}
+
+export const MUTATIONS = ['reorder-sheets', 'synonym-headers', 'inject-blank-rows', 'split-table', 'hide-sheet', 'dash-refids'] as const
+export type MutationName = (typeof MUTATIONS)[number]

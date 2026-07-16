@@ -21,34 +21,34 @@
     {
       "id": "CE2-C-annotate-harness",
       "lane": "ce2",
-      "status": "TODO",
-      "note": "annotate-goldens.mts + cost probe",
+      "status": "DONE",
+      "note": "compact contract + small 24x14 windows + disposition-agreement + resilient adjudicator/verify; probe green (dual-family agreeing, adjudicator resolving)",
       "commit": null,
-      "ts": "2026-07-16T08:26:11.796Z"
+      "ts": "2026-07-16T09:30:24.576Z"
     },
     {
       "id": "CE2-D-annotate-corpus",
       "lane": "ce2",
-      "status": "TODO",
-      "note": "8 files + 2 sealed holdouts + REVIEW_QUEUE",
+      "status": "DOING",
+      "note": "full run launched, budget-capped target 185/hard 250",
       "commit": null,
-      "ts": "2026-07-16T08:26:12.305Z"
+      "ts": "2026-07-16T09:30:25.094Z"
     },
     {
       "id": "CE2-E-eval2",
       "lane": "ce2",
-      "status": "TODO",
-      "note": "import-eval2.mts + metric locks",
+      "status": "DONE",
+      "note": "import-eval2.mts (offline/bundle/live/recover/mutate/review-queue) + pure metrics + census interface; gate green",
       "commit": null,
-      "ts": "2026-07-16T08:26:12.818Z"
+      "ts": "2026-07-16T09:48:33.715Z"
     },
     {
       "id": "CE2-F-mutation",
       "lane": "ce2",
-      "status": "TODO",
-      "note": "mutation fuzz on GL 2026 Example",
+      "status": "DONE",
+      "note": "6 pure golden transforms + xlsx --mutate generation + lock tests green (run pending on gl-2026 golden)",
       "commit": null,
-      "ts": "2026-07-16T08:26:13.324Z"
+      "ts": "2026-07-16T09:48:34.259Z"
     },
     {
       "id": "CE2-G-baseline",

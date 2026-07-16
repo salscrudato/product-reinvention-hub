@@ -1,0 +1,21 @@
+{
+  "schema": "ce2-holdout2/v1",
+  "law": "BLIND HOLDOUT. These two workbooks are NEVER annotated, NEVER opened in any tuning or eval-fitting loop, and NEVER used to build or adjust golden2. They are sealed by sha256 the way samples/hardening/holdout/** is sealed. A future 'green means right' claim is only credible if it holds on a workbook the factory never saw. Mirrors HOLDOUT_SHA discipline (frozen holdout d51e32f).",
+  "sealedAt": "2026-07-16",
+  "sealedBy": "CE2 (lane ce/ce2-goldens)",
+  "holdouts": [
+    {
+      "file": "PA_PROD_001_TableConfig.xlsx",
+      "path": "samples/corpus-2026-07/hagerty/PA_PROD_001_TableConfig.xlsx",
+      "sha256": "5a9b35a1c905658fe0f324bce38097b85b9396d795a03aa6f480ebc1a2150fc4",
+      "why": "A pure rating table-config workbook (23 sheets of rate/factor tables) — a structurally distinct shape from the annotated framework masters. Held out to prove counting-invariant + accounting generalize to table-only files."
+    },
+    {
+      "file": "OH_EnthusiastPlus_BRD.xlsx",
+      "path": "samples/corpus-2026-07/hagerty/OH_EnthusiastPlus_BRD.xlsx",
+      "sha256": "eb8dea55c2016813a7776771eea8b0bd2576235ad33a6ada6d934c31ec53fea5",
+      "why": "A carrier BRD (business requirements doc) workbook with heavy merged-cell layout ('Other comms' has 799 merges). Held out to prove merge-anchoring + entity extraction generalize to BRD-shaped sources the factory never trained a threshold on."
+    }
+  ],
+  "verify": "sha256sum samples/corpus-2026-07/hagerty/PA_PROD_001_TableConfig.xlsx samples/corpus-2026-07/hagerty/OH_EnthusiastPlus_BRD.xlsx  # must match the shas above"
+}

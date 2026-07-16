@@ -98,19 +98,25 @@ export async function readWorkbookCells(filePath: string): Promise<EnumWorkbook>
     }
     const cells: EnumCell[] = []
     let maxRow = -1, maxCol = -1
-    const limit = Math.min(ws.rowCount, ROW_CAP)
-    for (let r = 1; r <= limit; r++) {
-      const rowObj = ws.getRow(r)
-      for (let c = 1; c <= ws.columnCount; c++) {
-        const key = `${r - 1},${c - 1}`
-        if (covered.has(key)) continue                 // non-anchor merged cell: skip
-        const val = flatten(rowObj.getCell(c).value)
-        if (!isNonEmpty(val)) continue
-        cells.push({ ref: rcToRef(r - 1, c - 1), row: r - 1, col: c - 1, value: val, mergeRange: anchorRange.get(key) ?? null })
-        if (r - 1 > maxRow) maxRow = r - 1
-        if (c - 1 > maxCol) maxCol = c - 1
-      }
-    }
+    // SPARSE iteration (only populated cells) — dense getRow/getCell over inflated dims is
+    // O(rowCount*columnCount) and hangs on the 129k-cell masters. eachCell visits data only.
+    ws.eachRow({ includeEmpty: false }, (rowObj, rn) => {
+      if (rn > ROW_CAP) return
+      rowObj.eachCell({ includeEmpty: false }, (excelCell, cn) => {
+        const r = rn - 1, c = cn - 1
+        const key = `${r},${c}`
+        if (covered.has(key)) return                     // non-anchor merged cell: skip
+        const val = flatten(excelCell.value)
+        if (!isNonEmpty(val)) return
+        cells.push({ ref: rcToRef(r, c), row: r, col: c, value: val, mergeRange: anchorRange.get(key) ?? null })
+        if (r > maxRow) maxRow = r
+        if (c > maxCol) maxCol = c
+      })
+    })
+    // Merge anchors can sit on a row/col beyond any populated data cell — extend bounds so
+    // windows include them.
+    for (const [key] of anchorRange) { const [r, c] = key.split(',').map(Number); if (r! > maxRow) maxRow = r!; if (c! > maxCol) maxCol = c! }
+    cells.sort((a, b) => a.row - b.row || a.col - b.col)
     sheets.push({ name: ws.name, hidden: (ws.state ?? 'visible') !== 'visible', maxRow, maxCol, cells })
   })
   return { file: filePath, sheets }

@@ -19,6 +19,7 @@ import { join, resolve } from 'path'
 import {
   DISPOSITIONS, KINDS, NOISE_RULES, validateCell, validateGolden2File, canonicalizeNumeric,
   isSubstance, accountingClassOf, colToNum, numToCol, refToRC, rcToRef, splitCitation,
+  shiftRefRow, mutReorderSheets, mutInjectBlankRows, mutHideSheet, mutDashRefIds, mutSynonymHeaders, MUTATIONS,
   type Golden2File, type Golden2Cell,
 } from '../../scripts/lib/golden2-schema.mts'
 import {
@@ -317,6 +318,58 @@ describe('eval2: fabrication / linkage / counting / band / reconcile', () => {
     const bad = reconcileCensus({ S1: 100, 'Forms View - MTG': 2072 }, { S1: 100 })  // CE1 missed the hidden sheet
     expect(bad.ok).toBe(false)
     expect(bad.disagreements[0]!.sheet).toBe('Forms View - MTG')
+  })
+})
+
+// ─── 4b. mutation golden transforms (computable expected results) ───────────────
+
+describe('mutation fuzz: pure golden transforms', () => {
+  const base = (): Golden2File => ({
+    file: 'gl.xlsx', sha256: 'c'.repeat(64), annotatedAt: '2026-07-16T00:00:00Z',
+    annotators: { a: 'GROUNDED_CITED', b: 'VISION', adjudicator: 'DEEP_REASONER' },
+    sheets: [
+      { name: 'FW', hidden: false, cells: [g2cell('A5', 'ENTITY', 'coverage'), g2cell('A6', 'ATTR', 'limit')],
+        entities: [{ kind: 'coverage', refId: 'GL.COV.001', name: 'Premises', parentRef: 'GL.LOB.001', citations: ['FW!A5'] }], edges: [] },
+      { name: 'Forms', hidden: false, cells: [g2cell('A1', 'ENTITY', 'form')], entities: [], edges: [] },
+    ],
+    counts: { products: 0, coverages: 1, forms: 1, distinctFormTokens: 1, distinctRefIds: 1 },
+  })
+  it('MUTATIONS lists the six fuzz transforms', () => {
+    expect(MUTATIONS).toEqual(['reorder-sheets', 'synonym-headers', 'inject-blank-rows', 'split-table', 'hide-sheet', 'dash-refids'])
+  })
+  it('shiftRefRow shifts only rows at/below the insertion point', () => {
+    expect(shiftRefRow('A5', 4, 3)).toBe('A8')   // row index 4 (=row 5) >= 4 -> +3 -> row 8
+    expect(shiftRefRow('A4', 4, 3)).toBe('A4')   // row index 3 (=row 4) < 4 -> unchanged (boundary)
+    expect(shiftRefRow('A3', 4, 3)).toBe('A3')   // above the insertion -> unchanged
+    expect(shiftRefRow('C10', 4, 3)).toBe('C13') // column preserved
+  })
+  it('reorder-sheets only reorders (cells are sheet-relative)', () => {
+    const m = mutReorderSheets(base())
+    expect(m.sheets.map(s => s.name)).toEqual(['Forms', 'FW'])
+    expect(m.sheets.find(s => s.name === 'FW')!.cells.map(c => c.ref)).toEqual(['A5', 'A6'])
+  })
+  it('inject-blank-rows shifts cells AND citations at/below the row', () => {
+    const m = mutInjectBlankRows(base(), 'FW', 4, 3)   // insert 3 rows at row index 4
+    const fw = m.sheets.find(s => s.name === 'FW')!
+    expect(fw.cells.map(c => c.ref)).toEqual(['A8', 'A9'])
+    expect(fw.entities[0]!.citations).toEqual(['FW!A8'])
+    // Other sheets untouched.
+    expect(m.sheets.find(s => s.name === 'Forms')!.cells[0]!.ref).toBe('A1')
+  })
+  it('hide-sheet flips exactly one sheet hidden', () => {
+    const m = mutHideSheet(base(), 'FW')
+    expect(m.sheets.find(s => s.name === 'FW')!.hidden).toBe(true)
+    expect(m.sheets.find(s => s.name === 'Forms')!.hidden).toBe(false)
+  })
+  it('dash-refids dashes entity refIds + parentRefs, preserves cardinality', () => {
+    const m = mutDashRefIds(base())
+    const e = m.sheets.find(s => s.name === 'FW')!.entities[0]!
+    expect(e.refId).toBe('GL-COV-001')
+    expect(e.parentRef).toBe('GL-LOB-001')
+    expect(m.counts.distinctRefIds).toBe(base().counts.distinctRefIds)  // cardinality unchanged
+  })
+  it('synonym-headers leaves the golden unchanged (only workbook header text moves)', () => {
+    expect(mutSynonymHeaders(base())).toEqual(base())
   })
 })
 
