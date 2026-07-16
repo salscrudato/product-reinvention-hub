@@ -62,9 +62,9 @@
       "id": "CE2-H-close",
       "lane": "ce2",
       "status": "DONE",
-      "note": "CE2_REPORT.md + hostile self-review (15 findings, high-impact closed); fabrication-vs-workbook + citation-verify fixes; gate green pending",
-      "commit": null,
-      "ts": "2026-07-16T13:33:57.820Z"
+      "note": "SHIPPED 81d425f: 8/8 goldens + 8/8 RED baseline + 6 mutations + report/self-review; gate GREEN (gate3 exit 0); 35 locks; zero push",
+      "commit": "81d425f",
+      "ts": "2026-07-16T13:39:49.539Z"
     },
     {
       "id": "CE2-H1-harden",
