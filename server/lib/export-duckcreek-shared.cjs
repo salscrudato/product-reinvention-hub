@@ -1577,8 +1577,8 @@ function mapManuscriptOverlay(xmlText, manifest, limits = DEFAULT_PARSE_LIMITS) 
     ratingProgram,
     ldTables: [],
     rtTables,
-    // Overlay round-trips carry their concrete RT tables; no placeholders are minted
-    // on this path (the concept-linker field is workbook-import-only).
+    // Overlay recovery lifts rate tables directly from the compute chain; the D4
+    // placeholder-minting path (workbook rating-area parse) never runs here.
     ratePlaceholders: [],
     summary
   };
