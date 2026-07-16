@@ -66,42 +66,15 @@ router.get('/tenants', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) =
   res.json({ tenants: resources.map((r) => r.data), hasMore: resources.length === limit })
 })
 
-// Lazy mutateInternal (data.js) — deferred to avoid a require cycle at module init
-// (data.js and admin.js are both loaded by server.js). Used only to seed a provisioned
-// tenant's starter workspace through the SAME atomic, audited, correctly-partitioned envelope.
-function getMutateInternal() { return require('./data').mutateInternal }
-
-// A minimal, correctly-partitioned starter workspace: one draft product so a freshly
-// provisioned tenant is non-empty and demonstrable. Written through the tenant's mutate
-// envelope (pk = `${tid}|products`), so it is atomic + audited + tenant-isolated like any
-// other write — never a bare data-store insert.
-async function seedStarterWorkspace(tid, actor) {
-  const mutateInternal = getMutateInternal()
-  await mutateInternal(tid, {
-    op: 'create',
-    path: 'products/getting-started',
-    entityType: 'product',
-    data: {
-      refId: `${tid.toUpperCase()}.PROD.001`,
-      name: 'Getting Started',
-      lob: { refId: 'PH', name: 'Personal Home' },
-      description: 'Starter product created at provisioning. Edit or delete it once your first real product is imported.',
-      lifecycleState: 'draft',
-      states: [], allStates: false,
-    },
-  }, actor, '/api/admin/tenants:provision')
-}
-
 // Provision a new tenant (SUPER_ADMIN). Creates the tenant record with default
-// entitlements, optionally the first TENANT_ADMIN, and optionally a starter workspace.
-// Everything is correctly partitioned (the workspace goes through the tenant's mutate
-// envelope) and every step is append-only audited.
+// entitlements and optionally the first TENANT_ADMIN. New tenants are always blank —
+// no products are seeded at provisioning; content arrives only through import or
+// explicit creation. Every step is append-only audited.
 router.post('/tenants', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) => {
-  const { id, name, adminEmail, adminUsername, adminPassword, workspace } = req.body || {}
+  const { id, name, adminEmail, adminUsername, adminPassword } = req.body || {}
   const tid = slug(id || name)
   if (!tid) return res.status(400).json({ error: 'tenant_id_required' })
   if (tid === '__system__' || tid === 'default') return res.status(400).json({ error: 'reserved_tenant_id', tenantId: tid })
-  const seedMode = workspace === 'blank' ? 'blank' : 'starter'
   const existing = (await docs.item(`tenant:${tid}`, '__system__').read().catch(() => ({ resource: null }))).resource
   if (existing) return res.status(409).json({ error: 'tenant_exists', tenantId: tid })
 
@@ -112,7 +85,7 @@ router.post('/tenants', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) 
     config: { entitlements: platformConfig.DEFAULT_ENTITLEMENTS },
   }
   await docs.items.upsert({ id: `tenant:${tid}`, pk: '__system__', kind: 'tenant', data })
-  await platformAudit('tenant:provision', req.user, { tenantId: tid, name: data.name, workspace: seedMode })
+  await platformAudit('tenant:provision', req.user, { tenantId: tid, name: data.name })
 
   // First TENANT_ADMIN (optional). A platform record in __system__; role is fixed to
   // TENANT_ADMIN so the first admin can immediately manage their own org.
@@ -136,14 +109,7 @@ router.post('/tenants', requirePlatform(CAP_PLATFORM_TENANTS), async (req, res) 
     admin = safe
   }
 
-  // Starter workspace (default) — one draft product, correctly partitioned + audited.
-  let seeded = false
-  if (seedMode === 'starter') {
-    try { await seedStarterWorkspace(tid, { uid: req.user.uid, name: req.user.name }); seeded = true }
-    catch (e) { console.warn('[admin] starter workspace seed failed:', e.message) }
-  }
-
-  res.json({ ok: true, tenant: data, admin, workspace: seedMode, seeded })
+  res.json({ ok: true, tenant: data, admin })
 })
 
 // Configure a tenant: rename and/or suspend/reactivate.
