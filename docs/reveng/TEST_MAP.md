@@ -1,7 +1,7 @@
 # TEST_MAP — every suite, the canaries, the eval harness, holdouts, and the gaps (`d28c8a1`)
 
-> `docs/reveng/` dossier. Counted on this tree: **112 `*.test.ts(x)` files** (`find`,
-> excluding node_modules). Gate = `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
+> `docs/reveng/` dossier. Counted on this tree: **118 test files** (112 `*.test.ts` +
+> 6 `*.test.tsx`; `find`, excluding node_modules). Gate = `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
 > (wrapped with timing by `scripts/ops/cleanse/gate.mjs`). Evidence from RUNNING both the
 > gate and the OFFLINE eval on this tree is quoted in sections 6-7.
 
@@ -29,7 +29,7 @@ hardening locks gate LOCALLY (and in this dossier's Phase-2 run), not at deploy 
 | Personal Home HO-3 | **$1,528** | `shared/src/rating/evaluator.test.ts` (headline per CLAUDE.md) |
 | Personal Auto | **$1,002** | `shared/src/rating/personalAuto.evaluator.test.ts` |
 | General Liability | **$2,635** | `shared/src/rating/generalLiability.evaluator.test.ts` |
-| Imported Lemonade NJ HO filing | **$1,281** | `shared/src/rating/evaluator.creditFloor.test.ts` (creditFloor machinery, Rule 92) |
+| Imported Lemonade NJ HO filing | **$1,281** | `shared/src/insurance/filing/reconcile.test.ts:115` (`expect(result.finalPremium).toBe(1281)`); the creditFloor MECHANISM it exercises (Rule 92) is separately locked by `shared/src/rating/evaluator.creditFloor.test.ts` |
 | All four, registry-complete | — | `shared/src/rating/workedExample.canary.test.ts` — asserts every bespoke rating kit has a canary and vice-versa, AND final premium === last trace row (no display/engine drift) |
 
 A red canary blocks the deploy pipeline by construction (`azure-pipelines.yml:67-68`).

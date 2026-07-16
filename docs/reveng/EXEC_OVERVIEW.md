@@ -7,7 +7,9 @@
 A multi-tenant P&C **product-definition platform** ("Product Reinvention Hub"): carriers
 define products — coverages, forms, rules, rating algorithms — across 5 lines
 (PH/PA/GL/IM/PR), price them through a deterministic evaluator locked by four premium
-canaries ($1,528 / $1,002 / $2,635 / $1,281), ingest real carrier documents (Excel
+canaries ($1,528 / $1,002 / $2,635 in `shared/src/rating/*.test.ts` — the three the
+deploy pipeline runs — plus the $1,281 imported-filing canary at
+`shared/src/insurance/filing/reconcile.test.ts:115`), ingest real carrier documents (Excel
 product specs, rate-filing PDFs) through a cross-vendor multi-model AI **import brain**
 whose every output is cited back to a source cell, generate SERFF filing bundles, and run
 grounded copilots over the portfolio. React SPA + Express host on one Azure App Service;
@@ -86,8 +88,9 @@ routes to `unknown` with an explicit warning (`stage0-router.js:212-214`) — th
 diagnostic's D5 severity is overstated for this tree (marked DRIFTED in
 INGESTION_PIPELINE sec 11). (c) **The review's "9 Foundry deployments" and SERVICES.md's
 "16" are BOTH snapshots neither doc reconciles**: 16 = 13 registered in `fleet.ts` + 3
-deployed-but-unreferenced, with `grok-4-20-reasoning` appearing in ZERO files of this
-tree (FLEET.md sec 3). Also worth noting: my own swarm initially reported "no
+deployed-but-unreferenced, with `grok-4-20-reasoning` appearing in zero CODE or
+committed-doc files of this tree outside this dossier's own reconciliation (FLEET.md
+sec 3) — it exists only in the review's live-account query. Also worth noting: my own swarm initially reported "no
 docs/build gitignore trap"; `git check-ignore` proved the trap real — swarm output is
 proposals, not truth.
 
@@ -126,5 +129,33 @@ heavyDoc retry-drop; the diagnostic's stage map describes the older serial ladde
 Filled after the fresh-context verifier pass; per-doc verdicts, misses found, and fixes.
 
 ```text
-[VERIFICATION-LEDGER]
+Method: 11 fresh-context Haiku 4.5 verifiers, one per doc, each sampling 10 cited
+claims and checking them against the tree at d28c8a1. Misses fixed, re-judged by a
+NEW fresh verifier (max 2 rounds). Mermaid blocks lint-checked (4 blocks, all clean).
+
+Round 1 (110 claims):
+  ARCHITECTURE       10/10
+  INGESTION_PIPELINE 10/10
+  API_SURFACE        10/10
+  DATA_MODEL_DELTA   10/10
+  FRONTEND_MAP       10/10
+  SECURITY_TENANCY   10/10
+  PERF_COST          10/10
+  FLEET              10/10
+  RISK+BACKLOG       10/10
+  TEST_MAP            8/10  -> fixed: test-file count 112 -> 118 (112 .ts + 6 .tsx);
+                              $1,281 canary file corrected to
+                              shared/src/insurance/filing/reconcile.test.ts:115
+  EXEC_OVERVIEW       8/10  -> fixed: canary sentence now cites all four test files;
+                              "grok-4-20 in ZERO files" reworded (the dossier's own
+                              docs now mention it; zero CODE/non-dossier references)
+
+Round 2 (fresh judges on the two fixed docs):
+  TEST_MAP           10/10
+  EXEC_OVERVIEW      10/10
+
+Final: 130 claim-checks run, 126 first-pass, 4 fixed-and-re-verified, 0 UNVERIFIED.
+One round-1 verifier verdict was itself wrong (it "failed" the $1,281 canary after
+checking only azure-pipelines.yml) — the underlying assertion exists at
+reconcile.test.ts:115; the sentence was tightened anyway.
 ```
