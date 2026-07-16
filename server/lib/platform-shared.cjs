@@ -20,6 +20,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // shared/src/platform/server-entry.ts
 var server_entry_exports = {};
 __export(server_entry_exports, {
+  ALL_STATES_COUNT: () => ALL_STATES_COUNT,
   BRAND_ACCENTS: () => BRAND_ACCENTS,
   DEFAULT_ENTITLEMENTS: () => DEFAULT_ENTITLEMENTS,
   ENTITLEMENT_CAPS: () => ENTITLEMENT_CAPS,
@@ -27,6 +28,9 @@ __export(server_entry_exports, {
   FLAG_KEYS: () => FLAG_KEYS,
   KNOWN_AI_ROLES: () => KNOWN_AI_ROLES,
   TENANT_OVERRIDABLE_KEYS: () => TENANT_OVERRIDABLE_KEYS,
+  buildSuggestedQueries: () => buildSuggestedQueries,
+  computePortfolioPulse: () => computePortfolioPulse,
+  deriveDraftIdentity: () => deriveDraftIdentity,
   effectiveEntitlements: () => effectiveEntitlements,
   flagDef: () => flagDef,
   isKnownFlag: () => isKnownFlag,
@@ -254,8 +258,106 @@ function effectiveEntitlements(config) {
     aiModelRoles: e.aiModelRoles ?? [...DEFAULT_ENTITLEMENTS.aiModelRoles]
   };
 }
+
+// shared/src/platform/portfolio.ts
+var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function monthDay(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+function artifactBaseOf(fileName) {
+  const leaf = fileName.split(/[\\/]/).pop() ?? fileName;
+  const dot = leaf.lastIndexOf(".");
+  return (dot > 0 ? leaf.slice(0, dot) : leaf).trim();
+}
+function lobRefOf(lob) {
+  if (typeof lob === "string" && lob) return lob;
+  if (lob && typeof lob === "object") {
+    const ref = lob.refId;
+    if (typeof ref === "string" && ref) return ref;
+  }
+  return null;
+}
+function deriveDraftIdentity(data) {
+  const lineage = data?.lineage ?? null;
+  const sources = Array.isArray(lineage?.sources) ? lineage.sources : [];
+  const fileRef = sources.find((s) => s?.type === "file" && typeof s.ref === "string" && s.ref)?.ref;
+  const sourceFileName = fileRef ?? null;
+  const importedAt = lineage?.kind === "IMPORT" && typeof lineage.at === "string" && lineage.at ? lineage.at : null;
+  const contentHash = typeof data?.contentHash === "string" && data.contentHash ? data.contentHash : null;
+  const parts = sourceFileName ? [artifactBaseOf(sourceFileName), lobRefOf(data?.lob), monthDay(importedAt)].filter((p) => !!p) : [];
+  return { displayName: parts.length ? parts.join(" - ") : null, sourceFileName, importedAt, contentHash };
+}
+var ALL_STATES_COUNT = 51;
+var isDraftRow = (p) => p.lifecycle === "DRAFT" || p.lifecycleState === "draft";
+var isLiveRow = (p) => p.lifecycle === "LAUNCHED";
+function computePortfolioPulse(products, tasks) {
+  const live = products.filter(isLiveRow);
+  let statesCovered;
+  if (live.some((p) => p.allStates === true)) {
+    statesCovered = ALL_STATES_COUNT;
+  } else {
+    const seen = /* @__PURE__ */ new Set();
+    for (const p of live) {
+      if (!Array.isArray(p.states)) continue;
+      for (const s of p.states) if (typeof s === "string" && s) seen.add(s.toUpperCase());
+    }
+    statesCovered = seen.size;
+  }
+  const draftsAwaitingReview = products.filter((p) => isDraftRow(p) && p.reviewStatus !== "APPROVED").length;
+  let lastImport = null;
+  for (const p of products) {
+    const idn = deriveDraftIdentity(p);
+    if (!idn.importedAt) continue;
+    if (!lastImport || idn.importedAt > lastImport.at) {
+      lastImport = { status: "applied", at: idn.importedAt, artifact: idn.sourceFileName };
+    }
+  }
+  return {
+    liveProducts: live.length,
+    statesCovered,
+    draftsAwaitingReview,
+    lastImport,
+    openTasks: tasks.filter((t) => t.done !== true).length
+  };
+}
+var FALLBACK_QUERIES = [
+  "Summarize my portfolio by line of business and state coverage.",
+  "Which live products changed most recently, and what changed?",
+  "Where are the coverage gaps across my portfolio?"
+];
+var MIN_QUERIES = 3;
+var MAX_QUERIES = 4;
+var str = (v) => typeof v === "string" && v.trim() ? v.trim() : null;
+function buildSuggestedQueries(products, coverages) {
+  const queries = [];
+  const multiState = products.filter((p) => isLiveRow(p) && Array.isArray(p.states) && p.states.filter((s) => typeof s === "string" && s).length >= 2 && str(p.name)).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  if (multiState.length) {
+    const p = multiState[0];
+    const [s1, s2] = p.states.filter((s) => typeof s === "string" && s).map((s) => s.toUpperCase()).sort();
+    queries.push(`How does ${str(p.name)} differ between ${s1} and ${s2}?`);
+  }
+  const bare = coverages.filter((c) => str(c.name) && Array.isArray(c.formNumbers) && c.formNumbers.length === 0).sort((a, b) => `${str(a.productName) ?? ""}|${str(a.name)}`.localeCompare(`${str(b.productName) ?? ""}|${str(b.name)}`));
+  if (bare.length) {
+    const c = bare[0];
+    const where = str(c.productName) ? ` in ${str(c.productName)}` : "";
+    queries.push(`Which forms should attach to ${str(c.name)}${where}?`);
+  }
+  const awaiting = products.filter((p) => isDraftRow(p) && p.reviewStatus !== "APPROVED").length;
+  if (awaiting > 0) {
+    queries.push(`What should I review first across my ${awaiting} draft product${awaiting === 1 ? "" : "s"} awaiting review?`);
+  }
+  for (const f of FALLBACK_QUERIES) {
+    if (queries.length >= MIN_QUERIES) break;
+    queries.push(f);
+  }
+  return queries.slice(0, MAX_QUERIES);
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  ALL_STATES_COUNT,
   BRAND_ACCENTS,
   DEFAULT_ENTITLEMENTS,
   ENTITLEMENT_CAPS,
@@ -263,6 +365,9 @@ function effectiveEntitlements(config) {
   FLAG_KEYS,
   KNOWN_AI_ROLES,
   TENANT_OVERRIDABLE_KEYS,
+  buildSuggestedQueries,
+  computePortfolioPulse,
+  deriveDraftIdentity,
   effectiveEntitlements,
   flagDef,
   isKnownFlag,

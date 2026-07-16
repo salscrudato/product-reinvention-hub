@@ -51,3 +51,5 @@ export * from './changeset/diff'
 export * from './registry/stateFilingMatrix'
 // SERFF filing bundle assembler + Texas DOI reviewer lens (pure, deterministic).
 export * from './serff'
+
+export * from './platform/portfolio'

@@ -2,7 +2,13 @@
 // Platform-agnostic seam: the app depends only on this contract; swap the
 // implementation, not the callers. The active implementation is the Azure host
 // adapter (azure.adapter.ts) — JWT auth, Cosmos data, and Foundry AI over /api/*.
-import type { Unsubscribe } from '@pf/shared'
+import type { Unsubscribe, DraftIdentity, DraftDedupMatch, PortfolioPulse, TenantResolveResult, TenantMembership } from '@pf/shared'
+
+// P2 server-truth read models — computed server-side from persisted data (lineage,
+// lifecycle, tasks), shared via @pf/shared so server and app agree on one shape.
+// Product rows returned by db.get/db.list('products') additionally carry
+// `identity?: DraftIdentity` (server-derived, read-only — never write it back).
+export type { DraftIdentity, DraftDedupMatch, PortfolioPulse, TenantResolveResult, TenantMembership }
 
 // Two-plane role set. See docs/AUTHORITIES.md for the full capability matrix.
 // Tenant plane: VIEWER, inquiry personas (UNDERWRITING/COMPLIANCE/CLAIMS/ACTUARIAL/ANALYST), EDITOR, TENANT_ADMIN.
@@ -148,6 +154,13 @@ export interface BackendAdapter {
     loginBootstrap(username: string, password: string, tenant?: string): Promise<Session>
     /** Tenants offered on the login screen (ids + names only; safe pre-auth). */
     listTenants(): Promise<TenantInfo[]>
+    /** Pre-auth login resolve: { mode, tenantHint } derived from server config only —
+     *  uniform for known and unknown domains (no account/tenant enumeration). This is
+     *  the replacement seam for listTenants(); P4 flips the login page and removes the
+     *  legacy enumeration endpoint atomically. */
+    resolveTenantForEmail(email: string): Promise<TenantResolveResult>
+    /** The caller's own tenants (post-auth), for a multi-tenant chooser. */
+    getMyTenantMemberships(): Promise<TenantMembership[]>
     signOut(): Promise<void>
     /** Fires immediately with current user, then on every change. */
     onUser(cb: (user: AuthUser | null) => void): Unsubscribe
@@ -185,6 +198,17 @@ export interface BackendAdapter {
     setNewsPins(uid: string, pinnedHashes: string[]): Promise<void>
     /** Rev-checked transaction wrapper for optimistic concurrency. */
     tx<T>(fn: (helpers: { get: BackendAdapter['db']['get'] }) => Promise<T>): Promise<T>
+    /** Tenant-scoped dedup lookup: drafts whose persisted data.contentHash matches.
+     *  [] when none (and [] for every draft persisted before the import path stamps
+     *  contentHash — the field ships write-side in a later wave). */
+    findDraftsByContentHash(contentHash: string): Promise<DraftDedupMatch[]>
+  }
+  /** Read-only portfolio surfaces (any staff role; tenant-scoped; deterministic, zero AI). */
+  portfolio: {
+    /** GET /api/portfolio/pulse — counts + last import, ~60 s server-side cache per tenant. */
+    getPortfolioPulse(): Promise<PortfolioPulse>
+    /** GET /api/portfolio/suggested-queries — 3–4 deterministic strings from real portfolio facts. */
+    getSuggestedQueries(): Promise<string[]>
   }
   storage: {
     upload(path: string, file: File): Promise<string>

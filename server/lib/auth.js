@@ -429,6 +429,54 @@ function discoverHomeRealm(_email) {
   return null
 }
 
+// ─── Login resolve (pre-auth, uniform, zero enumeration) ─────────────────────
+// POST /api/auth/resolve — email in, { mode, tenantHint } out. The response is
+// derived ONLY from server-side config (TENANT_DOMAIN_MAP / domain-minus-TLD) and
+// the SSO home-realm seam; it NEVER touches the user or tenant store, so shape,
+// timing, and error text are identical for known and unknown domains — an
+// attacker cannot enumerate accounts or tenants through it. The legacy pre-auth
+// /api/auth/tenants enumeration stays in place this wave; P4 removes it
+// atomically with the client flip to this endpoint.
+async function resolveLogin(req, res) {
+  const email = String((req.body || {}).email || '').trim().toLowerCase()
+  // Format check only — data-independent, so a 400 reveals nothing about tenants.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'invalid_email' })
+  }
+  const realm = discoverHomeRealm(email) // stubbed null until Entra SSO lands (docs/IDENTITY.md)
+  return res.json({ mode: realm ? 'sso' : 'password', tenantHint: resolveTenantFromDomain(email) })
+}
+
+// ─── Memberships (post-auth, self only) ───────────────────────────────────────
+// GET /api/auth/memberships — the caller's own tenants, for a multi-tenant
+// chooser. Source of truth is the caller's user record `tenants` array ('*' or
+// a platform-plane role → every tenant). The JWT-bound tenant is always
+// included so a bootstrap/JIT principal with no record still sees its session
+// tenant. Reads only — names come from the same system tenant records the
+// login dropdown uses.
+async function myMemberships(req, res) {
+  if (!req.user) return res.status(401).json({ error: 'unauthenticated' })
+  try {
+    const all = await listTenants() // [{ id, name }] sorted by name
+    const nameOf = new Map(all.map((t) => [t.id, t.name]))
+    const record = await findUser(req.user.uid)
+    const platformPlane = req.user.role === 'SUPER_ADMIN' || req.user.role === 'SUPPORT'
+    let ids
+    if (platformPlane || record?.tenants === '*') {
+      ids = all.map((t) => t.id)
+    } else {
+      ids = Array.isArray(record?.tenants) ? record.tenants.filter((t) => typeof t === 'string' && t) : []
+    }
+    if (req.user.tenantId && !ids.includes(req.user.tenantId)) ids.push(req.user.tenantId)
+    const memberships = ids
+      .map((id) => ({ tenantId: id, name: nameOf.get(id) || id, current: id === req.user.tenantId }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+    return res.json({ memberships })
+  } catch {
+    return res.status(503).json({ error: 'memberships_unavailable' })
+  }
+}
+
 // ─── Misc handlers ────────────────────────────────────────────────────────────
 // /me carries the caller's EFFECTIVE feature flags so the client can hide disabled
 // surfaces from nav (server-side enforcement remains authoritative). Lazy-require of
@@ -547,6 +595,7 @@ module.exports = {
   isTenantSuspended,
   normalizeRole, sign, verify, signImpersonation,
   requestOtp, verifyOtp, loginBootstrap, me, changePassword, publicTenants, discoverHomeRealm,
+  resolveLogin, myMemberships,
   attachUser, requireAuth, requireRole, requireTenant, resolveTenantForPrincipal, revokeToken,
   setSessionCookie, clearSessionCookie,
 }

@@ -90,7 +90,7 @@ app.use((req, res, next) => {
 const { hasCapability } = require('./lib/authz')
 const PUBLIC_API = [
   '/api/health',
-  '/api/auth/otp/request', '/api/auth/otp/verify', '/api/auth/bootstrap', '/api/auth/tenants',
+  '/api/auth/otp/request', '/api/auth/otp/verify', '/api/auth/bootstrap', '/api/auth/tenants', '/api/auth/resolve',
   '/api/homecheck/',  // guest consumer surface — rate-limited, zero portfolio access
 ]
 const isPublicApi = (p) => PUBLIC_API.some((pub) => (pub.endsWith('/') ? p.startsWith(pub) : p === pub))
@@ -185,7 +185,12 @@ app.post('/api/auth/otp/verify',  loginRateLimit, auth.verifyOtp)
 // Bootstrap login: username+password for SUPER_ADMIN break-glass accounts only
 app.post('/api/auth/bootstrap',   loginRateLimit, auth.loginBootstrap)
 app.get('/api/auth/tenants', tenantsRateLimit, auth.publicTenants) // login-page dropdown (ids + names only)
+// Pre-auth login resolve: { mode, tenantHint } from server config ONLY — uniform for
+// known and unknown domains (no account/tenant enumeration). P4 removes the legacy
+// /api/auth/tenants enumeration atomically with the client flip to this endpoint.
+app.post('/api/auth/resolve', tenantsRateLimit, auth.resolveLogin)
 app.get('/api/auth/me', auth.requireAuth, auth.me)
+app.get('/api/auth/memberships', auth.requireAuth, auth.myMemberships) // caller's own tenants (multi-tenant chooser)
 app.post('/api/auth/logout', auth.revokeToken, (req, res) => { auth.clearSessionCookie(req, res); res.json({ ok: true }) }) // RISK-006: revoke jti + clear session cookie before responding
 app.post('/api/auth/change-password', auth.requireAuth, auth.changePassword)
 
@@ -211,6 +216,14 @@ try {
   console.log('[prodhub-host] /api/db mounted (Cosmos)')
 } catch (err) {
   console.warn('[prodhub-host] /api/db NOT mounted:', err.message)
+}
+
+// ─── Portfolio pulse + suggested queries (read-only, deterministic, zero AI) ──
+try {
+  app.use('/api/portfolio', require('./lib/portfolio'))
+  console.log('[prodhub-host] /api/portfolio mounted (pulse + suggested queries)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/portfolio NOT mounted:', err.message)
 }
 
 // ─── AI (Foundry Claude) — mounted if the module loads ──────────────────────

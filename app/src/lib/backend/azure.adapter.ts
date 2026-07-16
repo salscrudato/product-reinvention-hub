@@ -11,7 +11,7 @@
 // document, odd = collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
-import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, DuckCreekExportResult, ManagedUser, PortalPolicy, PortalSummary, TenantMember, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
+import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, DraftDedupMatch, DuckCreekExportResult, ManagedUser, PortalPolicy, PortalSummary, PortfolioPulse, TenantMember, TenantMembership, TenantResolveResult, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
 import { MutationConflictError } from './types'
 import { mapServerVersionRow, type ServerVersionRow } from './versionRead'
 
@@ -187,6 +187,15 @@ export const adapter: BackendAdapter = {
       return tenants
     },
 
+    async resolveTenantForEmail(email: string): Promise<TenantResolveResult> {
+      return api<TenantResolveResult>('/auth/resolve', { method: 'POST', body: JSON.stringify({ email }) })
+    },
+
+    async getMyTenantMemberships(): Promise<TenantMembership[]> {
+      const { memberships } = await api<{ memberships: TenantMembership[] }>('/auth/memberships')
+      return memberships
+    },
+
     async signOut(): Promise<void> {
       try { await api('/auth/logout', { method: 'POST' }) } catch { /* best-effort */ }
       setToken(null)
@@ -355,6 +364,22 @@ export const adapter: BackendAdapter = {
     // server-side batch precondition, so no client-held transaction is required.
     async tx<T>(fn: (helpers: { get: BackendAdapter['db']['get'] }) => Promise<T>): Promise<T> {
       return fn({ get: (path) => adapter.db.get(path) })
+    },
+
+    async findDraftsByContentHash(contentHash: string): Promise<DraftDedupMatch[]> {
+      const { matches } = await api<{ matches: DraftDedupMatch[] }>(`/db/drafts/dedup?contentHash=${encodeURIComponent(contentHash)}`)
+      return matches
+    },
+  },
+
+  portfolio: {
+    async getPortfolioPulse(): Promise<PortfolioPulse> {
+      return api<PortfolioPulse>('/portfolio/pulse')
+    },
+
+    async getSuggestedQueries(): Promise<string[]> {
+      const { queries } = await api<{ queries: string[] }>('/portfolio/suggested-queries')
+      return queries
     },
   },
 

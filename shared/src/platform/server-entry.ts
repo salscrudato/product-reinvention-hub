@@ -21,3 +21,9 @@ export {
   mergeConfig,
   effectiveEntitlements,
 } from './tenantConfig'
+export {
+  ALL_STATES_COUNT,
+  deriveDraftIdentity,
+  computePortfolioPulse,
+  buildSuggestedQueries,
+} from './portfolio'

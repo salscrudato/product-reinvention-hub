@@ -3,3 +3,4 @@
 // by the server (via server/lib/platform-shared.cjs, built from ./server-entry.ts).
 export * from './featureFlags'
 export * from './tenantConfig'
+export * from './portfolio'
