@@ -1,0 +1,389 @@
+{
+  "file": "reference/Product_Framework_Client_Master.xlsx",
+  "status": "OK",
+  "sheets": 11,
+  "hiddenSheets": 2,
+  "nonEmpty": 508,
+  "mergeShadows": 104,
+  "unaccounted": 404,
+  "conservation": true,
+  "tablesFound": 15,
+  "hiddenSubstanceCells": 55,
+  "nearDupClusters": [],
+  "formTokensDistinct": 4,
+  "stateMatrixSheets": [
+    "Product Component Model"
+  ],
+  "widestSheet": {
+    "name": "Product Component Model",
+    "cols": 70
+  },
+  "enumDomains": 1056,
+  "definitionsHarvested": 14,
+  "perSheet": [
+    {
+      "name": "Table of Contents",
+      "hidden": false,
+      "dims": {
+        "rows": 17,
+        "cols": 12
+      },
+      "nonEmpty": 105,
+      "fingerprint": {
+        "headerSig": "2b972226055b8209",
+        "sampleHash": "a0e93f9f701d37ef"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 9,
+          "colStart": 0,
+          "colEnd": 11,
+          "headerRow": 3,
+          "headerConfidence": 0.7750000000000001
+        },
+        {
+          "rowStart": 12,
+          "rowEnd": 16,
+          "colStart": 0,
+          "colEnd": 6,
+          "headerRow": 12,
+          "headerConfidence": 0.7857142857142858
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Version History",
+      "hidden": false,
+      "dims": {
+        "rows": 5,
+        "cols": 4
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "1db84d1bde525db4",
+        "sampleHash": "1428e27f56ef5438"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 4,
+          "colStart": 0,
+          "colEnd": 3,
+          "headerRow": 3,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Definitions",
+      "hidden": false,
+      "dims": {
+        "rows": 19,
+        "cols": 3
+      },
+      "nonEmpty": 42,
+      "fingerprint": {
+        "headerSig": "57d0a576ecbd7081",
+        "sampleHash": "82916eb10732202a"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 18,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 3,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 4,
+      "formTokenSample": [
+        "IN 2015",
+        "IN 2017",
+        "IN 2020",
+        "IN 2022"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Contacts",
+      "hidden": false,
+      "dims": {
+        "rows": 5,
+        "cols": 6
+      },
+      "nonEmpty": 20,
+      "fingerprint": {
+        "headerSig": "d412a03f16b2fa17",
+        "sampleHash": "a0df8d0733fe16d9"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 4,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 3,
+          "headerConfidence": 0.925
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Inventory",
+      "hidden": false,
+      "dims": {
+        "rows": 31,
+        "cols": 25
+      },
+      "nonEmpty": 105,
+      "fingerprint": {
+        "headerSig": "fc1b63783a0f6e61",
+        "sampleHash": "78e09b4bcddeff70"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 0,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 0,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 1,
+          "rowEnd": 30,
+          "colStart": 0,
+          "colEnd": 24,
+          "headerRow": 3,
+          "headerConfidence": 0.7695000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Component Model",
+      "hidden": false,
+      "dims": {
+        "rows": 16,
+        "cols": 70
+      },
+      "nonEmpty": 89,
+      "fingerprint": {
+        "headerSig": "252c6714a924404a",
+        "sampleHash": "07d27e424993bd09"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 2,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 1,
+          "headerConfidence": 0.9750000000000001
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 15,
+          "colStart": 0,
+          "colEnd": 69,
+          "headerRow": 4,
+          "headerConfidence": 0.7957142857142858
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "STATE_COLUMNS",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        5
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Temporary - TODO & Status",
+      "hidden": true,
+      "dims": {
+        "rows": 6,
+        "cols": 6
+      },
+      "nonEmpty": 23,
+      "fingerprint": {
+        "headerSig": "234b7945458c10be",
+        "sampleHash": "e8010c854fab66aa"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 5,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 0,
+          "headerConfidence": 0.8500000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        1,
+        2
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Source Forms",
+      "hidden": false,
+      "dims": {
+        "rows": 9,
+        "cols": 28
+      },
+      "nonEmpty": 25,
+      "fingerprint": {
+        "headerSig": "a53e73090bc11dc0",
+        "sampleHash": "31c9dcf60233f117"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 8,
+          "colStart": 0,
+          "colEnd": 27,
+          "headerRow": 0,
+          "headerConfidence": 0.5089285714285714
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Observation Log",
+      "hidden": false,
+      "dims": {
+        "rows": 30,
+        "cols": 6
+      },
+      "nonEmpty": 35,
+      "fingerprint": {
+        "headerSig": "6799e2611fc09f12",
+        "sampleHash": "780836ffc7b0a158"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 29,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 0,
+          "headerConfidence": 0.7916666666666666
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Question Log",
+      "hidden": false,
+      "dims": {
+        "rows": 12,
+        "cols": 5
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "dd53ce43b9bfabc0",
+        "sampleHash": "7110296d735e2dc6"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 11,
+          "colStart": 0,
+          "colEnd": 4,
+          "headerRow": 0,
+          "headerConfidence": 0.8
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "PCM Dropdowns (HIDE)",
+      "hidden": true,
+      "dims": {
+        "rows": 9,
+        "cols": 8
+      },
+      "nonEmpty": 32,
+      "fingerprint": {
+        "headerSig": "56e1934431b84035",
+        "sampleHash": "5eb10818edd32049"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 0,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 0,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 8,
+          "colStart": 0,
+          "colEnd": 7,
+          "headerRow": 3,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    }
+  ],
+  "wallMs": 3102,
+  "peakRssMB": 147,
+  "orchWallMs": 3827
+}

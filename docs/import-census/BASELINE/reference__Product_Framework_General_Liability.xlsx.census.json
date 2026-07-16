@@ -1,0 +1,237 @@
+{
+  "file": "reference/Product_Framework_General_Liability.xlsx",
+  "status": "OK",
+  "sheets": 4,
+  "hiddenSheets": 0,
+  "nonEmpty": 6716,
+  "mergeShadows": 51,
+  "unaccounted": 6665,
+  "conservation": true,
+  "tablesFound": 5,
+  "hiddenSubstanceCells": 0,
+  "nearDupClusters": [],
+  "formTokensDistinct": 33,
+  "stateMatrixSheets": [
+    "GL Product Framework"
+  ],
+  "widestSheet": {
+    "name": "GL Product Framework",
+    "cols": 68
+  },
+  "enumDomains": 220,
+  "definitionsHarvested": 17,
+  "perSheet": [
+    {
+      "name": "Revision History",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 6
+      },
+      "nonEmpty": 22,
+      "fingerprint": {
+        "headerSig": "0f1568ca0c65ab01",
+        "sampleHash": "2a16e4eba3fecd68"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 2,
+          "colStart": 1,
+          "colEnd": 2,
+          "headerRow": 0,
+          "headerConfidence": 0.7750000000000001
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 1,
+          "colEnd": 5,
+          "headerRow": 10,
+          "headerConfidence": 0.8
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Definitions-Product Framework",
+      "hidden": false,
+      "dims": {
+        "rows": 22,
+        "cols": 3
+      },
+      "nonEmpty": 62,
+      "fingerprint": {
+        "headerSig": "3a34c9d32457a1d1",
+        "sampleHash": "8c6edbf096e371c3"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 21,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 12,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 8,
+      "formTokenSample": [
+        "CA 0001",
+        "CG 0001",
+        "CO 1000",
+        "CP 0010",
+        "IN 2015",
+        "IN 2017",
+        "IN 2020",
+        "IN 2022"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "GL Product Framework",
+      "hidden": false,
+      "dims": {
+        "rows": 115,
+        "cols": 68
+      },
+      "nonEmpty": 6606,
+      "fingerprint": {
+        "headerSig": "ea71369e206d45b6",
+        "sampleHash": "5701d64f6dc1666b"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 114,
+          "colStart": 0,
+          "colEnd": 67,
+          "headerRow": 4,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 25,
+      "formTokenSample": [
+        "CG 00 01",
+        "CG 00 02",
+        "CG 00 09",
+        "CG 00 14",
+        "CG 00 33",
+        "CG 00 34",
+        "CG 00 35",
+        "CG 00 37",
+        "CG 01 39",
+        "CG 04 35",
+        "CG 04 37",
+        "CG 04 40"
+      ],
+      "stateOrientation": "STATE_COLUMNS",
+      "idPrefixes": {
+        "GL": 110
+      },
+      "repeatingParentCols": [
+        0,
+        2,
+        3,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Data Validation",
+      "hidden": false,
+      "dims": {
+        "rows": 7,
+        "cols": 7
+      },
+      "nonEmpty": 26,
+      "fingerprint": {
+        "headerSig": "74840930f055eed2",
+        "sampleHash": "909cd1744b2aec6c"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 6,
+          "colStart": 0,
+          "colEnd": 6,
+          "headerRow": 1,
+          "headerConfidence": 0.9928571428571429
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    }
+  ],
+  "wallMs": 2256,
+  "peakRssMB": 121,
+  "orchWallMs": 2978
+}

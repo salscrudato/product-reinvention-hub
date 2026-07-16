@@ -1,0 +1,1905 @@
+{
+  "file": "hagerty/CO_RV125_Rating_Config_Template.xlsm",
+  "status": "OK",
+  "sheets": 33,
+  "hiddenSheets": 4,
+  "nonEmpty": 51375,
+  "mergeShadows": 3112,
+  "unaccounted": 48263,
+  "conservation": true,
+  "tablesFound": 69,
+  "hiddenSubstanceCells": 2016,
+  "nearDupClusters": [
+    {
+      "basis": "headerSig",
+      "sheets": [
+        {
+          "name": "Liab BI (2)",
+          "nonEmpty": 3321
+        },
+        {
+          "name": "Liab BI & PD (1)",
+          "nonEmpty": 3305
+        },
+        {
+          "name": "Liab PD (8)",
+          "nonEmpty": 3313
+        },
+        {
+          "name": "Med Payments (12)",
+          "nonEmpty": 3265
+        },
+        {
+          "name": "UM BI (20)",
+          "nonEmpty": 854
+        },
+        {
+          "name": "UM BI (6)",
+          "nonEmpty": 838
+        },
+        {
+          "name": "UM PD (52)",
+          "nonEmpty": 1017
+        },
+        {
+          "name": "MC Pass Liab (33)",
+          "nonEmpty": 3321
+        },
+        {
+          "name": "MC Pass Liab (163)",
+          "nonEmpty": 3305
+        }
+      ]
+    },
+    {
+      "basis": "headerSig",
+      "sheets": [
+        {
+          "name": "Application Text",
+          "nonEmpty": 396
+        },
+        {
+          "name": "IM App Text",
+          "nonEmpty": 349
+        }
+      ]
+    }
+  ],
+  "formTokensDistinct": 142,
+  "stateMatrixSheets": [],
+  "widestSheet": {
+    "name": "Coverage Item",
+    "cols": 28
+  },
+  "enumDomains": 42,
+  "definitionsHarvested": 0,
+  "perSheet": [
+    {
+      "name": "Program Version",
+      "hidden": false,
+      "dims": {
+        "rows": 100,
+        "cols": 13
+      },
+      "nonEmpty": 311,
+      "fingerprint": {
+        "headerSig": "f7cf86b6ed24d3a5",
+        "sampleHash": "55169cf09417b2f5"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 44,
+          "colStart": 0,
+          "colEnd": 12,
+          "headerRow": 2,
+          "headerConfidence": 0.7923076923076924
+        },
+        {
+          "rowStart": 47,
+          "rowEnd": 59,
+          "colStart": 0,
+          "colEnd": 9,
+          "headerRow": 57,
+          "headerConfidence": 0.94
+        },
+        {
+          "rowStart": 62,
+          "rowEnd": 99,
+          "colStart": 0,
+          "colEnd": 3,
+          "headerRow": 62,
+          "headerConfidence": 0.625
+        }
+      ],
+      "formTokens": 11,
+      "formTokenSample": [
+        "AC 002",
+        "CO 03 25",
+        "CO 09 23",
+        "CORULES 01 22",
+        "CORULES 02 26",
+        "CORULES 05 08",
+        "CORULES 09 23",
+        "CORULES 11 24",
+        "FOR CO 24",
+        "ID CO 03 25",
+        "ID CO 12 21"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        2,
+        5
+      ],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        },
+        {
+          "col": 4,
+          "kind": "indent",
+          "levels": 2
+        },
+        {
+          "col": 8,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "Coverages",
+      "hidden": false,
+      "dims": {
+        "rows": 438,
+        "cols": 16
+      },
+      "nonEmpty": 2367,
+      "fingerprint": {
+        "headerSig": "b3b110cc7c6f10ee",
+        "sampleHash": "68c8f0b1dfaa2686"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 0,
+          "headerConfidence": 0.7428571428571429
+        },
+        {
+          "rowStart": 13,
+          "rowEnd": 30,
+          "colStart": 0,
+          "colEnd": 15,
+          "headerRow": 20,
+          "headerConfidence": 0.6866071428571429
+        },
+        {
+          "rowStart": 33,
+          "rowEnd": 54,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 45,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 58,
+          "rowEnd": 76,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 70,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 80,
+          "rowEnd": 100,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 92,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 104,
+          "rowEnd": 118,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 116,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 122,
+          "rowEnd": 190,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 134,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 193,
+          "rowEnd": 258,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 205,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 261,
+          "rowEnd": 275,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 273,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 278,
+          "rowEnd": 299,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 290,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 303,
+          "rowEnd": 321,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 315,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 325,
+          "rowEnd": 344,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 337,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 348,
+          "rowEnd": 362,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 360,
+          "headerConfidence": 0.9964285714285714
+        },
+        {
+          "rowStart": 365,
+          "rowEnd": 437,
+          "colStart": 0,
+          "colEnd": 8,
+          "headerRow": 365,
+          "headerConfidence": 0.7250000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        2,
+        3,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        },
+        {
+          "col": 10,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "Liab BI (2)",
+      "hidden": false,
+      "dims": {
+        "rows": 283,
+        "cols": 15
+      },
+      "nonEmpty": 3321,
+      "fingerprint": {
+        "headerSig": "cd62d28adb264d64",
+        "sampleHash": "f2a3f4ef8b290fe5"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 282,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "Liab BI & PD (1)",
+      "hidden": false,
+      "dims": {
+        "rows": 281,
+        "cols": 15
+      },
+      "nonEmpty": 3305,
+      "fingerprint": {
+        "headerSig": "cd62d28adb264d64",
+        "sampleHash": "99d72a1ef15f6e54"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 280,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "Liab PD (8)",
+      "hidden": false,
+      "dims": {
+        "rows": 282,
+        "cols": 15
+      },
+      "nonEmpty": 3313,
+      "fingerprint": {
+        "headerSig": "cd62d28adb264d64",
+        "sampleHash": "6a6210c7de53f18d"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 281,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "Med Payments (12)",
+      "hidden": false,
+      "dims": {
+        "rows": 276,
+        "cols": 15
+      },
+      "nonEmpty": 3265,
+      "fingerprint": {
+        "headerSig": "cd62d28adb264d64",
+        "sampleHash": "d7fae24dfeb4f001"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 275,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "UM BI (20)",
+      "hidden": true,
+      "dims": {
+        "rows": 88,
+        "cols": 15
+      },
+      "nonEmpty": 854,
+      "fingerprint": {
+        "headerSig": "cd62d28adb264d64",
+        "sampleHash": "29437e131d9c98a7"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 87,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "STATE_LIST",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "UM BI (6)",
+      "hidden": true,
+      "dims": {
+        "rows": 86,
+        "cols": 15
+      },
+      "nonEmpty": 838,
+      "fingerprint": {
+        "headerSig": "cd62d28adb264d64",
+        "sampleHash": "ac2c2c6db0b2878b"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 85,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "STATE_LIST",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "UM PD (52)",
+      "hidden": false,
+      "dims": {
+        "rows": 109,
+        "cols": 15
+      },
+      "nonEmpty": 1017,
+      "fingerprint": {
+        "headerSig": "cd62d28adb264d64",
+        "sampleHash": "a83ccbb166305294"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 108,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "STATE_LIST",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "MC Pass Liab (33)",
+      "hidden": false,
+      "dims": {
+        "rows": 283,
+        "cols": 15
+      },
+      "nonEmpty": 3321,
+      "fingerprint": {
+        "headerSig": "cd62d28adb264d64",
+        "sampleHash": "f2a3f4ef8b290fe5"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 282,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "MC Pass Liab (163)",
+      "hidden": false,
+      "dims": {
+        "rows": 281,
+        "cols": 15
+      },
+      "nonEmpty": 3305,
+      "fingerprint": {
+        "headerSig": "cd62d28adb264d64",
+        "sampleHash": "99d72a1ef15f6e54"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 280,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "Coverage Item",
+      "hidden": false,
+      "dims": {
+        "rows": 26,
+        "cols": 28
+      },
+      "nonEmpty": 581,
+      "fingerprint": {
+        "headerSig": "a19bb968875fa8e2",
+        "sampleHash": "92e2f4f1a89046f4"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 25,
+          "colStart": 0,
+          "colEnd": 27,
+          "headerRow": 0,
+          "headerConfidence": 0.7910714285714286
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "STATE_LIST",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "IM Policy Coverages",
+      "hidden": false,
+      "dims": {
+        "rows": 70,
+        "cols": 6
+      },
+      "nonEmpty": 251,
+      "fingerprint": {
+        "headerSig": "c9c5b3bf98600a87",
+        "sampleHash": "b60de2dcbcf0be81"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 69,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 4,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        3,
+        4
+      ],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "IM Features (R.M)",
+      "hidden": false,
+      "dims": {
+        "rows": 465,
+        "cols": 4
+      },
+      "nonEmpty": 1153,
+      "fingerprint": {
+        "headerSig": "b72190cc8df48a0f",
+        "sampleHash": "b1415ae51c695f1d"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 464,
+          "colStart": 0,
+          "colEnd": 3,
+          "headerRow": 2,
+          "headerConfidence": 0.8500000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        },
+        {
+          "col": 1,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 2,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 3,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "IM Credits",
+      "hidden": false,
+      "dims": {
+        "rows": 241,
+        "cols": 4
+      },
+      "nonEmpty": 585,
+      "fingerprint": {
+        "headerSig": "8d0d9e6ef49daad2",
+        "sampleHash": "14f29cdd71dd3b3d"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 240,
+          "colStart": 0,
+          "colEnd": 3,
+          "headerRow": 2,
+          "headerConfidence": 0.8500000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "IM Debits",
+      "hidden": false,
+      "dims": {
+        "rows": 255,
+        "cols": 4
+      },
+      "nonEmpty": 600,
+      "fingerprint": {
+        "headerSig": "b2fd4999dd998e4b",
+        "sampleHash": "c3a4458cfd97cce4"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 254,
+          "colStart": 0,
+          "colEnd": 3,
+          "headerRow": 5,
+          "headerConfidence": 0.8500000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "COLL (4)",
+      "hidden": false,
+      "dims": {
+        "rows": 531,
+        "cols": 18
+      },
+      "nonEmpty": 6257,
+      "fingerprint": {
+        "headerSig": "13ab66faa3ed3aec",
+        "sampleHash": "f252c3e62fdeb12e"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 530,
+          "colStart": 0,
+          "colEnd": 17,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 11,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "OTC (5)",
+      "hidden": false,
+      "dims": {
+        "rows": 636,
+        "cols": 21
+      },
+      "nonEmpty": 7925,
+      "fingerprint": {
+        "headerSig": "55e4cd051382fbf5",
+        "sampleHash": "372d74c3e7794bbd"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 635,
+          "colStart": 0,
+          "colEnd": 20,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "staircaseCols": [
+        {
+          "col": 8,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 11,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 14,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "Deductible Availability",
+      "hidden": false,
+      "dims": {
+        "rows": 177,
+        "cols": 10
+      },
+      "nonEmpty": 1192,
+      "fingerprint": {
+        "headerSig": "818399d6e8ef7471",
+        "sampleHash": "7ed1b10669a399f3"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 69,
+          "colStart": 0,
+          "colEnd": 9,
+          "headerRow": 11,
+          "headerConfidence": 0.9550000000000001
+        },
+        {
+          "rowStart": 72,
+          "rowEnd": 176,
+          "colStart": 0,
+          "colEnd": 9,
+          "headerRow": 79,
+          "headerConfidence": 0.9550000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        1
+      ],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "Event Coverages",
+      "hidden": false,
+      "dims": {
+        "rows": 15,
+        "cols": 5
+      },
+      "nonEmpty": 51,
+      "fingerprint": {
+        "headerSig": "7da41038b268fcbb",
+        "sampleHash": "33c6598790fdd887"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 14,
+          "colStart": 0,
+          "colEnd": 4,
+          "headerRow": 0,
+          "headerConfidence": 0.8200000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "Specialty Coverages",
+      "hidden": false,
+      "dims": {
+        "rows": 364,
+        "cols": 20
+      },
+      "nonEmpty": 1725,
+      "fingerprint": {
+        "headerSig": "c86604a682779a1e",
+        "sampleHash": "8fe5d7a69ecd5fb4"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 363,
+          "colStart": 0,
+          "colEnd": 19,
+          "headerRow": 9,
+          "headerConfidence": 0.7075
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        2,
+        5,
+        9,
+        10,
+        12,
+        13,
+        14,
+        15,
+        16,
+        19
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Features",
+      "hidden": false,
+      "dims": {
+        "rows": 206,
+        "cols": 5
+      },
+      "nonEmpty": 606,
+      "fingerprint": {
+        "headerSig": "32e7eac45dc575db",
+        "sampleHash": "25d58805dceaff47"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 81,
+          "colStart": 0,
+          "colEnd": 4,
+          "headerRow": 2,
+          "headerConfidence": 0.9100000000000001
+        },
+        {
+          "rowStart": 84,
+          "rowEnd": 197,
+          "colStart": 0,
+          "colEnd": 3,
+          "headerRow": 88,
+          "headerConfidence": 0.8875
+        },
+        {
+          "rowStart": 200,
+          "rowEnd": 205,
+          "colStart": 0,
+          "colEnd": 3,
+          "headerRow": 200,
+          "headerConfidence": 0.8500000000000001
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "AGE OF 55"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 4
+        },
+        {
+          "col": 1,
+          "kind": "indent",
+          "levels": 4
+        },
+        {
+          "col": 2,
+          "kind": "indent",
+          "levels": 4
+        },
+        {
+          "col": 3,
+          "kind": "indent",
+          "levels": 3
+        }
+      ]
+    },
+    {
+      "name": "PV Documents",
+      "hidden": false,
+      "dims": {
+        "rows": 102,
+        "cols": 22
+      },
+      "nonEmpty": 1594,
+      "fingerprint": {
+        "headerSig": "653e401d762376fc",
+        "sampleHash": "359f963e10f02548"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 101,
+          "colStart": 0,
+          "colEnd": 21,
+          "headerRow": 0,
+          "headerConfidence": 0.9977272727272728
+        }
+      ],
+      "formTokens": 122,
+      "formTokenSample": [
+        "AC 001",
+        "AC 002",
+        "AC 101",
+        "AC 101 01",
+        "AC 101 11",
+        "AC 103",
+        "AC 103 01",
+        "AC 103 11",
+        "AC 106",
+        "AC 106 01",
+        "AC 106 11",
+        "AC 107"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        1,
+        2,
+        7,
+        9,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Misc. Coverages",
+      "hidden": true,
+      "dims": {
+        "rows": 64,
+        "cols": 11
+      },
+      "nonEmpty": 246,
+      "fingerprint": {
+        "headerSig": "e753b52fa93b5ec7",
+        "sampleHash": "207b2470dec1f7e4"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 44,
+          "colStart": 0,
+          "colEnd": 10,
+          "headerRow": 13,
+          "headerConfidence": 0.6404040404040404
+        },
+        {
+          "rowStart": 47,
+          "rowEnd": 63,
+          "colStart": 0,
+          "colEnd": 10,
+          "headerRow": 49,
+          "headerConfidence": 0.709090909090909
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "PK 396"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        8,
+        9,
+        10
+      ],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        },
+        {
+          "col": 1,
+          "kind": "indent",
+          "levels": 2
+        },
+        {
+          "col": 2,
+          "kind": "indent",
+          "levels": 2
+        },
+        {
+          "col": 3,
+          "kind": "indent",
+          "levels": 2
+        },
+        {
+          "col": 4,
+          "kind": "indent",
+          "levels": 2
+        },
+        {
+          "col": 5,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "DocPckt Documents",
+      "hidden": false,
+      "dims": {
+        "rows": 9,
+        "cols": 24
+      },
+      "nonEmpty": 123,
+      "fingerprint": {
+        "headerSig": "a68a460ff89e13f1",
+        "sampleHash": "234f8cceabb7aaec"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 8,
+          "colStart": 0,
+          "colEnd": 23,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 4,
+      "formTokenSample": [
+        "CO 07 23",
+        "CO 11 24",
+        "CS 100",
+        "CS 101"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        17,
+        18
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "INS SCORE",
+      "hidden": false,
+      "dims": {
+        "rows": 38,
+        "cols": 10
+      },
+      "nonEmpty": 172,
+      "fingerprint": {
+        "headerSig": "ef5535bdedd2324b",
+        "sampleHash": "4eb78b19e24fbfff"
+      },
+      "tables": [
+        {
+          "rowStart": 1,
+          "rowEnd": 2,
+          "colStart": 0,
+          "colEnd": 9,
+          "headerRow": 1,
+          "headerConfidence": 0.76
+        },
+        {
+          "rowStart": 5,
+          "rowEnd": 31,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 7,
+          "headerConfidence": 0.925
+        },
+        {
+          "rowStart": 34,
+          "rowEnd": 37,
+          "colStart": 0,
+          "colEnd": 9,
+          "headerRow": 36,
+          "headerConfidence": 0.97
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        4
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "State Region Table",
+      "hidden": false,
+      "dims": {
+        "rows": 77,
+        "cols": 11
+      },
+      "nonEmpty": 285,
+      "fingerprint": {
+        "headerSig": "fd691d24ac561ab6",
+        "sampleHash": "098cc329cc0f52b7"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 3,
+          "colStart": 0,
+          "colEnd": 7,
+          "headerRow": 0,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 4,
+          "rowEnd": 4,
+          "colStart": 10,
+          "colEnd": 10,
+          "headerRow": 4,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 5,
+          "rowEnd": 48,
+          "colStart": 0,
+          "colEnd": 9,
+          "headerRow": 11,
+          "headerConfidence": 0.6507142857142857
+        },
+        {
+          "rowStart": 54,
+          "rowEnd": 54,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 54,
+          "headerConfidence": 0.55
+        },
+        {
+          "rowStart": 60,
+          "rowEnd": 60,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 60,
+          "headerConfidence": 0.55
+        },
+        {
+          "rowStart": 66,
+          "rowEnd": 76,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 66,
+          "headerConfidence": 0.75
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        8
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Application Text",
+      "hidden": false,
+      "dims": {
+        "rows": 92,
+        "cols": 6
+      },
+      "nonEmpty": 396,
+      "fingerprint": {
+        "headerSig": "120749bb40ffed89",
+        "sampleHash": "d0a85c00f7cfe432"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 1,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 0,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 3,
+          "colStart": 4,
+          "colEnd": 5,
+          "headerRow": 3,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 5,
+          "rowEnd": 91,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 14,
+          "headerConfidence": 0.75
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "AP CO 03 20"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "IM App Text",
+      "hidden": false,
+      "dims": {
+        "rows": 80,
+        "cols": 6
+      },
+      "nonEmpty": 349,
+      "fingerprint": {
+        "headerSig": "120749bb40ffed89",
+        "sampleHash": "044072d518987266"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 1,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 0,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 3,
+          "colStart": 4,
+          "colEnd": 5,
+          "headerRow": 3,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 4,
+          "rowEnd": 79,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 7,
+          "headerConfidence": 0.75
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "AP CO 01 13"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Coverage Rules",
+      "hidden": false,
+      "dims": {
+        "rows": 28,
+        "cols": 6
+      },
+      "nonEmpty": 60,
+      "fingerprint": {
+        "headerSig": "8e268db1c0d775c1",
+        "sampleHash": "33ec94d6b25c81bf"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 14,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 1,
+          "headerConfidence": 0.9416666666666667
+        },
+        {
+          "rowStart": 18,
+          "rowEnd": 18,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 18,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 20,
+          "rowEnd": 22,
+          "colStart": 1,
+          "colEnd": 1,
+          "headerRow": 20,
+          "headerConfidence": 0.6499999999999999
+        },
+        {
+          "rowStart": 25,
+          "rowEnd": 25,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 25,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 27,
+          "rowEnd": 27,
+          "colStart": 1,
+          "colEnd": 1,
+          "headerRow": 27,
+          "headerConfidence": 0.45
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "STATE_LIST",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        4,
+        5
+      ],
+      "staircaseCols": [
+        {
+          "col": 2,
+          "kind": "leading-space",
+          "levels": 2
+        },
+        {
+          "col": 3,
+          "kind": "leading-space",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "FLEX",
+      "hidden": false,
+      "dims": {
+        "rows": 74,
+        "cols": 15
+      },
+      "nonEmpty": 541,
+      "fingerprint": {
+        "headerSig": "f12cc7eb6c2a3905",
+        "sampleHash": "2e064ac3ebe17ce9"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 53,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 0,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 59,
+          "rowEnd": 73,
+          "colStart": 1,
+          "colEnd": 7,
+          "headerRow": 59,
+          "headerConfidence": 0.8714285714285714
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "ALL 1979"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        2,
+        3,
+        4,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "NPO Mapping",
+      "hidden": false,
+      "dims": {
+        "rows": 118,
+        "cols": 14
+      },
+      "nonEmpty": 1388,
+      "fingerprint": {
+        "headerSig": "5309c2be3a67f247",
+        "sampleHash": "aa23fe17f4c535c9"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 83,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 1,
+          "headerConfidence": 0.967857142857143
+        },
+        {
+          "rowStart": 86,
+          "rowEnd": 117,
+          "colStart": 0,
+          "colEnd": 11,
+          "headerRow": 87,
+          "headerConfidence": 0.8500000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "STATE_LIST",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        2,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Coverages (Comp Coll)",
+      "hidden": true,
+      "dims": {
+        "rows": 19,
+        "cols": 9
+      },
+      "nonEmpty": 78,
+      "fingerprint": {
+        "headerSig": "e14a5cbb8105b4b3",
+        "sampleHash": "bb2b6eacc3d4b0e9"
+      },
+      "tables": [
+        {
+          "rowStart": 1,
+          "rowEnd": 18,
+          "colStart": 0,
+          "colEnd": 8,
+          "headerRow": 1,
+          "headerConfidence": 0.7250000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    }
+  ],
+  "wallMs": 2378,
+  "peakRssMB": 297,
+  "orchWallMs": 3072
+}
