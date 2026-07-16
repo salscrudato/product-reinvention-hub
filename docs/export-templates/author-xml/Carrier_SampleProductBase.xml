@@ -1,0 +1,17 @@
+﻿<ManuScript>
+  <properties manuscriptID="Carrier_SampleProductBase_1_0_0_0" versionID="Carrier_SampleProductBase" versionDate="2009-03-13" version="1" boolean="1" fieldCache="1" shortCircuitCond="1" cultureCode="en-US" cultureName="United States [english]" caption="Carrier Sample Product Base (1.0.0.0)" inherited="Carrier_ProductBaseWithBilling_1_0_0_0" image="" dataSchema="">
+    <contexts inherited="DCT_ProductBase_1_0_0_0" />
+    <notes />
+    <keys>
+      <keyInfo name="family" value="DCTSampleProducts" />
+      <keyInfo name="lob" value="Base" />
+      <keyInfo name="state" value="CarrierAdmin" />
+      <keyInfo name="version" value="1.0.0.0" />
+      <keyInfo name="effectiveDateNew" value="2009-01-01" />
+      <keyInfo name="effectiveDateRenewal" value="2009-01-01" />
+      <keyInfo name="masterID" value="None" />
+      <keyInfo name="productCode" value="Pages" />
+    </keys>
+  </properties>
+  <model defaultValue="data.TotalPurePremiumWritten" />
+</ManuScript>

@@ -24,12 +24,13 @@ import {
   IconPlus, IconChart, IconChevronDown, IconTasks, IconWarning, IconCheck, IconDrag,
 } from '../components/ui/icons'
 import { businessDaysBetween } from '@pf/shared'
-import type { Product, TypeOfWork, TaskColumn } from '@pf/shared'
+import type { Product, TypeOfWork } from '@pf/shared'
 import {
   GTM_COLUMNS, GTM_PHASES, WORK_TYPES, DISPOSITIONS, DISPOSITION_META, byDueThenOrder,
-  isOverdue, startOfTodayMs, todayISO, fmtShort, toMillis, doneFields,
+  isOverdue, startOfTodayMs, todayISO, fmtShort, toMillis, doneFields, projectAccentVars,
   type BoardDisposition, type TaskDoc, type ProjectDoc,
 } from '../components/tasks/gtm/gtm'
+import { resolveDrop, commitMove } from '../components/tasks/gtm/boardDnd'
 import { LaunchRunway } from '../components/tasks/gtm/LaunchRunway'
 import { TaskCard, CompletedRow } from '../components/tasks/gtm/TaskCard'
 import { ProjectDialog } from '../components/tasks/gtm/ProjectDialog'
@@ -81,9 +82,10 @@ export default function Tasks() {
   const [arrivedBatch, setArrivedBatch] = useState<string | null>(null)
   const seedBatch = params.get('seedBatch')
 
-  // Filters
+  // Filters. `overdue` initializes from ?overdue=1 so the Home brief's overdue pill
+  // deep-links straight into the filtered board (mirrors the seedBatch URL pattern).
   const [mine, setMine]       = useState(false)
-  const [overdue, setOverdue] = useState(false)
+  const [overdue, setOverdue] = useState(() => params.get('overdue') === '1')
   const [typeFilter, setType] = useState<'' | TypeOfWork>('')
   const [phaseFilter, setPhase] = useState('')
   const [dispFilter, setDisp] = useState<'' | BoardDisposition>('')
@@ -196,28 +198,24 @@ export default function Tasks() {
     }
   }
 
-  // Drag a card between columns — same optimistic overlay + atomic mutate as the
-  // done-toggle; a failed write rolls the card back and toasts honestly.
+  // Drag a card between columns — the write path lives in boardDnd.ts (pure, pinned by
+  // boardDnd.test.ts): same optimistic overlay + single atomic { column } mutate as ever;
+  // a failed write rolls the card back and toasts honestly.
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
-  async function moveTask(task: TaskDoc, toColumn: TaskColumn) {
-    if (!actor || task.column === toColumn) return
-    setDoneOverride(prev => ({ ...prev, [task.id]: { ...prev[task.id], column: toColumn } }))
-    try {
-      await adapter.db.mutate({
-        op: 'update', path: `tasks/${task.id}`, data: { column: toColumn },
-        entityType: 'task', productId: task.productId, actor, expectedRev: task.rev,
-      })
-    } catch (err) {
-      setDoneOverride(prev => { const next = { ...prev }; delete next[task.id]; return next })
-      if (err instanceof MutationConflictError) conflictToast({})
-      else toast.error('Could not move the task')
-    }
-  }
+  const setMoveOverride = (id: string, patch: Partial<TaskDoc> | null) =>
+    setDoneOverride(prev => {
+      if (patch === null) { const next = { ...prev }; delete next[id]; return next }
+      return { ...prev, [id]: { ...prev[id], ...patch } }
+    })
   function onDragEnd(e: DragEndEvent) {
-    const toColumn = e.over?.id as TaskColumn | undefined
-    if (!toColumn || !GTM_COLUMNS.some(c => c.id === toColumn)) return
-    const task = (tasks ?? []).find(t => t.id === e.active.id)
-    if (task) void moveTask(task, toColumn)
+    if (!actor) return
+    const move = resolveDrop(e, tasks ?? [])
+    if (!move) return
+    void commitMove({ ...move, actor, mutate: adapter.db.mutate, setOverride: setMoveOverride })
+      .then(r => {
+        if (r === 'conflict') conflictToast({})
+        else if (r === 'error') toast.error('Could not move the task')
+      })
   }
 
   const activeFilters = [mine, overdue, !!typeFilter, !!phaseFilter, !!dispFilter].filter(Boolean).length
@@ -275,12 +273,14 @@ export default function Tasks() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    // The board root scopes the per-project accent: --proj-accent/-soft/-line recast every
+    // descendant (cards, column bars, metrics, switcher dot) when the PM switches projects.
+    <div className="flex flex-col gap-5" style={projectAccentVars(current.id)}>
       {/* Project selector + create */}
       <div className="flex flex-wrap items-center gap-2.5">
         <span className="inline-flex items-center gap-2 h-9 px-3 rounded-[11px] bg-surface font-semibold"
-          style={{ border: '1px solid var(--color-border)' }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-accent)' }} aria-hidden="true" />
+          style={{ border: '1px solid var(--proj-line, var(--color-border))' }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--proj-accent, var(--color-accent))' }} aria-hidden="true" />
           <select value={currentId ?? ''} onChange={e => switchProject(e.target.value)}
             aria-label="Select project"
             className="bg-transparent font-semibold text-text text-sm max-w-[240px] truncate focus:outline-none cursor-pointer">
@@ -430,7 +430,7 @@ export default function Tasks() {
               {GTM_COLUMNS.map(col => {
                 const items = byColumn[col.id]!
                 return (
-                  <DroppableColumn key={col.id} id={col.id} label={col.label} bar={col.bar} count={items.length}>
+                  <DroppableColumn key={col.id} id={col.id} label={col.label} count={items.length}>
                     {items.length > 0
                       ? items.map(t => (
                           <DraggableCard key={t.id} task={t} canEdit={canEdit}>
@@ -454,7 +454,8 @@ export default function Tasks() {
             <button onClick={() => setCompletedOpen(o => !o)}
               className="flex items-center gap-2.5 w-full text-left" aria-expanded={completedOpen}>
               <IconChevronDown size={15} className="transition-transform" style={{ transform: completedOpen ? 'none' : 'rotate(-90deg)' }} aria-hidden="true" />
-              <h3 className="text-[13px] font-bold text-text">Completed</h3>
+              {/* h2: the page h1 is the project name — heading levels must not skip (axe heading-order). */}
+              <h2 className="text-[13px] font-bold text-text">Completed</h2>
               <span className="text-[11px] font-semibold text-faint px-2 rounded-[7px] bg-raised" style={{ border: '1px solid var(--color-border)' }}>
                 {done.length}
               </span>
@@ -495,21 +496,22 @@ export default function Tasks() {
 
 // ─── Board DnD wrappers ─────────────────────────────────────────────────────────
 
-/** A droppable board column: header (tint bar · label · count) + card stack.
- *  The whole column glows softly while a card hovers over it. */
-function DroppableColumn({ id, label, bar, count, children }: {
-  id: string; label: string; bar: string; count: number; children: ReactNode
+/** A droppable board column: header (project-accent bar · label · count) + card stack.
+ *  Column identity is position + label; the bar and drop-glow carry the board's
+ *  per-project accent, so the whole surface reads as one project's workspace. */
+function DroppableColumn({ id, label, count, children }: {
+  id: string; label: string; count: number; children: ReactNode
 }) {
   const { isOver, setNodeRef } = useDroppable({ id })
   return (
     <section ref={setNodeRef} aria-label={label}
       className="rounded-[14px] p-1.5 min-h-[120px] transition-shadow"
       style={{
-        background: isOver ? 'var(--color-accent-soft)' : 'var(--color-raised)',
-        border: `1px solid ${isOver ? 'var(--color-accent-line)' : 'var(--color-border)'}`,
+        background: isOver ? 'var(--proj-soft, var(--color-accent-soft))' : 'var(--color-raised)',
+        border: `1px solid ${isOver ? 'var(--proj-line, var(--color-accent-line))' : 'var(--color-border)'}`,
       }}>
       <div className="flex items-center gap-2 px-2.5 py-2">
-        <span className="w-5 h-[3px] rounded-full" style={{ background: bar }} aria-hidden="true" />
+        <span className="w-5 h-[3px] rounded-full" style={{ background: 'var(--proj-accent, var(--color-accent))' }} aria-hidden="true" />
         <span className="text-[11px] font-semibold uppercase tracking-[.05em] text-dim">{label}</span>
         <span className="ml-auto text-[11px] font-semibold text-faint tabular-nums px-1.5 rounded-[7px] bg-surface"
           style={{ border: '1px solid var(--color-border)' }}>{count}</span>
@@ -559,7 +561,7 @@ function Metric({ value, unit, label, accent, danger }: {
     <div>
       <div className="flex items-baseline gap-1.5">
         <span className="text-[26px] font-bold tracking-tight tabular-nums"
-          style={{ color: danger ? 'var(--color-danger)' : accent ? 'var(--color-accent-strong)' : 'var(--color-text)' }}>
+          style={{ color: danger ? 'var(--color-danger)' : accent ? 'var(--proj-accent, var(--color-accent-strong))' : 'var(--color-text)' }}>
           {value}
         </span>
         {unit && <span className="text-xs font-semibold text-faint">{unit}</span>}

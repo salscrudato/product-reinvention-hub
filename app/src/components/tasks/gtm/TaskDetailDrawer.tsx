@@ -15,7 +15,7 @@ import { ProductProvider } from '../../../context/ProductContext'
 import { Drawer, Input, Button, Badge } from '../../ui'
 import { IconLink, IconCheck, IconInfo, IconWarning } from '../../ui/icons'
 import type { TaskColumn, TypeOfWork } from '@pf/shared'
-import { GTM_COLUMNS, GTM_PHASES, WORK_TYPES, fmtShort, columnLabel, type TaskDoc, type ProjectDoc } from './gtm'
+import { GTM_COLUMNS, GTM_PHASES, WORK_TYPES, fmtShort, columnLabel, projectAccentVars, type TaskDoc, type ProjectDoc } from './gtm'
 import { formFromTask, diffTaskEdits, commitTaskEdits, type TaskEditForm } from './taskEdits'
 import { resolveTaskEnrichment } from './taskLens'
 import { TaskLensPanel } from './TaskLensPanel'
@@ -88,9 +88,13 @@ export function TaskDetailDrawer({ task, project, canEdit, actor, onClose }: Pro
   const checklist = form.checklist
   const setChecklist = (next: TaskEditForm['checklist']) => set('checklist', next)
 
+  // The phase's ramp token (dot in the lineage header), when the task carries a known phase.
+  const lineagePhase = task.phaseL2 ? GTM_PHASES.find(p => p.name === task.phaseL2) ?? null : null
+
   return (
     <Drawer open onClose={onClose} title="Task detail" width="w-[560px]">
-      <div className="flex flex-col gap-5">
+      {/* The Drawer portals to <body>, escaping the board's accent scope — re-apply it. */}
+      <div className="flex flex-col gap-5" style={projectAccentVars(project.id)}>
         {/* Conflict / staleness banners — never a silent overwrite */}
         {conflict && (
           <div role="alert" className="flex items-start gap-2 px-3 py-2.5 rounded-[10px] text-[12.5px] text-danger"
@@ -107,6 +111,25 @@ export function TaskDetailDrawer({ task, project, canEdit, actor, onClose }: Pro
               className="font-semibold text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[4px]">
               Reload to latest
             </button>
+          </div>
+        )}
+
+        {/* Process lineage — the clean L2→L4 read the board card deliberately doesn't carry
+            (the card shows one main step; depth lives here). Non-focusable, purely
+            presentational: the drawer's tested tab order is untouched. */}
+        {task.origin !== 'adhoc' && (task.phaseL2 || task.groupL3) && (
+          <div className="flex flex-col gap-1 pl-3"
+            style={{ borderLeft: '2px solid var(--proj-accent, var(--color-accent))' }}>
+            <span className="text-[10px] font-bold uppercase tracking-[.06em] text-faint">Process lineage</span>
+            {task.phaseL2 && (
+              <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-text">
+                {lineagePhase && (
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: `var(${lineagePhase.cssVar})` }} aria-hidden="true" />
+                )}
+                {task.phaseL2}
+              </span>
+            )}
+            {task.groupL3 && <span className="text-[12px] text-dim pl-3.5">{task.groupL3}</span>}
           </div>
         )}
 

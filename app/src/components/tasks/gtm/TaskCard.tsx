@@ -1,24 +1,22 @@
 // TaskCard — one board card, and CompletedRow — one row in the Completed section.
-// A card shows the L4 title, its phase/group lineage (or a "One-off" badge), the owner
-// role, a due date (overdue-red when past, an "Ongoing" pill for no-due governance) and a
-// work-type colour chip. Completing a task moves it out of its column into Completed.
+// The card leads with ONE clear main step (the L4 title); identity chips (phase, 4E
+// disposition, work type) sit on a quiet second line; owner / due / checklist progress
+// on a third; and back-scheduled tasks close with a runway micro-bar reading how far
+// through their start→due window they are. The L2/L3 lineage detail lives in the task
+// drawer (keyboard-operable, focus-trapped) — never a nested wall on the card. The
+// card's left edge carries the board's per-project accent (--proj-accent, scoped by
+// the board root; every color a token).
 import { Badge } from '../../ui'
-import { IconCheck } from '../../ui/icons'
-import { fmtShort, workTypeBadge, columnLabel, isOverdue, dispositionMeta, type TaskDoc } from './gtm'
+import { IconCheck, IconCalendar, IconList } from '../../ui/icons'
+import {
+  fmtShort, workTypeBadge, columnLabel, isOverdue, dispositionMeta, elapsedFraction,
+  GTM_PHASES, type TaskDoc,
+} from './gtm'
 
 function initials(name?: string): string {
   if (!name) return '·'
   const words = name.replace(/[^a-zA-Z ]/g, '').trim().split(/\s+/)
   return ((words[0]?.[0] ?? '') + (words[1]?.[0] ?? '')).toUpperCase() || '·'
-}
-
-function CalendarGlyph() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="opacity-70">
-      <rect x="3" y="4" width="18" height="18" rx="3" /><path d="M3 9h18M8 2v4M16 2v4" />
-    </svg>
-  )
 }
 
 /** The complete/reopen checkbox — token-driven, keyboard-reachable. */
@@ -47,17 +45,18 @@ export function TaskCard({ task, canEdit, todayIso, arriving, dragHandle, onTogg
   const overdue = isOverdue(task, todayIso)
   const wt = workTypeBadge(task.typeOfWork)
   const disp = dispositionMeta(task.disposition)
-  const lineage = task.origin === 'adhoc'
-    ? null
-    : [task.phaseL2, task.groupL3].filter(Boolean).join(' / ')
+  const phase = task.phaseL2 ? GTM_PHASES.find(p => p.name === task.phaseL2) ?? null : null
+  const checklistDone = task.checklist?.filter(c => c.done).length ?? 0
+  const checklistTotal = task.checklist?.length ?? 0
+  const runway = task.ongoing || task.done ? null : elapsedFraction(task.startDate, task.dueAt, todayIso)
 
   return (
     <div
       className={`group bg-surface rounded-[11px] p-3 flex gap-2.5 rise-in transition-shadow hover:shadow-[var(--shadow-card-hover)] focus-within:shadow-[var(--shadow-card-hover)]${arriving ? ' task-arrive' : ''}`}
       style={{
         border: '1px solid var(--color-border)',
-        // 4E tint: a subtle left stripe in the disposition's token (Embrace/Elevate/Enhance).
-        borderLeft: disp ? `3px solid ${disp.token}` : '1px solid var(--color-border)',
+        // The organizing signal: the board's per-project accent on every card's left edge.
+        borderLeft: '3px solid var(--proj-accent, var(--color-accent))',
         boxShadow: 'var(--shadow-card)',
       }}
     >
@@ -70,31 +69,24 @@ export function TaskCard({ task, canEdit, todayIso, arriving, dragHandle, onTogg
           focus-visible work for free; VIEWER opens the identical (read-only) panel. */}
       <button type="button" onClick={() => onOpen(task)} aria-label={`Open task: ${task.title}`}
         className="flex-1 min-w-0 text-left rounded-[8px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        {/* Main step — the one thing this card asks of the reader. */}
         <div className="flex items-start gap-1.5">
-          <div className="flex-1 min-w-0 text-[13px] font-medium leading-snug text-text">{task.title}</div>
+          <div className="flex-1 min-w-0 text-[13px] font-semibold leading-snug text-text">{task.title}</div>
         </div>
 
-        {task.origin === 'adhoc'
-          ? <span className="inline-block mt-1.5 text-[9.5px] font-bold uppercase tracking-[.05em] text-faint rounded-[5px] px-1.5 py-0.5"
+        {/* Identity chips: phase (L2) or One-off · 4E disposition · work type. */}
+        <div className="flex items-center flex-wrap gap-1.5 mt-2">
+          {task.origin === 'adhoc' ? (
+            <span className="inline-block text-[9.5px] font-bold uppercase tracking-[.05em] text-faint rounded-[5px] px-1.5 py-0.5"
               style={{ border: '1px solid var(--color-border)' }}>One-off</span>
-          : lineage && <div className="text-[10.5px] text-faint font-semibold mt-1.5 truncate">{lineage}</div>}
-
-        <div className="flex items-center flex-wrap gap-2 mt-2.5">
-          {task.ownerRole && (
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-dim font-medium min-w-0">
-              <span className="w-[15px] h-[15px] rounded-full grid place-items-center text-[8px] font-bold shrink-0"
-                style={{ background: 'var(--color-chip)', color: 'var(--color-dim)' }}>{initials(task.ownerRole)}</span>
-              <span className="truncate max-w-[120px]">{task.ownerRole}</span>
+          ) : phase ? (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-dim rounded-[5px] px-1.5 py-0.5 bg-raised"
+              title={`Phase: ${phase.name}`} style={{ border: '1px solid var(--color-border)' }}>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: `var(${phase.cssVar})` }} aria-hidden="true" />
+              {phase.short}
             </span>
-          )}
-          {task.ongoing ? (
-            <span className="text-[11px] font-semibold rounded-[6px] px-1.5 py-0.5 bg-accent-soft text-accent">Ongoing</span>
-          ) : task.dueAt ? (
-            // Overdue reads calm: a soft danger pill, not shouting red text.
-            <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${overdue ? 'text-danger rounded-[6px] px-1.5 py-0.5' : 'text-dim'}`}
-              style={overdue ? { background: 'var(--color-danger-soft)' } : undefined}>
-              <CalendarGlyph />{fmtShort(task.dueAt)}{overdue ? ' · overdue' : ''}
-            </span>
+          ) : task.phaseL2 ? (
+            <span className="text-[10px] font-semibold text-faint truncate max-w-[140px]">{task.phaseL2}</span>
           ) : null}
           <span className="ml-auto flex items-center gap-1.5">
             {disp && (
@@ -108,6 +100,52 @@ export function TaskCard({ task, canEdit, todayIso, arriving, dragHandle, onTogg
             <Badge label={wt.label} color={wt.color} className="text-[10px]" />
           </span>
         </div>
+
+        {/* Meta: owner · due (overdue calm, ongoing pill) · checklist progress. */}
+        <div className="flex items-center flex-wrap gap-2 mt-2">
+          {task.ownerRole && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-dim font-medium min-w-0">
+              <span className="w-[15px] h-[15px] rounded-full grid place-items-center text-[8px] font-bold shrink-0"
+                style={{ background: 'var(--color-chip)', color: 'var(--color-dim)' }}>{initials(task.ownerRole)}</span>
+              <span className="truncate max-w-[120px]">{task.ownerRole}</span>
+            </span>
+          )}
+          {task.ongoing ? (
+            <span className="text-[11px] font-semibold rounded-[6px] px-1.5 py-0.5 bg-accent-soft text-accent">Ongoing</span>
+          ) : task.dueAt ? (
+            // Overdue reads calm: a soft danger pill, not shouting red text.
+            <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${overdue ? 'text-danger rounded-[6px] px-1.5 py-0.5' : 'text-dim'}`}
+              style={overdue ? { background: 'var(--color-danger-soft)' } : undefined}>
+              <IconCalendar size={11} className="opacity-70" aria-hidden="true" />
+              {fmtShort(task.dueAt)}{overdue ? ' · overdue' : ''}
+            </span>
+          ) : null}
+          {checklistTotal > 0 && (
+            <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-dim tabular-nums"
+              aria-label={`Checklist: ${checklistDone} of ${checklistTotal} done`}
+              title={`Checklist: ${checklistDone}/${checklistTotal} done`}>
+              <IconList size={11} className="opacity-70" aria-hidden="true" />
+              {checklistDone}/{checklistTotal}
+            </span>
+          )}
+        </div>
+
+        {/* Runway micro-bar — how far through its back-scheduled start→due window this
+            task is. The fill edge IS the today read; no animation (reduced-motion-free). */}
+        {runway != null && (
+          <span
+            role="img"
+            aria-label={`Task window ${fmtShort(task.startDate)} to ${fmtShort(task.dueAt)}, ${Math.round(runway * 100)}% elapsed`}
+            title={`${fmtShort(task.startDate)} → ${fmtShort(task.dueAt)} · ${Math.round(runway * 100)}% of the window elapsed`}
+            className="block mt-2.5 h-[3px] rounded-full overflow-hidden"
+            style={{ background: 'var(--color-chip)' }}
+          >
+            <span className="block h-full rounded-full" style={{
+              width: `${runway * 100}%`,
+              background: overdue ? 'var(--color-danger)' : 'var(--proj-accent, var(--color-accent))',
+            }} />
+          </span>
+        )}
       </button>
 
       {/* Drag affordance — visible on hover/focus so the card invites moving. */}

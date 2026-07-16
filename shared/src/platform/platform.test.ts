@@ -21,6 +21,20 @@ describe('featureFlags registry', () => {
   })
 })
 
+describe('page.dictionary default (EX-02 / DEFAULTS_SPEC §2)', () => {
+  it('ships DISABLED by default — the Dictionary hides until a DC export earns it', () => {
+    const def = FEATURE_FLAGS.find(f => f.key === 'page.dictionary')
+    expect(def?.defaultEnabled).toBe(false)
+    expect(def?.tenantOverridable).toBe(true)   // the unlock lever (P3's export-success hook)
+    expect(resolveFlags({}, {})['page.dictionary']).toBe(false)
+  })
+  it('the reveal path: a tenant override true flips it on (the ONE shared switch)', () => {
+    expect(resolveFlags({}, { 'page.dictionary': true })['page.dictionary']).toBe(true)
+    // …and the platform hard floor still wins over a tenant opt-in:
+    expect(resolveFlags({ 'page.dictionary': false }, { 'page.dictionary': true })['page.dictionary']).toBe(false)
+  })
+})
+
 describe('resolveFlag precedence', () => {
   it('falls back to the registry default', () => {
     expect(resolveFlag('page.rating', undefined, undefined)).toBe(true)

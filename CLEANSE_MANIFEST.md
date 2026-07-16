@@ -206,3 +206,15 @@ OVERALL: PASS
    gate.mjs - it is the universal pre-commit ritual. Add `--only <step>` (run a single
    step, e.g. --only test while iterating on a red suite) and a `--json` summary line so
    harnesses can parse timings instead of scraping the log.
+
+## Post-merge correction: docs/export-templates/author-xml RESTORED
+
+The Wave C archive of docs/export-templates/author-xml was verified against THIS branch
+(old DuckCreek export removed in 8825cbd; authed /api/duckcreek/* 404). The concurrent P3
+lane on main, however, shipped a NEW Duck Creek XML export whose drift/roundtrip tests
+(tests/export/node-index-drift.test.ts, tests/export/roundtrip.test.ts) read
+author-xml-node-index.json and DCT_SampleProduct_3_0_0_0.xml from that directory as live
+fixtures. The merge gate caught it (2 ENOENT failures); the directory is restored in the
+merge commit from main's side (byte-identical to the wave-C archive copy - main never
+modified it, it only reads it). The Wave C row above is therefore REVERSED for this path;
+the archive copy remains as a redundant backup.

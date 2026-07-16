@@ -133,6 +133,11 @@ export const IconList = (p: IconProps) => (
   <Glyph {...p}><path d="M8 6.5h12M8 12h12M8 17.5h12" /><path d="M4 6.5h.01M4 12h.01M4 17.5h.01" strokeWidth={2.2} /></Glyph>
 )
 
+/** Calendar — a dated page (due dates, schedules). */
+export const IconCalendar = (p: IconProps) => (
+  <Glyph {...p}><rect x="3.5" y="4.5" width="17" height="16.5" rx="2.5" /><path d="M3.5 9.5h17M8 2.5v4M16 2.5v4" /></Glyph>
+)
+
 export const IconPlus = (p: IconProps) => (<Glyph {...p}><path d="M12 5v14M5 12h14" /></Glyph>)
 export const IconClose = (p: IconProps) => (<Glyph {...p}><path d="M6 6 18 18M18 6 6 18" /></Glyph>)
 export const IconCheck = (p: IconProps) => (<Glyph {...p}><path d="m4.5 12.5 4.5 4.5L19.5 6.5" /></Glyph>)

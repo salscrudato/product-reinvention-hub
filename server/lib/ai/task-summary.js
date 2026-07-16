@@ -43,7 +43,9 @@ function bucketize(tasks) {
     const d = typeof t.dueAt === 'string' ? t.dueAt.slice(0, 10) : null
     return d && d >= today && d <= week
   })
-  return { open, overdue, next7 }
+  // dueToday (additive, consumed by the daily brief's buckets): the next7 slice due today.
+  const dueToday = next7.filter(t => typeof t.dueAt === 'string' && t.dueAt.slice(0, 10) === today)
+  return { open, overdue, next7, dueToday }
 }
 
 /** Keep only [citations] whose id is in validIds; drop the rest verbatim-safe. */
@@ -60,13 +62,16 @@ function _stripUncited(raw, validIds) {
 const rosterLine = t =>
   `${t.id} | ${String(t.title || '').slice(0, 80)} | due ${typeof t.dueAt === 'string' ? t.dueAt.slice(0, 10) : 'none'} | ${t.done ? 'done' : t.ongoing ? 'ongoing' : 'open'} | ${t.ownerRole || t.assignee || 'unassigned'}`
 
-async function taskSummary(req, res) {
-  const tid = req.user?.tenantId
-  if (!tid) return res.status(401).json({ error: 'unauthenticated' })
-
-  const g = fleet.guard()
-  if (!g.allow) return res.status(429).json({ error: 'ai_budget_exceeded', detail: g.reason })
-
+/**
+ * The composition core, extracted so the daily brief (daily-brief.js) can embed the
+ * SAME grounded paragraph + citations verbatim (HOME_BRIEF_SPEC §1.1) instead of
+ * re-summarizing. Pure of HTTP: returns a discriminated union; the taskSummary
+ * handler below maps it onto the historical wire shapes byte-for-byte.
+ *   { kind:'ok',    summary, counts, citedIds, deployment, generatedAt }
+ *   { kind:'empty', counts, generatedAt }                  // no open tasks — no model call
+ *   { kind:'error', error:'tasks_unavailable'|'uncited_summary'|'ai_upstream', detail }
+ */
+async function composeTaskSummary(tid, { degrade = false } = {}) {
   // Server-side roster read — same entity-row shape as /api/db/list.
   let rows
   try {
@@ -78,14 +83,14 @@ async function taskSummary(req, res) {
     ).fetchAll()
     rows = resources.map(r => ({ id: String(r.path || '').split('/').filter(Boolean).at(-1), ...r.data }))
   } catch (e) {
-    return res.status(503).json({ error: 'tasks_unavailable', detail: e.message })
+    return { kind: 'error', error: 'tasks_unavailable', detail: e.message }
   }
 
-  const { open, overdue, next7 } = bucketize(rows)
-  const counts = { open: open.length, overdue: overdue.length, next7: next7.length }
+  const { open, overdue, next7, dueToday } = bucketize(rows)
+  const counts = { open: open.length, overdue: overdue.length, next7: next7.length, dueToday: dueToday.length }
   if (open.length === 0) {
     // Nothing to synthesize — an honest empty result, no model call spent.
-    return res.json({ summary: null, counts, deployment: null, generatedAt: new Date().toISOString() })
+    return { kind: 'empty', counts, generatedAt: new Date().toISOString() }
   }
 
   // Compact roster: every overdue task, the next-7-day slate, then a slice of the
@@ -105,7 +110,7 @@ async function taskSummary(req, res) {
     'Task roster (id | title | due | status | owner):\n' + roster.join('\n'),
   ].join(' ')
 
-  const deployment = fleet.resolveModel('MID_REASONER', g.degrade)
+  const deployment = fleet.resolveModel('MID_REASONER', degrade)
   try {
     let summary = ''
     let cited = []
@@ -122,12 +127,32 @@ async function taskSummary(req, res) {
       cited = stripped.cited
     }
     if (!summary || cited.length === 0) {
-      return res.status(422).json({ error: 'uncited_summary', detail: 'The model produced no verifiable task citations.' })
+      return { kind: 'error', error: 'uncited_summary', detail: 'The model produced no verifiable task citations.' }
     }
-    return res.json({ summary, counts, citedIds: [...new Set(cited)], deployment, generatedAt: new Date().toISOString() })
+    return { kind: 'ok', summary, counts, citedIds: [...new Set(cited)], deployment, generatedAt: new Date().toISOString() }
   } catch (e) {
-    return res.status(502).json({ error: 'ai_upstream', detail: e.message })
+    return { kind: 'error', error: 'ai_upstream', detail: e.message }
   }
 }
 
-module.exports = { taskSummary, _stripUncited, _bucketize: bucketize }
+// HTTP shim — wire shapes identical to the pre-extraction handler (counts gains the
+// additive dueToday key; existing consumers read open/overdue/next7 as before).
+async function taskSummary(req, res) {
+  const tid = req.user?.tenantId
+  if (!tid) return res.status(401).json({ error: 'unauthenticated' })
+
+  const g = fleet.guard()
+  if (!g.allow) return res.status(429).json({ error: 'ai_budget_exceeded', detail: g.reason })
+
+  const r = await composeTaskSummary(tid, { degrade: g.degrade })
+  if (r.kind === 'error') {
+    const code = r.error === 'tasks_unavailable' ? 503 : r.error === 'uncited_summary' ? 422 : 502
+    return res.status(code).json({ error: r.error, detail: r.detail })
+  }
+  if (r.kind === 'empty') {
+    return res.json({ summary: null, counts: r.counts, deployment: null, generatedAt: r.generatedAt })
+  }
+  return res.json({ summary: r.summary, counts: r.counts, citedIds: r.citedIds, deployment: r.deployment, generatedAt: r.generatedAt })
+}
+
+module.exports = { taskSummary, composeTaskSummary, _stripUncited, _bucketize: bucketize }

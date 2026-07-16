@@ -35,7 +35,7 @@
       "effort": "L",
       "phase": "P3",
       "status": "DONE",
-      "evidence": "DONE @ b9be5fe: Unity CoverageConfig+TableConfig producers BUILT (transform never existed); cell-for-cell golden lockstep vs the committed (1).xlsx pair — CoverageConfig 3 sheets, TableConfig all 23 sheets (golden = PH tables 1-10 + PA tables 11-21, fed as concatenation); one documented anomaly normalization (Medical Payments Coverage T); safeCellValue on every cell, formula injection proven literal through a real exceljs round-trip | (was) Zero hits for TableConfig/CoverageConfig across code AND all git history (verified this pass). Shapes pinned from the updated workbooks: TableConfig 23 sheets = TOC + 21 tables + Config manifest LAST (brief's 'Config sheet is gone' is WRONG - it moved and gained ManuscriptID/SheetName columns); per-sheet preamble rows 4-7 (MS Physical Path / Manuscript ID / Comments / title+Table Type), header row 8, data 9+; keys = cols 1..n-1, value = col n, 2-D tables unpivoted. CoverageConfig: Coverage/Config/InputFields sheets with RequirementID carrying Hub refIds. SPEC 3.2-3.4.",
+      "evidence": "DONE @ b9be5fe: Unity CoverageConfig+TableConfig producers BUILT (transform never existed); cell-for-cell golden lockstep vs the committed (1).xlsx pair \u2014 CoverageConfig 3 sheets, TableConfig all 23 sheets (golden = PH tables 1-10 + PA tables 11-21, fed as concatenation); one documented anomaly normalization (Medical Payments Coverage T); safeCellValue on every cell, formula injection proven literal through a real exceljs round-trip | (was) Zero hits for TableConfig/CoverageConfig across code AND all git history (verified this pass). Shapes pinned from the updated workbooks: TableConfig 23 sheets = TOC + 21 tables + Config manifest LAST (brief's 'Config sheet is gone' is WRONG - it moved and gained ManuscriptID/SheetName columns); per-sheet preamble rows 4-7 (MS Physical Path / Manuscript ID / Comments / title+Table Type), header row 8, data 9+; keys = cols 1..n-1, value = col n, 2-D tables unpivoted. CoverageConfig: Coverage/Config/InputFields sheets with RequirementID carrying Hub refIds. SPEC 3.2-3.4.",
       "test": "Structural golden test: producer output sheet inventory, preamble bytes, header rows, manifest rows match the (1).xlsx pair for seeded PA.PROD.001",
       "lesson": "The updated workbooks resolved the schema guide's Open Question 1 (the missing 'MS Physical Path' binding) - ground truth arrived as data, not documentation."
     },
@@ -95,7 +95,7 @@
       "effort": "S",
       "phase": "P3",
       "status": "DONE",
-      "evidence": "DONE @ 99967da: flipDictionaryFlag writes the CONTRACTS-frozen tenant override (literal page.dictionary, plane tenant, setTenantConfig -> Cosmos tenant doc, audited); flips on SUCCESS only — blocked export writes nothing and never flips; idempotent once revealed; VIEWER 403 proven | (was) DEFAULTS_SPEC 2; flag key verbatim 'page.dictionary' (shared/src/platform/featureFlags.ts:57); pairs with EX-02 (the default flip)",
+      "evidence": "DONE @ 99967da: flipDictionaryFlag writes the CONTRACTS-frozen tenant override (literal page.dictionary, plane tenant, setTenantConfig -> Cosmos tenant doc, audited); flips on SUCCESS only \u2014 blocked export writes nothing and never flips; idempotent once revealed; VIEWER 403 proven | (was) DEFAULTS_SPEC 2; flag key verbatim 'page.dictionary' (shared/src/platform/featureFlags.ts:57); pairs with EX-02 (the default flip)",
       "test": "Hook writes override on success, not on lint FAIL; VIEWER cannot trigger",
       "lesson": "One switch, named once, wired by both sides - the spec names the exact flag key so P2 and P3 cannot drift."
     },
@@ -362,6 +362,42 @@
       "evidence": "Seam proven at 7797fb7: sniff clause + deterministic mapManuscriptOverlay + hardened parser (XXE/billion-laughs rejected) + F1 1.0 round-trip; remaining work is exposure policy, not mechanism",
       "test": "Round-trip suite reuses as the acceptance harness when un-parked",
       "lesson": "A validation seam and an import source differ only by an exposure flag - ship the proof, defer the policy."
+    },
+    {
+      "id": "EX-04",
+      "workstream": "EXPERIENCE",
+      "title": "Tasks board redesign (operator-added): per-project accent recast (--color-proj-1..5 categorical tokens, AA-documented, FNV-1a scoped custom properties), main-step cards (phase chip, checklist n/m, start\u2192due runway micro-bar), unified column headers, L2-4 lineage in the focus-trapped drawer, dnd write path extracted pure + PINNED (column-only mutate)",
+      "severity": "MED",
+      "effort": "M",
+      "phase": "P2",
+      "status": "DONE",
+      "evidence": "DONE @ 7f2b93e. Judge SHIP 10/10. Tasks chunk 20.4/25 KB gz. NOTE: the wave brief's \"mutateBatch column plus order\" premise was stale \u2014 the historical write is a single {column} mutate; preserved byte-identically.",
+      "test": "boardDnd.test.ts payload byte-equality + Object.keys(data)===[column]; projectAccent tests; TasksBoard.axe (4 variants + full route)",
+      "lesson": "A stale premise in a brief is a spec bug \u2014 pin the ACTUAL behavior with a test, then record the discrepancy."
+    },
+    {
+      "id": "EX-05",
+      "workstream": "EXPERIENCE",
+      "title": "Claims insured-centric risk report v2 (operator-added): {reportVersion:2, plainSummary, protections, watchouts, actions} (insurerLens dropped), version-gated cache (v1 regenerates for everyone), premium Dialog surface w/ section-derived tone + per-item ask-the-copilot through the real grounded ask(); DeterminationCard untouched",
+      "severity": "MED",
+      "effort": "M",
+      "phase": "P2",
+      "status": "DONE",
+      "evidence": "DONE @ 871e11e. Judge 2 mediums fixed pre-commit (Map-seed version gate, bounded session cache). Claims chunk 11.8/25 KB gz.",
+      "test": "form-risk-report.test.ts (_clean, _isCacheCurrent v1-reject, schema contract, server/client version parity); riskReport.test.ts; RiskReportDialog.axe.test.tsx",
+      "lesson": "Tone derived from the SECTION, never the model \u2014 an honesty property you can't prompt for."
+    },
+    {
+      "id": "EX-06",
+      "workstream": "EXPERIENCE",
+      "title": "Responsiveness/perf pass (operator-added): audit + News feed render-stability (memo cards + useCallback handlers); documented non-actions (content-visibility vs paged feed, TaskCard memo vs dragHandle identity, ambient-animation pausing = foreign-surface recommendation)",
+      "severity": "MED",
+      "effort": "M",
+      "phase": "P2",
+      "status": "DONE",
+      "evidence": "DONE @ 72255d2. Budget: initial 145.8/175, CSS 18.8/25, worst chunk Builder 22.7/25; wave chunks Tasks 20.4 / Claims 11.8 / Home 9.2.",
+      "test": "Bundle budget in gate + existing suites green; render-stability reasoning recorded in p2-summary",
+      "lesson": "A perf pass that documents what it deliberately did NOT do is worth more than one that only lists wins."
     }
   ],
   "summary": {
@@ -375,6 +411,9 @@
       "P2_experience_brief": [
         "EX-01",
         "EX-02",
+        "EX-04",
+        "EX-05",
+        "EX-06",
         "BR-01",
         "BR-02",
         "BR-03",
@@ -429,6 +468,17 @@
       "XE-05",
       "XE-06",
       "XE-08"
+    ],
+    "doneP2": [
+      "EX-01",
+      "EX-02",
+      "EX-04",
+      "EX-05",
+      "EX-06",
+      "BR-01",
+      "BR-02",
+      "BR-03",
+      "BR-04"
     ]
   }
 }

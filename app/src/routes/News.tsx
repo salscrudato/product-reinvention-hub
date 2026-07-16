@@ -10,7 +10,7 @@
 // (adapter.db.setNewsPins), NOT the mutate() envelope. The agent instruction lives in the
 // same newsPrefs doc and still saves via mutate() (its long-standing path). All backend
 // access goes through the adapter seam — the app never imports firebase/* directly.
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   IconNews, IconRefresh, IconExternalLink, IconSparkle, IconProduct, IconStates,
@@ -143,6 +143,10 @@ function computeRelevance(
       if (lobDisplay) matchedLobs.add(lobDisplay)
     }
   }
+
+  // Carrier match (server-tagged from the tenant profile): news about YOU outranks
+  // everything of equal portfolio relevance.
+  if (item.matchedCarrier) score += 3
 
   return { score, lobs: [...matchedLobs], states: [...matchedStates] }
 }
@@ -302,7 +306,7 @@ function ArticleImage({
 
 // ─── Featured hero card (editorial lead) ────────────────────────────────────────
 
-function HeroCard({
+const HeroCard = memo(function HeroCard({
   item, pinned, onTogglePin, onCopy,
 }: {
   item: FeedItem
@@ -367,6 +371,18 @@ function HeroCard({
                 >
                   <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full" style={{ background: 'white' }} />
                   {tier}
+                </span>
+              </>
+            )}
+            {item.matchedCarrier && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: 'var(--color-on-media)', color: 'white' }}
+                  title="Mentions your carrier (from the tenant profile)"
+                >
+                  About you
                 </span>
               </>
             )}
@@ -486,11 +502,11 @@ function HeroCard({
       </div>
     </article>
   )
-}
+})
 
 // ─── Compact horizontal card ─────────────────────────────────────────────────────
 
-function CompactCard({
+const CompactCard = memo(function CompactCard({
   item, pinned, onTogglePin, onCopy,
 }: {
   item: FeedItem
@@ -553,6 +569,18 @@ function CompactCard({
                 <span className="inline-flex items-center gap-1 text-accent font-medium">
                   <IconStar size={11} className="fill-current" aria-hidden="true" />
                   Pinned
+                </span>
+              </>
+            )}
+            {item.matchedCarrier && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-accent-soft text-accent"
+                  style={{ border: '1px solid var(--color-accent-line)' }}
+                  title="Mentions your carrier (from the tenant profile)"
+                >
+                  About you
                 </span>
               </>
             )}
@@ -658,7 +686,7 @@ function CompactCard({
       )}
     </article>
   )
-}
+})
 
 // ─── Loading skeletons ───────────────────────────────────────────────────────────
 
@@ -993,7 +1021,7 @@ export default function News() {
     }
   }
 
-  async function togglePin(hash: string) {
+  const togglePin = useCallback(async (hash: string) => {
     if (!user) { toast.error('Sign in to pin articles'); return }
     const prev = pinnedHashes
     const next = prev.includes(hash) ? prev.filter(h => h !== hash) : [...prev, hash]
@@ -1005,9 +1033,9 @@ export default function News() {
       setPinned(prev)   // revert on failure
       toast.error('Could not update pin')
     }
-  }
+  }, [user, pinnedHashes])
 
-  async function copyLink(url: string) {
+  const copyLink = useCallback(async (url: string) => {
     try {
       if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(url)
@@ -1015,7 +1043,7 @@ export default function News() {
     } catch {
       toast.error('Could not copy link')
     }
-  }
+  }, [])
 
   async function refresh() {
     setRefreshing(true)
