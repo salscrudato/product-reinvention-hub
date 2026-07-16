@@ -14,31 +14,9 @@ build/
 .env.local
 .env.*.local
 *.local
-apikeys.md
 keys.md
-tmp_key.md
-tmp_acn_secrets.md
-model_secrets.md
 # Any scratch/secret markdown dropped at the repo root (never commit these)
 tmp*.md
-tmp.md
-# Elasticsearch setup artifacts containing internal IPs/hostnames (DEF-0031)
-snowchat/scripts/es-setup-passwords-output.txt
-snowchat/scripts/es-port-checks-report.txt
-snowchat/scripts/es-port-checks-tmp/
-
-# Firebase
-.firebase/
-firebase-debug*.log
-firestore-debug.log
-ui-debug.log
-pubsub-debug.log
-storage.rules.swp
-.firebaserc.backup
-
-# emulator export dirs
-emulator-data/
-.emulator/
 
 # Playwright e2e artifacts
 /test-results/
