@@ -25,6 +25,12 @@ const isConfigured        = () => Boolean(SVC && KEY)
 const anthropicMessagesUrl = () => `${SVC}/anthropic/v1/messages`
 const openaiChatUrl        = () => `${SVC}/openai/v1/chat/completions`
 const openaiEmbeddingsUrl  = () => `${SVC}/openai/v1/embeddings`
+// Extended surfaces (2026-07-15 fleet expansion) — same resource + key, different routes.
+// Probe-verified: gpt-*-pro deployments answer ONLY on /responses (chat/completions → 400);
+// rerank and OCR live on provider-scoped paths. Callers: server/lib/external/foundry.js.
+const openaiResponsesUrl   = () => `${SVC}/openai/v1/responses`
+const cohereRerankUrl      = () => `${SVC}/providers/cohere/v2/rerank`
+const mistralOcrUrl        = () => `${SVC}/providers/mistral/azure/ocr`
 // Foundry's OpenAI-native surface authenticates with either `api-key` or Bearer; the embeddings
 // endpoint accepts `api-key`, so we reuse it for symmetry with the rest of the OpenAI surface.
 const anthropicHeaders     = () => ({ 'Content-Type': 'application/json', 'x-api-key': KEY, 'anthropic-version': ANTHROPIC_VERSION })
@@ -125,6 +131,9 @@ function snapshot() {
 module.exports = {
   // config
   isConfigured, anthropicMessagesUrl, openaiChatUrl, openaiEmbeddingsUrl, anthropicHeaders, openaiHeaders, ANTHROPIC_VERSION,
+  // extended surfaces (deployments in bridge.EXTENDED_DEPLOYMENTS; callers in external/foundry.js)
+  openaiResponsesUrl, cohereRerankUrl, mistralOcrUrl,
+  EXTENDED_DEPLOYMENTS: bridge.EXTENDED_DEPLOYMENTS,
   // OpenAI o-series helpers
   openaiMaxTokensKey, openaiChatBody,
   // routing

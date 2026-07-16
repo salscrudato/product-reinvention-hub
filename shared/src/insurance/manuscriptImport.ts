@@ -259,6 +259,9 @@ export function mapManuscriptOverlay(
     ratingProgram,
     ldTables: [],
     rtTables,
+    // Overlay recovery lifts rate tables directly from the compute chain; the D4
+    // placeholder-minting path (workbook rating-area parse) never runs here.
+    ratePlaceholders: [],
     summary,
   }
 }

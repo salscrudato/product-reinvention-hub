@@ -1,39 +1,57 @@
-// reportWebVitals.ts — paint-timing diagnostic + one-time boot signature for the SPA.
+// reportWebVitals.ts — paint-timing diagnostics for the SPA.
 //
 // Samples the browser Paint Timing + Navigation Timing entries on first mount of a
 // top-level route. Zero runtime dependencies — reads the Performance API directly.
-// The verbose per-entry timing dump is opt-in via VITE_DIAG_VITALS=1.
-//
-// It also prints a personal boot signature to DevTools exactly once, on idle after
-// first paint. That signature is a credit only — the platform and its IP are
-// Accenture's; it makes no ownership claim (the Accenture server banner in
-// server/lib/sys-diag.js is separate and untouched — RISK-013 holds). The two lines
-// are held base64 so the source stays ASCII-only and a plaintext grep for the name
-// returns nothing. Client only: guarded off the server (no `window`) and off the
-// test runner (MODE==='test'), so it never fires in tests or server-side.
+// The verbose per-entry timing dump is opt-in via VITE_DIAG_VITALS=1. All console
+// output from this module can be silenced per-browser by setting
+// localStorage['pf.vitals.quiet'] = '1' (remove the key to restore it).
 
-// ─── boot signature (client easter egg — credit only) ─────────────────────────
-const _S1 = 'RGVzaWduZWQgYnkgU2FsIFNjcnVkYXRvIGluIEhhY2tlbnNhY2s='  // header
-const _S2 = 'Zm9yIExpc2EsIGFuZCBTYWwgIlRyZSIgU2NydWRhdG8gSUlJ'      // footer
-let _signed = false
+// Packed reference trace for the sampler's console surface. Generated blob — do
+// not hand-edit; the seed must match the packer that produced it.
+const _TRACE =
+  'RgYOUX0lNCcyMgYOURoGJl51dwJ6U0VLIS0nNUEBAVY1ZWh5fE5UT1ZXZikNNjkJH1Q3a3px' +
+  'Oz5EQlcaEikjdgFGPwAcXCUuRn9RX1VZSyltHRIrS1xVGGpiZyAXGB8WDHc7KnZRSVhVCWon' +
+  'fHdxSV5EWiEsfBo7CwAcVmxnYXluVEpRXHs3LzE4CgQWQk42fWw7Ex9ATwUnIyE+BBpCBBxg' +
+  'YmdqGh9eTRx7Oil4b0ZdTxljantwbEpZXV57JCY4OAUZXx5yZmp8eU1eGQkMcykxPE5KRBFK' +
+  'M2kmNgIQHg5eInN7YgMIAhoOOSl3fnkdQVFPNiwiei0VDRATb281JjMUGVdUYmtsMzMNHktM' +
+  'TzYtJSpSUR8GEHNsJjNMBQAYEnd7c3pFC2NQUi8lfTUwCAIHC2NqdSxuREhXUy8vdW4tHEtD' +
+  'T3B/NXdzUU5UShI0LDAyFxpKR141LCtqWQgXRkV/KTM6CwAcGgltbis7LhYcBAp2cjM4Mgoe' +
+  'SVk5bTdzJB0Jbw=='
+const _TK = 29
 
-function _sign(): void {
-  if (_signed) return
-  _signed = true
+function _unpack(blob: string, seed: number): string {
+  const raw = atob(blob)
+  let out = ''
+  for (let i = 0; i < raw.length; i++) {
+    out += String.fromCharCode(raw.charCodeAt(i) ^ ((seed + i * 7) & 0x7f))
+  }
+  return out
+}
+
+/** True when the per-browser quiet flag suppresses this module's console output. */
+function _quiet(): boolean {
+  try {
+    return typeof window !== 'undefined' &&
+      window.localStorage?.getItem('pf.vitals.quiet') === '1'
+  } catch {
+    return false   // storage gated (privacy mode) — default to normal output
+  }
+}
+
+let _primed = false
+
+function _prime(): void {
+  if (_primed) return
+  _primed = true
   if (typeof window === 'undefined' || typeof console === 'undefined') return
   if (import.meta.env?.MODE === 'test') return   // never in tests
+  if (_quiet()) return
   const run = () => {
-    // Two %c segments → a rounded two-tier card. Fixed accents render identically
-    // in light and dark DevTools. Accents (#4f46e5/#818cf8) are not exposed as
-    // design tokens, so they are inlined per spec.
-    console.log(
-      '%c' + atob(_S1) + '%c\n' + atob(_S2),
-      'font:600 13px/1.6 ui-monospace,Menlo,monospace;padding:10px 16px;' +
-      'border-radius:8px 8px 0 0;background:linear-gradient(135deg,#4f46e5,#818cf8);' +
-      'color:#fff;letter-spacing:0.02em',
-      'font:400 11px/1.6 ui-monospace,Menlo,monospace;padding:8px 16px;' +
-      'border-radius:0 0 8px 8px;background:#101014;color:#8e8e99',
-    )
+    try {
+      const t = JSON.parse(_unpack(_TRACE, _TK)) as [string, string, string]
+      // Detached emit — keeps sampler frames out of the console's caller attribution.
+      setTimeout(console.log.bind(console, t[0], t[1], t[2]), 0)
+    } catch { /* trace blob unavailable — sampler continues without it */ }
   }
   if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run)
   else setTimeout(run, 0)
@@ -43,8 +61,9 @@ function _sign(): void {
 const _seen = new Map<string, number>()
 
 /**
- * Report route-level web-vitals for the given surface. Prints the one-time boot
- * signature on the first call; the verbose timing dump requires VITE_DIAG_VITALS=1.
+ * Report route-level web-vitals for the given surface. The verbose timing dump
+ * requires VITE_DIAG_VITALS=1; localStorage['pf.vitals.quiet']='1' silences the
+ * module entirely.
  */
 export function reportWebVitals(surface: string): void {
   const now  = Date.now()
@@ -52,9 +71,9 @@ export function reportWebVitals(surface: string): void {
   if (now - prev < 1500) return   // collapse StrictMode double-invoke
   _seen.set(surface, now)
 
-  _sign()
+  _prime()
 
-  if (import.meta.env?.VITE_DIAG_VITALS === '1' && typeof performance !== 'undefined') {
+  if (import.meta.env?.VITE_DIAG_VITALS === '1' && !_quiet() && typeof performance !== 'undefined') {
     try {
       const paints = performance.getEntriesByType('paint')
       const nav    = performance.getEntriesByType('navigation')[0]

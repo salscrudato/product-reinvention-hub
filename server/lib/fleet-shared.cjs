@@ -27,6 +27,7 @@ __export(api_server_exports, {
   DEPLOY_OPUS: () => DEPLOY_OPUS,
   DEPLOY_SONNET: () => DEPLOY_SONNET,
   ESCALATION_LADDER: () => ESCALATION_LADDER,
+  EXTENDED_DEPLOYMENTS: () => EXTENDED_DEPLOYMENTS,
   FLEET_PRICING: () => FLEET_PRICING,
   allDeployments: () => allDeployments,
   degradedRole: () => degradedRole,
@@ -88,6 +89,22 @@ var DEPLOY_HAIKU = FLEET_REGISTRY.BULK_VERIFY.deploymentName;
 var DEPLOY_GPT = FLEET_REGISTRY.VISION.deploymentName;
 var DEPLOY_GPT_MINI = FLEET_REGISTRY.CHEAP_GENERAL.deploymentName;
 var DEPLOY_EMBED = FLEET_REGISTRY.EMBED.deploymentName;
+var EXTENDED_DEPLOYMENTS = {
+  /** Deliberate deep reasoning for the hardest import disambiguation. Quality ≫ latency. */
+  DEEP_REASONER: { deploymentName: "gpt-5.4-pro", surface: "openai-responses", roleLabel: "Deep escalation reasoning \u2014 GPT-5.4-pro" },
+  /** Cross-vendor verify panel, third model lineage (decorrelates Claude+GPT errors). */
+  VERIFY_XAI: { deploymentName: "grok-4.3", surface: "openai-chat", roleLabel: "Verify panel \u2014 Grok 4.3" },
+  /** Cross-vendor verify panel, fourth model lineage. */
+  VERIFY_DEEPSEEK: { deploymentName: "DeepSeek-V4-Pro", surface: "openai-chat", roleLabel: "Verify panel \u2014 DeepSeek V4 Pro" },
+  /** Fast multimodal tier (page classification, vision-ladder steps). */
+  FAST_GENERAL: { deploymentName: "gpt-5.4-mini", surface: "openai-chat", roleLabel: "Fast general / vision \u2014 GPT-5.4-mini" },
+  /** Higher-fidelity query-time embeddings (write-time bulk stays on EMBED). */
+  EMBED_QUALITY: { deploymentName: "text-embedding-3-large", surface: "openai-embeddings", roleLabel: "Quality retrieval embeddings \u2014 text-embedding-3-large" },
+  /** Cross-encoder rerank over hybrid retrieval results (citation precision). */
+  RERANK: { deploymentName: "Cohere-rerank-v4.0-pro", surface: "cohere-rerank", roleLabel: "RAG rerank \u2014 Cohere Rerank v4 pro" },
+  /** Document OCR → markdown with native tables (the 0-char-PDF import fix). */
+  DOC_OCR: { deploymentName: "mistral-document-ai-2512", surface: "mistral-ocr", roleLabel: "Document OCR \u2014 Mistral Document AI" }
+};
 var FLEET_PRICING = {
   [DEPLOY_OPUS]: { inputPerMTok: 15, outputPerMTok: 75 },
   [DEPLOY_SONNET]: { inputPerMTok: 3, outputPerMTok: 15 },
@@ -95,7 +112,18 @@ var FLEET_PRICING = {
   [DEPLOY_GPT]: { inputPerMTok: 3, outputPerMTok: 12 },
   [DEPLOY_GPT_MINI]: { inputPerMTok: 0.3, outputPerMTok: 1.6 },
   // Embeddings bill input tokens only (no completion) — the output tier is 0.
-  [DEPLOY_EMBED]: { inputPerMTok: 0.02, outputPerMTok: 0 }
+  [DEPLOY_EMBED]: { inputPerMTok: 0.02, outputPerMTok: 0 },
+  // Extended deployments (2026-07-15). Conservative order-of-magnitude estimates — the
+  // guard needs a ceiling, not billing exactness. Rerank + OCR bill per-search/per-page,
+  // not per-token; their entries approximate that as an input-token rate so record() still
+  // moves the spend window (callers pass a nominal token count).
+  [EXTENDED_DEPLOYMENTS.DEEP_REASONER.deploymentName]: { inputPerMTok: 20, outputPerMTok: 150 },
+  [EXTENDED_DEPLOYMENTS.VERIFY_XAI.deploymentName]: { inputPerMTok: 3, outputPerMTok: 15 },
+  [EXTENDED_DEPLOYMENTS.VERIFY_DEEPSEEK.deploymentName]: { inputPerMTok: 1.5, outputPerMTok: 6 },
+  [EXTENDED_DEPLOYMENTS.FAST_GENERAL.deploymentName]: { inputPerMTok: 0.3, outputPerMTok: 1.6 },
+  [EXTENDED_DEPLOYMENTS.EMBED_QUALITY.deploymentName]: { inputPerMTok: 0.13, outputPerMTok: 0 },
+  [EXTENDED_DEPLOYMENTS.RERANK.deploymentName]: { inputPerMTok: 2, outputPerMTok: 0 },
+  [EXTENDED_DEPLOYMENTS.DOC_OCR.deploymentName]: { inputPerMTok: 3, outputPerMTok: 0 }
 };
 function estimateCostUsd(deploymentName, inputTokens, outputTokens) {
   const p = FLEET_PRICING[deploymentName] ?? FLEET_PRICING[DEPLOY_OPUS];
@@ -124,6 +152,7 @@ var ESCALATION_LADDER = ["BULK_VERIFY", "MID_REASONER", "GROUNDED_CITED"];
   DEPLOY_OPUS,
   DEPLOY_SONNET,
   ESCALATION_LADDER,
+  EXTENDED_DEPLOYMENTS,
   FLEET_PRICING,
   allDeployments,
   degradedRole,

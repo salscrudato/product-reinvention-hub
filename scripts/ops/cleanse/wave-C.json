@@ -1,0 +1,17 @@
+{
+  "wave": "C",
+  "archiveRoot": "C:/Users/salvatore.scrudato/hub-archive/2026-07-16",
+  "items": [
+    { "path": "review-packet", "action": "archive", "reason": "s16 ARCHIVE: external review dossier (SVGs, prompts, 46 authed screenshots, capture harness); one-shot deliverable, delivered" },
+    { "path": "claims_analysis", "action": "archive", "reason": "s16 ARCHIVE: claims enhancement recon artifacts; workstream closed (claims copilot already enhanced)" },
+    { "path": "docs/handoff", "action": "archive", "reason": "s16 ARCHIVE: import-brain + PCM handoff briefs; consumed by completed workstreams; contains stale tmp_keys.md references" },
+    { "path": "docs/import-hardening", "action": "archive", "reason": "s16 ARCHIVE: IH1-IH4 ledger+RESULTS, workstream closed (IMPORT-CERTIFIED f67fbf0); ledger.json survives summarized into BACKLOG_SEED by P-REVENG; caveat: scripts/phasep-probes.mts (manual one-off probe) wrote into RESULTS/ and becomes vestigial" },
+    { "path": "docs/claims-cx-vision", "action": "archive", "reason": "s16 ARCHIVE: claims CX vision docs (untracked); parked workstream" },
+    { "path": "docs/design-review", "action": "archive", "reason": "s16 ARCHIVE: design review notes (untracked); consumed" },
+    { "path": "docs/prompts", "action": "archive", "reason": "s16 ARCHIVE: agent prompt library incl. PROMPT_IMPORT_CONCEPT_LINKER.md (untracked); concept-linker port is COMPLETE on this branch so the prompt is consumed" },
+    { "path": "docs/AI_REVIEW.md", "action": "archive", "reason": "s16 ARCHIVE: AI review one-shot deliverable" },
+    { "path": "additional_samples", "action": "archive", "reason": "s16 ARCHIVE: client-proprietary eval workbooks - already absent at cleanse start, recorded for the map" },
+    { "path": "docs/kurt-brief.md", "action": "archive", "reason": "s16 personal brief - already absent at cleanse start, recorded for the map" },
+    { "path": "docs/export-templates/author-xml", "action": "archive", "reason": "s16 ARCHIVE: DuckCreek Author XML templates; retirement VERIFIED this run: commit 8825cbd present AND authed /api/duckcreek/* probes returned 404 on local boot (control /api/auth/me 200); sibling xlsx config templates in docs/export-templates/ are kept" }
+  ]
+}

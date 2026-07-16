@@ -309,6 +309,175 @@ describe('mapIsoWorkbook — rules, form rules, rating, tables', () => {
     expect(occ.data['defaultValue']).toBe(300000)
     expect((occ.data['rows'] as unknown[])).toHaveLength(3)
   })
+  it('a GL "Limits and Deductibles" sheet is NOT re-minted as reference tables (double-parse guard)', () => {
+    // The GL LD blocks key on "LDTable.NNN" at col 0 ("TABLE NAME:" only sits at col 1) and the
+    // sheet is claimed by parseLdTables → the signature detector must produce zero minted tables.
+    expect(plan.summary.counts['referenceTables'] ?? 0).toBe(0)   // absent on a non-CORE parse
+    expect(plan.ldTables.every(t => !(t.data as Record<string, unknown>)['mintedId'])).toBe(true)
+    expect(plan.ldTables.map(t => t.refId)).toEqual(['LDTable.001', 'LDTable.002'])
+  })
+  it('mints NO rate-table placeholders on a GL workbook (its rate tables are present)', () => {
+    expect(plan.ratePlaceholders).toEqual([])
+    expect(plan.summary.counts['ratePlaceholders'] ?? 0).toBe(0)
+  })
+})
+
+// ─── Signature-detected reference tables (D1/D7) ──────────────────────────────────
+// Real carrier specs park limit/deductible tables on a general sheet the named LD parser
+// never claims, marked "TABLE NAME:" in column 0 with no LDTable id. Detection is by CONTENT
+// SIGNATURE (>= 2 col-0 markers), never sheet name, and mints stable PREFIX.TBL.NNN ids.
+describe('mapIsoWorkbook — signature-detected reference tables (D1)', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', 'X'],
+    ['Active', 'CORE.LOB.001', 'Core', 'Collector Auto', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Collector Auto', 'Bodily Injury', '', 'X'],
+    ['Active', 'CORE.COV.003', 'Core', 'Collector Auto', 'Property Damage', '', 'X'],
+    ['Active', 'CORE.COV.009', 'Core', 'Collector Auto', 'Collision', '', 'X'],
+    ['Active', 'CORE.COV.010', 'Core', 'Collector Auto', 'Other Than Collision', '', 'X'],
+    ['Active', 'CORE.COV.020', 'Core', 'Collector Auto', 'Evacuation Expense', '', 'X'],
+  ])
+  // Signature sheet: two col-0 "TABLE NAME:" blocks, no LDTable ids (CORE style).
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI', 'BI', 'PD', 'PD'],
+    ['RULE ID:', 'Liability Limit: Available (thousands; $)', 'Available', 'Default', 'Available2', 'Default2'],
+    ['Single Limits ($)', 25, 'X', 'N/A', 'X', 'N/A'],
+    ['Single Limits ($)', 50, 'X', 'X', 'N/A', 'N/A'],
+    ['Split Limits', '100/300', 'X', 'N/A', 'X', 'N/A'],   // split limit the numeric parse would drop
+    ['TABLE NAME: Physical Damage Deductibles - AZ', '', 'Collision', 'Other Than Collision (OTC)'],
+    ['RULE ID:', 'Deductible ($)'],
+    ['GROUP 1: All vehicles', 0, 'X'],
+    ['GROUP 1: All vehicles', 500, 'X'],
+  ])
+  // Rules cite tables (and one coverage) by concept NAME, with blank RULE ID.
+  const rules = g('Rules Specifications', [
+    ['RULES'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RULE ID', 'RULE CATEGORY', 'RULE SUB-CATEGORY', 'RULE CONDITION', 'RULE OUTCOME', 'RULE REFERENCE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.COV.001', '', 'Product', 'Limits', 'If BI selected', 'A limit applies', 'Liability Limits', 'X'],
+    ['Active', 'CORE.COV.020', '', 'Product', 'Coverage', 'If requested', 'Evacuation applies', 'Evacuation Expense', 'X'],
+  ])
+  // Rating: COVERAGE NAME groups (one value per group; forward-filled), blank step ids.
+  const rating = g('Rating Specifications', [
+    ['RATING'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RATING STEP ID', 'COVERAGE NAME', 'RATING RULES', 'ALGORITHM STEP', 'CALCULATION', 'RATE REFERENCE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.RAT.1', '', 'Bodily Injury (Excluding Camper Trailer)', 'base', 'Base Rate', '*', 'Base Rate Table', 'X'],
+    ['Active', 'CORE.RAT.1', '', '', 'inc', 'Increased Limit Factor', '*', 'ILF Table', 'X'],
+    ['Active', 'CORE.RAT.1', '', 'Combined Single Limit (Excluding Camper Trailer)', 'csl', 'CSL Factor', '*', 'CSL Table', 'X'],
+    ['Active', 'CORE.RAT.1', '', 'Business Use', 'biz', 'Business Factor', '*', '', 'X'],
+  ])
+  // A single-marker grid must NOT be detected (below the >= 2 signature gate).
+  const single = g('Notes', [['TABLE NAME: Just One Block'], ['x', 1]])
+  const plan2 = mapIsoWorkbook([fw, refs, rules, rating, single])
+  const minted = plan2.ldTables.filter(t => (t.data as Record<string, unknown>)['mintedId'] === true)
+  const d = (i: number) => minted[i]!.data as Record<string, unknown>
+  const ruleOf = (frag: string) => plan2.rules.find(r => new RegExp(frag, 'i').test(String(r.data['outcome'])))!
+
+  it('detects >= 2 col-0 TABLE NAME blocks and mints stable PREFIX.TBL ids in source order', () => {
+    expect(plan2.summary.counts['referenceTables']).toBe(2)
+    expect(minted.map(t => t.refId)).toEqual(['CORE.TBL.001', 'CORE.TBL.002'])
+  })
+  it('infers term kind + per-state scope from the block signature', () => {
+    expect(d(0)['kindHint']).toBe('LIMIT')
+    expect(d(0)['state']).toBe('AZ')
+    expect(d(1)['kindHint']).toBe('DEDUCTIBLE')
+    expect(d(1)['state']).toBe('AZ')
+  })
+  it('captures the marker-row coverage codes and distinct numeric option values', () => {
+    expect(d(0)['coverageCodes']).toEqual(['BI', 'PD'])
+    expect((d(0)['rows'] as { value: number }[]).map(r => r.value)).toEqual([25, 50])
+    expect((d(1)['rows'] as { value: number }[]).map(r => r.value)).toEqual([0, 500])
+  })
+  it('a single-marker grid is NOT a reference-tables sheet (signature gate)', () => {
+    expect(minted).toHaveLength(2)
+    expect(plan2.summary.sheetsSkipped).toContain('Notes')
+  })
+  it('minting is stable: same input → same ids', () => {
+    const again = mapIsoWorkbook([fw, refs, rules, single])
+    expect(again.ldTables.filter(t => (t.data as Record<string, unknown>)['mintedId']).map(t => t.refId))
+      .toEqual(['CORE.TBL.001', 'CORE.TBL.002'])
+  })
+
+  // ── Linking (D2/D7/D8) ──
+  it('a Liability Limits matrix links to coverages via its header codes (BI→BI cov, PD→PD cov)', () => {
+    expect((d(0)['coverageRefIds'] as string[]).sort()).toEqual(['CORE.COV.001', 'CORE.COV.003'])
+  })
+  it('a Physical Damage Deductibles table links to Collision + Other Than Collision', () => {
+    expect((d(1)['coverageRefIds'] as string[]).sort()).toEqual(['CORE.COV.009', 'CORE.COV.010'])
+  })
+  it('a rule citing a table by concept name gains a tableRefIds link + back-links the table', () => {
+    const r = ruleOf('a limit applies')
+    expect(r.data['tableRefIds']).toEqual(['CORE.TBL.001'])
+    expect(r.data['tableLinkBasis']).toBe('derived')
+    expect((d(0)['ruleRefIds'] as string[])).toContain(r.refId)
+  })
+  it('D8: a rule reference that names a coverage resolves to it, not a failed table match', () => {
+    const r = ruleOf('Evacuation applies')
+    expect(r.data['resolvedCoverageRefId']).toBe('CORE.COV.020')
+    expect(r.data['tableRefIds']).toBeUndefined()
+  })
+  it('the transient _referenceText is cleared from every rule (no golden leak)', () => {
+    expect(plan2.rules.every(r => !('_referenceText' in r.data))).toBe(true)
+  })
+
+  // ── Term derivation (D1/D7) ──
+  const termsOf = (refId: string) =>
+    (plan2.coverages.find(c => c.refId === refId)!.data['terms'] as Array<Record<string, unknown>>)
+  it('a LIMIT table yields per-state LIMIT terms on its coverages (the "no limits" fix)', () => {
+    const t = termsOf('CORE.COV.001').find(x => x['ldTableRef'] === 'CORE.TBL.001')!
+    expect(t['kind']).toBe('LIMIT')
+    expect(t['states']).toEqual(['AZ'])
+    expect(t['allStates']).toBe(false)
+    expect(t['options']).toEqual([25, 50, '100/300'])   // split limit preserved, not dropped
+    expect(t['linkBasis']).toBe('derived')
+  })
+  it('a DEDUCTIBLE table yields DEDUCTIBLE terms on Collision + OTC', () => {
+    expect(termsOf('CORE.COV.009').some(x => x['kind'] === 'DEDUCTIBLE' && x['ldTableRef'] === 'CORE.TBL.002')).toBe(true)
+    expect(termsOf('CORE.COV.010').some(x => x['kind'] === 'DEDUCTIBLE')).toBe(true)
+  })
+  it('emits a reference_table_terms_derived notice distinct from the PCM-A ld_terms_folded', () => {
+    expect(plan2.summary.notices.some(n => n.code === 'reference_table_terms_derived')).toBe(true)
+  })
+
+  // ── Rating groups (D5) ──
+  const rgOf = (frag: string) =>
+    (plan2.ratingProgram!.data['ratingGroups'] as Array<{ refId: string; name: string; coverageRefIds: string[]; matchBasis: string }>)
+      .find(x => new RegExp(frag, 'i').test(x.name))!
+  it('mints coverage-name rating groups (PREFIX.RTG.NNN) and stamps steps', () => {
+    const grps = plan2.ratingProgram!.data['ratingGroups'] as unknown[]
+    expect(grps).toHaveLength(3)
+    expect((plan2.ratingProgram!.data['steps'] as Array<Record<string, unknown>>)[0]!['groupRefId']).toBe('CORE.RTG.001')
+  })
+  it('resolves a direct coverage-name group and a CSL group via the domain taxonomy', () => {
+    expect(rgOf('Bodily Injury').coverageRefIds).toEqual(['CORE.COV.001'])
+    expect(rgOf('Combined Single Limit').coverageRefIds.sort()).toEqual(['CORE.COV.001', 'CORE.COV.003'])
+  })
+  it('flags a group that names no coverage in the hierarchy (never invented)', () => {
+    const bu = rgOf('Business Use')
+    expect(bu.matchBasis).toBe('unmatched')
+    expect(bu.coverageRefIds).toEqual([])
+  })
+
+  // ── Rate-table placeholders (D4) ──
+  it('mints rate-table placeholders for the factors the algorithm names + links the steps', () => {
+    expect(plan2.ratePlaceholders.length).toBeGreaterThan(0)
+    expect(plan2.ratePlaceholders.every(p => p.data['status'] === 'PLACEHOLDER' && p.data['mintedId'] === true)).toBe(true)
+    expect(plan2.ratePlaceholders.every(p => /\.RTB\.\d+$/.test(p.refId!))).toBe(true)
+    const step = (plan2.ratingProgram!.data['steps'] as Array<Record<string, unknown>>).find(s => /Base Rate/i.test(String(s['label'])))!
+    expect(String(step['ratePlaceholderRef'])).toMatch(/CORE\.RTB\.\d+/)
+    expect(plan2.summary.notices.some(n => n.code === 'rate_table_placeholders')).toBe(true)
+  })
+
+  // ── Flag-not-invent notices/defects (R5) ──
+  it('flags unmatched rating groups as a notice + actionable defects (R5)', () => {
+    const n = plan2.summary.notices.find(x => x.code === 'rating_groups_unmatched')!
+    expect((n.data as { count: number }).count).toBe(1)
+    expect(plan2.summary.defects.some(d => d.code === 'rating_group_unmatched' && d.rawValue === 'Business Use')).toBe(true)
+  })
+  it('surfaces a reference_tables_linked summary + a D8 coverage-resolution notice', () => {
+    expect(plan2.summary.notices.some(n => n.code === 'reference_tables_linked')).toBe(true)
+    expect(plan2.summary.notices.some(n => n.code === 'rule_ref_resolved_to_coverage')).toBe(true)
+  })
 })
 
 // ─── Real-template column fidelity (quirks confirmed against the shipped GL books) ─
@@ -452,6 +621,13 @@ describe('mapIsoWorkbook — LD term fold (PCM-A)', () => {
     // rules attach nothing).
     expect((n!.data as { termsAttached: number; unknownCoverageRefs: number }).termsAttached).toBe(4)
     expect((n!.data as { unknownCoverageRefs: number }).unknownCoverageRefs).toBe(1)
+  })
+
+  it('the signature-detected term derivation NEVER fires on a GL workbook (PCM-A byte-identical)', () => {
+    // No "TABLE NAME:" reference sheet → no minted tables → deriveTermsFromReferenceTables no-ops;
+    // the fold above stays the sole term source and its ld_terms_folded notice is unchanged.
+    expect(foldPlan.summary.notices.some(x => x.code === 'reference_table_terms_derived')).toBe(false)
+    expect(foldPlan.ldTables.every(t => !(t.data as Record<string, unknown>)['mintedId'])).toBe(true)
   })
 
   it('stale numeric refs recover via the NAME in the same reference cell; unresolvable refs emit NO term', () => {
@@ -601,5 +777,161 @@ describe('mapIsoWorkbook — no fabrication on silence (G-D)', () => {
     expect(form.data['category']).toBe('ENDORSEMENT')
     expect(p.summary.warnings.some(w => /blank FORM CATEGORY/.test(w))).toBe(true)
     expect(p.summary.warnings.some(w => /blank MANDATORY/.test(w))).toBe(true)
+  })
+})
+
+// ─── Form anchor upgrades (D6) ────────────────────────────────────────────────────
+// A form the source anchors only at product/line level, whose number the hierarchy's
+// per-coverage form list names, is re-anchored to that coverage. Forms stay refId:null.
+describe('mapIsoWorkbook — form anchor upgrades (D6)', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'FORM NUMBER(S)', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Auto', 'Bodily Injury', '', 'AC 200', 'X'],
+  ])
+  // Two "TABLE NAME:" blocks → CORE signature (so the upgrade pass runs).
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI'],
+    ['RULE ID:', 'Available'],
+    ['Single', 25],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Late', 10],
+  ])
+  const forms = g('Forms Specifications', [
+    ['FORMS'],
+    ['PRODUCT FRAMEWORK ID', 'FORM NAME', 'FORM NUMBER', 'FORM CATEGORY'],
+    ['CORE.PRD.001', 'Some Form', 'AC 200', 'Endorsement'],   // line-level anchor only
+    ['CORE.PRD.001', 'Other Form', 'AC 999', 'Endorsement'],  // in no coverage form list
+  ])
+  const plan3 = mapIsoWorkbook([fw, refs, forms])
+
+  it('re-anchors a line-level form to the coverage whose form list names it (forms stay refId:null)', () => {
+    const f = plan3.forms.find(x => x.data['number'] === 'AC 200')!
+    expect(f.data['coverageRefIds']).toEqual(['CORE.COV.001'])
+    expect(String(f.data['anchorBasis'])).toMatch(/hierarchy form list/)
+    expect(f.refId).toBeNull()
+    expect(plan3.summary.counts['formAnchorUpgrades']).toBe(1)
+  })
+  it('a form in no coverage form list is left unanchored (never invented)', () => {
+    const f = plan3.forms.find(x => x.data['number'] === 'AC 999')!
+    expect(f.data['coverageRefIds']).toBeUndefined()
+  })
+})
+
+// ─── Review-hardening: rating-group forward-fill stops at policy-level steps (D5) ──
+describe('mapIsoWorkbook — rating-group forward-fill never bleeds onto policy-level steps', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Auto', 'Bodily Injury', '', 'X'],
+  ])
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI'],
+    ['RULE ID:', 'Available'],
+    ['Single', 25],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Late', 10],
+  ])
+  const rating = g('Rating Specifications', [
+    ['RATING'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RATING STEP ID', 'COVERAGE NAME', 'RATING RULES', 'ALGORITHM STEP', 'CALCULATION', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.RAT.1', '', 'Bodily Injury', 'base', 'Base Rate', '*', 'X'],
+    ['Active', 'CORE.RAT.1', '', '', 'ilf', 'Increased Limit Factor', '*', 'X'],   // coverage continuation → attributed
+    ['Active', 'CORE.RAT.1', '', '', 'fin', 'Final premium', '+', 'X'],            // policy-level → unattributed
+    ['Active', 'CORE.RAT.1', '', '', 'tax', 'MCCA Assessment', '+', 'X'],          // policy-level → unattributed
+  ])
+  const p = mapIsoWorkbook([fw, refs, rating])
+  const stepBy = (frag: string) => (p.ratingProgram!.data['steps'] as Array<Record<string, unknown>>).find(s => new RegExp(frag, 'i').test(String(s['label'])))!
+
+  it('a coverage continuation step inherits the group; a policy-level step does not', () => {
+    expect(stepBy('Increased Limit')['groupRefId']).toBe('CORE.RTG.001')
+    expect(stepBy('Final premium')['groupRefId']).toBeUndefined()
+    expect(stepBy('MCCA Assessment')['groupRefId']).toBeUndefined()
+  })
+})
+
+// ─── Review-hardening: rate-table artifacts correlated to their own block (D4) ──
+describe('mapIsoWorkbook — rate-table artifact detection is order/count-independent', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Auto', 'Bodily Injury', '', 'X'],
+  ])
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI'],
+    ['RULE ID:', 'Available'],
+    ['Single', 25],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Late', 10],
+  ])
+  // Artifact block FIRST (no RATE TABLE ID), real table SECOND — the old slice(N) got this backwards.
+  const rt = g('Rating Tables', [
+    ['RATE TABLE NAME:', 'Wrong-Line Example'],
+    ['(no id here)', 1],
+    ['RATE TABLE NAME:', 'Real Factor Table'],
+    ['RATE TABLE ID:', 'RTTable.001'],
+    ['Territory', 'Factor'],
+    ['A', 1.1],
+  ])
+  const p = mapIsoWorkbook([fw, refs, rt])
+  it('reports only the block with no RATE TABLE ID as the excluded artifact', () => {
+    const n = p.summary.notices.find(x => x.code === 'template_artifacts_excluded')!
+    expect((n.data as { names: string[] }).names).toEqual(['Wrong-Line Example'])
+    expect(p.rtTables.map(t => t.refId)).toContain('RTTable.001')   // the real table is kept
+  })
+})
+
+// ─── AI overlay: fill-only + validated (R4) ────────────────────────────────────────
+// The AI overlay resolves ONLY the tail the deterministic passes left unresolved, only to
+// entities that exist, and never overrides a deterministic link. Every applied link is
+// linkBasis:'ai-proposed'.
+describe('mapIsoWorkbook — AI overlay is fill-only + validated (R4)', () => {
+  const fw = g('Framework', [
+    ['PRODUCT FRAMEWORK'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.PRD.001', 'Core', '', '', '', 'X'],
+    ['Active', 'CORE.COV.001', 'Core', 'Auto', 'Bodily Injury', '', 'X'],
+    ['Active', 'CORE.COV.003', 'Core', 'Auto', 'Property Damage', '', 'X'],
+  ])
+  const refs = g('Reference Data', [
+    ['TABLE NAME: Liability Limits - AZ', '', 'BI'],
+    ['RULE ID:', 'Available'],
+    ['Single', 25],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Late', 10],
+  ])
+  const rating = g('Rating Specifications', [
+    ['RATING'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RATING STEP ID', 'COVERAGE NAME', 'RATING RULES', 'ALGORITHM STEP', 'CALCULATION', 'ALL ACTIVE STATES'],
+    ['Active', 'CORE.RAT.1', '', 'Bodily Injury', 'base', 'Base Rate', '*', 'X'],
+    ['Active', 'CORE.RAT.1', '', 'Business Use', 'biz', 'Business Factor', '*', 'X'],
+  ])
+  const groupsOf = (p: ImportPlan) => p.ratingProgram!.data['ratingGroups'] as Array<{ name: string; coverageRefIds: string[]; matchBasis: string }>
+
+  it('resolves an unmatched group from a VALID cited proposal (linkBasis ai-proposed)', () => {
+    const p = mapIsoWorkbook([fw, refs, rating], { ratingGroupLinks: { 'Business Use': ['CORE.COV.001'] } })
+    const bu = groupsOf(p).find(x => x.name === 'Business Use')!
+    expect(bu.matchBasis).toBe('ai-proposed')
+    expect(bu.coverageRefIds).toEqual(['CORE.COV.001'])
+    expect(p.summary.notices.some(n => n.code === 'ai_proposed_links')).toBe(true)
+  })
+  it('DROPS a dangling proposal (refId not in the model) — group stays flagged unmatched', () => {
+    const p = mapIsoWorkbook([fw, refs, rating], { ratingGroupLinks: { 'Business Use': ['CORE.COV.999'] } })
+    const bu = groupsOf(p).find(x => x.name === 'Business Use')!
+    expect(bu.matchBasis).toBe('unmatched')
+    expect(bu.coverageRefIds).toEqual([])
+  })
+  it('NEVER overrides a deterministic match, even when the overlay names that group', () => {
+    const p = mapIsoWorkbook([fw, refs, rating], { ratingGroupLinks: { 'Bodily Injury': ['CORE.COV.003'] } })
+    const bi = groupsOf(p).find(x => x.name === 'Bodily Injury')!
+    expect(bi.matchBasis).toBe('derived')
+    expect(bi.coverageRefIds).toEqual(['CORE.COV.001'])
   })
 })

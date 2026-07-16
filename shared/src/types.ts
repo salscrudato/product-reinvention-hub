@@ -15,6 +15,11 @@ export type Role = 'VIEWER' | 'UNDERWRITING' | 'COMPLIANCE' | 'CLAIMS' | 'ACTUAR
 export type Requirement  = 'MANDATORY' | 'OPTIONAL' | 'UNKNOWN'
 export type Source       = 'BUREAU' | 'PROPRIETARY'
 export type TermKind     = 'LIMIT' | 'DEDUCTIBLE' | 'OPTION'
+// Provenance of a derived/proposed link edge produced by the concept-linker import path.
+// 'given' = stated verbatim in the source; 'derived' = deterministically inferred by
+// concept matching; 'ai-proposed' = an accepted, cited AI-overlay suggestion (never
+// overwrites a deterministic basis). See shared/insurance/conceptMatch.ts + isoImport.ts.
+export type LinkBasis    = 'given' | 'derived' | 'ai-proposed'
 
 export interface GovernanceBlock {
   status:       Status
@@ -179,6 +184,15 @@ export interface CoverageTerm {
   structure?:   LimitStructure | DeductibleStructure
   limitBasis?:  LimitBasis
   optionSet?:   StandardOption[]
+  // ── Concept-linker additions (set on terms DERIVED from a signature-detected reference
+  //    table, e.g. CORE; nested in coverage.terms → golden-invisible). ──
+  /** Per-state scope of this term when it came from a state-suffixed table family (D7). */
+  states?:      string[]
+  allStates?:   boolean
+  /** The matrix header code (BI/PD/CSL/…) this term's coverage resolved from, when applicable. */
+  coverageCode?: string
+  /** Provenance of the coverage↔term link. */
+  linkBasis?:   LinkBasis
 }
 
 export interface Coverage extends GovernanceBlock, StateScope {
@@ -211,6 +225,14 @@ export interface Rule extends GovernanceBlock, StateScope {
   ldTableRefText?: string
   coverageRefIds:  string[]
   formNumbers:     string[]
+  // ── Concept-linker additions (set ONLY on a concept-linked import, e.g. CORE) ──
+  /** Reference tables this rule cites, reconstructed by concept matching (D2). Array ⇒
+   *  golden-invisible; absent on GL/IM/PR rules. */
+  tableRefIds?:           string[]
+  tableLinkBasis?:        LinkBasis
+  /** D8: the rule reference named a COVERAGE, not a table — resolved to this coverage refId
+   *  (a coverage link + notice, never a failed match). */
+  resolvedCoverageRefId?: string
 }
 
 export interface FormRule extends GovernanceBlock {
@@ -242,6 +264,30 @@ export interface RatingStep {
   // A credit is a multiplicative factor ≤ 1.0 (loyalty/bundle/renovation/…); flagging it lets
   // the evaluator floor the CUMULATIVE product of credits without touching non-credit steps.
   isCredit?:  boolean
+  // ── Concept-linker rating-group additions (set on a group-enriched import, e.g. CORE;
+  //    nested in ratingProgram.steps → golden-invisible; read by NO evaluator code). ──
+  /** The coverage-name group this step rates under (forward-filled from the COVERAGE NAME column). */
+  groupName?:            string
+  /** Minted rating-group id this step belongs to (e.g. CORE.RTG.007). */
+  groupRefId?:           string
+  /** Hierarchy coverage(s) the group resolved to (D5). */
+  groupCoverageRefIds?:  string[]
+  /** Endorsement-package form(s) the group rates, when it rates a package rather than a coverage. */
+  packageFormNumbers?:   string[]
+  groupMatchBasis?:      LinkBasis | 'unmatched'
+  /** Minted rate-table placeholder this step draws its factor from (D4; PREFIX.RTB.NNN). */
+  ratePlaceholderRef?:   string
+}
+
+/** Concept-linker rating-group summary — one per coverage-name group in a group-enriched
+ *  import (e.g. CORE). Nested on RatingProgram → golden-invisible. */
+export interface RatingGroupSummary {
+  refId:          string
+  name:           string
+  coverageRefIds: string[]
+  formNumbers:    string[]
+  stepRefIds:     string[]
+  matchBasis:     LinkBasis | 'unmatched'
 }
 
 export interface RatingProgram extends GovernanceBlock, StateScope {
@@ -249,6 +295,9 @@ export interface RatingProgram extends GovernanceBlock, StateScope {
   name:           string
   minimumPremium: number
   steps:          RatingStep[]
+  /** Coverage-name rating groups reconstructed by the concept-linker (D5). Absent on every
+   *  seeded/legacy program → golden-invisible, no behavioural change. */
+  ratingGroups?:  RatingGroupSummary[]
   // Optional maximum-credit cap: the cumulative product of every `isCredit` step is floored
   // at this value (e.g. 0.50 = "max total credit 50%", a filing's Rule 92). The evaluator
   // applies one corrective adjustment after the last credit step so the cumulative credit
@@ -272,6 +321,28 @@ export interface LDTable {
   /** Source value-column header ("AVAILABLE LIMITS" / "AVAILABLE DEDUCTIBLES") —
    *  explicit evidence of what the table enumerates (PCM-A term-kind inference). */
   valueHeader?:  string
+  // ── Concept-linker additions (present ONLY on minted reference tables, e.g. CORE.TBL.NNN,
+  //    recovered by signature from a sheet the named LD parser never claimed). Absent on
+  //    every GL/IM legacy LD table, so those serialize byte-identically. ──
+  /** Inferred term kind from the table's name/back-link/column-code signature. */
+  kindHint?:       TermKind
+  /** Per-state family suffix ("- AZ") — the state this table's terms are scoped to (D7). */
+  state?:          string
+  /** Verbatim column-code headers of a limit/deductible matrix (BI, PD, CSL, …) (D1/D7). */
+  coverageCodes?:  string[]
+  /** Coverage refIds this table's terms attach to (reconstructed by concept matching). */
+  coverageRefIds?: string[]
+  /** Rule refIds that cite this table (reconstructed by concept matching). */
+  ruleRefIds?:     string[]
+  /** The verbatim back-link cell the source carried (usually the value-column header). */
+  backLinkWas?:    string
+  /** Distinct option values as displayed — numeric single limits AND split-limit strings
+   *  ("100/300") the numeric-only `rows` cannot hold; drives a derived term's option list so
+   *  split liability limits are not silently lost. */
+  optionValues?:   (string | number)[]
+  /** True when this table's refId was SYNTHESIZED by the importer (never a source id). */
+  mintedId?:       boolean
+  linkBasis?:      LinkBasis
 }
 
 // rows layout is preserved as-is; lookup logic lives in the concrete getter

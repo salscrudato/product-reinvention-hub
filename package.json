@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "pnpm --filter app dev",
     "test": "pnpm test:unit",
-    "test:unit": "vitest run && pnpm --filter functions test",
+    "test:unit": "vitest run",
     "test:gates": "vitest run tests/server/tenant-isolation.test.ts tests/server/hitl.test.ts tests/server/cost-guard.test.ts",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
@@ -21,8 +21,7 @@
     "build:news": "pnpm dlx esbuild@0.25.5 shared/src/grounding/sources.ts --bundle --format=cjs --platform=node --target=node20 --outfile=server/lib/news-shared.cjs",
     "build:export": "pnpm dlx esbuild@0.25.5 shared/src/export/duckcreek/server-entry.ts --bundle --format=cjs --platform=node --target=node20 --outfile=server/lib/export-duckcreek-shared.cjs",
     "build": "pnpm build:serff && pnpm build:fleet && pnpm build:chunk && pnpm build:retrieve && pnpm build:seed && pnpm build:import-brain && pnpm build:filing && pnpm build:audit-chain && pnpm build:platform && pnpm build:news && pnpm build:export && pnpm --filter app build",
-    "eval": "tsx functions/eval/runner.ts",
-    "hygiene": "pnpm dlx knip && pnpm dlx depcheck ./app && pnpm dlx depcheck ./functions && pnpm dlx depcheck ./shared",
+    "hygiene": "pnpm dlx knip && pnpm dlx depcheck ./app && pnpm dlx depcheck ./shared",
     "harden:check": "node hardening/convergence.mjs",
     "harden:seed": "node hardening/seed.mjs",
     "harden:smoke:local": "node hardening/smoke.mjs",

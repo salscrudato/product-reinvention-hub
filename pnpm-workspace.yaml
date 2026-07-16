@@ -1,6 +1,5 @@
 packages:
   - 'app'
-  - 'functions'
   - 'shared'
 allowBuilds:
   '@firebase/util': true

@@ -5,8 +5,12 @@ import { describe, it, expect } from 'vitest'
 import { createRequire } from 'module'
 
 process.env.AUTH_JWT_SECRET ??= 'test-secret-metering-tests-minimum-32chars'
-process.env.COSMOS_ENDPOINT ??= 'https://dummy.documents.azure.com:443/'
-process.env.COSMOS_KEY     ??= 'dGVzdGtleQ=='
+// Cosmos must be ABSENT for this suite: metering persistence is best-effort and no-ops
+// without it (sysDocs() -> null), which is what makes these results deterministic. A dummy
+// endpoint here used to force every meter()/snapshot through a failing network call whose
+// latency was load-dependent and intermittently blew the 5s default test timeout.
+delete process.env.COSMOS_ENDPOINT
+delete process.env.COSMOS_KEY
 
 const _require = createRequire(import.meta.url)
 const metering = _require('../../server/lib/metering') as {

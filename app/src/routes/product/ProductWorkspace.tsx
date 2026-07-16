@@ -200,11 +200,6 @@ function WorkspaceInner() {
                   <LineageBadge lineage={product.lineage} />
                 </div>
               )}
-              <p className="text-sm text-dim mt-1">
-                {coverages.length} coverage{coverages.length !== 1 ? 's' : ''}
-                {' · '}{product.states?.length ?? 0} state{(product.states?.length ?? 0) !== 1 ? 's' : ''}
-                {' · '}{product.marketSegment}
-              </p>
               </div>
             </div>
 

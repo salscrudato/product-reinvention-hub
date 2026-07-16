@@ -1,6 +1,4 @@
-// Root vitest config — covers shared engines and app units.
-// Functions unit tests run via `pnpm --filter functions test` (chained in pnpm test).
-// Functions integration tests run separately via pnpm test:rules (emulator required).
+// Root vitest config — covers shared engines, app units, and the top-level tests/ suites.
 import { defineConfig } from 'vitest/config'
 import path from 'node:path'
 
@@ -10,9 +8,9 @@ export default defineConfig({
   // automatic runtime so no explicit React import is needed. Pure logic tests stay
   // `.test.ts` in the default node environment.
   esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
-  // Resolve @pf/shared to source for every suite. app/functions tests already resolve it
-  // via their own node_modules symlink (to the same shared/src/index.ts); this alias also
-  // lets the top-level tests/ suites (no workspace of their own) import it.
+  // Resolve @pf/shared to source for every suite. app tests already resolve it via their
+  // own node_modules symlink (to the same shared/src/index.ts); this alias also lets the
+  // top-level tests/ suites (no workspace of their own) import it.
   resolve: {
     alias: { '@pf/shared': path.resolve(process.cwd(), 'shared/src/index.ts') },
   },

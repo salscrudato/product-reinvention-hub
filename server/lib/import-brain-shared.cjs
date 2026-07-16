@@ -2113,19 +2113,215 @@ function resolveCoverageHierarchy(rows) {
   return out;
 }
 
+// shared/src/insurance/conceptMatch.ts
+function norm(s) {
+  return s.toUpperCase().replace(/[^A-Z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+}
+function squish(s) {
+  return norm(s).replace(/ /g, "");
+}
+function stem(t) {
+  return t.length > 3 ? t.replace(/S$/, "") : t;
+}
+var STOP = /* @__PURE__ */ new Set([
+  "THE",
+  "A",
+  "AN",
+  "OF",
+  "VIA",
+  "AND",
+  "OR",
+  "FOR",
+  "TO",
+  "BY",
+  "WITH",
+  "COVERAGE",
+  "COVERAGES",
+  "ENDORSEMENT",
+  "TABLE",
+  "MATRIX"
+]);
+function tokens(s) {
+  return norm(s).split(" ").filter((t) => t && !STOP.has(t)).map(stem);
+}
+var FORM_TOKEN = /\b(?:AC|PP|EP|NC|CA|CORULES|CAM)\s?\d[\d ]{0,6}\d?\b|\bAC \d{3} [A-Z]{2}\b/g;
+function formTokens(s) {
+  return [...new Set((s.toUpperCase().match(FORM_TOKEN) || []).map((m) => m.replace(/\s+/g, " ").trim()))];
+}
+var ABBREV_FOLD = [
+  [/ UNDER INSURED /g, " UNDERINSURED "],
+  [/ UM /g, " UNINSURED MOTORISTS "],
+  [/ UIM /g, " UNDERINSURED MOTORISTS "],
+  [/ BI /g, " BODILY INJURY "],
+  [/ PD /g, " PROPERTY DAMAGE "],
+  [/ OTC /g, " OTHER THAN COLLISION "],
+  [/ MED PAY /g, " MEDICAL PAYMENTS "],
+  [/ MPL /g, " MOTORCYCLE PASSENGER LIABILITY "]
+];
+function foldSynonyms(nn) {
+  let f = ` ${norm(nn)} `;
+  for (const [re, rep] of ABBREV_FOLD) f = f.replace(re, rep);
+  return f.replace(/\s+/g, " ").trim();
+}
+var COVERAGE_CODE_MAP = [
+  { code: /^(BI PD CSL|CSL)$/, phrases: ["BODILY INJURY", "PROPERTY DAMAGE"] },
+  { code: /^UM ?UIM BI$/, phrases: ["UNINSURED MOTORISTS BODILY INJURY", "UNDERINSURED MOTORISTS BODILY INJURY"] },
+  { code: /^UM BI$/, phrases: ["UNINSURED MOTORISTS BODILY INJURY"] },
+  { code: /^UM PD$/, phrases: ["UNINSURED MOTORISTS PROPERTY DAMAGE"] },
+  { code: /^UIM BI$/, phrases: ["UNDERINSURED MOTORISTS BODILY INJURY"] },
+  { code: /^UIM PD$/, phrases: ["UNDERINSURED MOTORISTS PROPERTY DAMAGE"] },
+  { code: /^BI$/, phrases: ["BODILY INJURY"] },
+  { code: /^PD$/, phrases: ["PROPERTY DAMAGE"] },
+  { code: /^(MP|MED PAY|MEDICAL PAYMENTS?)$/, phrases: ["MEDICAL PAYMENTS"] },
+  { code: /^MPL$/, phrases: ["MOTORCYCLE PASSENGER LIABILITY"] }
+];
+var PACKAGE_FORMS = [
+  { re: /^VALUE ADDED/, formNum: "AC 400" },
+  { re: /^VEHICLE UNDER CONSTRUCTION/, formNum: "AC 116" },
+  { re: /^TRAVELING COLLECTOR/, formNum: "AC 113" },
+  { re: /^LEGENDARY RIDE/, formNum: "AC 114" },
+  { re: /^MOTORSPORTS ADVANTAGE/, formNum: "AC 115" }
+];
+function isNA(s) {
+  return /^n\/?a\.?$/i.test(s) || s.trim() === "";
+}
+function matchCoverageByName(raw, coverages) {
+  const stripped = raw.replace(/\(.*?\)/g, " ").replace(/excluding.*$/i, " ");
+  const nn = norm(stripped);
+  if (!nn) return null;
+  for (const c of coverages) if (norm(c.name) === nn) return { refId: c.refId, how: "exact name" };
+  const overlapBag = (s) => new Set(tokens(s).filter((t) => t !== "LIABILITY"));
+  const bestOverlap = (inputTokens) => {
+    let best = null;
+    let bestScore = 0;
+    for (const c of coverages) {
+      const ct = overlapBag(c.name);
+      let overlap = 0;
+      for (const t of inputTokens) if (ct.has(t)) overlap++;
+      const score = overlap / Math.max(1, Math.max(inputTokens.size, ct.size));
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    return best ? { c: best, score: bestScore } : null;
+  };
+  const folded = bestOverlap(overlapBag(foldSynonyms(nn)));
+  if (folded && folded.score >= 0.6) return { refId: folded.c.refId, how: `name match (${Math.round(folded.score * 100)}%)` };
+  const rawM = bestOverlap(overlapBag(nn));
+  if (rawM && rawM.score >= 0.6) return { refId: rawM.c.refId, how: `name match (${Math.round(rawM.score * 100)}%)` };
+  const inTokens = new Set(tokens(foldSynonyms(nn)));
+  let cont = null;
+  let contLen = 0;
+  for (const c of coverages) {
+    const ct = tokens(c.name).filter((t) => t !== "LIABILITY");
+    if (ct.length >= 2 && ct.every((t) => inTokens.has(t)) && ct.length > contLen) {
+      cont = c;
+      contLen = ct.length;
+    }
+  }
+  if (cont) return { refId: cont.refId, how: "containment" };
+  return null;
+}
+function resolveCoverageCode(code, coverages) {
+  const nc = norm(code);
+  for (const { code: re, phrases } of COVERAGE_CODE_MAP) {
+    if (!re.test(nc)) continue;
+    const out = /* @__PURE__ */ new Set();
+    for (const phrase of phrases) {
+      const m = matchCoverageByName(phrase, coverages);
+      if (m) out.add(m.refId);
+    }
+    return [...out];
+  }
+  return [];
+}
+function physicalDamageCoverages(coverages) {
+  const out = [];
+  for (const c of coverages) {
+    if (/^collision/i.test(c.name) || /other than collision/i.test(c.name) || /\bcomprehensive\b/i.test(c.name) && !/liabilit|personal|medical|business/i.test(c.name)) out.push(c.refId);
+  }
+  return out;
+}
+function matchRuleReferenceToTables(ref, tables, ruleStates, ruleAll, coverages) {
+  if (isNA(ref)) return { tableRefIds: [], how: "" };
+  const refN = norm(ref);
+  const refT = new Set(tokens(ref));
+  const refF = formTokens(ref);
+  let cands = tables.filter((t) => {
+    const tn = norm(t.baseName);
+    if (tn && (tn.includes(refN) || refN.includes(tn))) return true;
+    const tt = tokens(t.baseName);
+    const sig = [...refT].filter((x) => x.length > 2);
+    if (sig.length && sig.every((x) => tt.includes(x))) return true;
+    if (refF.length && formTokens(t.baseName).some((f) => refF.includes(f))) return true;
+    return false;
+  });
+  if (!cands.length && /LIMIT/.test(refN) && /MATRIX/i.test(ref)) {
+    cands = tables.filter((t) => /SUB-?COVERAGE.*LIMIT/i.test(t.baseName));
+  }
+  if (!cands.length) {
+    const cm = matchCoverageByName(ref.replace(FORM_TOKEN, " "), coverages);
+    if (cm) return { tableRefIds: [], how: `reference resolves to coverage ${cm.refId} \u2014 no table in source`, resolvedCoverageRefId: cm.refId };
+    return { tableRefIds: [], how: "NO MATCHING TABLE IN SOURCE" };
+  }
+  const stateful = cands.filter((t) => t.state);
+  if (stateful.length && !ruleAll && ruleStates.length) {
+    const inScope = stateful.filter((t) => ruleStates.includes(t.state));
+    cands = [...cands.filter((t) => !t.state), ...inScope.length ? inScope : stateful];
+  }
+  return { tableRefIds: cands.map((t) => t.refId), how: "concept match on reference name" };
+}
+var RATING_GROUP_CONCEPTS = [
+  // Combined "Uninsured/Underinsured Motorists Combined Single Limit" must precede the
+  // single-sided CSL entries (first-match-wins): "UNINSURED" is not a substring of
+  // "UNDERINSURED", so without this the underinsured-only entry below would shadow it and drop
+  // the uninsured coverages.
+  { re: /\bUNINSURED\b.*\bUNDERINSURED MOTORISTS? COMBINED SINGLE LIMIT/, phrases: ["UNINSURED MOTORISTS BODILY INJURY", "UNINSURED MOTORISTS PROPERTY DAMAGE", "UNDERINSURED MOTORISTS BODILY INJURY", "UNDERINSURED MOTORISTS PROPERTY DAMAGE"] },
+  { re: /\bUNINSURED MOTORISTS? COMBINED SINGLE LIMIT/, phrases: ["UNINSURED MOTORISTS BODILY INJURY", "UNINSURED MOTORISTS PROPERTY DAMAGE"] },
+  { re: /\bUNDERINSURED MOTORISTS? COMBINED SINGLE LIMIT/, phrases: ["UNDERINSURED MOTORISTS BODILY INJURY", "UNDERINSURED MOTORISTS PROPERTY DAMAGE"] },
+  { re: /\bCOMBINED SINGLE LIMIT/, phrases: ["BODILY INJURY", "PROPERTY DAMAGE"] },
+  { re: /\bUNINSURED\b.*\bUNDERINSURED MOTORISTS/, phrases: ["UNINSURED MOTORISTS BODILY INJURY", "UNDERINSURED MOTORISTS BODILY INJURY"] },
+  { re: /\bUNDERINSURED MOTORISTS\b/, phrases: ["UNDERINSURED MOTORISTS BODILY INJURY"] },
+  { re: /\bUNINSURED MOTORISTS\b/, phrases: ["UNINSURED MOTORISTS BODILY INJURY"] },
+  { re: /^(UN)?SCHEDULED$/, phrases: ["COLLECTIBLE PERSONAL PROPERTY", "PERSONAL PROPERTY"] }
+];
+function matchGroup(raw, coverages, covsByForm) {
+  const base = norm(raw.replace(/\(.*?\)/g, " ").replace(/excluding.*$/i, " ").replace(/™/g, " "));
+  for (const { re, formNum } of PACKAGE_FORMS) {
+    if (!re.test(base)) continue;
+    const via = covsByForm.get(squish(formNum)) ?? [];
+    if (!via.length) break;
+    return { covRefIds: [...new Set(via)].slice(0, 40), formNums: [formNum], how: `rates endorsement package ${formNum}`, matchBasis: "derived" };
+  }
+  const folded = foldSynonyms(base);
+  for (const { re, phrases } of RATING_GROUP_CONCEPTS) {
+    if (!re.test(folded)) continue;
+    const ids = /* @__PURE__ */ new Set();
+    for (const p of phrases) {
+      const m2 = matchCoverageByName(p, coverages);
+      if (m2) ids.add(m2.refId);
+    }
+    if (ids.size) return { covRefIds: [...ids], formNums: [], how: "domain concept", matchBasis: "derived" };
+  }
+  const m = matchCoverageByName(raw, coverages);
+  if (m) return { covRefIds: [m.refId], formNums: [], how: m.how, matchBasis: "derived" };
+  return { covRefIds: [], formNums: [], how: "NO MATCHING COVERAGE IN HIERARCHY", matchBasis: "unmatched" };
+}
+
 // shared/src/insurance/isoImport.ts
 function text(v) {
   if (v == null) return "";
   if (typeof v === "string") return v.trim();
   return String(v);
 }
-function norm(v) {
+function norm2(v) {
   return text(v).toUpperCase().replace(/\s+/g, " ").trim();
 }
 function squishStr(s) {
   return s.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
-function squish(v) {
+function squish2(v) {
   return squishStr(text(v));
 }
 var PLACEHOLDER = /^<.*>$|^n\/?a$|^not applicable$|^intentionally left blank$/i;
@@ -2210,13 +2406,13 @@ var US_STATES = /* @__PURE__ */ new Set([
   "VI"
 ]);
 function mapStatus(v) {
-  const s = norm(v);
+  const s = norm2(v);
   if (s.startsWith("INACTIVE")) return "INACTIVE";
   if (s.startsWith("FUTURE")) return "FUTURE";
   return "ACTIVE";
 }
 function mapReview(v) {
-  const s = norm(v);
+  const s = norm2(v);
   if (s.startsWith("APPROV")) return "APPROVED";
   if (s.startsWith("REJECT")) return "REJECTED";
   if (s.startsWith("BUSINESS")) return "BUSINESS_REVIEW";
@@ -2240,7 +2436,7 @@ function mapSource(bureau, prop) {
   return "BUREAU";
 }
 function mapDynType(v) {
-  const s = norm(v);
+  const s = norm2(v);
   if (s.startsWith("CURRENCY")) return "CURRENCY";
   if (s.startsWith("DATE")) return "DATE";
   if (s.startsWith("LIST")) return "LIST";
@@ -2248,7 +2444,7 @@ function mapDynType(v) {
   return "TEXT";
 }
 function mapRuleCategory(v) {
-  const s = norm(v);
+  const s = norm2(v);
   if (s.startsWith("RATING")) return "RATING";
   if (s.startsWith("FORM")) return "FORMS";
   return "PRODUCT";
@@ -2281,7 +2477,7 @@ var FORM_CATEGORY_OUTLIERS = /* @__PURE__ */ new Set([
   "POLICY"
 ]);
 function mapFormCategory(v, overlay) {
-  const s = norm(v);
+  const s = norm2(v);
   if (overlay?.enumOverrides) {
     const ov = overlay.enumOverrides[s];
     if (ov) return { category: ov, exact: true, outlier: false };
@@ -2317,7 +2513,7 @@ function findHeaderRow(grid, aliasGroups, limit = 20) {
   const groups = aliasGroups.map((a) => a.map(squishStr));
   let best = -1, bestScore = 0;
   for (let r = 0; r < Math.min(grid.cells.length, limit); r++) {
-    const heads = row(grid, r).map(squish);
+    const heads = row(grid, r).map(squish2);
     let score = 0;
     for (const g of groups) if (heads.some((h) => h !== "" && g.includes(h))) score++;
     if (score > bestScore) {
@@ -2328,7 +2524,7 @@ function findHeaderRow(grid, aliasGroups, limit = 20) {
   return bestScore >= 3 ? best : -1;
 }
 function mapColumns(header, fields, exclude) {
-  const heads = header.map((h, i) => exclude?.has(i) ? "" : squish(h));
+  const heads = header.map((h, i) => exclude?.has(i) ? "" : squish2(h));
   const map = {};
   for (const [key, aliases] of Object.entries(fields)) {
     for (const alias of aliases) {
@@ -2340,9 +2536,9 @@ function mapColumns(header, fields, exclude) {
       }
     }
   }
-  const STOP = /* @__PURE__ */ new Set(["THE", "A", "AN", "OF", "OR", "AND", "TO", "IN", "IS", "FOR", "ON", "AT", "BY"]);
+  const STOP2 = /* @__PURE__ */ new Set(["THE", "A", "AN", "OF", "OR", "AND", "TO", "IN", "IS", "FOR", "ON", "AT", "BY"]);
   function sigWords(s) {
-    return s.replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length >= 2 && !STOP.has(w));
+    return s.replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length >= 2 && !STOP2.has(w));
   }
   for (const [key, aliases] of Object.entries(fields)) {
     if (key in map) continue;
@@ -2369,10 +2565,10 @@ function mapColumns(header, fields, exclude) {
 function stateColumns(header) {
   const cols = [];
   header.forEach((c, i) => {
-    const h = norm(c);
+    const h = norm2(c);
     if (US_STATES.has(h)) cols.push({ col: i, code: h });
   });
-  const allCol = header.findIndex((c) => /\bALL( ACTIVE)? STATES\b/.test(norm(c)));
+  const allCol = header.findIndex((c) => /\bALL( ACTIVE)? STATES\b/.test(norm2(c)));
   return { cols, allCol };
 }
 function stateMatrixExclusions(grid, hr, sc) {
@@ -2478,7 +2674,7 @@ var Ctx = class {
     const labels = [];
     header.forEach((c, i) => {
       const name = clean(c);
-      if (name && !handled.has(i) && !US_STATES.has(norm(c)) && !labels.includes(name)) labels.push(name);
+      if (name && !handled.has(i) && !US_STATES.has(norm2(c)) && !labels.includes(name)) labels.push(name);
     });
     if (labels.length) this.unmapped.push({ sheet, columns: labels.slice(0, 24) });
   }
@@ -2936,7 +3132,7 @@ function parseForms(grid, dynByForm, productRefId, ctx, overlay) {
         );
       } else {
         ctx.warnOnce(
-          `formcat:${norm(at(cells, "category"))}`,
+          `formcat:${norm2(at(cells, "category"))}`,
           `Sheet "${grid.sheet}" row ${r + 1} col "FORM CATEGORY": value "${clean(at(cells, "category"))}" not recognised \u2014 mapped to ENDORSEMENT, verify intent.`
         );
       }
@@ -3112,6 +3308,10 @@ function parseRules(grid, ctx) {
         // where the parsed table is LDTABLE.119) — the same cell's NAME is the
         // authoritative recovery channel for the term fold (PCM-A).
         ldTableRefText: extractTableRef(at(cells, "reference")) ? clean(at(cells, "reference")) : void 0,
+        // TRANSIENT: the raw RULE REFERENCE text, consumed + deleted by linkReferenceTables
+        // (concept rule→table matching, D2). Never reaches a plan/golden — so GL/IM/PR rules
+        // stay byte-identical whether or not their reference is a concept name.
+        _referenceText: clean(at(cells, "reference")) || void 0,
         coverageRefIds: splitList(at(cells, "ids")),
         formNumbers: forms,
         ...stateScope(cells, sc),
@@ -3282,14 +3482,14 @@ function parseLdTables(grid, ctx) {
   const rows = grid.cells;
   let markerCol = 0;
   for (let r = 0; r < Math.min(rows.length, 20); r++) {
-    if (LD_MARKER_GL.test(norm(cell(grid, r, 0)))) break;
-    if (LD_MARKER_IM.test(norm(cell(grid, r, 1)))) {
+    if (LD_MARKER_GL.test(norm2(cell(grid, r, 0)))) break;
+    if (LD_MARKER_IM.test(norm2(cell(grid, r, 1)))) {
       markerCol = 1;
       break;
     }
   }
   for (let r = 0; r < rows.length; r++) {
-    const first = norm(cell(grid, r, markerCol));
+    const first = norm2(cell(grid, r, markerCol));
     if (!LD_MARKER.test(first)) continue;
     const refId = text(cell(grid, r, markerCol));
     const markerRow = row(grid, r);
@@ -3320,7 +3520,7 @@ function parseLdTables(grid, ctx) {
     if (!entry.name) entry.name = name;
     if (!entry.valueHeader) entry.valueHeader = valueHeader;
     for (let dr = headerR + 1; dr < rows.length; dr++) {
-      if (LD_MARKER.test(norm(cell(grid, dr, markerCol)))) break;
+      if (LD_MARKER.test(norm2(cell(grid, dr, markerCol)))) break;
       const raw = cell(grid, dr, valueCol);
       const label = clean(raw);
       if (!label || /^available|^comment|^limit$|^deductible/i.test(label)) continue;
@@ -3347,7 +3547,7 @@ function parseRtTables(grid, ctx) {
   const rows = grid.cells;
   let pendingName = "";
   for (let r = 0; r < rows.length; r++) {
-    const first = norm(cell(grid, r, 0));
+    const first = norm2(cell(grid, r, 0));
     if (RT_NAME_MARKER.test(first)) {
       pendingName = clean(row(grid, r).slice(1).find((c) => clean(c)) ?? null);
       continue;
@@ -3357,7 +3557,7 @@ function parseRtTables(grid, ctx) {
     if (!refId) continue;
     let headerR = -1;
     for (let hr = r + 1; hr < rows.length && hr <= r + 3; hr++) {
-      if (RT_NAME_MARKER.test(norm(cell(grid, hr, 0))) || RT_ID_MARKER.test(norm(cell(grid, hr, 0)))) break;
+      if (RT_NAME_MARKER.test(norm2(cell(grid, hr, 0))) || RT_ID_MARKER.test(norm2(cell(grid, hr, 0)))) break;
       if (row(grid, hr).filter((c) => clean(c)).length >= 2) {
         headerR = hr;
         break;
@@ -3378,7 +3578,7 @@ function parseRtTables(grid, ctx) {
     if (tables.has(refId)) ctx.warnOnce(`duprt:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} col "RATE TABLE ID": table ${refId} appears more than once \u2014 rows merged.`);
     if (!entry.name) entry.name = pendingName;
     for (let dr = headerR + 1; dr < rows.length; dr++) {
-      const f = norm(cell(grid, dr, 0));
+      const f = norm2(cell(grid, dr, 0));
       if (RT_NAME_MARKER.test(f) || RT_ID_MARKER.test(f)) break;
       const cells = row(grid, dr);
       if (!entry.colIdx.some((ci) => clean(cells[ci] ?? null))) continue;
@@ -3416,6 +3616,9 @@ var RATE_FIELDS = {
     "LINE NUMBER"
   ],
   grouping: ["RATING GROUPING", "GROUPING", "GROUP", "SECTION", "ELEMENT", "CATEGORY"],
+  // The coverage-name group column real carrier ROCs group their steps under (forward-filled;
+  // one value per group). Distinct from `grouping` so it never shadows the step-label fallback.
+  groupName: ["COVERAGE NAME", "COVERAGE GROUP", "RATING GROUP NAME"],
   manualId: [
     "RATING MANUAL RULE/ STEP ID",
     "RATING MANUAL RULE/STEP ID",
@@ -3465,6 +3668,7 @@ var RATE_FIELDS = {
   ],
   review: ["REVIEW STATUS", "REVIEW", "APPROVAL STATUS"]
 };
+var GLOBAL_STEP = /\b(final premium|total (?:endorsement )?premium|premium subject to minimum|minimum premium|assessment|authority fee|fund fee|theft surcharge|taxe?s?)\b/i;
 function mapOp(v) {
   const s = text(v).trim();
   if (s === "+" || s === "-") return "ADD";
@@ -3487,9 +3691,9 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
   }
   const sc = stateColumns(header);
   const at = (r, k) => k in col ? r[col[k]] ?? null : null;
-  const rtByName = new Map(rtTables.map((t) => [norm(t.data["name"] ?? ""), t.refId]));
+  const rtByName = new Map(rtTables.map((t) => [norm2(t.data["name"] ?? ""), t.refId]));
   const resolveRef = (v) => {
-    const s = norm(v).replace(/ TABLE$/, "");
+    const s = norm2(v).replace(/ TABLE$/, "");
     if (!s) return void 0;
     for (const [name, refId2] of rtByName) if (name && (name === s || name.includes(s) || s.includes(name))) return refId2;
     return void 0;
@@ -3498,11 +3702,15 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
   const scopes = [];
   let programRefId = null;
   let order = 0;
+  let lastGroupName = "";
   for (let r = hr + 1; r < grid.cells.length; r++) {
     const cells = row(grid, r);
     const stepId = clean(at(cells, "stepId"));
     const label = clean(at(cells, "algorithm")) || clean(at(cells, "rules")) || clean(at(cells, "grouping"));
     if (!stepId && !label) continue;
+    const gn = clean(at(cells, "groupName"));
+    if (gn) lastGroupName = gn;
+    const stepGroupName = !gn && GLOBAL_STEP.test(label) ? "" : lastGroupName;
     if (!programRefId) {
       const full = [stepId, ...splitList(at(cells, "ids"))].find((s) => /\.RAT/i.test(s));
       if (full) {
@@ -3521,7 +3729,8 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
       label: label || stepId,
       op: mapOp(at(cells, "calc")),
       source: ref ? { type: "RT", ref } : rawRef ? { type: "RT", ref: rawRef } : { type: "INPUT", ref: label || stepId },
-      ...roundTo !== void 0 ? { roundTo } : {}
+      ...roundTo !== void 0 ? { roundTo } : {},
+      ...stepGroupName ? { groupName: stepGroupName } : {}
     });
     scopes.push(stateScope(cells, sc));
   }
@@ -3547,6 +3756,350 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
     }
   };
 }
+var TABLE_NAME_MARKER = /^TABLE NAME:/i;
+var RULE_ID_MARKER = /^RULE ID:/i;
+function detectReferenceTables(grids, consumed, ctx) {
+  const drafts = [];
+  for (const grid of grids) {
+    if (consumed.has(grid.sheet)) continue;
+    if (IGNORE_SHEET.test(grid.sheet) || DECOY_SHEET.test(grid.sheet) || VERSION_SUFFIX.test(grid.sheet)) continue;
+    const markerRows = [];
+    for (let r = 0; r < grid.cells.length; r++) {
+      if (TABLE_NAME_MARKER.test(text(cell(grid, r, 0)))) markerRows.push(r);
+    }
+    if (markerRows.length < 2) continue;
+    ctx.recognized.push(grid.sheet);
+    const nameCount = /* @__PURE__ */ new Map();
+    for (let i = 0; i < markerRows.length; i++) {
+      const start = markerRows[i];
+      const end = (markerRows[i + 1] ?? grid.cells.length) - 1;
+      const baseName = text(cell(grid, start, 0)).replace(/^TABLE NAME:\s*/i, "").trim();
+      if (!baseName) continue;
+      const mrow = row(grid, start);
+      const covCodes = [];
+      for (let c = 2; c <= 33; c++) {
+        const s = clean(mrow[c] ?? null);
+        if (s && !covCodes.includes(s)) covCodes.push(s);
+      }
+      const ridRow = row(grid, start + 1);
+      const hasRid = RULE_ID_MARKER.test(text(ridRow[0] ?? null));
+      const backLinkWas = hasRid ? clean(ridRow[1] ?? null) : "";
+      const dataStart = start + (hasRid ? 2 : 1);
+      const state = (baseName.match(/-\s*([A-Z]{2})\s*$/) ?? [])[1];
+      let group;
+      const rows = [];
+      const optionValues = [];
+      const rowLabels = [];
+      const seen = /* @__PURE__ */ new Set();
+      for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
+        const label = clean(cell(grid, r, 0));
+        const rawVal = cell(grid, r, 1);
+        const valStr = clean(rawVal);
+        if (!label && !valStr) continue;
+        if (label && !rowLabels.includes(label)) rowLabels.push(label);
+        if (!group) {
+          const gm = label.match(/^GROUP \d[^:]*/i);
+          if (gm) group = gm[0].trim();
+        }
+        const num = parseNum(rawVal);
+        if (num !== null && !seen.has(String(num)) && rows.length < 40) {
+          seen.add(String(num));
+          rows.push({ label: label || String(num), value: num });
+          if (!optionValues.includes(num)) optionValues.push(num);
+        } else if (num === null && /^\d[\d.,]*\s*\/\s*\d/.test(valStr) && !seen.has(valStr) && optionValues.length < 60) {
+          seen.add(valStr);
+          optionValues.push(valStr);
+        }
+      }
+      const hay = `${baseName} ${backLinkWas} ${covCodes.join(" ")}`.toUpperCase();
+      const kindHint = /DEDUCTIBLE/.test(hay) ? "DEDUCTIBLE" : /\bLIMIT/.test(hay) ? "LIMIT" : "OPTION";
+      let displayName = baseName + (group ? ` [${group.replace(/\s+/g, " ")}]` : "");
+      const n = (nameCount.get(displayName) ?? 0) + 1;
+      nameCount.set(displayName, n);
+      if (n > 1) displayName = `${displayName} (v${n})`;
+      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, optionValues, rowLabels, backLinkWas });
+    }
+  }
+  return drafts;
+}
+function mintReferenceTables(drafts, prefix) {
+  return drafts.map((d, i) => {
+    const refId = `${prefix}.TBL.${String(i + 1).padStart(3, "0")}`;
+    const data = {
+      name: d.displayName,
+      rows: d.rows,
+      defaultValue: d.rows[0]?.value,
+      valueHeader: d.backLinkWas || void 0,
+      kindHint: d.kindHint,
+      state: d.state,
+      coverageCodes: d.covCodes.length ? d.covCodes : void 0,
+      coverageRefIds: [],
+      ruleRefIds: [],
+      backLinkWas: d.backLinkWas || void 0,
+      optionValues: d.optionValues.length ? d.optionValues : void 0,
+      mintedId: true,
+      linkBasis: "derived"
+    };
+    return { docId: refId, refId, label: `${refId} \u2014 ${d.displayName}`, data };
+  });
+}
+function buildCovsByForm(coverages) {
+  const out = /* @__PURE__ */ new Map();
+  for (const c of coverages) {
+    for (const f of c.data["formNumbers"] ?? []) {
+      const k = squishStr(f);
+      if (!k) continue;
+      const list = out.get(k) ?? [];
+      if (!list.includes(c.refId)) list.push(c.refId);
+      out.set(k, list);
+    }
+  }
+  return out;
+}
+function linkReferenceTables(refDrafts, refTables, coverages, rules, overlay) {
+  const refTexts = rules.map((r) => {
+    const t = r.data["_referenceText"];
+    delete r.data["_referenceText"];
+    return typeof t === "string" ? t : "";
+  });
+  const tally = { backLinked: 0, covLinked: 0, rulesLinked: 0, resolvedToCoverage: 0, unresolved: 0, aiProposed: 0, resolvedRefs: [], unresolvedRefs: [] };
+  if (!refTables.length) return tally;
+  const namedCovs = coverages.map((c) => ({ refId: c.refId, name: String(c.data["name"] ?? "") }));
+  const conceptTables = refTables.map((t, i) => ({ refId: t.refId, baseName: refDrafts[i].baseName, state: refDrafts[i].state }));
+  const tableByRefId = new Map(refTables.map((t) => [t.refId, t]));
+  const covsByForm = buildCovsByForm(coverages);
+  const covRefIdSet = new Set(namedCovs.map((c) => c.refId));
+  const tableRefIdSet = new Set(refTables.map((t) => t.refId));
+  const validRefs = (proposed, ids) => (proposed ?? []).filter((id) => ids.has(id));
+  refDrafts.forEach((d, i) => {
+    const linked = /* @__PURE__ */ new Set();
+    if (/LIABILITY LIMITS/i.test(d.baseName)) {
+      for (const code of d.covCodes) for (const id of resolveCoverageCode(code, namedCovs)) linked.add(id);
+    } else if (/PHYSICAL DAMAGE DEDUCTIBLE/i.test(d.baseName)) {
+      for (const id of physicalDamageCoverages(namedCovs)) linked.add(id);
+    } else if (/SUB-?COVERAGE.*LIMIT/i.test(d.baseName)) {
+      for (const label of d.rowLabels) {
+        const m = matchCoverageByName(label, namedCovs);
+        if (m) linked.add(m.refId);
+      }
+    } else {
+      const m = matchCoverageByName(d.baseName.replace(FORM_TOKEN, " "), namedCovs);
+      if (m) linked.add(m.refId);
+      for (const ftk of formTokens(d.baseName)) for (const id of covsByForm.get(squishStr(ftk)) ?? []) linked.add(id);
+    }
+    if (linked.size === 0 && overlay?.tableCoverageLinks) {
+      const ai = validRefs(overlay.tableCoverageLinks[refTables[i].refId], covRefIdSet);
+      if (ai.length) {
+        ai.forEach((id) => linked.add(id));
+        refTables[i].data["linkBasis"] = "ai-proposed";
+        tally.aiProposed++;
+      }
+    }
+    refTables[i].data["coverageRefIds"] = [...linked];
+    if (linked.size) tally.covLinked++;
+  });
+  for (let i = 0; i < rules.length; i++) {
+    const ref = refTexts[i];
+    if (!ref) continue;
+    const rule = rules[i];
+    const states = rule.data["states"] ?? [];
+    const allStates = rule.data["allStates"] === true;
+    const m = matchRuleReferenceToTables(ref, conceptTables, states, allStates, namedCovs);
+    if (m.tableRefIds.length) {
+      rule.data["tableRefIds"] = m.tableRefIds;
+      rule.data["tableLinkBasis"] = "derived";
+      tally.rulesLinked++;
+      for (const tid of m.tableRefIds) {
+        const rr = tableByRefId.get(tid)?.data["ruleRefIds"];
+        if (rr && !rr.includes(rule.refId)) rr.push(rule.refId);
+      }
+    } else if (m.resolvedCoverageRefId) {
+      rule.data["resolvedCoverageRefId"] = m.resolvedCoverageRefId;
+      tally.resolvedToCoverage++;
+      if (!tally.resolvedRefs.includes(ref)) tally.resolvedRefs.push(ref);
+    } else {
+      const ai = overlay?.ruleReferenceLinks ? validRefs(overlay.ruleReferenceLinks[ref], tableRefIdSet) : [];
+      if (ai.length) {
+        rule.data["tableRefIds"] = ai;
+        rule.data["tableLinkBasis"] = "ai-proposed";
+        tally.rulesLinked++;
+        tally.aiProposed++;
+        for (const tid of ai) {
+          const rr = tableByRefId.get(tid)?.data["ruleRefIds"];
+          if (rr && !rr.includes(rule.refId)) rr.push(rule.refId);
+        }
+      } else if (m.how === "NO MATCHING TABLE IN SOURCE") {
+        tally.unresolved++;
+        if (!tally.unresolvedRefs.includes(ref)) tally.unresolvedRefs.push(ref);
+      }
+    }
+  }
+  tally.backLinked = refTables.filter((t) => t.data["ruleRefIds"].length > 0).length;
+  return tally;
+}
+function deriveTermsFromReferenceTables(coverages, refTables) {
+  if (!refTables.length) return 0;
+  const covByRefId = new Map(coverages.map((c) => [c.refId, c]));
+  const dedup = /* @__PURE__ */ new Set();
+  let attached = 0;
+  for (const table of refTables) {
+    const data = table.data;
+    if (data.kindHint !== "LIMIT" && data.kindHint !== "DEDUCTIBLE") continue;
+    const covIds = data.coverageRefIds ?? [];
+    if (!covIds.length) continue;
+    const tableRefId = table.refId;
+    for (const covId of covIds) {
+      const cov = covByRefId.get(covId);
+      if (!cov) continue;
+      const key = `${covId}|${tableRefId}`;
+      if (dedup.has(key)) continue;
+      dedup.add(key);
+      const term = {
+        id: tableRefId.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        kind: data.kindHint,
+        label: data.name || tableRefId,
+        ldTableRef: tableRefId,
+        // resolves in the UI — CORE.TBL is in plan.ldTables
+        options: data.optionValues ?? (data.rows ?? []).map((r) => r.value),
+        default: data.defaultValue ?? data.rows?.[0]?.value ?? 0,
+        basis: "",
+        states: data.state ? [data.state] : [],
+        allStates: !data.state,
+        linkBasis: "derived"
+      };
+      cov.data["terms"].push(term);
+      attached++;
+    }
+  }
+  return attached;
+}
+function enrichRatingWithGroups(ratingProgram, coverages, refTablesPresent, prefix, overlay) {
+  const empty = { groups: 0, matched: 0, aiProposed: 0, unmatchedNames: [] };
+  if (!ratingProgram || !refTablesPresent) return empty;
+  const steps = ratingProgram.data["steps"];
+  if (!steps.some((s) => s.groupName)) return empty;
+  const namedCovs = coverages.map((c) => ({ refId: c.refId, name: String(c.data["name"] ?? "") }));
+  const covsByForm = buildCovsByForm(coverages);
+  const covRefIdSet = new Set(namedCovs.map((c) => c.refId));
+  let aiProposed = 0;
+  const groups = [];
+  const unmatchedNames = [];
+  let cur = null;
+  let gSeq = 0;
+  for (const step of steps) {
+    const gn = step.groupName;
+    if (gn && (!cur || cur.name !== gn)) {
+      gSeq += 1;
+      const m = matchGroup(gn, namedCovs, covsByForm);
+      let covRefIds = m.covRefIds;
+      let matchBasis = m.matchBasis;
+      if (m.matchBasis === "unmatched" && overlay?.ratingGroupLinks) {
+        const ai = (overlay.ratingGroupLinks[gn] ?? []).filter((id) => covRefIdSet.has(id));
+        if (ai.length) {
+          covRefIds = ai;
+          matchBasis = "ai-proposed";
+          aiProposed++;
+        }
+      }
+      cur = {
+        refId: `${prefix}.RTG.${String(gSeq).padStart(3, "0")}`,
+        name: gn,
+        coverageRefIds: covRefIds,
+        formNumbers: m.formNums,
+        stepRefIds: [],
+        matchBasis
+      };
+      groups.push(cur);
+      if (matchBasis === "unmatched") unmatchedNames.push(gn);
+    }
+    if (cur && gn) {
+      step.groupRefId = cur.refId;
+      if (cur.coverageRefIds.length) step.groupCoverageRefIds = cur.coverageRefIds;
+      if (cur.formNumbers.length) step.packageFormNumbers = cur.formNumbers;
+      step.groupMatchBasis = cur.matchBasis;
+      cur.stepRefIds.push(step.id);
+    }
+  }
+  ratingProgram.data["ratingGroups"] = groups;
+  return { groups: groups.length, matched: groups.filter((g) => g.matchBasis !== "unmatched").length, aiProposed, unmatchedNames };
+}
+function upgradeFormAnchors(forms, coverages, refTablesPresent) {
+  if (!refTablesPresent) return 0;
+  const covsByForm = buildCovsByForm(coverages);
+  let upgraded = 0;
+  for (const form of forms) {
+    if (Array.isArray(form.data["coverageRefIds"]) && form.data["coverageRefIds"].length) continue;
+    const num = squishStr(String(form.data["number"] ?? ""));
+    if (!num) continue;
+    const via = covsByForm.get(num);
+    if (via && via.length) {
+      form.data["coverageRefIds"] = [...via];
+      form.data["anchorBasis"] = "derived: hierarchy form list";
+      upgraded++;
+    }
+  }
+  return upgraded;
+}
+function mintRatePlaceholders(ratingProgram, prefix, refTablesPresent) {
+  if (!ratingProgram || !refTablesPresent) return [];
+  const steps = ratingProgram.data["steps"];
+  const byName = /* @__PURE__ */ new Map();
+  for (const s of steps) {
+    const n = String(s.label ?? "").replace(/\s+/g, " ").trim();
+    if (!/factor|rate|charge|premium|credit|surcharge|discount/i.test(n)) continue;
+    const k = n.toUpperCase();
+    const entry = byName.get(k) ?? { name: n, stepIds: [] };
+    entry.stepIds.push(s.id);
+    byName.set(k, entry);
+  }
+  const placeholders = [];
+  const stepToRtb = /* @__PURE__ */ new Map();
+  let seq = 0;
+  for (const { name, stepIds } of byName.values()) {
+    const refId = `${prefix}.RTB.${String(++seq).padStart(3, "0")}`;
+    for (const sid of stepIds) stepToRtb.set(sid, refId);
+    placeholders.push({
+      docId: refId,
+      refId,
+      label: `${refId} \u2014 ${name}`,
+      data: {
+        name,
+        status: "PLACEHOLDER",
+        note: "PLACEHOLDER \u2014 values not present in source; pull from the rate filings named in the rules SOURCE column",
+        stepRefIds: stepIds,
+        mintedId: true
+      }
+    });
+  }
+  for (const s of steps) {
+    const rtb = stepToRtb.get(s.id);
+    if (rtb) s.ratePlaceholderRef = rtb;
+  }
+  return placeholders;
+}
+function rateTableArtifacts(grid) {
+  if (!grid) return [];
+  const markers = [];
+  for (let r = 0; r < grid.cells.length; r++) {
+    if (RT_NAME_MARKER.test(norm2(cell(grid, r, 0)))) {
+      markers.push({ row: r, name: clean(row(grid, r).slice(1).find((c) => clean(c)) ?? null) || "(blank skeleton)" });
+    }
+  }
+  const artifacts = [];
+  for (let i = 0; i < markers.length; i++) {
+    const start = markers[i].row;
+    const end = markers[i + 1]?.row ?? grid.cells.length;
+    let hasId = false;
+    for (let r = start; r < end; r++) {
+      if (RT_ID_MARKER.test(norm2(cell(grid, r, 0))) && clean(row(grid, r).slice(1).find((c) => clean(c)) ?? null)) {
+        hasId = true;
+        break;
+      }
+    }
+    if (!hasId) artifacts.push(markers[i].name);
+  }
+  return artifacts;
+}
 function mapIsoWorkbook(grids, overlay) {
   const ctx = new Ctx();
   const fwGrid = selectFrameworkSheet(grids, ctx);
@@ -3571,6 +4124,12 @@ function mapIsoWorkbook(grids, overlay) {
   const rules = ruleGrid ? parseRules(ruleGrid, ctx) : [];
   const formRules = optGrid ? parseFormRules(optGrid, ctx) : [];
   const ratingProgram = rateGrid ? parseRating(rateGrid, rtTables, productRefId, lobName, ctx) : null;
+  const consumedSheets = new Set(
+    [...ctx.recognized, ldGrid?.sheet, rtGrid?.sheet].filter((s) => !!s)
+  );
+  const refDrafts = detectReferenceTables(grids, consumedSheets, ctx);
+  const refPrefix = refIdPrefix(productRefId ?? firstFw?.coverages[0]?.refId ?? "") || lob.prefix;
+  const refTables = refDrafts.length ? mintReferenceTables(refDrafts, refPrefix) : [];
   const products = [];
   if (fwResults) {
     for (const fw of fwResults) {
@@ -3599,7 +4158,78 @@ function mapIsoWorkbook(grids, overlay) {
   }
   const product = products[0] ?? null;
   const allCoverages = fwResults ? fwResults.flatMap((fw) => fw.coverages) : [];
+  const refLinks = linkReferenceTables(refDrafts, refTables, allCoverages, rules, overlay);
   foldLdTermsIntoCoverages(allCoverages, rules, ldTables, ctx);
+  const derivedTerms = deriveTermsFromReferenceTables(allCoverages, refTables);
+  if (derivedTerms > 0) {
+    ctx.addNotice({
+      code: "reference_table_terms_derived",
+      message: `${derivedTerms} coverage term(s) derived from ${refTables.length} signature-detected reference table(s) (limits/deductibles the named LD parser never claimed).`,
+      data: { terms: derivedTerms, tables: refTables.length }
+    });
+  }
+  const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix, overlay);
+  const formUpgrades = upgradeFormAnchors(forms, allCoverages, refTables.length > 0);
+  const ratePlaceholders = mintRatePlaceholders(ratingProgram, refPrefix, refTables.length > 0);
+  const excludedArtifacts = refTables.length > 0 ? rateTableArtifacts(rtGrid) : [];
+  if (ratePlaceholders.length > 0) {
+    ctx.addNotice({
+      code: "rate_table_placeholders",
+      message: `${ratePlaceholders.length} rate-table placeholder(s) minted \u2014 the rating algorithm names these factors but their VALUES are not in the source; pull them from the rate filings named in the rules SOURCE column.`,
+      data: { count: ratePlaceholders.length }
+    });
+  }
+  if (excludedArtifacts.length > 0) {
+    ctx.addNotice({
+      code: "template_artifacts_excluded",
+      message: `${excludedArtifacts.length} rate-table template artifact(s) excluded (blank-name skeletons and/or a wrong-line example) \u2014 no factor values were fabricated from them.`,
+      data: { count: excludedArtifacts.length, names: excludedArtifacts }
+    });
+    for (const name of excludedArtifacts) {
+      ctx.addDefect({ code: "template_artifact_excluded", field: "rateTable", rawValue: name });
+    }
+  }
+  if (refTables.length > 0) {
+    ctx.addNotice({
+      code: "reference_tables_linked",
+      message: `${refTables.length} reference table(s) recovered by signature: ${refLinks.backLinked} back-linked to rules, ${refLinks.covLinked} linked to coverages, ${refLinks.rulesLinked} rule(s) carry table links, ${refLinks.resolvedToCoverage} reference(s) resolved to a coverage, ${refLinks.unresolved} unresolved.`,
+      data: { tables: refTables.length, backLinked: refLinks.backLinked, covLinked: refLinks.covLinked, rulesTableLinked: refLinks.rulesLinked, resolvedToCoverage: refLinks.resolvedToCoverage, unresolved: refLinks.unresolved }
+    });
+    if (refLinks.resolvedToCoverage > 0) {
+      ctx.addNotice({
+        code: "rule_ref_resolved_to_coverage",
+        message: `${refLinks.resolvedToCoverage} rule reference(s) named a coverage rather than a table \u2014 resolved to a coverage link, not a failed match (D8): ${refLinks.resolvedRefs.slice(0, 8).join("; ")}.`,
+        data: { count: refLinks.resolvedToCoverage, refs: refLinks.resolvedRefs }
+      });
+    }
+    if (refLinks.unresolved > 0) {
+      ctx.addNotice({
+        code: "unresolved_rule_refs",
+        message: `${refLinks.unresolved} rule reference(s) matched no table or coverage in the source \u2014 pull the referenced tables from the filings named in the rules SOURCE column: ${refLinks.unresolvedRefs.slice(0, 8).join("; ")}.`,
+        data: { count: refLinks.unresolved, refs: refLinks.unresolvedRefs }
+      });
+    }
+  }
+  if (ratingGroups.unmatchedNames.length > 0) {
+    const clean0 = (s) => s.replace(/\s*\(Excluding[^)]*\)\s*/i, "").trim();
+    ctx.addNotice({
+      code: "rating_groups_unmatched",
+      message: `${ratingGroups.unmatchedNames.length} rating group(s) name no coverage in the hierarchy \u2014 add these coverages: ${ratingGroups.unmatchedNames.map(clean0).join("; ")}.`,
+      data: { count: ratingGroups.unmatchedNames.length, names: ratingGroups.unmatchedNames.map(clean0) }
+    });
+    for (const name of ratingGroups.unmatchedNames) {
+      ctx.addDefect({ code: "rating_group_unmatched", field: "ratingGroup", rawValue: clean0(name) });
+    }
+  }
+  const aiLinks = refLinks.aiProposed + ratingGroups.aiProposed;
+  if (aiLinks > 0) {
+    ctx.addNotice({
+      code: "ai_proposed_links",
+      message: `${aiLinks} link(s) resolved from an accepted, cited AI proposal (linkBasis: ai-proposed) \u2014 applied only where the deterministic pass was unresolved and only to entities that exist; review before accepting.`,
+      data: { count: aiLinks }
+    });
+  }
+  const allLdTables = [...ldTables, ...refTables];
   const dynFieldCount = forms.reduce((n, f) => n + (f.data["dynamicFields"]?.length ?? 0), 0);
   const stepCount = ratingProgram ? ratingProgram.data["steps"].length : 0;
   const counts = {
@@ -3611,7 +4241,24 @@ function mapIsoWorkbook(grids, overlay) {
     formRules: formRules.length,
     ratingSteps: stepCount,
     rtTables: rtTables.length,
-    ldTables: ldTables.length
+    ldTables: allLdTables.length,
+    // Concept-linker counts are added ONLY under the CORE signature, so a workbook with no
+    // reference tables (GL/IM/PR) keeps a byte-identical `summary.counts` object.
+    ...refTables.length > 0 ? {
+      referenceTables: refTables.length,
+      referenceTablesBackLinked: refLinks.backLinked,
+      referenceTablesCovLinked: refLinks.covLinked,
+      rulesTableLinked: refLinks.rulesLinked,
+      rulesResolvedToCoverage: refLinks.resolvedToCoverage,
+      ruleRefsUnresolved: refLinks.unresolved,
+      ratingGroups: ratingGroups.groups,
+      ratingGroupsMatched: ratingGroups.matched,
+      ratingGroupsUnmatched: ratingGroups.unmatchedNames.length,
+      formAnchorUpgrades: formUpgrades,
+      ratePlaceholders: ratePlaceholders.length,
+      rateTemplateArtifactsExcluded: excludedArtifacts.length,
+      linksAiProposed: refLinks.aiProposed + ratingGroups.aiProposed
+    } : {}
   };
   const knownSheets = new Set(ctx.recognized);
   const sheetsSkipped = grids.map((g) => g.sheet).filter((s) => !knownSheets.has(s));
@@ -3624,8 +4271,9 @@ function mapIsoWorkbook(grids, overlay) {
     rules,
     formRules,
     ratingProgram,
-    ldTables,
+    ldTables: allLdTables,
     rtTables,
+    ratePlaceholders,
     summary: {
       productName: product ? product.data["name"] : null,
       productRefId,

@@ -14,10 +14,15 @@
 import type {
   Status, ReviewStatus, Lifecycle, Requirement, Source,
   FormCategory, DynamicFieldType, RuleCategory, DynamicField,
-  RTTable, LDTable, RatingStep, CoverageTerm, TermKind,
+  RTTable, LDTable, LDRow, RatingStep, RatingGroupSummary, CoverageTerm, TermKind,
 } from '../types'
 import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
+import {
+  matchCoverageByName, matchRuleReferenceToTables, resolveCoverageCode,
+  physicalDamageCoverages, matchGroup, formTokens, FORM_TOKEN,
+  type NamedCoverage, type ConceptTable,
+} from './conceptMatch'
 
 // ─── Public shapes ─────────────────────────────────────────────────────────────
 
@@ -46,6 +51,7 @@ export interface UnmappedColumns { sheet: string; columns: string[] }
  *  the file's Data Validation vocab and has no canonical target — never silently coerced. */
 export interface ReviewDefect {
   code:           'unmapped_enum' | 'forms_applicability_merged'
+                  | 'rating_group_unmatched' | 'template_artifact_excluded'
   field?:         string
   rawValue?:      string
   rowRef?:        string
@@ -74,6 +80,17 @@ export interface AliasOverlay {
   confidences?:    Record<string, number>
   /** cited cell per proposal key (source of truth for each suggestion). */
   citations?:      Record<string, string>
+  // ── Concept-linker AI overlay (R4): accepted, cited proposals for the ambiguous tail the
+  //    deterministic passes left unresolved. FILL-ONLY — applied only where the deterministic
+  //    result was empty/unmatched, never overwriting a 'given'/'derived' link, and only when the
+  //    proposed refIds EXIST in the deterministic model (dangling refs are dropped). Every applied
+  //    link is stamped linkBasis:'ai-proposed'. ──
+  /** rating-group name (raw) → coverage refId(s), for a group no coverage matched. */
+  ratingGroupLinks?:   Record<string, string[]>
+  /** reference-table refId → coverage refId(s), for a table left coverage-unlinked. */
+  tableCoverageLinks?: Record<string, string[]>
+  /** rule-reference text (raw) → reference-table refId(s), for an unresolved rule reference. */
+  ruleReferenceLinks?: Record<string, string[]>
 }
 
 export interface ImportSummary {
@@ -104,6 +121,10 @@ export interface ImportPlan {
   ratingProgram:  PlannedEntity | null
   ldTables:       PlannedEntity[]
   rtTables:       PlannedEntity[]
+  /** Minted rate-table placeholders (PREFIX.RTB.NNN) — one per distinct factor/rate the rating
+   *  algorithm names, when the actual rate values are not present in the source (D4). Empty on
+   *  every workbook whose rate tables ARE present. */
+  ratePlaceholders: PlannedEntity[]
   summary:        ImportSummary
 }
 
@@ -1082,6 +1103,10 @@ function parseRules(grid: IsoGrid, ctx: Ctx): PlannedEntity[] {
         // where the parsed table is LDTABLE.119) — the same cell's NAME is the
         // authoritative recovery channel for the term fold (PCM-A).
         ldTableRefText: extractTableRef(at(cells, 'reference')) ? clean(at(cells, 'reference')) : undefined,
+        // TRANSIENT: the raw RULE REFERENCE text, consumed + deleted by linkReferenceTables
+        // (concept rule→table matching, D2). Never reaches a plan/golden — so GL/IM/PR rules
+        // stay byte-identical whether or not their reference is a concept name.
+        _referenceText: clean(at(cells, 'reference')) || undefined,
         coverageRefIds: splitList(at(cells, 'ids')),
         formNumbers: forms,
         ...stateScope(cells, sc),
@@ -1414,6 +1439,9 @@ const RATE_FIELDS: Record<string, string[]> = {
   stepId:    ['RATING STEP ID', 'STEP ID', 'STEP', 'STEP NUMBER', 'STEP NO',
                'ITEM', 'ID', 'SEQUENCE', 'STEP #', 'LINE NO', 'LINE NUMBER'],
   grouping:  ['RATING GROUPING', 'GROUPING', 'GROUP', 'SECTION', 'ELEMENT', 'CATEGORY'],
+  // The coverage-name group column real carrier ROCs group their steps under (forward-filled;
+  // one value per group). Distinct from `grouping` so it never shadows the step-label fallback.
+  groupName: ['COVERAGE NAME', 'COVERAGE GROUP', 'RATING GROUP NAME'],
   manualId:  ['RATING MANUAL RULE/ STEP ID', 'RATING MANUAL RULE/STEP ID',
                'MANUAL RULE/ STEP ID', 'MANUAL STEP', 'MANUAL REF', 'MANUAL RULE'],
   // "RULES" is the ROC-template short form; broader synonyms for novel formats.
@@ -1429,6 +1457,11 @@ const RATE_FIELDS: Record<string, string[]> = {
                'TABLE', 'FACTOR TABLE', 'LOOKUP TABLE', 'RATE TABLE REFERENCE'],
   review:    ['REVIEW STATUS', 'REVIEW', 'APPROVAL STATUS'],
 }
+
+// Policy-level aggregation steps — a total/final/minimum premium, a tax, an assessment, or a
+// statutory fee/surcharge. Coverage-scoped when the row names its own coverage; otherwise (a
+// blank-coverage continuation row) they are global and must not inherit the previous group.
+const GLOBAL_STEP = /\b(final premium|total (?:endorsement )?premium|premium subject to minimum|minimum premium|assessment|authority fee|fund fee|theft surcharge|taxe?s?)\b/i
 
 function mapOp(v: IsoCell): RatingStep['op'] {
   const s = text(v).trim()
@@ -1461,12 +1494,23 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
   const scopes: { allStates: boolean; states: string[] }[] = []
   let programRefId: string | null = null
   let order = 0
+  let lastGroupName = ''
 
   for (let r = hr + 1; r < grid.cells.length; r++) {
     const cells = row(grid, r)
     const stepId = clean(at(cells, 'stepId'))
     const label = clean(at(cells, 'algorithm')) || clean(at(cells, 'rules')) || clean(at(cells, 'grouping'))
     if (!stepId && !label) continue
+    // Forward-fill the coverage-name group column (populated once per group). Purely
+    // descriptive on the step (nested → golden-invisible); enrichRatingWithGroups turns it
+    // into minted RTG group ids under the CORE signature.
+    const gn = clean(at(cells, 'groupName'))
+    if (gn) lastGroupName = gn
+    // A policy-level aggregation step (final/total/minimum premium, tax, assessment, statutory
+    // fee/surcharge) that carries NO coverage name of its own belongs to no coverage group — do
+    // not forward-fill the previous group onto it, or the trailing statutory taxes/fees and the
+    // final premium get falsely attributed to the last coverage (D5).
+    const stepGroupName = (!gn && GLOBAL_STEP.test(label)) ? '' : lastGroupName
     if (!programRefId) {
       const full = [stepId, ...splitList(at(cells, 'ids'))].find(s => /\.RAT/i.test(s))
       if (full) { const m = full.match(/^(.*\.RAT\.\d+)/i); programRefId = m ? m[1]! : full } // "GL.RAT.1.00" → "GL.RAT.1"
@@ -1485,6 +1529,7 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
         ? { type: 'RT', ref }
         : (rawRef ? { type: 'RT', ref: rawRef } : { type: 'INPUT', ref: label || stepId }),
       ...(roundTo !== undefined ? { roundTo } : {}),
+      ...(stepGroupName ? { groupName: stepGroupName } : {}),
     })
     scopes.push(stateScope(cells, sc))
   }
@@ -1509,6 +1554,430 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
       reviewStatus: 'NOT_STARTED' as ReviewStatus, reviewer: '',
     },
   }
+}
+
+// ─── Concept-linked reference tables (signature-detected; D1/D2/D7) ────────────────
+// Real carrier specs park limit/deductible tables on a general "Rule References" sheet the
+// named LD parser never claims, marked "TABLE NAME:" in COLUMN 0 with no LDTable id. This
+// pass recovers them BY CONTENT SIGNATURE (never sheet name): a grid must carry >= 2 column-0
+// "TABLE NAME:" block markers AND not already be claimed by a named parser (the `consumed`
+// set). GL/IM/PR score zero markers (their LD blocks key on "LDTable.NNN" / "LDNNN") and their
+// LD sheet sits in `consumed`, so this pass is a strict no-op on them — verified by the
+// offline import:eval diff (extraEntityRate === 0).
+
+const TABLE_NAME_MARKER = /^TABLE NAME:/i
+const RULE_ID_MARKER    = /^RULE ID:/i
+
+interface ReferenceTableDraft {
+  baseName:    string        // raw table name — matching + state-suffix extraction
+  displayName: string        // group/version-qualified name (the minted LDTable.name)
+  state?:      string        // per-state family suffix ("- AZ")
+  group?:      string        // "GROUP 1" vehicle-group qualifier (dup disambiguation)
+  covCodes:    string[]      // marker-row column codes (BI/PD/CSL/…) for a limit matrix
+  kindHint:    TermKind
+  sourceRows:  string        // "start-end", 1-based, for provenance
+  rows:        LDRow[]       // distinct numeric option values (limit/deductible amounts)
+  optionValues:(string | number)[]  // distinct option values incl. split limits ("100/300")
+  rowLabels:   string[]      // every data-row col-0 label (sub-coverage-matrix name matching)
+  backLinkWas: string        // the RULE ID line's value-column header
+}
+
+/** Scan every UNCLAIMED grid for "TABLE NAME:" reference-table blocks. Returns [] unless a
+ *  grid clears the >= 2-marker signature gate — so it never fires on a GL/IM/PR workbook. */
+function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, ctx: Ctx): ReferenceTableDraft[] {
+  const drafts: ReferenceTableDraft[] = []
+  for (const grid of grids) {
+    if (consumed.has(grid.sheet)) continue
+    if (IGNORE_SHEET.test(grid.sheet) || DECOY_SHEET.test(grid.sheet) || VERSION_SUFFIX.test(grid.sheet)) continue
+    const markerRows: number[] = []
+    for (let r = 0; r < grid.cells.length; r++) {
+      if (TABLE_NAME_MARKER.test(text(cell(grid, r, 0)))) markerRows.push(r)
+    }
+    if (markerRows.length < 2) continue            // signature gate
+    ctx.recognized.push(grid.sheet)
+    const nameCount = new Map<string, number>()
+    for (let i = 0; i < markerRows.length; i++) {
+      const start = markerRows[i]!
+      const end = (markerRows[i + 1] ?? grid.cells.length) - 1
+      const baseName = text(cell(grid, start, 0)).replace(/^TABLE NAME:\s*/i, '').trim()
+      if (!baseName) continue
+      // Column-code headers of a limit/deductible matrix live on the marker row (cols 2..33).
+      const mrow = row(grid, start)
+      const covCodes: string[] = []
+      for (let c = 2; c <= 33; c++) { const s = clean(mrow[c] ?? null); if (s && !covCodes.includes(s)) covCodes.push(s) }
+      // The "RULE ID:" line follows the marker; its col-1 cell is the value-column header.
+      const ridRow = row(grid, start + 1)
+      const hasRid = RULE_ID_MARKER.test(text(ridRow[0] ?? null))
+      const backLinkWas = hasRid ? clean(ridRow[1] ?? null) : ''
+      const dataStart = start + (hasRid ? 2 : 1)
+      const state = (baseName.match(/-\s*([A-Z]{2})\s*$/) ?? [])[1]
+      let group: string | undefined
+      const rows: LDRow[] = []
+      const optionValues: (string | number)[] = []
+      const rowLabels: string[] = []
+      const seen = new Set<string>()
+      for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
+        const label = clean(cell(grid, r, 0))
+        const rawVal = cell(grid, r, 1)
+        const valStr = clean(rawVal)
+        if (!label && !valStr) continue
+        if (label && !rowLabels.includes(label)) rowLabels.push(label)
+        if (!group) { const gm = label.match(/^GROUP \d[^:]*/i); if (gm) group = gm[0]!.trim() }
+        const num = parseNum(rawVal)
+        if (num !== null && !seen.has(String(num)) && rows.length < 40) {
+          seen.add(String(num))
+          rows.push({ label: label || String(num), value: num })
+          if (!optionValues.includes(num)) optionValues.push(num)
+        } else if (num === null && /^\d[\d.,]*\s*\/\s*\d/.test(valStr) && !seen.has(valStr) && optionValues.length < 60) {
+          // A split limit ("100/300") the numeric parse rejects — preserve the display value so
+          // the derived term's option list keeps it instead of silently dropping it.
+          seen.add(valStr)
+          optionValues.push(valStr)
+        }
+      }
+      // Kind from the same "hay" the reference impl scans (name + back-link + codes).
+      const hay = `${baseName} ${backLinkWas} ${covCodes.join(' ')}`.toUpperCase()
+      const kindHint: TermKind = /DEDUCTIBLE/.test(hay) ? 'DEDUCTIBLE' : /\bLIMIT/.test(hay) ? 'LIMIT' : 'OPTION'
+      let displayName = baseName + (group ? ` [${group.replace(/\s+/g, ' ')}]` : '')
+      const n = (nameCount.get(displayName) ?? 0) + 1
+      nameCount.set(displayName, n)
+      if (n > 1) displayName = `${displayName} (v${n})`
+      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, optionValues, rowLabels, backLinkWas })
+    }
+  }
+  return drafts
+}
+
+/** Mint a stable PREFIX.TBL.NNN reference-table entity per draft (source-row order). Aligned by
+ *  index with the drafts so linkReferenceTables can back-fill coverage/rule links. The refId is
+ *  SYNTHESIZED — mintedId:true flags it so it never reads as a source id (F25). */
+function mintReferenceTables(drafts: ReferenceTableDraft[], prefix: string): PlannedEntity[] {
+  return drafts.map((d, i) => {
+    const refId = `${prefix}.TBL.${String(i + 1).padStart(3, '0')}`
+    const data: LDTable = {
+      name: d.displayName,
+      rows: d.rows,
+      defaultValue: d.rows[0]?.value,
+      valueHeader: d.backLinkWas || undefined,
+      kindHint: d.kindHint,
+      state: d.state,
+      coverageCodes: d.covCodes.length ? d.covCodes : undefined,
+      coverageRefIds: [],
+      ruleRefIds: [],
+      backLinkWas: d.backLinkWas || undefined,
+      optionValues: d.optionValues.length ? d.optionValues : undefined,
+      mintedId: true,
+      linkBasis: 'derived',
+    }
+    return { docId: refId, refId, label: `${refId} — ${d.displayName}`, data: data as unknown as Record<string, unknown> }
+  })
+}
+
+/** Reverse index: squished form number → the coverage refIds whose form list names it. Shared
+ *  by the reference-table linker and the rating-group enricher (package-form resolution). */
+function buildCovsByForm(coverages: PlannedEntity[]): Map<string, string[]> {
+  const out = new Map<string, string[]>()
+  for (const c of coverages) {
+    for (const f of ((c.data['formNumbers'] as string[] | undefined) ?? [])) {
+      const k = squishStr(f)
+      if (!k) continue
+      const list = out.get(k) ?? []
+      if (!list.includes(c.refId as string)) list.push(c.refId as string)
+      out.set(k, list)
+    }
+  }
+  return out
+}
+
+/** Reconstruct the implied links a human analyst would (D2/D7/D8): reference-table → coverage
+ *  (via header codes / physical-damage / sub-coverage-matrix rows / name / form tokens), and
+ *  rule → reference-table (concept match on the rule's free-text reference), with a rule →
+ *  coverage fallback when the reference names a coverage rather than a table (D8). Consumes +
+ *  clears the transient `_referenceText` on EVERY rule so GL/IM/PR stay byte-identical, then
+ *  no-ops when no reference tables were detected. Returns link tallies for the caller's notices.
+ *  `refDrafts` and `refTables` are index-aligned. */
+function linkReferenceTables(
+  refDrafts: ReferenceTableDraft[],
+  refTables: PlannedEntity[],
+  coverages: PlannedEntity[],
+  rules: PlannedEntity[],
+  overlay?: AliasOverlay | null,
+): { backLinked: number; covLinked: number; rulesLinked: number; resolvedToCoverage: number; unresolved: number; aiProposed: number; resolvedRefs: string[]; unresolvedRefs: string[] } {
+  // Always pull + clear the transient reference text (keeps every non-CORE golden clean).
+  const refTexts = rules.map(r => {
+    const t = r.data['_referenceText']
+    delete r.data['_referenceText']
+    return typeof t === 'string' ? t : ''
+  })
+  const tally = { backLinked: 0, covLinked: 0, rulesLinked: 0, resolvedToCoverage: 0, unresolved: 0, aiProposed: 0, resolvedRefs: [] as string[], unresolvedRefs: [] as string[] }
+  if (!refTables.length) return tally
+
+  const namedCovs: NamedCoverage[] = coverages.map(c => ({ refId: c.refId as string, name: String(c.data['name'] ?? '') }))
+  const conceptTables: ConceptTable[] = refTables.map((t, i) => ({ refId: t.refId as string, baseName: refDrafts[i]!.baseName, state: refDrafts[i]!.state }))
+  const tableByRefId = new Map(refTables.map(t => [t.refId as string, t]))
+  const covsByForm = buildCovsByForm(coverages)
+  // Validation sets: an AI-proposed link is applied ONLY when its refIds exist in the
+  // deterministic model (dangling refs are dropped, never invented).
+  const covRefIdSet = new Set(namedCovs.map(c => c.refId))
+  const tableRefIdSet = new Set(refTables.map(t => t.refId as string))
+  const validRefs = (proposed: string[] | undefined, ids: ReadonlySet<string>): string[] =>
+    (proposed ?? []).filter(id => ids.has(id))
+
+  // ── Reference-table → coverage links (D1/D7) ──
+  refDrafts.forEach((d, i) => {
+    const linked = new Set<string>()
+    if (/LIABILITY LIMITS/i.test(d.baseName)) {
+      for (const code of d.covCodes) for (const id of resolveCoverageCode(code, namedCovs)) linked.add(id)
+    } else if (/PHYSICAL DAMAGE DEDUCTIBLE/i.test(d.baseName)) {
+      for (const id of physicalDamageCoverages(namedCovs)) linked.add(id)
+    } else if (/SUB-?COVERAGE.*LIMIT/i.test(d.baseName)) {
+      for (const label of d.rowLabels) { const m = matchCoverageByName(label, namedCovs); if (m) linked.add(m.refId) }
+    } else {
+      const m = matchCoverageByName(d.baseName.replace(FORM_TOKEN, ' '), namedCovs)
+      if (m) linked.add(m.refId)
+      for (const ftk of formTokens(d.baseName)) for (const id of (covsByForm.get(squishStr(ftk)) ?? [])) linked.add(id)
+    }
+    // Fill-only AI overlay: a table the deterministic passes left coverage-unlinked may be
+    // linked by an accepted, cited proposal — but only to coverages that actually exist.
+    if (linked.size === 0 && overlay?.tableCoverageLinks) {
+      const ai = validRefs(overlay.tableCoverageLinks[refTables[i]!.refId as string], covRefIdSet)
+      if (ai.length) { ai.forEach(id => linked.add(id)); refTables[i]!.data['linkBasis'] = 'ai-proposed'; tally.aiProposed++ }
+    }
+    refTables[i]!.data['coverageRefIds'] = [...linked]
+    if (linked.size) tally.covLinked++
+  })
+
+  // ── Rule → reference-table links (D2) + D8 coverage fallback ──
+  for (let i = 0; i < rules.length; i++) {
+    const ref = refTexts[i]!
+    if (!ref) continue
+    const rule = rules[i]!
+    const states = (rule.data['states'] as string[] | undefined) ?? []
+    const allStates = rule.data['allStates'] === true
+    const m = matchRuleReferenceToTables(ref, conceptTables, states, allStates, namedCovs)
+    if (m.tableRefIds.length) {
+      rule.data['tableRefIds'] = m.tableRefIds
+      rule.data['tableLinkBasis'] = 'derived'
+      tally.rulesLinked++
+      for (const tid of m.tableRefIds) {
+        const rr = tableByRefId.get(tid)?.data['ruleRefIds'] as string[] | undefined
+        if (rr && !rr.includes(rule.refId as string)) rr.push(rule.refId as string)
+      }
+    } else if (m.resolvedCoverageRefId) {
+      rule.data['resolvedCoverageRefId'] = m.resolvedCoverageRefId
+      tally.resolvedToCoverage++
+      if (!tally.resolvedRefs.includes(ref)) tally.resolvedRefs.push(ref)
+    } else {
+      // Deterministically unresolved — try an accepted, cited AI proposal (existing tables only).
+      const ai = overlay?.ruleReferenceLinks ? validRefs(overlay.ruleReferenceLinks[ref], tableRefIdSet) : []
+      if (ai.length) {
+        rule.data['tableRefIds'] = ai
+        rule.data['tableLinkBasis'] = 'ai-proposed'
+        tally.rulesLinked++
+        tally.aiProposed++
+        for (const tid of ai) { const rr = tableByRefId.get(tid)?.data['ruleRefIds'] as string[] | undefined; if (rr && !rr.includes(rule.refId as string)) rr.push(rule.refId as string) }
+      } else if (m.how === 'NO MATCHING TABLE IN SOURCE') {
+        tally.unresolved++
+        if (!tally.unresolvedRefs.includes(ref)) tally.unresolvedRefs.push(ref)
+      }
+    }
+  }
+  tally.backLinked = refTables.filter(t => (t.data['ruleRefIds'] as string[]).length > 0).length
+  return tally
+}
+
+/** Assemble coverage.terms from the LIMIT/DEDUCTIBLE reference tables and their reconstructed
+ *  coverage links (D1/D7) — this is what makes the user-reported "no limits or deductibles"
+ *  symptom disappear. Signature-gated (refTables is [] on GL/IM/PR), and SEPARATE from the
+ *  PCM-A fold (foldLdTermsIntoCoverages), which is left untouched so its output stays
+ *  byte-identical. One term per (coverage, table); state-suffixed families yield per-state
+ *  terms. Returns the number of coverage↔term links attached. */
+function deriveTermsFromReferenceTables(coverages: PlannedEntity[], refTables: PlannedEntity[]): number {
+  if (!refTables.length) return 0
+  const covByRefId = new Map(coverages.map(c => [c.refId as string, c]))
+  const dedup = new Set<string>()
+  let attached = 0
+  for (const table of refTables) {
+    const data = table.data as unknown as LDTable
+    if (data.kindHint !== 'LIMIT' && data.kindHint !== 'DEDUCTIBLE') continue   // terms only from limit/deductible tables
+    const covIds = data.coverageRefIds ?? []
+    if (!covIds.length) continue
+    const tableRefId = table.refId as string
+    for (const covId of covIds) {
+      const cov = covByRefId.get(covId)
+      if (!cov) continue
+      const key = `${covId}|${tableRefId}`
+      if (dedup.has(key)) continue
+      dedup.add(key)
+      const term: CoverageTerm = {
+        id: tableRefId.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        kind: data.kindHint,
+        label: data.name || tableRefId,
+        ldTableRef: tableRefId,                       // resolves in the UI — CORE.TBL is in plan.ldTables
+        options: data.optionValues ?? (data.rows ?? []).map(r => r.value),
+        default: data.defaultValue ?? data.rows?.[0]?.value ?? 0,
+        basis: '',
+        states: data.state ? [data.state] : [],
+        allStates: !data.state,
+        linkBasis: 'derived',
+      }
+      ;(cov.data['terms'] as CoverageTerm[]).push(term)
+      attached++
+    }
+  }
+  return attached
+}
+
+/** Reconstruct the rating algorithm's coverage-name GROUPS (D5): the COVERAGE NAME column
+ *  appears once per group and the steps beneath it rate that coverage. Mint a stable
+ *  PREFIX.RTG.NNN per group, resolve it to hierarchy coverage(s) (or an endorsement package's
+ *  form) via matchGroup, and stamp the linkage onto each step + a golden-invisible
+ *  ratingProgram.data.ratingGroups summary. Groups that name no coverage are flagged (never
+ *  invented). Signature-gated (refTablesPresent) so GL/PR/seeded programs are untouched — the
+ *  evaluator reads none of the fields written here. */
+function enrichRatingWithGroups(
+  ratingProgram: PlannedEntity | null,
+  coverages: PlannedEntity[],
+  refTablesPresent: boolean,
+  prefix: string,
+  overlay?: AliasOverlay | null,
+): { groups: number; matched: number; aiProposed: number; unmatchedNames: string[] } {
+  const empty = { groups: 0, matched: 0, aiProposed: 0, unmatchedNames: [] as string[] }
+  if (!ratingProgram || !refTablesPresent) return empty
+  const steps = ratingProgram.data['steps'] as RatingStep[]
+  if (!steps.some(s => s.groupName)) return empty
+
+  const namedCovs: NamedCoverage[] = coverages.map(c => ({ refId: c.refId as string, name: String(c.data['name'] ?? '') }))
+  const covsByForm = buildCovsByForm(coverages)
+  const covRefIdSet = new Set(namedCovs.map(c => c.refId))
+  let aiProposed = 0
+
+  const groups: RatingGroupSummary[] = []
+  const unmatchedNames: string[] = []
+  let cur: RatingGroupSummary | null = null
+  let gSeq = 0
+  for (const step of steps) {
+    const gn = step.groupName
+    if (gn && (!cur || cur.name !== gn)) {
+      gSeq += 1
+      const m = matchGroup(gn, namedCovs, covsByForm)
+      let covRefIds = m.covRefIds
+      let matchBasis: RatingGroupSummary['matchBasis'] = m.matchBasis
+      // Fill-only AI overlay: a group no coverage matched may be resolved by an accepted, cited
+      // proposal — but only to coverages that exist. Never overrides a deterministic match.
+      if (m.matchBasis === 'unmatched' && overlay?.ratingGroupLinks) {
+        const ai = (overlay.ratingGroupLinks[gn] ?? []).filter(id => covRefIdSet.has(id))
+        if (ai.length) { covRefIds = ai; matchBasis = 'ai-proposed'; aiProposed++ }
+      }
+      cur = {
+        refId: `${prefix}.RTG.${String(gSeq).padStart(3, '0')}`, name: gn,
+        coverageRefIds: covRefIds, formNumbers: m.formNums, stepRefIds: [], matchBasis,
+      }
+      groups.push(cur)
+      if (matchBasis === 'unmatched') unmatchedNames.push(gn)
+    }
+    // Attribute ONLY steps that carry a group name. A policy-level step (parseRating left its
+    // groupName unset because it is a global aggregation with no coverage of its own) is not
+    // stamped with the persisting `cur` group — that would falsely link statutory taxes/fees and
+    // the final premium to the last coverage (D5).
+    if (cur && gn) {
+      step.groupRefId = cur.refId
+      if (cur.coverageRefIds.length) step.groupCoverageRefIds = cur.coverageRefIds
+      if (cur.formNumbers.length) step.packageFormNumbers = cur.formNumbers
+      step.groupMatchBasis = cur.matchBasis
+      cur.stepRefIds.push(step.id)
+    }
+  }
+  ratingProgram.data['ratingGroups'] = groups
+  return { groups: groups.length, matched: groups.filter(g => g.matchBasis !== 'unmatched').length, aiProposed, unmatchedNames }
+}
+
+/** Upgrade form anchors (D6): a form the source anchors only at product/line level, whose form
+ *  number appears in one-or-more coverages' form-number lists, is re-anchored to those coverages
+ *  — the hierarchy identifies the owning coverage the forms sheet left implicit. Forms keep
+ *  refId:null (their natural key is number+edition) and their verbatim number; the link rides
+ *  nested form.data.coverageRefIds (golden-invisible — forms are never pushed to the golden).
+ *  Signature-gated so GL/IM/PR forms are byte-identical. Returns the number upgraded. */
+function upgradeFormAnchors(forms: PlannedEntity[], coverages: PlannedEntity[], refTablesPresent: boolean): number {
+  if (!refTablesPresent) return 0
+  const covsByForm = buildCovsByForm(coverages)
+  let upgraded = 0
+  for (const form of forms) {
+    if (Array.isArray(form.data['coverageRefIds']) && (form.data['coverageRefIds'] as unknown[]).length) continue
+    const num = squishStr(String(form.data['number'] ?? ''))
+    if (!num) continue
+    const via = covsByForm.get(num)
+    if (via && via.length) {
+      form.data['coverageRefIds'] = [...via]
+      form.data['anchorBasis'] = 'derived: hierarchy form list'
+      upgraded++
+    }
+  }
+  return upgraded
+}
+
+/** Mint one PREFIX.RTB.NNN placeholder per distinct factor/rate the rating algorithm names, and
+ *  link every step that uses it (step.ratePlaceholderRef). Marks the gap explicitly — the actual
+ *  factor VALUES are not in the source (D4: the rate-table area held only a wrong-line template
+ *  example + blank skeletons). Runs STRICTLY AFTER parseRating has consumed the real rtTables, so
+ *  it cannot perturb RatingStep.source.ref (the field the evaluator reads). Never invents values.
+ *  Signature-gated → empty on GL/IM/PR. */
+function mintRatePlaceholders(ratingProgram: PlannedEntity | null, prefix: string, refTablesPresent: boolean): PlannedEntity[] {
+  if (!ratingProgram || !refTablesPresent) return []
+  const steps = ratingProgram.data['steps'] as RatingStep[]
+  const byName = new Map<string, { name: string; stepIds: string[] }>()
+  for (const s of steps) {
+    const n = String(s.label ?? '').replace(/\s+/g, ' ').trim()
+    if (!/factor|rate|charge|premium|credit|surcharge|discount/i.test(n)) continue
+    const k = n.toUpperCase()
+    const entry = byName.get(k) ?? { name: n, stepIds: [] }
+    entry.stepIds.push(s.id)
+    byName.set(k, entry)
+  }
+  const placeholders: PlannedEntity[] = []
+  const stepToRtb = new Map<string, string>()
+  let seq = 0
+  for (const { name, stepIds } of byName.values()) {
+    const refId = `${prefix}.RTB.${String(++seq).padStart(3, '0')}`
+    for (const sid of stepIds) stepToRtb.set(sid, refId)
+    placeholders.push({
+      docId: refId, refId, label: `${refId} — ${name}`,
+      data: {
+        name, status: 'PLACEHOLDER',
+        note: 'PLACEHOLDER — values not present in source; pull from the rate filings named in the rules SOURCE column',
+        stepRefIds: stepIds, mintedId: true,
+      },
+    })
+  }
+  for (const s of steps) { const rtb = stepToRtb.get(s.id); if (rtb) s.ratePlaceholderRef = rtb }
+  return placeholders
+}
+
+/** Names of the RATE-TABLE-NAME block markers on the rate-tables grid that yielded no usable
+ *  table — template artifacts (a wrong-line example, blank-name skeletons) the mapper correctly
+ *  excludes (D4). A block is an artifact iff it carries no RATE TABLE ID with a real refId — this
+ *  correlates each NAME marker to its own block, so it is order- and count-independent (a real
+ *  table sitting after an example, or two ids under one name, are handled correctly). Surfaced as
+ *  a notice + defects so the exclusion is transparent, never silent. */
+function rateTableArtifacts(grid: IsoGrid | undefined): string[] {
+  if (!grid) return []
+  const markers: { row: number; name: string }[] = []
+  for (let r = 0; r < grid.cells.length; r++) {
+    if (RT_NAME_MARKER.test(norm(cell(grid, r, 0)))) {
+      markers.push({ row: r, name: clean(row(grid, r).slice(1).find(c => clean(c)) ?? null) || '(blank skeleton)' })
+    }
+  }
+  const artifacts: string[] = []
+  for (let i = 0; i < markers.length; i++) {
+    const start = markers[i]!.row
+    const end = markers[i + 1]?.row ?? grid.cells.length
+    let hasId = false
+    for (let r = start; r < end; r++) {
+      if (RT_ID_MARKER.test(norm(cell(grid, r, 0))) && clean(row(grid, r).slice(1).find(c => clean(c)) ?? null)) { hasId = true; break }
+    }
+    if (!hasId) artifacts.push(markers[i]!.name)
+  }
+  return artifacts
 }
 
 // ─── Orchestration ───────────────────────────────────────────────────────────────
@@ -1554,6 +2023,17 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   const formRules = optGrid ? parseFormRules(optGrid, ctx) : []
   const ratingProgram = rateGrid ? parseRating(rateGrid, rtTables, productRefId, lobName, ctx) : null
 
+  // ── Concept-linked reference tables (D1): recover limit/deductible tables the named LD
+  //    parser never claimed. Runs AFTER every named parser so `consumed` is complete;
+  //    signature-gated (>= 2 col-0 "TABLE NAME:" markers) + consumed-skip ⇒ strict no-op on
+  //    GL/IM/PR. The original `ldTables` still feed the (untouched) PCM-A fold below. ──
+  const consumedSheets = new Set<string>(
+    [...ctx.recognized, ldGrid?.sheet, rtGrid?.sheet].filter((s): s is string => !!s),
+  )
+  const refDrafts = detectReferenceTables(grids, consumedSheets, ctx)
+  const refPrefix = refIdPrefix(productRefId ?? firstFw?.coverages[0]?.refId ?? '') || lob.prefix
+  const refTables = refDrafts.length ? mintReferenceTables(refDrafts, refPrefix) : []
+
   // ── Build PlannedEntity[] — one per detected product. ──
   const products: PlannedEntity[] = []
   if (fwResults) {
@@ -1586,10 +2066,104 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   // Flat union of all coverages across all products (ordered by product then depth).
   const allCoverages: PlannedEntity[] = fwResults ? fwResults.flatMap(fw => fw.coverages) : []
 
+  // Reconstruct rule↔table↔coverage links by concept matching (D2/D7/D8). Clears the
+  // transient rule reference text on every workbook; only wires links when reference tables
+  // were detected (CORE signature) — GL/IM/PR are byte-identical.
+  const refLinks = linkReferenceTables(refDrafts, refTables, allCoverages, rules, overlay)
+
   // Assemble coverage.terms from the LD tables and the rules that reference them
   // (ledger PCM-A). coverageRefIds are globally unique, so the flat union is safe
-  // in multi-product workbooks.
+  // in multi-product workbooks. NB: the fold runs over the ORIGINAL ldTables only — the
+  // minted reference tables derive their terms through the separate, signature-gated
+  // deriveTermsFromReferenceTables path so PCM-A output stays byte-identical.
   foldLdTermsIntoCoverages(allCoverages, rules, ldTables, ctx)
+
+  // Assemble coverage terms from the signature-detected reference tables (D1/D7) — separate
+  // from the PCM-A fold above, gated on refTables so GL/IM/PR are untouched.
+  const derivedTerms = deriveTermsFromReferenceTables(allCoverages, refTables)
+  if (derivedTerms > 0) {
+    ctx.addNotice({
+      code: 'reference_table_terms_derived',
+      message: `${derivedTerms} coverage term(s) derived from ${refTables.length} signature-detected reference table(s) (limits/deductibles the named LD parser never claimed).`,
+      data: { terms: derivedTerms, tables: refTables.length },
+    })
+  }
+
+  // Reconstruct the rating algorithm's coverage-name groups (D5) — mint RTG group ids, resolve
+  // each to hierarchy coverages / package forms, flag the genuinely-missing ones. CORE-gated.
+  const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix, overlay)
+
+  // Upgrade line-level form anchors to the coverages the hierarchy's form lists name (D6). CORE-gated.
+  const formUpgrades = upgradeFormAnchors(forms, allCoverages, refTables.length > 0)
+
+  // Rate-table placeholders (D4): the rate-table area held no usable factor tables (a wrong-line
+  // template example + blank skeletons), so mint one placeholder per distinct factor the rating
+  // algorithm names and flag the missing values. STRICTLY after parseRating (rtTables consumed).
+  const ratePlaceholders = mintRatePlaceholders(ratingProgram, refPrefix, refTables.length > 0)
+  const excludedArtifacts = refTables.length > 0 ? rateTableArtifacts(rtGrid) : []
+  if (ratePlaceholders.length > 0) {
+    ctx.addNotice({
+      code: 'rate_table_placeholders',
+      message: `${ratePlaceholders.length} rate-table placeholder(s) minted — the rating algorithm names these factors but their VALUES are not in the source; pull them from the rate filings named in the rules SOURCE column.`,
+      data: { count: ratePlaceholders.length },
+    })
+  }
+  if (excludedArtifacts.length > 0) {
+    ctx.addNotice({
+      code: 'template_artifacts_excluded',
+      message: `${excludedArtifacts.length} rate-table template artifact(s) excluded (blank-name skeletons and/or a wrong-line example) — no factor values were fabricated from them.`,
+      data: { count: excludedArtifacts.length, names: excludedArtifacts },
+    })
+    for (const name of excludedArtifacts) {
+      ctx.addDefect({ code: 'template_artifact_excluded', field: 'rateTable', rawValue: name })
+    }
+  }
+
+  // ── Flag-not-invent: R5 notices/defects for the reconstructed link graph (CORE-gated). ──
+  if (refTables.length > 0) {
+    ctx.addNotice({
+      code: 'reference_tables_linked',
+      message: `${refTables.length} reference table(s) recovered by signature: ${refLinks.backLinked} back-linked to rules, ${refLinks.covLinked} linked to coverages, ${refLinks.rulesLinked} rule(s) carry table links, ${refLinks.resolvedToCoverage} reference(s) resolved to a coverage, ${refLinks.unresolved} unresolved.`,
+      data: { tables: refTables.length, backLinked: refLinks.backLinked, covLinked: refLinks.covLinked, rulesTableLinked: refLinks.rulesLinked, resolvedToCoverage: refLinks.resolvedToCoverage, unresolved: refLinks.unresolved },
+    })
+    if (refLinks.resolvedToCoverage > 0) {
+      ctx.addNotice({
+        code: 'rule_ref_resolved_to_coverage',
+        message: `${refLinks.resolvedToCoverage} rule reference(s) named a coverage rather than a table — resolved to a coverage link, not a failed match (D8): ${refLinks.resolvedRefs.slice(0, 8).join('; ')}.`,
+        data: { count: refLinks.resolvedToCoverage, refs: refLinks.resolvedRefs },
+      })
+    }
+    if (refLinks.unresolved > 0) {
+      ctx.addNotice({
+        code: 'unresolved_rule_refs',
+        message: `${refLinks.unresolved} rule reference(s) matched no table or coverage in the source — pull the referenced tables from the filings named in the rules SOURCE column: ${refLinks.unresolvedRefs.slice(0, 8).join('; ')}.`,
+        data: { count: refLinks.unresolved, refs: refLinks.unresolvedRefs },
+      })
+    }
+  }
+  if (ratingGroups.unmatchedNames.length > 0) {
+    const clean0 = (s: string) => s.replace(/\s*\(Excluding[^)]*\)\s*/i, '').trim()
+    ctx.addNotice({
+      code: 'rating_groups_unmatched',
+      message: `${ratingGroups.unmatchedNames.length} rating group(s) name no coverage in the hierarchy — add these coverages: ${ratingGroups.unmatchedNames.map(clean0).join('; ')}.`,
+      data: { count: ratingGroups.unmatchedNames.length, names: ratingGroups.unmatchedNames.map(clean0) },
+    })
+    for (const name of ratingGroups.unmatchedNames) {
+      ctx.addDefect({ code: 'rating_group_unmatched', field: 'ratingGroup', rawValue: clean0(name) })
+    }
+  }
+  const aiLinks = refLinks.aiProposed + ratingGroups.aiProposed
+  if (aiLinks > 0) {
+    ctx.addNotice({
+      code: 'ai_proposed_links',
+      message: `${aiLinks} link(s) resolved from an accepted, cited AI proposal (linkBasis: ai-proposed) — applied only where the deterministic pass was unresolved and only to entities that exist; review before accepting.`,
+      data: { count: aiLinks },
+    })
+  }
+
+  // Reference tables share a single home with the real LD tables so the UI ldTables→chip
+  // lookup and the golden both see them under their minted CORE.TBL refIds.
+  const allLdTables = [...ldTables, ...refTables]
 
   const dynFieldCount = forms.reduce((n, f) => n + ((f.data['dynamicFields'] as unknown[])?.length ?? 0), 0)
   const stepCount = ratingProgram ? (ratingProgram.data['steps'] as unknown[]).length : 0
@@ -1603,7 +2177,24 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     formRules: formRules.length,
     ratingSteps: stepCount,
     rtTables: rtTables.length,
-    ldTables: ldTables.length,
+    ldTables: allLdTables.length,
+    // Concept-linker counts are added ONLY under the CORE signature, so a workbook with no
+    // reference tables (GL/IM/PR) keeps a byte-identical `summary.counts` object.
+    ...(refTables.length > 0 ? {
+      referenceTables: refTables.length,
+      referenceTablesBackLinked: refLinks.backLinked,
+      referenceTablesCovLinked: refLinks.covLinked,
+      rulesTableLinked: refLinks.rulesLinked,
+      rulesResolvedToCoverage: refLinks.resolvedToCoverage,
+      ruleRefsUnresolved: refLinks.unresolved,
+      ratingGroups: ratingGroups.groups,
+      ratingGroupsMatched: ratingGroups.matched,
+      ratingGroupsUnmatched: ratingGroups.unmatchedNames.length,
+      formAnchorUpgrades: formUpgrades,
+      ratePlaceholders: ratePlaceholders.length,
+      rateTemplateArtifactsExcluded: excludedArtifacts.length,
+      linksAiProposed: refLinks.aiProposed + ratingGroups.aiProposed,
+    } : {}),
   }
 
   const knownSheets = new Set(ctx.recognized)
@@ -1614,7 +2205,8 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
     product,
     products,
     coverages: allCoverages,
-    forms, rules, formRules, ratingProgram, ldTables, rtTables,
+    forms, rules, formRules, ratingProgram, ldTables: allLdTables, rtTables,
+    ratePlaceholders,
     summary: {
       productName: product ? (product.data['name'] as string) : null,
       productRefId,
