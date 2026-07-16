@@ -17,6 +17,7 @@ import type {
   RTTable, LDTable, LDRow, RatingStep, RatingGroupSummary, CoverageTerm, TermKind,
 } from '../types'
 import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
+import { refIdToDocId } from './refId'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
 import {
   matchCoverageByName, matchRuleReferenceToTables, resolveCoverageCode,
@@ -144,7 +145,8 @@ function norm(v: IsoCell): string {
 function squishStr(s: string): string { return s.toUpperCase().replace(/[^A-Z0-9]/g, '') }
 function squish(v: IsoCell): string { return squishStr(text(v)) }
 const PLACEHOLDER = /^<.*>$|^n\/?a$|^not applicable$|^intentionally left blank$/i
-function isPlaceholder(s: string): boolean { return s === '' || PLACEHOLDER.test(s) }
+/** Exported for the L3 pinning lock (BACKLOG_SEED sec 3) — behavior unchanged. */
+export function isPlaceholder(s: string): boolean { return s === '' || PLACEHOLDER.test(s) }
 function clean(v: IsoCell): string { const s = text(v); return isPlaceholder(s) ? '' : s }
 
 function isX(v: IsoCell): boolean {
@@ -162,8 +164,9 @@ function parseNum(v: IsoCell): number | null {
 }
 
 /** Split a multi-value cell (newlines / commas / semicolons), dropping placeholders.
- *  Internal spaces are preserved so form numbers like "CG 21 70" stay intact. */
-function splitList(v: IsoCell): string[] {
+ *  Internal spaces are preserved so form numbers like "CG 21 70" stay intact.
+ *  Exported for the L1 pinning lock (BACKLOG_SEED sec 3) — behavior unchanged. */
+export function splitList(v: IsoCell): string[] {
   return text(v).split(/[\n;,]+/).map(s => s.trim()).filter(s => s && !isPlaceholder(s))
 }
 
@@ -307,8 +310,9 @@ function refIdPrefix(refId: string): string {
   if (m) return m[1]!.toUpperCase()
   return (refId.split(/[.\-_\d]/).filter(Boolean)[0] ?? '').toUpperCase()
 }
-/** Firestore-safe doc id (matches the seed: dots → dashes). */
-function dashId(refId: string): string { return refId.replace(/\./g, '-') }
+/** Firestore-safe doc id (matches the seed: dots → dashes) — the canonical mint
+ *  now lives in refId.ts (BACKLOG_SEED item 1); this alias keeps call sites stable. */
+const dashId = refIdToDocId
 /** Pull an LD/RT table ref out of a free-text "rule reference" cell. */
 function extractTableRef(v: IsoCell): string | undefined {
   const m = text(v).match(/\b((?:LD|RT)Table\.\w+)/i)
@@ -497,18 +501,38 @@ function findSheet(grids: IsoGrid[], re: RegExp, exclude?: RegExp): IsoGrid | un
 
 // ─── Summary accumulator ─────────────────────────────────────────────────────────
 
+/** A rectangle of cells a parser consumed, with why (CE1-S6 instrumentation).
+ *  Structurally identical to the census ConsumedSpan (shared/src/import/census) —
+ *  declared locally so the mapper stays import-cycle-free. Row/col are 0-based
+ *  inclusive. Emitted ONLY when a collector is passed to mapIsoWorkbook; the
+ *  ImportPlan output itself never changes. */
+export interface ConsumedSpanRec {
+  sheet: string
+  rowStart: number
+  rowEnd: number
+  colStart: number
+  colEnd: number
+  reason: string
+}
+
 class Ctx {
   warnings:   string[] = []
   unmapped:   UnmappedColumns[] = []
   recognized: string[] = []
   defects:    ReviewDefect[] = []
   notices:    ImportNotice[] = []
+  /** consumedSpans collector (CE1-S6): null = instrumentation off (default). */
+  spans: ConsumedSpanRec[] | null = null
   private warned = new Set<string>()
   /** De-duplicated warning (keeps the summary readable when a value recurs on 100s of rows). */
   warnOnce(key: string, msg: string): void { if (!this.warned.has(key)) { this.warned.add(key); this.warnings.push(msg) } }
   warn(msg: string): void { this.warnings.push(msg) }
   addDefect(d: ReviewDefect): void { this.defects.push(d) }
   addNotice(n: ImportNotice): void { this.notices.push(n) }
+  /** Record a consumed rectangle (no-op unless a collector was supplied). */
+  consume(sheet: string, rowStart: number, rowEnd: number, colStart: number, colEnd: number, reason: string): void {
+    if (this.spans && rowEnd >= rowStart) this.spans.push({ sheet, rowStart, rowEnd, colStart, colEnd, reason })
+  }
   recordUnmapped(sheet: string, header: IsoCell[], handled: Set<number>): void {
     const labels: string[] = []
     header.forEach((c, i) => {
@@ -1353,7 +1377,8 @@ function parseLdTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
     if (!entry.name) entry.name = name
     if (!entry.valueHeader) entry.valueHeader = valueHeader
 
-    for (let dr = headerR + 1; dr < rows.length; dr++) {
+    let dr = headerR + 1
+    for (; dr < rows.length; dr++) {
       if (LD_MARKER.test(norm(cell(grid, dr, markerCol)))) break
       const raw = cell(grid, dr, valueCol)
       const label = clean(raw)
@@ -1363,6 +1388,7 @@ function parseLdTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
       entry.rows.push({ label, value: num, constraintNote: note || undefined })
       if (/default/i.test(note)) entry.defaultValue = num
     }
+    ctx.consume(grid.sheet, r, dr - 1, markerCol, Math.max(valueCol, commentCol, markerCol), `ld-table:${refId}`)
     tables.set(refId, entry)
   }
 
@@ -1409,7 +1435,8 @@ function parseRtTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
     if (tables.has(refId)) ctx.warnOnce(`duprt:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} col "RATE TABLE ID": table ${refId} appears more than once — rows merged.`)
     if (!entry.name) entry.name = pendingName
 
-    for (let dr = headerR + 1; dr < rows.length; dr++) {
+    let dr = headerR + 1
+    for (; dr < rows.length; dr++) {
       const f = norm(cell(grid, dr, 0))
       if (RT_NAME_MARKER.test(f) || RT_ID_MARKER.test(f)) break
       const cells = row(grid, dr)
@@ -1422,6 +1449,7 @@ function parseRtTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
       })
       entry.rows.push(rec)
     }
+    ctx.consume(grid.sheet, r, dr - 1, 0, colIdx.length ? Math.max(...colIdx) : 0, `rt-table:${refId}`)
     tables.set(refId, entry)
   }
 
@@ -1642,6 +1670,7 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
       const n = (nameCount.get(displayName) ?? 0) + 1
       nameCount.set(displayName, n)
       if (n > 1) displayName = `${displayName} (v${n})`
+      ctx.consume(grid.sheet, start, Math.min(end, grid.cells.length - 1), 0, covCodes.length ? 33 : 1, `reference-table:${displayName}`)
       drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, optionValues, rowLabels, backLinkWas })
     }
   }
@@ -1986,9 +2015,14 @@ function rateTableArtifacts(grid: IsoGrid | undefined): string[] {
  *  may span all four workbooks (concatenate every sheet from every uploaded file);
  *  sheets are located by name so any subset works.
  *
- *  overlay — optional AI-proposed aliases/enum overrides from proposeMapping; purely additive. */
-export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null): ImportPlan {
+ *  overlay — optional AI-proposed aliases/enum overrides from proposeMapping; purely additive.
+ *  consumedSpans — optional CE1-S6 collector: when supplied, every parser records the cell
+ *  rectangles it consumed (sheet, rowRange, colRange, reason) into it. Purely observational —
+ *  the returned ImportPlan is byte-identical with or without a collector (locked by
+ *  tests/import/consumed-spans.test.ts + the offline eval goldens). */
+export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, consumedSpans?: ConsumedSpanRec[]): ImportPlan {
   const ctx = new Ctx()
+  ctx.spans = consumedSpans ?? null
 
   const fwGrid   = selectFrameworkSheet(grids, ctx)
   // "Forms Library" is the IM/PR component-model template's name for the forms sheet.
@@ -2033,6 +2067,23 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null):
   const refDrafts = detectReferenceTables(grids, consumedSheets, ctx)
   const refPrefix = refIdPrefix(productRefId ?? firstFw?.coverages[0]?.refId ?? '') || lob.prefix
   const refTables = refDrafts.length ? mintReferenceTables(refDrafts, refPrefix) : []
+
+  // CE1-S6: sheet-grain consumption for the named parsers (the stacked ld/rt and
+  // reference-table parsers already emitted block-grain spans from inside). Only
+  // sheets whose parse produced something are claimed; column refinement is CE3's.
+  if (ctx.spans) {
+    const gridSpan = (g: IsoGrid | undefined, used: boolean, reason: string) => {
+      if (!g || !used || g.cells.length === 0) return
+      const cols = g.cells.reduce((m, r) => Math.max(m, r?.length ?? 0), 0)
+      ctx.consume(g.sheet, 0, g.cells.length - 1, 0, Math.max(0, cols - 1), reason)
+    }
+    gridSpan(fwGrid, !!fwResults && fwResults.length > 0, 'framework-sheet')
+    gridSpan(formGrid, forms.length > 0, 'forms-sheet')
+    gridSpan(dynGrid, Object.keys(dynByForm).length > 0, 'dynamic-fields-sheet')
+    gridSpan(ruleGrid, rules.length > 0, 'rules-sheet')
+    gridSpan(optGrid, formRules.length > 0, 'form-rules-sheet')
+    gridSpan(rateGrid, !!ratingProgram, 'rating-sheet')
+  }
 
   // ── Build PlannedEntity[] — one per detected product. ──
   const products: PlannedEntity[] = []

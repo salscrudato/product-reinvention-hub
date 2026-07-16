@@ -1,0 +1,948 @@
+{
+  "file": "reference/Product_Component_Model_Coverages.xlsx",
+  "status": "OK",
+  "sheets": 18,
+  "hiddenSheets": 1,
+  "nonEmpty": 31865,
+  "mergeShadows": 156,
+  "unaccounted": 31709,
+  "conservation": true,
+  "tablesFound": 38,
+  "hiddenSubstanceCells": 35,
+  "nearDupClusters": [
+    {
+      "basis": "headerSig",
+      "sheets": [
+        {
+          "name": "Product Component Model Hacked",
+          "nonEmpty": 13477
+        },
+        {
+          "name": "Product Component Model Main",
+          "nonEmpty": 13474
+        }
+      ]
+    },
+    {
+      "basis": "headerSig",
+      "sheets": [
+        {
+          "name": "PA CVG",
+          "nonEmpty": 244
+        },
+        {
+          "name": "NY CVG",
+          "nonEmpty": 167
+        }
+      ]
+    },
+    {
+      "basis": "name",
+      "sheets": [
+        {
+          "name": "Product Component Model OLD",
+          "nonEmpty": 2724
+        },
+        {
+          "name": "Product Component Model Hacked",
+          "nonEmpty": 13477
+        }
+      ]
+    }
+  ],
+  "formTokensDistinct": 10,
+  "stateMatrixSheets": [
+    "Product Component Model Hacked",
+    "Product Component Model Main",
+    "Product Component Model OLD"
+  ],
+  "widestSheet": {
+    "name": "Product Component Model Hacked",
+    "cols": 97
+  },
+  "enumDomains": 0,
+  "definitionsHarvested": 12,
+  "perSheet": [
+    {
+      "name": "Product Component Model Hacked",
+      "hidden": false,
+      "dims": {
+        "rows": 224,
+        "cols": 97
+      },
+      "nonEmpty": 13477,
+      "fingerprint": {
+        "headerSig": "79ed2ee8ced9c5a3",
+        "sampleHash": "64ef741e09df0690"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 2,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 0,
+          "headerConfidence": 0.7750000000000001
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 223,
+          "colStart": 0,
+          "colEnd": 96,
+          "headerRow": 4,
+          "headerConfidence": 0.9731958762886599
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "MAX 200"
+      ],
+      "stateOrientation": "STATE_COLUMNS",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        19,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        31,
+        40,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Definitions",
+      "hidden": false,
+      "dims": {
+        "rows": 16,
+        "cols": 3
+      },
+      "nonEmpty": 37,
+      "fingerprint": {
+        "headerSig": "57d0a576ecbd7081",
+        "sampleHash": "1bced57940eaf04b"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 15,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 3,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 4,
+      "formTokenSample": [
+        "IN 2015",
+        "IN 2017",
+        "IN 2020",
+        "IN 2022"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Revision History",
+      "hidden": false,
+      "dims": {
+        "rows": 10,
+        "cols": 5
+      },
+      "nonEmpty": 19,
+      "fingerprint": {
+        "headerSig": "eb979ee7c6ef67ca",
+        "sampleHash": "0187436c1515ba76"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 2,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 2,
+          "headerConfidence": 0.775
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 9,
+          "colStart": 0,
+          "colEnd": 4,
+          "headerRow": 9,
+          "headerConfidence": 0.8
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Component Model Main",
+      "hidden": false,
+      "dims": {
+        "rows": 221,
+        "cols": 97
+      },
+      "nonEmpty": 13474,
+      "fingerprint": {
+        "headerSig": "79ed2ee8ced9c5a3",
+        "sampleHash": "08367211a6981802"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 2,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 0,
+          "headerConfidence": 0.7750000000000001
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 220,
+          "colStart": 0,
+          "colEnd": 96,
+          "headerRow": 4,
+          "headerConfidence": 0.9731958762886599
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "MAX 200"
+      ],
+      "stateOrientation": "STATE_COLUMNS",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        19,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        31,
+        40,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "StatPlan",
+      "hidden": false,
+      "dims": {
+        "rows": 84,
+        "cols": 16
+      },
+      "nonEmpty": 488,
+      "fingerprint": {
+        "headerSig": "134bb0751b006381",
+        "sampleHash": "94a5c0c4a89fd135"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 83,
+          "colStart": 0,
+          "colEnd": 15,
+          "headerRow": 0,
+          "headerConfidence": 0.9437500000000001
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "MAX 200"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        4,
+        5,
+        7
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "CoverageStructure",
+      "hidden": false,
+      "dims": {
+        "rows": 36,
+        "cols": 13
+      },
+      "nonEmpty": 194,
+      "fingerprint": {
+        "headerSig": "7111f947df9f2963",
+        "sampleHash": "95c853405b243a17"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 35,
+          "colStart": 0,
+          "colEnd": 12,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        3,
+        7,
+        8
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "NewCovStructure",
+      "hidden": false,
+      "dims": {
+        "rows": 39,
+        "cols": 13
+      },
+      "nonEmpty": 219,
+      "fingerprint": {
+        "headerSig": "8890a1f34a89a6c3",
+        "sampleHash": "aac1c98be6f40a2e"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 38,
+          "colStart": 0,
+          "colEnd": 12,
+          "headerRow": 0,
+          "headerConfidence": 0.976923076923077
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        3,
+        4,
+        5,
+        8
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "PA CVG",
+      "hidden": false,
+      "dims": {
+        "rows": 44,
+        "cols": 14
+      },
+      "nonEmpty": 244,
+      "fingerprint": {
+        "headerSig": "c5c8e4d5fd64e1d9",
+        "sampleHash": "be467fdf2880d656"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 43,
+          "colStart": 0,
+          "colEnd": 13,
+          "headerRow": 0,
+          "headerConfidence": 0.9357142857142857
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        2,
+        3,
+        4
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "NY CVG",
+      "hidden": false,
+      "dims": {
+        "rows": 70,
+        "cols": 13
+      },
+      "nonEmpty": 167,
+      "fingerprint": {
+        "headerSig": "c5c8e4d5fd64e1d9",
+        "sampleHash": "b723f965e988d01c"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 34,
+          "colStart": 0,
+          "colEnd": 12,
+          "headerRow": 0,
+          "headerConfidence": 0.9653846153846155
+        },
+        {
+          "rowStart": 39,
+          "rowEnd": 39,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 39,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 40,
+          "rowEnd": 51,
+          "colStart": 1,
+          "colEnd": 1,
+          "headerRow": 48,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 52,
+          "rowEnd": 52,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 52,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 53,
+          "rowEnd": 56,
+          "colStart": 1,
+          "colEnd": 1,
+          "headerRow": 53,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 57,
+          "rowEnd": 69,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 57,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        2,
+        3,
+        4
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "OpenL<->StatPan Cov match",
+      "hidden": false,
+      "dims": {
+        "rows": 84,
+        "cols": 8
+      },
+      "nonEmpty": 299,
+      "fingerprint": {
+        "headerSig": "10156c3eac5ef9df",
+        "sampleHash": "6424754474d1d28a"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 83,
+          "colStart": 1,
+          "colEnd": 7,
+          "headerRow": 0,
+          "headerConfidence": 0.8714285714285714
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        6,
+        7
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "OpenL Cvg Discount Surcharge",
+      "hidden": false,
+      "dims": {
+        "rows": 117,
+        "cols": 5
+      },
+      "nonEmpty": 183,
+      "fingerprint": {
+        "headerSig": "8f961b4316f18587",
+        "sampleHash": "75a2e432ba771a61"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 60,
+          "colStart": 0,
+          "colEnd": 4,
+          "headerRow": 0,
+          "headerConfidence": 0.9100000000000001
+        },
+        {
+          "rowStart": 63,
+          "rowEnd": 116,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 63,
+          "headerConfidence": 0.7750000000000001
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "MAX 200"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Coverage Analysis",
+      "hidden": false,
+      "dims": {
+        "rows": 4,
+        "cols": 3
+      },
+      "nonEmpty": 11,
+      "fingerprint": {
+        "headerSig": "ead1c68dedc05825",
+        "sampleHash": "108516ad305705b1"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 3,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 2,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Non-PIP",
+      "hidden": false,
+      "dims": {
+        "rows": 53,
+        "cols": 2
+      },
+      "nonEmpty": 106,
+      "fingerprint": {
+        "headerSig": "9f0557b005ae5b42",
+        "sampleHash": "30c5e621f8d24638"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 52,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "PIP States",
+      "hidden": false,
+      "dims": {
+        "rows": 41,
+        "cols": 3
+      },
+      "nonEmpty": 123,
+      "fingerprint": {
+        "headerSig": "f87f1fd964ba9a2a",
+        "sampleHash": "2495f7c1994fc41b"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 40,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "UP TO 12"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Liability limits",
+      "hidden": false,
+      "dims": {
+        "rows": 42,
+        "cols": 3
+      },
+      "nonEmpty": 38,
+      "fingerprint": {
+        "headerSig": "acd4ae8cd5e008a7",
+        "sampleHash": "7bacc8a999699cee"
+      },
+      "tables": [
+        {
+          "rowStart": 1,
+          "rowEnd": 1,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 1,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 2,
+          "rowEnd": 2,
+          "colStart": 1,
+          "colEnd": 1,
+          "headerRow": 2,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 8,
+          "colStart": 2,
+          "colEnd": 2,
+          "headerRow": 3,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 10,
+          "rowEnd": 10,
+          "colStart": 1,
+          "colEnd": 1,
+          "headerRow": 10,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 11,
+          "rowEnd": 20,
+          "colStart": 2,
+          "colEnd": 2,
+          "headerRow": 11,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 22,
+          "rowEnd": 22,
+          "colStart": 1,
+          "colEnd": 1,
+          "headerRow": 22,
+          "headerConfidence": 0.5
+        },
+        {
+          "rowStart": 23,
+          "rowEnd": 28,
+          "colStart": 2,
+          "colEnd": 2,
+          "headerRow": 23,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 30,
+          "rowEnd": 30,
+          "colStart": 1,
+          "colEnd": 1,
+          "headerRow": 30,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 31,
+          "rowEnd": 41,
+          "colStart": 2,
+          "colEnd": 2,
+          "headerRow": 31,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Discounts",
+      "hidden": false,
+      "dims": {
+        "rows": 24,
+        "cols": 5
+      },
+      "nonEmpty": 27,
+      "fingerprint": {
+        "headerSig": "d56377e75338d135",
+        "sampleHash": "a568eb635bf79a11"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 16,
+          "colStart": 0,
+          "colEnd": 4,
+          "headerRow": 0,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 20,
+          "rowEnd": 23,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 21,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Component Model OLD",
+      "hidden": false,
+      "dims": {
+        "rows": 215,
+        "cols": 58
+      },
+      "nonEmpty": 2724,
+      "fingerprint": {
+        "headerSig": "cc53525c94b2bbb6",
+        "sampleHash": "d9eb7c60a9dd1d4d"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 2,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 0,
+          "headerConfidence": 0.7750000000000001
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 214,
+          "colStart": 0,
+          "colEnd": 57,
+          "headerRow": 4,
+          "headerConfidence": 0.7706896551724138
+        }
+      ],
+      "formTokens": 1,
+      "formTokenSample": [
+        "MAX 200"
+      ],
+      "stateOrientation": "STATE_COLUMNS",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        28,
+        37,
+        57
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "PCM Dropdowns (HIDE)",
+      "hidden": true,
+      "dims": {
+        "rows": 9,
+        "cols": 9
+      },
+      "nonEmpty": 35,
+      "fingerprint": {
+        "headerSig": "ad5c7687c8dc74cd",
+        "sampleHash": "6092579977531438"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 0,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 0,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 8,
+          "colStart": 0,
+          "colEnd": 8,
+          "headerRow": 3,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    }
+  ],
+  "wallMs": 2558,
+  "peakRssMB": 282,
+  "orchWallMs": 3128
+}

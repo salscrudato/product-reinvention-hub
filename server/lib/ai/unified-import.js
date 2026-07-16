@@ -368,10 +368,14 @@ async function unifiedImport(req, res) {
 
     emit(res, { t: 'tool', name: 'extract:coverages', phase: 'end', summary: `${rawCoverages.length} coverage(s) extracted` })
 
+    // Canonical case-preserving mint (BACKLOG_SEED item 1) — the old
+    // .toLowerCase() stranded these ids outside the parentId validator's
+    // dot->dash candidate set.
+    const { refIdToDocId } = require('../import-brain-shared.cjs')
     const coverageEntities = rawCoverages.map((c, i) => {
       const refId = `${fbPrefix}.COV.SYNTH${String(i + 1).padStart(3, '0')}`
       return {
-        docId: refId.replace(/\./g, '-').toLowerCase(),
+        docId: refIdToDocId(refId),
         refId,
         label: String(c.name),
         data: {

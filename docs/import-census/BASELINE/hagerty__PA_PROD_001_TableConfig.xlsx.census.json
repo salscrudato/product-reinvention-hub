@@ -1,0 +1,840 @@
+{
+  "file": "hagerty/PA_PROD_001_TableConfig.xlsx",
+  "status": "OK",
+  "sheets": 23,
+  "hiddenSheets": 0,
+  "nonEmpty": 660,
+  "mergeShadows": 108,
+  "unaccounted": 552,
+  "conservation": true,
+  "tablesFound": 23,
+  "hiddenSubstanceCells": 0,
+  "nearDupClusters": [
+    {
+      "basis": "headerSig",
+      "sheets": [
+        {
+          "name": "TerritoryBaseRate_1",
+          "nonEmpty": 20
+        },
+        {
+          "name": "TerritoryBaseRate_11",
+          "nonEmpty": 20
+        },
+        {
+          "name": "MedicalPaymentsRatebyTerritory_",
+          "nonEmpty": 20
+        },
+        {
+          "name": "UMUIMRatebyTerritory_16",
+          "nonEmpty": 20
+        }
+      ]
+    },
+    {
+      "basis": "headerSig",
+      "sheets": [
+        {
+          "name": "TierFactor_9",
+          "nonEmpty": 16
+        },
+        {
+          "name": "TierFactor_19",
+          "nonEmpty": 16
+        }
+      ]
+    }
+  ],
+  "formTokensDistinct": 0,
+  "stateMatrixSheets": [],
+  "widestSheet": {
+    "name": "TOC",
+    "cols": 8
+  },
+  "enumDomains": 0,
+  "definitionsHarvested": 0,
+  "perSheet": [
+    {
+      "name": "TOC",
+      "hidden": false,
+      "dims": {
+        "rows": 23,
+        "cols": 8
+      },
+      "nonEmpty": 89,
+      "fingerprint": {
+        "headerSig": "b021bff628f7f8b4",
+        "sampleHash": "d691f8afd834234a"
+      },
+      "tables": [
+        {
+          "rowStart": 1,
+          "rowEnd": 22,
+          "colStart": 3,
+          "colEnd": 7,
+          "headerRow": 1,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        3,
+        5,
+        6
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "TerritoryBaseRate_1",
+      "hidden": false,
+      "dims": {
+        "rows": 13,
+        "cols": 2
+      },
+      "nonEmpty": 20,
+      "fingerprint": {
+        "headerSig": "4615d1bcc39eed3b",
+        "sampleHash": "2d688ad325300b14"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 12,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "ProtectionClassConstructionFact",
+      "hidden": false,
+      "dims": {
+        "rows": 12,
+        "cols": 4
+      },
+      "nonEmpty": 36,
+      "fingerprint": {
+        "headerSig": "72e360af46f5f3ec",
+        "sampleHash": "5b7666814ac2f225"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 11,
+          "colStart": 0,
+          "colEnd": 3,
+          "headerRow": 7,
+          "headerConfidence": 0.9750000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "CoverageAKeyFactor_3",
+      "hidden": false,
+      "dims": {
+        "rows": 15,
+        "cols": 2
+      },
+      "nonEmpty": 24,
+      "fingerprint": {
+        "headerSig": "706f222b78b6f557",
+        "sampleHash": "debd29a3cbc14bf1"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 14,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "DeductibleFactors_4",
+      "hidden": false,
+      "dims": {
+        "rows": 15,
+        "cols": 3
+      },
+      "nonEmpty": 36,
+      "fingerprint": {
+        "headerSig": "53780d1c7589fe4d",
+        "sampleHash": "04e02fb6b6b9b767"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 14,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0
+      ],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "CoverageCPercentageFactor_5",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 2
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "01559e94d978ce2a",
+        "sampleHash": "af94399cf88e6e84"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "LiabilityIncreasedLimitCharges_",
+      "hidden": false,
+      "dims": {
+        "rows": 14,
+        "cols": 3
+      },
+      "nonEmpty": 33,
+      "fingerprint": {
+        "headerSig": "a412d2af8079853a",
+        "sampleHash": "36b7231d970c10a4"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 13,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0
+      ],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "ScheduledPersonalPropertyClassR",
+      "hidden": false,
+      "dims": {
+        "rows": 14,
+        "cols": 2
+      },
+      "nonEmpty": 22,
+      "fingerprint": {
+        "headerSig": "9d2bd075bc8088cb",
+        "sampleHash": "bc0674d008c7ef87"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 13,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "EndorsementCreditFactors_8",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 2
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "3017fcb3a6d176f1",
+        "sampleHash": "7c9a9819827e39b6"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "TierFactor_9",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 2
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "29491f5f3d36a2b6",
+        "sampleHash": "8767cc98490cce4f"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "WaterBackUpFlatPremium_10",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 2
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "e0f1202f43c9f888",
+        "sampleHash": "c6b629aec849835b"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "TerritoryBaseRate_11",
+      "hidden": false,
+      "dims": {
+        "rows": 13,
+        "cols": 2
+      },
+      "nonEmpty": 20,
+      "fingerprint": {
+        "headerSig": "4615d1bcc39eed3b",
+        "sampleHash": "586bac6ac5f29abd"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 12,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "DriverClassFactor_12",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 2
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "410673c685207404",
+        "sampleHash": "fc8fa3672571d2e9"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "BIPDLimitFactor_13",
+      "hidden": false,
+      "dims": {
+        "rows": 12,
+        "cols": 2
+      },
+      "nonEmpty": 18,
+      "fingerprint": {
+        "headerSig": "427d77e10ce1c75b",
+        "sampleHash": "b2b16b0f9db25fef"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 11,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "VehicleAgeFactor_14",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 2
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "c5a01286eebff611",
+        "sampleHash": "4766c9df26a4c4b7"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "MedicalPaymentsRatebyTerritory_",
+      "hidden": false,
+      "dims": {
+        "rows": 13,
+        "cols": 2
+      },
+      "nonEmpty": 20,
+      "fingerprint": {
+        "headerSig": "4615d1bcc39eed3b",
+        "sampleHash": "12929eb3ca25b141"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 12,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "UMUIMRatebyTerritory_16",
+      "hidden": false,
+      "dims": {
+        "rows": 13,
+        "cols": 2
+      },
+      "nonEmpty": 20,
+      "fingerprint": {
+        "headerSig": "4615d1bcc39eed3b",
+        "sampleHash": "4b69355a86cb4046"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 12,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "CollisionPremium_17",
+      "hidden": false,
+      "dims": {
+        "rows": 14,
+        "cols": 3
+      },
+      "nonEmpty": 33,
+      "fingerprint": {
+        "headerSig": "b711d55fd2402bb3",
+        "sampleHash": "f2d83ef6b94bdc5d"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 13,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0
+      ],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "ComprehensivePremium_18",
+      "hidden": false,
+      "dims": {
+        "rows": 14,
+        "cols": 3
+      },
+      "nonEmpty": 33,
+      "fingerprint": {
+        "headerSig": "ae5318ce8603badc",
+        "sampleHash": "87a44a346f6975ed"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 13,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0
+      ],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "TierFactor_19",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 2
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "29491f5f3d36a2b6",
+        "sampleHash": "5f695d9f96ded01b"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "RentalReimbursementRate_20",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 2
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "aa3a0de9db033ece",
+        "sampleHash": "707a5db4c1415e1a"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": [
+        {
+          "col": 0,
+          "kind": "indent",
+          "levels": 2
+        }
+      ]
+    },
+    {
+      "name": "TowingandLaborRate_21",
+      "hidden": false,
+      "dims": {
+        "rows": 11,
+        "cols": 2
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "6125a8705a9b1aba",
+        "sampleHash": "18b330e0a78377bb"
+      },
+      "tables": [
+        {
+          "rowStart": 3,
+          "rowEnd": 10,
+          "colStart": 0,
+          "colEnd": 1,
+          "headerRow": 7,
+          "headerConfidence": 0.95
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Config",
+      "hidden": false,
+      "dims": {
+        "rows": 22,
+        "cols": 7
+      },
+      "nonEmpty": 112,
+      "fingerprint": {
+        "headerSig": "eecb96e65a74dc4d",
+        "sampleHash": "7a9bd69c837c8b06"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 21,
+          "colStart": 0,
+          "colEnd": 6,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        3,
+        4,
+        6
+      ],
+      "staircaseCols": []
+    }
+  ],
+  "wallMs": 1717,
+  "peakRssMB": 99,
+  "orchWallMs": 2412
+}

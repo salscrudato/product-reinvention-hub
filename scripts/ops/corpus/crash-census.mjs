@@ -61,31 +61,15 @@ function listWorkbooks(dir) {
 }
 const rel = (p) => path.relative(CORPUS_DIR, p).replace(/\\/g, '/')
 
-// Replicated VERBATIM from stage0-router.js collectWorkbookSignals (lines 46-63);
-// kept in sync by the comment there being the single live implementation.
-function collectWorkbookSignals(structural, REFID_TOKEN) {
-  const refIds = []
-  const sheetNames = []
-  for (const fp of (structural.sheets || [])) {
-    sheetNames.push(fp.sheetName)
-    const rows = fp.cells || []
-    for (const row of rows) {
-      for (const cell of row) {
-        if (typeof cell !== 'string') continue
-        const m = cell.match(new RegExp(REFID_TOKEN.source, 'gi'))
-        if (m) refIds.push(...m)
-        if (refIds.length > 500) break
-      }
-      if (refIds.length > 500) break
-    }
-  }
-  return { refIds, sheetNames }
-}
+// collectWorkbookSignals: the replica this census used to carry (CRASH_CENSUS
+// F-0 residual) died — the collector is now exported from the seam-free
+// workbook.js (stage0-router.js keeps an internal twin because it requires
+// ./ai-call; the twin is pinned by tests/import-brain/parser-armor.test.ts).
 
 // ---------- child mode: exercise the deterministic live path on ONE file ----------
 
 async function crashOne(file) {
-  const { sniffContainer, readWorkbookToStructural } = requireCjs('./workbook.js')
+  const { sniffContainer, readWorkbookToStructural, collectWorkbookSignals } = requireCjs('./workbook.js')
   const { REFID_TOKEN } = requireCjs('./constants.js')
   const brainShared = requireCjs('../import-brain-shared.cjs')
   const { inferLob, scoreHeaderCandidates } = brainShared

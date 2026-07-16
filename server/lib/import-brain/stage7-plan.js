@@ -18,7 +18,7 @@
 const { CONFIDENCE_DISCARD } = require('./constants')
 
 const brainShared = require('../import-brain-shared.cjs')
-const { LOB_REGISTRY } = brainShared
+const { LOB_REGISTRY, refIdToDocId } = brainShared
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,8 +37,15 @@ function entityLabel(entity) {
   return typeof v === 'string' && v.trim() ? v.trim() : (entityRefId(entity) ?? entity.kind)
 }
 
+// docId minting: refIds go through THE canonical case-preserving mint (bridged
+// refIdToDocId, BACKLOG_SEED item 1) so the parentId validator's dot->dash
+// candidate resolves brain-minted parents ("CORE.COV.001" -> "CORE-COV-001").
+// The old lowercasing here stranded every non-ISO-joined child behind a 422
+// INVALID_PARENT. Label-derived fallbacks (no refId, e.g. "coverage-3") keep the
+// legacy slug — they are never parentId targets, and slugs stay URL-tame.
 function toDocId(refId, fallback) {
-  const base = (refId ?? fallback ?? 'entity').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  if (typeof refId === 'string' && refId.trim()) return refIdToDocId(refId.trim())
+  const base = String(fallback ?? 'entity').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
   return base || 'entity'
 }
 

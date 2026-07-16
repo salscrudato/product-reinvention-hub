@@ -1,0 +1,688 @@
+{
+  "file": "reference/Product_Framework_SECURA_Property.xlsx",
+  "status": "OK",
+  "sheets": 15,
+  "hiddenSheets": 4,
+  "nonEmpty": 19260,
+  "mergeShadows": 140,
+  "unaccounted": 19120,
+  "conservation": true,
+  "tablesFound": 22,
+  "hiddenSubstanceCells": 2234,
+  "nearDupClusters": [],
+  "formTokensDistinct": 717,
+  "stateMatrixSheets": [
+    "Product Component Model"
+  ],
+  "widestSheet": {
+    "name": "Ref Connect Pull",
+    "cols": 41
+  },
+  "enumDomains": 2098532,
+  "definitionsHarvested": 15,
+  "perSheet": [
+    {
+      "name": "Table of Contents",
+      "hidden": false,
+      "dims": {
+        "rows": 17,
+        "cols": 12
+      },
+      "nonEmpty": 105,
+      "fingerprint": {
+        "headerSig": "2b972226055b8209",
+        "sampleHash": "7fa274c41ee94b91"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 9,
+          "colStart": 0,
+          "colEnd": 11,
+          "headerRow": 3,
+          "headerConfidence": 0.7750000000000001
+        },
+        {
+          "rowStart": 12,
+          "rowEnd": 16,
+          "colStart": 0,
+          "colEnd": 6,
+          "headerRow": 12,
+          "headerConfidence": 0.7857142857142858
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Version History",
+      "hidden": false,
+      "dims": {
+        "rows": 5,
+        "cols": 4
+      },
+      "nonEmpty": 16,
+      "fingerprint": {
+        "headerSig": "1db84d1bde525db4",
+        "sampleHash": "85e7ac4cebfbb848"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 4,
+          "colStart": 0,
+          "colEnd": 3,
+          "headerRow": 3,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Definitions",
+      "hidden": false,
+      "dims": {
+        "rows": 20,
+        "cols": 3
+      },
+      "nonEmpty": 44,
+      "fingerprint": {
+        "headerSig": "57d0a576ecbd7081",
+        "sampleHash": "4c8790417f864110"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 19,
+          "colStart": 0,
+          "colEnd": 2,
+          "headerRow": 3,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 4,
+      "formTokenSample": [
+        "IN 2015",
+        "IN 2017",
+        "IN 2020",
+        "IN 2022"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Contacts",
+      "hidden": false,
+      "dims": {
+        "rows": 5,
+        "cols": 6
+      },
+      "nonEmpty": 19,
+      "fingerprint": {
+        "headerSig": "d412a03f16b2fa17",
+        "sampleHash": "e5e47b0f047eda9c"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 4,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 3,
+          "headerConfidence": 0.925
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Inventory",
+      "hidden": true,
+      "dims": {
+        "rows": 31,
+        "cols": 25
+      },
+      "nonEmpty": 107,
+      "fingerprint": {
+        "headerSig": "fc1b63783a0f6e61",
+        "sampleHash": "c68fe6109d9c8526"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 0,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 0,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 1,
+          "rowEnd": 30,
+          "colStart": 0,
+          "colEnd": 24,
+          "headerRow": 3,
+          "headerConfidence": 0.7695000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Component Model",
+      "hidden": false,
+      "dims": {
+        "rows": 478,
+        "cols": 32
+      },
+      "nonEmpty": 6668,
+      "fingerprint": {
+        "headerSig": "051b9ce3a1b9190d",
+        "sampleHash": "2891058078353a8a"
+      },
+      "tables": [
+        {
+          "rowStart": 1,
+          "rowEnd": 2,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 1,
+          "headerConfidence": 0.95
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 458,
+          "colStart": 0,
+          "colEnd": 31,
+          "headerRow": 4,
+          "headerConfidence": 1
+        },
+        {
+          "rowStart": 463,
+          "rowEnd": 477,
+          "colStart": 1,
+          "colEnd": 31,
+          "headerRow": 463,
+          "headerConfidence": 0.7644086021505376
+        }
+      ],
+      "formTokens": 51,
+      "formTokenSample": [
+        "CP 00 10",
+        "CP 00 17",
+        "CP 00 18",
+        "CP 00 20",
+        "CP 00 30",
+        "CP 00 32",
+        "CP 00 40",
+        "CP 00 50",
+        "CP 00 60",
+        "CP 00 70",
+        "CP 03 21",
+        "CP 04 01"
+      ],
+      "stateOrientation": "STATE_COLUMNS",
+      "idPrefixes": {
+        "PRCOV001": 1,
+        "PR": 82,
+        "PRCOV004": 23,
+        "PRCOV005": 15,
+        "PRCOV006": 15,
+        "PRCOV007": 15,
+        "PRCOV008": 16,
+        "PRCOV009": 1,
+        "PRCOV040": 22,
+        "PRCOV041": 21,
+        "PRCOV042": 12,
+        "PRCOV043": 1,
+        "PRCOV044": 10,
+        "PRCOV045": 1,
+        "PRCOV046": 4,
+        "PRCOV047": 22,
+        "PRCOV048": 13,
+        "PRCOV049": 9,
+        "PRCOV050": 7,
+        "PRCOV051": 7,
+        "PRCOV052": 4,
+        "PRCOV053": 5,
+        "PRCOV054": 1,
+        "PRCOV055": 29,
+        "PRCOV056": 15
+      },
+      "repeatingParentCols": [
+        1,
+        2,
+        3,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Property Forms Usage",
+      "hidden": false,
+      "dims": {
+        "rows": 340,
+        "cols": 13
+      },
+      "nonEmpty": 2446,
+      "fingerprint": {
+        "headerSig": "ba6d23537b1b11b4",
+        "sampleHash": "c97187bddd89c95d"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 339,
+          "colStart": 0,
+          "colEnd": 12,
+          "headerRow": 0,
+          "headerConfidence": 0.9362179487179487
+        }
+      ],
+      "formTokens": 275,
+      "formTokenSample": [
+        "AGP 0184",
+        "ALD 0001",
+        "ALD 9999",
+        "BPE 0689",
+        "CP 0010",
+        "CP 0017",
+        "CP 0018",
+        "CP 0020",
+        "CP 0030",
+        "CP 0032",
+        "CP 0040",
+        "CP 0050"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        3,
+        4,
+        5,
+        7,
+        8
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Coverage Summary",
+      "hidden": false,
+      "dims": {
+        "rows": 171,
+        "cols": 15
+      },
+      "nonEmpty": 1425,
+      "fingerprint": {
+        "headerSig": "43f3f491aa8fb5f2",
+        "sampleHash": "a5a91e65e2767d2b"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 170,
+          "colStart": 0,
+          "colEnd": 14,
+          "headerRow": 1,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Question & Observation Log",
+      "hidden": false,
+      "dims": {
+        "rows": 16,
+        "cols": 5
+      },
+      "nonEmpty": 59,
+      "fingerprint": {
+        "headerSig": "f2684144845cf6e1",
+        "sampleHash": "6a8ec73c6112d0f1"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 15,
+          "colStart": 0,
+          "colEnd": 4,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 3,
+      "formTokenSample": [
+        "ISO 2012",
+        "THE 2007",
+        "THE 2012"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        4
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Matrix - Archive",
+      "hidden": false,
+      "dims": {
+        "rows": 76,
+        "cols": 10
+      },
+      "nonEmpty": 185,
+      "fingerprint": {
+        "headerSig": "9797fc9e5564ae70",
+        "sampleHash": "58c5e0333b300646"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 75,
+          "colStart": 0,
+          "colEnd": 9,
+          "headerRow": 0,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 6,
+      "formTokenSample": [
+        "CPT 2000",
+        "CPT 3500",
+        "CPT 4500",
+        "CPT 5500",
+        "CPT 6000",
+        "TO 180"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        2,
+        9
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Product Overview",
+      "hidden": false,
+      "dims": {
+        "rows": 12,
+        "cols": 5
+      },
+      "nonEmpty": 49,
+      "fingerprint": {
+        "headerSig": "8a831732382784cf",
+        "sampleHash": "2067ea336063d39d"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 11,
+          "colStart": 0,
+          "colEnd": 4,
+          "headerRow": 5,
+          "headerConfidence": 0.98
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        1,
+        2,
+        3
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Forms View - MTG",
+      "hidden": true,
+      "dims": {
+        "rows": 356,
+        "cols": 28
+      },
+      "nonEmpty": 2072,
+      "fingerprint": {
+        "headerSig": "c3deb9056f035bca",
+        "sampleHash": "a57923147fe43428"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 355,
+          "colStart": 0,
+          "colEnd": 27,
+          "headerRow": 3,
+          "headerConfidence": 0.6946428571428571
+        }
+      ],
+      "formTokens": 275,
+      "formTokenSample": [
+        "AGP 0184",
+        "ALD 0001",
+        "ALD 9999",
+        "BPE 0689",
+        "CP 0010",
+        "CP 0017",
+        "CP 0018",
+        "CP 0020",
+        "CP 0030",
+        "CP 0032",
+        "CP 0040",
+        "CP 0050"
+      ],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        3,
+        4,
+        6,
+        7,
+        8
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Temporary - TODO & Status",
+      "hidden": true,
+      "dims": {
+        "rows": 6,
+        "cols": 6
+      },
+      "nonEmpty": 23,
+      "fingerprint": {
+        "headerSig": "234b7945458c10be",
+        "sampleHash": "e8010c854fab66aa"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 5,
+          "colStart": 0,
+          "colEnd": 5,
+          "headerRow": 0,
+          "headerConfidence": 0.8500000000000001
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        1,
+        2
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "Ref Connect Pull",
+      "hidden": false,
+      "dims": {
+        "rows": 4983,
+        "cols": 41
+      },
+      "nonEmpty": 6010,
+      "fingerprint": {
+        "headerSig": "946ffec7fc615e5d",
+        "sampleHash": "5d20cf04164df404"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 366,
+          "colStart": 0,
+          "colEnd": 40,
+          "headerRow": 0,
+          "headerConfidence": 0.769074421513446
+        },
+        {
+          "rowStart": 383,
+          "rowEnd": 383,
+          "colStart": 14,
+          "colEnd": 14,
+          "headerRow": 383,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 4982,
+          "rowEnd": 4982,
+          "colStart": 10,
+          "colEnd": 10,
+          "headerRow": 4982,
+          "headerConfidence": 0.8
+        }
+      ],
+      "formTokens": 103,
+      "formTokenSample": [
+        "AGP 0184",
+        "ALD 0001",
+        "ALD 9999",
+        "AS OF 10",
+        "BE 100",
+        "CG 2811",
+        "CG 3113",
+        "CG 3374",
+        "CG 3375",
+        "CP 0010",
+        "CP 0018",
+        "CP 0434"
+      ],
+      "stateOrientation": "STATE_LIST",
+      "idPrefixes": {},
+      "repeatingParentCols": [
+        0,
+        1,
+        4,
+        7,
+        8,
+        9,
+        10,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        26,
+        27,
+        31,
+        32
+      ],
+      "staircaseCols": []
+    },
+    {
+      "name": "PCM Dropdowns (HIDE)",
+      "hidden": true,
+      "dims": {
+        "rows": 9,
+        "cols": 8
+      },
+      "nonEmpty": 32,
+      "fingerprint": {
+        "headerSig": "56e1934431b84035",
+        "sampleHash": "5eb10818edd32049"
+      },
+      "tables": [
+        {
+          "rowStart": 0,
+          "rowEnd": 0,
+          "colStart": 0,
+          "colEnd": 0,
+          "headerRow": 0,
+          "headerConfidence": 0.8
+        },
+        {
+          "rowStart": 3,
+          "rowEnd": 8,
+          "colStart": 0,
+          "colEnd": 7,
+          "headerRow": 3,
+          "headerConfidence": 1
+        }
+      ],
+      "formTokens": 0,
+      "formTokenSample": [],
+      "stateOrientation": "NONE",
+      "idPrefixes": {},
+      "repeatingParentCols": [],
+      "staircaseCols": []
+    }
+  ],
+  "wallMs": 7073,
+  "peakRssMB": 1008,
+  "orchWallMs": 7669
+}

@@ -25,15 +25,36 @@ __export(brain_server_entry_exports, {
   MAX_EMBED_COLS: () => MAX_EMBED_COLS,
   MAX_EMBED_ROWS: () => MAX_EMBED_ROWS,
   SURFACED_COLUMNS: () => SURFACED_COLUMNS,
+  augmentHeaderCandidates: () => augmentHeaderCandidates,
+  buildSheetCensus: () => buildSheetCensus,
   buildStructuralModel: () => buildStructuralModel,
+  buildWorkbookCensus: () => buildWorkbookCensus,
+  createAccounting: () => createAccounting,
+  dashId: () => dashId,
   fingerprintGrid: () => fingerprintGrid,
+  fnv1a64: () => fnv1a64,
+  formTokenCensus: () => formTokenCensus,
+  harvestAliasOverlay: () => harvestAliasOverlay,
+  headerLockV2Signals: () => headerLockV2Signals,
+  hiddenSheetSubstance: () => hiddenSheetSubstance,
+  idColumnProfile: () => idColumnProfile,
   inferLob: () => inferLob,
   mapIsoWorkbook: () => mapIsoWorkbook,
+  nearDuplicateSheetClusters: () => nearDuplicateSheetClusters,
   normalizeCellValue: () => normalizeCellValue,
   pickBestHeaderRow: () => pickBestHeaderRow,
+  post: () => post,
+  postSpan: () => postSpan,
   refIdSegmentKind: () => refIdSegmentKind,
+  refIdToDocId: () => refIdToDocId,
+  repeatingParentRuns: () => repeatingParentRuns,
   resolveLobByRefId: () => resolveLobByRefId,
+  rollupSheet: () => rollupSheet,
+  rollupWorkbook: () => rollupWorkbook,
   scoreHeaderCandidates: () => scoreHeaderCandidates,
+  segmentTableRegions: () => segmentTableRegions,
+  staircaseHierarchy: () => staircaseHierarchy,
+  stateLexicon: () => stateLexicon,
   synthesizeRefId: () => synthesizeRefId
 });
 module.exports = __toCommonJS(brain_server_entry_exports);
@@ -2026,91 +2047,282 @@ function synthesizeRefId(lob, kind, seq, parentSeq) {
   return lob.refIdScheme.synthesize(kind, seq, parentSeq);
 }
 
-// shared/src/insurance/coverageHierarchy.ts
-function nameKey(s) {
-  return s.toUpperCase().replace(/\s+/g, " ").trim();
+// shared/src/insurance/refId.ts
+function refIdToDocId(refId) {
+  return refId.replace(/\./g, "-");
 }
-function segs(refId) {
-  return refId.split(".").filter(Boolean);
+var dashId = refIdToDocId;
+
+// shared/src/import/census/hash.ts
+var FNV_OFFSET = 0xcbf29ce484222325n;
+var FNV_PRIME = 0x100000001b3n;
+var MASK64 = 0xffffffffffffffffn;
+function fnv1a64(s) {
+  let h = FNV_OFFSET;
+  for (let i = 0; i < s.length; i++) {
+    const cu = s.charCodeAt(i);
+    h = (h ^ BigInt(cu & 255)) * FNV_PRIME & MASK64;
+    h = (h ^ BigInt(cu >>> 8)) * FNV_PRIME & MASK64;
+  }
+  return h.toString(16).padStart(16, "0");
 }
-function isSegmentPrefix(prefix, candidate) {
-  if (prefix.length >= candidate.length) return false;
-  for (let i = 0; i < prefix.length; i++) if (prefix[i] !== candidate[i]) return false;
-  return true;
-}
-function resolveCoverageHierarchy(rows) {
-  const out = [];
-  const seen = /* @__PURE__ */ new Set();
-  const topLevelByName = /* @__PURE__ */ new Map();
-  const known = [];
-  let lastTopLevelRefId = null;
-  let lastCoverageName = "";
-  let topOrder = 0;
-  const childOrder = /* @__PURE__ */ new Map();
-  for (const raw of rows) {
-    const refId = raw.refId.trim();
-    if (!refId || seen.has(refId)) continue;
-    let coverageName = raw.coverageName.trim();
-    const subName = raw.subCoverageName.trim();
-    if (coverageName) lastCoverageName = coverageName;
-    else if (subName && lastCoverageName) coverageName = lastCoverageName;
-    if (!coverageName && !subName) {
-      const mySegs2 = segs(refId);
-      let nestFallback = null;
-      for (const k of known) {
-        if (k.segs.length >= 3 && isSegmentPrefix(k.segs, mySegs2)) {
-          if (!nestFallback || k.segs.length > segs(nestFallback).length) nestFallback = k.refId;
-        }
-      }
-      if (!nestFallback) continue;
-      coverageName = mySegs2[mySegs2.length - 1] ?? refId;
-    }
-    const mySegs = segs(refId);
-    let nestParent = null;
-    for (const k of known) {
-      if (isSegmentPrefix(k.segs, mySegs)) {
-        if (!nestParent || k.segs.length > segs(nestParent).length) nestParent = k.refId;
+
+// shared/src/import/census/regions.ts
+function rowBands(occupied) {
+  return occupied.map((row2) => {
+    let min = -1, max = -1;
+    for (let c = 0; c < row2.length; c++) {
+      if (row2[c]) {
+        if (min < 0) min = c;
+        max = c;
       }
     }
-    const explicitSub = subName !== "" && nameKey(subName) !== nameKey(coverageName);
-    const isSub = explicitSub || nestParent !== null;
-    if (!isSub) {
-      const name2 = coverageName || subName;
-      topOrder += 1;
-      out.push({ refId, name: name2, parentRefId: null, isSub: false, order: topOrder, parentSignal: "none" });
-      if (coverageName) topLevelByName.set(nameKey(coverageName), refId);
-      lastTopLevelRefId = refId;
-      known.push({ refId, segs: mySegs });
-      seen.add(refId);
+    return min < 0 ? null : [min, max];
+  });
+}
+var BLANK_RUN_SPLIT = 2;
+function segmentTableRegions(occupied, normalized) {
+  const bands = rowBands(occupied);
+  const regions = [];
+  let start = -1, end = -1, colMin = 0, colMax = 0, gapRun = 0;
+  const close = () => {
+    if (start < 0) return;
+    regions.push(finishRegion(start, end, colMin, colMax, normalized));
+    start = -1;
+  };
+  for (let r = 0; r < bands.length; r++) {
+    const band = bands[r];
+    if (band === null) {
+      if (start >= 0) gapRun++;
       continue;
     }
-    let parentRefId = null;
-    let signal = "none";
-    if (nestParent) {
-      parentRefId = nestParent;
-      signal = "refid-nesting";
-    } else if (coverageName && topLevelByName.has(nameKey(coverageName))) {
-      parentRefId = topLevelByName.get(nameKey(coverageName));
-      signal = "group-name";
-    } else if (!coverageName && lastTopLevelRefId) {
-      parentRefId = lastTopLevelRefId;
-      signal = "nearest-preceding";
+    if (start < 0) {
+      start = r;
+      end = r;
+      colMin = band[0];
+      colMax = band[1];
+      gapRun = 0;
+      continue;
     }
-    const name = subName || coverageName;
-    if (parentRefId) {
-      const n = (childOrder.get(parentRefId) ?? 0) + 1;
-      childOrder.set(parentRefId, n);
-      out.push({ refId, name, parentRefId, isSub: true, order: n, parentSignal: signal });
-    } else {
-      topOrder += 1;
-      out.push({ refId, name, parentRefId: null, isSub: false, order: topOrder, parentSignal: "orphan-promoted" });
-      if (coverageName) topLevelByName.set(nameKey(coverageName), refId);
-      lastTopLevelRefId = refId;
+    const bandDisjoint = band[1] < colMin || band[0] > colMax;
+    if (gapRun >= BLANK_RUN_SPLIT || bandDisjoint) {
+      close();
+      start = r;
+      end = r;
+      colMin = band[0];
+      colMax = band[1];
+      gapRun = 0;
+      continue;
     }
-    known.push({ refId, segs: mySegs });
-    seen.add(refId);
+    end = r;
+    gapRun = 0;
+    if (band[0] < colMin) colMin = band[0];
+    if (band[1] > colMax) colMax = band[1];
+  }
+  close();
+  return regions;
+}
+function finishRegion(rowStart, rowEnd, colStart, colEnd, normalized) {
+  const slice = [];
+  for (let r = rowStart; r <= rowEnd; r++) {
+    const row2 = normalized[r] ?? [];
+    slice.push(row2.slice(colStart, colEnd + 1));
+  }
+  const candidates = scoreHeaderCandidates(slice);
+  const best = pickBestHeaderRow(candidates);
+  const headerRow = best >= 0 ? rowStart + best : null;
+  const headerConfidence = best >= 0 ? candidates.find((c) => c.rowIndex === best)?.score ?? 0 : 0;
+  return { rowStart, rowEnd, colStart, colEnd, headerRow, headerConfidence };
+}
+
+// shared/src/import/census/buildCensus.ts
+var VERBATIM_CAP = 512;
+function colLabel(col) {
+  let n = col + 1, out = "";
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
   }
   return out;
+}
+function cellRef(sheet, row2, col) {
+  return `${sheet}!${colLabel(col)}${row2 + 1}`;
+}
+function isFormulaShape(v) {
+  return typeof v === "object" && v !== null && ("formula" in v || "sharedFormula" in v);
+}
+function rawVerbatim(v) {
+  if (v === null || v === void 0) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === "object") {
+    const o = v;
+    if (isFormulaShape(v)) return rawVerbatim(o["result"]);
+    if (Array.isArray(o["richText"])) return o["richText"].map((t) => t.text ?? "").join("");
+    if ("error" in o) return String(o["error"] ?? "");
+    if ("text" in o && o["text"] !== void 0) return rawVerbatim(o["text"]);
+    if ("hyperlink" in o) return String(o["hyperlink"] ?? "");
+  }
+  return String(v);
+}
+function classifyCellType(v) {
+  if (isFormulaShape(v)) return "formula";
+  if (v instanceof Date) return "date";
+  if (typeof v === "number") return "number";
+  if (typeof v === "boolean") return "bool";
+  return "string";
+}
+function mergeMap(raw) {
+  const m = /* @__PURE__ */ new Map();
+  for (const r of raw.merges ?? []) {
+    const span = [r.bottom - r.top + 1, r.right - r.left + 1];
+    for (let row2 = r.top; row2 <= r.bottom; row2++) {
+      for (let col = r.left; col <= r.right; col++) {
+        m.set(`${row2}:${col}`, { anchorRow: r.top, anchorCol: r.left, span });
+      }
+    }
+  }
+  return m;
+}
+function buildSheetCensus(raw) {
+  const merges = mergeMap(raw);
+  let lastRow = -1, lastCol = -1;
+  const verbatims = raw.cells.map((row2) => (row2 ?? []).map((c) => {
+    if (!c) return null;
+    const s = rawVerbatim(c.v);
+    return s === "" ? null : s;
+  }));
+  for (let r = 0; r < verbatims.length; r++) {
+    const row2 = verbatims[r];
+    for (let c = 0; c < row2.length; c++) {
+      if (row2[c] !== null) {
+        if (r > lastRow) lastRow = r;
+        if (c > lastCol) lastCol = c;
+      }
+    }
+  }
+  const rows = lastRow + 1;
+  const cols = lastCol + 1;
+  const cells = [];
+  const occupied = [];
+  const normalized = [];
+  for (let r = 0; r < rows; r++) {
+    const occRow = new Array(cols).fill(false);
+    const normRow = new Array(cols).fill(null);
+    for (let c = 0; c < cols; c++) {
+      const rawCell = raw.cells[r]?.[c] ?? null;
+      const verbatim = verbatims[r]?.[c] ?? null;
+      if (rawCell) normRow[c] = normalizeCellValue(rawCell.v);
+      if (verbatim === null || rawCell === null) continue;
+      occRow[c] = true;
+      const merge = merges.get(`${r}:${c}`);
+      cells.push({
+        ref: cellRef(raw.name, r, c),
+        sheet: raw.name,
+        row: r,
+        col: c,
+        type: classifyCellType(rawCell.v),
+        valueHash: fnv1a64(verbatim),
+        verbatim: verbatim.length > VERBATIM_CAP ? verbatim.slice(0, VERBATIM_CAP) : verbatim,
+        verbatimTruncated: verbatim.length > VERBATIM_CAP,
+        merged: merge ? { anchor: cellRef(raw.name, merge.anchorRow, merge.anchorCol), span: merge.span } : null,
+        format: {
+          bold: rawCell.bold === true,
+          filled: rawCell.filled === true,
+          indent: typeof rawCell.indent === "number" ? rawCell.indent : 0,
+          topBorder: rawCell.topBorder === true
+        },
+        hidden: raw.hidden
+      });
+    }
+    occupied.push(occRow);
+    normalized.push(normRow);
+  }
+  const candidates = scoreHeaderCandidates(normalized);
+  const best = pickBestHeaderRow(candidates);
+  const headerSig = best >= 0 ? fnv1a64((candidates.find((c) => c.rowIndex === best)?.labels ?? []).map((l) => l.toUpperCase().replace(/[^A-Z0-9]/g, "")).join("|")) : "";
+  const step = Math.max(1, Math.floor(cells.length / 64));
+  const sampled = [`${rows}x${cols}`];
+  for (let i = 0; i < cells.length; i += step) sampled.push(cells[i].valueHash);
+  const sampleHash = fnv1a64(sampled.join("|"));
+  return {
+    name: raw.name,
+    hidden: raw.hidden,
+    dims: { rows, cols },
+    nonEmpty: cells.length,
+    fingerprint: { headerSig, sampleHash },
+    tables: segmentTableRegions(occupied, normalized),
+    cells
+  };
+}
+function buildWorkbookCensus(sheets, sourceName) {
+  return { sourceName, sheets: sheets.map(buildSheetCensus) };
+}
+
+// shared/src/import/census/accounting.ts
+var DISPOSITIONS = ["FACT", "SCHEMA", "NOISE", "HEADER", "MERGE_SHADOW", "NEEDS_REVIEW", "UNACCOUNTED"];
+function createAccounting(census) {
+  const entries = /* @__PURE__ */ new Map();
+  for (const cell2 of census.cells) {
+    const isShadow = cell2.merged !== null && cell2.merged.anchor !== cell2.ref;
+    entries.set(cell2.ref, {
+      ref: cell2.ref,
+      disposition: isShadow ? "MERGE_SHADOW" : "UNACCOUNTED",
+      by: "code",
+      ruleId: isShadow ? "merge-normalization" : null,
+      factRef: null,
+      citations: []
+    });
+  }
+  return { sheet: census.name, nonEmpty: census.nonEmpty, entries };
+}
+function post(acc, ref, disposition, by, ruleId = null, factRef = null, citations = []) {
+  const cur = acc.entries.get(ref);
+  if (!cur || cur.disposition === "MERGE_SHADOW") return false;
+  acc.entries.set(ref, { ref, disposition, by, ruleId, factRef, citations });
+  return true;
+}
+function postSpan(acc, span, disposition, by, ruleId = null) {
+  let n = 0;
+  for (let r = span.rowStart; r <= span.rowEnd; r++) {
+    for (let c = span.colStart; c <= span.colEnd; c++) {
+      if (post(acc, `${span.sheet}!${colLabel(c)}${r + 1}`, disposition, by, ruleId)) n++;
+    }
+  }
+  return n;
+}
+function emptyCounts() {
+  const out = {};
+  for (const d of DISPOSITIONS) out[d] = 0;
+  return out;
+}
+function rollupSheet(acc) {
+  const byDisposition = emptyCounts();
+  const unaccounted = [];
+  for (const e of acc.entries.values()) {
+    byDisposition[e.disposition]++;
+    if (e.disposition === "UNACCOUNTED") unaccounted.push(e.ref);
+  }
+  const total = DISPOSITIONS.reduce((s, d) => s + byDisposition[d], 0);
+  if (total !== acc.nonEmpty) {
+    throw new Error(`accounting broke conservation on "${acc.sheet}": ${total} entries vs ${acc.nonEmpty} nonEmpty`);
+  }
+  const denominator = acc.nonEmpty - byDisposition.NOISE - byDisposition.HEADER - byDisposition.MERGE_SHADOW;
+  const substanceCoverage = denominator <= 0 ? 1 : (byDisposition.FACT + byDisposition.SCHEMA) / denominator;
+  return { sheet: acc.sheet, nonEmpty: acc.nonEmpty, byDisposition, substanceCoverage, unaccounted };
+}
+function rollupWorkbook(sourceName, sheets) {
+  const byDisposition = emptyCounts();
+  let nonEmpty = 0;
+  for (const s of sheets) {
+    nonEmpty += s.nonEmpty;
+    for (const d of DISPOSITIONS) byDisposition[d] += s.byDisposition[d];
+  }
+  const denominator = nonEmpty - byDisposition.NOISE - byDisposition.HEADER - byDisposition.MERGE_SHADOW;
+  const substanceCoverage = denominator <= 0 ? 1 : (byDisposition.FACT + byDisposition.SCHEMA) / denominator;
+  return { sourceName, nonEmpty, byDisposition, substanceCoverage, sheets };
 }
 
 // shared/src/insurance/conceptMatch.ts
@@ -2309,6 +2521,326 @@ function matchGroup(raw, coverages, covsByForm) {
   return { covRefIds: [], formNums: [], how: "NO MATCHING COVERAGE IN HIERARCHY", matchBasis: "unmatched" };
 }
 
+// shared/src/import/census/detectors.ts
+function nonEmptyRows(census) {
+  const rows = /* @__PURE__ */ new Map();
+  for (const c of census.cells) {
+    const list = rows.get(c.row);
+    if (list) list.push(c);
+    else rows.set(c.row, [c]);
+  }
+  return rows;
+}
+function headerLockV2Signals(census, aliasSquished, limit = 15) {
+  const rows = nonEmptyRows(census);
+  const out = [];
+  const boldRatio = (r) => {
+    const cells = rows.get(r) ?? [];
+    return cells.length === 0 ? 0 : cells.filter((c) => c.format.bold).length / cells.length;
+  };
+  const stringRatio = (r) => {
+    const cells = rows.get(r) ?? [];
+    return cells.length === 0 ? 0 : cells.filter((c) => c.type === "string").length / cells.length;
+  };
+  const numericBelow = (r) => {
+    let numeric = 0, total = 0;
+    for (let rr = r + 1; rr <= r + 3; rr++) {
+      for (const c of rows.get(rr) ?? []) {
+        total++;
+        if (c.type === "number" || c.type === "date" || c.type === "formula") numeric++;
+      }
+    }
+    return total === 0 ? 0 : numeric / total;
+  };
+  const scanTo = Math.min(limit, census.dims.rows);
+  for (let r = 0; r < scanTo; r++) {
+    const cells = rows.get(r);
+    if (!cells || cells.length === 0) continue;
+    const formattingShift = boldRatio(r) >= 0.6 && boldRatio(r + 1) < 0.3;
+    const typeShift = stringRatio(r) >= 0.8 && numericBelow(r) >= 0.5;
+    let aliasHits = 0;
+    if (aliasSquished && aliasSquished.size > 0) {
+      for (const c of cells) {
+        const sq = c.verbatim.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (sq && aliasSquished.has(sq)) aliasHits++;
+      }
+    }
+    out.push({ row: r, formattingShift, typeShift, aliasHits });
+  }
+  return out;
+}
+function augmentHeaderCandidates(candidates, signals) {
+  const byRow = new Map(signals.map((s) => [s.row, s]));
+  return candidates.map((c) => {
+    const s = byRow.get(c.rowIndex);
+    if (!s) return c;
+    const bonus = (s.formattingShift ? 0.1 : 0) + (s.typeShift ? 0.1 : 0) + Math.min(0.05 * s.aliasHits, 0.15);
+    return { ...c, score: Math.min(1, c.score + bonus) };
+  }).sort((a, b) => b.score - a.score);
+}
+var PARENT_RUN_THRESHOLD = 0.35;
+function repeatingParentRuns(census) {
+  const byCol = /* @__PURE__ */ new Map();
+  for (const c of census.cells) {
+    const list = byCol.get(c.col);
+    if (list) list.push(c);
+    else byCol.set(c.col, [c]);
+  }
+  const out = [];
+  for (const [col, cells] of byCol) {
+    if (cells.length < 4) continue;
+    cells.sort((a, b) => a.row - b.row);
+    let pairs = 0, repeats = 0;
+    for (let i = 1; i < cells.length; i++) {
+      pairs++;
+      if (cells[i].valueHash === cells[i - 1].valueHash) repeats++;
+    }
+    const repeatFraction = pairs === 0 ? 0 : repeats / pairs;
+    if (repeatFraction >= PARENT_RUN_THRESHOLD) out.push({ col, repeatFraction, nonEmpty: cells.length });
+  }
+  return out.sort((a, b) => a.col - b.col);
+}
+function staircaseHierarchy(census) {
+  const byCol = /* @__PURE__ */ new Map();
+  for (const c of census.cells) {
+    if (c.type !== "string") continue;
+    const list = byCol.get(c.col);
+    if (list) list.push(c);
+    else byCol.set(c.col, [c]);
+  }
+  const out = [];
+  for (const [col, cells] of byCol) {
+    if (cells.length < 4) continue;
+    const indentLevels = /* @__PURE__ */ new Set();
+    let indented = 0;
+    for (const c of cells) {
+      indentLevels.add(c.format.indent);
+      if (c.format.indent > 0) indented++;
+    }
+    if (indentLevels.size >= 2 && indented >= 2) {
+      out.push({ col, kind: "indent", levels: indentLevels.size, laddered: indented });
+      continue;
+    }
+    const spaceLevels = /* @__PURE__ */ new Set();
+    let spaced = 0;
+    for (const c of cells) {
+      const lead = (c.verbatim.match(/^ */) ?? [""])[0].length;
+      spaceLevels.add(lead);
+      if (lead > 0) spaced++;
+    }
+    if (spaceLevels.size >= 2 && spaced >= 2) {
+      out.push({ col, kind: "leading-space", levels: spaceLevels.size, laddered: spaced });
+    }
+  }
+  return out.sort((a, b) => a.col - b.col);
+}
+var FORM_TOKEN_GENERAL = /\b[A-Z]{2,3}(?: (?:\d{2}|[A-Z]{2}))(?: \d{2}){1,3}\b|\b[A-Z]{2,3} \d{3,4}\b/g;
+function formTokenCensus(census) {
+  const found = /* @__PURE__ */ new Set();
+  for (const c of census.cells) {
+    if (c.type !== "string") continue;
+    const up = c.verbatim.toUpperCase().replace(/\s+/g, " ");
+    for (const m of up.match(FORM_TOKEN_GENERAL) ?? []) found.add(m.trim());
+    for (const m of up.match(FORM_TOKEN) ?? []) found.add(m.replace(/\s+/g, " ").trim());
+  }
+  const distinct = [...found].sort();
+  return { distinct, count: distinct.length };
+}
+function stateLexicon(census, normalized) {
+  let stateColumnsRow = null;
+  for (let r = 0; r < Math.min(15, normalized.length); r++) {
+    if (hasWideStateColumns(normalized[r] ?? [])) {
+      stateColumnsRow = r;
+      break;
+    }
+  }
+  const byCol = /* @__PURE__ */ new Map();
+  for (const c of census.cells) {
+    if (c.type !== "string") continue;
+    const s = byCol.get(c.col) ?? { total: 0, states: 0 };
+    s.total++;
+    if (US_STATE_CODES.has(c.verbatim.trim().toUpperCase())) s.states++;
+    byCol.set(c.col, s);
+  }
+  const stateListCols = [...byCol.entries()].filter(([, s]) => s.total >= 5 && s.states / s.total >= 0.6).map(([col]) => col).sort((a, b) => a - b);
+  const orientation = stateColumnsRow !== null ? "STATE_COLUMNS" : stateListCols.length > 0 ? "STATE_LIST" : "NONE";
+  return { orientation, stateColumnsRow, stateListCols };
+}
+var REFID_SHAPE = /^[A-Z][A-Z0-9]{0,7}(?:\.[A-Z0-9]{1,10}){1,4}$/i;
+function idColumnProfile(census) {
+  const byCol = /* @__PURE__ */ new Map();
+  const prefixes = {};
+  for (const c of census.cells) {
+    if (c.type !== "string") continue;
+    const v = c.verbatim.trim();
+    const s = byCol.get(c.col) ?? { total: 0, ids: 0 };
+    s.total++;
+    if (REFID_SHAPE.test(v) && /\d/.test(v)) {
+      s.ids++;
+      const prefix = v.split(".")[0].toUpperCase();
+      prefixes[prefix] = (prefixes[prefix] ?? 0) + 1;
+    }
+    byCol.set(c.col, s);
+  }
+  const columns = [...byCol.entries()].map(([col, s]) => ({ col, refIdRatio: s.total === 0 ? 0 : s.ids / s.total, nonEmpty: s.total })).filter((p) => p.refIdRatio >= 0.5 && p.nonEmpty >= 3).sort((a, b) => a.col - b.col);
+  return { columns, prefixes };
+}
+var VERSIONISH = /\s*\(\s*\d+\s*\)\s*$|\b(hacked|old|copy|backup|scratch|final|v\d+)\b/gi;
+function nearDuplicateSheetClusters(workbook) {
+  const clusters = [];
+  const row2 = (s) => ({ name: s.name, nonEmpty: s.nonEmpty, sampleHash: s.fingerprint.sampleHash, hidden: s.hidden });
+  const bySig = /* @__PURE__ */ new Map();
+  for (const s of workbook.sheets) {
+    if (!s.fingerprint.headerSig || s.nonEmpty === 0) continue;
+    const list = bySig.get(s.fingerprint.headerSig);
+    if (list) list.push(s);
+    else bySig.set(s.fingerprint.headerSig, [s]);
+  }
+  const clustered = /* @__PURE__ */ new Set();
+  for (const group of bySig.values()) {
+    if (group.length < 2) continue;
+    clusters.push({ basis: "headerSig", sheets: group.map(row2) });
+    for (const s of group) clustered.add(s.name);
+  }
+  const byBase = /* @__PURE__ */ new Map();
+  for (const s of workbook.sheets) {
+    if (clustered.has(s.name) || s.nonEmpty === 0) continue;
+    const base = s.name.replace(VERSIONISH, "").replace(/\s+/g, " ").trim().toUpperCase();
+    if (!base || base === s.name.trim().toUpperCase()) continue;
+    const list = byBase.get(base);
+    if (list) list.push(s);
+    else byBase.set(base, [s]);
+  }
+  for (const [base, group] of byBase) {
+    const sibs = workbook.sheets.filter((s) => !group.includes(s) && s.name.replace(VERSIONISH, "").replace(/\s+/g, " ").trim().toUpperCase() === base);
+    const all = [.../* @__PURE__ */ new Set([...group, ...sibs])];
+    if (all.length >= 2) clusters.push({ basis: "name", sheets: all.map(row2) });
+  }
+  return clusters;
+}
+function harvestAliasOverlay(raws, censuses) {
+  const definitions = [];
+  const enumDomains = [];
+  const schemaCellRefs = [];
+  const censusByName = new Map(censuses.map((c) => [c.name, c]));
+  for (const raw of raws) {
+    const census = censusByName.get(raw.name);
+    if (census && isDefinitionsSheetName(raw.name)) {
+      const normalized = [];
+      for (let r = 0; r < census.dims.rows; r++) normalized.push(new Array(census.dims.cols).fill(null));
+      for (const c of census.cells) {
+        const asNumber = Number(c.verbatim);
+        normalized[c.row][c.col] = c.type === "number" && Number.isFinite(asNumber) ? asNumber : c.verbatim;
+      }
+      for (const d of parseDefinitionsSheet(normalized)) definitions.push({ ...d, sheet: raw.name });
+      for (const c of census.cells) schemaCellRefs.push(c.ref);
+    }
+    for (const v of raw.validations ?? []) {
+      if (v.type !== "list" || v.formulae.length === 0) continue;
+      const f = String(v.formulae[0] ?? "");
+      const inline = /^"(.*)"$/.exec(f.trim());
+      enumDomains.push({
+        sheet: raw.name,
+        ref: v.ref,
+        type: v.type,
+        values: inline ? inline[1].split(",").map((s) => s.trim()).filter(Boolean) : [],
+        sourceRange: inline ? null : f
+      });
+    }
+  }
+  return { definitions, enumDomains, schemaCellRefs };
+}
+function hiddenSheetSubstance(workbook) {
+  return workbook.sheets.filter((s) => s.hidden && s.nonEmpty > 0).map((s) => ({ name: s.name, nonEmpty: s.nonEmpty }));
+}
+
+// shared/src/insurance/coverageHierarchy.ts
+function nameKey(s) {
+  return s.toUpperCase().replace(/\s+/g, " ").trim();
+}
+function segs(refId) {
+  return refId.split(".").filter(Boolean);
+}
+function isSegmentPrefix(prefix, candidate) {
+  if (prefix.length >= candidate.length) return false;
+  for (let i = 0; i < prefix.length; i++) if (prefix[i] !== candidate[i]) return false;
+  return true;
+}
+function resolveCoverageHierarchy(rows) {
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  const topLevelByName = /* @__PURE__ */ new Map();
+  const known = [];
+  let lastTopLevelRefId = null;
+  let lastCoverageName = "";
+  let topOrder = 0;
+  const childOrder = /* @__PURE__ */ new Map();
+  for (const raw of rows) {
+    const refId = raw.refId.trim();
+    if (!refId || seen.has(refId)) continue;
+    let coverageName = raw.coverageName.trim();
+    const subName = raw.subCoverageName.trim();
+    if (coverageName) lastCoverageName = coverageName;
+    else if (subName && lastCoverageName) coverageName = lastCoverageName;
+    if (!coverageName && !subName) {
+      const mySegs2 = segs(refId);
+      let nestFallback = null;
+      for (const k of known) {
+        if (k.segs.length >= 3 && isSegmentPrefix(k.segs, mySegs2)) {
+          if (!nestFallback || k.segs.length > segs(nestFallback).length) nestFallback = k.refId;
+        }
+      }
+      if (!nestFallback) continue;
+      coverageName = mySegs2[mySegs2.length - 1] ?? refId;
+    }
+    const mySegs = segs(refId);
+    let nestParent = null;
+    for (const k of known) {
+      if (isSegmentPrefix(k.segs, mySegs)) {
+        if (!nestParent || k.segs.length > segs(nestParent).length) nestParent = k.refId;
+      }
+    }
+    const explicitSub = subName !== "" && nameKey(subName) !== nameKey(coverageName);
+    const isSub = explicitSub || nestParent !== null;
+    if (!isSub) {
+      const name2 = coverageName || subName;
+      topOrder += 1;
+      out.push({ refId, name: name2, parentRefId: null, isSub: false, order: topOrder, parentSignal: "none" });
+      if (coverageName) topLevelByName.set(nameKey(coverageName), refId);
+      lastTopLevelRefId = refId;
+      known.push({ refId, segs: mySegs });
+      seen.add(refId);
+      continue;
+    }
+    let parentRefId = null;
+    let signal = "none";
+    if (nestParent) {
+      parentRefId = nestParent;
+      signal = "refid-nesting";
+    } else if (coverageName && topLevelByName.has(nameKey(coverageName))) {
+      parentRefId = topLevelByName.get(nameKey(coverageName));
+      signal = "group-name";
+    } else if (!coverageName && lastTopLevelRefId) {
+      parentRefId = lastTopLevelRefId;
+      signal = "nearest-preceding";
+    }
+    const name = subName || coverageName;
+    if (parentRefId) {
+      const n = (childOrder.get(parentRefId) ?? 0) + 1;
+      childOrder.set(parentRefId, n);
+      out.push({ refId, name, parentRefId, isSub: true, order: n, parentSignal: signal });
+    } else {
+      topOrder += 1;
+      out.push({ refId, name, parentRefId: null, isSub: false, order: topOrder, parentSignal: "orphan-promoted" });
+      if (coverageName) topLevelByName.set(nameKey(coverageName), refId);
+      lastTopLevelRefId = refId;
+    }
+    known.push({ refId, segs: mySegs });
+    seen.add(refId);
+  }
+  return out;
+}
+
 // shared/src/insurance/isoImport.ts
 function text(v) {
   if (v == null) return "";
@@ -2496,9 +3028,7 @@ function refIdPrefix(refId) {
   if (m) return m[1].toUpperCase();
   return (refId.split(/[.\-_\d]/).filter(Boolean)[0] ?? "").toUpperCase();
 }
-function dashId(refId) {
-  return refId.replace(/\./g, "-");
-}
+var dashId2 = refIdToDocId;
 function extractTableRef(v) {
   const m = text(v).match(/\b((?:LD|RT)Table\.\w+)/i);
   return m ? m[1] : void 0;
@@ -2653,6 +3183,8 @@ var Ctx = class {
   recognized = [];
   defects = [];
   notices = [];
+  /** consumedSpans collector (CE1-S6): null = instrumentation off (default). */
+  spans = null;
   warned = /* @__PURE__ */ new Set();
   /** De-duplicated warning (keeps the summary readable when a value recurs on 100s of rows). */
   warnOnce(key, msg) {
@@ -2669,6 +3201,10 @@ var Ctx = class {
   }
   addNotice(n) {
     this.notices.push(n);
+  }
+  /** Record a consumed rectangle (no-op unless a collector was supplied). */
+  consume(sheet, rowStart, rowEnd, colStart, colEnd, reason) {
+    if (this.spans && rowEnd >= rowStart) this.spans.push({ sheet, rowStart, rowEnd, colStart, colEnd, reason });
   }
   recordUnmapped(sheet, header, handled) {
     const labels = [];
@@ -2793,7 +3329,7 @@ function finalizeCoverages(resolved, draftByRefId, at, sheetName, ctx) {
     const draft = draftByRefId.get(rc.refId);
     const cells = draft.cells;
     return {
-      docId: dashId(rc.refId),
+      docId: dashId2(rc.refId),
       refId: rc.refId,
       label: `${rc.refId} \u2014 ${rc.name}`,
       data: {
@@ -3293,7 +3829,7 @@ function parseRules(grid, ctx) {
       continue;
     }
     byId.set(id, {
-      docId: dashId(id),
+      docId: dashId2(id),
       refId: id,
       label: `${id} \u2014 ${clean(at(cells, "subCategory"))}`,
       data: {
@@ -3361,7 +3897,7 @@ function parseFormRules(grid, ctx) {
       continue;
     }
     byId.set(id, {
-      docId: dashId(id),
+      docId: dashId2(id),
       refId: id,
       label: `${id} \u2014 ${clean(at(cells, "condition")).slice(0, 40)}`,
       data: {
@@ -3519,7 +4055,8 @@ function parseLdTables(grid, ctx) {
     if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} (LD marker): table ${refId} appears more than once \u2014 rows merged.`);
     if (!entry.name) entry.name = name;
     if (!entry.valueHeader) entry.valueHeader = valueHeader;
-    for (let dr = headerR + 1; dr < rows.length; dr++) {
+    let dr = headerR + 1;
+    for (; dr < rows.length; dr++) {
       if (LD_MARKER.test(norm2(cell(grid, dr, markerCol)))) break;
       const raw = cell(grid, dr, valueCol);
       const label = clean(raw);
@@ -3529,6 +4066,7 @@ function parseLdTables(grid, ctx) {
       entry.rows.push({ label, value: num, constraintNote: note || void 0 });
       if (/default/i.test(note)) entry.defaultValue = num;
     }
+    ctx.consume(grid.sheet, r, dr - 1, markerCol, Math.max(valueCol, commentCol, markerCol), `ld-table:${refId}`);
     tables.set(refId, entry);
   }
   return [...tables.entries()].map(([refId, t]) => ({
@@ -3577,7 +4115,8 @@ function parseRtTables(grid, ctx) {
     const entry = tables.get(refId) ?? { name: pendingName, columns, rows: [], colIdx };
     if (tables.has(refId)) ctx.warnOnce(`duprt:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} col "RATE TABLE ID": table ${refId} appears more than once \u2014 rows merged.`);
     if (!entry.name) entry.name = pendingName;
-    for (let dr = headerR + 1; dr < rows.length; dr++) {
+    let dr = headerR + 1;
+    for (; dr < rows.length; dr++) {
       const f = norm2(cell(grid, dr, 0));
       if (RT_NAME_MARKER.test(f) || RT_ID_MARKER.test(f)) break;
       const cells = row(grid, dr);
@@ -3590,6 +4129,7 @@ function parseRtTables(grid, ctx) {
       });
       entry.rows.push(rec);
     }
+    ctx.consume(grid.sheet, r, dr - 1, 0, colIdx.length ? Math.max(...colIdx) : 0, `rt-table:${refId}`);
     tables.set(refId, entry);
   }
   return [...tables.entries()].map(([refId, t]) => ({
@@ -3740,7 +4280,7 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
   const handled = new Set(Object.values(col).concat(sc.cols.map((s) => s.col), sc.allCol));
   ctx.recordUnmapped(grid.sheet, header, handled);
   return {
-    docId: dashId(refId),
+    docId: dashId2(refId),
     refId,
     label: `${refId} \u2014 rating program`,
     data: {
@@ -3817,6 +4357,7 @@ function detectReferenceTables(grids, consumed, ctx) {
       const n = (nameCount.get(displayName) ?? 0) + 1;
       nameCount.set(displayName, n);
       if (n > 1) displayName = `${displayName} (v${n})`;
+      ctx.consume(grid.sheet, start, Math.min(end, grid.cells.length - 1), 0, covCodes.length ? 33 : 1, `reference-table:${displayName}`);
       drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, optionValues, rowLabels, backLinkWas });
     }
   }
@@ -4100,8 +4641,9 @@ function rateTableArtifacts(grid) {
   }
   return artifacts;
 }
-function mapIsoWorkbook(grids, overlay) {
+function mapIsoWorkbook(grids, overlay, consumedSpans) {
   const ctx = new Ctx();
+  ctx.spans = consumedSpans ?? null;
   const fwGrid = selectFrameworkSheet(grids, ctx);
   const formGrid = findSheet(grids, /forms specifications?|forms library/i, /dynamic/i);
   const dynGrid = findSheet(grids, /forms dynamic|dynamic data/i);
@@ -4130,6 +4672,19 @@ function mapIsoWorkbook(grids, overlay) {
   const refDrafts = detectReferenceTables(grids, consumedSheets, ctx);
   const refPrefix = refIdPrefix(productRefId ?? firstFw?.coverages[0]?.refId ?? "") || lob.prefix;
   const refTables = refDrafts.length ? mintReferenceTables(refDrafts, refPrefix) : [];
+  if (ctx.spans) {
+    const gridSpan = (g, used, reason) => {
+      if (!g || !used || g.cells.length === 0) return;
+      const cols = g.cells.reduce((m, r) => Math.max(m, r?.length ?? 0), 0);
+      ctx.consume(g.sheet, 0, g.cells.length - 1, 0, Math.max(0, cols - 1), reason);
+    };
+    gridSpan(fwGrid, !!fwResults && fwResults.length > 0, "framework-sheet");
+    gridSpan(formGrid, forms.length > 0, "forms-sheet");
+    gridSpan(dynGrid, Object.keys(dynByForm).length > 0, "dynamic-fields-sheet");
+    gridSpan(ruleGrid, rules.length > 0, "rules-sheet");
+    gridSpan(optGrid, formRules.length > 0, "form-rules-sheet");
+    gridSpan(rateGrid, !!ratingProgram, "rating-sheet");
+  }
   const products = [];
   if (fwResults) {
     for (const fw of fwResults) {
@@ -4295,14 +4850,35 @@ function mapIsoWorkbook(grids, overlay) {
   MAX_EMBED_COLS,
   MAX_EMBED_ROWS,
   SURFACED_COLUMNS,
+  augmentHeaderCandidates,
+  buildSheetCensus,
   buildStructuralModel,
+  buildWorkbookCensus,
+  createAccounting,
+  dashId,
   fingerprintGrid,
+  fnv1a64,
+  formTokenCensus,
+  harvestAliasOverlay,
+  headerLockV2Signals,
+  hiddenSheetSubstance,
+  idColumnProfile,
   inferLob,
   mapIsoWorkbook,
+  nearDuplicateSheetClusters,
   normalizeCellValue,
   pickBestHeaderRow,
+  post,
+  postSpan,
   refIdSegmentKind,
+  refIdToDocId,
+  repeatingParentRuns,
   resolveLobByRefId,
+  rollupSheet,
+  rollupWorkbook,
   scoreHeaderCandidates,
+  segmentTableRegions,
+  staircaseHierarchy,
+  stateLexicon,
   synthesizeRefId
 });

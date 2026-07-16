@@ -351,10 +351,16 @@ function envelope(tid, payload, actor, source) {
     // but the import path runs through here — so resolve the parent trying the
     // parentId verbatim AND its dot->dash form. Additive: a genuinely missing parent
     // still fails (neither candidate resolves).
+    // Belt-and-braces (BACKLOG_SEED item 1): a THIRD candidate — lowercased
+    // dot->dash — resolves parents persisted under the retired lowercasing mints
+    // (stage7-plan toDocId / unified-import fallback, pre-unification). New writes
+    // are case-preserving; this keeps historical lowercase docs reachable.
     if (data.parentId && op !== 'delete') {
       const base = segs(path).slice(0, -1)
       const raw = String(data.parentId)
-      const candidates = raw.includes('.') ? [raw, raw.replace(/\./g, '-')] : [raw]
+      const candidates = raw.includes('.')
+        ? [...new Set([raw, raw.replace(/\./g, '-'), raw.toLowerCase().replace(/\./g, '-')])]
+        : [raw]
       let parent = null
       for (const cand of candidates) {
         parent = await readEntity(tid, [...base, cand].join('/'))
