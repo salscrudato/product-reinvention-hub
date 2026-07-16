@@ -219,6 +219,34 @@ export function linkage2(extracted: EvalEntity2[]): Linkage2Result {
   }
 }
 
+// ─── (F2) Golden hierarchy recall — a FLATTENED plan must not pass vacuously ────
+// linkage2 only catches a DANGLING parentId in the extracted set; it is silent when the
+// pipeline emits NO parents at all (every sub promoted to top-level). This scores the
+// golden's OWN parentRef edges: each golden child with a parentRef must reappear in the
+// plan as a child whose parentId resolves to the golden's parent (byte-identical refId).
+
+export interface Golden2ParentEdge { child: string; parent: string }
+export interface HierarchyRecallResult {
+  goldenParentEdges: number
+  reproduced: number
+  recall: number                    // BLOCKING >= threshold (only when goldenParentEdges > 0)
+  misses: { child: string; parent: string; detail: string }[]
+}
+
+export function hierarchyRecall(goldenEdges: Golden2ParentEdge[], extracted: EvalEntity2[]): HierarchyRecallResult {
+  const byRef = new Map<string, EvalEntity2>()
+  for (const e of extracted) if (e.refId) byRef.set(e.refId.trim().toLowerCase(), e)
+  let reproduced = 0
+  const misses: HierarchyRecallResult['misses'] = []
+  for (const ge of goldenEdges) {
+    const child = byRef.get(ge.child.trim().toLowerCase())
+    const pid = child ? String(child.fields['parentId'] ?? '') : ''
+    if (child && pid && pid.trim().toLowerCase() === ge.parent.trim().toLowerCase()) reproduced++
+    else if (misses.length < 30) misses.push({ child: ge.child, parent: ge.parent, detail: !child ? 'child entity missing from plan' : !pid ? 'child promoted to top-level (parentId dropped)' : `parentId "${pid}" != golden parent "${ge.parent}"` })
+  }
+  return { goldenParentEdges: goldenEdges.length, reproduced, recall: goldenEdges.length > 0 ? reproduced / goldenEdges.length : 1, misses }
+}
+
 // ─── (G) Counting invariants (the bulk-loss floor) ────────────────────────────
 // For each kind, the extracted count must be >= the deterministic distinct-token lower
 // bound (and >= the golden's annotated count). A violation is bulk data loss.

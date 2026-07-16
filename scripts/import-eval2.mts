@@ -36,7 +36,8 @@ import {
 import {
   accountingMetrics, goldenEntityRecall, goldenNumericFidelity, resolveCitations,
   fabricationMetrics, linkage2, countingInvariants, needsReviewBand, reconcileCensus,
-  type EvalEntity2, type KindFloor, type NumericClaim, type CitationClaim,
+  hierarchyRecall, isSourceShapedRefId,
+  type EvalEntity2, type KindFloor, type NumericClaim, type CitationClaim, type Golden2ParentEdge,
 } from './lib/import-eval2-metrics.mts'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
@@ -163,6 +164,11 @@ function buildFloors(g: Golden2File): KindFloor[] {
   // Deterministic distinct-token floors (do not need model annotation).
   if (g.counts.distinctFormTokens) floors.push({ kind: 'form', floor: g.counts.distinctFormTokens, source: 'distinctFormTokens' })
   for (const [k, n] of Object.entries(byKind)) if (n > 0 && k !== 'other') floors.push({ kind: k, floor: n, source: `distinctRefIds.${k}` })
+  // FILE-LEVEL total floor (hostile review #4): the distinct source-shaped refIds a plan
+  // extracts (junk / SYNTH excluded — see scoreGolden's __TOTAL__ count) must meet the raw
+  // distinct-refId cardinality of the workbook, REGARDLESS of kind. Closes "drop real
+  // entities, pad the count with mislabelled fillers, stay green".
+  if (g.counts.distinctRefIds) floors.push({ kind: '__TOTAL__', floor: g.counts.distinctRefIds, source: 'counts.distinctRefIds (file-level)' })
   // Collapse to the MAX floor per kind.
   const max = new Map<string, KindFloor>()
   for (const f of floors) { const cur = max.get(f.kind); if (!cur || f.floor > cur.floor) max.set(f.kind, f) }
@@ -207,11 +213,23 @@ function scoreGolden(g: Golden2File, extracted: EvalEntity2[], accounted: Set<st
   if (link.parentWithRef > 0 && link.parentResolutionRate < T.parentResolutionRate) reds.push(`parentResolution=${link.parentResolutionRate.toFixed(3)}<1.0`)
   if (link.ldTableRefResolutionRate != null && link.ldTableRefResolutionRate < T.ldTableRefResolutionRate) reds.push(`ldTableRef=${link.ldTableRefResolutionRate.toFixed(3)}<${T.ldTableRefResolutionRate}`)
 
+  // Hierarchy recall — a FLATTENED plan (subs promoted to top-level) must not pass vacuously.
+  const goldenParentEdges: Golden2ParentEdge[] = []
+  for (const sh of g.sheets) {
+    for (const e of sh.entities) if (e.refId && e.parentRef) goldenParentEdges.push({ child: e.refId, parent: e.parentRef })
+    for (const ed of sh.edges) if (ed.type === 'BELONGS_TO') goldenParentEdges.push({ child: ed.from, parent: ed.to })
+  }
+  const hier = hierarchyRecall(goldenParentEdges, extracted)
+  if (hier.goldenParentEdges > 0 && hier.recall < T.parentResolutionRate) reds.push(`hierarchyRecall=${hier.recall.toFixed(3)}<1.0 (${hier.goldenParentEdges} golden edges, ${hier.reproduced} reproduced)`)
+
   // Counting invariants — the bulk-loss floor.
   const countByKind: Record<string, number> = {}
   for (const e of extracted) countByKind[e.kind] = (countByKind[e.kind] ?? 0) + 1
   // coverage floor covers coverage+subCoverage.
   countByKind['coverage'] = (countByKind['coverage'] ?? 0)
+  // File-level floor target: distinct source-shaped extracted refIds (junk/SYNTH excluded).
+  const isSynth = (id: string) => /(^|\.)SYNTH(?:[^A-Za-z]|$)/i.test(id)
+  countByKind['__TOTAL__'] = new Set(extracted.map(e => e.refId).filter((r): r is string => !!r && isSourceShapedRefId(r) && !isSynth(r)).map(r => r.toLowerCase())).size
   const floors = buildFloors(g)
   const counting = countingInvariants(floors, countByKind)
   if (!counting.ok) reds.push(`countingInvariants=${counting.violations.length} (${counting.violations.map(v => `${v.kind}:${v.extracted}<${v.floor}`).join(',')})`)
@@ -231,11 +249,22 @@ function scoreGolden(g: Golden2File, extracted: EvalEntity2[], accounted: Set<st
     if (!rc.ok) reds.push(`censusReconcile=${rc.disagreements.length} sheet(s) disagree`)
   }
 
+  // Golden completeness (hostile review #5/A, #F): a FULL golden must disposition-or-queue EVERY
+  // non-empty source cell, else correlated omission shrinks the accounting denominator and the
+  // board goes green while data is lost. REPORTED as a golden-QUALITY signal (distinct from a
+  // pipeline red): goldens annotated before the 'omitted-by-both' harness fix may show < 1.0 — a
+  // full re-annotation drives it to 1.0. `warn` when a full golden is under-covered.
+  const rawNonEmpty = wb.sheets.reduce((n, s) => n + s.cells.length, 0)
+  const dispositioned = g.sheets.reduce((n, s) => n + s.cells.length, 0)
+  const goldenCompleteness = rawNonEmpty > 0 ? Math.min(1, (dispositioned + (g.agreement?.queued ?? 0)) / rawNonEmpty) : 1
+  const completenessWarn = g.coverage !== 'sampled' && goldenCompleteness < 0.98
+
   return {
     id: goldenName(g), coverage: g.coverage ?? 'full', pass: reds.length === 0, reds,
     metrics: {
       accounting: acc, entityRecall: recall, numeric: { checked: numeric.checked, fidelity: numeric.fidelity }, citationResolve: citRate,
-      fabrication: fab, linkage: link, counting, needsReview: nr, extractedByKind: countByKind, floors, censusReconcileReds,
+      fabrication: fab, linkage: link, hierarchy: hier, counting, needsReview: nr, extractedByKind: countByKind, floors, censusReconcileReds,
+      goldenCompleteness: { rawNonEmpty, dispositioned, queued: g.agreement?.queued ?? 0, completeness: goldenCompleteness, warn: completenessWarn },
     },
   }
 }
@@ -260,20 +289,37 @@ function sourceRefTokens(g: Golden2File): Set<string> {
   return s
 }
 
-// ─── offline accounted: value-presence proxy ───────────────────────────────────
+// ─── offline accounted: ENTITY-BOUND value-presence (hostile review #1) ─────────
+// The naive global value bag let a categorical value (state="CA") survive on ONE of 200
+// coverages mark all 200 loci accounted while 199 were dropped. This binds:
+//   ENTITY cell            -> its value must BE an extracted entity's refId or name
+//   ATTR cell with ofEntity-> its value must appear on THAT entity (per-entity bag)
+//   ATTR cell w/o ofEntity -> falls back to the global bag (documented weaker proxy; the
+//                             live mode uses exact provenance loci and has no such fallback)
 function offlineAccounted(g: Golden2File, extracted: EvalEntity2[], wb: EnumWorkbook): Set<string> {
-  const captured = new Set<string>()
+  const global = new Set<string>()
+  const entityIdName = new Set<string>()
+  const byEntity = new Map<string, Set<string>>()
+  const add = (m: Set<string>, v: unknown) => { const c = canonicalizeNumeric(v); if (c) m.add(c) }
   for (const e of extracted) {
-    if (e.refId) { const c = canonicalizeNumeric(e.refId); if (c) captured.add(c) }
-    for (const v of Object.values(e.fields)) for (const x of (Array.isArray(v) ? v : [v])) { const c = canonicalizeNumeric(x); if (c) captured.add(c) }
+    const bag = new Set<string>()
+    if (e.refId) { add(global, e.refId); add(entityIdName, e.refId); add(bag, e.refId) }
+    add(entityIdName, e.fields['name'])
+    for (const v of Object.values(e.fields)) for (const x of (Array.isArray(v) ? v : [v])) { add(global, x); add(bag, x) }
+    if (e.refId) byEntity.set(e.refId.trim().toLowerCase(), bag)
+    const nm = String(e.fields['name'] ?? '').trim().toLowerCase(); if (nm) byEntity.set(nm, bag)
   }
   const vidx = valueIndex(wb)
   const accounted = new Set<string>()
   for (const sh of g.sheets) for (const c of sh.cells) {
     if (!isSubstance(c.disposition)) continue
-    const src = vidx.get(`${sh.name}!${c.ref}`)
-    const canon = canonicalizeNumeric(src ?? '')
-    if (canon != null && captured.has(canon)) accounted.add(`${sh.name}!${c.ref}`)
+    const canon = canonicalizeNumeric(vidx.get(`${sh.name}!${c.ref}`) ?? '')
+    if (canon == null) continue
+    let hit: boolean
+    if (c.disposition === 'ENTITY') hit = entityIdName.has(canon)
+    else if (c.ofEntity) hit = byEntity.get(c.ofEntity.trim().toLowerCase())?.has(canon) ?? false
+    else hit = global.has(canon)   // ATTR without an owner link -> global fallback (weaker)
+    if (hit) accounted.add(`${sh.name}!${c.ref}`)
   }
   return accounted
 }

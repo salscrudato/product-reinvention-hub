@@ -14,7 +14,7 @@
  * that lives in docs/import-census/BASELINE_EVAL2.md, not here.
  */
 import { describe, it, expect } from 'vitest'
-import { readdirSync, readFileSync, statSync } from 'fs'
+import { readdirSync, readFileSync, statSync, existsSync } from 'fs'
 import { join, resolve } from 'path'
 import {
   DISPOSITIONS, KINDS, NOISE_RULES, validateCell, validateGolden2File, canonicalizeNumeric,
@@ -29,7 +29,7 @@ import {
 import {
   accountingMetrics, goldenEntityRecall, goldenNumericFidelity, resolveCitations,
   fabricationMetrics, linkage2, countingInvariants, needsReviewBand, reconcileCensus,
-  isSourceShapedRefId, type EvalEntity2,
+  isSourceShapedRefId, hierarchyRecall, type EvalEntity2,
 } from '../../scripts/lib/import-eval2-metrics.mts'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -299,6 +299,27 @@ describe('eval2: fabrication / linkage / counting / band / reconcile', () => {
     expect(m.parentResolutionRate).toBe(0.5)
     expect(m.ldTableRefResolutionRate).toBe(0.5)
   })
+  it('hierarchyRecall catches a FLATTENED plan (subs promoted to top-level), not just dangling parents', () => {
+    const edges = [{ child: 'GL.COV.001.001', parent: 'GL.COV.001' }, { child: 'GL.COV.002.001', parent: 'GL.COV.002' }]
+    // A plan that reproduces both parent edges:
+    const good = hierarchyRecall(edges, [
+      { kind: 'coverage', refId: 'GL.COV.001.001', fields: { parentId: 'GL.COV.001' } },
+      { kind: 'coverage', refId: 'GL.COV.002.001', fields: { parentId: 'GL.COV.002' } },
+    ])
+    expect(good.recall).toBe(1)
+    // A FLATTENED plan: children present but promoted to top-level (parentId dropped) — linkage2
+    // would be silent (parentWithRef 0), hierarchyRecall reds it.
+    const flat = hierarchyRecall(edges, [
+      { kind: 'coverage', refId: 'GL.COV.001.001', fields: {} },
+      { kind: 'coverage', refId: 'GL.COV.002.001', fields: {} },
+    ])
+    expect(flat.goldenParentEdges).toBe(2)
+    expect(flat.reproduced).toBe(0)
+    expect(flat.recall).toBe(0)
+    expect(flat.misses[0]!.detail).toMatch(/promoted to top-level/)
+    // No golden edges -> vacuously 1 (never a false red).
+    expect(hierarchyRecall([], []).recall).toBe(1)
+  })
   it('countingInvariants fails when extracted < floor (bulk loss)', () => {
     const floors = [{ kind: 'coverage', floor: 137, source: 'distinctRefIds' }, { kind: 'form', floor: 10, source: 'distinctFormTokens' }]
     expect(countingInvariants(floors, { coverage: 137, form: 12 }).ok).toBe(true)
@@ -379,27 +400,32 @@ describe('mutation fuzz: pure golden transforms', () => {
 // walks every file under the two pipeline roots and fails on any occurrence.
 
 describe('anti-leakage: goldens2 never enters the pipeline', () => {
-  const roots = ['server/lib/import-brain', 'shared/src/import'].map(r => resolve(process.cwd(), r))
+  // The RUNTIME import prompt is assembled by server/lib/ai/* and the *-shared.cjs bridges (the
+  // esbuild artifacts the server actually requires), not only the source dirs — scan them all
+  // (hostile review #8). Required roots MUST exist and the scan MUST touch files (#9: a lock that
+  // scans zero files passes vacuously).
+  const requiredRoots = ['server/lib/import-brain', 'shared/src/import'].map(r => resolve(process.cwd(), r))
+  const optionalRoots = ['server/lib/ai', 'app/src/import'].map(r => resolve(process.cwd(), r))
   function walk(dir: string): string[] {
     const out: string[] = []
-    let entries: string[] = []
-    try { entries = readdirSync(dir) } catch { return out }
+    const entries = readdirSync(dir)   // throws (fails the test) if a dir vanishes — no silent swallow
     for (const name of entries) {
-      const p = join(dir, name)
-      const st = statSync(p)
-      if (st.isDirectory()) out.push(...walk(p))
-      else out.push(p)
+      const p = join(dir, name); const st = statSync(p)
+      if (st.isDirectory()) out.push(...walk(p)); else out.push(p)
     }
     return out
   }
-  it('no pipeline file mentions "goldens2"', () => {
-    const offenders: string[] = []
-    for (const root of roots) {
-      for (const file of walk(root)) {
-        const body = readFileSync(file, 'utf8')
-        if (body.includes('goldens2')) offenders.push(file)
-      }
-    }
+  it('required pipeline roots exist and are non-empty', () => {
+    for (const r of requiredRoots) { expect(existsSync(r), `missing pipeline root ${r}`).toBe(true); expect(walk(r).length).toBeGreaterThan(0) }
+  })
+  it('no pipeline file (incl. runtime .cjs bridges) mentions "goldens2"', () => {
+    const files = new Set<string>()
+    for (const r of [...requiredRoots, ...optionalRoots]) if (existsSync(r)) walk(r).forEach(f => files.add(f))
+    // The runtime bridges: every server/lib/*-shared.cjs esbuild artifact.
+    const libDir = resolve(process.cwd(), 'server/lib')
+    if (existsSync(libDir)) for (const f of readdirSync(libDir)) if (f.endsWith('-shared.cjs')) files.add(join(libDir, f))
+    expect(files.size, 'anti-leakage scanned ZERO files — vacuous lock').toBeGreaterThan(20)
+    const offenders = [...files].filter(f => readFileSync(f, 'utf8').includes('goldens2'))
     expect(offenders, `goldens2 leaked into: ${offenders.join(', ')}`).toEqual([])
   })
 })

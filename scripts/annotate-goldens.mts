@@ -150,7 +150,7 @@ async function openaiJson(deployment: string, system: string, userText: string, 
   }, `openai:${deployment}`)
 }
 
-async function openaiResponses(deployment: string, input: string, file: string, maxTokens = 6000): Promise<Record<string, unknown>> {
+async function openaiResponses(deployment: string, input: string, file: string, maxTokens = 6000, tries = RETRIES): Promise<Record<string, unknown>> {
   return withRetry(async () => {
     const body = { model: deployment, input, max_output_tokens: maxTokens }
     const r = await fetch(`${ENDPOINT}/openai/v1/responses`, {
@@ -163,7 +163,7 @@ async function openaiResponses(deployment: string, input: string, file: string, 
     record(deployment, j.usage?.input_tokens || 0, j.usage?.output_tokens || 0, file)
     const text = (j.output || []).flatMap(o => o.content || []).filter(c => c.type === 'output_text').map(c => c.text).join('')
     return safeJson(text)
-  }, `responses:${deployment}`)
+  }, `responses:${deployment}`, tries)
 }
 
 function safeJson(s: string): Record<string, unknown> {
@@ -361,27 +361,48 @@ function reconcile(a: WindowAnnotation, b: WindowAnnotation): Reconciled {
 }
 
 // ─── Adjudicate disagreements (DEEP_REASONER) — grounded-or-none ───────────────
+// Circuit breaker: when the adjudicator (gpt-5.4-pro) fails repeatedly under Foundry
+// overload it resolves nothing and just queues — so paying for it is pure waste. After 3
+// consecutive failures the circuit OPENS: disagreements queue directly with no model call.
+// Every 6th window it half-opens (one probe) to detect recovery.
+let adjFailStreak = 0
+let adjWindowsSinceProbe = 0
 async function adjudicate(w: CellWindow, rec: Reconciled, file: string): Promise<{ resolvedCells: Golden2Cell[]; resolvedEntities: Golden2Entity[]; queued: Reconciled['queued'] }> {
   const out = { resolvedCells: [] as Golden2Cell[], resolvedEntities: [] as Golden2Entity[], queued: [] as Reconciled['queued'] }
   if (rec.disagreements.length === 0) return out
+  const circuitOpen = adjFailStreak >= 3
+  const halfOpenProbe = circuitOpen && (++adjWindowsSinceProbe % 6 === 0)
+  if (circuitOpen && !halfOpenProbe) {
+    for (const d of rec.disagreements) out.queued.push({ ref: d.ref, reason: 'adjudicator-circuit-open', a: d.a, b: d.b })
+    return out
+  }
   const clip = (v: EnumCell['value']) => { const s = v === null ? '' : String(v); return s.length > 160 ? s.slice(0, 160) + '…' : s }
   const rawCells = w.cells.map(c => `${c.ref} = ${clip(c.value)}`).join('\n')
   const input = `You are the ADJUDICATOR for insurance-workbook annotations. Two independent annotators (A, B) disagree on some cells/entities in this window. Decide ONLY what you can ground in the RAW cells below. If neither reading grounds, return it as "none" (it goes to human review). Never invent.\n\n${GLOSSARY}\n${COMPACT_INSTRUCTIONS}\n\nRAW WINDOW CELLS (sheet "${w.sheet}"):\n${rawCells}\n\nDISAGREEMENTS (JSON): ${JSON.stringify(rec.disagreements).slice(0, 6000)}\n\nReturn the compact JSON object (dispositions/noise/entities/edges/attrLinks/unclassified) for ONLY the disagreed refs you can ground, PLUS a "none" array of refs/names you cannot ground. Everything not grounded goes in "none".`
   let raw: Record<string, unknown>
-  try { raw = await openaiResponses(GPT_DEEP, input, file, 4000) }
+  try { raw = await openaiResponses(GPT_DEEP, input, file, 4000, 3) }   // fewer retries: queueing is a fine fallback
   catch (e) {
     if (e instanceof BudgetExceeded) throw e
     // A persistent adjudicator failure must NOT crash the run — queue every disagreement for a human.
-    console.log(`    adjudicator unavailable (${String((e as Error).message).slice(0, 70)}) — queueing ${rec.disagreements.length} disagreement(s)`)
+    adjFailStreak++
+    console.log(`    adjudicator unavailable (${String((e as Error).message).slice(0, 60)}) fail#${adjFailStreak} — queueing ${rec.disagreements.length}`)
     for (const d of rec.disagreements) out.queued.push({ ref: d.ref, reason: 'adjudicator-unavailable', a: d.a, b: d.b })
     return out
   }
+  // A 200 with an empty body is an overload-degraded response, not a real adjudication.
+  if (Object.keys(raw).length === 0) { adjFailStreak++; for (const d of rec.disagreements) out.queued.push({ ref: d.ref, reason: 'adjudicator-empty', a: d.a, b: d.b }); return out }
+  adjFailStreak = 0   // a real response resets the breaker
   const windowRefs = new Set(w.cells.map(c => c.ref))
   const coerced = coerceAnnotation(raw, windowRefs)
-  out.resolvedCells = coerced.cells
-  out.resolvedEntities = coerced.entities
+  // The adjudicator may ONLY resolve the DISPUTED refs — never override a cell A and B already
+  // agreed on, and never promote a both-unclassified cell (hostile review #12). Restrict its
+  // output to the disagreement set.
+  const disCellRefs = new Set(rec.disagreements.filter(d => d.kind === 'cell').map(d => d.ref))
+  const disEntityRefs = new Set(rec.disagreements.filter(d => d.kind === 'entity').map(d => d.ref))
+  out.resolvedCells = coerced.cells.filter(c => disCellRefs.has(c.ref))
+  out.resolvedEntities = coerced.entities.filter(e => disEntityRefs.has(e.refId ?? e.name))
   const none = (Array.isArray(raw.none) ? raw.none : []).map(String)
-  const resolvedRefs = new Set([...coerced.cells.map(c => c.ref), ...coerced.entities.map(e => e.refId ?? e.name)])
+  const resolvedRefs = new Set([...out.resolvedCells.map(c => c.ref), ...out.resolvedEntities.map(e => e.refId ?? e.name)])
   for (const d of rec.disagreements) {
     const id = d.ref
     if (none.includes(id) || !resolvedRefs.has(id)) out.queued.push({ ref: id, reason: 'adjudicator-none-or-unresolved', a: d.a, b: d.b })
@@ -487,8 +508,12 @@ async function annotateFile(spec: FileSpec, probeWindows = 0): Promise<Golden2Fi
       // silent 200-with-empty failure, not a real disagreement. Throw so the window skips WITHOUT
       // a checkpoint and a later resume re-attempts it once the endpoint recovers (dual-family
       // truth is never manufactured from a single family).
-      if (windowRefs.size >= 4 && ((a.cells.length === 0) !== (b.cells.length === 0))) {
-        throw new Error(`degraded: one family empty (A=${a.cells.length} B=${b.cells.length}) — skip to retry on resume`)
+      // Symmetric degradation test: on a non-trivial window, EITHER family returning nothing
+      // (one-empty OR both-empty) is an overload-degraded 200, never a legitimate annotation —
+      // skip WITHOUT a checkpoint so a resume re-attempts it. (An exact-zero XOR let both-empty
+      // slip through and bake a 0-cell window as legitimate — hostile review #14.)
+      if (windowRefs.size >= 4 && (a.cells.length === 0 || b.cells.length === 0)) {
+        throw new Error(`degraded: family empty (A=${a.cells.length} B=${b.cells.length}) — skip to retry on resume`)
       }
       const rec = reconcile(a, b)
       const adj = await adjudicate(w, rec, label)
@@ -519,6 +544,12 @@ async function annotateFile(spec: FileSpec, probeWindows = 0): Promise<Golden2Fi
       // Sheet-qualify every surviving citation for the assembled golden ("Sheet!A6").
       entities = kept.map(e => ({ ...e, citations: e.citations.map(c => c.includes('!') ? c : `${w.sheet}!${c}`) }))
       const allQueued = [...rec.queued, ...adj.queued]
+      // CORRELATED OMISSION (hostile review #5, critical): a non-empty cell that BOTH families
+      // silently omitted — never in a disposition list, never unclassified, never queued — would
+      // vanish without a trace. Force every such leftover ref into the queue so it surfaces for a
+      // human and is never counted as "accounted for" by silence.
+      const touched = new Set<string>([...acceptedCells.keys(), ...allQueued.map(q => String(q.ref))])
+      for (const ref of windowRefs) if (!touched.has(ref)) allQueued.push({ ref, reason: 'omitted-by-both', a: 'ABSENT', b: 'ABSENT' })
       result = { cells: [...acceptedCells.values()], entities, edges: rec.edges, queued: allQueued, agreed: rec.cells.length, total: windowRefs.size, adjudicated: adj.resolvedCells.length + adj.resolvedEntities.length }
       if (!probeWindows) writeFileSync(ckpt, JSON.stringify(result))
       console.log(`  ${w.sheet} w${w.index + 1}/${w.total}: ${windowRefs.size} cells | agreed ${rec.cells.length} | adj ${result.adjudicated} | queued ${allQueued.length} | ents ${entities.length} | $${spend.toFixed(2)}`)

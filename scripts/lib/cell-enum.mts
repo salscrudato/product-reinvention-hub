@@ -114,8 +114,10 @@ export async function readWorkbookCells(filePath: string): Promise<EnumWorkbook>
       })
     })
     // Merge anchors can sit on a row/col beyond any populated data cell — extend bounds so
-    // windows include them.
-    for (const [key] of anchorRange) { const [r, c] = key.split(',').map(Number); if (r! > maxRow) maxRow = r!; if (c! > maxCol) maxCol = c! }
+    // windows include them, but CAP the extension: a far-coordinate merge (malformed workbook)
+    // must not inflate maxRow/maxCol into an OOM in densify() (hostile review #G).
+    const COL_CAP = 4096
+    for (const [key] of anchorRange) { const [r, c] = key.split(',').map(Number); if (r! <= ROW_CAP && r! > maxRow) maxRow = r!; if (c! <= COL_CAP && c! > maxCol) maxCol = c! }
     cells.sort((a, b) => a.row - b.row || a.col - b.col)
     sheets.push({ name: ws.name, hidden: (ws.state ?? 'visible') !== 'visible', maxRow, maxCol, cells })
   })
