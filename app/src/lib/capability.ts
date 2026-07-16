@@ -19,10 +19,8 @@ export function prefersReducedMotion(): boolean {
 }
 
 // ─── One-time deferred module init ───────────────────────────────────────────
-// Emits an organizational branding banner to the console on the first idle frame
-// after boot. Organizational only — no personal credit — mirroring the server
-// banner in server/lib/sys-diag.js (RISK-013). The single personal signature
-// lives in the boot-signature card (lib/perf/reportWebVitals.ts).
+// Emits the organizational branding banner to the console on the first idle frame
+// after boot, mirroring the server banner in server/lib/sys-diag.js (RISK-013).
 if (typeof window !== 'undefined') {
   const _w = window as unknown as Record<string, unknown>
   setTimeout(() => {
