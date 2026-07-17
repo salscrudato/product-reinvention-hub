@@ -155,23 +155,23 @@ async function routeArtifacts(opts) {
 
     if (sniff.container === 'ZIP' && sniff.workbookKind) {
       try {
-        const { structural, skippedHiddenSheets, isoGrids } = await readWorkbookToStructural(buf, doc.name, sniff.workbookKind)
+        const { structural, skippedHiddenSheets, isoGrids, census } = await readWorkbookToStructural(buf, doc.name, sniff.workbookKind)
         // Embed-cap continuation (ledger F09): upgrade truncated fingerprints to
         // the authoritative uncapped grid BEFORE any rename/merge — per workbook,
         // so the sheet-name join can never drift.
         extendTruncatedGrids(structural, isoGrids, doc.name, out.warnings)
-        out.workbooks.push({ name: doc.name, kind: sniff.workbookKind, structural, skippedHiddenSheets, isoGrids })
+        out.workbooks.push({ name: doc.name, kind: sniff.workbookKind, structural, skippedHiddenSheets, hiddenSheets: skippedHiddenSheets, isoGrids, census })
         if (skippedHiddenSheets.length > 0) {
-          // Explicit hidden-sheet policy: hidden sheets are EXCLUDED from AI
-          // classification/extraction (archive/scratch noise) but FEED the
-          // deterministic ISO mapper (legacy-parity requirement, workbook.js).
-          // Per-sheet sizes ride along so the review UI shows what was skipped.
+          // CE3 hidden-sheet POLICY FLIP (Step 1): hidden sheets are now INCLUDED in
+          // AI classification/extraction (a hidden Forms View can carry thousands of
+          // real cells); every entity extracted from one is stamped hiddenSource:true
+          // at stage 7 so the review UI warns on its provenance.
           const gridBySheet = new Map((isoGrids || []).map(g => [g.sheet, g]))
           const dims = skippedHiddenSheets.slice(0, 8).map(n => {
             const g = gridBySheet.get(n)
             return g ? `${n} (${g.cells.length}×${g.cells[0]?.length ?? 0})` : n
           })
-          out.warnings.push({ kind: 'hidden-sheets-skipped', doc: doc.name, detail: `Skipped ${skippedHiddenSheets.length} hidden sheet(s) for AI extraction — policy: hidden sheets feed the deterministic ISO mapper only: ${dims.join(', ')}${skippedHiddenSheets.length > 8 ? ', …' : ''}` })
+          out.warnings.push({ kind: 'hidden-sheets-included', doc: doc.name, detail: `Including ${skippedHiddenSheets.length} hidden sheet(s) in extraction with hiddenSource provenance — review before accepting: ${dims.join(', ')}${skippedHiddenSheets.length > 8 ? ', …' : ''}` })
         }
         const sig = collectWorkbookSignals(structural)
         allRefIds.push(...sig.refIds)
@@ -228,7 +228,7 @@ async function routeArtifacts(opts) {
       // which normalize idempotently; extendTruncatedGrids slices to the
       // embedded width so the fingerprint's column policy is preserved.
       extendTruncatedGrids(structural, [{ sheet: doc.name, file: doc.name, cells: rows.map(r => r.map(c => brainShared.normalizeCellValue(c))) }], doc.name, out.warnings)
-      out.workbooks.push({ name: doc.name, kind: 'CSV', structural, skippedHiddenSheets: [] })
+      out.workbooks.push({ name: doc.name, kind: 'CSV', structural, skippedHiddenSheets: [], hiddenSheets: [], census: null })
       docSummaries.push(`Type: CSV/text, ${rows.length} line(s)\nHead: ${text.slice(0, 400)}`)
       continue
     }
@@ -309,13 +309,53 @@ function extendTruncatedGrids(structural, isoGrids, docName, warnings) {
     // NOT be consumed; claiming continuation there would be a false conservation
     // attestation. Keep the honest NOT-extracted warning for that shape.
     const consumesCells = fp.layoutShape !== 'STACKED_TABLES' || !Array.isArray(fp.subTables) || fp.subTables.length === 0
+    let rowsRecovered = false
+    let colsRecovered = false
     if (consumesCells && raw && Array.isArray(raw.cells) && raw.cells.length >= embeddedRows && rowsPastCap > 0) {
       fp.cells = embeddedWidth > 0 ? raw.cells.map(r => (r ?? []).slice(0, embeddedWidth)) : raw.cells
       fp.cellsExtended = true
-      fp.cellsTruncated = false
-      warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}": ${fp.dataRowCount} rows exceed the ${brainShared.MAX_EMBED_ROWS}-row embed cap — the tail (${rowsPastCap} row(s)) IS extracted via continuation windows${colsPastCap > 0 ? `; ${colsPastCap} column(s) past the ${brainShared.MAX_EMBED_COLS}-column cap remain excluded (warned non-goal)` : ''}.` })
+      rowsRecovered = true
+    }
+    // CE3 Step 3(a): COLUMN continuation past MAX_EMBED_COLS — mirror of the row
+    // continuation. The authoritative uncapped grid widens fp.cells and the extra
+    // columns gain continuation columnProfiles so stage 3 maps them and stage 4
+    // extracts them (a 148-column PCM loses columns 129-148 without this).
+    if (consumesCells && raw && Array.isArray(raw.cells) && colsPastCap > 0 && Array.isArray(fp.cells) && Array.isArray(fp.columnProfiles)) {
+      const fullWidth = raw.cells.reduce((m, r) => Math.max(m, (r ?? []).length), 0)
+      const priorWidth = fp.cells[0]?.length ?? 0
+      if (fullWidth > priorWidth) {
+        fp.cells = fp.cells.map((row, i) => {
+          const rawRow = raw.cells[i] ?? []
+          const out = (row ?? []).slice()
+          for (let c = priorWidth; c < fullWidth; c++) out[c] = rawRow[c] ?? null
+          return out
+        })
+        const headerRow = Math.max(0, fp.bestHeaderRow ?? 0)
+        for (let c = priorWidth; c < fullWidth; c++) {
+          const headerLabel = raw.cells[headerRow]?.[c] != null ? String(raw.cells[headerRow][c]) : null
+          const seen = new Set()
+          const distinctSample = []
+          const typeMix = {}
+          for (let r = headerRow + 1; r < fp.cells.length && distinctSample.length < 8; r++) {
+            const v = fp.cells[r]?.[c]
+            if (v === null || v === undefined || v === '') continue
+            const t = typeof v
+            typeMix[t] = (typeMix[t] || 0) + 1
+            const s = String(v)
+            if (!seen.has(s)) { seen.add(s); distinctSample.push(v) }
+          }
+          fp.columnProfiles.push({ colIndex: c, headerLabel, typeMix, distinctSample, isEnumLike: false, hasDollarPattern: false, hasDatePattern: false, continuation: true })
+        }
+        fp.colsExtended = true
+        colsRecovered = true
+      }
+    }
+    if (rowsRecovered || colsRecovered) {
+      fp.cellsTruncated = !(rowsRecovered || rowsPastCap === 0) || !(colsRecovered || colsPastCap === 0)
+      warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}": embed caps exceeded — ${rowsPastCap > 0 ? `${rowsPastCap} row(s) past the ${brainShared.MAX_EMBED_ROWS}-row cap ${rowsRecovered ? 'ARE extracted via continuation windows' : 'are NOT extracted'}` : 'all rows covered'}; ${colsPastCap > 0 ? `${colsPastCap} column(s) past the ${brainShared.MAX_EMBED_COLS}-column cap ${colsRecovered ? 'ARE extracted via column continuation' : 'are NOT extracted'}` : 'all columns covered'}.` })
     } else if (rowsPastCap === 0 && colsPastCap > 0) {
-      // Column-only truncation: no rows lost; column overflow is the warned non-goal.
+      // Column-only truncation the raw grid cannot recover (raw itself capped or
+      // absent past the embed width): honest exact-loss wording, no phantom rows.
       warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}": ${fp.dataColCount} columns exceed the ${brainShared.MAX_EMBED_COLS}-column embed cap — ${colsPastCap} column(s) are NOT extracted; all rows are covered.` })
     } else {
       const why = !consumesCells ? 'stacked-table layout extracts from segmented sub-tables, not the raw grid' : 'no raw grid on this path'

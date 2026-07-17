@@ -22,6 +22,7 @@ const fleet = require('../fleet')
 const { sse, emit, _forcedToolCall, _extractPdfText, _findSampleFile, getImportBrain, getStageFiling } = require('./_shared')
 const { persistRunResult, fetchRunResult, sanitizeRunId } = require('./run-results')
 const { createRunTrace } = require('./run-trace')
+const observatory = require('./run-observatory')
 const fs = require('fs')
 
 const HAIKU_OVERRIDE = process.env.AZURE_FOUNDRY_HAIKU_DEPLOYMENT || ''
@@ -136,7 +137,7 @@ function mergeStructurals(workbooks) {
 
 // ─── Run the brain over a structural model and emit the plan bundle ───────────
 
-async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, send, isoGrids, skippedDocuments }) {
+async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, send, isoGrids, skippedDocuments, censuses, hiddenSheets, onStage, resume, tenantId }) {
   const brain = getImportBrain()
   if (typeof brain.runAdaptiveImportBrain !== 'function') {
     throw new Error('Import brain not available (build:import-brain may not have run).')
@@ -146,6 +147,10 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
     lobRefIdHint: lobRefIdHint || undefined,
     budget,
     emit: send,
+    censuses: censuses || [],
+    onStage,
+    resume,
+    tenantId,
   })
 
   // Deterministic ISO-family mapper as canonical-identity oracle: when the raw
@@ -166,6 +171,20 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
   }
 
   send({ t: 'tool', name: 'brain:stage7:plan', phase: 'start', summary: 'Assembling the reviewable import plan' })
+  // Near-dup sheet clusters from the CE1 census fingerprints (CE3 Step 1): every
+  // cluster member was extracted; stage 7 folds byte-identical facts and turns
+  // conflicting ones into review items carrying the cluster evidence.
+  let sheetClusters = []
+  try {
+    const brainShared = require('../import-brain-shared.cjs')
+    if (typeof brainShared.nearDuplicateSheetClusters === 'function') {
+      for (const c of censuses || []) {
+        if (c && Array.isArray(c.sheets) && c.sheets.length > 0) {
+          sheetClusters.push(...brainShared.nearDuplicateSheetClusters(c))
+        }
+      }
+    }
+  } catch { sheetClusters = [] }
   const { buildImportPlan } = require('../import-brain/stage7-plan')
   const bundle = buildImportPlan(brainOutput, {
     lobRefIdHint: lobRefIdHint || undefined,
@@ -173,6 +192,8 @@ async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarni
     edition:      edition || undefined,
     routerWarnings: routerWarnings || [],
     isoPlan,
+    hiddenSheets: hiddenSheets || [],
+    sheetClusters,
   })
   send({ t: 'tool', name: 'brain:stage7:plan', phase: 'end', summary: `${bundle.counts?.accepted ?? 0} accepted, ${bundle.counts?.unresolved ?? 0} unresolved, ${bundle.importWarnings?.length ?? 0} warning(s)` })
   send({ t: 'json', key: 'brain:stage7', value: {
@@ -218,6 +239,8 @@ async function unifiedImport(req, res) {
   const runId = sanitizeRunId(body.runId)
   const runTenant = resolveTenantForPrincipal(req.user)
 
+  const runStartedAt = new Date().toISOString()
+  const runFileNames = (Array.isArray(body.documents) ? body.documents : []).map(d => String((d && d.name) || '')).filter(Boolean).slice(0, 20)
   // Run-trace telemetry: every SSE frame is observed BEFORE it hits the wire, so
   // a finished (or crashed, or client-abandoned) run leaves a durable per-stage
   // record for the admin Import Runs surface. Never throws, never gates the run.
@@ -234,6 +257,74 @@ async function unifiedImport(req, res) {
     const r = await persistRunResult({ tenantId: runTenant, runId, bundle })
     if (!r.ok) console.warn(`[unifiedImport] run ${runId}: bundle persistence failed (${r.reason})`)
     send({ t: 'json', key: 'run:persisted', value: { runId, ok: r.ok, ...(r.ok ? {} : { reason: r.reason }) } })
+    // CE3 Step 8 observatory: a compact, replayable index doc + the bundle as a
+    // stage artifact. Best-effort telemetry — never fails the run, never blocks.
+    try {
+      const plan = (bundle && bundle.plan) || {}
+      const metrics = {
+        products: (plan.products || []).length,
+        coverages: (plan.coverages || []).length,
+        forms: (plan.forms || []).length,
+        rules: (plan.rules || []).length,
+        unresolved: (bundle.unresolved || []).length,
+        importWarnings: (bundle.importWarnings || []).length,
+      }
+      await observatory.persistImportRun({
+        tenantId: runTenant, runId,
+        indexDoc: {
+          startedAt: runStartedAt,
+          status: 'ok',
+          fileNames: runFileNames,
+          metrics,
+          spend: { byDeployment: (budget && budget.byDeployment) || {}, spendUsd: Math.round(((budget && budget.spendUsd) || 0) * 1e4) / 1e4, calls: (budget && budget.calls) || 0 },
+          checkpointRefs: [],
+        },
+      })
+      await observatory.persistStageArtifact({ tenantId: runTenant, runId, stage: 'bundle', artifact: { metrics, bundleCounts: bundle.counts || null } })
+    } catch (e) {
+      console.warn(`[unifiedImport] run ${runId}: observatory persistence failed (${String(e && e.message).slice(0, 120)})`)
+    }
+  }
+
+  // ── CE3 Step 7: per-stage checkpoints + resume ──────────────────────────────
+  // With a run id, every completed stage persists its output as a Blob artifact
+  // (import-runs/{tenant}/{runId}/{stage}.json) and emits brain:checkpoint. A
+  // resumeRunId in the body reloads those artifacts so completed stages — and
+  // completed stage-4 SHEETS — are restored, never re-run.
+  const onStage = runId ? async (stage, artifact) => {
+    // Per-sheet stage-4 checkpoints encode the sheet into a slash-free slug; the
+    // artifact body carries the true sheetName (resume reads bodies, never slugs).
+    const isSheet = typeof stage === 'string' && stage.startsWith('stage4/')
+    const stageKey = isSheet ? observatory.sheetStageSlug(stage.slice(7)) : stage
+    const r = await observatory.persistStageArtifact({ tenantId: runTenant, runId, stage: stageKey, artifact })
+    if (r && r.ok) emit(res, observatory.checkpointEvent(stageKey, isSheet ? stage.slice(7) : null, `${runId}/${stageKey}`))
+  } : undefined
+  let resume
+  const resumeRunId = sanitizeRunId(body.resumeRunId)
+  if (resumeRunId) {
+    resume = { stage4: { sheets: {} } }
+    try {
+      const list = await observatory.listStageArtifacts({ tenantId: runTenant, runId: resumeRunId })
+      const stages = (list && list.status === 'ok' && Array.isArray(list.stages)) ? list.stages : []
+      for (const stage of stages) {
+        const got = await observatory.getStageArtifact({ tenantId: runTenant, runId: resumeRunId, stage })
+        if (!got || got.status !== 'ok' || !got.artifact) continue
+        const payload = got.artifact.artifact // wrapper {runId, stage, at, artifact}
+        if (!payload) continue
+        if (stage.startsWith('stage4.')) {
+          if (payload.sheetName && Array.isArray(payload.entities)) resume.stage4.sheets[payload.sheetName] = payload.entities
+        } else if (/^stage[1-9]/.test(stage)) {
+          resume[stage] = payload
+        }
+      }
+      const restoredSheets = Object.keys(resume.stage4.sheets).length
+      const restoredStages = Object.keys(resume).filter(k => k !== 'stage4').length
+      if (restoredSheets + restoredStages === 0) resume = undefined
+      emit(res, { t: 'notice', level: 'info', kind: 'resume', message: resume ? `Resuming run ${resumeRunId}: restored ${restoredStages} stage checkpoint(s) + ${restoredSheets} extracted sheet(s).` : `Resume from ${resumeRunId}: no checkpoints found — running from the start.` })
+    } catch (e) {
+      emit(res, { t: 'notice', level: 'warn', kind: 'resume', message: `Resume from ${resumeRunId} unavailable (${String(e && e.message).slice(0, 80)}) — running from the start.` })
+      resume = undefined
+    }
   }
 
   // SSE keepalive: Azure App Service closes connections idle >~230s; long stage-4
@@ -319,13 +410,23 @@ async function unifiedImport(req, res) {
       }
       const structural = mergeStructurals(routed.workbooks)
       const isoGrids = routed.workbooks.flatMap(w => Array.isArray(w.isoGrids) ? w.isoGrids : [])
+      // CE3 Step 1: the cell census joins the run — emit per-sheet counts so the
+      // client sees the conservation baseline before extraction begins.
+      const censuses = routed.workbooks.map(w => w.census).filter(Boolean)
+      const hiddenSheets = routed.workbooks.flatMap(w => Array.isArray(w.hiddenSheets) ? w.hiddenSheets : [])
+      try {
+        const observatory = require('./run-observatory')
+        const perSheet = censuses.flatMap(c => (c.sheets || []).map(s => ({ name: s.name, nonEmpty: s.nonEmpty, hidden: !!s.hidden, tables: (s.tables || []).length })))
+        if (perSheet.length > 0) emit(res, observatory.censusEvent(perSheet))
+      } catch { /* census telemetry is never a run blocker */ }
       const wbBundle = await runBrainToBundle({
         structural,
         lobRefIdHint: body.lobRefIdHint || routed.lobRefIdHint,
         edition:      routed.edition,
         routerWarnings: routed.warnings,
         skippedDocuments: routed.filingDocs.map((d) => d.name),
-        budget, send, isoGrids,
+        budget, send, isoGrids, censuses, hiddenSheets,
+        onStage, resume, tenantId: runTenant,
       })
       await persistIfRequested(wbBundle)
       emitSpend(send, budget)

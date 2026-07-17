@@ -11,6 +11,7 @@ const { scaffoldProduct }  = require('./scaffold-product')
 const { draftRule }        = require('./draft-rule')
 const { analyzeClaim }     = require('./analyze-claim')
 const { unifiedImport, unifiedImportResult } = require('./unified-import')
+const observatory = require('./run-observatory')
 const { registerReindexRoute } = require('./reindex-product')
 const { identifyBaseForm } = require('./identify-base-form')
 const { proposeMapping }   = require('./propose-mapping')
@@ -25,6 +26,33 @@ console.log(`[prodhub-host] AI configured=${fleet.isConfigured()}`)
 const router = express.Router()
 
 registerReindexRoute(router)
+
+// ─── CE3 Step 8: import-run observatory (READ-shaped, product:read, tenant-scoped) ──
+// SUPER_ADMIN break-glass tenant (X-Tenant-Id) is honored through
+// resolveTenantForPrincipal, exactly like every other tenant-scoped read. These
+// are GET routes (no AI, no metering) so they sit ahead of the POST /:name
+// dispatcher and never collide with it.
+function tenantOf(req) { return resolveTenantForPrincipal(req.user) }
+router.get('/importRuns', requireCapability('product:read'), requireTenant, async (req, res) => {
+  const r = await observatory.listImportRuns({ tenantId: tenantOf(req), limit: req.query.limit })
+  if (r.status === 'storage_not_configured') return res.status(503).json({ error: 'storage_not_configured', detail: 'Set AZURE_BLOB_CONNECTION to enable the import-run observatory.' })
+  if (r.status !== 'ok') return res.status(500).json({ error: 'observatory_error', reason: r.reason })
+  return res.json({ runs: r.runs })
+})
+router.get('/importRun/:runId', requireCapability('product:read'), requireTenant, async (req, res) => {
+  const r = await observatory.getImportRun({ tenantId: tenantOf(req), runId: req.params.runId })
+  if (r.status === 'storage_not_configured') return res.status(503).json({ error: 'storage_not_configured' })
+  if (r.status === 'invalid_id') return res.status(400).json({ error: 'invalid_run_id' })
+  if (r.status !== 'ok') return res.status(404).json({ error: 'run_not_found', runId: req.params.runId })
+  return res.json({ run: r.run })
+})
+router.get('/importRun/:runId/artifact/:stage', requireCapability('product:read'), requireTenant, async (req, res) => {
+  const r = await observatory.getStageArtifact({ tenantId: tenantOf(req), runId: req.params.runId, stage: req.params.stage })
+  if (r.status === 'storage_not_configured') return res.status(503).json({ error: 'storage_not_configured' })
+  if (r.status === 'invalid_id') return res.status(400).json({ error: 'invalid_id' })
+  if (r.status !== 'ok') return res.status(404).json({ error: 'artifact_not_found', runId: req.params.runId, stage: req.params.stage })
+  return res.json(r.artifact)
+})
 
 router.post('/:name', requireCapability('ai:invoke'), requireTenant, async (req, res) => {
   const name = req.params.name

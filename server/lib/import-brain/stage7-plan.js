@@ -122,6 +122,9 @@ function toPlanned(entity, extraData) {
   data.confidence = entity.overallConfidence
   const refField = entity.fields.find(f => f.fieldName === 'refId' || f.fieldName === 'number')
   data.citation = citationString(refField?.citation) || citationString(entity.fields[0]?.citation)
+  // CE3 Step 1: sheet provenance rides every planned entity (hidden-source stamping
+  // and near-dup cluster folding key on it; the review UI can render it directly).
+  if (entity.sourceSheet) data.sourceSheet = entity.sourceSheet
   Object.assign(data, extraData || {})
   return {
     docId: toDocId(refId, `${entity.kind}-${entity.sourceRowIndex}`),
@@ -317,6 +320,23 @@ function buildImportPlan(brainOutput, opts = {}) {
     }
   }
 
+  // ── CE3 Step 4: sweeper outputs are first-class plan citizens ────────────────
+  // Residue the sweeper could not classify becomes census_unaccounted unresolved
+  // items (sheet + refs + verbatim sample + reason) — never a silent loss.
+  for (const item of (brainOutput.sweeper && brainOutput.sweeper.unresolvedItems) || []) {
+    unresolved.push({
+      section: 'census',
+      kind: 'census_unaccounted',
+      label: item.label,
+      refId: null,
+      sheet: item.sheet,
+      refs: item.refs,
+      verbatimSample: item.verbatimSample,
+      reason: item.reason,
+      citation: String(item.citation || ''),
+    })
+  }
+
   const byKind = (kind) => accepted.filter(e => e.kind === kind)
 
   // ── Product ────────────────────────────────────────────────────────────────
@@ -414,6 +434,111 @@ function buildImportPlan(brainOutput, opts = {}) {
   let formRules = byKind('formRule').map(e => toPlanned(e))
   let ldTables  = byKind('ldTable').map(e => toPlanned(e, productRefId ? { productId: productRefId } : {}))
   let rtTables  = byKind('rtTable').map(e => toPlanned(e, productRefId ? { productId: productRefId } : {}))
+
+  // ── CE3 Step 4: sweeper FACT proposals join the plan review-flagged ──────────
+  // Each carries the VERBATIM source text + the citing cell; refId stays null (a
+  // model can nominate a cell, never mint an id — SYNTH minting is the accepted
+  // entities' deterministic pass, not the sweeper's).
+  {
+    const groupOf = { coverage: coverages, form: forms, rule: rules, formRule: formRules, ldTable: ldTables, rtTable: rtTables }
+    for (const f of (brainOutput.sweeper && brainOutput.sweeper.facts) || []) {
+      const group = groupOf[f.entityKind]
+      if (!group) continue // product/ratingStep proposals stay review items only
+      group.push({
+        docId: toDocId(null, `sweeper-${f.sheet}-${String(f.ref).replace(/[^A-Za-z0-9]/g, '-')}`),
+        refId: null,
+        label: String(f.name),
+        data: {
+          name: String(f.name),
+          citation: String(f.ref),
+          sourceSheet: f.sheet,
+          needsReview: true,
+          sweeperFact: true,
+          confidence: 0.5,
+        },
+      })
+    }
+  }
+
+  // ── CE3 Step 1: hidden-sheet provenance stamping ─────────────────────────────
+  // Hidden sheets now ENTER extraction (policy flip); every entity they yielded is
+  // stamped so the review UI warns on provenance before anything persists.
+  {
+    const hiddenSet = new Set(opts.hiddenSheets || [])
+    if (hiddenSet.size > 0) {
+      for (const group of [coverages, forms, rules, formRules, ldTables, rtTables]) {
+        for (const p of group) {
+          if (typeof p.data.sourceSheet === 'string' && hiddenSet.has(p.data.sourceSheet)) {
+            p.data.hiddenSource = true
+            p.data.needsReview = true
+          }
+        }
+      }
+      if (productPlanned && typeof productPlanned.data.sourceSheet === 'string' && hiddenSet.has(productPlanned.data.sourceSheet)) {
+        productPlanned.data.hiddenSource = true
+      }
+    }
+  }
+
+  // ── CE3 Step 1: near-dup sheet cluster fold ─────────────────────────────────
+  // Every cluster member was extracted (never a silent authority pick). Byte-identical
+  // facts across a cluster fold to one entity (citations merged); CONFLICTING copies
+  // stay in the plan review-flagged AND become unresolved items carrying the cluster
+  // evidence, so a human picks the authority.
+  {
+    const clusters = Array.isArray(opts.sheetClusters) ? opts.sheetClusters : []
+    if (clusters.length > 0) {
+      const clusterOf = new Map()
+      clusters.forEach((c, i) => (c.sheets || []).forEach(s => clusterOf.set(s.name, i)))
+      const factBag = (p) => JSON.stringify(
+        Object.entries(p.data)
+          .filter(([k, v]) => !['citation', 'confidence', 'sourceSheet', 'clusterCitations', 'needsReview', 'hiddenSource'].includes(k) && (typeof v !== 'object' || Array.isArray(v)))
+          .sort(([a], [b]) => (a < b ? -1 : 1)))
+      let foldedTotal = 0
+      let conflictTotal = 0
+      const foldGroup = (group, section) => {
+        const seen = new Map() // clusterIdx|identity -> { p, bag }
+        const kept = []
+        for (const p of group) {
+          const sheet = typeof p.data.sourceSheet === 'string' ? p.data.sourceSheet : null
+          const clusterIdx = sheet !== null ? clusterOf.get(sheet) : undefined
+          if (clusterIdx === undefined) { kept.push(p); continue }
+          const identity = `${clusterIdx}|${(p.refId || String(p.data.name || p.label)).toLowerCase()}`
+          const prior = seen.get(identity)
+          if (!prior) { seen.set(identity, { p, bag: factBag(p) }); kept.push(p); continue }
+          if (factBag(p) === prior.bag) {
+            // Byte-identical fact from a sibling copy — fold, keep the citation trail.
+            const trail = Array.isArray(prior.p.data.clusterCitations) ? prior.p.data.clusterCitations : (prior.p.data.clusterCitations = [])
+            if (p.data.citation) trail.push(String(p.data.citation))
+            foldedTotal++
+            continue
+          }
+          // Conflicting copy: keep it (review-flagged) + a first-class review item.
+          p.data.needsReview = true
+          p.data.clusterConflict = true
+          kept.push(p)
+          unresolved.push({
+            section,
+            label: p.label,
+            refId: p.refId,
+            reason: `near-duplicate sheet cluster carries a CONFLICTING copy of this ${section} (cluster: ${(clusters[clusterIdx].sheets || []).map(s => s.name).join(' / ')}) — pick the authoritative row.`,
+            citation: String(p.data.citation || ''),
+          })
+          conflictTotal++
+        }
+        return kept
+      }
+      coverages = foldGroup(coverages, 'coverage')
+      forms     = foldGroup(forms, 'form')
+      rules     = foldGroup(rules, 'rule')
+      formRules = foldGroup(formRules, 'formRule')
+      ldTables  = foldGroup(ldTables, 'ldTable')
+      rtTables  = foldGroup(rtTables, 'rtTable')
+      if (foldedTotal > 0 || conflictTotal > 0) {
+        planWarnings.push({ kind: 'dup-cluster-fold', sheet: null, row: null, field: null, detail: `Near-duplicate sheet clusters: ${foldedTotal} byte-identical fact(s) folded (citations merged), ${conflictTotal} conflicting cop(ies) held for review.` })
+      }
+    }
+  }
 
   // Parent-before-child ordering for coverages (importPlan flushes batches on
   // forward-references; sorting parents first minimizes flushes and orphan risk).

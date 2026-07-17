@@ -27,9 +27,12 @@ __export(api_server_exports, {
   DEPLOY_OPUS: () => DEPLOY_OPUS,
   DEPLOY_SONNET: () => DEPLOY_SONNET,
   ESCALATION_LADDER: () => ESCALATION_LADDER,
+  EXTENDED_DEGRADE: () => EXTENDED_DEGRADE,
   EXTENDED_DEPLOYMENTS: () => EXTENDED_DEPLOYMENTS,
   FLEET_PRICING: () => FLEET_PRICING,
+  WORKBOOK_DIGEST: () => WORKBOOK_DIGEST,
   allDeployments: () => allDeployments,
+  degradedExtendedRole: () => degradedExtendedRole,
   degradedRole: () => degradedRole,
   estimateCostUsd: () => estimateCostUsd,
   resolveDeployment: () => resolveDeployment
@@ -105,6 +108,17 @@ var EXTENDED_DEPLOYMENTS = {
   /** Document OCR → markdown with native tables (the 0-char-PDF import fix). */
   DOC_OCR: { deploymentName: "mistral-document-ai-2512", surface: "mistral-ocr", roleLabel: "Document OCR \u2014 Mistral Document AI" }
 };
+var EXTENDED_DEGRADE = {
+  VERIFY_XAI: "VERIFY_DEEPSEEK"
+};
+function degradedExtendedRole(role) {
+  return EXTENDED_DEGRADE[role] ?? role;
+}
+var WORKBOOK_DIGEST = {
+  primary: "DEEP_REASONER",
+  fallback: "GROUNDED_CITED",
+  roleLabel: "Workbook digest synthesis \u2014 deep reasoner with grounded-cited fallback"
+};
 var FLEET_PRICING = {
   [DEPLOY_OPUS]: { inputPerMTok: 5, outputPerMTok: 25 },
   // Opus 4.8 list price
@@ -155,9 +169,12 @@ var ESCALATION_LADDER = ["BULK_VERIFY", "MID_REASONER", "GROUNDED_CITED"];
   DEPLOY_OPUS,
   DEPLOY_SONNET,
   ESCALATION_LADDER,
+  EXTENDED_DEGRADE,
   EXTENDED_DEPLOYMENTS,
   FLEET_PRICING,
+  WORKBOOK_DIGEST,
   allDeployments,
+  degradedExtendedRole,
   degradedRole,
   estimateCostUsd,
   resolveDeployment

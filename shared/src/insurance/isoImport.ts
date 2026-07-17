@@ -19,6 +19,7 @@ import type {
 import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
 import { refIdToDocId } from './refId'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
+import { conservationEligible, runConservationPass } from '../import/mapper/conserve'
 import {
   matchCoverageByName, matchRuleReferenceToTables, resolveCoverageCode,
   physicalDamageCoverages, matchGroup, formTokens, FORM_TOKEN,
@@ -2215,6 +2216,78 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
   // Reference tables share a single home with the real LD tables so the UI ldTables→chip
   // lookup and the golden both see them under their minted CORE.TBL refIds.
   const allLdTables = [...ldTables, ...refTables]
+
+  // ── CE3 conservation pass — single-workbook imports whose named parse is thin (see
+  //    shared/src/import/mapper/conserve.ts for the gate law). Full ISO template exports
+  //    (multi-file GL/IM/PR sets, CORE signature) are structurally ineligible, so every
+  //    locked fixture keeps a byte-identical plan; the eval2 corpus files (single workbooks,
+  //    <= 1 producing species) get their residue harvested as review-flagged cited entities. ──
+  const speciesProduced = {
+    framework: !!fwResults && fwResults.length > 0,
+    forms: forms.length > 0,
+    dynamic: Object.keys(dynByForm).length > 0,
+    rules: rules.length > 0,
+    formRules: formRules.length > 0,
+    rating: !!ratingProgram,
+    rtTables: rtTables.length > 0,
+    ldTables: ldTables.length > 0,
+  }
+  if (conservationEligible(grids, speciesProduced, refTables.length)) {
+    const producedSheets = new Set<string>(ctx.recognized)
+    if (ldTables.length && ldGrid) producedSheets.add(ldGrid.sheet)
+    if (rtTables.length && rtGrid) producedSheets.add(rtGrid.sheet)
+    if (forms.length === 0 && formGrid) producedSheets.delete(formGrid.sheet)
+    if (rules.length === 0 && ruleGrid) producedSheets.delete(ruleGrid.sheet)
+    if (!ratingProgram && rateGrid) producedSheets.delete(rateGrid.sheet)
+    const conserved = runConservationPass({
+      grids,
+      consumedSheets: producedSheets,
+      existingRefIds: new Set(
+        [...products, ...allCoverages, ...forms, ...rules, ...formRules, ...allLdTables, ...rtTables]
+          .map(e => e.refId?.toLowerCase())
+          .filter((s): s is string => !!s),
+      ),
+      existingProductNames: new Set(products.map(p => String(p.data['name'] ?? '').toLowerCase()).filter(Boolean)),
+      existingCoverageNames: new Set(allCoverages.map(c => String(c.data['name'] ?? '').toLowerCase()).filter(Boolean)),
+      frameworkCoverageCount: allCoverages.length,
+      frameworkSheet: fwGrid?.sheet ?? null,
+      refPrefix,
+    })
+    products.push(...conserved.products)
+    allCoverages.push(...conserved.coverages)
+    forms.push(...conserved.forms)
+    rules.push(...conserved.rules)
+    allLdTables.push(...conserved.ldTables)
+    rtTables.push(...conserved.rtTables)
+    if (ctx.spans) ctx.spans.push(...conserved.consumed)
+    for (const span of conserved.consumed) {
+      if (!ctx.recognized.includes(span.sheet)) ctx.recognized.push(span.sheet)
+    }
+    if (conserved.enumDomains.length > 0) {
+      ctx.addNotice({
+        code: 'alias_overlay_harvested',
+        message: `${conserved.enumDomains.length} per-workbook enum domain(s) harvested from Data Validation (schema-learning, item 15) and applied fill-only to conserved entities.`,
+        data: { domains: conserved.enumDomains },
+      })
+    }
+    const conservedTotal =
+      conserved.products.length + conserved.coverages.length + conserved.forms.length +
+      conserved.rules.length + conserved.ldTables.length + conserved.rtTables.length
+    if (conservedTotal > 0) {
+      ctx.addNotice({
+        code: 'conservation_harvest',
+        message: `${conservedTotal} review-flagged entit(ies) conserved from substance the named parsers left behind (byte-for-byte source tokens and cited sheet regions; nothing invented).`,
+        data: { total: conservedTotal, byMechanism: conserved.stats },
+      })
+    }
+    if (conserved.unharvestedSheets.length > 0) {
+      ctx.addNotice({
+        code: 'conservation_unharvested',
+        message: `${conserved.unharvestedSheets.length} substance sheet(s) could not be conserved and need review: ${conserved.unharvestedSheets.slice(0, 8).join('; ')}.`,
+        data: { sheets: conserved.unharvestedSheets },
+      })
+    }
+  }
 
   const dynFieldCount = forms.reduce((n, f) => n + ((f.data['dynamicFields'] as unknown[])?.length ?? 0), 0)
   const stepCount = ratingProgram ? (ratingProgram.data['steps'] as unknown[]).length : 0

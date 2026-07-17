@@ -1,5 +1,5 @@
 {
-  "runAt": "2026-07-16T13:37:16.147Z",
+  "runAt": "2026-07-17T02:58:27.867Z",
   "mode": "offline",
   "thresholds": {
     "unaccountedEntityCells": 0,
@@ -19,8 +19,8 @@
       "coverage": "sampled",
       "pass": false,
       "reds": [
-        "unaccountedEntityCells=503",
-        "substanceCoverage=0.156<0.985",
+        "unaccountedEntityCells=64",
+        "substanceCoverage=0.909<0.985",
         "numericFidelity=0.000<1.0",
         "hierarchyRecall=0.000<1.0 (127 golden edges, 0 reproduced)",
         "countingInvariants=3 (product:1<10,form:0<259,__TOTAL__:1608<2532)"
@@ -28,211 +28,211 @@
       "metrics": {
         "accounting": {
           "entityCells": 975,
-          "entityAccounted": 472,
-          "unaccountedEntityCells": 503,
+          "entityAccounted": 911,
+          "unaccountedEntityCells": 64,
           "substanceCells": 7585,
-          "substanceAccounted": 1182,
-          "substanceCoverage": 0.15583388266315096,
+          "substanceAccounted": 6895,
+          "substanceCoverage": 0.9090309822017139,
           "sampleUnaccounted": [
             {
-              "locus": "Product Component Model!B6",
+              "locus": "Coverage Summary!A3",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Coverage Summary!B4",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B5",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B6",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B7",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B8",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B9",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B10",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B11",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B12",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B13",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B14",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B15",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B16",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B17",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B18",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B19",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B20",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B21",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B22",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B23",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!B24",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Coverage Summary!C2",
               "disposition": "ENTITY",
               "kind": "product"
             },
             {
-              "locus": "Product Component Model!C23",
+              "locus": "Coverage Summary!D2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!E2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!F2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!G2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!H2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!I2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!J2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!K2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!L2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!M2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!N2",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Coverage Summary!C3",
               "disposition": "ATTR",
               "kind": null
             },
             {
-              "locus": "Product Component Model!C24",
+              "locus": "Coverage Summary!D3",
               "disposition": "ATTR",
               "kind": null
             },
             {
-              "locus": "Product Component Model!E23",
+              "locus": "Coverage Summary!E3",
               "disposition": "ATTR",
               "kind": null
             },
             {
-              "locus": "Product Component Model!E24",
+              "locus": "Coverage Summary!F3",
               "disposition": "ATTR",
               "kind": null
             },
             {
-              "locus": "Product Component Model!H7",
-              "disposition": "ENTITY",
-              "kind": "form"
+              "locus": "Coverage Summary!G3",
+              "disposition": "ATTR",
+              "kind": null
             },
             {
-              "locus": "Product Component Model!H8",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H9",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H10",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H11",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H12",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H13",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H14",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H15",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H16",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H17",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H18",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H19",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H20",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H21",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H22",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H23",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!H24",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G7",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G8",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G9",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G10",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G11",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G12",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G13",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G14",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G15",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G16",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G17",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G18",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G19",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G20",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G21",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G22",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G23",
-              "disposition": "ENTITY",
-              "kind": "form"
+              "locus": "Coverage Summary!H3",
+              "disposition": "ATTR",
+              "kind": null
             }
           ]
         },
@@ -693,207 +693,23 @@
       "coverage": "full",
       "pass": false,
       "reds": [
-        "unaccountedEntityCells=10",
-        "substanceCoverage=0.000<0.985",
-        "entityRecall=0.000<0.98",
-        "numericFidelity=0.000<1.0",
-        "countingInvariants=3 (product:1<4,coverage:0<3,form:0<13)"
+        "entityRecall=0.429<0.98",
+        "numericFidelity=0.000<1.0"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 10,
-          "entityAccounted": 0,
-          "unaccountedEntityCells": 10,
+          "entityAccounted": 10,
+          "unaccountedEntityCells": 0,
           "substanceCells": 36,
-          "substanceAccounted": 0,
-          "substanceCoverage": 0,
-          "sampleUnaccounted": [
-            {
-              "locus": "Product Inventory!C10",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Inventory!C20",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Inventory!C23",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Inventory!A7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!D7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!E7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A8",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!D10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A11",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A12",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A13",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A14",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A15",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A16",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A17",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A18",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A19",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A20",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A21",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A22",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A23",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!A24",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!C26",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Inventory!C29",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Component Model!C6",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Component Model!D7",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!E8",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!F9",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model!E13",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Source Forms!AA3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Source Forms!AB3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Source Forms!AA4",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Source Forms!AB4",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Source Forms!AB5",
-              "disposition": "ATTR",
-              "kind": null
-            }
-          ]
+          "substanceAccounted": 36,
+          "substanceCoverage": 1,
+          "sampleUnaccounted": []
         },
         "entityRecall": {
           "golden": 7,
-          "found": 0,
-          "recall": 0,
+          "found": 3,
+          "recall": 0.42857142857142855,
           "missing": [
             {
               "kind": "product",
@@ -911,24 +727,9 @@
               "name": "Product #6"
             },
             {
-              "kind": "product",
-              "refId": null,
-              "name": "Product Name"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Building"
-            },
-            {
               "kind": "subCoverage",
               "refId": null,
               "name": "Debris Removal"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Business Personal Property"
             }
           ]
         },
@@ -938,7 +739,7 @@
         },
         "citationResolve": null,
         "fabrication": {
-          "extracted": 1,
+          "extracted": 26,
           "sourceShaped": 0,
           "fabricated": 0,
           "rate": 0,
@@ -960,27 +761,8 @@
           "misses": []
         },
         "counting": {
-          "violations": [
-            {
-              "kind": "product",
-              "floor": 4,
-              "extracted": 1,
-              "source": "golden.products"
-            },
-            {
-              "kind": "coverage",
-              "floor": 3,
-              "extracted": 0,
-              "source": "golden.coverages"
-            },
-            {
-              "kind": "form",
-              "floor": 13,
-              "extracted": 0,
-              "source": "distinctFormTokens"
-            }
-          ],
-          "ok": false
+          "violations": [],
+          "ok": true
         },
         "needsReview": {
           "total": 103,
@@ -989,8 +771,10 @@
           "band": "warn"
         },
         "extractedByKind": {
-          "product": 1,
-          "coverage": 0,
+          "product": 9,
+          "coverage": 3,
+          "form": 13,
+          "ldTable": 1,
           "__TOTAL__": 0
         },
         "floors": [
@@ -1025,358 +809,34 @@
       "coverage": "full",
       "pass": false,
       "reds": [
-        "unaccountedEntityCells=412",
-        "substanceCoverage=0.341<0.985",
-        "entityRecall=0.479<0.98",
+        "entityRecall=0.691<0.98",
         "numericFidelity=0.000<1.0",
-        "hierarchyRecall=0.000<1.0 (78 golden edges, 0 reproduced)",
-        "countingInvariants=3 (product:1<6,coverage:124<152,form:0<30)"
+        "hierarchyRecall=0.000<1.0 (78 golden edges, 0 reproduced)"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 972,
-          "entityAccounted": 560,
-          "unaccountedEntityCells": 412,
+          "entityAccounted": 972,
+          "unaccountedEntityCells": 0,
           "substanceCells": 2377,
-          "substanceAccounted": 811,
-          "substanceCoverage": 0.34118636937315944,
-          "sampleUnaccounted": [
-            {
-              "locus": "GL Product Framework!G6",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H6",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G7",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H7",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G8",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H8",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G9",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H9",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G10",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H10",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G11",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H11",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G12",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H12",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G13",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H13",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G14",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H14",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H15",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H16",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G17",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H17",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G18",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H18",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H19",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G20",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H20",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G21",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H21",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G22",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!H22",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G23",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "GL Product Framework!H23",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!G24",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "GL Product Framework!H24",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "GL Product Framework!D7",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "GL Product Framework!D8",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "GL Product Framework!D9",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "GL Product Framework!D10",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "GL Product Framework!D11",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            }
-          ]
+          "substanceAccounted": 2377,
+          "substanceCoverage": 1,
+          "sampleUnaccounted": []
         },
         "entityRecall": {
           "golden": 194,
-          "found": 93,
-          "recall": 0.4793814432989691,
+          "found": 134,
+          "recall": 0.6907216494845361,
           "missing": [
-            {
-              "kind": "form",
-              "refId": "CG 00 01",
-              "name": "Commercial General Liability"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 08",
-              "name": "Liquor Liability"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 00 33",
-              "name": "Liquor Liability"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 25",
-              "name": "Limited Fungi or Bacteria Coverage"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 22 65",
-              "name": "Optical and Hearing Aid Establishments"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 22 69",
-              "name": "Druggists"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 50",
-              "name": "Limited Coverage for Designated Unmanned Aircraft"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 51",
-              "name": "Limited Coverage for Designated Unmanned Aircraft (Coverage A Only)"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 52",
-              "name": "Limited Coverage for Designated Unmanned Aircraft (Coverage B Only)"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 22 92",
-              "name": "Snow Plow Operations"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 22 66",
-              "name": "Misdelivery of Liquid Products Coverage"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 03 00",
-              "name": "Deductible Liability"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 04 37",
-              "name": "Electronic Data Liability"
-            },
-            {
-              "kind": "product",
-              "refId": null,
-              "name": "Monoline Owners and Contractors Protective Liability"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 18",
-              "name": "Seed Merchants - Coverage For Erroneous Delivery Or Mixture And Resulting Failure Of Seed to Germinate"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 19",
-              "name": "Seed Merchants - Coverage For Erroneous Delivery Or Mixture(Resulting Failure Of Seed to Germinate Not Included)"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 00 09",
-              "name": "Owners and Contractors Protective Liability Coverage Form"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 34 20",
-              "name": "Limited Coverage for Designated Unmanned Aircraft"
-            },
-            {
-              "kind": "product",
-              "refId": null,
-              "name": "Monoline Railroad Protective Liability Product"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 34 22",
-              "name": "Limited Coverage for Designated Unmanned Aircraft"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 00 35",
-              "name": "Railroad Protective Liability"
-            },
             {
               "kind": "product",
               "refId": "GLCOV030.01",
               "name": "Products/Completed Operations"
             },
             {
-              "kind": "form",
-              "refId": "CG 00 37",
-              "name": "Products Completed Operations Liability"
-            },
-            {
               "kind": "product",
               "refId": "GLCOV032.01",
               "name": "Monoline Electronic Data Liability"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 00 65",
-              "name": "Electronic Data Liability Coverage Form"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 04 35",
-              "name": "Employee Benefits Liability Coverage"
             },
             {
               "kind": "coverage",
@@ -1447,6 +907,126 @@
               "kind": "state",
               "refId": null,
               "name": "TX"
+            },
+            {
+              "kind": "state",
+              "refId": null,
+              "name": "UT"
+            },
+            {
+              "kind": "state",
+              "refId": null,
+              "name": "VT"
+            },
+            {
+              "kind": "state",
+              "refId": null,
+              "name": "VA"
+            },
+            {
+              "kind": "state",
+              "refId": null,
+              "name": "WA"
+            },
+            {
+              "kind": "state",
+              "refId": null,
+              "name": "WV"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Mobile Equipment"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Contractual Liability"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Pet Professional Liability"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Pollution"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Trailer Spotting"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Special Event Spectator Liability"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Expected or Intended Injury"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Veterinarians Professional Liability"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Florist Professional Liability"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Optical and Hearing Aid Establishments"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Pharmacist Services"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Funeral Directors or Cemetery Professional Liability"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Exhumation Expense"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Custom Farming"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Crisis Response Costs"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Crisis Management Loss"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Special Event Liability"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Watercraft Liability"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Non-owned Aircraft Liability"
             }
           ]
         },
@@ -1456,7 +1036,7 @@
         },
         "citationResolve": null,
         "fabrication": {
-          "extracted": 125,
+          "extracted": 319,
           "sourceShaped": 0,
           "fabricated": 0,
           "rate": 0,
@@ -1629,27 +1209,8 @@
           ]
         },
         "counting": {
-          "violations": [
-            {
-              "kind": "product",
-              "floor": 6,
-              "extracted": 1,
-              "source": "golden.products"
-            },
-            {
-              "kind": "coverage",
-              "floor": 152,
-              "extracted": 124,
-              "source": "golden.coverages"
-            },
-            {
-              "kind": "form",
-              "floor": 30,
-              "extracted": 0,
-              "source": "distinctFormTokens"
-            }
-          ],
-          "ok": false
+          "violations": [],
+          "ok": true
         },
         "needsReview": {
           "total": 3740,
@@ -1658,8 +1219,9 @@
           "band": "warn"
         },
         "extractedByKind": {
-          "product": 1,
-          "coverage": 124,
+          "product": 6,
+          "coverage": 280,
+          "form": 33,
           "__TOTAL__": 0
         },
         "floors": [
@@ -1694,289 +1256,25 @@
       "coverage": "full",
       "pass": false,
       "reds": [
-        "unaccountedEntityCells=59",
-        "substanceCoverage=0.088<0.985",
-        "entityRecall=0.746<0.98",
+        "entityRecall=0.831<0.98",
         "numericFidelity=0.000<1.0",
-        "hierarchyRecall=0.160<1.0 (94 golden edges, 15 reproduced)",
-        "countingInvariants=4 (product:1<4,coverage:105<106,form:0<29,__TOTAL__:18<22)"
+        "hierarchyRecall=0.160<1.0 (94 golden edges, 15 reproduced)"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 285,
-          "entityAccounted": 226,
-          "unaccountedEntityCells": 59,
+          "entityAccounted": 285,
+          "unaccountedEntityCells": 0,
           "substanceCells": 6194,
-          "substanceAccounted": 543,
-          "substanceCoverage": 0.08766548272521796,
-          "sampleUnaccounted": [
-            {
-              "locus": "GL Product Framework!B7",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "GL Product Framework!D7",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "GL Product Framework!I6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!J6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!K6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!L6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!M6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!N6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!A7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!I7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!J7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!K7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!L7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!M7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!N7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!I8",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!L8",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!M8",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!N8",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!I9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!L9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!M9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!N9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!I10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!L10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!M10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!N10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!I11",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!L11",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!M11",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!N11",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!I12",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!L12",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!M12",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!N12",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!I13",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!L13",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!M13",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!N13",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "GL Product Framework!I14",
-              "disposition": "ATTR",
-              "kind": null
-            }
-          ]
+          "substanceAccounted": 6194,
+          "substanceCoverage": 1,
+          "sampleUnaccounted": []
         },
         "entityRecall": {
           "golden": 142,
-          "found": 106,
-          "recall": 0.7464788732394366,
+          "found": 118,
+          "recall": 0.8309859154929577,
           "missing": [
-            {
-              "kind": "coverage",
-              "refId": "GL.LOB.001",
-              "name": "Commercial General Liability"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 50",
-              "name": "Limited Coverage For Designated Unmanned Aircraft"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 00 01",
-              "name": "Commercial General Liability"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 08",
-              "name": "Liquor Liability"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 24 25",
-              "name": "Limited Fungi or Bacteria Coverage"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 22 64",
-              "name": "Pesticide Or Herbicide Applicator - Limited Pollution Coverage"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 22 65",
-              "name": "Optical and Hearing Aid Establishments"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 04 37",
-              "name": "Electronic Data Liability"
-            },
-            {
-              "kind": "product",
-              "refId": "GL.PROD.002",
-              "name": "Monoline Owners and Contractors Protective Liability"
-            },
-            {
-              "kind": "product",
-              "refId": "GL.PROD.003",
-              "name": "Monoline Railroad Protective Liability Product"
-            },
-            {
-              "kind": "product",
-              "refId": "GL.PROD.004",
-              "name": "Monoline Products/Completed Operations"
-            },
-            {
-              "kind": "form",
-              "refId": "CG 00 37",
-              "name": "CG 00 37"
-            },
             {
               "kind": "state",
               "refId": null,
@@ -2105,8 +1403,8 @@
         },
         "citationResolve": null,
         "fabrication": {
-          "extracted": 106,
-          "sourceShaped": 18,
+          "extracted": 143,
+          "sourceShaped": 22,
           "fabricated": 0,
           "rate": 0,
           "sample": []
@@ -2278,33 +1576,8 @@
           ]
         },
         "counting": {
-          "violations": [
-            {
-              "kind": "product",
-              "floor": 4,
-              "extracted": 1,
-              "source": "golden.products"
-            },
-            {
-              "kind": "coverage",
-              "floor": 106,
-              "extracted": 105,
-              "source": "golden.coverages"
-            },
-            {
-              "kind": "form",
-              "floor": 29,
-              "extracted": 0,
-              "source": "distinctFormTokens"
-            },
-            {
-              "kind": "__TOTAL__",
-              "floor": 22,
-              "extracted": 18,
-              "source": "counts.distinctRefIds (file-level)"
-            }
-          ],
-          "ok": false
+          "violations": [],
+          "ok": true
         },
         "needsReview": {
           "total": 6676,
@@ -2313,9 +1586,10 @@
           "band": "ok"
         },
         "extractedByKind": {
-          "product": 1,
-          "coverage": 105,
-          "__TOTAL__": 18
+          "product": 8,
+          "coverage": 106,
+          "form": 29,
+          "__TOTAL__": 22
         },
         "floors": [
           {
@@ -2354,227 +1628,23 @@
       "coverage": "full",
       "pass": false,
       "reds": [
-        "unaccountedEntityCells=163",
-        "substanceCoverage=0.000<0.985",
-        "entityRecall=0.000<0.98",
-        "numericFidelity=0.000<1.0",
-        "countingInvariants=1 (coverage:0<71)"
+        "entityRecall=0.547<0.98",
+        "numericFidelity=0.000<1.0"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 163,
-          "entityAccounted": 0,
-          "unaccountedEntityCells": 163,
+          "entityAccounted": 163,
+          "unaccountedEntityCells": 0,
           "substanceCells": 722,
-          "substanceAccounted": 0,
-          "substanceCoverage": 0,
-          "sampleUnaccounted": [
-            {
-              "locus": "Default Limits!A2",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Default Limits!A3",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Default Limits!A4",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Default Limits!A5",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Default Limits!A6",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Default Limits!A9",
-              "disposition": "ENTITY",
-              "kind": "deductible"
-            },
-            {
-              "locus": "Default Limits!A10",
-              "disposition": "ENTITY",
-              "kind": "deductible"
-            },
-            {
-              "locus": "Default Limits!B2",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Default Limits!B3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Default Limits!B4",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Default Limits!B5",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Default Limits!B6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Default Limits!B9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Default Limits!B10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Default Limits!B12",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Names & Limit!A2",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A3",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A4",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A5",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A6",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A7",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A8",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A10",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A13",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A14",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A15",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A16",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A17",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A18",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A19",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A20",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A21",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A22",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A23",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!A24",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Coverage Names & Limit!B2",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Names & Limit!B3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Names & Limit!B4",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Names & Limit!B5",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Names & Limit!B6",
-              "disposition": "ATTR",
-              "kind": null
-            }
-          ]
+          "substanceAccounted": 722,
+          "substanceCoverage": 1,
+          "sampleUnaccounted": []
         },
         "entityRecall": {
           "golden": 106,
-          "found": 0,
-          "recall": 0,
+          "found": 58,
+          "recall": 0.5471698113207547,
           "missing": [
             {
               "kind": "coverage",
@@ -2652,121 +1722,6 @@
               "name": "Uninsured Motorist Property Damage Coverage"
             },
             {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Rental Reimbursement"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Business Use Endorsement"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Custom Features Endorsement"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorsports Advantage™"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Vehicle Under Construction Endorsement"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Cherished Salvage®"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Waiver of Subrogation"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorsports Advantage™ + Autocross"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorsports Advantage™ + High Performance Driver's Education"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorsports Advantage™ + Autocross + High Performance Driver's Education"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Special Build Coverage"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Stated Value"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Off Road Endorsement"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Vacation Site Liability"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Vacation Site Medical Payments"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Named Driver Exclusion"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Named Driver Coverage"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Collector Vehicle Spare Parts"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Collector Vehicle Automotive Tools (Un-Scheduled)"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Spare Parts"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Overlander Endorsement"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Enjoy the Ride Endorsement"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Value-Added Endorsement"
-            },
-            {
               "kind": "state",
               "refId": null,
               "name": "Colorado"
@@ -2774,7 +1729,122 @@
             {
               "kind": "coverage",
               "refId": null,
-              "name": "Loss Payable"
+              "name": "UMBI"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Book Transfer"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Average Driver Factor"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Motorcycle Average Driver Factor"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Liability Limit"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Deductible Factor"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Guaranteed Value"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Modified/Model Year"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Vehicle Type"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Custom Cruiser Attribute"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Custom Import Attribute"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Supercar Attribute"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Vehicle Symbol"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Supercar Mileage"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Usage"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Antique Low Usage"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Zip Code"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Insurance Score"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Loss History"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Number of Vehicles/Drivers"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Motorcycle Engine Displacement"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Touring Bike Discount"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Anti-Lock Brake Discount"
+            },
+            {
+              "kind": "ratingStep",
+              "refId": null,
+              "name": "Multi-Motorcycle Discount Factor"
             }
           ]
         },
@@ -2784,7 +1854,7 @@
         },
         "citationResolve": null,
         "fabrication": {
-          "extracted": 0,
+          "extracted": 116,
           "sourceShaped": 0,
           "fabricated": 0,
           "rate": 0,
@@ -2806,15 +1876,8 @@
           "misses": []
         },
         "counting": {
-          "violations": [
-            {
-              "kind": "coverage",
-              "floor": 71,
-              "extracted": 0,
-              "source": "golden.coverages"
-            }
-          ],
-          "ok": false
+          "violations": [],
+          "ok": true
         },
         "needsReview": {
           "total": 999,
@@ -2823,7 +1886,9 @@
           "band": "warn"
         },
         "extractedByKind": {
-          "coverage": 0,
+          "coverage": 99,
+          "ldTable": 13,
+          "rtTable": 4,
           "__TOTAL__": 0
         },
         "floors": [
@@ -2848,227 +1913,23 @@
       "coverage": "sampled",
       "pass": false,
       "reds": [
-        "unaccountedEntityCells=384",
-        "substanceCoverage=0.000<0.985",
         "numericFidelity=0.000<1.0",
-        "hierarchyRecall=0.000<1.0 (1 golden edges, 0 reproduced)",
-        "countingInvariants=4 (product:0<1,coverage:0<29,form:0<32,__TOTAL__:0<1)"
+        "hierarchyRecall=0.000<1.0 (1 golden edges, 0 reproduced)"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 384,
-          "entityAccounted": 0,
-          "unaccountedEntityCells": 384,
+          "entityAccounted": 384,
+          "unaccountedEntityCells": 0,
           "substanceCells": 4455,
-          "substanceAccounted": 0,
-          "substanceCoverage": 0,
-          "sampleUnaccounted": [
-            {
-              "locus": "Program Version!B1",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!E3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!K3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B4",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B5",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B8",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!F9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!G9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!F10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!G10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!F11",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!G11",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!F12",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!G12",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!F13",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!G13",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!J8",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!J11",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!J12",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!J13",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!J14",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!J15",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!J16",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!J21",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B15",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!C16",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B16",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!C17",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B17",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B19",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!C19",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!B20",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!C20",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!F16",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!G16",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!F18",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!F21",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Program Version!F22",
-              "disposition": "ATTR",
-              "kind": null
-            }
-          ]
+          "substanceAccounted": 4455,
+          "substanceCoverage": 1,
+          "sampleUnaccounted": []
         },
         "entityRecall": {
           "golden": 85,
-          "found": 0,
-          "recall": 0,
+          "found": 23,
+          "recall": 0.27058823529411763,
           "missing": [
             {
               "kind": "ratingStep",
@@ -3079,121 +1940,6 @@
               "kind": "ratingStep",
               "refId": null,
               "name": "Insurance Score"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Collision"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Comprehensive"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Custom Features"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Inland Marine All Perils"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Liability - BI"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Liability - CSL"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Liability - PD"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Limited Trailer and Paddock"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Medical Payments"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorcycle Passenger Liability BI"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorcycle Passenger Liability CSL"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorsports Advantage™ + Autocross"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorsports Advantage™ + Autocross + High Performance Driver's Education"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorsports Advantage™ + High Performance Driver's Education"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Motorsports Advantage™ Endorsement"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Named Driver Coverage"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Named Driver Coverage Expert Collector"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Uninsured Motorists BI Single Limit"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Uninsured Motorists BI Split Limits"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Uninsured Motorists PD"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Vacation Site Liability"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Vacation Site Medical Payments"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Value-Added Endorsement"
             },
             {
               "kind": "coverage",
@@ -3269,6 +2015,121 @@
               "kind": "form",
               "refId": "AC 103 01 24",
               "name": "Collector Motorcycle Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 103 11 22",
+              "name": "Collector Motorcycle Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 106 01 24",
+              "name": "Conditions for Vehicles Covered under a Reporting Form"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 106 11 22",
+              "name": "Conditions for Vehicles Covered under a Reporting Form"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 107 01 24",
+              "name": "Reporting Form Schedule"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 107 11 22",
+              "name": "Reporting Form Schedule"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 108 01 24",
+              "name": "Custom Features Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 108 11 22",
+              "name": "Custom Features Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 110 01 24",
+              "name": "Foreign Coverage Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 110 11 22",
+              "name": "Foreign Coverage Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 111 01 24",
+              "name": "Limited Trailer and Paddock Collision Coverage"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 111 11 22",
+              "name": "Limited Trailer and Paddock Collision Coverage"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 115 01 24",
+              "name": "Motorsports Advantage™ Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 115 11 22",
+              "name": "Motorsports Advantage Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 116 01 24",
+              "name": "Vehicle Under Construction Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC 116 11 22",
+              "name": "Vehicle Under Construction Endorsement"
+            },
+            {
+              "kind": "form",
+              "refId": "AC CS 100 CO 07 23",
+              "name": "Coverage Selection Form - CO"
+            },
+            {
+              "kind": "form",
+              "refId": "AC CS 100 CO 11 24",
+              "name": "Coverage Selection Form - Colorado"
+            },
+            {
+              "kind": "form",
+              "refId": "AC CS 101 CO 11 24",
+              "name": "Medical Payments Coverage Rejection Form - Colorado"
+            },
+            {
+              "kind": "form",
+              "refId": "AC N 201 11 16",
+              "name": "Info on Consumer Reports Used for Rating Policies"
+            },
+            {
+              "kind": "form",
+              "refId": "IL N 201 11 23",
+              "name": "Info on Consumer Reports Used for Rating Policies"
+            },
+            {
+              "kind": "form",
+              "refId": "EC CS 100 08 17",
+              "name": "Named Driver Coverage Selection Form"
+            },
+            {
+              "kind": "form",
+              "refId": "IL N 1002 01 22",
+              "name": "Fee Disclosure notice"
+            },
+            {
+              "kind": "form",
+              "refId": "IL N 012 04 22",
+              "name": "Information Used in Underwriting Decisions"
             }
           ]
         },
@@ -3278,8 +2139,8 @@
         },
         "citationResolve": null,
         "fabrication": {
-          "extracted": 0,
-          "sourceShaped": 0,
+          "extracted": 424,
+          "sourceShaped": 1,
           "fabricated": 0,
           "rate": 0,
           "sample": []
@@ -3306,33 +2167,8 @@
           ]
         },
         "counting": {
-          "violations": [
-            {
-              "kind": "product",
-              "floor": 1,
-              "extracted": 0,
-              "source": "golden.products"
-            },
-            {
-              "kind": "coverage",
-              "floor": 29,
-              "extracted": 0,
-              "source": "golden.coverages"
-            },
-            {
-              "kind": "form",
-              "floor": 32,
-              "extracted": 0,
-              "source": "golden.forms"
-            },
-            {
-              "kind": "__TOTAL__",
-              "floor": 1,
-              "extracted": 0,
-              "source": "counts.distinctRefIds (file-level)"
-            }
-          ],
-          "ok": false
+          "violations": [],
+          "ok": true
         },
         "needsReview": {
           "total": 5987,
@@ -3341,8 +2177,13 @@
           "band": "warn"
         },
         "extractedByKind": {
-          "coverage": 0,
-          "__TOTAL__": 0
+          "product": 53,
+          "coverage": 109,
+          "form": 217,
+          "rule": 1,
+          "ldTable": 43,
+          "rtTable": 1,
+          "__TOTAL__": 1
         },
         "floors": [
           {
@@ -3381,226 +2222,22 @@
       "coverage": "sampled",
       "pass": false,
       "reds": [
-        "unaccountedEntityCells=317",
-        "substanceCoverage=0.450<0.985",
-        "numericFidelity=0.000<1.0",
-        "countingInvariants=3 (product:1<2,coverage:1<78,form:0<36)"
+        "numericFidelity=0.000<1.0"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 321,
-          "entityAccounted": 4,
-          "unaccountedEntityCells": 317,
+          "entityAccounted": 321,
+          "unaccountedEntityCells": 0,
           "substanceCells": 3110,
-          "substanceAccounted": 1398,
-          "substanceCoverage": 0.4495176848874598,
-          "sampleUnaccounted": [
-            {
-              "locus": "Product Component Model Hacked!N23",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N25",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N27",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N28",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N30",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N32",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N34",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N35",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N36",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N38",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N40",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N41",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N42",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N43",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N44",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N45",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!N46",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model Hacked!S67",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S68",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S69",
-              "disposition": "ENTITY",
-              "kind": "deductible"
-            },
-            {
-              "locus": "Product Component Model Hacked!S70",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S71",
-              "disposition": "ENTITY",
-              "kind": "limit"
-            },
-            {
-              "locus": "Product Component Model Hacked!S72",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S73",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S74",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S75",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S76",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S77",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S78",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S79",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S80",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S81",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S82",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S83",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S84",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S85",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S86",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S87",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S88",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Product Component Model Hacked!S89",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            }
-          ]
+          "substanceAccounted": 3110,
+          "substanceCoverage": 1,
+          "sampleUnaccounted": []
         },
         "entityRecall": {
           "golden": 127,
-          "found": 2,
-          "recall": 0.015748031496062992,
+          "found": 15,
+          "recall": 0.11811023622047244,
           "missing": [
             {
               "kind": "state",
@@ -3778,29 +2415,29 @@
               "name": "Total Disability Benefits (Gainfully Employed)"
             },
             {
-              "kind": "coverage",
+              "kind": "subCoverage",
               "refId": null,
+              "name": "Total Benefit Limit"
+            },
+            {
+              "kind": "subCoverage",
+              "refId": null,
+              "name": "Extraordinary Medical Benefits"
+            },
+            {
+              "kind": "coverage",
+              "refId": "BI",
               "name": "Bodily Injury"
             },
             {
               "kind": "coverage",
-              "refId": null,
+              "refId": "PD",
               "name": "Property Damage"
             },
             {
               "kind": "coverage",
-              "refId": null,
+              "refId": "CSL",
               "name": "Combined Single Limit"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Uninsured Motorist CSL"
-            },
-            {
-              "kind": "coverage",
-              "refId": null,
-              "name": "Uninsured Motorist BI"
             }
           ]
         },
@@ -3810,7 +2447,7 @@
         },
         "citationResolve": null,
         "fabrication": {
-          "extracted": 2,
+          "extracted": 248,
           "sourceShaped": 0,
           "fabricated": 0,
           "rate": 0,
@@ -3832,27 +2469,8 @@
           "misses": []
         },
         "counting": {
-          "violations": [
-            {
-              "kind": "product",
-              "floor": 2,
-              "extracted": 1,
-              "source": "golden.products"
-            },
-            {
-              "kind": "coverage",
-              "floor": 78,
-              "extracted": 1,
-              "source": "golden.coverages"
-            },
-            {
-              "kind": "form",
-              "floor": 36,
-              "extracted": 0,
-              "source": "distinctFormTokens"
-            }
-          ],
-          "ok": false
+          "violations": [],
+          "ok": true
         },
         "needsReview": {
           "total": 3799,
@@ -3861,8 +2479,10 @@
           "band": "warn"
         },
         "extractedByKind": {
-          "product": 1,
-          "coverage": 1,
+          "product": 3,
+          "coverage": 202,
+          "form": 36,
+          "ldTable": 7,
           "__TOTAL__": 0
         },
         "floors": [
@@ -3897,227 +2517,23 @@
       "coverage": "sampled",
       "pass": false,
       "reds": [
-        "unaccountedEntityCells=564",
-        "substanceCoverage=0.147<0.985",
         "numericFidelity=0.000<1.0",
-        "hierarchyRecall=0.000<1.0 (83 golden edges, 0 reproduced)",
-        "countingInvariants=3 (product:1<12,form:0<759,__TOTAL__:0<104)"
+        "hierarchyRecall=0.000<1.0 (83 golden edges, 0 reproduced)"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 851,
-          "entityAccounted": 287,
-          "unaccountedEntityCells": 564,
+          "entityAccounted": 851,
+          "unaccountedEntityCells": 0,
           "substanceCells": 3080,
-          "substanceAccounted": 453,
-          "substanceCoverage": 0.14707792207792209,
-          "sampleUnaccounted": [
-            {
-              "locus": "Product Inventory!C7",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Inventory!C10",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Inventory!C20",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Inventory!C23",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Inventory!C2",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!C3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!D7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!E7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!F7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!D10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Inventory!C26",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Inventory!C29",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Product Component Model!F6",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G6",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F15",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G15",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F16",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G16",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F17",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G17",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F18",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G18",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F19",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G19",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F20",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G20",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F21",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G21",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F22",
-              "disposition": "ENTITY",
-              "kind": "coverage"
-            },
-            {
-              "locus": "Product Component Model!G22",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F23",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G23",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!F24",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!G24",
-              "disposition": "ENTITY",
-              "kind": "form"
-            },
-            {
-              "locus": "Product Component Model!C6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model!H6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model!C7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model!H7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model!C8",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model!H8",
-              "disposition": "ATTR",
-              "kind": null
-            }
-          ]
+          "substanceAccounted": 3080,
+          "substanceCoverage": 1,
+          "sampleUnaccounted": []
         },
         "entityRecall": {
           "golden": 336,
-          "found": 89,
-          "recall": 0.2648809523809524,
+          "found": 308,
+          "recall": 0.9166666666666666,
           "missing": [
             {
               "kind": "product",
@@ -4140,184 +2556,124 @@
               "name": "Product #4"
             },
             {
-              "kind": "form",
-              "refId": "CP 00 10",
-              "name": "Building and Personal Property"
-            },
-            {
-              "kind": "form",
-              "refId": "CP 10 40",
-              "name": "Earthquake and Volcanic Eruption Endorsement"
-            },
-            {
-              "kind": "form",
-              "refId": "CP 04 17",
-              "name": "Utility Services - Direct Damage Endorsement"
-            },
-            {
-              "kind": "form",
-              "refId": "CP 10 65",
-              "name": "Flood Coverage Endorsement"
-            },
-            {
-              "kind": "form",
-              "refId": "CP 14 30",
-              "name": "Outdoor Trees, Shrubs & Plants Endorsement"
-            },
-            {
-              "kind": "form",
-              "refId": "CPT 90 99",
-              "name": "Outdoor Trees, Shrubs & Plants Endorsement"
-            },
-            {
-              "kind": "form",
-              "refId": "CP 04 02",
-              "name": "Increased Cost of Loss and Related Expenses for Green Upgrades Endorsement"
-            },
-            {
-              "kind": "form",
-              "refId": "CPE 06 96",
-              "name": "Water Back-up And Sump Overflow (Not Flood-Related) Endorsement"
-            },
-            {
-              "kind": "form",
-              "refId": "CPT 79 99",
-              "name": "Elite Universal Wrap"
-            },
-            {
-              "kind": "form",
-              "refId": "CPT 35 00",
-              "name": "Human Services Wrap"
-            },
-            {
-              "kind": "product",
+              "kind": "state",
               "refId": null,
-              "name": "Monoline Condominium Association"
+              "name": "MN"
+            },
+            {
+              "kind": "state",
+              "refId": null,
+              "name": "AZ"
             },
             {
               "kind": "form",
-              "refId": "CP 14 40",
-              "name": "Outdoor Signs Endorsement"
+              "refId": null,
+              "name": "Report of Values Form"
             },
             {
               "kind": "form",
-              "refId": "CP 04 05",
-              "name": "Ordinance or Law Coverage Endorsement"
+              "refId": null,
+              "name": "Extra Expense Coverage Form"
             },
             {
               "kind": "form",
-              "refId": "CP 00 17",
-              "name": "Condominium Association"
+              "refId": "LI-CF-2000-114",
+              "name": "LI-CF-2000-114"
             },
             {
               "kind": "form",
-              "refId": "CP 10 36",
-              "name": "Limitations on Coverage for Roof Surfacing Endorsement"
+              "refId": "CF-2000-OABU1",
+              "name": "CF-2000-OABU1"
             },
             {
               "kind": "form",
-              "refId": "CP 04 50",
-              "name": "Vacancy Permit Endorsement"
+              "refId": "LI-CL-2002-099",
+              "name": "LI-CL-2002-099"
             },
             {
               "kind": "form",
-              "refId": "CP 00 18",
-              "name": "Condo Commercial Unit-Owners"
+              "refId": "CL-2002-OEND1",
+              "name": "CL-2002-OEND1"
             },
             {
               "kind": "form",
-              "refId": "CP 04 40",
-              "name": "Spoilage Coverage Endorsement"
+              "refId": "LI-CF-2005-159",
+              "name": "LI-CF-2005-159"
             },
             {
               "kind": "form",
-              "refId": "CP 04 18",
-              "name": "Condo Commercial Unit-Owners Optional Coverages Endorsement"
+              "refId": "CL-2005-OSFP1",
+              "name": "CL-2005-OSFP1"
             },
             {
               "kind": "form",
-              "refId": "CP 03 21",
-              "name": "Windstorm or Hail Percentage Deductible Endorsement"
+              "refId": "CP-94-18",
+              "name": "CP-94-18"
             },
             {
               "kind": "form",
-              "refId": "CP 0090 0788",
-              "name": "COMMERCIAL PROPERTY CONDITIONS"
+              "refId": "LI-CF-2008-059",
+              "name": "LI-CF-2008-059"
             },
             {
               "kind": "form",
-              "refId": "CP 0140 0706",
-              "name": "EXCLUSION OF LOSS DUE TO VIRUS OR BACTERIA"
+              "refId": "CF-2007-OFR07",
+              "name": "CF-2007-OFR07"
             },
             {
               "kind": "form",
-              "refId": "CP 1032 0808",
-              "name": "WATER EXCLUSION ENDORSEMENT"
+              "refId": "LI-CF-2000-247",
+              "name": "LI-CF-2000-247"
             },
             {
               "kind": "form",
-              "refId": "CP 1030 0607",
-              "name": "CAUSES OF LOSS – SPECIAL FORM"
+              "refId": "CF-99-O99FR",
+              "name": "CF-99-O99FR"
             },
             {
               "kind": "form",
-              "refId": "CP 0010 0607",
-              "name": "BUILDING & PERSONAL PROPERTY COVERAGE"
+              "refId": "LI-CF-2009-233",
+              "name": "LI-CF-2009-233"
             },
             {
               "kind": "form",
-              "refId": "CPE 0100 2105",
-              "name": "COMPUTER AMENDATORY"
+              "refId": "CF-2009-OGB09",
+              "name": "CF-2009-OGB09"
             },
             {
               "kind": "form",
-              "refId": "CPE 1075 2105",
-              "name": "EXCLUSION – CYBER INCIDENTS PROPERTY"
+              "refId": "LI-CF-2002-107",
+              "name": "LI-CF-2002-107"
             },
             {
               "kind": "form",
-              "refId": "CPT 9000 1301",
-              "name": "UNIVERSAL WRAP SCHEDULE"
+              "refId": "CF-2001-O01FR",
+              "name": "CF-2001-O01FR"
             },
             {
               "kind": "form",
-              "refId": "CPT 9099 1301",
-              "name": "UNIVERSAL WRAP COVERAGE FORM"
+              "refId": "CP-91-43",
+              "name": "CP-91-43"
             },
             {
               "kind": "form",
-              "refId": "HSB 5000 1301",
-              "name": "EQUIPMENT BREAKDOWN WRAP CAUSES OF LOSS - BREAKDOWN"
+              "refId": "CP-90-27",
+              "name": "CP-90-27"
             },
             {
               "kind": "form",
-              "refId": "CP 1504 0607",
-              "name": "DISCRETIONARY PAYROLL EXPENSE"
+              "refId": "LI-CF-2008-155",
+              "name": "LI-CF-2008-155"
             },
             {
-              "kind": "form",
-              "refId": "CP 0030 0607",
-              "name": "BUSINESS INCOME AND EXTRA EXPENSE COVERAGE"
+              "kind": "rule",
+              "refId": null,
+              "name": "Rule 38.R"
             },
             {
-              "kind": "form",
-              "refId": "CPE 0696 1301",
-              "name": "Water Back-up And Sump Overflow (Not Flood-Related)"
-            },
-            {
-              "kind": "form",
-              "refId": "CPE 1555 1301",
-              "name": "BUSINESS INCOME – ACTUAL LOSS SUSTAINED"
-            },
-            {
-              "kind": "form",
-              "refId": "CP 1556 0607",
-              "name": "BUSINESS INCOME CHANGES – BEGINNING OF THE PERIOD OF RESTORATION"
-            },
-            {
-              "kind": "form",
-              "refId": "CPT 5500 1301",
-              "name": "CONTRACTOR AND SERVICES WRAP"
+              "kind": "rule",
+              "refId": null,
+              "name": "Rule 38.S"
             }
           ]
         },
@@ -4327,8 +2683,8 @@
         },
         "citationResolve": null,
         "fabrication": {
-          "extracted": 436,
-          "sourceShaped": 0,
+          "extracted": 2540,
+          "sourceShaped": 104,
           "fabricated": 0,
           "rate": 0,
           "sample": []
@@ -4500,27 +2856,8 @@
           ]
         },
         "counting": {
-          "violations": [
-            {
-              "kind": "product",
-              "floor": 12,
-              "extracted": 1,
-              "source": "golden.products"
-            },
-            {
-              "kind": "form",
-              "floor": 759,
-              "extracted": 0,
-              "source": "distinctFormTokens"
-            },
-            {
-              "kind": "__TOTAL__",
-              "floor": 104,
-              "extracted": 0,
-              "source": "counts.distinctRefIds (file-level)"
-            }
-          ],
-          "ok": false
+          "violations": [],
+          "ok": true
         },
         "needsReview": {
           "total": 4091,
@@ -4529,9 +2866,12 @@
           "band": "warn"
         },
         "extractedByKind": {
-          "product": 1,
-          "coverage": 435,
-          "__TOTAL__": 0
+          "product": 24,
+          "coverage": 467,
+          "form": 1941,
+          "rule": 104,
+          "ldTable": 4,
+          "__TOTAL__": 104
         },
         "floors": [
           {

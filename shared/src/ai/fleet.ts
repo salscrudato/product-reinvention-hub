@@ -142,6 +142,34 @@ export const EXTENDED_DEPLOYMENTS = {
 
 export type ExtendedRole = keyof typeof EXTENDED_DEPLOYMENTS
 
+// ─── Extended degrade map (CE3 step 0: fleet reality) ─────────────────────────
+// Operator statement 2026-07-16: Grok is no longer available in foundry-prodhub-dev
+// (FLEET.md at d28c8a1 is stale on this point). VERIFY_XAI callers must resolve
+// their lineage through this map + an isConfigured-style probe (the probe lives
+// server-side in server/lib/import-brain/verify-lineage.js — this registry stays
+// pure). VERIFY_DEEPSEEK becomes the third judge lineage.
+export const EXTENDED_DEGRADE: Readonly<Partial<Record<ExtendedRole, ExtendedRole>>> = {
+  VERIFY_XAI: 'VERIFY_DEEPSEEK',
+} as const
+
+/** Resolve an extended verify role through the degrade map (one hop). */
+export function degradedExtendedRole(role: ExtendedRole): ExtendedRole {
+  return EXTENDED_DEGRADE[role] ?? role
+}
+
+// ─── WORKBOOK_DIGEST routing descriptor (CE3 step 2: workbook understanding) ──
+// The stage-1 digest synthesis role: primary = DEEP_REASONER (gpt-5.4-pro on the
+// /responses surface — reuse external.foundry.deepReason, NEVER chat/completions),
+// fallback = GROUNDED_CITED (opus chat) when the responses surface is unavailable.
+// A composite descriptor rather than a core ModelRole because the two rungs ride
+// different API surfaces; call sites resolve deployments through the registries
+// above — no deployment id is ever hardcoded at a call site.
+export const WORKBOOK_DIGEST = {
+  primary:   'DEEP_REASONER' as ExtendedRole,
+  fallback:  'GROUNDED_CITED' as ModelRole,
+  roleLabel: 'Workbook digest synthesis — deep reasoner with grounded-cited fallback',
+} as const
+
 // ─── Fleet pricing (for cost accounting / spend ceilings) ─────────────────────
 // USD per 1M tokens. The Anthropic figures are current list prices (Opus 4.8 $5/$25, Sonnet 5
 // $3/$15, Haiku 4.5 $1/$5) so per-tenant cost attribution (metering.js costUsd) is accurate and

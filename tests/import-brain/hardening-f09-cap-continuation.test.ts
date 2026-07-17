@@ -86,17 +86,33 @@ describe('F09: truncated fingerprints upgrade to the authoritative raw grid', ()
     expect(w.detail).toMatch(/NOT extracted/i)
   })
 
-  it('column overflow stays excluded (warned non-goal): rows are sliced to the embedded width', () => {
+  it('column overflow is RECOVERED via column continuation (CE3 Step 3a policy flip)', () => {
+    // Pre-CE3 this pinned "columns stay excluded (warned non-goal)". The CE3 brain
+    // rewire mandates column continuation mirroring the row continuation: the
+    // authoritative raw grid widens fp.cells and the new columns gain continuation
+    // columnProfiles so stages 3-4 map + extract them.
     const { fp, raw } = bigFixture(2009, 3)
-    // Pretend the source had 200 columns; the fingerprint embedded only 3.
     fp.dataColCount = 200
+    ;(fp as { columnProfiles?: unknown[] }).columnProfiles = [
+      { colIndex: 0, headerLabel: 'RefId', typeMix: { string: 3 }, distinctSample: ['GL.RUL.1'] },
+      { colIndex: 1, headerLabel: 'Name', typeMix: { string: 3 }, distinctSample: ['x'] },
+      { colIndex: 2, headerLabel: 'Desc', typeMix: { string: 3 }, distinctSample: ['y'] },
+    ]
     const wide = raw.map(r => [...r, ...new Array(197).fill('x')])
     const warnings: Array<{ kind: string; detail: string }> = []
     extendTruncatedGrids({ sheets: [fp] }, [{ sheet: 'BIG', file: 'w.xlsx', cells: wide }], 'w.xlsx', warnings)
     expect(fp.cells.length).toBe(2010)
-    expect(fp.cells[5]!.length).toBe(3)         // sliced to embedded width
+    expect(fp.cells[5]!.length).toBe(200)       // widened to the authoritative grid
+    expect(fp.cells[5]![150]).toBe('x')          // continuation values really there
+    const profiles = (fp as { columnProfiles: Array<{ colIndex: number; continuation?: boolean }> }).columnProfiles
+    expect(profiles.length).toBe(200)            // 3 originals + 197 continuation profiles
+    expect(profiles[3]!.colIndex).toBe(3)
+    expect(profiles.filter(p => p.continuation).length).toBe(197)
+    expect((fp as { colsExtended?: boolean }).colsExtended).toBe(true)
+    expect(fp.cellsTruncated).toBe(false)
     const w = warnings.find(x => x.kind === 'grid-truncated')!
     expect(w.detail).toMatch(/197 column\(s\)/)
+    expect(w.detail).toMatch(/ARE extracted via column continuation/)
   })
 
   it('STACKED_TABLES never claims continuation — its extraction ignores fp.cells', () => {

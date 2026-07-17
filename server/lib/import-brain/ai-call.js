@@ -190,6 +190,45 @@ async function callOpenAI({ deployment, systemPrompt, userPrompt, maxTokens, too
   return { raw: text, usage: json.usage, stopReason }
 }
 
+// ─── OpenAI Responses API call (CE3 Step 2: the WORKBOOK_DIGEST primary rung) ──
+// gpt-*-pro deployments REJECT chat/completions with 400 — they live on the
+// /responses surface (docs/reveng/FLEET.md, the #1 wiring trap). external/foundry's
+// deepReason() does NOT know the IMPORT_CONTEXT (it can throw ai_budget_ceiling) and
+// records only globally, so the import path gets its own call here: guard with the
+// no-cap context, record into BOTH fleet.record and the per-run budget.
+async function callResponses({ deployment, input, maxOutputTokens, budget }) {
+  if (MISSING_DEPLOYMENTS.has(deployment)) {
+    const err = new Error(`deployment ${deployment} not provisioned (cached 404)`)
+    err.status = 404
+    throw err
+  }
+  if (budget && budget.noCap) fleet.guard(fleet.IMPORT_CONTEXT)
+  else {
+    const g = fleet.guard()
+    if (!g.allow) throw new Error('ai_budget_ceiling')
+  }
+  const upstream = await fetchWithRetry(fleet.openaiResponsesUrl(), {
+    method: 'POST',
+    headers: fleet.openaiHeaders(),
+    body: JSON.stringify({ model: deployment, input, max_output_tokens: maxOutputTokens ?? 4096 }),
+  })
+  if (!upstream.ok) {
+    const detail = (await upstream.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300)
+    if (upstream.status === 404) MISSING_DEPLOYMENTS.add(deployment)
+    const err = new Error(`Foundry responses ${upstream.status}: ${detail}`)
+    err.status = upstream.status
+    throw err
+  }
+  const json = await upstream.json()
+  recordSpend(budget, deployment, json.usage?.input_tokens, json.usage?.output_tokens)
+  const text = (json.output || [])
+    .flatMap(o => Array.isArray(o.content) ? o.content : [])
+    .filter(c => c && c.type === 'output_text')
+    .map(c => c.text)
+    .join('')
+  return { raw: text, usage: json.usage, stopReason: json.status ?? null }
+}
+
 // ─── Escalation ladder (haiku → sonnet → opus) ────────────────────────────────
 // Walks the Anthropic tiers above `fromRole`, calling each until one parses.
 // A missing mid-tier deployment (Foundry 4xx, e.g. sonnet not deployed) is skipped —
@@ -237,6 +276,6 @@ function createBudget(opts = {}) {
 }
 
 module.exports = {
-  callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI,
+  callAnthropic, callOpenAI, callResponses, resolveAnthropic, resolveOpenAI,
   escalateAnthropic, fetchWithRetry, createBudget,
 }
