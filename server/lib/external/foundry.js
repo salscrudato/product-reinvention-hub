@@ -19,7 +19,8 @@ const EXT = fleet.EXTENDED_DEPLOYMENTS
 async function dispatch(url, headers, body, deploymentName, usageOf) {
   const g = fleet.guard()
   if (!g.allow) { const e = new Error('ai_budget_ceiling'); e.status = 503; throw e }
-  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+  // Bound every outbound AI call so a hung Foundry socket can't wedge the request (F16).
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(20_000) })
   const text = await res.text()
   if (!res.ok) { const e = new Error(`foundry_${res.status}: ${text.slice(0, 300)}`); e.status = res.status; throw e }
   const json = JSON.parse(text)

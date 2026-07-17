@@ -27,6 +27,32 @@ const EMBED_DIMS       = Number(process.env.AZURE_FOUNDRY_EMBED_DIMS) || 512
 const MAX_BATCH        = 96    // one request embeds up to this many texts (latency/robustness cap)
 const MAX_CHARS        = 8000  // truncate very long chunk text before embedding (token budget guard)
 
+/** POST one embeddings request with retry (exp backoff + jitter) on 408/429/5xx and network
+ *  errors — query-time grounding must survive a transient Foundry hiccup instead of collapsing
+ *  to lexical-only on the first blip. Returns a 2xx Response, or null once retries are exhausted. */
+async function _postEmbedWithRetry(body, timeoutMs, maxAttempts = 3) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      const base = Math.min(500 * 2 ** (attempt - 1), 4000)
+      await new Promise((r) => setTimeout(r, base + Math.floor(Math.random() * 300)))
+    }
+    let resp
+    try {
+      resp = await fetch(fleet.openaiEmbeddingsUrl(), {
+        method: 'POST', headers: fleet.openaiHeaders(),
+        body: JSON.stringify(body), signal: AbortSignal.timeout(timeoutMs),
+      })
+    } catch { if (attempt === maxAttempts - 1) return null; continue }
+    if (resp.ok) return resp
+    if (resp.status !== 408 && resp.status !== 429 && resp.status < 500) { console.warn(`[embed] Foundry ${resp.status}`); return null }
+    if (attempt === maxAttempts - 1) { console.warn(`[embed] Foundry ${resp.status} (final)`); return null }
+    try { await resp.arrayBuffer() } catch { /* drain */ }
+    const ra = Number(resp.headers.get('Retry-After') || 0)
+    if (ra > 0) await new Promise((r) => setTimeout(r, Math.min(ra * 1000, 15_000)))
+  }
+  return null
+}
+
 /** Embed an array of texts → array of float vectors (same order), or null on any failure.
  *  Splits into ≤ MAX_BATCH requests. All-or-nothing: if any sub-batch fails the whole call
  *  returns null, so we never produce a corpus where only some chunks are dense-rankable
@@ -41,13 +67,8 @@ async function embedBatch(texts, { timeoutMs = 20_000 } = {}) {
     const out = new Array(list.length)
     for (let i = 0; i < list.length; i += MAX_BATCH) {
       const slice = list.slice(i, i + MAX_BATCH)
-      const upstream = await fetch(fleet.openaiEmbeddingsUrl(), {
-        method: 'POST',
-        headers: fleet.openaiHeaders(),
-        body: JSON.stringify({ model: EMBED_DEPLOYMENT, input: slice, dimensions: EMBED_DIMS }),
-        signal: AbortSignal.timeout(timeoutMs),
-      })
-      if (!upstream.ok) { console.warn(`[embed] Foundry ${upstream.status}`); return null }
+      const upstream = await _postEmbedWithRetry({ model: EMBED_DEPLOYMENT, input: slice, dimensions: EMBED_DIMS }, timeoutMs)
+      if (!upstream) return null
       const json = await upstream.json()
       // Embeddings bill input tokens only; record so the shared spend guard reflects real cost.
       fleet.record(EMBED_DEPLOYMENT, json.usage?.total_tokens || json.usage?.prompt_tokens || 0, 0)

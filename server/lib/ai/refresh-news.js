@@ -21,6 +21,8 @@
 // (no image-generation deployment exists in the fleet — see EXECUTION-R0.md).
 
 const crypto     = require('crypto')
+const net        = require('net')
+const dns        = require('dns').promises
 const fleet      = require('../fleet')
 const metering   = require('../metering')
 const dataRouter = require('../data')
@@ -35,6 +37,135 @@ function newsShared() {
 }
 
 const sha1 = (str) => crypto.createHash('sha1').update(str).digest('hex')
+
+// ─── SSRF guard (F11) ─────────────────────────────────────────────────────────
+// Every URL fetched by this module is UNTRUSTED: the article URL is model output and
+// the image URL is scraped from a remote page. Before any fetch we require the target
+// to be a PUBLIC http(s) endpoint — no non-http scheme, no credentials-in-URL, no IP
+// literal in a private/reserved/link-local/loopback range, and no cloud-metadata host.
+// Bare hostnames are resolved through DNS and EVERY resolved address is re-checked, so a
+// public name that points at an internal IP (127.0.0.1, 169.254.169.254, …) is rejected.
+// Redirects are followed MANUALLY (safeFetch) with each hop re-validated, so an external
+// page can never 302 us onto an internal target. Fail-closed on parse/DNS failure.
+// Residual gap: fetch re-resolves DNS after our check (a classic TOCTOU / DNS-rebinding
+// race); per-hop re-validation closes the redirect vector but not a racing rebind.
+const METADATA_HOSTS = new Set(['metadata.google.internal', 'metadata.azure.com'])
+
+function ipv4ToBytes(s) {
+  const parts = String(s).split('.')
+  if (parts.length !== 4) return null
+  const b = parts.map(p => (/^\d{1,3}$/.test(p) ? Number(p) : NaN))
+  if (b.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return null
+  return b
+}
+
+function isPrivateV4(b) {
+  const [a, c] = b
+  if (a === 0) return true                             // 0.0.0.0/8
+  if (a === 127) return true                           // 127.0.0.0/8 loopback
+  if (a === 10) return true                            // 10.0.0.0/8
+  if (a === 172 && c >= 16 && c <= 31) return true     // 172.16.0.0/12
+  if (a === 192 && c === 168) return true              // 192.168.0.0/16
+  if (a === 169 && c === 254) return true              // 169.254.0.0/16 link-local (+ metadata IP)
+  if (a === 100 && c >= 64 && c <= 127) return true    // 100.64.0.0/10 CGNAT
+  if (a >= 224) return true                            // 224.0.0.0/3 multicast + reserved
+  return false
+}
+
+function ipv6ToBytes(str) {
+  let s = String(str)
+  const v4m = s.match(/^(.*:)((?:\d{1,3}\.){3}\d{1,3})$/)   // IPv4-mapped/embedded tail
+  if (v4m) {
+    const v4 = ipv4ToBytes(v4m[2])
+    if (!v4) return null
+    s = `${v4m[1]}${(((v4[0] << 8) | v4[1]) >>> 0).toString(16)}:${(((v4[2] << 8) | v4[3]) >>> 0).toString(16)}`
+  }
+  const halves = s.split('::')
+  if (halves.length > 2) return null
+  const head = halves[0] ? halves[0].split(':') : []
+  const tail = halves.length === 2 ? (halves[1] ? halves[1].split(':') : []) : []
+  let groups
+  if (halves.length === 2) {
+    const missing = 8 - (head.length + tail.length)
+    if (missing < 1) return null
+    groups = [...head, ...Array(missing).fill('0'), ...tail]
+  } else {
+    groups = head
+  }
+  if (groups.length !== 8) return null
+  const bytes = []
+  for (const g of groups) {
+    if (!/^[0-9a-f]{1,4}$/i.test(g)) return null
+    const n = parseInt(g, 16)
+    bytes.push((n >> 8) & 0xff, n & 0xff)
+  }
+  return bytes
+}
+
+function isPrivateV6(b) {
+  if (b.every((x, i) => (i < 15 ? x === 0 : x === 1))) return true   // ::1 loopback
+  if (b.every(x => x === 0)) return true                            // :: unspecified
+  if ((b[0] & 0xfe) === 0xfc) return true                          // fc00::/7 unique-local
+  if (b[0] === 0xfe && (b[1] & 0xc0) === 0x80) return true         // fe80::/10 link-local
+  if (b.slice(0, 10).every(x => x === 0) && b[10] === 0xff && b[11] === 0xff) {
+    return isPrivateV4(b.slice(12, 16))                            // ::ffff:0:0/96 IPv4-mapped
+  }
+  return false
+}
+
+function isPrivateIp(ip) {
+  const fam = net.isIP(ip)
+  if (fam === 4) { const b = ipv4ToBytes(ip); return b ? isPrivateV4(b) : true }
+  if (fam === 6) { const b = ipv6ToBytes(ip); return b ? isPrivateV6(b) : true }
+  return true   // not a parseable IP literal → treat as unsafe
+}
+
+async function hostResolvesPublic(host) {
+  let timer
+  try {
+    const results = await Promise.race([
+      dns.lookup(host, { all: true, verbatim: true }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('dns_timeout')), 2000) }),
+    ])
+    if (!Array.isArray(results) || results.length === 0) return false
+    return results.every(r => !isPrivateIp(r.address))
+  } catch { return false } finally { clearTimeout(timer) }
+}
+
+// Async so the DNS re-check fits the existing await style. Returns true only when the
+// target is provably a public http(s) endpoint.
+async function isPublicHttpUrl(raw) {
+  let u
+  try { u = new URL(String(raw)) } catch { return false }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
+  if (u.username || u.password) return false                  // no credentials-in-URL
+  let host = u.hostname.toLowerCase()
+  if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1)   // unwrap IPv6 literal
+  if (!host) return false
+  if (METADATA_HOSTS.has(host)) return false
+  if (net.isIP(host)) return !isPrivateIp(host)               // IP literal — check directly
+  return hostResolvesPublic(host)                             // name — resolve + re-check all A/AAAA
+}
+
+// fetch with MANUAL redirect handling: re-validate every hop's target through the SSRF
+// guard before following (bounded to maxHops). Returns null when the target — or any
+// redirect hop — fails the guard, or the redirect budget is exceeded. Callers treat a
+// null result exactly like a failed/dead fetch.
+async function safeFetch(url, init = {}, maxHops = 5) {
+  let current = String(url)
+  for (let hop = 0; hop <= maxHops; hop++) {
+    if (!(await isPublicHttpUrl(current))) return null
+    const res = await fetch(current, { ...init, redirect: 'manual' })
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location')
+      if (!loc) return res
+      try { current = new URL(loc, current).href } catch { return null }
+      continue
+    }
+    return res
+  }
+  return null   // redirect budget exceeded
+}
 
 // ─── Scout prompt (mirrors the reference agent's grounding rules) ─────────────
 const NEWS_SYSTEM = `You are a P&C insurance news scout for a product manager. Use the web_search tool to find recent, real, relevant news items matching the user's instruction. Prefer primary sources (regulator sites, carrier newsrooms, trade press). Return ONLY a JSON array (max 8 items) — no prose before or after — where each item is:
@@ -70,6 +201,16 @@ function extractJsonArray(text) {
   return []
 }
 
+// Normalise a URL to host+path (drop protocol/www/query/hash/trailing-slash) so the model's
+// emitted URL can be matched against the web_search tool's actual result URLs despite cosmetic
+// differences (tracking params, redirects to canonical). Used by the grounding gate below.
+function normUrl(u) {
+  try {
+    const p = new URL(String(u))
+    return (p.host.replace(/^www\./, '') + p.pathname.replace(/\/+$/, '')).toLowerCase()
+  } catch { return String(u || '').toLowerCase() }
+}
+
 // ─── Web-search scout ─────────────────────────────────────────────────────────
 // Raw Anthropic messages call with the web_search server tool + pause_turn loop.
 // Throws Error with .code='web_search_unsupported' when the upstream rejects the
@@ -77,13 +218,17 @@ function extractJsonArray(text) {
 async function webSearchScout(deployment, instruction) {
   const messages = [{ role: 'user', content: instruction }]
   let finalText = ''
+  let truncated = false
+  const resultUrls = new Set()   // URLs the web_search tool ACTUALLY returned (grounding gate, S17)
   for (let turn = 0; turn < 6; turn++) {
     const upstream = await fetch(fleet.anthropicMessagesUrl(), {
       method: 'POST',
       headers: fleet.anthropicHeaders(),
       body: JSON.stringify({
         model: deployment,
-        max_tokens: 2048,
+        // 8 rich items × (title + lead + 3 bullets + tags) overruns 2048 and truncates the JSON
+        // array to zero news silently — give it headroom and flag any remaining truncation (S30).
+        max_tokens: 4096,
         system: [{ type: 'text', text: NEWS_SYSTEM, cache_control: { type: 'ephemeral' } }],
         tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
         messages,
@@ -102,12 +247,20 @@ async function webSearchScout(deployment, instruction) {
     const json = await upstream.json()
     fleet.record(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
     metering.meterCurrent(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
+    // Harvest the real result URLs the search tool returned this turn.
+    for (const b of json.content || []) {
+      if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) {
+        for (const r of b.content) { if (r && r.type === 'web_search_result' && r.url) resultUrls.add(normUrl(r.url)) }
+      }
+    }
     const text = (json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n')
     if (text.trim()) finalText = text
+    if (json.stop_reason === 'max_tokens') truncated = true
     if (json.stop_reason === 'pause_turn') { messages.push({ role: 'assistant', content: json.content }); continue }
     break
   }
-  return extractJsonArray(finalText)
+  if (truncated) console.warn('[refreshNews] scout output hit max_tokens — some items may have been dropped')
+  let items = extractJsonArray(finalText)
     .filter(x => x && typeof x === 'object' && x.url && x.title)
     .map(x => ({
       url:         String(x.url),
@@ -118,6 +271,15 @@ async function webSearchScout(deployment, instruction) {
       tags:        Array.isArray(x.tags) ? x.tags.filter(t => typeof t === 'string').slice(0, 5) : [],
       publishedAt: /^\d{4}-\d{2}-\d{2}/.test(String(x.publishedAt || '')) ? String(x.publishedAt).slice(0, 10) : null,
     }))
+  // Grounding gate (S17): keep only items whose URL matches one the web_search tool actually
+  // returned — a hallucinated-but-live URL must not slip past the downstream liveness probe.
+  // Fallback: if this surface returned no harvestable result blocks, defer to liveness alone.
+  if (resultUrls.size > 0) {
+    const before = items.length
+    items = items.filter(it => resultUrls.has(normUrl(it.url)))
+    if (items.length < before) console.warn(`[refreshNews] grounding gate dropped ${before - items.length} ungrounded URL(s)`)
+  }
+  return items
 }
 
 // ─── Liveness probe (C2 — drop dead/hallucinated URLs) ────────────────────────
@@ -125,8 +287,9 @@ async function headIsAlive(url) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 4000)
   try {
-    const res = await fetch(url, { method: 'HEAD', redirect: 'follow', signal: ctrl.signal })
-    return res.status !== 404 && res.status !== 410
+    // safeFetch guards the URL (and every redirect hop) against SSRF; null = blocked/dead.
+    const res = await safeFetch(url, { method: 'HEAD', signal: ctrl.signal })
+    return !!res && res.status !== 404 && res.status !== 410
   } catch { return false } finally { clearTimeout(timer) }
 }
 
@@ -138,11 +301,11 @@ async function resolveImage(articleUrl, title, source) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 5000)
   try {
-    const res = await fetch(articleUrl, {
-      method: 'GET', redirect: 'follow', signal: ctrl.signal,
+    const res = await safeFetch(articleUrl, {
+      method: 'GET', signal: ctrl.signal,
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' },
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res || !res.ok) throw new Error(`HTTP ${res ? res.status : 'blocked'}`)
     const html = (await res.text()).slice(0, 16384)
     const ogCandidate = N.extractOgImage(html)
     const rawCandidate = ogCandidate ?? N.extractInlineImage(html)
@@ -155,8 +318,8 @@ async function resolveImage(articleUrl, title, source) {
     const headCtrl = new AbortController()
     const headTimer = setTimeout(() => headCtrl.abort(), 3000)
     try {
-      const headRes = await fetch(validUrl, { method: 'HEAD', redirect: 'follow', signal: headCtrl.signal })
-      if (!headRes.ok) throw new Error(`HEAD ${headRes.status}`)
+      const headRes = await safeFetch(validUrl, { method: 'HEAD', signal: headCtrl.signal })
+      if (!headRes || !headRes.ok) throw new Error(`HEAD ${headRes ? headRes.status : 'blocked'}`)
       const ct = (headRes.headers.get('content-type') || '').toLowerCase()
       if (!ct.startsWith('image/')) throw new Error('not an image content-type')
     } finally { clearTimeout(headTimer) }
@@ -175,11 +338,11 @@ async function persistImageToBlob(image, urlHash) {
     const timer = setTimeout(() => ctrl.abort(), 6000)
     let buf, contentType
     try {
-      const res = await fetch(image.url, {
-        redirect: 'follow', signal: ctrl.signal,
+      const res = await safeFetch(image.url, {
+        signal: ctrl.signal,
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' },
       })
-      if (!res.ok) throw new Error(`GET ${res.status}`)
+      if (!res || !res.ok) throw new Error(`GET ${res ? res.status : 'blocked'}`)
       contentType = (res.headers.get('content-type') || '').toLowerCase().split(';')[0]
       if (!contentType.startsWith('image/') || contentType === 'image/svg+xml') throw new Error('bad content-type')
       const ab = await res.arrayBuffer()

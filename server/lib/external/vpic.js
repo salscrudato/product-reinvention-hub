@@ -15,7 +15,7 @@ const BASE = 'https://vpic.nhtsa.dot.gov/api/vehicles'
 async function decodeVin(vin, opts = {}) {
   const params = new URLSearchParams({ format: 'json' })
   if (opts.modelYear) params.set('modelyear', String(opts.modelYear))
-  const res = await fetch(`${BASE}/DecodeVinValues/${encodeURIComponent(vin)}?${params}`)
+  const res = await fetch(`${BASE}/DecodeVinValues/${encodeURIComponent(vin)}?${params}`, { signal: AbortSignal.timeout(10_000) })
   if (!res.ok) { const e = new Error(`vpic_${res.status}`); e.status = res.status; throw e }
   const r = (await res.json()).Results?.[0] || {}
   return {

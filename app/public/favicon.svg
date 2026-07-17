@@ -1,12 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Product Reinvention Hub">
-  <!-- Favicon: the transparent Greater Ascent mark (a greater-than climbing to a crescent
-       moon). Bold chevron keeps the silhouette legible down to 16px on light or dark tab
-       strips. Brand-asset file: carries the canonical violet gradient as literal hex. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="The Reinvention Engine">
+  <!-- Favicon: the transparent Greater Ascent mark — a greater-than climbing toward a
+       crescent moon with a soft mist trailing behind it. Bold chevron keeps the
+       silhouette legible down to 16px on light or dark tab strips. Brand-asset file:
+       carries the canonical electric-blue gradient as literal hex. -->
   <defs>
-    <linearGradient id="fv-v" x1="4" y1="6" x2="26" y2="28" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#A100FF"/><stop offset=".55" stop-color="#8B1FE0"/><stop offset="1" stop-color="#7A00E6"/>
+    <linearGradient id="fv-b" x1="4" y1="6" x2="26" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E86FF"/><stop offset=".55" stop-color="#0B57D6"/><stop offset="1" stop-color="#0A45C0"/>
+    </linearGradient>
+    <linearGradient id="fv-m" x1="13" y1="19" x2="4" y2="26" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E86FF" stop-opacity=".5"/><stop offset="1" stop-color="#0B57D6" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <path d="M21.4 6.44A3.15 3.15 0 1 0 25.83 10.21A3 3 0 0 1 21.4 6.44Z" fill="url(#fv-v)"/>
-  <path d="M5.69 13.94L17.6 15.4L10.05 24.73" fill="none" stroke="url(#fv-v)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.4 18.4Q7.7 20.2 4.4 23.5" fill="none" stroke="url(#fv-m)" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M13.9 21.6Q9.6 23 6.4 26" fill="none" stroke="url(#fv-m)" stroke-width="1" stroke-linecap="round"/>
+  <path d="M23.68 7.71A3.15 3.15 0 1 0 28.11 11.48A3 3 0 0 1 23.68 7.71Z" fill="url(#fv-b)"/>
+  <path d="M5.8 12L18.6 14.2L13.2 25.8" fill="none" stroke="url(#fv-b)" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

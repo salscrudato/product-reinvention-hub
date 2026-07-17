@@ -4,7 +4,7 @@
 // Serves the built Vite SPA AND the full backend API, replacing Firebase +
 // GCloud Cloud Functions:
 //   GET  /api/health                      → {"status":"ok"}
-//   POST /api/auth/login                  → { user, token }   (JWT)
+//   POST /api/auth/login                  → { user, token }   (opaque session id)
 //   GET  /api/auth/me                     → { user }          (Bearer)
 //   POST /api/auth/change-password        → { ok }            (Bearer)
 //   /api/db/*                             → Cosmos-backed data (role-enforced)
@@ -90,7 +90,8 @@ app.use((req, res, next) => {
 const { hasCapability } = require('./lib/authz')
 const PUBLIC_API = [
   '/api/health',
-  '/api/auth/otp/request', '/api/auth/otp/verify', '/api/auth/bootstrap', '/api/auth/tenants', '/api/auth/resolve',
+  '/api/auth/otp/request', '/api/auth/otp/verify', '/api/auth/otp/magic', '/api/auth/bootstrap', '/api/auth/tenants', '/api/auth/resolve',
+  '/api/auth/passkey/options', '/api/auth/passkey/verify',  // usernameless WebAuthn sign-in (pre-auth by definition)
   '/api/homecheck/',  // guest consumer surface — rate-limited, zero portfolio access
 ]
 const isPublicApi = (p) => PUBLIC_API.some((pub) => (pub.endsWith('/') ? p.startsWith(pub) : p === pub))
@@ -179,9 +180,23 @@ app.get('/api/health', (_req, res) => {
 })
 
 // ─── auth ─────────────────────────────────────────────────────────────────
-// OTP flow: request → verify (regular email users)
+// OTP flow: request → verify (regular email users); the same email carries a
+// single-use magic link that lands on /api/auth/otp/magic (one-click sign-in).
 app.post('/api/auth/otp/request', loginRateLimit, auth.requestOtp)
 app.post('/api/auth/otp/verify',  loginRateLimit, auth.verifyOtp)
+app.post('/api/auth/otp/magic',   loginRateLimit, auth.verifyMagicLink)
+// Passkeys (WebAuthn): usernameless sign-in is public; enrollment requires a session.
+try {
+  const passkeys = require('./lib/passkeys')
+  app.post('/api/auth/passkey/options',          loginRateLimit, passkeys.authOptions)
+  app.post('/api/auth/passkey/verify',           loginRateLimit, passkeys.authVerify)
+  app.post('/api/auth/passkey/register/options', auth.requireAuth, passkeys.registerOptions)
+  app.post('/api/auth/passkey/register/verify',  auth.requireAuth, passkeys.registerVerify)
+  app.get('/api/auth/passkey/mine',              auth.requireAuth, passkeys.listMine)
+  console.log('[prodhub-host] /api/auth/passkey mounted (WebAuthn)')
+} catch (err) {
+  console.warn('[prodhub-host] /api/auth/passkey NOT mounted:', err.message)
+}
 // Bootstrap login: username+password for SUPER_ADMIN break-glass accounts only
 app.post('/api/auth/bootstrap',   loginRateLimit, auth.loginBootstrap)
 app.get('/api/auth/tenants', tenantsRateLimit, auth.publicTenants) // login-page dropdown (ids + names only)
@@ -191,7 +206,7 @@ app.get('/api/auth/tenants', tenantsRateLimit, auth.publicTenants) // login-page
 app.post('/api/auth/resolve', tenantsRateLimit, auth.resolveLogin)
 app.get('/api/auth/me', auth.requireAuth, auth.me)
 app.get('/api/auth/memberships', auth.requireAuth, auth.myMemberships) // caller's own tenants (multi-tenant chooser)
-app.post('/api/auth/logout', auth.revokeToken, (req, res) => { auth.clearSessionCookie(req, res); res.json({ ok: true }) }) // RISK-006: revoke jti + clear session cookie before responding
+app.post('/api/auth/logout', auth.revokeToken, (req, res) => { auth.clearSessionCookie(req, res); res.json({ ok: true }) }) // RISK-006: destroy the server-side session + clear its cookie before responding
 app.post('/api/auth/change-password', auth.requireAuth, auth.changePassword)
 
 // ─── platform administration (SUPER_ADMIN + SUPPORT only) ───────────────────

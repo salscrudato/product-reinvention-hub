@@ -36,3 +36,7 @@ tmp*.md
 .DS_Store
 Thumbs.db
 
+# Firebase local cache + scratch status file (never commit)
+.firebase/
+status.txt
+

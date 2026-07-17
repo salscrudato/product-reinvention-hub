@@ -92,8 +92,11 @@ if (!existsSync(resolve(ROOT, 'server/node_modules'))) {
   if (status !== 0) { console.error('[dev] server dependency install failed.'); process.exit(status ?? 1) }
 }
 
+// Sign-in accounts are defined (always-on) in server/lib/auth.js — the ONE place to
+// edit them; admin/admin and sal/scrudato both work locally out of the box.
 console.log(`[dev] API host  → http://localhost:${PORT}`)
 console.log('[dev] SPA (dev) → http://localhost:5173  (/api proxied to the API host)')
+console.log('[dev] Sign in:  admin / admin   or   sal / scrudato   (SUPER_ADMIN, local only).')
 
 run('api', 'node', ['server/server.js'], { PORT })
 run('app', 'pnpm', ['--filter', 'app', 'dev'], { VITE_DEV_PROXY_TARGET: process.env.VITE_DEV_PROXY_TARGET || `http://localhost:${PORT}` })

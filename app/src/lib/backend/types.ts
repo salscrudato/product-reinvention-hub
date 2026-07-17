@@ -234,6 +234,16 @@ export interface BackendAdapter {
     requestOtp(email: string): Promise<void>
     /** Step 2 of OTP flow: submit the code to get a session. */
     verifyOtp(email: string, code: string, tenant?: string): Promise<Session>
+    /** One-click door: verify the single-use magic-link token from the sign-in email. */
+    verifyMagicLink(email: string, token: string): Promise<Session>
+    /** Passkey sign-in, step 1: fetch a usernameless WebAuthn challenge (pre-auth). */
+    passkeyAuthOptions(): Promise<{ requestId: string; options: Record<string, unknown> }>
+    /** Passkey sign-in, step 2: submit the browser assertion for a session. */
+    passkeyAuthVerify(requestId: string, credential: Record<string, unknown>): Promise<Session>
+    /** Passkey enrollment (post-auth), step 1: fetch a registration challenge for the caller. */
+    passkeyRegisterOptions(): Promise<{ requestId: string; options: Record<string, unknown> }>
+    /** Passkey enrollment, step 2: verify + store the new credential. */
+    passkeyRegisterVerify(requestId: string, credential: Record<string, unknown>, deviceName?: string): Promise<void>
     /** Bootstrap admin login: username + password, server-validated only (never trust client). */
     loginBootstrap(username: string, password: string, tenant?: string): Promise<Session>
     /** Tenants offered on the login screen (ids + names only; safe pre-auth). */

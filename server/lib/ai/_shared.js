@@ -46,12 +46,16 @@ async function fetchWithRetry(url, opts, { maxAttempts = 3, timeoutMs = 90_000 }
 }
 
 // ─── Forced-tool AI call ──────────────────────────────────────────────────────
-// opts.thinking — { type:'enabled', budget_tokens:N } enables extended thinking.
+// Forced tool_choice → the model MUST call `toolName`; we return its structured input.
+// Extended thinking is intentionally NOT plumbed here: it is incompatible with forced
+// tool_choice, and the legacy {type:'enabled',budget_tokens} form 400s on claude-opus-4-8 /
+// claude-sonnet-5. Adaptive thinking, if ever wanted, belongs only on non-forced calls and
+// must be probed against Foundry first.
 // system — string (auto-wrapped with ephemeral cache_control) or block array.
+// opts.effort — 'low'|'medium'|'high'|'xhigh'|'max' → output_config.effort, applied ONLY when the
+//   resolved deployment supports it (opus/sonnet). Probe-verified safe alongside forced tool_choice.
 async function _forcedToolCall(deployment, system, tools, toolName, blocks, instruction, maxTokens, opts = {}) {
-  const { thinking = null } = opts
-  const headers = { ...fleet.anthropicHeaders() }
-  if (thinking) headers['anthropic-beta'] = 'interleaved-thinking-2025-05-14'
+  const headers = fleet.anthropicHeaders()
   const systemBlocks = Array.isArray(system)
     ? system
     : [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }]
@@ -62,10 +66,14 @@ async function _forcedToolCall(deployment, system, tools, toolName, blocks, inst
     tools,
     tool_choice: { type: 'tool', name: toolName },
     messages: [{ role: 'user', content: [...blocks, { type: 'text', text: instruction }] }],
+    // temperature/top_p omitted — removed on opus-4-8/sonnet-5, deprecated on haiku-4-5.
   }
-  // temperature is deprecated on claude-opus-4-8 and claude-haiku-4-5.
-  // Do not include it — omitting it gives deterministic behavior by default.
-  if (thinking) body.thinking = thinking
+  // output_config.effort is the primary intelligence lever, but it is opus/sonnet-only — haiku
+  // 400s ("does not support the effort parameter"). Apply it only when the deployment supports it,
+  // so a role that degraded to haiku under budget pressure silently skips it (never 400s).
+  if (opts.effort && (deployment === fleet.DEPLOY_OPUS || deployment === fleet.DEPLOY_SONNET)) {
+    body.output_config = { effort: opts.effort }
+  }
   const upstream = await fetchWithRetry(fleet.anthropicMessagesUrl(), {
     method: 'POST', headers, body: JSON.stringify(body),
   }, { timeoutMs: 90_000 })
@@ -78,6 +86,12 @@ async function _forcedToolCall(deployment, system, tools, toolName, blocks, inst
   // Per-tenant attribution: mirrors the global fleet.record with the ambient tenant (ALS).
   require('../metering').meterCurrent(deployment, json.usage?.input_tokens, json.usage?.output_tokens)
   const tu = Array.isArray(json.content) ? json.content.find((b) => b.type === 'tool_use') : null
+  // Honest failure: a safety refusal or an output-cap truncation BEFORE the tool call must not
+  // masquerade as an empty extraction — surface it so the caller reports/degrades (S25/F10).
+  if (!tu) {
+    if (json.stop_reason === 'refusal') throw new Error('ai_refusal: model declined to produce structured output')
+    if (json.stop_reason === 'max_tokens') throw new Error('ai_truncated: output cap reached before tool call — raise max_tokens')
+  }
   return (tu && tu.input) || {}
 }
 

@@ -49,9 +49,10 @@ describe('POST /api/auth/bootstrap', () => {
   it('returns 200 with token on valid credentials', async () => {
     const res = await request(app)
       .post('/api/auth/bootstrap')
-      .send({ username: 'admin', password: 'admin', tenant: null })
-    // admin has no tenant requirement; any 200 or 400/tenant_required is acceptable
-    // depending on the bootstrap config. Accept either non-401/non-429 response.
+      .send({ username: 'sal', password: 'scrudato', tenant: null })
+    // sal (the sole bootstrap account) has no tenant requirement; any 200 or
+    // 400/tenant_required is acceptable depending on the bootstrap config.
+    // Accept either non-401/non-429 response.
     expect(res.status).not.toBe(401)
     expect(res.status).not.toBe(429)
   })

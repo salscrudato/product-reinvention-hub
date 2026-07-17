@@ -21,10 +21,9 @@ const crypto = require('crypto')
 const otpModule = require('./otp')
 const emailAdapter = require('./email')
 
-// AUTH_JWT_SECRET — fail-closed: server refuses to start without it.
-const _secret = process.env.AUTH_JWT_SECRET
-if (!_secret) throw new Error('[auth] AUTH_JWT_SECRET is required — set it in App Service config (production) or local env (dev/smoke)')
-const SECRET = _secret
+// Session lifetime (8 h). Sessions are opaque and server-side (no JWT), so this
+// module has no signing secret to manage. otp.js still enforces AUTH_JWT_SECRET for
+// its own token hashing and is required above, so a missing secret still fails boot.
 const TTL_SECONDS = 8 * 60 * 60
 
 // Two-plane role model.
@@ -81,49 +80,64 @@ function resolveTenantFromDomain(email) {
   return _domainMap[domain] || domain.split('.').slice(0, -1).join('.') || domain
 }
 
-// ─── Bootstrap admins (config/env only, never in the client bundle) ──────────
-// DEF-0041 (fail-closed, re-hardened after a regression): a bootstrap account
-// EXISTS only when its password is explicitly configured via env
-// (BOOTSTRAP_ADMIN_PASSWORD in App Service config).
-// The well-known dev defaults are available ONLY behind the explicit opt-in
-// BOOTSTRAP_USERS_ENABLED=true (local dev + hardening/smoke.mjs — never set it in
-// a deployed environment). With neither set, loginBootstrap always returns 401.
-// NOTE: seed admins should migrate to normal admin management after the pilot.
-const BOOTSTRAP_DEFAULTS_OK = process.env.BOOTSTRAP_USERS_ENABLED === 'true'
-function bootstrapAccount(envPassword, devDefault, name, email) {
-  const password = envPassword || (BOOTSTRAP_DEFAULTS_OK ? devDefault : null)
-  return password ? { password, name, email } : null
+// ─── Sign-in accounts — THE ONE PLACE TO EDIT (USER DIRECTIVE 2026-07-17) ─────
+// Simple, always-on username → password sign-in. To add, remove, or change a login,
+// edit THIS map and nothing else. Every account is granted SUPER_ADMIN and is checked
+// by loginBootstrap() with a timing-safe compare.
+//
+// This is a deliberate LOCAL / non-deployed shortcut ("rewire later"): it retires the
+// former fail-closed, env-gated door (DEF-0041) — passwords live in code and the
+// accounts are always enabled. The azure deploy remote is disabled, so this ships
+// nowhere; do NOT deploy it as-is.
+const BOOTSTRAP_ADMINS = {
+  admin: { password: 'admin',    name: 'Admin', email: 'admin@prodhub.local' },
+  sal:   { password: 'scrudato', name: 'Sal',   email: 'sal@prodhub.local' },
 }
-const BOOTSTRAP_ADMINS = {}
-{
-  const admin = bootstrapAccount(process.env.BOOTSTRAP_ADMIN_PASSWORD, 'admin', 'Admin', 'admin@prodhub.local')
-  if (admin) BOOTSTRAP_ADMINS.admin = admin
-}
-if (BOOTSTRAP_DEFAULTS_OK && !process.env.BOOTSTRAP_ADMIN_PASSWORD) {
-  console.warn('[auth] SECURITY: BOOTSTRAP_USERS_ENABLED=true with default passwords — acceptable ONLY for local dev/smoke. Never set this in a deployed environment.')
+// SECURITY: these bootstrap accounts use well-known default passwords and are always
+// on — acceptable ONLY for local/dev use; never deploy them.
+if (process.env.NODE_ENV !== 'test') {
+  console.warn('[auth] SECURITY: bootstrap sign-in (admin/admin, sal/scrudato) is ENABLED with default passwords, always on — local/dev only, never deploy.')
 }
 
-// ─── base64url HS256 JWT ──────────────────────────────────────────────────────
-const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-const fromB64url = (s) => Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
+// ─── Opaque, in-memory sessions (no JWT) ──────────────────────────────────────
+// Sign-in mints a random 256-bit session id (NOT a signed token) and stores that
+// session's claims in an in-process Map; verify() resolves the id back to its claims.
+// There is no secret and nothing to decode client-side — the id is just an
+// unguessable handle. Sessions live only in this process, so a host restart signs
+// everyone out (dev already behaved this way: its JWT secret was ephemeral per boot).
+// Single-instance by design — multi-instance hosting would need a shared store
+// (e.g. Cosmos) in place of this Map.
+const SESSIONS = new Map() // sid -> { ...claims, expiresAt }
 
-function sign(payload) {
-  const now = Math.floor(Date.now() / 1000)
-  const jti = crypto.randomUUID()
-  const head = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const data = `${head}.${b64url(JSON.stringify({ ...payload, jti, iat: now, exp: now + TTL_SECONDS }))}`
-  return `${data}.${b64url(crypto.createHmac('sha256', SECRET).update(data).digest())}`
+const newSid = () => crypto.randomBytes(32).toString('hex')
+
+// Timer-free memory bound: sweep expired entries only when the map grows past a soft
+// cap, so this never keeps the process alive (matters for the test runner).
+function sweepExpired() {
+  const now = Date.now()
+  for (const [sid, s] of SESSIONS) if (s.expiresAt <= now) SESSIONS.delete(sid)
 }
-function verify(token) {
-  const p = String(token || '').split('.')
-  if (p.length !== 3) return null
-  const expected = b64url(crypto.createHmac('sha256', SECRET).update(`${p[0]}.${p[1]}`).digest())
-  const a = Buffer.from(p[2]), b = Buffer.from(expected)
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null
-  let payload; try { payload = JSON.parse(fromB64url(p[1]).toString('utf8')) } catch { return null }
-  if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) return null
-  return payload
+
+// sign(claims): open a session, return its opaque id. Name kept for call-site
+// compatibility — loginBootstrap / passkeys / impersonation / tests all call sign().
+function sign(claims, ttlSeconds = TTL_SECONDS) {
+  if (SESSIONS.size > 1000) sweepExpired()
+  const sid = newSid()
+  SESSIONS.set(sid, { ...claims, expiresAt: Date.now() + ttlSeconds * 1000 })
+  return sid
 }
+
+// verify(sid): resolve an opaque session id to its claims, or null if unknown/expired.
+function verify(sid) {
+  if (!sid || typeof sid !== 'string') return null
+  const s = SESSIONS.get(sid)
+  if (!s) return null
+  if (s.expiresAt <= Date.now()) { SESSIONS.delete(sid); return null }
+  return s
+}
+
+// destroySession(sid): forget a session (sign-out / revocation).
+function destroySession(sid) { if (sid) SESSIONS.delete(sid) }
 
 // ─── HTTP-only session cookie ─────────────────────────────────────────────────
 // The session JWT is ALSO set as an HTTP-only cookie so the browser never has to
@@ -154,26 +168,6 @@ function readSessionCookie(req) {
     if (part.slice(0, eq).trim() === SESSION_COOKIE) return part.slice(eq + 1).trim() || null
   }
   return null
-}
-
-// ─── JWT revocation (RISK-006) ────────────────────────────────────────────────
-const _revokedCache = new Map()
-const REVOKE_CACHE_TTL = 5 * 60 * 1000
-
-async function isRevoked(jti) {
-  const cached = _revokedCache.get(jti)
-  if (cached && Date.now() - cached.cachedAt < REVOKE_CACHE_TTL) return cached.revoked
-  const docs = systemContainer()
-  if (!docs) return false
-  try {
-    const { resources } = await docs.items.query({
-      query: "SELECT c.id FROM c WHERE c.pk='__system__' AND c.kind='revokedToken' AND c.data.jti=@jti",
-      parameters: [{ name: '@jti', value: jti }],
-    }).fetchAll()
-    const revoked = resources.length > 0
-    _revokedCache.set(jti, { revoked, cachedAt: Date.now() })
-    return revoked
-  } catch { return false }
 }
 
 // ─── Cosmos helpers ───────────────────────────────────────────────────────────
@@ -295,8 +289,17 @@ async function requestOtp(req, res) {
   otpModule.store(normalized, code, tenantId)
   await writeLoginAudit('otp_requested', normalized, tenantId, ip, ua)
 
+  // Magic link: a single-use companion token in the same email. The link targets the
+  // SPA origin (the page the user is sitting on — Origin header; PUBLIC_APP_ORIGIN
+  // pins it explicitly), carrying the token in the URL FRAGMENT so it never appears
+  // in server access logs.
+  const magicToken = otpModule.generateMagicToken()
+  otpModule.storeMagic(normalized, magicToken, tenantId)
+  const appOrigin = process.env.PUBLIC_APP_ORIGIN || String(req.headers.origin || '') || null
+  const magicUrl = appOrigin ? `${appOrigin}/#ml=${magicToken}&email=${encodeURIComponent(normalized)}` : null
+
   try {
-    await emailAdapter.sendOtp(normalized, code)
+    await emailAdapter.sendOtp(normalized, code, magicUrl)
   } catch (err) {
     console.error('[auth] OTP send failed:', err.message)  // log the error, NOT the code
     return res.status(500).json({ error: 'otp_send_failed' })
@@ -327,6 +330,13 @@ async function verifyOtp(req, res) {
   }
 
   const resolvedTenant = result.tenantId || (tenant ? String(tenant) : null)
+  return mintEmailSession(req, res, normalized, resolvedTenant, 'otp', ip, ua)
+}
+
+// ─── Shared email-identity session mint (OTP code + magic link) ───────────────
+// Both email doors converge here: JIT-provision, disabled/suspended gates, JWT +
+// HTTP-only cookie, audit trail. `method` lands in the JWT and the audit event.
+async function mintEmailSession(req, res, normalized, resolvedTenant, method, ip, ua) {
   const user = await jitProvisionUser(normalized, resolvedTenant)
   if (user.disabled) {
     await writeLoginAudit('login_disabled', normalized, resolvedTenant, ip, ua)
@@ -342,10 +352,10 @@ async function verifyOtp(req, res) {
   const token = sign({
     sub: user.username, name: user.name || user.username,
     email: normalized, role: user.role || 'VIEWER',
-    tenantId: effectiveTenant, method: 'otp',
+    tenantId: effectiveTenant, method,
   })
 
-  await writeLoginAudit('otp_success', normalized, effectiveTenant, ip, ua)
+  await writeLoginAudit(`${method}_success`, normalized, effectiveTenant, ip, ua)
   setSessionCookie(req, res, token)
   return res.json({
     user: { uid: user.username, email: normalized, name: user.name || user.username, role: user.role || 'VIEWER', tenantId: effectiveTenant },
@@ -353,9 +363,42 @@ async function verifyOtp(req, res) {
   })
 }
 
+// ─── Magic-link verify handler ────────────────────────────────────────────────
+// POST /api/auth/otp/magic { email, token } — the one-click door. The token is
+// single-use (a failed attempt burns it) and shares the OTP's 10-minute TTL.
+async function verifyMagicLink(req, res) {
+  const { email, token } = req.body || {}
+  if (!email || !token) return res.status(400).json({ error: 'email_and_token_required' })
+  const normalized = String(email).trim().toLowerCase()
+  const ip = getIp(req); const ua = req.headers['user-agent'] || null
+
+  const result = otpModule.verifyMagic(normalized, String(token))
+  if (!result.ok) {
+    const event = result.reason === 'expired' ? 'magic_expired'
+      : result.reason === 'not_found' ? 'magic_not_found'
+      : 'magic_failed'
+    await writeLoginAudit(event, normalized, null, ip, ua)
+    if (result.reason === 'expired') return res.status(400).json({ error: 'magic_expired' })
+    return res.status(400).json({ error: 'magic_invalid' })
+  }
+  return mintEmailSession(req, res, normalized, result.tenantId, 'magic', ip, ua)
+}
+
 // ─── Bootstrap admin login handler ───────────────────────────────────────────
 // Server-validated only. A client can never assert BOOTSTRAP_ADMINS membership.
 // Every attempt (success or failure) is audit-logged. Bootstrap grant is audited separately.
+// passwordsMatch: constant-shape timing-safe compare (SHA-256 → equal-length buffers).
+// `expected` may be null/undefined — a random UUID stands in so timing stays uniform.
+function passwordsMatch(expected, submitted) {
+  const expectedHash = crypto.createHash('sha256').update(expected != null ? String(expected) : crypto.randomUUID()).digest()
+  const actualHash   = crypto.createHash('sha256').update(String(submitted)).digest()
+  return expected != null && crypto.timingSafeEqual(expectedHash, actualHash)
+}
+
+// The password door: any account in the BOOTSTRAP_ADMINS map above (admin, sal).
+// No user-record lookup happens here by design — the account list is the closed map, so
+// an attacker cannot probe for provisioned usernames through this endpoint, and every
+// attempt resolves in constant shape (timing-safe compare, uniform 401).
 async function loginBootstrap(req, res) {
   const { username, password, tenant } = req.body || {}
   if (!username || !password) return res.status(400).json({ error: 'username_and_password_required' })
@@ -363,12 +406,7 @@ async function loginBootstrap(req, res) {
   const uKey = String(username).trim().toLowerCase()
 
   const admin = BOOTSTRAP_ADMINS[uKey]
-  // Timing-safe compare via SHA-256 hashes (equal-length buffers always)
-  const expectedHash = crypto.createHash('sha256').update(admin ? admin.password : crypto.randomUUID()).digest()
-  const actualHash   = crypto.createHash('sha256').update(String(password)).digest()
-  const match = admin && crypto.timingSafeEqual(expectedHash, actualHash)
-
-  if (!match) {
+  if (!admin || !passwordsMatch(admin ? admin.password : null, password)) {
     await writeLoginAudit('bootstrap_failed', uKey, null, ip, ua)
     return res.status(401).json({ error: 'invalid_credentials' })
   }
@@ -392,29 +430,26 @@ async function loginBootstrap(req, res) {
 const IMPERSONATION_TTL = 60 * 60  // 1 hour
 
 function signImpersonation(targetUser, supportActor, tenantId) {
-  const now = Math.floor(Date.now() / 1000)
-  const jti = crypto.randomUUID()
-  const head = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  // Ensure impersonation can never grant a platform role to a tenant user.
+  // Ensure impersonation can never grant a platform role to a tenant user — the role
+  // comes from the target user record, never from the SUPPORT actor.
   const targetRole = normalizeRole(targetUser.role)
   if (targetRole === 'SUPER_ADMIN' || targetRole === 'SUPPORT') {
     throw new Error('Cannot impersonate a platform-plane user')
   }
-  const payload = {
-    sub: targetUser.username || targetUser.uid,
+  const subject = targetUser.username || targetUser.uid
+  const token = sign({
+    sub: subject,
     name: targetUser.name,
     email: targetUser.email,
     role: targetRole,
     tenantId,
     method: 'impersonation',
     impersonatedBy: { uid: supportActor.uid, name: supportActor.name, email: supportActor.email },
-    jti, iat: now, exp: now + IMPERSONATION_TTL,
-  }
-  const data = `${head}.${b64url(JSON.stringify(payload))}`
+  }, IMPERSONATION_TTL)
   return {
-    token: `${data}.${b64url(crypto.createHmac('sha256', SECRET).update(data).digest())}`,
-    expiresAt: new Date((now + IMPERSONATION_TTL) * 1000).toISOString(),
-    subject: payload.sub,
+    token,
+    expiresAt: new Date(Date.now() + IMPERSONATION_TTL * 1000).toISOString(),
+    subject,
     tenantId,
   }
 }
@@ -514,31 +549,32 @@ async function changePassword(req, res) {
 async function publicTenants(_req, res) { res.json({ tenants: await listTenants() }) }
 
 // ─── Per-request middleware ───────────────────────────────────────────────────
-async function attachUser(req, _res, next) {
+function attachUser(req, _res, next) {
   const h = req.headers.authorization || ''
   // Bearer first (existing clients, harnesses); HTTP-only session cookie fallback.
-  const token = h.startsWith('Bearer ') ? h.slice(7) : readSessionCookie(req)
-  const p = token ? verify(token) : null
-  if (p) {
-    if (p.jti && await isRevoked(p.jti)) {
-      req.user = null
-    } else {
-      const role = normalizeRole(p.role)
-      let tenantId = p.tenantId || null
-      // SUPER_ADMIN: per-request tenant override via X-Tenant-Id header. The platform
-      // plane can scope its session to any tenant to administer it; every resulting data
-      // change is still recorded in that tenant's audit log. Tenant-plane roles never
-      // reach this branch — they are pinned to the tenantId in their JWT.
-      if (role === 'SUPER_ADMIN') {
-        const override = String(req.headers['x-tenant-id'] || '').trim()
-        if (override) tenantId = override
-      }
-      req.user = { uid: p.sub, name: p.name, email: p.email, role, tenantId, _jti: p.jti || null }
-      // Impersonation token: dual-attributed; the real actor is in _impersonatedBy.
-      // Every audit action must include both identities (see tenant-admin.js actorFor).
-      if (p.impersonatedBy) {
-        req.user._impersonatedBy = p.impersonatedBy
-      }
+  // Both carry the same opaque session id.
+  const sid = h.startsWith('Bearer ') ? h.slice(7) : readSessionCookie(req)
+  const s = sid ? verify(sid) : null
+  if (s) {
+    const role = normalizeRole(s.role)
+    let tenantId = s.tenantId || null
+    // SUPER_ADMIN: per-request tenant override via X-Tenant-Id header. The platform
+    // plane can scope its session to any tenant to administer it; every resulting data
+    // change is still recorded in that tenant's audit log. Tenant-plane roles never
+    // reach this branch — they are pinned to the tenantId in their session.
+    if (role === 'SUPER_ADMIN') {
+      const override = String(req.headers['x-tenant-id'] || '').trim()
+      if (override) tenantId = override
+    }
+    req.user = { uid: s.sub, name: s.name, email: s.email, role, tenantId }
+    // _sid is the session id itself (a bearer credential) — keep it readable for
+    // revokeToken() but NON-enumerable so it never serializes into a response body
+    // (/api/auth/me returns req.user) or an audit record spread.
+    Object.defineProperty(req.user, '_sid', { value: sid, enumerable: false })
+    // Impersonation session: dual-attributed; the real actor is in _impersonatedBy.
+    // Every audit action must include both identities (see tenant-admin.js actorFor).
+    if (s.impersonatedBy) {
+      req.user._impersonatedBy = s.impersonatedBy
     }
   } else {
     req.user = null
@@ -546,20 +582,10 @@ async function attachUser(req, _res, next) {
   next()
 }
 
-async function revokeToken(req, _res, next) {
-  const jti = req.user?._jti
-  if (jti) {
-    _revokedCache.set(jti, { revoked: true, cachedAt: Date.now() })
-    const docs = systemContainer()
-    if (docs) {
-      try {
-        await docs.items.upsert({
-          id: `revokedToken:${jti}`, pk: '__system__', kind: 'revokedToken',
-          data: { jti, uid: req.user.uid, revokedAt: Date.now() },
-        })
-      } catch { /* best-effort */ }
-    }
-  }
+// Sign-out / revocation: forget the session so its id (and the cookie carrying it)
+// can never be replayed. In-memory, so it takes effect immediately (process-local).
+function revokeToken(req, _res, next) {
+  destroySession(req.user?._sid)
   next()
 }
 
@@ -592,7 +618,8 @@ module.exports = {
   RANK, DEFAULT_TENANT_ID, BOOTSTRAP_ADMINS, MANAGED_TENANT_ROLES, listTenants, findUser,
   isTenantSuspended,
   normalizeRole, sign, verify, signImpersonation,
-  requestOtp, verifyOtp, loginBootstrap, me, changePassword, publicTenants, discoverHomeRealm,
+  requestOtp, verifyOtp, verifyMagicLink, loginBootstrap, me, changePassword, publicTenants, discoverHomeRealm,
+  writeLoginAudit, passwordsMatch,
   resolveLogin, myMemberships,
   attachUser, requireAuth, requireRole, requireTenant, resolveTenantForPrincipal, revokeToken,
   setSessionCookie, clearSessionCookie,

@@ -106,9 +106,12 @@ var EXTENDED_DEPLOYMENTS = {
   DOC_OCR: { deploymentName: "mistral-document-ai-2512", surface: "mistral-ocr", roleLabel: "Document OCR \u2014 Mistral Document AI" }
 };
 var FLEET_PRICING = {
-  [DEPLOY_OPUS]: { inputPerMTok: 15, outputPerMTok: 75 },
+  [DEPLOY_OPUS]: { inputPerMTok: 5, outputPerMTok: 25 },
+  // Opus 4.8 list price
   [DEPLOY_SONNET]: { inputPerMTok: 3, outputPerMTok: 15 },
-  [DEPLOY_HAIKU]: { inputPerMTok: 0.8, outputPerMTok: 4 },
+  // Sonnet 5 list ($2/$10 intro)
+  [DEPLOY_HAIKU]: { inputPerMTok: 1, outputPerMTok: 5 },
+  // Haiku 4.5 list price
   [DEPLOY_GPT]: { inputPerMTok: 3, outputPerMTok: 12 },
   [DEPLOY_GPT_MINI]: { inputPerMTok: 0.3, outputPerMTok: 1.6 },
   // Embeddings bill input tokens only (no completion) — the output tier is 0.

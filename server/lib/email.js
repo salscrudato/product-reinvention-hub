@@ -13,12 +13,16 @@
 const EMAIL_PROVIDER = (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase()
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@prodhub.local'
 
-async function sendOtp(to, code) {
+// magicUrl (optional): a single-use sign-in link issued alongside the code — one
+// click signs the user in without typing anything. Never logged, same as the code.
+async function sendOtp(to, code, magicUrl) {
   const subject = 'Your Product Hub sign-in code'
-  const text = `Your one-time sign-in code is: ${code}\n\nThis code expires in 10 minutes. Do not share it.`
+  const text = `Your one-time sign-in code is: ${code}\n\n${magicUrl ? `Or sign in with one click: ${magicUrl}\n\n` : ''}This code and link expire in 10 minutes. Do not share them.`
   const html = `<p>Your one-time sign-in code is:</p>
 <p style="font-size:2em;letter-spacing:.25em;font-weight:700;font-family:monospace">${code}</p>
-<p>This code expires in 10 minutes. Do not share it with anyone.</p>`
+${magicUrl ? `<p style="margin:24px 0"><a href="${magicUrl}" style="display:inline-block;padding:12px 28px;border-radius:10px;background:#6d28d9;color:#ffffff;text-decoration:none;font-weight:600">Sign in with one click</a></p>
+<p style="font-size:.85em;color:#666">The button signs you in directly — no code needed.</p>` : ''}
+<p>This code${magicUrl ? ' and link' : ''} expire in 10 minutes. Do not share them with anyone.</p>`
 
   if (EMAIL_PROVIDER === 'none') return true   // dev/CI: swallow silently, code is not logged
   if (EMAIL_PROVIDER === 'smtp') return _sendSmtp(to, subject, text, html)

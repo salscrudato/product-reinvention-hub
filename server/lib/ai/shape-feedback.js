@@ -48,6 +48,17 @@ const _SHAPE_TOOL = {
   },
 }
 
+// Dedicated engineering system prompt for the maintainer implementation-brief call — the
+// story-shaping PM persona (SHAPE_SYSTEM) is the wrong voice for writing a coding-agent brief.
+const IMPL_SYSTEM = [
+  'You are a senior staff engineer writing a precise, deploy-ready Claude Code implementation brief.',
+  'Given a shaped user story, produce ONE copy-paste prompt a coding agent can execute end-to-end.',
+  'Structure it: READ FIRST (the likely source files), TASK (what to build), DONE WHEN (acceptance',
+  'criteria as [ ] checkboxes), FINISH (run the gate: pnpm typecheck && pnpm lint && pnpm test && pnpm build; commit locally).',
+  'Be concrete and file-specific. Do NOT invent files, APIs, or behavior not implied by the story.',
+  'Call `emit_implementation_brief` exactly once as your only action.',
+].join(' ')
+
 const _IMPL_TOOL = {
   name: 'emit_implementation_brief',
   description: 'Emit a Claude Code implementation brief for the maintainer persona.',
@@ -91,7 +102,9 @@ async function shapeFeedback(req, res) {
   if (attachments && attachments.length) {
     lines.push(`\nAttachments: ${attachments.map((a) => a.name).join(', ')}`)
   }
-  if (screenshotUrl) lines.push('\n(A screenshot was attached — factor it into the type classification and reproduction steps.)')
+  // The screenshot is NOT sent to the model on this text-only shaping call, so we must not
+  // tell it to "factor in" an image it cannot see — that invites invented visual detail.
+  if (screenshotUrl) lines.push('\n(The user attached a screenshot; its contents are NOT included here — do not infer or invent any visual detail from it.)')
   const instruction = lines.join('\n')
 
   try {
@@ -131,7 +144,7 @@ async function shapeFeedback(req, res) {
             : '',
         ].filter(Boolean).join('\n')
 
-        const briefRaw = await _forcedToolCall(deployment, SHAPE_SYSTEM, [_IMPL_TOOL],
+        const briefRaw = await _forcedToolCall(deployment, IMPL_SYSTEM, [_IMPL_TOOL],
           'emit_implementation_brief', [], briefInstr, 2048)
         story.implementationPrompt = briefRaw.implementationPrompt || undefined
       } catch { /* non-fatal: maintainer prompt is best-effort */ }

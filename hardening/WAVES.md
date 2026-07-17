@@ -130,5 +130,5 @@ secret; both canaries byte-exact (HO-3 $1,528, GL $2,635).
 - depends-on: none
 - verify: harden-probe DEF-0036,0031; `git grep -i "C0S1LR7\|10\.192\.37\.11"` returns nothing at HEAD; /gate (no code surface).
 - BLOCKED-ON-HUMAN (Sal — out-of-code, do NOT skip):
-    1. Rotate the Foundry key NOW in Azure AI Foundry — the committed key `C0S1LR7AUnd9…` is compromised — then update AZURE_FOUNDRY_KEY in App Service config.
+    1. Rotate the Foundry key NOW in Azure AI Foundry — the committed key (literal redacted from this doc 2026-07-16) is compromised — then update AZURE_FOUNDRY_KEY in App Service config.
     2. Purge it from history: `git filter-repo --path tmp.md --path snowchat/scripts/es-setup-passwords-output.txt --invert-paths` (or BFG), force-push, and re-seed all existing clones.

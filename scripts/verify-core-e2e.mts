@@ -85,7 +85,7 @@ async function main() {
   const plan: ImportPlan = mapIsoWorkbook(await read(resolve(process.cwd(), FILE)))
   console.log(`parsed: product=${plan.product?.refId} coverages=${plan.coverages.length} forms=${plan.forms.length} rules=${plan.rules.length} ld=${plan.ldTables.length} rt=${plan.rtTables.length}`)
 
-  const login = await api('/auth/bootstrap', { username: 'admin', password: 'admin', tenant: TENANT })
+  const login = await api('/auth/bootstrap', { username: 'sal', password: 'scrudato', tenant: TENANT })
   if (!login.ok || !login.body?.token) { console.error('AUTH FAILED', login.status); process.exit(2) }
   const token = login.body.token
   console.log(`auth ok, pid=${PID}`)

@@ -51,20 +51,25 @@ describe('RISK-004 -- blob upload path must be sanitized', () => {
   })
 })
 
-// --- RISK-006: JWT revocation -----------------------------------------------------------------
-describe('RISK-006 -- JWT revocation must be implemented', () => {
-  it('auth.js adds jti claim to newly issued tokens', () => {
-    // The sign() function must include a jti in the payload
-    expect(authJs).toMatch(/jti/)
+// --- RISK-006: session revocation -------------------------------------------------------------
+// Sessions are opaque, server-side handles (no JWT). "Revocation" = destroying the session
+// record; because the server holds the session (not a stateless bearer it cannot recall), a
+// signed-out id can never be replayed — verify() returns null for an unknown/destroyed id.
+// (Runtime-proven separately: logout → replay of the same token → 401.)
+describe('RISK-006 -- a signed-out / revoked session must not be replayable', () => {
+  it('auth.js holds sessions in a server-side store (revocation is impossible for a stateless bearer)', () => {
+    expect(authJs).toMatch(/SESSIONS/)
   })
 
-  it('auth.js checks for revokedToken in Cosmos inside attachUser', () => {
-    // attachUser must query for kind:'revokedToken' to detect revoked tokens
-    expect(authJs).toMatch(/revokedToken/)
+  it('auth.js can destroy a session (destroySession)', () => {
+    expect(authJs).toMatch(/destroySession/)
   })
 
-  it('auth.js exports a revokeToken function for use by the logout route', () => {
-    expect(authJs).toMatch(/revokeToken/)
+  it('revokeToken destroys the caller session and is wired to the logout route', () => {
+    // revokeToken must forget the session...
+    expect(authJs).toMatch(/function revokeToken[\s\S]*?destroySession/)
+    // ...and server.js must run it on POST /api/auth/logout.
+    expect(serverJs).toMatch(/\/api\/auth\/logout[\s\S]{0,40}auth\.revokeToken/)
   })
 })
 

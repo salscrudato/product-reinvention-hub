@@ -113,7 +113,7 @@ async function main() {
   console.log(`portal-live: ${BASE} tenant=${TENANT}`)
 
   // ── SUPER_ADMIN bootstrap scoped to the isolated tenant ──────────────────────
-  const login = await apiRetry('/auth/bootstrap', { method: 'POST', body: JSON.stringify({ username: 'admin', password: 'admin', tenant: TENANT }) }, null)
+  const login = await apiRetry('/auth/bootstrap', { method: 'POST', body: JSON.stringify({ username: 'sal', password: 'scrudato', tenant: TENANT }) }, null)
   if (login.status !== 200 || !login.body?.token) { console.error(`bootstrap login failed: ${login.status}`); process.exit(2) }
   const jwt = login.body.token as string
   record('bootstrap login', true, `tenant=${login.body.user?.tenantId}`)

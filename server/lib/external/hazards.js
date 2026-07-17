@@ -10,7 +10,8 @@
 // FEMA NFHL, OpenFEMA, USGS, NWS. NFIP claims added here (same OpenFEMA host).
 
 async function getJson(url, label) {
-  const res = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'ProductReinventionHub (ops@prodhub.local)' } })
+  // 10s cap so a stalled federal endpoint can't hang the underwriting/claims request (F16).
+  const res = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'ProductReinventionHub (ops@prodhub.local)' }, signal: AbortSignal.timeout(10_000) })
   if (!res.ok) { const e = new Error(`${label}_${res.status}`); e.status = res.status; throw e }
   return res.json()
 }

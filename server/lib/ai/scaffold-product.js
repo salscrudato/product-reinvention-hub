@@ -73,8 +73,10 @@ async function scaffoldProduct(req, res) {
       { type: 'text', text: `\n\nCONTEXT:\n${ctx.length ? ctx.join('\n\n---\n\n') : '(no matching context found)'}` },
     ]
     emit(res, { t: 'tool', name: 'emit_product_scaffold', phase: 'start', summary: 'Scaffolding product from context' })
-    const raw = await _forcedToolCall(deployment, systemBlocks, [_EMIT_SCAFFOLD], 'emit_product_scaffold', [], instruction, 4096,
-      { thinking: { type: 'enabled', budget_tokens: 2048 } })
+    // No extended thinking: it is incompatible with forced tool_choice, and the legacy
+    // {type:'enabled',budget_tokens} form 400s on opus-4-8. The forced emit_product_scaffold
+    // tool already gives structured output. (Adaptive thinking is a separate Foundry-gated change.)
+    const raw = await _forcedToolCall(deployment, systemBlocks, [_EMIT_SCAFFOLD], 'emit_product_scaffold', [], instruction, 4096)
     const proposed = Array.isArray(raw.coverages) ? raw.coverages : []
     const coverages = proposed.filter((c) => c && c.name && c.citation)
     const forms = (Array.isArray(raw.forms) ? raw.forms : []).filter((f) => f && f.number && f.citation)

@@ -91,7 +91,7 @@ async function main() {
   const newDeadline = '2028-09-29'
 
   // ── Login (SUPER_ADMIN bootstrap, scoped to the isolated tenant) ──
-  const login = await apiRetry('/auth/bootstrap', { method: 'POST', body: JSON.stringify({ username: 'admin', password: 'admin', tenant: TENANT }) }, null)
+  const login = await apiRetry('/auth/bootstrap', { method: 'POST', body: JSON.stringify({ username: 'sal', password: 'scrudato', tenant: TENANT }) }, null)
   if (login.status !== 200 || !login.body?.token) { console.error(`bootstrap login failed: ${login.status} ${JSON.stringify(login.body).slice(0, 200)}`); process.exit(2) }
   const jwt = login.body.token as string
   record('bootstrap login (isolated tenant)', true, `tenant=${login.body.user?.tenantId}`)
@@ -153,7 +153,7 @@ async function main() {
   artifacts.round2 = { total: n2, added: addedR2, preserved: preservedR1 }
 
   // ══ Tenant isolation — another tenant sees none of it ══
-  const loginB = await apiRetry('/auth/bootstrap', { method: 'POST', body: JSON.stringify({ username: 'admin', password: 'admin', tenant: TENANT_B }) }, null)
+  const loginB = await apiRetry('/auth/bootstrap', { method: 'POST', body: JSON.stringify({ username: 'sal', password: 'scrudato', tenant: TENANT_B }) }, null)
   if (loginB.status === 200 && loginB.body?.token) {
     const readB = await listTasks(loginB.body.token as string, PROJECT_ID)
     record('tenant isolation: tenant B sees 0 of these tasks', readB.status === 200 && readB.rows.length === 0, `rowsB=${readB.rows.length}`)

@@ -77,4 +77,39 @@ function verify(emailKey, code) {
   return { ok: true, tenantId }
 }
 
-module.exports = { generate6Digit, store, verify }
+// ─── Magic-link tokens ────────────────────────────────────────────────────────
+// Same posture as OTP codes: hashed at rest, in-memory, TTL'd, single-use. A magic
+// token is issued ALONGSIDE the 6-digit code in the same email — clicking the link
+// and typing the code are two doors into the same pending sign-in.
+const _pendingMagic = new Map() // emailKey -> { tokenHash: Buffer, expiresAt, tenantId }
+
+function generateMagicToken() {
+  return crypto.randomBytes(32).toString('base64url')
+}
+
+function storeMagic(emailKey, token, tenantId) {
+  _pendingMagic.set(emailKey, {
+    tokenHash: _hashCode(token),
+    expiresAt: Date.now() + OTP_TTL_MS,
+    tenantId:  tenantId || null,
+  })
+}
+
+function verifyMagic(emailKey, token) {
+  const rec = _pendingMagic.get(emailKey)
+  if (!rec) return { ok: false, reason: 'not_found' }
+  if (Date.now() > rec.expiresAt) { _pendingMagic.delete(emailKey); return { ok: false, reason: 'expired' } }
+  const submitted = _hashCode(token)
+  let match = false
+  try {
+    const a = rec.tokenHash, b = submitted
+    match = a.length === b.length && crypto.timingSafeEqual(a, b)
+  } catch { match = false }
+  // Single-use either way: a failed attempt burns the link (it arrives by URL, so
+  // there is no legitimate retry path — the user requests a fresh email instead).
+  _pendingMagic.delete(emailKey)
+  if (!match) return { ok: false, reason: 'invalid' }
+  return { ok: true, tenantId: rec.tenantId }
+}
+
+module.exports = { generate6Digit, store, verify, generateMagicToken, storeMagic, verifyMagic }

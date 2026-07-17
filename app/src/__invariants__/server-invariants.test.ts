@@ -19,6 +19,7 @@ const dataJs   = readFileSync(resolve(dir, '../../../server/lib/data.js'),      
 const aiJs     = readFileSync(resolve(dir, '../../../server/lib/ai/chat.js'),    'utf8')
 const filingJs = readFileSync(resolve(dir, '../../../server/lib/filing.js'),     'utf8')
 const authJs   = readFileSync(resolve(dir, '../../../server/lib/auth.js'),       'utf8')
+const otpJs    = readFileSync(resolve(dir, '../../../server/lib/otp.js'),        'utf8')
 
 // ─── DEF-0043 / DEF-0046 ─────────────────────────────────────────────────────
 // Mutation sweep FAULT-003 dropped the audit ops.push from envelope(); FAULT-B dropped
@@ -96,20 +97,20 @@ describe('DEF-0003 — parentId must resolve to an existing same-tenant entity',
   })
 })
 
-// ─── DEF-0041 (re-hardened) — bootstrap admins are fail-closed ───────────────
-// The original fix regressed during the multi-tenant rewrite: BOOTSTRAP_ADMINS came
-// back always-on with default passwords. These assertions pin the fail-closed shape.
-describe('DEF-0041 — bootstrap admins fail-closed (no default passwords in production)', () => {
-  it('dev-default passwords exist only behind the BOOTSTRAP_USERS_ENABLED opt-in', () => {
-    expect(authJs).toMatch(/BOOTSTRAP_USERS_ENABLED\s*===\s*'true'/)
-    expect(authJs).toMatch(/BOOTSTRAP_DEFAULTS_OK\s*\?\s*devDefault\s*:\s*null/)
+// ─── Simple bootstrap sign-in (USER DIRECTIVE 2026-07-17) ────────────────────
+// The former fail-closed, env-gated door (DEF-0041) was intentionally replaced with a
+// single always-on BOOTSTRAP_ADMINS map (admin + sal) for local, non-deployed use
+// ("rewire later"). These pin the new intent and the guards that still hold.
+describe('bootstrap sign-in — one always-on account map, marked local-only', () => {
+  it('accounts live in one BOOTSTRAP_ADMINS map (the single place to edit)', () => {
+    expect(authJs).toMatch(/const BOOTSTRAP_ADMINS\s*=\s*\{[\s\S]*?admin:\s*\{\s*password:/)
+    expect(authJs).toMatch(/sal:\s*\{\s*password:/)
   })
-  it('no unconditional env-or-default password fallback remains', () => {
-    // The regressed shape was: password: process.env.X || 'admin'
-    expect(authJs).not.toMatch(/password:\s*process\.env\.\w+\s*\|\|\s*'/)
+  it('the door emits a security warning that it is local-only / never-deploy', () => {
+    expect(authJs).toMatch(/console\.warn[\s\S]*?never deploy/i)
   })
-  it('AUTH_JWT_SECRET stays fail-closed (server refuses to start without it)', () => {
-    expect(authJs).toMatch(/AUTH_JWT_SECRET is required/)
+  it('AUTH_JWT_SECRET stays fail-closed where it is still used (otp.js token hashing)', () => {
+    expect(otpJs).toMatch(/AUTH_JWT_SECRET is required/)
   })
 })
 

@@ -17,21 +17,34 @@ import { mapServerVersionRow, type ServerVersionRow } from './versionRead'
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 const TOKEN_KEY = 'pf.azure.token'
+const USER_KEY = 'pf.azure.user'
 
 // ─── token + fetch helpers ───────────────────────────────────────────────────
+// The session token is now an OPAQUE server-side session id (no JWT), so there is
+// nothing to decode from it. We keep a small identity HINT in localStorage purely for
+// an instant first paint on reload; the server (session cookie / bearer) is always the
+// authority and onUser() re-validates against /auth/me on every boot, correcting or
+// clearing the hint. Tampering with the hint only changes optimistic UI — every /api
+// call is still gated by the real server-side session.
 let token: string | null = (typeof localStorage !== 'undefined' && localStorage.getItem(TOKEN_KEY)) || null
 
-function decode(tok: string): AuthUser | null {
-  try {
-    const p = JSON.parse(atob(tok.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')))
-    if (typeof p.exp === 'number' && p.exp * 1000 < Date.now()) return null
-    return { uid: p.sub, email: p.email ?? null, name: p.name ?? null, role: p.role ?? null, tenantId: p.tenantId ?? null }
-  } catch { return null }
+function readStoredUser(): AuthUser | null {
+  if (typeof localStorage === 'undefined') return null
+  try { const raw = localStorage.getItem(USER_KEY); return raw ? (JSON.parse(raw) as AuthUser) : null } catch { return null }
 }
 
-let currentUser: AuthUser | null = token ? decode(token) : null
+// Trust the hint only when a session token is also present (login sets both, logout
+// clears both) — never render an authed shell for a session that isn't there.
+let currentUser: AuthUser | null = token ? readStoredUser() : null
 const userListeners = new Set<(u: AuthUser | null) => void>()
-function setUser(u: AuthUser | null) { currentUser = u; userListeners.forEach((cb) => cb(u)) }
+function setUser(u: AuthUser | null) {
+  currentUser = u
+  if (typeof localStorage !== 'undefined') {
+    if (u) localStorage.setItem(USER_KEY, JSON.stringify(u))
+    else localStorage.removeItem(USER_KEY)
+  }
+  userListeners.forEach((cb) => cb(u))
+}
 
 // Active tenant override for SUPER_ADMIN: sent as X-Tenant-Id on every request.
 let activeTenantOverride: string | null = null
@@ -180,6 +193,38 @@ export const adapter: BackendAdapter = {
       setToken(tok)
       setUser(user)
       return { user, token: tok }
+    },
+
+    async verifyMagicLink(email: string, token: string): Promise<Session> {
+      const { user, token: tok } = await api<{ user: AuthUser; token: string }>('/auth/otp/magic', {
+        method: 'POST', body: JSON.stringify({ email, token }),
+      })
+      setToken(tok)
+      setUser(user)
+      return { user, token: tok }
+    },
+
+    async passkeyAuthOptions(): Promise<{ requestId: string; options: Record<string, unknown> }> {
+      return api('/auth/passkey/options', { method: 'POST', body: '{}' })
+    },
+
+    async passkeyAuthVerify(requestId: string, credential: Record<string, unknown>): Promise<Session> {
+      const { user, token: tok } = await api<{ user: AuthUser; token: string }>('/auth/passkey/verify', {
+        method: 'POST', body: JSON.stringify({ requestId, response: credential }),
+      })
+      setToken(tok)
+      setUser(user)
+      return { user, token: tok }
+    },
+
+    async passkeyRegisterOptions(): Promise<{ requestId: string; options: Record<string, unknown> }> {
+      return api('/auth/passkey/register/options', { method: 'POST', body: '{}' })
+    },
+
+    async passkeyRegisterVerify(requestId: string, credential: Record<string, unknown>, deviceName?: string): Promise<void> {
+      await api('/auth/passkey/register/verify', {
+        method: 'POST', body: JSON.stringify({ requestId, response: credential, deviceName }),
+      })
     },
 
     async loginBootstrap(username: string, password: string, tenant?: string): Promise<Session> {

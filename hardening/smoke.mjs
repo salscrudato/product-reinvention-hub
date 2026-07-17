@@ -13,8 +13,8 @@
  * Env vars:
  *   BASE_URL        server base URL (no trailing slash).  Default: http://localhost:3000
  *   MODE            LOCAL | LIVE.  Default: LOCAL
- *   SMOKE_USER      bootstrap username.  Default: admin
- *   SMOKE_PASS      bootstrap password.  Default: admin
+ *   SMOKE_USER      bootstrap username.  Default: sal
+ *   SMOKE_PASS      bootstrap password.  Default: scrudato
  *   SMOKE_TENANT    tenant id to bind.   Default: smoke-test
  *
  * Exit codes:
@@ -34,8 +34,8 @@ const REPO_ROOT = resolve(__dirname, '..')
 // ─── config ───────────────────────────────────────────────────────────────────
 const MODE = (process.env.MODE || 'LOCAL').toUpperCase()
 const BASE_URL = (process.env.BASE_URL || (MODE === 'LOCAL' ? 'http://localhost:3000' : '')).replace(/\/$/, '')
-const SMOKE_USER = process.env.SMOKE_USER || 'admin'
-const SMOKE_PASS = process.env.SMOKE_PASS || 'admin'
+const SMOKE_USER = process.env.SMOKE_USER || 'sal'
+const SMOKE_PASS = process.env.SMOKE_PASS || 'scrudato'
 const SMOKE_TENANT = process.env.SMOKE_TENANT || 'smoke-test'
 
 // ─── fixture manifest (must all exist before any probe runs) ──────────────────

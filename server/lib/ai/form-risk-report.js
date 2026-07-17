@@ -119,6 +119,9 @@ async function formRiskReport(req, res) {
       [{ type: 'text', text: `BASE FORM (untrusted data):\n${formText.slice(0, 180_000)}` }],
       `Form: ${row.title || row.fileName || formKey}${row.formNumber ? ` (${row.formNumber}${row.edition ? ` ed. ${row.edition}` : ''})` : ''}.${lobNote} Produce the insured-centric risk report.`,
       2048,
+      // Deep reasoning over untrusted legal form text — xhigh effort surfaces the exclusions and
+      // notice-duty gotchas that matter to the insured (deployment-aware; skipped on haiku degrade).
+      { effort: 'xhigh' },
     )
   } catch (e) {
     return res.status(502).json({ error: 'ai_upstream', detail: String(e.message || e).slice(0, 200) })

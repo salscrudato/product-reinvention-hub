@@ -47,11 +47,11 @@ describe('degradedRole', () => {
 })
 
 describe('estimateCostUsd', () => {
-  it('prices a call from the per-deployment table', () => {
-    // opus: $15/M in, $75/M out → 1M in + 1M out = $90
-    expect(estimateCostUsd(DEPLOY_OPUS, 1_000_000, 1_000_000)).toBeCloseTo(90, 6)
-    // haiku: $0.80/M in, $4/M out → 500k in + 250k out = 0.4 + 1.0 = $1.4
-    expect(estimateCostUsd(DEPLOY_HAIKU, 500_000, 250_000)).toBeCloseTo(1.4, 6)
+  it('prices a call from the per-deployment table (current Anthropic list prices)', () => {
+    // opus 4.8: $5/M in, $25/M out → 1M in + 1M out = $30
+    expect(estimateCostUsd(DEPLOY_OPUS, 1_000_000, 1_000_000)).toBeCloseTo(30, 6)
+    // haiku 4.5: $1/M in, $5/M out → 500k in + 250k out = 0.5 + 1.25 = $1.75
+    expect(estimateCostUsd(DEPLOY_HAIKU, 500_000, 250_000)).toBeCloseTo(1.75, 6)
   })
 
   it('has pricing for every deployment', () => {

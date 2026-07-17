@@ -55,7 +55,7 @@ async function latestFilings(opts = {}) {
   if (opts.line) where.push(`state_type_of_insurance = ${soqlQuote(opts.line)}`)
   const params = new URLSearchParams({ $limit: String(opts.limit ?? 25), $order: 'received_date DESC' })
   if (where.length) params.set('$where', where.join(' AND '))
-  const res = await fetch(`${BASE}/${dataset}.json?${params}`, { headers: headers() })
+  const res = await fetch(`${BASE}/${dataset}.json?${params}`, { headers: headers(), signal: AbortSignal.timeout(10_000) })
   if (!res.ok) { const e = new Error(`tx_filings_${res.status}`); e.status = res.status; throw e }
   return (await res.json()).map(normalize)
 }

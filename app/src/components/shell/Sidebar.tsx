@@ -114,7 +114,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-4 h-14 shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <Logo size={26} className="shrink-0" />
-        {!collapsed && <span className="font-semibold text-sm text-text tracking-tight truncate flex-1 min-w-0">Product Reinvention Hub</span>}
+        {!collapsed && <span className="font-semibold text-sm text-text tracking-tight truncate flex-1 min-w-0">The Reinvention Engine</span>}
         {onMobileClose && !collapsed && (
           <button
             onClick={onMobileClose}

@@ -34,8 +34,8 @@ const ALLOWLIST: Record<string, { count: number; why: string }> = {
     why: 'createBatch(): ONE transactional batch of Create-only ops (filing record + hash-chained audit + chainHead). Immutable by construction; no upsert/replace exists in the file.',
   },
   'lib/auth.js': {
-    count: 5,
-    why: '__system__ identity plane (DEF-0017): loginAudit append-only create, JIT user provisioning upserts (x2), changePassword user upsert, revokedToken upsert (RISK-006). Not tenant entities.',
+    count: 4,
+    why: '__system__ identity plane (DEF-0017): loginAudit append-only create, JIT user provisioning upserts (x2), changePassword user upsert. Not tenant entities. (Sessions are opaque + in-memory now — no JWT, so revocation is an in-process session delete with no Cosmos write.)',
   },
   'lib/admin.js': {
     count: 13,
@@ -52,6 +52,10 @@ const ALLOWLIST: Record<string, { count: number; why: string }> = {
   'lib/tenant-admin.js': {
     count: 4,
     why: '__system__ user-identity upserts (invite / role change / remove / disable). Each is PAIRED with an audited member-mirror write through mutateInternal (hash-chained) in the tenant partition.',
+  },
+  'lib/passkeys.js': {
+    count: 1,
+    why: '__system__ identity plane (DEF-0017 class, same as lib/auth.js user records): ONE upsertCredential() helper serving both passkey enrollment (store the WebAuthn public key) and the per-sign-in counter/lastUsedAt bump (clone detection). Credential public keys are identity records, not tenant entities — no version-history obligation; every enrollment and sign-in also writes a loginAudit event through auth.writeLoginAudit.',
   },
   'lib/ai/reindex-product.js': {
     count: 1,

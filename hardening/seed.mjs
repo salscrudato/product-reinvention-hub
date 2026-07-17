@@ -610,16 +610,16 @@ async function main() {
     process.exit(1)
   }
 
-  // 2. Login as bootstrap admin into the test tenant
-  console.log(`\nLogging in: admin → '${TEST_TENANT}'...`)
+  // 2. Login as the bootstrap account into the test tenant
+  console.log(`\nLogging in: sal → '${TEST_TENANT}'...`)
   let token
   try {
-    const r = await apiPost('/api/auth/login', { username: 'admin', password: 'admin', tenant: TEST_TENANT })
+    const r = await apiPost('/api/auth/bootstrap', { username: 'sal', password: 'scrudato', tenant: TEST_TENANT })
     token = r.token
     console.log(`  uid=${r.user?.uid}  role=${r.user?.role}  tenantId=${r.user?.tenantId}`)
   } catch (e) {
     console.error(`\nLOGIN FAIL: ${e.message}`)
-    console.error('The bootstrap admin (admin/admin) must be present in auth.js (DEF-0041 noted).')
+    console.error('The bootstrap account (sal/scrudato) must be present in auth.js (DEF-0041 noted).')
     process.exit(1)
   }
 

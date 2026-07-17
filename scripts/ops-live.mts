@@ -56,7 +56,7 @@ async function apiRetry(path: string, init: RequestInit, token: string | null = 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 async function bootstrap(tenant: string): Promise<string> {
-  const login = await apiRetry('/auth/bootstrap', { method: 'POST', body: JSON.stringify({ username: 'admin', password: 'admin', tenant }) })
+  const login = await apiRetry('/auth/bootstrap', { method: 'POST', body: JSON.stringify({ username: 'sal', password: 'scrudato', tenant }) })
   if (login.status !== 200 || !login.body?.token) { console.error(`bootstrap failed: ${login.status} ${short(login.body)}`); process.exit(2) }
   return login.body.token as string
 }

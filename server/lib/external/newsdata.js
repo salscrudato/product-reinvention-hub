@@ -23,7 +23,7 @@ async function latest(opts = {}) {
     country: opts.country ?? 'us',
     language: 'en',
   })
-  const res = await fetch(`${BASE}?${params}`)
+  const res = await fetch(`${BASE}?${params}`, { signal: AbortSignal.timeout(10_000) })
   if (!res.ok) { const e = new Error(`newsdata_${res.status}`); e.status = res.status; throw e }
   const j = await res.json()
   return (j.results || []).map(a => ({

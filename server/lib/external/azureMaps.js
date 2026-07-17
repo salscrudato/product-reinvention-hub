@@ -23,7 +23,7 @@ async function geocode(address, opts = {}) {
     limit: '1',
     countrySet: 'US',
   })
-  const res = await fetch(`${BASE}?${params}`)
+  const res = await fetch(`${BASE}?${params}`, { signal: AbortSignal.timeout(10_000) })
   if (!res.ok) { const e = new Error(`azure_maps_${res.status}`); e.status = res.status; throw e }
   const top = (await res.json()).results?.[0]
   if (!top || top.score < (opts.minScore ?? 0.5)) return null

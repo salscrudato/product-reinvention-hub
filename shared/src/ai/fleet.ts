@@ -143,18 +143,19 @@ export const EXTENDED_DEPLOYMENTS = {
 export type ExtendedRole = keyof typeof EXTENDED_DEPLOYMENTS
 
 // ─── Fleet pricing (for cost accounting / spend ceilings) ─────────────────────
-// USD per 1M tokens. Illustrative list-price estimates — the cost GUARD only needs a
-// conservative order-of-magnitude to enforce a spend ceiling, not billing-grade exactness.
-// The Anthropic figures mirror functions/src/telemetry.ts; update all when prices change.
+// USD per 1M tokens. The Anthropic figures are current list prices (Opus 4.8 $5/$25, Sonnet 5
+// $3/$15, Haiku 4.5 $1/$5) so per-tenant cost attribution (metering.js costUsd) is accurate and
+// the spend ceiling reflects real dollars. The non-Anthropic extended-fleet entries below stay
+// conservative order-of-magnitude estimates. Update the Anthropic rows when Anthropic prices change.
 export interface FleetPricing {
   readonly inputPerMTok:  number
   readonly outputPerMTok: number
 }
 
 export const FLEET_PRICING: Readonly<Record<string, FleetPricing>> = {
-  [DEPLOY_OPUS]:     { inputPerMTok: 15.00, outputPerMTok: 75.00 },
-  [DEPLOY_SONNET]:   { inputPerMTok:  3.00, outputPerMTok: 15.00 },
-  [DEPLOY_HAIKU]:    { inputPerMTok:  0.80, outputPerMTok:  4.00 },
+  [DEPLOY_OPUS]:     { inputPerMTok:  5.00, outputPerMTok: 25.00 },  // Opus 4.8 list price
+  [DEPLOY_SONNET]:   { inputPerMTok:  3.00, outputPerMTok: 15.00 },  // Sonnet 5 list ($2/$10 intro)
+  [DEPLOY_HAIKU]:    { inputPerMTok:  1.00, outputPerMTok:  5.00 },  // Haiku 4.5 list price
   [DEPLOY_GPT]:      { inputPerMTok:  3.00, outputPerMTok: 12.00 },
   [DEPLOY_GPT_MINI]: { inputPerMTok:  0.30, outputPerMTok:  1.60 },
   // Embeddings bill input tokens only (no completion) — the output tier is 0.

@@ -1,6 +1,6 @@
 {
-  "name": "Product Reinvention Hub",
-  "short_name": "PRH",
+  "name": "The Reinvention Engine",
+  "short_name": "Reinvention",
   "description": "AI-native product management for P&C insurers — coverages, forms, rules, rating and governance in one workspace.",
   "id": "/",
   "start_url": "/",
@@ -8,7 +8,7 @@
   "display": "standalone",
   "orientation": "any",
   "background_color": "#F7F7FA",
-  "theme_color": "#8B1FE0",
+  "theme_color": "#0B57D6",
   "categories": ["business", "productivity", "finance"],
   "icons": [
     { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
