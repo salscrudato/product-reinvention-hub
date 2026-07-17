@@ -74,6 +74,19 @@ process.on('SIGTERM', () => shutdown(0))
 // ─── boot ─────────────────────────────────────────────────────────────────────
 loadKeysMd()
 
+// SAFETY: local dev must NEVER touch the LIVE demo database ('prodhub'). cosmos.js
+// falls back to 'prodhub' whenever COSMOS_DB is unset, so pin the isolated workstream
+// DB here unless an explicit NON-prod COSMOS_DB is already set. keys.md normally sets
+// it; this is the belt-and-braces guarantee for every local session (and any agent).
+const ISOLATED_DB = 'prodhub-sal'
+if (!process.env.COSMOS_DB || process.env.COSMOS_DB === 'prodhub') {
+  if (process.env.COSMOS_DB === 'prodhub') {
+    console.warn(`[dev] SAFETY: COSMOS_DB was 'prodhub' (the LIVE demo) — overriding to '${ISOLATED_DB}' so local dev never writes prod data.`)
+  }
+  process.env.COSMOS_DB = ISOLATED_DB
+}
+console.log(`[dev] Cosmos database: ${process.env.COSMOS_DB}  (isolated workstream — never the live 'prodhub').`)
+
 // Local-only JWT secret: the host refuses to boot without one, and keys.md does
 // not carry it (it is per-environment, not a shared service credential). An
 // ephemeral random secret is correct for local dev — every restart simply
