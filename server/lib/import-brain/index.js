@@ -93,12 +93,44 @@ async function runAdaptiveImportBrain(opts) {
   // ── CE3 Step 7: resume — completed stage artifacts skip their stage entirely.
   const resume = opts.resume && typeof opts.resume === 'object' ? opts.resume : {}
 
+  // ── Stage 1a: workbook digest (CE3 Step 2) ──────────────────────────────────
+  // Compressed structural digest -> dual decorrelated readers (opus + gpt-5.1, each
+  // with a code-bounded window-request tool) -> WORKBOOK_DIGEST synthesis (deep
+  // reasoner on /responses, opus chat fallback). Telemetry + adjudication input:
+  // the stage-1 prefilter skip-gate below stays exactly as-is.
+  let workbookUnderstanding = null
+  if (censusBySheet.size > 0) {
+    emitStage(emit, 1, 'digest', 'start', `Digesting ${censusBySheet.size} censused sheet(s)`)
+    try {
+      const { digestWorkbook } = require('./stage1-digest')
+      const d = resume.digest && resume.digest.understanding
+        ? { understanding: resume.digest.understanding, resumed: true }
+        : await digestWorkbook({ censuses: opts.censuses, structural, budget, review, emit })
+      workbookUnderstanding = d && d.understanding ? d.understanding : null
+      if (workbookUnderstanding && !d.resumed) await checkpoint('digest', { understanding: workbookUnderstanding })
+    } catch (e) {
+      review.push({ kind: 'digest-error', detail: `workbook digest failed: ${String(e && e.message || e).slice(0, 160)} — classification proceeds without it.` })
+    }
+    emitStage(emit, 1, 'digest', 'end', workbookUnderstanding ? `${workbookUnderstanding.perSheet.length} sheet reading(s)` : 'no understanding produced')
+  }
+
   // ── Stage 1: Sheet classification ──────────────────────────────────────────
   emitStage(emit, 1, 'classify', 'start', `Classifying ${(structural.sheets || []).length} sheet(s)`)
 
   const classifiedSheets = Array.isArray(resume.stage1 && resume.stage1.classifiedSheets)
     ? (emitStage(emit, 1, 'classify', 'progress', 'restored from checkpoint (resume)'), resume.stage1.classifiedSheets)
     : await classifySheets(structural.sheets || [], budget, review)
+
+  // Digest-vs-classify disagreements are review items (visible, never silent).
+  if (workbookUnderstanding) {
+    const digestDomain = new Map(workbookUnderstanding.perSheet.map(s => [s.sheet, s.domain]))
+    for (const c of classifiedSheets) {
+      const dd = digestDomain.get(c.sheetName)
+      if (dd && dd !== 'UNKNOWN' && c.domain !== 'ignore' && dd !== c.domain) {
+        review.push({ kind: 'digest-classify-disagreement', sheetName: c.sheetName, detail: `digest read "${c.sheetName}" as ${dd}; stage-1 classified ${c.domain} — review which is right.` })
+      }
+    }
+  }
 
   const contentCount = classifiedSheets.filter(s => s.domain !== 'ignore').length
   const ignoredCount = classifiedSheets.length - contentCount
@@ -200,6 +232,7 @@ async function runAdaptiveImportBrain(opts) {
     } catch { output.accounting = { sourceName: structural.sourceName || '', sheets: sheetRollups } }
     output.sweeper = { facts: sweeper.sweptFacts, unresolvedItems: sweeper.unresolvedItems, perSheet: sweeper.perSheet }
   }
+  if (workbookUnderstanding) output.workbookUnderstanding = workbookUnderstanding
 
   // Per-run spend telemetry — the no-cap import switch removes the CAP, never the
   // TELEMETRY. Logged server-side and streamed so operators see true import cost.

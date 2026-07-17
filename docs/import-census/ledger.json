@@ -181,6 +181,14 @@
       "ts": "2026-07-16T19:35:34.514Z"
     },
     {
+      "id": "CE3-S8",
+      "lane": "ce3-brain",
+      "status": "DONE",
+      "note": "Step 2 digest + Step 9 locks + Step 7 kill-test + close. DIGEST (stage1-digest.js): compressed structural digest (regions/detectors/fingerprints/3 sample rows, never full grids) -> dual decorrelated readers (GROUNDED_CITED + VISION) each with the bounded window tool (40x40, 12/model, 3 round-trips - enforced in serveWindow/readerLoop CODE, both locked) -> WORKBOOK_DIGEST synthesis on /responses via new import-safe callResponses in ai-call.js (IMPORT_CONTEXT guard + per-run budget recording; MISSING_DEPLOYMENTS 404 cache; GROUNDED_CITED chat fallback); reader disagreements + digest-vs-classify disagreements become review items; prefilter skip-gate untouched; understanding checkpointed + on BrainOutput.workbookUnderstanding + brain:digest SSE. LOCKS: tests/import-brain/hardening-ce3-brain.test.ts (14 tests: hidden-sheet flip on the REAL trimmed SECURA fixture incl. hidden Forms View - MTG censused+structural+isoGrids hidden flag AND mapper conservation extracting MTG-cited forms; hiddenSource stamping synthetic; dup-cluster fold identical-folds + conflict-to-review pair; sweeper vocabulary/citation enforcement incl. the invention-impossible acceptAnswer line; census_unaccounted plan contract; cache determinism + promptVersion invalidation; 200-col continuation profiles; per-sheet resume short-circuit; window-tool bounds) + tests/import-brain/hardening-ce3-killtest.test.ts (SIGKILL child mid-stage-4 via fixtures/ce3-kill-runner.mjs stub runner -> resume completes, call-log proves ZERO re-extraction of checkpointed sheets, orphaned sheets ARE extracted; deterministic, zero spend). FIXTURE: samples/hardening/workbooks/trimmed-secura-property-ce3.xlsx (trim-workbook.mjs, 5 sheets 80 rows, hidden MTG + Product Inventory - prompt-sanctioned trimmed client fixture). CLOSE: eval1 4/4 F1=1.0 extras=0 zero regen; eval2 offline+census 7/8 at all four CE3 gates (all-lines twin exception); bundle budget green (23.1/25 worst chunk); CE3_REPORT.md rewritten (red-to-green table, gate design, twin proof, impossibility proofs, cache/spend, hostile self-review x6, CE5 live-run instructions); orchestration.md lane row DONE. Item 4 note: eval2 ldTableRef gate green-or-null on all 8; eval1-side gating needs scripts/import-eval.mts (outside allowlist, CE5).",
+      "commit": null,
+      "ts": "2026-07-17T00:05:00Z"
+    },
+    {
       "id": "CE3-S7",
       "lane": "ce3-brain",
       "status": "DONE",
