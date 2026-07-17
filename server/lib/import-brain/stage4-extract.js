@@ -24,6 +24,7 @@
 const fleet = require('../fleet')
 const brainShared = require('../import-brain-shared.cjs')
 const { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI } = require('./ai-call')
+const { cachedCall, PROMPT_VERSION } = require('./extract-cache')
 const { STAGE4_EXTRACT_SYSTEM, STAGE4_JUDGE_SYSTEM } = require('./prompts')
 const {
   extractJson, colLetter,
@@ -367,7 +368,33 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
         return
       }
     }
-    // Judge could not ground any candidate → importWarning; keep best candidate FLAGGED.
+
+    // ── CE3 Step 3(c): third-lineage escalation — ONE deepseek pass before
+    // needs_review. The gpt-5.1 judge could not ground a verdict (three-way
+    // disagreement); VERIFY_DEEPSEEK (the post-grok third judge family) gets one
+    // look. Deployment comes from the fleet registry bridge; the call rides
+    // callOpenAI so IMPORT_CONTEXT no-cap + spend telemetry hold; a missing
+    // deployment (404 skip-set) degrades silently to the review path.
+    try {
+      const ext = require('../fleet-shared.cjs').EXTENDED_DEPLOYMENTS
+      const dsDeployment = ext && ext.VERIFY_DEEPSEEK && ext.VERIFY_DEEPSEEK.deploymentName
+      if (dsDeployment) {
+        const dsJudged = await parseWithRetry({
+          call: () => callOpenAI({ deployment: dsDeployment, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: 400, budget }),
+          parse: parseJudge, review, stage: 'stage4', sheetName, what: `deepseek tail verdict for "${conflict.fieldName}" row ${conflict.rowIdx}`,
+        })
+        if (dsJudged && dsJudged.verdict && dsJudged.verdict !== 'none') {
+          const letterIdx = String(dsJudged.verdict).trim().toLowerCase().charCodeAt(0) - 97
+          const pick = (letterIdx >= 0 && letterIdx < conflict.candidates.length) ? conflict.candidates[letterIdx] : null
+          if (pick) {
+            conflict.resolved = { ...pick, confidence: Math.min(Number(dsJudged.confidence ?? pick.confidence), 1), method: 'judge-deepseek' }
+            return
+          }
+        }
+      }
+    } catch { /* third lineage unavailable — fall through to review */ }
+
+    // No judge lineage could ground a candidate → importWarning; keep best candidate FLAGGED.
     review.push({
       kind: 'consensus-failure', sheetName, rowIndex: conflict.rowIdx, fieldPath: conflict.fieldName,
       detail: `No grounded consensus for "${conflict.fieldName}" (candidates: ${conflict.candidates.map(c => JSON.stringify(c.value)).slice(0, 4).join(' vs ')}). Kept highest-confidence candidate flagged for review.`,
@@ -728,13 +755,16 @@ function excelRowOf(rowIdx, headerRow, gridRows) {
  * @param {string|undefined}   lobRefIdHint  e.g. 'GL.LOB.001'
  * @returns {Promise<object[]>} BrainEntity[]
  */
-async function extractRows(classified, locks, colMaps, fpByName, budget, review, lobRefIdHint, onProgress) {
+async function extractRows(classified, locks, colMaps, fpByName, budget, review, lobRefIdHint, onProgress, extras = {}) {
   const progress = typeof onProgress === 'function' ? onProgress : () => {}
   const allEntities = []
   const lockMap  = new Map()
   const colMapOf = new Map()
   for (const l of locks)   lockMap.set(l.sheetName, l)
   for (const m of colMaps) colMapOf.set(m.sheetName, m)
+  // CE3 Step 3: census table regions + the accounting ledger ride in via extras
+  // ({ censusBySheet?: Map, accounting?: Map<sheet, SheetAccounting>, tenantId? }).
+  const censusBySheet = extras.censusBySheet instanceof Map ? extras.censusBySheet : new Map()
 
   const deployBulk    = resolveAnthropic('BULK_VERIFY', budget)
   const deployGptMini = resolveOpenAI(fleet.DEPLOY_GPT_MINI, budget)  // BULK_ALT
@@ -753,8 +783,37 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     const colMap = colMapOf.get(sheet.sheetName)
     if (!fp || !lock || !colMap) return null
 
-    const { rows, gridRows } = gatherRows(fp, lock.headerRowIndex)
+    // ── CE3 Step 7: per-sheet resume — a checkpointed sheet is NEVER re-extracted.
+    if (extras.completedSheets instanceof Map && extras.completedSheets.has(sheet.sheetName)) {
+      progress(`${fp.sheetName}: restored from checkpoint (resume)`)
+      return { fp, entities: extras.completedSheets.get(sheet.sheetName), resumed: true }
+    }
+
+    let { rows, gridRows } = gatherRows(fp, lock.headerRowIndex)
     if (rows.length === 0) return null
+
+    // ── CE3 Step 3(a): census TableRegion windows — a stacked sheet whose census
+    // segments MULTIPLE regions extracts the region the locked header governs;
+    // the other regions' cells stay unaccounted so the stage-4.5 sweeper (which
+    // classifies with citations, never a naive row batch) surfaces them as FACT
+    // proposals or review items instead of being extracted under the WRONG map.
+    const censusSheet = censusBySheet.get(sheet.sheetName)
+    const regions = censusSheet && Array.isArray(censusSheet.tables) ? censusSheet.tables : []
+    if (regions.length > 1 && fp.layoutShape !== 'STACKED_TABLES' && Array.isArray(gridRows)) {
+      const headerAbs = lock.headerRowIndex ?? -1
+      const primary = regions.find(rg => headerAbs >= rg.rowStart && headerAbs <= rg.rowEnd) || regions[0]
+      const kept = []
+      const keptGrid = []
+      for (let i = 0; i < rows.length; i++) {
+        const abs = gridRows[i]
+        if (abs >= primary.rowStart && abs <= primary.rowEnd) { kept.push(rows[i]); keptGrid.push(abs) }
+      }
+      if (kept.length > 0 && kept.length < rows.length) {
+        review.push({ kind: 'census-region-window', sheetName: fp.sheetName, detail: `"${fp.sheetName}" segments into ${regions.length} census table regions — extracted rows ${primary.rowStart + 1}-${primary.rowEnd + 1} under the locked header; the other region(s) go to the sweeper (never extracted under the wrong column map).` })
+        rows = kept
+        gridRows = keptGrid
+      }
+    }
 
     // A sheet with ZERO mapped columns cannot be extracted meaningfully — skip it
     // with an importWarning instead of asking models to extract from nothing
@@ -795,9 +854,17 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
       // short-circuits to the sentinel (no identical retry — it re-truncates).
       const rowsWhat = `rows ${batchStart}-${batchStart + batch.length - 1}`
       const onTruncation = () => TRUNCATED
+      // CE3 Step 3(d) — extraction cache (backlog item 8): the window's verbatim
+      // content is inside userPrompt, so the sha256 key IS the contentHash + prompt
+      // version + deployment. A hit returns the raw output byte-for-byte (parsing,
+      // consensus and ledger posting run identically; only the model call is skipped).
+      const cached = (deployment, call) => cachedCall({
+        deployment, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt,
+        promptVersion: PROMPT_VERSION, budget, tenantId: extras.tenantId, call,
+      })
       const [aVote, bVote] = await Promise.all([
-        parseWithRetry({ call: () => callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK extraction ${rowsWhat}`, onTruncation }),
-        parseWithRetry({ call: () => callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK_ALT extraction ${rowsWhat}`, onTruncation }),
+        parseWithRetry({ call: () => cached(deployBulk, () => callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget })), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK extraction ${rowsWhat}`, onTruncation }),
+        parseWithRetry({ call: () => cached(deployGptMini, () => callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget })), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK_ALT extraction ${rowsWhat}`, onTruncation }),
       ])
 
       if ((aVote === TRUNCATED || bVote === TRUNCATED) && batch.length > 1) {
@@ -873,7 +940,17 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     return { fp, entities: batchResults.map(r => r.entities) }
   }
 
-  const sheetResults = await pMap(contentSheets, extractSheet, 2)
+  const extractAndCheckpoint = async (sheet) => {
+    const result = await extractSheet(sheet)
+    // CE3 Step 7: per-sheet stage-4 checkpoint (skipped for resumed sheets — their
+    // artifact already exists). Best-effort; never fails extraction.
+    if (result && !result.resumed && typeof extras.onSheetComplete === 'function') {
+      try { await extras.onSheetComplete(sheet.sheetName, result.entities) } catch { /* checkpoint only */ }
+    }
+    return result
+  }
+
+  const sheetResults = await pMap(contentSheets, extractAndCheckpoint, 2)
 
   // Source-evidenced synthesis fallback (ledger F30): the workbook's own scheme
   // prefix, read from the first real refId any sheet extracted — used when no
@@ -911,6 +988,24 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     // After all batches: derive parentId for sub-coverages from row context.
     deriveParentIds(sheetEntities)
     allEntities.push(...sheetEntities)
+  }
+
+  // ── CE3 Step 3(b): post consumed cells to the AccountingLedger as FACTs ──────
+  // Every extraction result — the deterministic CODE fast path AND the AI vote
+  // paths — accounts the exact cells its citations name. UNACCOUNTED residue is
+  // the stage-4.5 sweeper's work queue; conservation is measured, never assumed.
+  const accounting = extras.accounting instanceof Map ? extras.accounting : null
+  if (accounting && typeof brainShared.post === 'function') {
+    for (const e of allEntities) {
+      const factRef = `${e.kind}:${e.sourceSheet}:${e.sourceRowIndex}:${e.occurrence ?? 0}`
+      for (const f of e.fields || []) {
+        const cit = f.citation
+        if (!cit || !cit.sheet || !cit.cell) continue
+        const acc = accounting.get(cit.sheet)
+        if (!acc) continue
+        brainShared.post(acc, `${cit.sheet}!${String(cit.cell).toUpperCase()}`, 'FACT', f.deterministic ? 'code' : 'model', 'stage4-extract', factRef, [])
+      }
+    }
   }
 
   return allEntities

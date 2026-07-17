@@ -316,24 +316,46 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
     }
 
     if (hidden) {
-      // Hidden sheets are excluded from AI extraction (archives/scratch noise) but
-      // FEED the deterministic ISO mapper — the legacy import path always read them,
-      // so canonical identity/coverage parity requires the mapper to see them too.
-      skippedHiddenSheets.push(ws.name)
-      hiddenGrids.push({ sheet: ws.name, cells })
+      // CE3 POLICY FLIP (Step 1): hidden sheets ENTER extraction — a hidden
+      // "Forms View - MTG" carries 2,072 real cells the old skip lost. They ride
+      // the structural model like any sheet; their names travel as provenance so
+      // stage 7 stamps hiddenSource:true on every entity extracted from them.
+      skippedHiddenSheets.push(ws.name) // legacy key: now "hidden sheet names", still surfaced
+      hiddenGrids.push({ sheet: ws.name, cells, mergedCells: getMergedRanges(ws) })
       continue
     }
     grids.push({ sheet: ws.name, cells, mergedCells: getMergedRanges(ws) })
   }
 
-  const structural = brainShared.buildStructuralModel(grids, sourceName, kind)
+  // Visible-first, hidden-after: preserves the pre-flip mapper input order exactly
+  // (isoGrids already carried hidden sheets in this order; structural now does too).
+  const structural = brainShared.buildStructuralModel([...grids, ...hiddenGrids], sourceName, kind)
   // Raw grids (visible + hidden) ride along for the deterministic ISO-family mapper
   // (stage 7 joins its canonical identities with the brain's cited extraction).
   const isoGrids = [
     ...grids.map(g => ({ sheet: g.sheet, file: sourceName, cells: g.cells })),
-    ...hiddenGrids.map(g => ({ sheet: g.sheet, file: sourceName, cells: g.cells })),
+    ...hiddenGrids.map(g => ({ sheet: g.sheet, file: sourceName, cells: g.cells, hidden: true })),
   ]
-  return { structural, skippedHiddenSheets, isoGrids }
+
+  // CE1 cell census on the SAME loaded workbook (no second ExcelJS parse).
+  // Formatting-lite over the census-lite ceiling: the per-cell style walk doubles
+  // RSS on 100k+-cell masters (CE1 F-C6: All Lines = 1.28 GB child RSS); above the
+  // ceiling only values/merges/validations are censused (format flags default off —
+  // the only losses are the headerLockV2 formatting bonus and indent staircase).
+  let census = null
+  try {
+    const totalCells = [...grids, ...hiddenGrids].reduce(
+      (n, g) => n + g.cells.reduce((m, row) => m + row.reduce((k, v) => k + (v !== null && v !== undefined && v !== '' ? 1 : 0), 0), 0), 0)
+    const liteCeiling = Number(process.env.IMPORT_CENSUS_LITE_CELLS || 60000)
+    const raws = collectRawCensusSheets(wb, { lite: totalCells > liteCeiling })
+    census = brainShared.buildWorkbookCensus(raws, sourceName)
+    census.formattingLite = totalCells > liteCeiling
+  } catch (e) {
+    // The census is an accounting aid, never a run blocker — surface, continue.
+    census = { sourceName, sheets: [], censusError: String(e && e.message || e).slice(0, 200) }
+  }
+
+  return { structural, skippedHiddenSheets, hiddenSheets: skippedHiddenSheets, isoGrids, census }
 }
 
 // ─── Cell-census feeding (CE1-S4) ─────────────────────────────────────────────
@@ -343,7 +365,13 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
 // (shared/src/import/census); the census itself is built by the bridged pure
 // module. Read-only: no ExcelJS write API is ever touched.
 
-function collectRawCensusSheets(wb) {
+function collectRawCensusSheets(wb, opts = {}) {
+  // lite (CE3): skip per-cell STYLE reads (font/fill/alignment/border) — on
+  // 100k+-cell masters the style walk doubles RSS (CE1 F-C6). RawCensusCell's
+  // format fields are optional; buildSheetCensus defaults them, so census
+  // structure/accounting are byte-identical — only formatting-derived detector
+  // signals (headerLockV2 formattingShift, indent staircase) lose input.
+  const lite = !!opts.lite
   const sheets = []
   for (const ws of wb.worksheets) {
     const hidden = ws.state === 'hidden' || ws.state === 'veryHidden'
@@ -366,7 +394,7 @@ function collectRawCensusSheets(wb) {
         const cell = rowObj.getCell(c)
         const v = cell.value
         if (v === null || v === undefined) continue
-        arr[c - 1] = {
+        arr[c - 1] = lite ? { v } : {
           v,
           bold: !!(cell.font && cell.font.bold),
           filled: !!(cell.fill && cell.fill.type === 'pattern' && cell.fill.pattern && cell.fill.pattern !== 'none'),

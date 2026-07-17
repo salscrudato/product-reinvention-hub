@@ -136,6 +136,25 @@ async function getImportRun({ tenantId, runId }) {
   }
 }
 
+/** List a run's persisted stage-artifact keys (CE3 Step 7 resume discovery). */
+async function listStageArtifacts({ tenantId, runId }) {
+  const rid = sanitizeRunId(runId)
+  const tid = sanitizeTenantId(tenantId)
+  if (!rid || !tid) return { status: 'invalid_id' }
+  const client = getClient()
+  if (!client) return { status: 'storage_not_configured' }
+  try {
+    const prefix = `import-runs/${tid}/${rid}/`
+    const stages = []
+    for await (const item of client.listBlobsFlat({ prefix })) {
+      if (item.name.endsWith('.json')) stages.push(item.name.slice(prefix.length, -'.json'.length))
+    }
+    return { status: 'ok', stages }
+  } catch (e) {
+    return { status: 'error', reason: String((e && e.message) || e).slice(0, 160) }
+  }
+}
+
 /** Fetch one stage artifact (JSON passthrough). */
 async function getStageArtifact({ tenantId, runId, stage }) {
   const rid = sanitizeRunId(runId)
@@ -165,9 +184,19 @@ const checkpointEvent = (stage, sheet, blobRef) => ({ t: 'json', key: 'brain:che
 /** Test seam: inject a fake container client. */
 function __setClientForTests(client) { containerClient = client; clientResolved = true }
 
+/** Encode a per-sheet stage-4 checkpoint into a valid stage slug (<= 32 chars,
+ *  no slash): "stage4." + squashed sheet name + short FNV hash (collision-safe;
+ *  resume recovers the true sheet name from the artifact body, never the slug). */
+function sheetStageSlug(sheetName) {
+  const squashed = String(sheetName || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 16) || 'sheet'
+  let h = 0x811c9dc5
+  for (const ch of String(sheetName || '')) { h ^= ch.charCodeAt(0); h = (h * 0x01000193) >>> 0 }
+  return `stage4.${squashed}-${h.toString(16)}`
+}
+
 module.exports = {
   persistImportRun, persistStageArtifact,
-  listImportRuns, getImportRun, getStageArtifact,
+  listImportRuns, listStageArtifacts, getImportRun, getStageArtifact,
   censusEvent, sweeperEvent, cacheEvent, checkpointEvent,
-  __setClientForTests, sanitizeStage,
+  __setClientForTests, sanitizeStage, sheetStageSlug,
 }
