@@ -1,0 +1,2826 @@
+{
+  "file": "Product_Framework_Client_Master.xlsx",
+  "sha256": "11aca796faf26ef13701893197101b30c2d9cc207950046957b04c43eb8dfc9c",
+  "annotatedAt": "2026-07-16T09:56:18.574Z",
+  "annotators": {
+    "a": "GROUNDED_CITED",
+    "b": "VISION",
+    "adjudicator": "DEEP_REASONER"
+  },
+  "sheets": [
+    {
+      "name": "Table of Contents",
+      "hidden": false,
+      "cells": [
+        {
+          "ref": "A1",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A2",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B2",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A3",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B3",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "C4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "C5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "C6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A7",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B7",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "C7",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A8",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B8",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "C8",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A9",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B9",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "C9",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A10",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B10",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "C10",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "A13",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "D13",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "G13",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B14",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "E14",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B15",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "E15",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B16",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "E16",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        },
+        {
+          "ref": "B17",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.TOC"
+        }
+      ],
+      "entities": [],
+      "edges": []
+    },
+    {
+      "name": "Version History",
+      "hidden": false,
+      "cells": [
+        {
+          "ref": "A1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A2",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B2",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A3",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B3",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        }
+      ],
+      "entities": [],
+      "edges": []
+    },
+    {
+      "name": "Definitions",
+      "hidden": false,
+      "cells": [
+        {
+          "ref": "A1",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A2",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B2",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A3",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B3",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A4",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B4",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C4",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A5",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B5",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A6",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B6",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A7",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B7",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A8",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B8",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A9",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B9",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C9",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A10",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B10",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C10",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A11",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B11",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C11",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A12",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B12",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A13",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B13",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A14",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B14",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C14",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A15",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B15",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C15",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A16",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B16",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A17",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B17",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A19",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B19",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        }
+      ],
+      "entities": [],
+      "edges": []
+    },
+    {
+      "name": "Product Contacts",
+      "hidden": false,
+      "cells": [
+        {
+          "ref": "A1",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "A2",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "B2",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "A3",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "B3",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "A4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "B4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "C4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "D4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "E4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "A5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "B5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "C5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "D5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        },
+        {
+          "ref": "E5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.CONTACTS"
+        }
+      ],
+      "entities": [],
+      "edges": []
+    },
+    {
+      "name": "Observation Log",
+      "hidden": false,
+      "cells": [
+        {
+          "ref": "A1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "E1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A2",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A3",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A6",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A7",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A8",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A9",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A10",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A11",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A12",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A13",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A14",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A15",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A16",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A17",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A18",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A19",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A20",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A21",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A22",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A23",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A24",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A25",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A26",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A27",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A28",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A29",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A30",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        }
+      ],
+      "entities": [],
+      "edges": []
+    },
+    {
+      "name": "Question Log",
+      "hidden": false,
+      "cells": [
+        {
+          "ref": "A1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "E1",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A2",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A3",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A6",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A7",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A8",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A9",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A10",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A11",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A12",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        }
+      ],
+      "entities": [],
+      "edges": []
+    },
+    {
+      "name": "PCM Dropdowns (HIDE)",
+      "hidden": true,
+      "cells": [
+        {
+          "ref": "A1",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "A4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "B4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "C4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "D4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "E4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "F4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "G4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "H4",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "A5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "B5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "C5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "D5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "E5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "F5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "G5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "H5",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "A6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "B6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "C6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "D6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "E6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "F6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "G6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "H6",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "C7",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "E7",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "G7",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "E8",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "G8",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "E9",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        },
+        {
+          "ref": "G9",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.DROPDOWN_SRC"
+        }
+      ],
+      "entities": [],
+      "edges": []
+    },
+    {
+      "name": "Product Inventory",
+      "hidden": false,
+      "cells": [
+        {
+          "ref": "C10",
+          "disposition": "ENTITY",
+          "kind": "product",
+          "ofEntity": "4",
+          "noiseRule": null
+        },
+        {
+          "ref": "C20",
+          "disposition": "ENTITY",
+          "kind": "product",
+          "ofEntity": "14",
+          "noiseRule": null
+        },
+        {
+          "ref": "C23",
+          "disposition": "ENTITY",
+          "kind": "product",
+          "ofEntity": "17",
+          "noiseRule": null
+        },
+        {
+          "ref": "A7",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D7",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": "1",
+          "noiseRule": null
+        },
+        {
+          "ref": "E7",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": "1",
+          "noiseRule": null
+        },
+        {
+          "ref": "A8",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A9",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A10",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D10",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": "4",
+          "noiseRule": null
+        },
+        {
+          "ref": "A11",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A12",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A13",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A14",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A15",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A16",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A17",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A18",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A19",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A20",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A21",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A22",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A23",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A24",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "H4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "L4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "E6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "H6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "J6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "L6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "N6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C26",
+          "disposition": "ENTITY",
+          "kind": "product",
+          "ofEntity": "20",
+          "noiseRule": null
+        },
+        {
+          "ref": "C29",
+          "disposition": "ENTITY",
+          "kind": "product",
+          "ofEntity": "23",
+          "noiseRule": null
+        },
+        {
+          "ref": "P4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "T4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "X4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "P6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "R6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "T6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "U6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "V6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "X6",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "O5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "P5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Q5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "R5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "S5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "V5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "W5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "X5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Y5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        }
+      ],
+      "entities": [
+        {
+          "kind": "product",
+          "refId": "17",
+          "name": "Product #4",
+          "parentRef": null,
+          "citations": [
+            "Product Inventory!C23",
+            "Product Inventory!A23"
+          ]
+        },
+        {
+          "kind": "product",
+          "refId": "20",
+          "name": "Product #5",
+          "parentRef": null,
+          "citations": [
+            "Product Inventory!C26",
+            "Product Inventory!A26"
+          ]
+        },
+        {
+          "kind": "product",
+          "refId": "23",
+          "name": "Product #6",
+          "parentRef": null,
+          "citations": [
+            "Product Inventory!C29",
+            "Product Inventory!A29"
+          ]
+        }
+      ],
+      "edges": []
+    },
+    {
+      "name": "Product Component Model",
+      "hidden": false,
+      "cells": [
+        {
+          "ref": "C6",
+          "disposition": "ENTITY",
+          "kind": "product",
+          "ofEntity": "Product Name",
+          "noiseRule": null
+        },
+        {
+          "ref": "D7",
+          "disposition": "ENTITY",
+          "kind": "coverage",
+          "ofEntity": "Commercial Property",
+          "noiseRule": null
+        },
+        {
+          "ref": "E8",
+          "disposition": "ENTITY",
+          "kind": "coverage",
+          "ofEntity": "Building",
+          "noiseRule": null
+        },
+        {
+          "ref": "F9",
+          "disposition": "ENTITY",
+          "kind": "subCoverage",
+          "ofEntity": "Debris Removal",
+          "noiseRule": null
+        },
+        {
+          "ref": "E13",
+          "disposition": "ENTITY",
+          "kind": "coverage",
+          "ofEntity": "Business Personal Property",
+          "noiseRule": null
+        },
+        {
+          "ref": "C4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "G4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "E5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "G5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "H5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "I5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "J5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "K5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "L5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "M5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "N5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F10",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.BLANK_LABEL"
+        },
+        {
+          "ref": "F11",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.BLANK_LABEL"
+        },
+        {
+          "ref": "F12",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.BLANK_LABEL"
+        },
+        {
+          "ref": "F14",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.BLANK_LABEL"
+        },
+        {
+          "ref": "F15",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.BLANK_LABEL"
+        },
+        {
+          "ref": "F16",
+          "disposition": "NOISE",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": "NOISE.BLANK_LABEL"
+        },
+        {
+          "ref": "R4",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "O5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "P5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Q5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "R5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "S5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "T5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "U5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "V5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "W5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "X5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Y5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Z5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AA5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AB5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AC5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AD5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AE5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AF5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AG5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AH5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AI5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AJ5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AK5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AL5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AM5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AN5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AO5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AP5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AQ5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AR5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AS5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AT5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AU5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AV5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AW5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AX5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AY5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AZ5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BA5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BB5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BC5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BD5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BE5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BF5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BG5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BH5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BI5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BJ5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BK5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BL5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BM5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BN5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BO5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BP5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BQ5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "BR5",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        }
+      ],
+      "entities": [
+        {
+          "kind": "product",
+          "refId": null,
+          "name": "Product Name",
+          "parentRef": null,
+          "citations": [
+            "Product Component Model!C6"
+          ]
+        },
+        {
+          "kind": "coverage",
+          "refId": null,
+          "name": "Building",
+          "parentRef": null,
+          "citations": [
+            "Product Component Model!E8"
+          ]
+        },
+        {
+          "kind": "subCoverage",
+          "refId": null,
+          "name": "Debris Removal",
+          "parentRef": "Building",
+          "citations": [
+            "Product Component Model!F9",
+            "Product Component Model!E8"
+          ]
+        },
+        {
+          "kind": "coverage",
+          "refId": null,
+          "name": "Business Personal Property",
+          "parentRef": null,
+          "citations": [
+            "Product Component Model!E13"
+          ]
+        }
+      ],
+      "edges": []
+    },
+    {
+      "name": "Temporary - TODO & Status",
+      "hidden": true,
+      "cells": [
+        {
+          "ref": "A1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A2",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B2",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C2",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F2",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A3",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B3",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C3",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F3",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F4",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F5",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "A6",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B6",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C6",
+          "disposition": "LOG",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        }
+      ],
+      "entities": [],
+      "edges": []
+    },
+    {
+      "name": "Source Forms",
+      "hidden": false,
+      "cells": [
+        {
+          "ref": "A1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "B1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "C1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "D1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "E1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "F1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "G1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "H1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "I1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "J1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AA3",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": "BASE COVERAGE FORM",
+          "noiseRule": null
+        },
+        {
+          "ref": "AB3",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": "BASE COVERAGE FORM",
+          "noiseRule": null
+        },
+        {
+          "ref": "AA4",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": "OTHER COVERAGE FORM",
+          "noiseRule": null
+        },
+        {
+          "ref": "AB4",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": "OTHER COVERAGE FORM",
+          "noiseRule": null
+        },
+        {
+          "ref": "AB5",
+          "disposition": "ATTR",
+          "kind": null,
+          "ofEntity": "ENDORSEMENT",
+          "noiseRule": null
+        },
+        {
+          "ref": "Z1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AA1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "AB1",
+          "disposition": "HEADER",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Z3",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Z4",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Z5",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Z6",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Z7",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Z8",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        },
+        {
+          "ref": "Z9",
+          "disposition": "SCHEMA",
+          "kind": null,
+          "ofEntity": null,
+          "noiseRule": null
+        }
+      ],
+      "entities": [],
+      "edges": []
+    }
+  ],
+  "counts": {
+    "products": 4,
+    "coverages": 3,
+    "forms": 0,
+    "distinctFormTokens": 13,
+    "distinctRefIds": 0
+  },
+  "coverage": "full",
+  "sampledWindows": 11,
+  "totalWindows": 11,
+  "distinctRefIdsByKind": {},
+  "spendUsd": 0,
+  "agreement": {
+    "windows": 11,
+    "cellExactRate": 0.5525114155251142,
+    "adjudicated": 83,
+    "queued": 67
+  }
+}

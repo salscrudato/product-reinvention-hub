@@ -111,10 +111,10 @@
     {
       "id": "CE2-D-annotate-corpus",
       "lane": "ce2",
-      "status": "DOING",
-      "note": "full run launched, budget-capped target 185/hard 250",
+      "status": "DONE",
+      "note": "8/8 files annotated $94.09; citation-resolve 100.00% (1391/1391 accepted entities); 2 holdouts sealed; REVIEW_QUEUE.md (8553 rows)",
       "commit": null,
-      "ts": "2026-07-16T09:30:25.094Z"
+      "ts": "2026-07-16T13:33:54.863Z"
     },
     {
       "id": "CE2-E-eval2",
@@ -128,25 +128,25 @@
       "id": "CE2-F-mutation",
       "lane": "ce2",
       "status": "DONE",
-      "note": "6 pure golden transforms + xlsx --mutate generation + lock tests green (run pending on gl-2026 golden)",
+      "note": "gl-2026-example 6 mutation fixtures generated + scored vs exact computed goldens; dash-refids brittleness confirmed on gl-base during dev",
       "commit": null,
-      "ts": "2026-07-16T09:48:34.259Z"
+      "ts": "2026-07-16T13:33:55.697Z"
     },
     {
       "id": "CE2-G-baseline",
       "lane": "ce2",
-      "status": "TODO",
-      "note": "expected-red baseline + BASELINE_EVAL2.md",
+      "status": "DONE",
+      "note": "eval2 --offline 8/8 RED; BASELINE_EVAL2.md; headline: forms 0<759 (SECURA), hierarchy 0/127 (All_Lines), refIds 1608<2532",
       "commit": null,
-      "ts": "2026-07-16T08:26:13.826Z"
+      "ts": "2026-07-16T13:33:56.794Z"
     },
     {
       "id": "CE2-H-close",
       "lane": "ce2",
-      "status": "TODO",
-      "note": "CE2_REPORT.md + hostile self-review + gate green",
-      "commit": null,
-      "ts": "2026-07-16T08:26:14.386Z"
+      "status": "DONE",
+      "note": "SHIPPED 81d425f: 8/8 goldens + 8/8 RED baseline + 6 mutations + report/self-review; gate GREEN (gate3 exit 0); 35 locks; zero push",
+      "commit": "81d425f",
+      "ts": "2026-07-16T13:39:49.539Z"
     },
     {
       "id": "CE2-H1-harden",

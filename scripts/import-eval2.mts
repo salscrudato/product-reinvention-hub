@@ -26,7 +26,7 @@ import { resolve, dirname, join, basename } from 'path'
 import { fileURLToPath } from 'url'
 import { createRequire } from 'module'
 import { mapIsoWorkbook } from '@pf/shared'
-import { readWorkbookCells, sheetDigest, type EnumWorkbook, type EnumSheet } from './lib/cell-enum.mts'
+import { readWorkbookCells, sheetDigest, distinctTotals, type EnumWorkbook, type EnumSheet } from './lib/cell-enum.mts'
 import { recoverRunResult } from './lib/run-recovery.mts'
 import {
   canonicalizeNumeric, isSubstance, refToRC, rcToRef,
@@ -202,8 +202,11 @@ function scoreGolden(g: Golden2File, extracted: EvalEntity2[], accounted: Set<st
     if (MODE !== 'offline' && cr.rate != null && cr.rate < T.citationResolve) reds.push(`citationResolve=${cr.rate.toFixed(3)}<1.0`)
   }
 
-  // Fabrication — floor-based against the source token set.
-  const srcTokens = sourceRefTokens(g)
+  // Fabrication — against the DETERMINISTIC source refId set (every refId that appears in the
+  // raw workbook), NOT the golden's annotated entities. On a SAMPLED golden the annotated entity
+  // set is a subset, so keying fabrication off it false-flags real refIds the golden never
+  // annotated. distinctTotals reads the whole workbook, so a source id is never called fabricated.
+  const srcTokens = distinctTotals(wb).refIds
   const fab = fabricationMetrics(extracted, srcTokens)
   const fabT = MODE === 'offline' ? T.fabricationOffline : T.fabricationLive
   if (fab.rate > fabT) reds.push(`fabrication=${fab.rate.toFixed(3)}>${fabT}`)
@@ -470,10 +473,43 @@ async function buildReviewQueue(): Promise<void> {
   console.log(`REVIEW_QUEUE.md written (${goldenByFile.size} golden file(s))`)
 }
 
+// ─── --verify-citations: every ACCEPTED golden entity citation resolves to its cell ───────
+// DONE-WHEN: citation-resolve 1.00 on every accepted annotation. Each entity's citation
+// ("Sheet!A6") must point at a cell whose verbatim value contains the entity's name or refId.
+async function verifyCitations(): Promise<void> {
+  const files = existsSync(GOLDENS) ? readdirSync(GOLDENS).filter(f => f.endsWith('.golden2.json')) : []
+  let grand = 0, grandOk = 0, filesFull = 0
+  for (const gf of files) {
+    const g = JSON.parse(readFileSync(join(GOLDENS, gf), 'utf8')) as Golden2File
+    const src = findSource(g.file); if (!src) { console.log(`  ⚠ ${gf}: no source`); continue }
+    const vidx = valueIndex(await readWorkbookCells(src))
+    // Per-ENTITY contract (matches annotate-goldens citationResolvesLocally): an accepted entity
+    // resolves iff AT LEAST ONE of its citations points at a cell whose value matches the entity's
+    // name OR refId, in either containment direction (a refId entity legitimately also cites its
+    // name cell, and vice-versa).
+    const fold = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
+    const matches = (cellVal: string, target: string) => { const a = fold(cellVal), b = fold(target); return !!b && (a === b || a.includes(b) || b.includes(a)) }
+    let entTotal = 0, entOk = 0; let miss: { cit: string; want: string; got: string } | null = null
+    for (const sh of g.sheets) for (const e of sh.entities) {
+      entTotal++
+      const targets = [e.name, e.refId ?? ''].filter(Boolean)
+      const ok = e.citations.some(c => { const i = c.lastIndexOf('!'); const cell = vidx.get(c) ?? vidx.get(`${c.slice(0, i).replace(/\s*\([^)]*\)\s*$/, '')}!${c.slice(i + 1)}`) ?? ''; return targets.some(t => matches(cell, t)) })
+      if (ok) entOk++; else if (!miss) { const c0 = e.citations[0] ?? ''; miss = { cit: c0, want: e.refId || e.name, got: (vidx.get(c0) ?? '').slice(0, 40) } }
+    }
+    const rate = entTotal > 0 ? entOk / entTotal : 1
+    grand += entTotal; grandOk += entOk; if (rate === 1) filesFull++
+    console.log(`  ${rate === 1 ? '✓' : '✗'} ${gf.replace('.golden2.json', '').padEnd(24)} citationResolve ${(rate * 100).toFixed(1)}% (${entOk}/${entTotal})${miss ? ` e.g. ${miss.cit} want "${miss.want}" got "${miss.got}"` : ''}`)
+  }
+  const rate = grand > 0 ? grandOk / grand : 1
+  console.log(`\n${rate === 1 ? '✓' : '✗'} overall accepted-citation resolve ${(rate * 100).toFixed(2)}% (${grandOk}/${grand}); ${filesFull}/${files.length} files at 1.00`)
+  process.exit(rate === 1 ? 0 : 1)
+}
+
 // ─── main ───────────────────────────────────────────────────────────────────
 async function main() {
   if (opt('--mutate')) { await generateMutations(opt('--mutate')!); return }
   if (flag('--review-queue')) { await buildReviewQueue(); return }
+  if (flag('--verify-citations')) { await verifyCitations(); return }
   const goldenFiles: string[] = []
   if (existsSync(GOLDENS)) for (const f of readdirSync(GOLDENS)) if (f.endsWith('.golden2.json')) goldenFiles.push(join(GOLDENS, f))
   const mutDir = join(GOLDENS, 'mutations')

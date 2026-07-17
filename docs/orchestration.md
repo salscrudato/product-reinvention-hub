@@ -5,7 +5,7 @@ another lane's tree; CE5 merges locally and reconciles shared files (ledger.json
 
 | lane | branch | worktree | owns | status |
 |---|---|---|---|---|
-| ce2 | ce/ce2-goldens | .claude/worktrees/ce2-goldens | golden2 schema + cell-enum + dual-family annotation factory + eval-v2 + mutation fuzz + expected-RED baseline; seals HOLDOUT2 | INFRA DONE (33 locks green, gate green); annotation run + baseline in progress |
+| ce2 | ce/ce2-goldens | .claude/worktrees/ce2-goldens | golden2 schema + cell-enum + dual-family annotation factory + eval-v2 + mutation fuzz + expected-RED baseline; seals HOLDOUT2 | **DONE** — 35 locks + gate green; 8/8 goldens annotated ($94.09, citation-resolve 100%); 8/8 expected-RED baseline; 6 mutation fixtures; 15-finding hostile review with high-impact holes closed |
 
 ## CE2 interfaces other lanes consume
 
