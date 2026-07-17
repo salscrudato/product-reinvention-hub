@@ -265,6 +265,13 @@ lazy?**
       two fixtures per mechanism: real trimmed-SECURA + synthetics).
 - [x] Observatory routes live-shaped (Step 8, CE3-S3) + fixture delivered for CE4.
 - [x] Items 14 (rt>0/ld>0 on the Property master) + 15 (coverageEffect @ E5:E9) delivered.
-- [ ] Live smoke: attempted at close if env resolves (sec 8 has the exact steps); otherwise
-      ledger-noted — zero live spend was required for any lock on this lane.
+- [x] Live smoke GREEN (CE3-S9): the brain driven with REAL Foundry env over the trimmed GL
+      fixture — $2.4565 / 234 calls / 29 min: brain:digest (chat-fallback synthesis fired as
+      designed), per-stage + per-SHEET checkpoints, brain:sweeper per sheet (4,909 cells
+      swept + 148 review on the framework sheet), LIVE accounting coverage 0.884, sensible
+      workbookUnderstanding domains, bundle identity 205=200+5, per-deployment spend
+      telemetry. cacheHits 0 on the cold run (Blob store unconfigured); re-import hit rates
+      are CE5's measurement. The express/auth layer was not booted (firewalled Cosmos) — the
+      observatory routes were verified against a local boot in CE3-S3; sec 8 has the full
+      server-path steps.
 - [x] Holdouts untouched and unscored. Zero pushes. Ledger + this report complete.

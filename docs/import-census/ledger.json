@@ -181,6 +181,14 @@
       "ts": "2026-07-16T19:35:34.514Z"
     },
     {
+      "id": "CE3-S9",
+      "lane": "ce3-brain",
+      "status": "DONE",
+      "note": "LIVE SMOKE GREEN + lane CLOSE. Smoke: runAdaptiveImportBrain driven directly with REAL Foundry env (creds parsed from repo-root keys.md, never persisted) over samples/hardening/workbooks/20ISOFrameworkGL.xlsx (the trimmed GL fixture) - $2.4565, 234 calls, 1754s wall, ALL new mechanisms fired live: brain:digest (dual readers; /responses primary fell back to GROUNDED_CITED chat exactly as designed - CE5 should verify the gpt-5.4-pro responses payload shape when running the full loop), per-stage + per-SHEET checkpoints (digest/stage1/2/3/stage4 per sheet/stage4.5/stage5 all emitted), brain:sweeper per sheet (GL Product Framework: 4909 cells swept + 148 to review; Revision History 22; Data Validation 26; Definitions 60 review), LIVE accounting substanceCoverage 0.884 measured (deterministic FACT posts cover cited cells; the sweeper honestly classified the residue), workbookUnderstanding domains sensible (framework/definitions/rules), bundle counts identity 205=200+5, spend telemetry per-deployment (haiku 94 calls / mini 94 / sonnet 33 / opus 6 / gpt-5.1 7), cacheHits 0 (cold run, blob store unconfigured - memory cache only; live hit rates are CE5's re-import measurement). NOTE for CE5: the smoke bypassed the express/auth layer (full server boot needs the firewalled -1r99 Cosmos; observatory routes were verified against a local boot in CE3-S3); the exact server-path instructions are CE3_REPORT sec 8. Deviation note: the direct-brain smoke exercises stages 1-6 + plan build; run-persistence/SSE-wire were exercised via the FakeBlob observatory locks instead. Lane DONE-WHEN met: gate green at every commit, canaries exact, eval1 4/4 zero-regen, eval2 7/8 at all four CE3 gates + all-lines twin proof, kill-test + cache + hardening-ce locks green (two fixtures each), observatory live-shaped + CE4 fixture delivered, holdouts untouched and unscored, ZERO pushes to origin.",
+      "commit": null,
+      "ts": "2026-07-17T01:10:00Z"
+    },
+    {
       "id": "CE3-S8",
       "lane": "ce3-brain",
       "status": "DONE",
