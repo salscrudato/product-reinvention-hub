@@ -2841,6 +2841,396 @@ function resolveCoverageHierarchy(rows) {
   return out;
 }
 
+// shared/src/import/mapper/conserve.ts
+var MIN_SHEETS = 4;
+var MAX_SPECIES = 2;
+function speciesCount(sp) {
+  return Object.values(sp).filter(Boolean).length;
+}
+function conservationEligible(grids, species, referenceTableCount) {
+  if (grids.length < MIN_SHEETS) return false;
+  const names = /* @__PURE__ */ new Set();
+  for (const g of grids) {
+    if (names.has(g.sheet)) return false;
+    names.add(g.sheet);
+  }
+  if (speciesCount(species) > MAX_SPECIES) return false;
+  if (referenceTableCount > 0) return false;
+  return true;
+}
+function textOf(v) {
+  if (v === null || v === void 0) return "";
+  return String(v).trim();
+}
+var PLACEHOLDERISH = /^<.*>$|^n\/?a$|^not applicable$|^tbd$|^x{1,3}$|^-+$|^\.{2,}$|^…+$/i;
+function isBlankish(s) {
+  return s === "" || PLACEHOLDERISH.test(s);
+}
+function colLabel2(c) {
+  let s = "";
+  for (let n = c; n >= 0; n = Math.floor(n / 26) - 1) s = String.fromCharCode(65 + n % 26) + s;
+  return s;
+}
+function cellRefOf(sheet, r, c) {
+  return `${sheet}!${colLabel2(c)}${r + 1}`;
+}
+var REFID_RE = /\b[A-Za-z]{2,12}(?:[.\-_][A-Za-z]{1,8})?[.\-_]\d{1,6}\b/g;
+var FORM_RE = /\b[A-Z]{2,4}[ \-]?\d{2}(?:[ \-]?\d{2}){1,4}\b/g;
+var SYNTH_MARK = /(^|\.)SYNTH(?:[^A-Za-z]|$)/i;
+function sheetNameClass(name) {
+  const n = name.trim().toLowerCase();
+  if (/(^|\b)(table of contents|toc)(\b|$)/.test(n)) return "noise";
+  if (/(revision|version)\s*history/.test(n)) return "log";
+  if (/(observation|question).*log|log.*(observation|question)|question\s*&\s*observation/.test(n)) return "log";
+  if (/product\s*contacts?|contacts?$/.test(n)) return "noise";
+  if (/^definitions|definitions$|definitions-/.test(n)) return "schema";
+  if (/data\s*validation/.test(n)) return "schema";
+  if (/dropdown|\(hide\)/.test(n)) return "noise";
+  if (/archive|\bold\b|- archive/.test(n)) return "noise";
+  return null;
+}
+var BLANK_RUN_SPLIT2 = 2;
+function detectRegions(grid) {
+  const rows = grid.cells;
+  const occupied = [];
+  let maxCol = 0;
+  for (let r = 0; r < rows.length; r++) {
+    const row2 = rows[r] ?? [];
+    let n = 0;
+    for (let c = 0; c < row2.length; c++) {
+      if (textOf(row2[c] ?? null) !== "") {
+        n++;
+        if (c > maxCol) maxCol = c;
+      }
+    }
+    occupied.push(n);
+  }
+  const regions = [];
+  let start = -1;
+  let blanks = 0;
+  const close = (end) => {
+    if (start < 0) return;
+    regions.push({ rowStart: start, rowEnd: end, colStart: 0, colEnd: maxCol, headerRow: headerRowOf(grid, start, end) });
+    start = -1;
+  };
+  for (let r = 0; r < rows.length; r++) {
+    if (occupied[r] > 0) {
+      if (start < 0) start = r;
+      blanks = 0;
+    } else if (start >= 0 && ++blanks >= BLANK_RUN_SPLIT2) {
+      close(r - blanks);
+      blanks = 0;
+    }
+  }
+  close(rows.length - 1);
+  return regions.filter((rg) => rg.rowEnd >= rg.rowStart);
+}
+function headerRowOf(grid, rowStart, rowEnd) {
+  let best = null;
+  let bestValues = 0;
+  for (let r = rowStart; r <= Math.min(rowStart + 8, rowEnd - 1); r++) {
+    const row2 = grid.cells[r] ?? [];
+    let strings = 0, values = 0;
+    for (const v of row2) {
+      const s = textOf(v ?? null);
+      if (s === "") continue;
+      values++;
+      if (typeof v === "string" && !/^\d+([.,]\d+)?$/.test(s)) strings++;
+    }
+    if (values >= 2 && strings / values >= 0.6 && values > bestValues) {
+      best = r;
+      bestValues = values;
+    }
+  }
+  return best;
+}
+function runConservationPass(input) {
+  const res = {
+    products: [],
+    coverages: [],
+    forms: [],
+    rules: [],
+    ldTables: [],
+    rtTables: [],
+    enumDomains: [],
+    consumed: [],
+    stats: {},
+    unharvestedSheets: []
+  };
+  const prefix = /^[A-Za-z]{2,6}$/.test(input.refPrefix) ? input.refPrefix.toUpperCase() : "WB";
+  const seenRefIds = new Set(input.existingRefIds);
+  const synthSeq = {};
+  const bump = (k) => {
+    res.stats[k] = (res.stats[k] ?? 0) + 1;
+  };
+  const mintSynth = (kind) => {
+    const n = synthSeq[kind] = (synthSeq[kind] ?? 0) + 1;
+    return `${prefix}.SYNTH.${kind}.${String(n).padStart(3, "0")}`;
+  };
+  const entity = (refId, name, citation, mechanism, extra) => ({
+    docId: refIdToDocId(refId),
+    refId,
+    label: `${refId} \u2014 ${name}`,
+    data: {
+      refId,
+      name,
+      conservation: mechanism,
+      needsReview: true,
+      citation,
+      ...extra
+    }
+  });
+  for (const g of input.grids) {
+    for (let r = 0; r < g.cells.length; r++) {
+      const row2 = g.cells[r] ?? [];
+      for (let c = 0; c < row2.length; c++) {
+        const v = row2[c] ?? null;
+        if (typeof v !== "string" && typeof v !== "number") continue;
+        const s = String(v);
+        const matches = s.match(REFID_RE);
+        if (!matches) continue;
+        for (const tok of matches) {
+          const key = tok.toLowerCase();
+          if (seenRefIds.has(key) || SYNTH_MARK.test(tok)) continue;
+          seenRefIds.add(key);
+          const cite = cellRefOf(g.sheet, r, c);
+          const kind = refIdSegmentKind(tok);
+          const e = entity(tok, tok, cite, "refid-token");
+          if (kind === "product") {
+            res.products.push(e);
+            bump("token.product");
+          } else if (kind === "coverage" || kind === "lob") {
+            res.coverages.push(e);
+            bump("token.coverage");
+          } else if (kind === "form") {
+            res.forms.push(e);
+            bump("token.form");
+          } else if (kind === "rating") {
+            if (/^LD/i.test(tok)) {
+              res.ldTables.push(e);
+              bump("token.ldTable");
+            } else {
+              res.rtTables.push(e);
+              bump("token.rtTable");
+            }
+          } else {
+            e.data["kindUnknown"] = true;
+            res.rules.push(e);
+            bump("token.rule");
+          }
+          res.consumed.push({ sheet: g.sheet, rowStart: r, rowEnd: r, colStart: c, colEnd: c, reason: "conserve:refid-token" });
+        }
+      }
+    }
+  }
+  const formTokens2 = /* @__PURE__ */ new Set();
+  for (const g of input.grids) {
+    for (let r = 0; r < g.cells.length; r++) {
+      const row2 = g.cells[r] ?? [];
+      for (let c = 0; c < row2.length; c++) {
+        const v = row2[c] ?? null;
+        if (typeof v !== "string") continue;
+        const matches = v.match(FORM_RE);
+        if (!matches) continue;
+        for (const raw of matches) {
+          const tok = raw.replace(/[ \-]+/g, " ").trim();
+          const key = tok.toLowerCase();
+          if (formTokens2.has(key) || seenRefIds.has(key)) continue;
+          formTokens2.add(key);
+          seenRefIds.add(key);
+          res.forms.push(entity(tok, tok, cellRefOf(g.sheet, r, c), "form-token", { formNumber: tok }));
+          bump("form.token");
+          res.consumed.push({ sheet: g.sheet, rowStart: r, rowEnd: r, colStart: c, colEnd: c, reason: "conserve:form-token" });
+        }
+      }
+    }
+  }
+  const fwGrid = input.frameworkSheet ? input.grids.find((g) => g.sheet === input.frameworkSheet) : void 0;
+  if (fwGrid) {
+    const regions = detectRegions(fwGrid);
+    for (const rg of regions) {
+      if (rg.headerRow === null) continue;
+      const header = fwGrid.cells[rg.headerRow] ?? [];
+      const prodCols = header.map((v, c) => ({ c, h: textOf(v ?? null).replace(/\s+/g, " ").toUpperCase() })).filter((x) => x.h === "PRODUCT" || x.h === "PRODUCT NAME" || x.h === "PROGRAM").map((x) => x.c);
+      const seenHere = /* @__PURE__ */ new Set();
+      for (const c of prodCols) {
+        for (let r = rg.headerRow + 1; r <= rg.rowEnd; r++) {
+          const label = textOf(fwGrid.cells[r]?.[c] ?? null);
+          if (isBlankish(label) || /^\d+([.,]\d+)?$/.test(label)) continue;
+          const key = label.toLowerCase();
+          if (seenHere.has(key)) continue;
+          seenHere.add(key);
+          res.products.push(entity(mintSynth("PROD"), label, cellRefOf(fwGrid.sheet, r, c), "framework-product-column"));
+          bump("name.product");
+          res.consumed.push({ sheet: fwGrid.sheet, rowStart: r, rowEnd: r, colStart: c, colEnd: c, reason: "conserve:framework-product-column" });
+        }
+      }
+    }
+  }
+  const conservable = input.grids.filter((g) => !sheetNameClass(g.sheet) && (!input.consumedSheets.has(g.sheet) || g.sheet === input.frameworkSheet && input.frameworkCoverageCount === 0));
+  for (const g of conservable) {
+    const regions = detectRegions(g);
+    if (regions.length === 0) {
+      res.unharvestedSheets.push(g.sheet);
+      continue;
+    }
+    const sheetLower = g.sheet.toLowerCase();
+    const isProductSheet = /product\s*(inventory|overview)|program\s*version/.test(sheetLower);
+    const isCoverageLike = /coverage|cvg|\bcov\b|product component model|product framework/.test(sheetLower) || g.sheet === input.frameworkSheet;
+    const isDocumentSheet = /\bdocuments?\b|\bforms?\b/.test(sheetLower);
+    let harvested = false;
+    const seenProductsHere = /* @__PURE__ */ new Set();
+    const seenCoveragesHere = /* @__PURE__ */ new Set();
+    const seenFormsHere = /* @__PURE__ */ new Set();
+    for (const rg of regions) {
+      const dataStart = rg.headerRow !== null ? rg.headerRow + 1 : rg.rowStart;
+      const header = rg.headerRow !== null ? g.cells[rg.headerRow] ?? [] : [];
+      const headerText = (c) => textOf(header[c] ?? null).replace(/\s+/g, " ").toUpperCase();
+      const colsMatching = (re) => {
+        const out = [];
+        for (let c = rg.colStart; c <= rg.colEnd; c++) if (re.test(headerText(c))) out.push(c);
+        return out;
+      };
+      let coverageCols = isCoverageLike ? colsMatching(/^(SUB ?)?COVERAGE( NAME)?S?$/) : [];
+      let productCols = isProductSheet || isCoverageLike ? colsMatching(/^PRODUCT( NAME)?$|^PROGRAM$/) : [];
+      let formCols = isDocumentSheet ? colsMatching(/FORM|DOCUMENT|TITLE|NAME/) : [];
+      const fallbackLabelCol = (() => {
+        for (let c = rg.colStart; c <= rg.colEnd; c++) {
+          const seen = /* @__PURE__ */ new Set();
+          for (let r = dataStart; r <= rg.rowEnd; r++) {
+            const v = g.cells[r]?.[c] ?? null;
+            if (typeof v === "string" && !isBlankish(v.trim())) seen.add(v.trim().toLowerCase());
+          }
+          if (seen.size >= 2) return c;
+        }
+        return -1;
+      })();
+      if (isCoverageLike && coverageCols.length === 0 && fallbackLabelCol >= 0) coverageCols = [fallbackLabelCol];
+      if (isProductSheet && productCols.length === 0 && fallbackLabelCol >= 0) productCols = [fallbackLabelCol];
+      if (formCols.length === 0 && isDocumentSheet && fallbackLabelCol >= 0) formCols = [fallbackLabelCol];
+      const harvestCols = (cols, seenHere, push, synthKind, mechanism, stat) => {
+        for (const c of cols) {
+          for (let r = dataStart; r <= rg.rowEnd; r++) {
+            const row2 = g.cells[r] ?? [];
+            const label = textOf(row2[c] ?? null);
+            if (isBlankish(label) || /^\d+([.,]\d+)?$/.test(label)) continue;
+            const key = label.toLowerCase();
+            if (seenHere.has(key)) continue;
+            seenHere.add(key);
+            const residue = row2.map((v) => textOf(v ?? null)).filter((s, i) => i !== c && s !== "").slice(0, 24);
+            push(entity(mintSynth(synthKind), label, cellRefOf(g.sheet, r, c), mechanism, { sourceValues: residue }));
+            bump(stat);
+            harvested = true;
+          }
+        }
+        if (cols.length > 0) {
+          res.consumed.push({ sheet: g.sheet, rowStart: rg.rowStart, rowEnd: rg.rowEnd, colStart: rg.colStart, colEnd: rg.colEnd, reason: "conserve:named-rows" });
+        }
+      };
+      if (productCols.length > 0 || coverageCols.length > 0 || isDocumentSheet && formCols.length > 0) {
+        harvestCols(productCols, seenProductsHere, (e) => res.products.push(e), "PROD", "product-sheet", "name.product");
+        harvestCols(coverageCols, seenCoveragesHere, (e) => res.coverages.push(e), "COV", "coverage-sheet", "name.coverage");
+        harvestCols(formCols, seenFormsHere, (e) => res.forms.push(e), "FORM", "document-sheet", "name.form");
+      } else {
+        const title = regionTitle(g, rg);
+        const values = [];
+        outer: for (let r = rg.rowStart; r <= rg.rowEnd; r++) {
+          const row2 = g.cells[r] ?? [];
+          for (let c = rg.colStart; c <= rg.colEnd; c++) {
+            const s = textOf(row2[c] ?? null);
+            if (s === "") continue;
+            values.push(s);
+            if (values.length >= 400) break outer;
+          }
+        }
+        if (values.length === 0) continue;
+        const scope = `${g.sheet} ${title}`;
+        const rateish = /rate|factor|loss cost|premium/i.test(scope) && !/limit|deductible/i.test(scope);
+        const e = entity(
+          mintSynth(rateish ? "RTB" : "TBL"),
+          title || `${g.sheet} region ${rg.rowStart + 1}-${rg.rowEnd + 1}`,
+          cellRefOf(g.sheet, rg.rowStart, rg.colStart),
+          "generic-region",
+          { sourceValues: values, region: `${cellRefOf(g.sheet, rg.rowStart, rg.colStart)}:${colLabel2(rg.colEnd)}${rg.rowEnd + 1}` }
+        );
+        if (rateish) res.rtTables.push(e);
+        else res.ldTables.push(e);
+        bump(rateish ? "region.rt" : "region.ld");
+        res.consumed.push({ sheet: g.sheet, rowStart: rg.rowStart, rowEnd: rg.rowEnd, colStart: rg.colStart, colEnd: rg.colEnd, reason: "conserve:generic-region" });
+        harvested = true;
+      }
+    }
+    if (!harvested) res.unharvestedSheets.push(g.sheet);
+  }
+  for (const g of input.grids) {
+    if (!/data\s*validation/i.test(g.sheet)) continue;
+    const regions = detectRegions(g);
+    for (const rg of regions) {
+      if (rg.headerRow === null) continue;
+      const header = g.cells[rg.headerRow] ?? [];
+      for (let c = rg.colStart; c <= rg.colEnd; c++) {
+        const field = textOf(header[c] ?? null).replace(/\s+/g, " ").trim();
+        if (field === "" || isBlankish(field)) continue;
+        const values = [];
+        let first = -1, last = -1;
+        for (let r = rg.headerRow + 1; r <= rg.rowEnd; r++) {
+          const s = textOf(g.cells[r]?.[c] ?? null);
+          if (s === "") continue;
+          values.push(s);
+          if (first < 0) first = r;
+          last = r;
+        }
+        if (values.length < 2) continue;
+        const fieldKey = camelize(field);
+        if (fieldKey === "") continue;
+        res.enumDomains.push({
+          field: fieldKey,
+          values,
+          range: `${g.sheet}!${colLabel2(c)}${first + 1}:${colLabel2(c)}${last + 1}`
+        });
+        bump("overlay.domain");
+      }
+      res.consumed.push({ sheet: g.sheet, rowStart: rg.rowStart, rowEnd: rg.rowEnd, colStart: rg.colStart, colEnd: rg.colEnd, reason: "conserve:enum-domains" });
+    }
+  }
+  if (res.enumDomains.length > 0) enrichFromDomains(res);
+  return res;
+}
+function camelize(header) {
+  const words = header.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+  return words.map((w, i) => i === 0 ? w : w[0].toUpperCase() + w.slice(1)).join("");
+}
+function enrichFromDomains(res) {
+  const byValue = /* @__PURE__ */ new Map();
+  for (const d of res.enumDomains) {
+    for (const v of d.values) {
+      const key = v.toLowerCase();
+      const cur = byValue.get(key);
+      if (cur && cur.field !== d.field) cur.hits++;
+      else if (!cur) byValue.set(key, { field: d.field, hits: 1 });
+    }
+  }
+  const apply = (e) => {
+    const residue = e.data["sourceValues"];
+    if (!Array.isArray(residue)) return;
+    for (const raw of residue) {
+      const hit = byValue.get(String(raw).toLowerCase());
+      if (!hit || hit.hits > 1) continue;
+      if (e.data[hit.field] !== void 0) continue;
+      e.data[hit.field] = String(raw);
+    }
+  };
+  for (const arr of [res.products, res.coverages, res.forms, res.rules, res.ldTables, res.rtTables]) arr.forEach(apply);
+}
+function regionTitle(g, rg) {
+  const row2 = g.cells[rg.rowStart] ?? [];
+  for (let c = rg.colStart; c <= rg.colEnd; c++) {
+    const s = textOf(row2[c] ?? null);
+    if (s !== "" && !/^\d+([.,]\d+)?$/.test(s)) return s.slice(0, 120);
+  }
+  return "";
+}
+
 // shared/src/insurance/isoImport.ts
 function text(v) {
   if (v == null) return "";
@@ -4785,6 +5175,68 @@ function mapIsoWorkbook(grids, overlay, consumedSpans) {
     });
   }
   const allLdTables = [...ldTables, ...refTables];
+  const speciesProduced = {
+    framework: !!fwResults && fwResults.length > 0,
+    forms: forms.length > 0,
+    dynamic: Object.keys(dynByForm).length > 0,
+    rules: rules.length > 0,
+    formRules: formRules.length > 0,
+    rating: !!ratingProgram,
+    rtTables: rtTables.length > 0,
+    ldTables: ldTables.length > 0
+  };
+  if (conservationEligible(grids, speciesProduced, refTables.length)) {
+    const producedSheets = new Set(ctx.recognized);
+    if (ldTables.length && ldGrid) producedSheets.add(ldGrid.sheet);
+    if (rtTables.length && rtGrid) producedSheets.add(rtGrid.sheet);
+    if (forms.length === 0 && formGrid) producedSheets.delete(formGrid.sheet);
+    if (rules.length === 0 && ruleGrid) producedSheets.delete(ruleGrid.sheet);
+    if (!ratingProgram && rateGrid) producedSheets.delete(rateGrid.sheet);
+    const conserved = runConservationPass({
+      grids,
+      consumedSheets: producedSheets,
+      existingRefIds: new Set(
+        [...products, ...allCoverages, ...forms, ...rules, ...formRules, ...allLdTables, ...rtTables].map((e) => e.refId?.toLowerCase()).filter((s) => !!s)
+      ),
+      existingProductNames: new Set(products.map((p) => String(p.data["name"] ?? "").toLowerCase()).filter(Boolean)),
+      existingCoverageNames: new Set(allCoverages.map((c) => String(c.data["name"] ?? "").toLowerCase()).filter(Boolean)),
+      frameworkCoverageCount: allCoverages.length,
+      frameworkSheet: fwGrid?.sheet ?? null,
+      refPrefix
+    });
+    products.push(...conserved.products);
+    allCoverages.push(...conserved.coverages);
+    forms.push(...conserved.forms);
+    rules.push(...conserved.rules);
+    allLdTables.push(...conserved.ldTables);
+    rtTables.push(...conserved.rtTables);
+    if (ctx.spans) ctx.spans.push(...conserved.consumed);
+    for (const span of conserved.consumed) {
+      if (!ctx.recognized.includes(span.sheet)) ctx.recognized.push(span.sheet);
+    }
+    if (conserved.enumDomains.length > 0) {
+      ctx.addNotice({
+        code: "alias_overlay_harvested",
+        message: `${conserved.enumDomains.length} per-workbook enum domain(s) harvested from Data Validation (schema-learning, item 15) and applied fill-only to conserved entities.`,
+        data: { domains: conserved.enumDomains }
+      });
+    }
+    const conservedTotal = conserved.products.length + conserved.coverages.length + conserved.forms.length + conserved.rules.length + conserved.ldTables.length + conserved.rtTables.length;
+    if (conservedTotal > 0) {
+      ctx.addNotice({
+        code: "conservation_harvest",
+        message: `${conservedTotal} review-flagged entit(ies) conserved from substance the named parsers left behind (byte-for-byte source tokens and cited sheet regions; nothing invented).`,
+        data: { total: conservedTotal, byMechanism: conserved.stats }
+      });
+    }
+    if (conserved.unharvestedSheets.length > 0) {
+      ctx.addNotice({
+        code: "conservation_unharvested",
+        message: `${conserved.unharvestedSheets.length} substance sheet(s) could not be conserved and need review: ${conserved.unharvestedSheets.slice(0, 8).join("; ")}.`,
+        data: { sheets: conserved.unharvestedSheets }
+      });
+    }
+  }
   const dynFieldCount = forms.reduce((n, f) => n + (f.data["dynamicFields"]?.length ?? 0), 0);
   const stepCount = ratingProgram ? ratingProgram.data["steps"].length : 0;
   const counts = {
