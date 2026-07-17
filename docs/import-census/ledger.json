@@ -155,6 +155,22 @@
       "note": "hostile-review 15 findings; closed offline-accounting bind + hierarchy gate + file-level floor + anti-leakage widen/non-vacuous + both-empty guard + adjudicator-restrict + correlated-omission queue + col-cap + completeness report; 35 locks green",
       "commit": null,
       "ts": "2026-07-16T10:25:51.778Z"
+    },
+    {
+      "id": "CE5-S0",
+      "lane": "ce5-cert",
+      "status": "DONE",
+      "note": "Preconditions verified. Holdout shas MATCH (PA 5a9b35a1..., OH eb8dea55...); 6 masters + 4 hagerty present; HOLDOUT2.manifest.json intact; keys.md present (shell env unset -> live boot must source keys.md, COSMOS_DB=prodhub-sal). Main working tree was DIRTY with FOREIGN 'AI Tuning Loop' work (docs/review/AI_TUNING_LEDGER.md+HANDOFF.md, firebase.json, server/lib/ai/_shared|analyze-claim|draft-rule|form-risk-report.js, server/lib/storage.js, storage.rules) -> parked surgically to stash@{0} 'CE5: AI-tuning loop + storage.rules foreign in-flight work parked...'. Recovery anchor pre-merge main = d7d50a5. ce1 ALREADY in main (0 ahead); ce2 merged clean --no-ff (4a14aa4).",
+      "commit": "4a14aa4",
+      "ts": "2026-07-17T00:00:00Z"
+    },
+    {
+      "id": "CE5-BLOCK-1",
+      "lane": "ce5-cert",
+      "status": "BLOCKED",
+      "note": "STOP per git-law: ce3 merge conflicts in server/lib/ai/unified-import.js (7 hunks) - a CODE file, not orchestration.md/ledger. NOT resolved silently; ce3 merge ABORTED (main restored to 4a14aa4, clean). ROOT CAUSE = two-lineage telemetry collision: main shipped run-trace.js (createRunTrace; Import Runs admin tab; already on origin/main 01b44e2) at 80ed149 AFTER the CE lanes branched from the ce1+ce2 base; ce3 shipped run-observatory.js (observatory.* checkpoint/resume + replayable index) at 948d2d8 and CE4's Observatory route (app/src/routes/ingestion, useImportRuns) consumes the ce3 contract. Both hook the SAME SSE emit seam in unifiedImport incompatibly (main: send=(ev)=>{tracer.observe(ev);emit(res,ev)}; ce3: removed send wrapper, threads res+onStage+resume+censuses+hiddenSheets into runBrainToBundle). This is R25 three-lineage territory - operator decision required. Awaiting operator choice before any further merge/gate/spend.",
+      "commit": "4a14aa4",
+      "ts": "2026-07-17T00:00:01Z"
     }
   ]
 }
