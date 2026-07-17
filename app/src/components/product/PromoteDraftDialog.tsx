@@ -1,17 +1,18 @@
 // PromoteDraftDialog — the ONLY path by which a draft becomes a published product.
-// Promotion flips lifecycle → LAUNCHED (status ACTIVE, review APPROVED) on the product
-// doc via a single adapter.db.mutate() update, guarded by:
+// Promotion goes through adapter.db.promoteDraft() → POST /api/db/drafts/:id/promote
+// (P3): the SERVER derives the readiness verdict from persisted data and refuses a
+// blocked draft with 409 { not_promotable, blockers } — the same guard sits inside
+// the mutation envelope itself, so no surface can flip lifecycle around it. Guards:
 //   • Role: EDITOR/ADMIN only (hidden for VIEWER here; enforced server-side by the
-//     Firestore product-write rule — both sides, always).
+//     product:write capability — both sides, always).
 //   • A TYPED confirmation: the user must type the product's exact name. Nothing is
 //     written until it matches, so a draft can never slip into the portfolio by a
 //     stray click.
 //   • Optimistic concurrency: expectedRev guards against promoting a stale draft.
-// Because no other surface writes lifecycle:'LAUNCHED', this dialog is the single,
-// audited gate between the Drafts workbench and the published Products portfolio.
+//   • Server verdict: a 409-blocked promote renders the blockers VERBATIM below.
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { adapter, MutationConflictError } from '../../lib/backend'
+import { adapter, MutationConflictError, PromoteBlockedError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { Dialog, Button } from '../ui'
 import { IconSpinner, IconArrowUp, IconWarning } from '../ui/icons'
@@ -26,9 +27,13 @@ interface Props {
   onPromoted?: (id: string) => void
 }
 
-export function PromoteDraftDialog({ product, actor, onClose, onPromoted }: Props) {
+// `actor` stays in Props for caller compatibility; the server now derives the actor
+// from the JWT on the promote endpoint, so the dialog no longer sends it.
+export function PromoteDraftDialog({ product, onClose, onPromoted }: Props) {
   const [typed, setTyped]   = useState('')
   const [busy, setBusy]     = useState(false)
+  // Server verdict from a 409-blocked promote — rendered verbatim, never rewritten.
+  const [blockers, setBlockers] = useState<string[] | null>(null)
   // A malformed / partially-imported draft may lack a name; fall back to refId/id so the
   // dialog never crashes and still gates promotion behind a typed confirmation.
   const target = (product.name ?? product.refId ?? product.id ?? '').trim()
@@ -39,16 +44,16 @@ export function PromoteDraftDialog({ product, actor, onClose, onPromoted }: Prop
     if (!matches || busy) return
     setBusy(true)
     try {
-      await adapter.db.mutate({
-        op: 'update', path: `products/${product.id}`, entityType: 'product', productId: product.id, actor,
-        data: { lifecycle: 'LAUNCHED', status: 'ACTIVE', reviewStatus: 'APPROVED' },
-        expectedRev: product.rev,
-      })
+      // The server re-derives the readiness verdict from persisted data and 409s a
+      // blocked draft — this dialog only renders that verdict.
+      await adapter.db.promoteDraft(product.id, product.rev)
       toast.success(`${displayName} promoted to the portfolio`)
       onPromoted?.(product.id)
       onClose()
     } catch (err) {
-      if (err instanceof MutationConflictError) {
+      if (err instanceof PromoteBlockedError) {
+        setBlockers(err.blockers)
+      } else if (err instanceof MutationConflictError) {
         // No open editor to reload into — closing returns to the live-subscribed product view.
         conflictToast({ discard: onClose })
       } else {
@@ -71,6 +76,22 @@ export function PromoteDraftDialog({ product, actor, onClose, onPromoted }: Prop
         </div>
 
         {product.lineage && <LineageBadge lineage={product.lineage} variant="full" />}
+
+        {blockers && (
+          <div className="flex flex-col gap-1.5 rounded-[12px] p-3.5" role="alert"
+            style={{ background: 'var(--color-danger-soft)', border: '1px solid var(--color-border)' }}>
+            <span className="flex items-center gap-1.5 text-sm font-medium text-danger">
+              <IconWarning size={14} aria-hidden="true" /> The server refused this promotion
+            </span>
+            {blockers.length > 0 ? (
+              <ul className="flex flex-col gap-1 text-xs text-dim list-disc pl-4">
+                {blockers.map((b, i) => <li key={i}>{b}</li>)}
+              </ul>
+            ) : (
+              <p className="text-xs text-dim">Validation failed on this draft — open its extraction report for details.</p>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="promote-confirm" className="text-sm text-dim">

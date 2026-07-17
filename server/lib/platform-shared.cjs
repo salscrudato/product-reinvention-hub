@@ -31,6 +31,7 @@ __export(server_entry_exports, {
   buildSuggestedQueries: () => buildSuggestedQueries,
   computePortfolioPulse: () => computePortfolioPulse,
   deriveDraftIdentity: () => deriveDraftIdentity,
+  deriveDraftReadiness: () => deriveDraftReadiness,
   effectiveEntitlements: () => effectiveEntitlements,
   flagDef: () => flagDef,
   isKnownFlag: () => isKnownFlag,
@@ -290,6 +291,24 @@ function deriveDraftIdentity(data) {
   const parts = sourceFileName ? [artifactBaseOf(sourceFileName), lobRefOf(data?.lob), monthDay(importedAt)].filter((p) => !!p) : [];
   return { displayName: parts.length ? parts.join(" - ") : null, sourceFileName, importedAt, contentHash };
 }
+var NO_READINESS = { citations: null, blockers: [], validation: null, promotable: true, source: "none" };
+var isValidation = (v) => v === "pass" || v === "warn" || v === "fail";
+var count = (v) => typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+function deriveDraftReadiness(data) {
+  const raw = data?.readiness;
+  if (!raw || typeof raw !== "object") return NO_READINESS;
+  const s = raw;
+  if (s.v !== 1 || !isValidation(s.validation)) return NO_READINESS;
+  const blockers = Array.isArray(s.blockers) ? s.blockers.filter((b) => typeof b === "string" && b.length > 0) : [];
+  const c = s.counts && typeof s.counts === "object" ? { accepted: count(s.counts.accepted), unresolved: count(s.counts.unresolved) } : null;
+  return {
+    citations: c,
+    blockers,
+    validation: s.validation,
+    promotable: blockers.length === 0 && s.validation !== "fail",
+    source: "summary"
+  };
+}
 var ALL_STATES_COUNT = 51;
 var isDraftRow = (p) => p.lifecycle === "DRAFT" || p.lifecycleState === "draft";
 var isLiveRow = (p) => p.lifecycle === "LAUNCHED";
@@ -368,6 +387,7 @@ function buildSuggestedQueries(products, coverages) {
   buildSuggestedQueries,
   computePortfolioPulse,
   deriveDraftIdentity,
+  deriveDraftReadiness,
   effectiveEntitlements,
   flagDef,
   isKnownFlag,

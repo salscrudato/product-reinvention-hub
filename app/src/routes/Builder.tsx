@@ -9,10 +9,9 @@ import { useNavigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { usePortfolioInventory } from '../lib/usePortfolioInventory'
-import { Skeleton, EmptyState, RefChip, LifecyclePill } from '../components/ui'
+import { Skeleton, EmptyState } from '../components/ui'
 import {
-  IconSparkle, IconUpload, IconCopy, IconPlus, IconArrowUp, IconArrowRight,
-  IconWand, IconCoverage, IconForm, IconTrash, type IconType,
+  IconSparkle, IconUpload, IconCopy, IconPlus, IconWand, type IconType,
 } from '../components/ui/icons'
 import { NewProductModal } from '../components/product/NewProductModal'
 import { UnifiedImportModal } from '../import/UnifiedImportModal'
@@ -20,10 +19,9 @@ import { CloneProductModal } from '../components/product/CloneProductModal'
 import { ScaffoldProductModal } from '../components/product/ScaffoldProductModal'
 import { PromoteDraftDialog } from '../components/product/PromoteDraftDialog'
 import { DeleteDraftDialog } from '../components/product/DeleteDraftDialog'
-import { LineageBadge } from '../components/product/LineageBadge'
+import { DraftCard, type DraftRow } from '../components/builder/DraftCard'
+import { draftTitle } from '../components/builder/draftPresentation'
 import { canI } from '../lib/canI'
-import type { Product } from '@pf/shared'
-import type { WithId } from '../context/ProductContext'
 
 type Modal = 'new' | 'unified' | 'clone' | 'scaffold' | null
 
@@ -32,14 +30,14 @@ export default function Builder() {
   const { user } = useUser()
   const canEdit  = canI(user, 'product:write')
 
-  const [products, setProducts] = useState<WithId<Product>[]>([])
+  const [products, setProducts] = useState<DraftRow[]>([])
   const [loading, setLoading]   = useState(true)
   const [modal, setModal]       = useState<Modal>(null)
-  const [promoteFor, setPromoteFor] = useState<WithId<Product> | null>(null)
-  const [deleteFor, setDeleteFor]   = useState<WithId<Product> | null>(null)
+  const [promoteFor, setPromoteFor] = useState<DraftRow | null>(null)
+  const [deleteFor, setDeleteFor]   = useState<DraftRow | null>(null)
 
   useEffect(() => {
-    const unsub = adapter.db.subscribe<WithId<Product>>('products', d => {
+    const unsub = adapter.db.subscribe<DraftRow>('products', d => {
       if (Array.isArray(d)) { setProducts(d); setLoading(false) }
     })
     return unsub
@@ -121,7 +119,11 @@ export default function Builder() {
       )}
       {deleteFor && user && (
         <DeleteDraftDialog
-          product={deleteFor}
+          product={{ id: deleteFor.id, name: draftTitle(deleteFor), lifecycle: deleteFor.lifecycle }}
+          counts={{
+            coverages: inventory.byProduct.get(deleteFor.id)?.coverages.length,
+            forms:     inventory.byProduct.get(deleteFor.id)?.forms.length,
+          }}
           actor={{ uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }}
           onClose={() => setDeleteFor(null)}
           onDeleted={() => setDeleteFor(null)}
@@ -154,56 +156,5 @@ function StartCard({ Icon, title, desc, onClick, featured }: {
   )
 }
 
-// ─── Draft card ─────────────────────────────────────────────────────────────────
-
-function DraftCard({ p, covCount, formCount, canEdit, onOpen, onPromote, onDelete }: {
-  p: WithId<Product>
-  covCount?: number; formCount?: number
-  canEdit: boolean
-  onOpen: () => void; onPromote: () => void; onDelete: () => void
-}) {
-  return (
-    <div className="group relative bg-surface rounded-[16px] overflow-hidden flex flex-col"
-      style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
-      <span aria-hidden="true" className="block h-[3px] w-full opacity-70"
-        style={{ background: 'linear-gradient(90deg, var(--color-accent-bright) 0%, var(--color-accent-strong) 55%, transparent 100%)' }} />
-      <div className="p-5 flex flex-col gap-3 flex-1">
-        <button onClick={onOpen} aria-label={`Open ${p.name}`}
-          className="flex flex-col gap-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-[8px]">
-          <span className="font-semibold text-[15px] text-text leading-snug group-hover:text-accent transition-colors">{p.name}</span>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {p.refId && <RefChip id={p.refId} />}
-            <LifecyclePill lifecycle={p.lifecycle} />
-            {p.lob?.name && <span className="text-[11px] text-faint">{p.lob.name}</span>}
-          </div>
-        </button>
-
-        {p.lineage && <LineageBadge lineage={p.lineage} />}
-
-        <div className="flex items-center gap-3 text-xs text-dim pt-3 mt-auto" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <span className="inline-flex items-center gap-1"><IconCoverage size={13} aria-hidden="true" />{covCount ?? '—'}</span>
-          <span className="inline-flex items-center gap-1"><IconForm size={13} aria-hidden="true" />{formCount ?? '—'}</span>
-          <span className="truncate">{p.owner?.name ?? '—'}</span>
-          <div className="ml-auto flex items-center gap-1.5">
-            {canEdit && (
-              <button onClick={onDelete} title={`Delete ${p.name}`} aria-label={`Delete ${p.name}`}
-                className="inline-flex items-center justify-center w-6 h-6 rounded-[7px] text-faint hover:text-danger hover:bg-danger/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-danger">
-                <IconTrash size={13} aria-hidden="true" />
-              </button>
-            )}
-            <button onClick={onOpen}
-              className="inline-flex items-center gap-1 pl-1.5 pr-2 py-1 rounded-[7px] text-[11px] font-medium text-dim hover:text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
-              Open <IconArrowRight size={12} aria-hidden="true" />
-            </button>
-            {canEdit && (
-              <button onClick={onPromote} title={`Promote ${p.name} to the published portfolio`}
-                className="inline-flex items-center gap-1 pl-1.5 pr-2 py-1 rounded-[7px] text-[11px] font-medium text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
-                <IconArrowUp size={12} aria-hidden="true" />Promote
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+// The draft card itself lives in components/builder/DraftCard.tsx (P3) — identity,
+// labeled telemetry, readiness lights, armed Promote, and the overflow kebab.

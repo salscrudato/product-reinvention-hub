@@ -2,13 +2,14 @@
 // Platform-agnostic seam: the app depends only on this contract; swap the
 // implementation, not the callers. The active implementation is the Azure host
 // adapter (azure.adapter.ts) — JWT auth, Cosmos data, and Foundry AI over /api/*.
-import type { Unsubscribe, DraftIdentity, DraftDedupMatch, PortfolioPulse, TenantResolveResult, TenantMembership } from '@pf/shared'
+import type { Unsubscribe, DraftIdentity, DraftReadiness, DraftDedupMatch, PortfolioPulse, TenantResolveResult, TenantMembership } from '@pf/shared'
 
-// P2 server-truth read models — computed server-side from persisted data (lineage,
-// lifecycle, tasks), shared via @pf/shared so server and app agree on one shape.
-// Product rows returned by db.get/db.list('products') additionally carry
-// `identity?: DraftIdentity` (server-derived, read-only — never write it back).
-export type { DraftIdentity, DraftDedupMatch, PortfolioPulse, TenantResolveResult, TenantMembership }
+// P2/P3 server-truth read models — computed server-side from persisted data (lineage,
+// lifecycle, readiness summary, tasks), shared via @pf/shared so server and app agree
+// on one shape. Product rows returned by db.get/db.list('products') additionally carry
+// `identity?: DraftIdentity` and `readiness?: DraftReadiness` (server-derived,
+// read-only — never write them back).
+export type { DraftIdentity, DraftReadiness, DraftDedupMatch, PortfolioPulse, TenantResolveResult, TenantMembership }
 
 // Two-plane role set. See docs/AUTHORITIES.md for the full capability matrix.
 // Tenant plane: VIEWER, inquiry personas (UNDERWRITING/COMPLIANCE/CLAIMS/ACTUARIAL/ANALYST), EDITOR, TENANT_ADMIN.
@@ -206,6 +207,15 @@ export interface MutationPayload {
   expectedRev?: number   // absent = no optimistic lock
 }
 
+export class PromoteBlockedError extends Error {
+  /** The server's blocking reasons, VERBATIM — render them, never rewrite them. */
+  readonly blockers: string[]
+  constructor(blockers: string[] = []) {
+    super('This draft cannot be promoted — the server reported blocking issues.')
+    this.blockers = blockers
+  }
+}
+
 export class MutationConflictError extends Error {
   /** Entity path that triggered the 409 (e.g. "products/PH.PROD.001"). */
   readonly conflictPath?: string
@@ -273,9 +283,14 @@ export interface BackendAdapter {
     /** Rev-checked transaction wrapper for optimistic concurrency. */
     tx<T>(fn: (helpers: { get: BackendAdapter['db']['get'] }) => Promise<T>): Promise<T>
     /** Tenant-scoped dedup lookup: drafts whose persisted data.contentHash matches.
-     *  [] when none (and [] for every draft persisted before the import path stamps
-     *  contentHash — the field ships write-side in a later wave). */
+     *  [] when none. The import-apply path stamps contentHash at draft creation (P3);
+     *  drafts persisted before that wave have no hash and never match. */
     findDraftsByContentHash(contentHash: string): Promise<DraftDedupMatch[]>
+    /** POST /api/db/drafts/:id/promote — server-verdict promotion (P3). The server
+     *  derives promotability from the PERSISTED readiness summary; a blocked draft
+     *  rejects with PromoteBlockedError carrying the blockers verbatim, a stale rev
+     *  with MutationConflictError. The client renders the verdict, never computes it. */
+    promoteDraft(id: string, expectedRev?: number): Promise<{ rev: number }>
   }
   /** Read-only portfolio surfaces (any staff role; tenant-scoped; deterministic, zero AI). */
   portfolio: {

@@ -49,8 +49,11 @@ export function Dialog({ open, onClose, title, children, width = 'max-w-lg', foo
     const visibleFocusables = () =>
       Array.from(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []).filter(el => el.offsetParent !== null)
 
-    // Move focus into the panel (first control, else the panel itself).
-    ;(visibleFocusables()[0] ?? panel)?.focus()
+    // Move focus into the panel. A control marked data-autofocus wins (React strips
+    // the DOM autofocus attribute and this effect runs after React's own autoFocus
+    // call, so without the marker the dialog's default-focus intent was silently
+    // overridden — P3 hostile-review fix); else first control, else the panel itself.
+    ;(panel?.querySelector<HTMLElement>('[data-autofocus]') ?? visibleFocusables()[0] ?? panel)?.focus()
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return

@@ -24,6 +24,7 @@ export {
 export {
   ALL_STATES_COUNT,
   deriveDraftIdentity,
+  deriveDraftReadiness,
   computePortfolioPulse,
   buildSuggestedQueries,
 } from './portfolio'

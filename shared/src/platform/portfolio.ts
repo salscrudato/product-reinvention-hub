@@ -8,12 +8,15 @@
 // Nothing re-runs an import stage and nothing writes. Draft identity is a
 // read-time projection — legacy drafts need no migration.
 //
-// NOT here (storage gap, recorded in the P2 wave report): per-draft readiness
-// (citations resolved/total, blockingUnresolved, validation pass|warn|fail).
-// Stage-5/6 validation + citation outcomes are not queryably persisted per
-// draft (they live only in the opt-in whole-bundle blob keyed by runId, which
-// drafts do not record), so a readiness read-model cannot be computed from
-// stored data yet.
+// Per-draft readiness (P3 closes the P2 storage gap): the import-apply write
+// side now stamps a bounded `data.readiness` summary (ReadinessSummary below)
+// derived from the bundle's stage-5/6/7 outputs at the moment the user applies
+// the plan. deriveDraftReadiness() projects it read-time, exactly like
+// identity — legacy drafts (no summary) get a null-verdict projection and are
+// NOT blocked (flag-not-invent: absence of evidence never fabricates a
+// blocker). NOTE: no citation resolved/total ratio exists anywhere in the
+// pipeline — the honest citation numbers are the bundle conservation counts
+// (proposed = accepted + unresolved), so that is what is persisted.
 
 // ─── Draft identity (task 1) ─────────────────────────────────────────────────
 
@@ -81,6 +84,75 @@ export function deriveDraftIdentity(data: DraftIdentitySource | null | undefined
     ? [artifactBaseOf(sourceFileName), lobRefOf(data?.lob), monthDay(importedAt)].filter((p): p is string => !!p)
     : []
   return { displayName: parts.length ? parts.join(' - ') : null, sourceFileName, importedAt, contentHash }
+}
+
+// ─── Draft readiness (P3) ────────────────────────────────────────────────────
+
+/** Persisted on the product doc as `data.readiness` by the import-apply write
+ *  side (client, through the atomic mutate envelope). Bounded and versioned —
+ *  a summary of the bundle's stage-5/6/7 outputs, never the whole bundle.
+ *  SEMANTICS: it describes the IMPORT RUN's citation governance (what the source
+ *  established, what stayed unresolved), not the subset of sections the reviewer
+ *  chose to write — deselecting a section changes what lands in the draft, not
+ *  what the run proved about the source. WRITE-ONCE: the envelope refuses any
+ *  later mutation of the field (READINESS_IMMUTABLE), so the promote verdict can
+ *  never be laundered by re-stamping a clean summary. */
+export interface ReadinessSummary {
+  v: 1
+  /** Bundle conservation counts (proposed = accepted + unresolved); null for
+   *  local XLSX imports, which never run the citation pipeline. */
+  counts: { proposed: number; accepted: number; unresolved: number } | null
+  /** Verbatim reasons of BLOCKING unresolved items (bounded by the writer). */
+  blockers: string[]
+  /** fail = blocking items present; warn = unresolved items or import warnings; pass = clean. */
+  validation: 'pass' | 'warn' | 'fail'
+  /** Stage-6 import-warning count. */
+  importWarnings: number
+  /** Stage-7 completeness assessment (e.g. COMPLETE, PARTIAL, EMPTY), when produced. */
+  completeness: string | null
+}
+
+/** Read-time readiness projection for a draft row. The server verdict —
+ *  `promotable` here and the promote 409 — derives ONLY from persisted data;
+ *  clients render it, never recompute it. */
+export interface DraftReadiness {
+  /** Citation-governance counts from the persisted summary, or null (legacy draft / local import). */
+  citations: { accepted: number; unresolved: number } | null
+  /** Verbatim blocker reasons; empty when nothing blocks. */
+  blockers: string[]
+  /** Persisted validation verdict, or null when no summary exists. */
+  validation: 'pass' | 'warn' | 'fail' | null
+  /** Server-computed promote verdict: false only when persisted evidence blocks. */
+  promotable: boolean
+  /** 'summary' = derived from a persisted import summary; 'none' = no data (no verdict — nothing blocks). */
+  source: 'summary' | 'none'
+}
+
+const NO_READINESS: DraftReadiness = { citations: null, blockers: [], validation: null, promotable: true, source: 'none' }
+
+const isValidation = (v: unknown): v is 'pass' | 'warn' | 'fail' => v === 'pass' || v === 'warn' || v === 'fail'
+const count = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0)
+
+/** Loose-in (Cosmos data is untyped), strict-out. Reads only the persisted
+ *  `data.readiness` summary; never throws on legacy/malformed rows. */
+export function deriveDraftReadiness(data: { readiness?: unknown } | null | undefined): DraftReadiness {
+  const raw = data?.readiness
+  if (!raw || typeof raw !== 'object') return NO_READINESS
+  const s = raw as Partial<ReadinessSummary> & { counts?: unknown; blockers?: unknown }
+  if (s.v !== 1 || !isValidation(s.validation)) return NO_READINESS
+  const blockers = Array.isArray(s.blockers)
+    ? (s.blockers as unknown[]).filter((b): b is string => typeof b === 'string' && b.length > 0)
+    : []
+  const c = s.counts && typeof s.counts === 'object'
+    ? { accepted: count((s.counts as { accepted?: unknown }).accepted), unresolved: count((s.counts as { unresolved?: unknown }).unresolved) }
+    : null
+  return {
+    citations: c,
+    blockers,
+    validation: s.validation,
+    promotable: blockers.length === 0 && s.validation !== 'fail',
+    source: 'summary',
+  }
 }
 
 // ─── Portfolio pulse (task 5) ────────────────────────────────────────────────

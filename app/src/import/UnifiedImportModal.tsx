@@ -15,7 +15,7 @@
 //   • Nothing is written to Cosmos until the reviewer clicks "Import N items."
 //   • Writes go through importPlan() → adapter.db.mutate() — the mutation invariant holds.
 //   • VIEWER sees no write action (canEdit = false → modal body is read-only text).
-import { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type {
   UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan,
@@ -45,12 +45,15 @@ import { VirtualList } from './VirtualList'
 const AgentVisualizer = lazy(() =>
   import('./AgentVisualizer').then(m => ({ default: m.AgentVisualizer })))
 import { adapter } from '../lib/backend'
+import type { DraftDedupMatch } from '../lib/backend'
 import { canI } from '../lib/canI'
 import { importPlan, type ImportProgress, type ImportResult } from '../lib/import/importProduct'
 import { newDraftId, filingLineage, importLineage } from '../lib/draft/draft'
+import { hashFiles, mintRunId, readinessFromBundle, readinessFromLocalXlsx } from '../lib/import/provenance'
+import { deleteDraftProduct } from '../lib/product/deleteDraft'
 
 interface Props { onClose: () => void; onImported: (productId: string) => void }
-type Phase = 'select' | 'streaming' | 'review' | 'xlsx-plan' | 'importing' | 'done' | 'error'
+type Phase = 'select' | 'streaming' | 'duplicate' | 'review' | 'xlsx-plan' | 'importing' | 'done' | 'error'
 
 interface AISuggestions {
   aliasOverlay:     AliasOverlay
@@ -154,17 +157,17 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const [watchAgents, setWatch] = useState(false)
   const [vizExpanded, setVizExpanded] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Dedup-at-the-door (P3): hash + matches computed at file intake, BEFORE any upload,
+  // AI spend, or draft creation. pendingFiles holds the File objects across the
+  // duplicate interrupt (they never survive into ordinary modal state); replaceTarget
+  // is the existing draft to remove AFTER a successful "Replace" import.
+  const [dupes, setDupes] = useState<DraftDedupMatch[]>([])
+  const pendingFiles  = useRef<File[] | null>(null)
+  const contentHashRef = useRef<string | null>(null)
+  const runIdRef       = useRef<string | null>(null)
+  const replaceTarget  = useRef<string | null>(null)
 
-  const handleFiles = useCallback(async (files: File[]) => {
-    const validTypes = /\.(pdf|xlsx|xls|zip|txt|xml|csv)$/i
-    const docs = files.filter(f => validTypes.test(f.name) || f.type !== '')
-    if (!docs.length) {
-      setError('Choose at least one document (PDF, XLSX, ZIP, TXT, XML, or CSV).')
-      setPhase('error')
-      return
-    }
-    setFiles(docs.map(f => f.name)); setStages([]); setError(''); setLocalPlan(null); setBundle(null)
-
+  const proceedWithFiles = useCallback(async (docs: File[]) => {
     // Magic-byte sniff: all XLSX/XLSM (ZIP signature PK\x03\x04) → local ISO mapper.
     // Anything else (PDF, ZIP SERFF, mixed) → server pipeline.
     const formats = await Promise.all(docs.map(sniffFormat))
@@ -187,9 +190,14 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
 
     setPhase('streaming')
     try {
+      // Minted here, echoed by the server, and persisted with the bundle blob — the
+      // draft's extraction report recovers the full bundle through this id.
+      const runId = mintRunId()
+      runIdRef.current = runId
       const documents = await readUploadFiles(docs)
       const b = await runUnifiedImport(documents, {
         onStage: (e) => setStages(prev => [...prev, e]),
+        runId,
       })
       setBundle(b)
       setCardStatus(b.formatCard?.status ?? 'PROPOSED')
@@ -201,6 +209,35 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
     }
   }, [])
 
+  const handleFiles = useCallback(async (files: File[]) => {
+    const validTypes = /\.(pdf|xlsx|xls|zip|txt|xml|csv)$/i
+    const docs = files.filter(f => validTypes.test(f.name) || f.type !== '')
+    if (!docs.length) {
+      setError('Choose at least one document (PDF, XLSX, ZIP, TXT, XML, or CSV).')
+      setPhase('error')
+      return
+    }
+    setFiles(docs.map(f => f.name)); setStages([]); setError(''); setLocalPlan(null); setBundle(null)
+    contentHashRef.current = null; runIdRef.current = null; replaceTarget.current = null
+
+    // Dedup at the door: hash the raw bytes while the File objects exist and interrupt
+    // BEFORE bytes leave the browser. Hash/lookup failure never blocks an import — the
+    // gate is best-effort; the stamp is simply absent when hashing was impossible.
+    try { contentHashRef.current = await hashFiles(docs) } catch { /* crypto unavailable — no stamp */ }
+    if (contentHashRef.current) {
+      try {
+        const matches = await adapter.db.findDraftsByContentHash(contentHashRef.current)
+        if (matches.length > 0) {
+          pendingFiles.current = docs
+          setDupes(matches)
+          setPhase('duplicate')
+          return
+        }
+      } catch { /* dedup lookup unavailable — proceed */ }
+    }
+    await proceedWithFiles(docs)
+  }, [proceedWithFiles])
+
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDrag(false)
     void handleFiles(Array.from(e.dataTransfer.files))
@@ -210,6 +247,38 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
     const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n
   })
 
+  // "Replace" completion: the NEW draft is created first, then the existing one is
+  // removed — a failed replace never destroys data before its replacement exists.
+  // Fail-closed on lifecycle (hostile-review fix): the dedup interrupt's status check
+  // is stale by delete time (the user can sit in review for an hour while someone
+  // promotes the match), so re-read the CURRENT lifecycle immediately before deleting;
+  // an unreadable doc is treated as LAUNCHED so deleteDraftProduct's guard refuses.
+  // Best-effort: a refused/failed removal downgrades to a warning, never fails the import.
+  // A PARTIAL import (skipped batches) keeps the existing draft — deleting it against
+  // an incomplete replacement would destroy the only good copy (hostile-review fix).
+  async function finishReplaceIfClean(res: ImportResult, actor: { uid: string; name: string }) {
+    if (res.failed > 0 && replaceTarget.current) {
+      replaceTarget.current = null
+      toast.warning('Some items were skipped, so the existing draft was kept. Delete it manually once the new draft looks right.')
+      return
+    }
+    await finishReplace(actor)
+  }
+
+  async function finishReplace(actor: { uid: string; name: string }) {
+    const target = replaceTarget.current
+    if (!target) return
+    replaceTarget.current = null
+    try {
+      const live = await adapter.db.get<{ lifecycle?: string; lifecycleState?: string }>(`products/${target}`)
+      if (!live) return   // already gone — nothing to replace
+      await deleteDraftProduct({ id: target, lifecycle: live.lifecycle ?? live.lifecycleState?.toUpperCase() ?? 'LAUNCHED' }, actor)
+      toast.success('Replaced the existing draft.')
+    } catch (e) {
+      toast.warning(`The new draft was created, but the existing draft could not be removed: ${e instanceof Error ? e.message : 'unknown error'}`)
+    }
+  }
+
   async function runImport() {
     if (!bundle?.plan.product || !bundle.plan.productId || !user) return
     setPhase('importing')
@@ -218,7 +287,13 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       const actor   = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
       const draftId = newDraftId(bundle.plan.productId)
       const lineage = buildLineage(bundle, fileNames, actor)
-      const res = await importPlan(acceptedPlan(bundle, accepted), actor, setProgress, { productId: draftId, lineage })
+      const res = await importPlan(acceptedPlan(bundle, accepted), actor, setProgress, {
+        productId: draftId, lineage,
+        contentHash: contentHashRef.current ?? undefined,
+        importRunId: runIdRef.current ?? undefined,
+        readiness:   readinessFromBundle(bundle),
+      })
+      await finishReplaceIfClean(res, actor)
       setResult(res); setPhase('done')
       if (res.failed) toast.warning(`Imported ${res.written} items, ${res.failed} skipped`)
       else            toast.success(`Imported ${res.written} items`)
@@ -241,7 +316,12 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       const actor   = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
       const draftId = newDraftId(localPlan.productId)
       const lineage = importLineage(fileNames, localPlan.product?.refId ?? null, actor)
-      const res = await importPlan(localPlan, actor, setProgress, { productId: draftId, lineage })
+      const res = await importPlan(localPlan, actor, setProgress, {
+        productId: draftId, lineage,
+        contentHash: contentHashRef.current ?? undefined,
+        readiness:   readinessFromLocalXlsx((localPlan.summary.warnings ?? []).length + (localPlan.summary.defects ?? []).length),
+      })
+      await finishReplaceIfClean(res, actor)
       setResult(res); setPhase('done')
       if (res.failed) toast.warning(`Imported ${res.written} items, ${res.failed} skipped`)
       else            toast.success(`Imported ${res.written} items`)
@@ -348,6 +428,22 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
           watchAgents={watchAgents} onToggleWatch={() => setWatch(w => !w)}
           vizExpanded={vizExpanded} onToggleExpand={() => setVizExpanded(e => !e)}
         />
+      ) : phase === 'duplicate' ? (
+        <DuplicatePane
+          matches={dupes}
+          fileNames={fileNames}
+          onOpenExisting={(id) => onImported(id)}
+          onReplace={(id) => {
+            replaceTarget.current = id
+            const docs = pendingFiles.current; pendingFiles.current = null
+            if (docs) void proceedWithFiles(docs)
+          }}
+          onImportCopy={() => {
+            const docs = pendingFiles.current; pendingFiles.current = null
+            if (docs) void proceedWithFiles(docs)
+          }}
+          onCancel={onClose}
+        />
       ) : phase === 'xlsx-plan' && localPlan ? (
         <XlsxPlanPane
           plan={localPlan}
@@ -450,7 +546,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
           )}
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={onClose}>Close</Button>
-            <Button variant="primary" onClick={() => { setPhase('select'); setError(''); setBundle(null) }}>
+            <Button variant="primary" onClick={() => { setPhase('select'); setError(''); setBundle(null); setDupes([]); pendingFiles.current = null; replaceTarget.current = null }}>
               Try again
             </Button>
           </div>
@@ -461,6 +557,72 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
 }
 
 // ─── Panes ────────────────────────────────────────────────────────────────────
+
+// Dedup interrupt (P3): shown BEFORE any upload or draft creation when the selected
+// files' content hash matches an existing draft. Default focus = "Open existing"
+// (the safe action); "Replace" is offered only for a single non-launched match.
+function DuplicatePane({ matches, fileNames, onOpenExisting, onReplace, onImportCopy, onCancel }: {
+  matches:        DraftDedupMatch[]
+  fileNames:      string[]
+  onOpenExisting: (id: string) => void
+  onReplace:      (id: string) => void
+  onImportCopy:   () => void
+  onCancel:       () => void
+}) {
+  const explainId = useId()
+  const replaceHintId = useId()
+  const newest = matches[0]!
+  const replaceable = matches.length === 1 && newest.status !== 'LAUNCHED'
+  const when = (iso: string | null) => {
+    if (!iso) return null
+    const d = new Date(iso)
+    return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+  return (
+    <div className="flex flex-col gap-4 py-1">
+      <div className="flex items-start gap-2.5 rounded-[12px] p-3.5"
+        style={{ background: 'var(--color-warn-soft)', border: '1px solid var(--color-warn-line)' }}>
+        <IconWarning size={16} className="text-warn shrink-0 mt-0.5" aria-hidden="true" />
+        <p id={explainId} className="text-sm text-dim">
+          <span className="font-medium text-text">{fileNames.length === 1 ? fileNames[0] : `${fileNames.length} files`}</span>{' '}
+          {matches.length === 1 ? 'was already imported — an existing draft came from the same content.'
+            : `was already imported — ${matches.length} existing drafts came from the same content.`}{' '}
+          Nothing has been uploaded or created yet.
+        </p>
+      </div>
+      <ul className="flex flex-col gap-2" aria-label="Existing drafts from this content">
+        {matches.map((m) => (
+          <li key={m.id} className="flex items-center gap-2.5 rounded-[10px] px-3 py-2 bg-surface"
+            style={{ border: '1px solid var(--color-border)' }}>
+            <IconFile size={14} className="text-faint shrink-0" aria-hidden="true" />
+            <span className="text-sm text-text truncate">{m.displayName ?? m.id}</span>
+            <span className="ml-auto flex items-center gap-2 text-xs text-faint shrink-0">
+              {when(m.importedAt) && <span>imported {when(m.importedAt)}</span>}
+              {m.status && <span className="uppercase tracking-wide text-[10px]">{m.status}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {replaceable && (
+        <p id={replaceHintId} className="text-xs text-faint">
+          Replace imports the files again, then permanently deletes the existing draft once the new one is created.
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2 justify-end pt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+        <Button onClick={onImportCopy}>Import as copy</Button>
+        {replaceable && (
+          <Button variant="destructive" onClick={() => onReplace(newest.id)} aria-describedby={replaceHintId}>
+            Replace
+          </Button>
+        )}
+        <Button variant="primary" autoFocus data-autofocus onClick={() => onOpenExisting(newest.id)} aria-describedby={explainId}>
+          Open existing <IconArrowRight size={14} />
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 function SelectPane({ dragOver, setDrag, onDrop, onBrowse, inputRef, onFiles }: {
   dragOver:  boolean; setDrag: (b: boolean) => void; onDrop: (e: React.DragEvent) => void

@@ -22,7 +22,7 @@
 // and linked back via productRefIds = [draftId] — so the draft is fully isolated and
 // the shared library (and any launched product's forms) is left untouched.
 import { adapter } from '../backend'
-import type { ImportPlan, PlannedEntity, Lineage } from '@pf/shared'
+import type { ImportPlan, PlannedEntity, Lineage, ReadinessSummary } from '@pf/shared'
 import type { MutationPayload } from '../backend/types'
 
 export interface ImportActor { uid: string; name: string }
@@ -44,6 +44,14 @@ export interface ImportOptions {
   productId?: string
   /** Provenance stamped onto the created product doc. */
   lineage?:   Lineage
+  /** P3 identity/readiness stamps persisted on the product doc at creation:
+   *  contentHash (sha256 of the raw uploaded bytes — feeds /drafts/dedup),
+   *  importRunId (the client-minted unified-import run id — feeds the extraction
+   *  report), readiness (the bounded stage-5/6/7 summary — feeds the server's
+   *  promote verdict). All optional; absent fields are simply not stamped. */
+  contentHash?: string
+  importRunId?: string
+  readiness?:   ReadinessSummary
 }
 
 // Where each planned group lands + how mutate() should tag it.
@@ -120,6 +128,9 @@ export async function importPlan(
       ...plan.product.data,
       owner: { uid: actor.uid, name: actor.name },
       ...(opts.lineage ? { lineage: opts.lineage } : {}),
+      ...(opts.contentHash ? { contentHash: opts.contentHash } : {}),
+      ...(opts.importRunId ? { importRunId: opts.importRunId } : {}),
+      ...(opts.readiness ? { readiness: opts.readiness } : {}),
     },
   })
   written++

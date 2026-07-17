@@ -12,7 +12,7 @@
 
 import type { Unsubscribe } from '@pf/shared'
 import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, DraftDedupMatch, DuckCreekExportResult, ImportRunSummary, ImportRunTrace, ManagedUser, PortalPolicy, PortalSummary, PortfolioPulse, TenantMember, TenantMembership, TenantResolveResult, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'
-import { MutationConflictError } from './types'
+import { MutationConflictError, PromoteBlockedError } from './types'
 import { mapServerVersionRow, type ServerVersionRow } from './versionRead'
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
@@ -50,7 +50,16 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...(init.headers || {}),
     },
   })
-  if (res.status === 409) throw new MutationConflictError()
+  if (res.status === 409) {
+    // A 409 is usually optimistic-concurrency conflict, but the promote gate also
+    // answers 409 with a STRUCTURED verdict ({ error:'not_promotable', blockers }) —
+    // read the body so the UI can show the server's blocking reasons verbatim
+    // instead of a misleading "modified by another user" toast.
+    let body: { error?: string; blockers?: string[] } | null = null
+    try { body = (await res.json()) as { error?: string; blockers?: string[] } } catch { /* non-JSON — plain conflict */ }
+    if (body?.error === 'not_promotable') throw new PromoteBlockedError(Array.isArray(body.blockers) ? body.blockers : [])
+    throw new MutationConflictError()
+  }
   if (res.status === 401) {
     // Session expired or token rejected: perform the full LOCAL sign-out, not just
     // the token clear. Clearing only the token left currentUser set, so the shell
@@ -369,6 +378,16 @@ export const adapter: BackendAdapter = {
     async findDraftsByContentHash(contentHash: string): Promise<DraftDedupMatch[]> {
       const { matches } = await api<{ matches: DraftDedupMatch[] }>(`/db/drafts/dedup?contentHash=${encodeURIComponent(contentHash)}`)
       return matches
+    },
+
+    async promoteDraft(id: string, expectedRev?: number): Promise<{ rev: number }> {
+      // Server-verdict promotion: a blocked draft rejects inside api() as
+      // PromoteBlockedError (blockers verbatim); a stale rev as MutationConflictError.
+      const r = await api<{ ok: true; rev: number }>(`/db/drafts/${encodeURIComponent(id)}/promote`, {
+        method: 'POST', body: JSON.stringify({ expectedRev }),
+      })
+      pokeAll()   // reflect the lifecycle flip in every open view
+      return { rev: r.rev }
     },
   },
 

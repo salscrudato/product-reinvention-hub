@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   deriveDraftIdentity,
+  deriveDraftReadiness,
   computePortfolioPulse,
   buildSuggestedQueries,
   ALL_STATES_COUNT,
@@ -64,6 +65,64 @@ describe('deriveDraftIdentity', () => {
 
   it('accepts a string lob (legacy shape) as the LOB part', () => {
     expect(deriveDraftIdentity(importedDraft({ lob: 'GL' })).displayName).toBe('HO3_Countrywide_2026 - GL - Jul 15')
+  })
+})
+
+describe('deriveDraftReadiness', () => {
+  const summary = (over: Record<string, unknown> = {}) => ({
+    readiness: {
+      v: 1,
+      counts: { proposed: 12, accepted: 10, unresolved: 2 },
+      blockers: [],
+      validation: 'warn',
+      importWarnings: 3,
+      completeness: 'PARTIAL',
+      ...over,
+    },
+  })
+
+  it('projects a persisted summary: counts, verdict, promotable', () => {
+    const r = deriveDraftReadiness(summary())
+    expect(r).toEqual({
+      citations: { accepted: 10, unresolved: 2 },
+      blockers: [],
+      validation: 'warn',
+      promotable: true,
+      source: 'summary',
+    })
+  })
+
+  it('blockers make the draft non-promotable and pass through VERBATIM', () => {
+    const reasons = ['Coverage "CA-EQ" cites sheet row 44 which was dropped', 'Rating step 9: ungrounded-field factor']
+    const r = deriveDraftReadiness(summary({ blockers: reasons, validation: 'fail' }))
+    expect(r.promotable).toBe(false)
+    expect(r.blockers).toEqual(reasons)
+    expect(r.validation).toBe('fail')
+  })
+
+  it('a fail verdict blocks even with an empty blocker list', () => {
+    expect(deriveDraftReadiness(summary({ validation: 'fail' })).promotable).toBe(false)
+  })
+
+  it('null counts (local XLSX import) keeps citations null but the verdict real', () => {
+    const r = deriveDraftReadiness(summary({ counts: null, validation: 'pass' }))
+    expect(r.citations).toBeNull()
+    expect(r.validation).toBe('pass')
+    expect(r.promotable).toBe(true)
+  })
+
+  it('legacy drafts (no summary) get the null verdict and are NOT blocked — flag, never invent', () => {
+    for (const data of [null, undefined, {}, { readiness: 'garbage' }, { readiness: { v: 2, validation: 'pass' } }, { readiness: { v: 1, validation: 'maybe' } }]) {
+      expect(deriveDraftReadiness(data as never)).toEqual({
+        citations: null, blockers: [], validation: null, promotable: true, source: 'none',
+      })
+    }
+  })
+
+  it('sanitizes malformed pieces without dropping the summary (loose-in, strict-out)', () => {
+    const r = deriveDraftReadiness(summary({ blockers: ['real', 7, '', null], counts: { accepted: -3, unresolved: 'x' } }))
+    expect(r.blockers).toEqual(['real'])
+    expect(r.citations).toEqual({ accepted: 0, unresolved: 0 })
   })
 })
 

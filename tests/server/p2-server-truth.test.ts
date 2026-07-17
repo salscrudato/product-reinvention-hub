@@ -162,9 +162,73 @@ describe('draft identity — server-derived read model on product rows', () => {
     expect(idn.contentHash).toBeNull()
   })
 
-  it('SOURCE AUDIT: /get and /list attach identity to product rows at READ time (derived last — a stored field cannot spoof it; nothing is persisted)', () => {
-    expect(dataSrc).toMatch(/withIdentity = \(row, data\) => \(\{ \.\.\.row, identity: deriveDraftIdentity\(data\) \}\)/)
+  it('SOURCE AUDIT: /get and /list attach identity + readiness to product rows at READ time (derived last — a stored field cannot spoof them; nothing is persisted)', () => {
+    // P3 extends the projection: readiness rides next to identity, same spoof-proof
+    // spread order (row first, projections last) and the same read-time-only rule.
+    expect(dataSrc).toMatch(/withIdentity = \(row, data\) => \(\{ \.\.\.row, identity: deriveDraftIdentity\(data\), readiness: deriveDraftReadiness\(data\) \}\)/)
     expect(dataSrc).toMatch(/isProductDoc\(ent\.path\) \? withIdentity\(row, ent\.data\) : row/)
     expect(dataSrc).toMatch(/isProducts \? withIdentity\(row, r\.data\) : row/)
+  })
+})
+
+// ─── P3 — promote verdict + envelope enforcement ─────────────────────────────
+
+describe('P3 promote — POST /api/db/drafts/:id/promote', () => {
+  it('401 unauthenticated; 403 for read-only roles (product:write floor)', async () => {
+    expect((await request(app).post('/api/db/drafts/d1/promote').send({})).status).toBe(401)
+    for (const role of ['VIEWER', 'POLICYHOLDER']) {
+      const res = await request(app).post('/api/db/drafts/d1/promote')
+        .set('Authorization', `Bearer ${token(role)}`).send({})
+      expect(res.status).toBe(403)
+    }
+  })
+
+  it('passes the gates for EDITOR (guards fire before any Cosmos I/O)', async () => {
+    const res = await request(app).post('/api/db/drafts/d1/promote')
+      .set('Authorization', `Bearer ${token('EDITOR')}`).send({})
+    expect([401, 403]).not.toContain(res.status)
+  })
+
+  it('SOURCE AUDIT: the route is capability- + tenant-gated and derives the tenant like every P2 route', () => {
+    const idx = dataSrc.indexOf("router.post('/drafts/:id/promote'")
+    expect(idx).toBeGreaterThan(-1)
+    const fn = dataSrc.slice(idx, idx + 700)
+    expect(fn).toMatch(/requireCapability\('product:write'\)/)
+    expect(fn).toMatch(/requireTenant/)
+    expect(fn).toMatch(/resolveTenantForPrincipal\(req\.user\)/)
+  })
+
+  it('SOURCE AUDIT: the envelope NOT_PROMOTABLE guard consults the PERSISTED summary (laundering in the same write is impossible — readiness is also write-once) AND the effective post-write state (create-as-LAUNCHED is gated too)', () => {
+    const idx = dataSrc.indexOf("data.lifecycle === 'LAUNCHED'")
+    expect(idx).toBeGreaterThan(-1)
+    const guard = dataSrc.slice(idx, idx + 900)
+    expect(guard).toMatch(/deriveDraftReadiness\(current\?\.data\)/)
+    expect(guard).toMatch(/deriveDraftReadiness\(effectiveData\)/)
+    expect(guard).toMatch(/NOT_PROMOTABLE/)
+    // EVERY route that reaches the envelope surfaces the verdict as a structured 409:
+    // /mutate, /mutateBatch, /drafts/:id/promote AND /restore (a restore forward to a
+    // LAUNCHED state is still a promotion of a currently-blocked draft).
+    expect((dataSrc.match(/status\(409\)\.json\(\{ error: 'not_promotable', blockers: e\.blockers \|\| \[\] \}\)/g) || []).length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('SOURCE AUDIT: the readiness summary is WRITE-ONCE — the envelope refuses any later mutation (no laundering channel), mapped to a structured 422 on both write routes', () => {
+    expect(dataSrc).toMatch(/'readiness' in data/)
+    expect(dataSrc).toMatch(/READINESS_IMMUTABLE/)
+    expect((dataSrc.match(/status\(422\)\.json\(\{ error: 'readiness_immutable'/g) || []).length).toBe(2)
+  })
+})
+
+describe('P3 readiness — server-derived read model on product rows', () => {
+  const { deriveDraftReadiness } = _require('../../server/lib/platform-shared.cjs') as {
+    deriveDraftReadiness: (d: Record<string, unknown> | null) => { blockers: string[]; validation: string | null; promotable: boolean; source: string }
+  }
+
+  it('the committed bridge exports the SAME projection the shared tests pin (bridge regenerated, not hand-edited)', () => {
+    const blocked = deriveDraftReadiness({ readiness: { v: 1, counts: { proposed: 3, accepted: 1, unresolved: 2 }, blockers: ['Coverage X: dropped row'], validation: 'fail', importWarnings: 0, completeness: null } })
+    expect(blocked.promotable).toBe(false)
+    expect(blocked.blockers).toEqual(['Coverage X: dropped row'])
+    // Legacy rows: no summary → no verdict → NOT blocked (flag-not-invent).
+    const legacy = deriveDraftReadiness({})
+    expect(legacy).toEqual({ citations: null, blockers: [], validation: null, promotable: true, source: 'none' })
   })
 })

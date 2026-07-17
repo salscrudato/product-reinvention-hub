@@ -91,6 +91,10 @@ export interface RunUnifiedImportOpts {
   productName?: string
   filingState?: string
   signal?:     AbortSignal
+  /** Client-minted run id (see lib/import/provenance.ts mintRunId). When present the
+   *  server echoes it (run:id) and persists the full bundle blob under it, which is
+   *  what the draft's extraction report recovers via POST /api/ai/unifiedImportResult. */
+  runId?:      string
 }
 
 /** Stream the unified import pipeline and return the proposal bundle on completion. */
@@ -103,7 +107,7 @@ export async function runUnifiedImport(
 
   await adapter.fns.stream(
     'unifiedImport',
-    { documents, productName: opts.productName, filingState: opts.filingState },
+    { documents, productName: opts.productName, filingState: opts.filingState, runId: opts.runId },
     (chunk) => {
       let ev: {
         t: string; name?: string; phase?: 'start' | 'progress' | 'end'; summary?: string;
