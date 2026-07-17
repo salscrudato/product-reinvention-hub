@@ -5,7 +5,7 @@
 // out from their node. The hero's call-to-action is an inline sign-in form beneath
 // the copy — OTP flow for email users, password flow for bootstrap admins.
 // Pure CSS + inline SVG, zero images, honours prefers-reduced-motion.
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { adapter } from '../lib/backend'
 import type { TenantInfo } from '../lib/backend'
@@ -36,6 +36,50 @@ function Aurora() {
         style={{ background: 'var(--gradient-aurora-c)' }} />
     </div>
   )
+}
+
+// ─── Pointer tilt (elevation) ────────────────────────────────────────────────
+// A whisper of 3D: the graph leans a few degrees toward the pointer, eased by a
+// per-frame lerp so motion is butter-smooth (no transition fighting, no jank).
+// Fine-pointer devices only; reduced-motion users get a static graph (the CSS
+// guard also zeroes the transform, so this is belt AND braces).
+
+function useTilt(maxDeg = 4) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!window.matchMedia('(pointer: fine)').matches) return
+    let raf = 0
+    let targetX = 0, targetY = 0, curX = 0, curY = 0
+    const tick = () => {
+      // Critically-damped-feeling lerp: ~12% per frame reads as weightless glass.
+      curX += (targetX - curX) * 0.12
+      curY += (targetY - curY) * 0.12
+      el.style.setProperty('--tilt-x', `${curX.toFixed(3)}deg`)
+      el.style.setProperty('--tilt-y', `${curY.toFixed(3)}deg`)
+      raf = Math.abs(targetX - curX) + Math.abs(targetY - curY) > 0.005 ? requestAnimationFrame(tick) : 0
+    }
+    const start = () => { if (!raf) raf = requestAnimationFrame(tick) }
+    const onMove = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect()
+      const nx = (e.clientX - r.left) / r.width - 0.5   // -0.5 .. 0.5
+      const ny = (e.clientY - r.top) / r.height - 0.5
+      targetY = nx * maxDeg * 2                          // rotateY follows horizontal
+      targetX = -ny * maxDeg * 2                         // rotateX opposes vertical
+      start()
+    }
+    const onLeave = () => { targetX = 0; targetY = 0; start() }
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerleave', onLeave)
+    return () => {
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerleave', onLeave)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [maxDeg])
+  return ref
 }
 
 // ─── Insight-graph geometry ───────────────────────────────────────────────────
@@ -116,6 +160,7 @@ function InsightGraph() {
     <svg
       viewBox="0 0 470 470" width="100%" height="100%" fill="none"
       className="graph-float max-w-[500px]"
+      shapeRendering="geometricPrecision" textRendering="optimizeLegibility"
       role="img"
       aria-label="An insurance product manager at the focal point, continuously informed by inward-flowing streams from the platform: live market news, the product's coverages and forms branching from a coverages node, an AI copilot, rating, and intelligent tasks."
     >
@@ -162,9 +207,9 @@ function InsightGraph() {
         </g>
       ))}
 
-      {/* Feature source nodes */}
+      {/* Feature source nodes — ig-node adds the springy hover lift + label warm-up */}
       {FEATURES.map((f, i) => (
-        <g key={f.id} className="rise-in" style={{ '--rise-delay': `${250 + i * 110}ms` } as React.CSSProperties}>
+        <g key={f.id} className="rise-in ig-node" style={{ '--rise-delay': `${250 + i * 110}ms` } as React.CSSProperties}>
           <circle cx={f.x} cy={f.y} r={RN + 7} fill="url(#ig-glow)" className="node-glow"
             style={{ '--breathe-delay': `${i * 420}ms` } as React.CSSProperties} />
           <circle cx={f.x} cy={f.y} r={RN} stroke="var(--color-accent-line)" strokeWidth={1}
@@ -177,6 +222,9 @@ function InsightGraph() {
       {/* Focal point - the product manager, aggregating every stream */}
       <g className="rise-in" style={{ '--rise-delay': '150ms' } as React.CSSProperties}>
         <circle cx={PM.x} cy={PM.y} r={RPM + 22} fill="url(#ig-glow)" className="node-glow" />
+        {/* Slow breathing halo — one soft ring blooms and fades every six seconds */}
+        <circle cx={PM.x} cy={PM.y} r={RPM + 2} fill="none" stroke="var(--color-accent)" strokeWidth={1.25}
+          className="medallion-pulse" />
         {/* Orbiting intake ring (reuses the edge-flow dash animation) */}
         <circle cx={PM.x} cy={PM.y} r={RPM + 9} fill="none" stroke="var(--color-accent-line)" strokeWidth={1.25}
           className="edge-flow" style={{ strokeDasharray: '3 9' } as React.CSSProperties} />
@@ -424,12 +472,12 @@ const CARDS: { icon: Glyph; title: string; body: string }[] = [
 ]
 
 function FeatureCard({ icon: Icon, title, body, delay }: { icon: Glyph; title: string; body: string; delay: number }) {
+  // Hover lift/shadow/border all live in .landing-card (CSS-only — no style mutation
+  // in JS, so the transitions are compositor-smooth and theme-correct).
   return (
     <div
-      className="group rise-in bg-surface rounded-[18px] p-6 flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1"
-      style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)', '--rise-delay': `${delay}ms` } as React.CSSProperties}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)' }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-card)' }}
+      className="group rise-in landing-card bg-surface rounded-[18px] p-6 flex flex-col gap-4"
+      style={{ '--rise-delay': `${delay}ms` } as React.CSSProperties}
     >
       <div className="w-11 h-11 rounded-[13px] flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.06]"
         style={{ background: 'var(--gradient-accent-soft)' }}>
@@ -445,6 +493,7 @@ function FeatureCard({ icon: Icon, title, body, delay }: { icon: Glyph; title: s
 
 export default function Landing() {
   const { user } = useUser()
+  const tiltRef = useTilt(4)
 
   // Route-level paint diagnostic (must run before the early return below to keep
   // hook order stable across renders).
@@ -471,7 +520,7 @@ export default function Landing() {
           <h1 className="rise-in text-display text-[2.75rem] leading-[1.04] sm:text-6xl font-bold text-text"
             style={{ '--rise-delay': '0ms' } as React.CSSProperties}>
             Ship insurance<br />products{' '}
-            <span className="gradient-text">faster.</span>
+            <span className="gradient-text gradient-shimmer">faster.</span>
           </h1>
 
           <p className="rise-in text-base sm:text-lg text-dim leading-relaxed max-w-md mx-auto lg:mx-0"
@@ -486,8 +535,8 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Insight graph */}
-        <div className="relative shrink-0 w-[360px] h-[360px] sm:w-[480px] sm:h-[480px] flex items-center justify-center">
+        {/* Insight graph — wrapped in the pointer tilt (a few degrees of lean, rAF-lerped) */}
+        <div ref={tiltRef} className="landing-tilt relative shrink-0 w-[360px] h-[360px] sm:w-[480px] sm:h-[480px] flex items-center justify-center">
           <div className="absolute inset-10 rounded-full blur-3xl opacity-[.16] pointer-events-none"
             style={{ background: 'radial-gradient(circle, var(--color-accent-bright), transparent 70%)' }} aria-hidden="true" />
           <InsightGraph />
