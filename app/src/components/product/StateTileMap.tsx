@@ -41,10 +41,8 @@ interface Props {
 	/** The selectable footprint — the denominator for every count. Selection and
 	 *  the peril overlay are both clipped to this set, so nothing can exceed 100%. */
 	footprint: Set<string>
-	/** The line's peril model from the LOB registry (`lob.perilModel`). Drives the
-	 *  peril badge + legend: COASTAL_WIND_HAIL badges its eligible states, TERRITORY
-	 *  (e.g. Personal Auto) carries none and renders badge-free. Never hard-code peril facts. */
-	peril: PerilRule
+	/** Optional peril model; omit to suppress the coastal overlay and legend entry entirely. */
+	peril?: PerilRule
 	onToggle?: (state: string) => void
 	canEdit?: boolean
 	labels?: Partial<LegendLabels>
@@ -92,14 +90,11 @@ export function StateTileMap({ active, footprint, peril, onToggle, canEdit = fal
 		active: 'In scope',
 		available: 'Available in footprint',
 		inactive: 'Out of scope',
-		peril: peril.label,
+		peril: peril?.label ?? '',
 		...labels,
 	}
 
-	// Peril-eligible states, clipped to the footprint — a coastal state outside the
-	// footprint earns no badge. Empty for TERRITORY / NONE lines (e.g. Personal Auto), so the
-	// overlay and its legend entry simply don't render.
-	const perilSet = new Set(peril.eligibleStates.filter(st => footprint.has(st)))
+	const perilSet = new Set(peril ? peril.eligibleStates.filter(st => footprint.has(st)) : [])
 	const showPeril = perilSet.size > 0
 
 	// The selected count, always intersected with the footprint — this keeps a count
@@ -124,10 +119,9 @@ export function StateTileMap({ active, footprint, peril, onToggle, canEdit = fal
 	)
 	const focusFallback = focused && footprint.has(focused) ? focused : (ALL_STATES.find(st => footprint.has(st)) ?? null)
 
-	const describeStatus = (st: string, isActive: boolean, inFootprint: boolean, isPeril: boolean) => {
+	const describeStatus = (st: string, isActive: boolean, inFootprint: boolean) => {
 		if (!inFootprint) return `${st} — ${L.inactive}`
-		const perilNote = isPeril ? `; ${L.peril}` : ''
-		return `${st} — ${isActive ? L.active : L.available}${perilNote}`
+		return `${st} — ${isActive ? L.active : L.available}`
 	}
 
 	// Nearest selectable state in a direction, by anchor geometry — so arrow keys
@@ -221,7 +215,7 @@ export function StateTileMap({ active, footprint, peril, onToggle, canEdit = fal
 				const fill = shapeFill(isActive, inFootprint, isPeril)
 				const stroke = isActive ? 'var(--color-border-strong)' : 'var(--color-border)'
 				const textFill = isActive ? 'var(--color-surface)' : 'var(--color-dim)'
-				const statusLabel = describeStatus(st, isActive, inFootprint, isPeril)
+				const statusLabel = describeStatus(st, isActive, inFootprint)
 				const ext = externalPos.get(st)
 
 				return (

@@ -99,8 +99,7 @@ export function CoverageStatesDialog({ cov, onClose }: { cov: WithId<Coverage>; 
 	        <StateTileMap
 	          active={active}
 	          footprint={new Set(productFootprint)}
-	          peril={lob.perilModel}
-	          onToggle={canEdit && !allStates ? toggle : undefined}
+		          onToggle={canEdit && !allStates ? toggle : undefined}
 	          canEdit={canEdit && !allStates}
 	          labels={{ active: 'In scope', inactive: 'Out of scope' }}
 	        />

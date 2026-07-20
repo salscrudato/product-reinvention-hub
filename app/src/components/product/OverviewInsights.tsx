@@ -59,7 +59,6 @@ export function FootprintPanel() {
       <StateTileMap
         active={new Set(active)}
         footprint={footprint}
-        peril={lob.peril}
         canEdit={false}
         ariaLabel={`Geographic footprint: ${product.allStates ? 'all footprint states' : `${active.length} states in scope`}`}
       />

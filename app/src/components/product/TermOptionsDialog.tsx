@@ -806,8 +806,7 @@ function OptionRow({ o, mode, scopeStates, peril, canEdit, hasError, onChange, o
 	                  <StateTileMap
 	                    active={activeSet}
 	                    footprint={footprintSet}
-	                    peril={peril}
-	                    onToggle={canEdit && !o.allStates ? handleToggleState : undefined}
+		                    onToggle={canEdit && !o.allStates ? handleToggleState : undefined}
 	                    canEdit={canEdit && !o.allStates}
 	                    labels={{
 	                      active: 'Option available',
