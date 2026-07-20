@@ -467,6 +467,20 @@ export function resolveLobByRefId(refId?: string | null): LobDefinition | undefi
   return lobByPrefix(refId)
 }
 
+/** Resolve a LOB by its display name or common aliases (case-insensitive).
+ *  Used as a fallback when uploaded files name the LOB in a text field but
+ *  carry non-standard refId prefixes that the prefix matcher can't resolve. */
+export function resolveLobByName(name?: string | null): LobDefinition | undefined {
+  if (!name) return undefined
+  const n = name.trim().toLowerCase()
+  return Object.values(LOB_REGISTRY).find(l =>
+    l.name.toLowerCase() === n ||
+    l.displayName.toLowerCase() === n ||
+    n.includes(l.name.toLowerCase()) ||
+    n.includes(l.code.toLowerCase())
+  )
+}
+
 /** Entity-kind classification a refId's SCHEME SEGMENT carries, across every line's
  *  shape — including glued digit runs ("PR.PROD001", "IM.PROD044") and abbreviated
  *  tokens ("CORE.PRD.001"). This is the shared identifier parser the import brain

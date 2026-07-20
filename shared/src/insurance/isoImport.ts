@@ -16,7 +16,7 @@ import type {
   FormCategory, DynamicFieldType, RuleCategory, DynamicField,
   RTTable, LDTable, LDRow, RatingStep, RatingGroupSummary, CoverageTerm, TermKind,
 } from '../types'
-import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
+import { resolveLobByRefId, resolveLobByName, DEFAULT_LOB } from './lobRegistry'
 import { refIdToDocId } from './refId'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
 import {
@@ -2044,7 +2044,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
   // ── LOB resolution — driven by the first product's refId (line-agnostic). ──
   const firstFw = fwResults?.[0] ?? null
   const productRefId = firstFw?.productRefId ?? null
-  const lob = resolveLobByRefId(productRefId) ?? resolveLobByRefId(firstFw?.coverages[0]?.refId ?? null) ?? DEFAULT_LOB
+  const lob = resolveLobByRefId(productRefId) ?? resolveLobByRefId(firstFw?.coverages[0]?.refId ?? null) ?? resolveLobByName(firstFw?.lobName) ?? DEFAULT_LOB
   const lobRefId = firstFw?.lobRefId ?? `${lob.prefix}.LOB.001`
   const lobName = firstFw?.lobName || lob.name
   const productId = productRefId

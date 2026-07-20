@@ -67,10 +67,8 @@ export default function Builder() {
 
       {/* Start a draft — four grounded entry points (author-only) */}
       {canEdit && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <StartCard featured Icon={IconSparkle} title="Scaffold with AI"
-            desc="Describe it — grounded in your real portfolio, never invented." onClick={() => setModal('scaffold')} />
-          <StartCard Icon={IconUpload} title="Import"
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <StartCard featured Icon={IconUpload} title="Import"
             desc="ISO workbook (XLSX), filing PDF, SERFF, or ERC — auto-detected by content." onClick={() => setModal('unified')} />
           <StartCard Icon={IconCopy} title="Clone a product"
             desc="Start from an existing product's structure." onClick={() => setModal('clone')} />
