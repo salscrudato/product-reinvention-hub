@@ -2031,7 +2031,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
   const dynGrid  = findSheet(grids, /forms dynamic|dynamic data/i)
   // "Rules Repository" is the IM/PR component-model template's name for the rules sheet.
   // "E+ Rules Specs" is the E+ workbook variant.
-  const ruleGrid = findSheet(grids, /rules specifications?|rules repository|e\+\s*rules?\s*specs?/i, /optional/i)
+  const ruleGrid = findSheet(grids, /rules specifications?|rules repository|rule references|e\+\s*rules?\s*specs?/i, /optional/i)
   const optGrid  = findSheet(grids, /optional forms rules/i)
   // "PROPERTY ROC" and the exact sheet name "ROC" are the Property/IM Rate Order of Calculations.
   const rateGrid = findSheet(grids, /rating specifications?|property roc|^roc$|e\+\s*rat/i)
