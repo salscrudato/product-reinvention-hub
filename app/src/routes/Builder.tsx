@@ -11,7 +11,7 @@ import { useUser } from '../context/useUser'
 import { usePortfolioInventory } from '../lib/usePortfolioInventory'
 import { Skeleton, EmptyState, RefChip, LifecyclePill } from '../components/ui'
 import {
-  IconSparkle, IconUpload, IconCopy, IconPlus, IconArrowUp, IconArrowRight,
+  IconUpload, IconCopy, IconPlus, IconArrowUp, IconArrowRight,
   IconWand, IconCoverage, IconForm, IconTrash, type IconType,
 } from '../components/ui/icons'
 import { NewProductModal } from '../components/product/NewProductModal'
