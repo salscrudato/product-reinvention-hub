@@ -128,8 +128,28 @@ export default function Home() {
   // Cockpit data — realtime, with genuine loading / error states (see useLiveCollection).
   const tasks    = useLiveCollection<Task>('tasks')
   const products = useLiveCollection<Product>('products')
-  // Fixed at mount so streaming chat tokens don't re-sort the rail on every keystroke.
   const now = useMemo(() => Date.now(), [])
+
+  const [busUnit,     setBusUnit]     = useState('')
+  const [productName, setProductName] = useState('')
+
+  const busUnitOptions = useMemo(() => {
+    const seen = new Set<string>()
+    products.items.forEach(p => { if (p.lob?.name) seen.add(p.lob.name) })
+    return [...seen].sort()
+  }, [products.items])
+
+  const productOptions = useMemo(() => {
+    const base = products.items.filter(p => !busUnit || p.lob?.name === busUnit)
+    const seen = new Set<string>()
+    base.forEach(p => seen.add(p.name))
+    return [...seen].sort()
+  }, [products.items, busUnit])
+
+  const filteredProducts = useMemo(() => products.items.filter(p =>
+    (!busUnit     || p.lob?.name === busUnit) &&
+    (!productName || p.name      === productName)
+  ), [products.items, busUnit, productName])
 
   // Search index powers citation → entity navigation (best-effort; not a rendered panel).
   useEffect(() => {
@@ -256,7 +276,38 @@ export default function Home() {
 
   const empty = messages.length === 0
 
+  const selectCls = "h-9 pl-3 pr-8 rounded-[10px] bg-surface border border-border-strong text-sm text-text appearance-none focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent"
+
   return (
+    <div className="flex flex-col gap-4">
+
+    {/* Filter bar */}
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="relative">
+        <select value={busUnit} onChange={e => { setBusUnit(e.target.value); setProductName('') }}
+          aria-label="Filter by business unit" className={selectCls}>
+          <option value="">All business units</option>
+          {busUnitOptions.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-faint" width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div className="relative">
+        <select value={productName} onChange={e => setProductName(e.target.value)}
+          aria-label="Filter by product" className={selectCls} disabled={productOptions.length === 0}>
+          <option value="">All products</option>
+          {productOptions.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-faint" width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      {(busUnit || productName) && (
+        <button onClick={() => { setBusUnit(''); setProductName('') }}
+          className="h-9 px-3 rounded-[10px] text-sm text-dim hover:text-danger transition-colors"
+          style={{ border: '1px solid var(--color-border)' }}>
+          Clear filters
+        </button>
+      )}
+    </div>
+
     <div
       className="flex flex-col gap-6 lg:grid lg:h-full lg:min-h-0"
       // The rail column springs between full width and a slim edge affordance;
@@ -387,9 +438,9 @@ export default function Home() {
               </button>
               <PriorityRail
                 status={combineStatus(tasks.status, products.status)}
-                tasks={tasks.items} products={products.items} now={now}
+                tasks={tasks.items} products={filteredProducts} now={now}
               />
-              <PortfolioMetrics products={products.items} />
+              <PortfolioMetrics products={filteredProducts} />
             </div>
           </>
         ) : (
@@ -414,6 +465,7 @@ export default function Home() {
           </button>
         )}
       </aside>
+    </div>
     </div>
   )
 }
