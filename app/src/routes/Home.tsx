@@ -77,6 +77,20 @@ function ChatResponseCard({ card, onCite }: { card: ChatCard; onCite: (cite: str
   )
 }
 
+// ─── Product catalog — fixed taxonomy used by the filter dropdowns ───────────────
+const BUS_UNITS = ['Personal Lines', 'Small Commercial', 'Middle Market', 'E&S'] as const
+
+const PRODUCT_CATALOG: { name: string; busUnit: string }[] = [
+  { name: 'Homeowners',                    busUnit: 'Personal Lines'   },
+  { name: 'Personal Auto',                 busUnit: 'Personal Lines'   },
+  { name: 'Personal Umbrella',             busUnit: 'Personal Lines'   },
+  { name: 'Personal Floater',              busUnit: 'Personal Lines'   },
+  { name: 'Commercial Property',           busUnit: 'Small Commercial' },
+  { name: 'Commercial General Liability',  busUnit: 'Small Commercial' },
+  { name: 'Inland Marine',                 busUnit: 'Small Commercial' },
+  { name: 'Commercial Auto',               busUnit: 'Small Commercial' },
+]
+
 // ─── Cockpit ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -133,22 +147,13 @@ export default function Home() {
   const [busUnit,     setBusUnit]     = useState('')
   const [productName, setProductName] = useState('')
 
-  const busUnitOptions = useMemo(() => {
-    const seen = new Set<string>()
-    products.items.forEach(p => { if (p.lob?.name) seen.add(p.lob.name) })
-    return [...seen].sort()
-  }, [products.items])
-
-  const productOptions = useMemo(() => {
-    const base = products.items.filter(p => !busUnit || p.lob?.name === busUnit)
-    const seen = new Set<string>()
-    base.forEach(p => seen.add(p.name))
-    return [...seen].sort()
-  }, [products.items, busUnit])
+  const productOptions = useMemo(() =>
+    !busUnit ? PRODUCT_CATALOG.map(c => c.name) : PRODUCT_CATALOG.filter(c => c.busUnit === busUnit).map(c => c.name)
+  , [busUnit])
 
   const filteredProducts = useMemo(() => products.items.filter(p =>
-    (!busUnit     || p.lob?.name === busUnit) &&
-    (!productName || p.name      === productName)
+    (!busUnit     || PRODUCT_CATALOG.some(c => c.name === p.name && c.busUnit === busUnit)) &&
+    (!productName || p.name === productName)
   ), [products.items, busUnit, productName])
 
   // Search index powers citation → entity navigation (best-effort; not a rendered panel).
@@ -287,7 +292,7 @@ export default function Home() {
         <select value={busUnit} onChange={e => { setBusUnit(e.target.value); setProductName('') }}
           aria-label="Filter by business unit" className={selectCls}>
           <option value="">All business units</option>
-          {busUnitOptions.map(o => <option key={o} value={o}>{o}</option>)}
+          {BUS_UNITS.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-faint" width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </div>
