@@ -19,7 +19,6 @@ import { useDebounce } from '../lib/useDebounce'
 import { Button, Skeleton, EmptyState } from '../components/ui'
 import { IconPlus, IconDownload, IconProduct, IconSearch, IconCards, IconLayers, IconRefresh } from '../components/ui/icons'
 import { ProductCard } from '../components/product/ProductCard'
-import { DeleteProductDialog } from '../components/product/DeleteProductDialog'
 import { RetireProductDialog } from '../components/product/RetireProductDialog'
 import { PageHero } from '../components/ui/PageHero'
 import { ProductHierarchy } from '../components/product/ProductHierarchy'
@@ -63,14 +62,12 @@ export default function Products() {
   const debouncedQuery = useDebounce(query, 200)
   const [seg,      setSeg]      = useState<SegmentSelection>({})
   const [exporting, setExporting] = useState(false)
-  // ALWAYS defaults to the Hierarchy view on load (per product direction);
-  // ?view= (e.g. the post-promotion landing) switches it for this visit only.
-  const [view, setView] = useState<ProductView>('tree')
+  // Defaults to Cards view; ?view= (e.g. the post-promotion landing) switches it for this visit only.
+  const [view, setView] = useState<ProductView>('cards')
   // EX-01: the Hierarchy renders collapsed by default; this toolbar signal sweeps
   // every node open/closed (each firing = a fresh epoch; nodes stay individually
   // toggleable in between).
   const [bulk, setBulk] = useState<{ mode: 'expand' | 'collapse'; epoch: number }>({ mode: 'collapse', epoch: 0 })
-  const [deleteFor,  setDeleteFor]  = useState<WithId<Product> | null>(null)
   const [retireFor,  setRetireFor]  = useState<WithId<Product> | null>(null)
   const [showRetired, setShowRetired] = useState(false)
   // Keyboard cursor over the visible results — driven from the search field
@@ -182,7 +179,7 @@ export default function Products() {
       <PageHero
         glyph="products"
         title="Products"
-        subtitle={`${launched.length} published product${launched.length !== 1 ? 's' : ''}`}
+
         stats={!loading && launched.length > 0 ? (
           <div className="flex items-center gap-2 mt-1.5 text-xs text-dim tnum flex-wrap">
             <span>{kpis.lines} line{kpis.lines !== 1 ? 's' : ''} of business</span>
@@ -197,11 +194,6 @@ export default function Products() {
             {launched.length > 0 && (
               <Button variant="ghost" size="sm" onClick={exportPortfolio} disabled={exporting}>
                 <IconDownload size={14} />{exporting ? 'Exporting…' : 'Export'}
-              </Button>
-            )}
-            {canEdit && (
-              <Button variant="primary" size="sm" onClick={() => navigate('/app/builder')}>
-                <IconPlus size={14} />New draft
               </Button>
             )}
           </>
@@ -305,7 +297,7 @@ export default function Products() {
               one motion language. Capped + reduced-motion-neutralised (see index.css). */}
           {visible.map((p, i) => (
             <div key={p.id} className="rise-in h-full" style={{ '--rise-delay': `${Math.min(i, 8) * 40}ms` } as React.CSSProperties}>
-              <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} onRetire={() => setRetireFor(p)}
+              <ProductCard p={p} canEdit={canEdit} onRetire={() => setRetireFor(p)}
                 highlight={debouncedQuery} focused={i === focusIdx || p.id === promotedId} />
             </div>
           ))}
@@ -331,7 +323,7 @@ export default function Products() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 opacity-60">
               {retired.map(p => (
                 <div key={p.id} className="h-full">
-                  <ProductCard p={p} canEdit={canEdit} onDelete={() => setDeleteFor(p)} />
+                  <ProductCard p={p} canEdit={canEdit} />
                 </div>
               ))}
             </div>
@@ -339,14 +331,6 @@ export default function Products() {
         </div>
       )}
 
-      {deleteFor && user && (
-        <DeleteProductDialog
-          product={deleteFor}
-          actor={{ uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }}
-          onClose={() => setDeleteFor(null)}
-          onDeleted={() => setDeleteFor(null)}
-        />
-      )}
       {retireFor && user && (
         <RetireProductDialog
           product={retireFor}

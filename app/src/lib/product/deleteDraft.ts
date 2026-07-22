@@ -33,19 +33,20 @@ export async function deleteProduct(
   // 1) Subcollection entities (coverages, rules, form-rules, rating programs).
   for (const { coll, entityType } of SUBCOLLECTIONS) {
     const docs = await adapter.db.list<{ id: string }>(`products/${pid}/${coll}`)
-    for (const d of docs) {
-      // Delete is last-write-wins: cascade deletes are idempotent, so no expectedRev needed.
-      await adapter.db.mutate({ op: 'delete', path: `products/${pid}/${coll}/${d.id}`, entityType, productId: pid, actor })
-    }
+    if (docs.length === 0) continue
+    await adapter.db.mutateBatch(
+      docs.map(d => ({ op: 'delete' as const, path: `products/${pid}/${coll}/${d.id}`, entityType, productId: pid, actor })),
+    )
   }
 
   // 2) Lifecycle tasks for this product (top-level `tasks` collection).
   const tasks = await adapter.db.list<{ id: string }>('tasks', {
     where: [{ field: 'productId', op: '==', value: pid }],
   })
-  for (const t of tasks) {
-    // Delete is last-write-wins: cascade deletes are idempotent, so no expectedRev needed.
-    await adapter.db.mutate({ op: 'delete', path: `tasks/${t.id}`, entityType: 'task', productId: pid, actor })
+  if (tasks.length > 0) {
+    await adapter.db.mutateBatch(
+      tasks.map(t => ({ op: 'delete' as const, path: `tasks/${t.id}`, entityType: 'task', productId: pid, actor })),
+    )
   }
 
   // 3) Draft-namespaced forms only. Scaffolded drafts mint forms with a `${pid}__` id and
@@ -54,10 +55,11 @@ export async function deleteProduct(
   const forms = await adapter.db.list<{ id: string; productRefIds?: string[] }>('forms', {
     where: [{ field: 'productRefIds', op: 'array-contains', value: pid }],
   })
-  for (const f of forms) {
-    if (!f.id.startsWith(`${pid}__`)) continue
-    // Delete is last-write-wins: cascade deletes are idempotent, so no expectedRev needed.
-    await adapter.db.mutate({ op: 'delete', path: `forms/${f.id}`, entityType: 'form', productId: pid, actor })
+  const ownedForms = forms.filter(f => f.id.startsWith(`${pid}__`))
+  if (ownedForms.length > 0) {
+    await adapter.db.mutateBatch(
+      ownedForms.map(f => ({ op: 'delete' as const, path: `forms/${f.id}`, entityType: 'form', productId: pid, actor })),
+    )
   }
 
   // 4) Global tables owned by this product. The filing importer tags ldTable/rtTable
@@ -66,18 +68,21 @@ export async function deleteProduct(
   const ldList = await adapter.db.list<{ id: string }>('ldTables', {
     where: [{ field: 'productId', op: '==', value: pid }],
   })
-  for (const t of ldList) {
-    await adapter.db.mutate({ op: 'delete', path: `ldTables/${t.id}`, entityType: 'ldTable', productId: pid, actor })
+  if (ldList.length > 0) {
+    await adapter.db.mutateBatch(
+      ldList.map(t => ({ op: 'delete' as const, path: `ldTables/${t.id}`, entityType: 'ldTable', productId: pid, actor })),
+    )
   }
   const rtList = await adapter.db.list<{ id: string }>('rtTables', {
     where: [{ field: 'productId', op: '==', value: pid }],
   })
-  for (const t of rtList) {
-    await adapter.db.mutate({ op: 'delete', path: `rtTables/${t.id}`, entityType: 'rtTable', productId: pid, actor })
+  if (rtList.length > 0) {
+    await adapter.db.mutateBatch(
+      rtList.map(t => ({ op: 'delete' as const, path: `rtTables/${t.id}`, entityType: 'rtTable', productId: pid, actor })),
+    )
   }
 
   // 5) Finally the product shell itself.
-  // Delete is last-write-wins: product deletion is the terminal step of a cascade, so no expectedRev needed.
   await adapter.db.mutate({ op: 'delete', path: `products/${pid}`, entityType: 'product', productId: pid, actor })
 }
 

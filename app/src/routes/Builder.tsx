@@ -53,7 +53,7 @@ export default function Builder() {
   )
   const inventory = usePortfolioInventory(drafts, drafts.length > 0)
 
-  const openDraft = (id: string) => { setModal(null); navigate(`/app/products/${id}/overview`) }
+  const openDraft = (id: string) => { setModal(null); navigate(`/app/builder/${id}/overview`) }
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,7 +95,7 @@ export default function Builder() {
                 covCount={inventory.byProduct.get(p.id)?.coverages.length}
                 formCount={inventory.byProduct.get(p.id)?.forms.length}
                 canEdit={canEdit}
-                onOpen={() => navigate(`/app/products/${p.id}/overview`)}
+                onOpen={() => navigate(`/app/builder/${p.id}/overview`)}
                 onPromote={() => setPromoteFor(p)}
                 onDelete={() => setDeleteFor(p)}
               />

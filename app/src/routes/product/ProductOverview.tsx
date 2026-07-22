@@ -11,7 +11,7 @@ import { Skeleton } from '../../components/ui'
 import { ProductVitals } from '../../components/product/ProductVitals'
 import { ProductSummaryDashboard } from '../../components/product/ProductSummaryDashboard'
 import { ProductDetailsCard } from '../../components/product/ProductDetailsCard'
-import { FootprintPanel, CompositionPanel } from '../../components/product/OverviewInsights'
+import { FootprintPanel } from '../../components/product/OverviewInsights'
 
 export default function ProductOverview() {
   const { loading } = useProductCtx()
@@ -57,9 +57,6 @@ export default function ProductOverview() {
         <aside className="flex flex-col gap-6 min-w-0 xl:sticky xl:top-4" aria-label="Product visuals">
           <div className="rise-in" style={{ '--rise-delay': '110ms' } as React.CSSProperties}>
             <FootprintPanel />
-          </div>
-          <div className="rise-in" style={{ '--rise-delay': '180ms' } as React.CSSProperties}>
-            <CompositionPanel />
           </div>
         </aside>
       </div>

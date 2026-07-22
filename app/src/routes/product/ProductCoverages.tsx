@@ -30,7 +30,7 @@ import { CoverageTree } from '../../components/product/CoverageTree'
 import type { CoverageAspect } from '../../components/product/coverageAspects'
 import { TermOptionsDialog } from '../../components/product/TermOptionsDialog'
 import { CoverageStatesDialog } from '../../components/product/CoverageStatesDialog'
-import { CoverageFormsDialog } from '../../components/product/CoverageFormsDialog'
+
 import { CoverageEditDialog } from '../../components/product/CoverageEditDialog'
 import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
@@ -76,13 +76,13 @@ export default function ProductCoverages() {
   }, [filters.reconciliation])
 
   // Aspect editors (dialogs) + coverage create/edit.
-  const [dialog, setDialog] = useState<{ kind: 'limits' | 'deductibles' | 'options' | 'states' | 'forms'; cov: WithId<Coverage> } | null>(null)
+  const [dialog, setDialog] = useState<{ kind: 'limits' | 'deductibles' | 'options' | 'states'; cov: WithId<Coverage> } | null>(null)
   const [editCov, setEditCov] = useState<WithId<Coverage> | 'new' | null>(null)
   const [deletePending, setDeletePending] = useState<WithId<Coverage> | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  // Which parent card's sub-coverage tree is expanded (cards view only). One at a time.
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Which parent cards' sub-coverage trees are expanded (cards view only). Multiple at a time.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
   // Feedback capture context: publish the coverage whose detail/editor is open as the focused
   // entity, so ⌘. attaches that exact coverage + its refId. Cleared when nothing specific is open.
@@ -122,19 +122,24 @@ export default function ProductCoverages() {
     [topLevel, subsByParent, passing],
   )
 
-  // Keep the expansion honest: collapse if the expanded card is no longer on screen, or if
-  // the view left cards mode.
+  // Keep the expansion honest: collapse any card no longer on screen, or clear all if view leaves cards.
   useEffect(() => {
-    if (expandedId && (view !== 'cards' || !cards.some((c) => c.id === expandedId))) setExpandedId(null)
-  }, [cards, view, expandedId])
+    if (expandedIds.size === 0) return
+    if (view !== 'cards') { setExpandedIds(new Set()); return }
+    const cardIds = new Set(cards.map(c => c.id))
+    setExpandedIds(prev => {
+      const filtered = new Set([...prev].filter(id => cardIds.has(id)))
+      return filtered.size === prev.size ? prev : filtered
+    })
+  }, [cards, view]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Esc collapses the open sub-coverage tree.
+  // Esc collapses all open sub-coverage trees.
   useEffect(() => {
-    if (!expandedId) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpandedId(null) }
+    if (expandedIds.size === 0) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpandedIds(new Set()) }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [expandedId])
+  }, [expandedIds.size])
 
   // A deep link (?cov=<id|refId>) auto-opens that coverage's Limits editor once,
   // after coverages have loaded (guarded so closing it doesn't reopen).
@@ -148,7 +153,7 @@ export default function ProductCoverages() {
   }, [coverages, params])
 
   function onTile(aspect: CoverageAspect, cov: WithId<Coverage>) {
-    if (aspect === 'limits' || aspect === 'deductibles' || aspect === 'options' || aspect === 'states' || aspect === 'forms') {
+    if (aspect === 'limits' || aspect === 'deductibles' || aspect === 'options' || aspect === 'states') {
       setDialog({ kind: aspect, cov })
     } else {
       navigate(`/app/products/${pid}/${aspect}?cov=${encodeURIComponent(cov.refId ?? cov.id)}`)
@@ -267,8 +272,8 @@ export default function ProductCoverages() {
               <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                 {cards.map((cov, i) => {
                   const subs = subsByParent.get(cov.refId ?? '') ?? []
-                  const isExpanded = expandedId === cov.id
-                  const dimmed = expandedId != null && !isExpanded
+                  const isExpanded = expandedIds.has(cov.id)
+                  const dimmed = false
                   return (
                     <Fragment key={cov.id}>
                       <div
@@ -280,7 +285,7 @@ export default function ProductCoverages() {
                           parentName={cov.parentId ? parentName(cov.parentId) : undefined}
                           subCount={subs.length}
                           expanded={isExpanded}
-                          onToggleSubs={subs.length ? () => setExpandedId(isExpanded ? null : cov.id) : undefined}
+                          onToggleSubs={subs.length ? () => setExpandedIds(prev => { const n = new Set(prev); isExpanded ? n.delete(cov.id) : n.add(cov.id); return n }) : undefined}
                           {...hubProps(cov)}
                         />
                       </div>
@@ -300,7 +305,7 @@ export default function ProductCoverages() {
                               </div>
                               <button
                                 type="button"
-                                onClick={() => setExpandedId(null)}
+                                onClick={() => setExpandedIds(prev => { const n = new Set(prev); n.delete(cov.id); return n })}
                                 className="inline-flex items-center gap-1 h-7 px-2.5 rounded-[8px] text-[12px] font-medium text-dim hover:text-text hover:bg-hover transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                               >
                                 <IconChevronDown size={13} className="rotate-180" />Collapse
@@ -336,7 +341,6 @@ export default function ProductCoverages() {
       {dialog?.kind === 'deductibles' && <TermOptionsDialog cov={dialog.cov} mode="DEDUCTIBLE" onClose={() => setDialog(null)} />}
       {dialog?.kind === 'options' && <TermOptionsDialog cov={dialog.cov} mode="OPTION" onClose={() => setDialog(null)} />}
       {dialog?.kind === 'states' && <CoverageStatesDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
-      {dialog?.kind === 'forms' && <CoverageFormsDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
       {editCov !== null && <CoverageEditDialog cov={editCov === 'new' ? null : editCov} onClose={() => setEditCov(null)} />}
 
       {/* Delete confirmation — replaces the native window.confirm (A5) */}

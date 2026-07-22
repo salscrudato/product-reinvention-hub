@@ -226,7 +226,6 @@ export function ProductSummaryDashboard() {
         {state === 'loading' && !summary ? (
           <div className="flex flex-col gap-3">
             <Skeleton className="h-5 w-2/3" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-5/6" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">{[1,2,3,4].map(i => <Skeleton key={i} className="h-16 rounded-[12px]" />)}</div>
           </div>
         ) : state === 'error' && !summary ? (
           <div className="flex items-center gap-2 text-sm text-dim">
@@ -240,18 +239,6 @@ export function ProductSummaryDashboard() {
               <h3 className="text-[17px] font-bold text-text leading-snug">{summary.headline}</h3>
               <p className="text-sm text-dim leading-relaxed">{summary.overview}</p>
             </div>
-
-            {/* Highlight tiles */}
-            {summary.highlights?.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {summary.highlights.map((h, i) => (
-                  <div key={i} className="rounded-[12px] bg-raised px-3 py-2.5" style={{ border: '1px solid var(--color-border)' }}>
-                    <div className="text-[15px] font-bold text-text leading-tight tnum">{h.value}</div>
-                    <div className="text-[11px] text-faint mt-0.5">{h.label}</div>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Coverage highlights */}
             {summary.coverageHighlights?.length > 0 && (
