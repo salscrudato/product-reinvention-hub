@@ -291,10 +291,8 @@ describe('synthetic fixture B — cross-LOB CP Product Framework', () => {
     expect(plan.summary.sheetsRecognized).toContain('CP Product Framework')
   })
 
-  it('CP prefix not in LOB registry → falls back to DEFAULT_LOB (Personal Lines / Property)', () => {
-    // DEFAULT_LOB is Personal Home (PH). Once a CP LOB entry is added to lobRegistry,
-    // this test will need updating. For now it documents the fallback behaviour.
-    expect(plan.product?.data['marketSegment']).toBe('Personal Lines / Property')
+  it('CP prefix resolves to Commercial Lines / Property via lobRegistry', () => {
+    expect(plan.product?.data['marketSegment']).toBe('Commercial Lines / Property')
   })
 
   it('CP coverage entities are created with correct refIds', () => {

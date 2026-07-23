@@ -190,7 +190,7 @@ export async function importPlan(
   // ── Everything else: free batching (no intra-collection parent dependency) ────
   const freeGroups: [keyof typeof GROUPS, PlannedEntity[]][] = [
     ['ldTable', plan.ldTables],
-    ['rtTable', plan.rtTables],
+    ['rtTable', [...plan.rtTables, ...plan.ratePlaceholders]],
     ['form', plan.forms],
     ['rule', plan.rules],
     ['formRule', plan.formRules],
