@@ -20,7 +20,6 @@ import { useUser } from '../context/useUser'
 import { IconChevronLeft, IconChevronRight } from '../components/ui/icons'
 import { PriorityRail } from '../components/home/PriorityRail'
 import { PortfolioMetrics } from '../components/home/PortfolioMetrics'
-import { DailyBriefCard } from '../components/home/DailyBriefCard'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
 import { reportWebVitals } from '../lib/perf/reportWebVitals'
 import type { SearchIndexEntry, Task, Product } from '@pf/shared'
@@ -330,8 +329,6 @@ export default function Home() {
                   <h1 className="text-2xl font-bold text-text tracking-tight">Ask your product portfolio</h1>
                   <p className="text-sm text-dim max-w-md">Grounded in your coverages, forms, rules and rating tables — every answer cites its source.</p>
                 </div>
-                {/* The First Prompt — today's brief leads until a conversation takes over. */}
-                <DailyBriefCard products={products.items} tasks={tasks.items} />
               </div>
             ) : (
               <div className="flex flex-col gap-5 py-4" role="log" aria-live="off" aria-label="Conversation">
