@@ -16,7 +16,7 @@ import type {
   FormCategory, DynamicFieldType, RuleCategory, DynamicField,
   RTTable, LDTable, LDRow, RatingStep, RatingGroupSummary, CoverageTerm, TermKind,
 } from '../types'
-import { resolveLobByRefId, DEFAULT_LOB } from './lobRegistry'
+import { resolveLobByRefId, resolveLobByName, DEFAULT_LOB } from './lobRegistry'
 import { refIdToDocId } from './refId'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
 import { conservationEligible, runConservationPass } from '../import/mapper/conserve'
@@ -469,7 +469,7 @@ function countRefIdRows(grid: IsoGrid): number {
 // version copies are excluded first; then the candidate with the most real-refId rows wins.
 // Ties are warned with code ambiguous_sheet and the first candidate is returned.
 function selectFrameworkSheet(grids: IsoGrid[], ctx: Ctx): IsoGrid | undefined {
-  const FW_RE = /framework|product component model|component model/i
+  const FW_RE = /framework|product component model|component model|e\+\s*framework/i
   const candidates = grids.filter(g =>
     FW_RE.test(g.sheet) &&
     !IGNORE_SHEET.test(g.sheet) &&
@@ -2027,15 +2027,17 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
 
   const fwGrid   = selectFrameworkSheet(grids, ctx)
   // "Forms Library" is the IM/PR component-model template's name for the forms sheet.
-  const formGrid = findSheet(grids, /forms specifications?|forms library/i, /dynamic/i)
+  // "E+ Form Specs" is the E+ workbook variant.
+  const formGrid = findSheet(grids, /forms specifications?|forms library|e\+\s*form specs?/i, /dynamic/i)
   const dynGrid  = findSheet(grids, /forms dynamic|dynamic data/i)
   // "Rules Repository" is the IM/PR component-model template's name for the rules sheet.
-  const ruleGrid = findSheet(grids, /rules specifications?|rules repository/i, /optional/i)
+  // "E+ Rules Specs" is the E+ workbook variant.
+  const ruleGrid = findSheet(grids, /rules specifications?|rules repository|rule references|e\+\s*rules?\s*specs?/i, /optional/i)
   const optGrid  = findSheet(grids, /optional forms rules/i)
   // "PROPERTY ROC" and the exact sheet name "ROC" are the Property/IM Rate Order of Calculations.
-  const rateGrid = findSheet(grids, /rating specifications?|property roc|^roc$/i)
-  const rtGrid   = findSheet(grids, /rating tables|rate tables/i)
-  const ldGrid   = findSheet(grids, /limits and deductibles|limits & deductibles/i)
+  const rateGrid = findSheet(grids, /rating specifications?|property roc|^roc$|e\+\s*rat/i)
+  const rtGrid   = findSheet(grids, /rating tables|rate tables|e\+\s*rating\s*tables?/i)
+  const ldGrid   = findSheet(grids, /limits and deductibles|limits & deductibles|e\+\s*limits?/i)
 
   // parseFramework now returns FrameworkResult[] (multi-product aware) or null.
   const fwResults = fwGrid ? parseFramework(fwGrid, ctx, overlay) : null
@@ -2043,7 +2045,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
   // ── LOB resolution — driven by the first product's refId (line-agnostic). ──
   const firstFw = fwResults?.[0] ?? null
   const productRefId = firstFw?.productRefId ?? null
-  const lob = resolveLobByRefId(productRefId) ?? resolveLobByRefId(firstFw?.coverages[0]?.refId ?? null) ?? DEFAULT_LOB
+  const lob = resolveLobByRefId(productRefId) ?? resolveLobByRefId(firstFw?.coverages[0]?.refId ?? null) ?? resolveLobByName(firstFw?.lobName) ?? DEFAULT_LOB
   const lobRefId = firstFw?.lobRefId ?? `${lob.prefix}.LOB.001`
   const lobName = firstFw?.lobName || lob.name
   const productId = productRefId

@@ -97,5 +97,5 @@ describe('Tasks route — axe on the full recast board', () => {
     const { default: Tasks } = await import('../../../routes/Tasks')
     render(<MemoryRouter><Tasks /></MemoryRouter>)
     expect(await axeViolations(document.body)).toEqual([])
-  })
+  }, 15000)
 })

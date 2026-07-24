@@ -26,6 +26,13 @@ export function ProductVitals() {
     if (!product) return []
     const rated = coverages.filter(c => c.premiumGenerating).length
     const stateCount = product.states?.length ?? 0
+
+    // Deduplicate forms by number+edition so the same physical form imported
+    // against multiple coverages counts as one.
+    const uniqueFormCount = new Set(forms.map(f => `${f.number}__${f.edition}`)).size
+    // Deduplicate rules by id (belt-and-suspenders; subcollection docs are already unique).
+    const uniqueRuleCount = new Set(rules.map(r => r.id)).size
+
     return [
       {
         tab: 'coverages', icon: IconCoverage, value: String(coverages.length),
@@ -33,8 +40,8 @@ export function ProductVitals() {
         hint: rated > 0 ? `${rated} rated` : undefined,
       },
       {
-        tab: 'forms', icon: IconForm, value: String(forms.length),
-        label: forms.length === 1 ? 'Form' : 'Forms',
+        tab: 'forms', icon: IconForm, value: String(uniqueFormCount),
+        label: uniqueFormCount === 1 ? 'Form' : 'Forms',
       },
       {
         tab: 'pricing', icon: IconPricing,
@@ -48,8 +55,8 @@ export function ProductVitals() {
         label: product.allStates || stateCount !== 1 ? 'States' : 'State',
       },
       {
-        tab: 'rules', icon: IconRule, value: String(rules.length),
-        label: rules.length === 1 ? 'Rule' : 'Rules',
+        tab: 'rules', icon: IconRule, value: String(uniqueRuleCount),
+        label: uniqueRuleCount === 1 ? 'Rule' : 'Rules',
       },
     ]
   }, [product, coverages, rules, forms, ratingProgram])

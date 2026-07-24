@@ -20,7 +20,6 @@ import { useUser } from '../context/useUser'
 import { IconChevronLeft, IconChevronRight } from '../components/ui/icons'
 import { PriorityRail } from '../components/home/PriorityRail'
 import { PortfolioMetrics } from '../components/home/PortfolioMetrics'
-import { DailyBriefCard } from '../components/home/DailyBriefCard'
 import { useLiveCollection, combineStatus } from '../lib/useLiveCollection'
 import { reportWebVitals } from '../lib/perf/reportWebVitals'
 import type { SearchIndexEntry, Task, Product } from '@pf/shared'
@@ -77,6 +76,20 @@ function ChatResponseCard({ card, onCite }: { card: ChatCard; onCite: (cite: str
   )
 }
 
+// ─── Product catalog — fixed taxonomy used by the filter dropdowns ───────────────
+const BUS_UNITS = ['Personal Lines', 'Small Commercial', 'Middle Market', 'E&S'] as const
+
+const PRODUCT_CATALOG: { name: string; busUnit: string }[] = [
+  { name: 'Homeowners',                    busUnit: 'Personal Lines'   },
+  { name: 'Personal Auto',                 busUnit: 'Personal Lines'   },
+  { name: 'Personal Umbrella',             busUnit: 'Personal Lines'   },
+  { name: 'Personal Floater',              busUnit: 'Personal Lines'   },
+  { name: 'Commercial Property',           busUnit: 'Small Commercial' },
+  { name: 'Commercial General Liability',  busUnit: 'Small Commercial' },
+  { name: 'Inland Marine',                 busUnit: 'Small Commercial' },
+  { name: 'Commercial Auto',               busUnit: 'Small Commercial' },
+]
+
 // ─── Cockpit ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -128,8 +141,19 @@ export default function Home() {
   // Cockpit data — realtime, with genuine loading / error states (see useLiveCollection).
   const tasks    = useLiveCollection<Task>('tasks')
   const products = useLiveCollection<Product>('products')
-  // Fixed at mount so streaming chat tokens don't re-sort the rail on every keystroke.
   const now = useMemo(() => Date.now(), [])
+
+  const [busUnit,     setBusUnit]     = useState('')
+  const [productName, setProductName] = useState('')
+
+  const productOptions = useMemo(() =>
+    !busUnit ? PRODUCT_CATALOG.map(c => c.name) : PRODUCT_CATALOG.filter(c => c.busUnit === busUnit).map(c => c.name)
+  , [busUnit])
+
+  const filteredProducts = useMemo(() => products.items.filter(p =>
+    (!busUnit     || PRODUCT_CATALOG.some(c => c.name === p.name && c.busUnit === busUnit)) &&
+    (!productName || p.name === productName)
+  ), [products.items, busUnit, productName])
 
   // Search index powers citation → entity navigation (best-effort; not a rendered panel).
   // Drop deleted-entity tombstones: a delete UPSERTS its searchIndex row with `deleted:true`
@@ -261,7 +285,38 @@ export default function Home() {
 
   const empty = messages.length === 0
 
+  const selectCls = "h-9 pl-3 pr-8 rounded-[10px] bg-surface border border-border-strong text-sm text-text appearance-none focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent"
+
   return (
+    <div className="flex flex-col gap-4">
+
+    {/* Filter bar */}
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="relative">
+        <select value={busUnit} onChange={e => { setBusUnit(e.target.value); setProductName('') }}
+          aria-label="Filter by business unit" className={selectCls}>
+          <option value="">All business units</option>
+          {BUS_UNITS.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-faint" width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div className="relative">
+        <select value={productName} onChange={e => setProductName(e.target.value)}
+          aria-label="Filter by product" className={selectCls} disabled={productOptions.length === 0}>
+          <option value="">All products</option>
+          {productOptions.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-faint" width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      {(busUnit || productName) && (
+        <button onClick={() => { setBusUnit(''); setProductName('') }}
+          className="h-9 px-3 rounded-[10px] text-sm text-dim hover:text-danger transition-colors"
+          style={{ border: '1px solid var(--color-border)' }}>
+          Clear filters
+        </button>
+      )}
+    </div>
+
     <div
       className="flex flex-col gap-6 lg:grid lg:h-full lg:min-h-0"
       // The rail column springs between full width and a slim edge affordance;
@@ -279,8 +334,6 @@ export default function Home() {
                   <h1 className="text-2xl font-bold text-text tracking-tight">Ask your product portfolio</h1>
                   <p className="text-sm text-dim max-w-md">Grounded in your coverages, forms, rules and rating tables — every answer cites its source.</p>
                 </div>
-                {/* The First Prompt — today's brief leads until a conversation takes over. */}
-                <DailyBriefCard products={products.items} tasks={tasks.items} />
               </div>
             ) : (
               <div className="flex flex-col gap-5 py-4" role="log" aria-live="off" aria-label="Conversation">
@@ -392,9 +445,9 @@ export default function Home() {
               </button>
               <PriorityRail
                 status={combineStatus(tasks.status, products.status)}
-                tasks={tasks.items} products={products.items} now={now}
+                tasks={tasks.items} products={filteredProducts} now={now}
               />
-              <PortfolioMetrics products={products.items} />
+              <PortfolioMetrics products={filteredProducts} />
             </div>
           </>
         ) : (
@@ -419,6 +472,7 @@ export default function Home() {
           </button>
         )}
       </aside>
+    </div>
     </div>
   )
 }

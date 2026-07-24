@@ -57,7 +57,7 @@ export default function App() {
               <Route index                element={<Home />} />
               <Route path="products"      element={<Products />} />
 
-              {/* Product workspace — nested tabs */}
+              {/* Product workspace — nested tabs (Products portfolio context) */}
               <Route path="products/:id" element={<ProductWorkspace />}>
                 <Route index                element={<Navigate to="overview" replace />} />
                 <Route path="overview"      element={<ProductOverview />} />
@@ -69,6 +69,17 @@ export default function App() {
               </Route>
 
               <Route path="builder"    element={<Builder />} />
+
+              {/* Product workspace — nested tabs (Builder / drafts context) */}
+              <Route path="builder/:id" element={<ProductWorkspace />}>
+                <Route index                element={<Navigate to="overview" replace />} />
+                <Route path="overview"      element={<ProductOverview />} />
+                <Route path="coverages"     element={<ProductCoverages />} />
+                <Route path="forms"         element={<ProductForms />} />
+                <Route path="pricing"       element={<ProductPricing />} />
+                <Route path="states"        element={<ProductStates />} />
+                <Route path="rules"         element={<ProductRules />} />
+              </Route>
               <Route path="explorer"   element={<Explorer />} />
               <Route path="tasks"      element={<Tasks />} />
               <Route path="news"       element={<News />} />

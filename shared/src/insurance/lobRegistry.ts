@@ -238,7 +238,12 @@ export const PH_LOB: LobDefinition = {
   family:   'Property',
   sections: PH_SECTIONS,
   peril:    PH_PERIL,
-  footprintStates: ['AZ','CA','CO','FL','GA','IL','IN','MI','NC','OH','PA','SC','TN','TX','VA'],
+  footprintStates: [
+    'AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA',
+    'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM',
+    'NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA',
+    'WV','WI','WY',
+  ],
   // canonical additive fields
   code:                 'PH',
   displayName:          'Personal Home',
@@ -460,6 +465,20 @@ export function resolveLob(product?: { lob?: { refId?: string | null } | null } 
  *  Returns undefined when no line claims the prefix. */
 export function resolveLobByRefId(refId?: string | null): LobDefinition | undefined {
   return lobByPrefix(refId)
+}
+
+/** Resolve a LOB by its display name or common aliases (case-insensitive).
+ *  Used as a fallback when uploaded files name the LOB in a text field but
+ *  carry non-standard refId prefixes that the prefix matcher can't resolve. */
+export function resolveLobByName(name?: string | null): LobDefinition | undefined {
+  if (!name) return undefined
+  const n = name.trim().toLowerCase()
+  return Object.values(LOB_REGISTRY).find(l =>
+    l.name.toLowerCase() === n ||
+    l.displayName.toLowerCase() === n ||
+    n.includes(l.name.toLowerCase()) ||
+    n.includes(l.code.toLowerCase())
+  )
 }
 
 /** Entity-kind classification a refId's SCHEME SEGMENT carries, across every line's

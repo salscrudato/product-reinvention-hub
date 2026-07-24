@@ -191,7 +191,9 @@ export default function ProductPricing() {
   const rtGetter = useMemo(() => kit.makeRtGetter(rtTables), [kit, rtTables])
   const ldGetter = useMemo(() => kit.makeLdGetter(ldTables), [kit, ldTables])
   const debouncedInputs = useDebounced(inputs, 90)
-  const tablesReady = Object.keys(rtTables).length > 0 && Object.keys(ldTables).length > 0
+  const needsRt = !!ratingProgram?.steps.some(s => s.source.type === 'RT' || s.source.type === 'SPP')
+  const needsLd = !!ratingProgram?.steps.some(s => s.source.type === 'LD')
+  const tablesReady = (!needsRt || Object.keys(rtTables).length > 0) && (!needsLd || Object.keys(ldTables).length > 0)
 
   // Table refs a step needs that aren't loaded (a step points at a deleted/renamed table).
   // RT/SPP resolve in rtTables; LD in ldTables. Distinct, in first-seen order.

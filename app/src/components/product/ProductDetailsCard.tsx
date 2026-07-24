@@ -61,7 +61,7 @@ export function ProductDetailsCard() {
         </Row>
 
         <Row label="Line of business">
-          {canEdit ? (
+          {canEdit && product.lifecycle !== 'LAUNCHED' ? (
             <select value={product.lob?.refId ?? ''} aria-label="Line of business"
               onChange={e => { const l = LOB_OPTIONS.find(o => o.refId === e.target.value); if (l) void save({ lob: { refId: l.refId, name: l.name } }) }}
               className="h-8 px-2.5 rounded-[8px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25">
@@ -76,7 +76,7 @@ export function ProductDetailsCard() {
         </Row>
 
         <Row label="Market segment">
-          {canEdit ? (
+          {canEdit && product.lifecycle !== 'LAUNCHED' ? (
             <select value={product.marketSegment ?? ''} aria-label="Market segment"
               onChange={e => void save({ marketSegment: e.target.value })}
               className="h-8 px-2.5 rounded-[8px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25">

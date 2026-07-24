@@ -31,7 +31,7 @@ import {
 import { StateTileMap } from './StateTileMap'
 import type {
   Coverage, CoverageTerm, StandardOption, OptionValueType,
-  LimitStructure, DeductibleStructure, LimitBasis, PerilRule,
+  LimitStructure, DeductibleStructure, LimitBasis,
 } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
@@ -447,7 +447,7 @@ export function TermOptionsDialog({ cov, mode, onClose, filterStates }: Props) {
             ) : (
               <div className="flex flex-col gap-2">
                 {visibleOptions.map(o => (
-	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} peril={lob.perilModel} canEdit={canEdit}
+	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} canEdit={canEdit}
                     hasError={optionIssues(o.id).some(i => i.severity === 'error')}
                     onChange={next => setOptions(options.map(x => x.id === o.id ? next : x))}
                     onDefault={() => setOptions(options.map(x => ({ ...x, isDefault: x.id === o.id })))}
@@ -710,8 +710,8 @@ function RangeInput({ label, value, onChange, pct }: {
 
 // ─── One editable option row ─────────────────────────────────────────────────
 
-function OptionRow({ o, mode, scopeStates, peril, canEdit, hasError, onChange, onDefault, onRemove }: {
-	  o: StandardOption; mode: Mode; scopeStates: string[]; peril: PerilRule; canEdit: boolean; hasError: boolean
+function OptionRow({ o, mode, scopeStates, canEdit, hasError, onChange, onDefault, onRemove }: {
+	  o: StandardOption; mode: Mode; scopeStates: string[]; canEdit: boolean; hasError: boolean
 	  onChange: (o: StandardOption) => void; onDefault: () => void; onRemove: () => void
 	}) {
 	  const [expanded, setExpanded] = useState(false)
@@ -850,8 +850,7 @@ function OptionRow({ o, mode, scopeStates, peril, canEdit, hasError, onChange, o
 	                  <StateTileMap
 	                    active={activeSet}
 	                    footprint={footprintSet}
-	                    peril={peril}
-	                    onToggle={canEdit && !o.allStates ? handleToggleState : undefined}
+		                    onToggle={canEdit && !o.allStates ? handleToggleState : undefined}
 	                    canEdit={canEdit && !o.allStates}
 	                    labels={{
 	                      active: 'Option available',

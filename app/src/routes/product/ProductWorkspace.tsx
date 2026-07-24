@@ -36,6 +36,8 @@ function WorkspaceInner() {
   const { user }     = useUser()
   const canEdit      = canI(user, 'product:write')
   const activeTab    = TABS.find(t => pathname.includes(t.id))?.id ?? 'overview'
+  const isBuilderCtx = pathname.startsWith('/app/builder/')
+  const base         = isBuilderCtx ? '/app/builder' : '/app/products'
   const [historyOpen, setHistoryOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [promoteOpen, setPromoteOpen] = useState(false)
@@ -134,15 +136,15 @@ function WorkspaceInner() {
           {/* Back bar — consistent on every detail tab: return to the hub, or jump
               straight to a sibling product without going back first. */}
           <div className="flex items-center gap-2 mb-4 text-sm">
-            <button onClick={() => navigate('/app/products')}
+            <button onClick={() => navigate(base)}
               className="inline-flex items-center gap-1.5 -ml-1.5 px-1.5 py-1 rounded-[7px] text-dim hover:text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-              <IconBack size={15} aria-hidden="true" /> Products
+              <IconBack size={15} aria-hidden="true" /> {isBuilderCtx ? 'Builder' : 'Products'}
             </button>
             <span className="text-faint" aria-hidden="true">/</span>
             <div className="relative">
               <label htmlFor="pf-sibling-switch" className="sr-only">Switch to another product</label>
               <select id="pf-sibling-switch" value={pid}
-                onChange={e => { if (e.target.value !== pid) navigate(`/app/products/${e.target.value}/${activeTab}`) }}
+                onChange={e => { if (e.target.value !== pid) navigate(`${base}/${e.target.value}/${activeTab}`) }}
                 className="max-w-[280px] h-8 pl-2.5 pr-8 rounded-[8px] bg-surface border border-border-strong text-sm font-medium text-text truncate appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/25">
                 {(siblings.length ? siblings : [{ id: pid, name: product.name }]).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -210,9 +212,11 @@ function WorkspaceInner() {
                   <IconArrowUp size={14} aria-hidden="true" />Promote
                 </Button>
               )}
-              <Button variant="ghost" size="sm" onClick={() => setCommentsOpen(true)}>
-                <IconChat size={14} aria-hidden="true" />Comments
-              </Button>
+              {product.lifecycle !== 'LAUNCHED' && (
+                <Button variant="ghost" size="sm" onClick={() => setCommentsOpen(true)}>
+                  <IconChat size={14} aria-hidden="true" />Comments
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
                 <IconRecent size={14} aria-hidden="true" />History
               </Button>
@@ -227,7 +231,7 @@ function WorkspaceInner() {
         {TABS.map(tab => (
           <button
             key={tab.id}
-            onClick={() => navigate(`/app/products/${pid}/${tab.id}`)}
+            onClick={() => navigate(`${base}/${pid}/${tab.id}`)}
             aria-current={activeTab === tab.id ? 'page' : undefined}
             className={`shrink-0 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px rounded-t-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               activeTab === tab.id
