@@ -95,6 +95,9 @@ export default function ProductCoverages() {
 
   const filtered = filters.results
   const passing = useMemo(() => new Set(filtered.map((c) => c.id)), [filtered])
+  // The page's selected states (state facet) cascade into the per-coverage limit/deductible/
+  // option editors, so filtering on a state also narrows the limits shown to that state.
+  const selectedStates = filters.state.enums.state ?? []
   const parentName = (refId?: string | null) => coverages.find((c) => c.refId === refId)?.name
 
   // Sub-coverages grouped by their parent's refId, and the set of parent refIds that
@@ -332,9 +335,9 @@ export default function ProductCoverages() {
       )}
 
       {/* Aspect editors */}
-      {dialog?.kind === 'limits' && <TermOptionsDialog cov={dialog.cov} mode="LIMIT" onClose={() => setDialog(null)} />}
-      {dialog?.kind === 'deductibles' && <TermOptionsDialog cov={dialog.cov} mode="DEDUCTIBLE" onClose={() => setDialog(null)} />}
-      {dialog?.kind === 'options' && <TermOptionsDialog cov={dialog.cov} mode="OPTION" onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'limits' && <TermOptionsDialog cov={dialog.cov} mode="LIMIT" filterStates={selectedStates} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'deductibles' && <TermOptionsDialog cov={dialog.cov} mode="DEDUCTIBLE" filterStates={selectedStates} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'options' && <TermOptionsDialog cov={dialog.cov} mode="OPTION" filterStates={selectedStates} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'states' && <CoverageStatesDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'forms' && <CoverageFormsDialog cov={dialog.cov} onClose={() => setDialog(null)} />}
       {editCov !== null && <CoverageEditDialog cov={editCov === 'new' ? null : editCov} onClose={() => setEditCov(null)} />}

@@ -642,7 +642,7 @@ export default function HomeCheck() {
             <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--color-text)', letterSpacing: '-.014em' }}>HomeCheck</span>
           </div>
           <Link to="/" style={{ fontSize: 13, color: 'var(--color-dim)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-            Product Hub <IconArrowRight className="w-3 h-3" />
+            Product Reinvention Hub <IconArrowRight className="w-3 h-3" />
           </Link>
         </div>
       </nav>

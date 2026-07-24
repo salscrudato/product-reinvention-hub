@@ -29,7 +29,7 @@ export function Logo({ size = 28, className = '' }: { size?: number; className?:
   const gid = useId()
   const mid = useId()
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" className={className} role="img" aria-label="The Reinvention Engine">
+    <svg width={size} height={size} viewBox="0 0 32 32" className={className} role="img" aria-label="Product Reinvention Hub">
       <defs>
         <linearGradient id={gid} x1="4" y1="6" x2="26" y2="28" gradientUnits="userSpaceOnUse">
           <stop offset="0" style={{ stopColor: 'var(--color-accent-bright)' }} />

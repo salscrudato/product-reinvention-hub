@@ -20,6 +20,7 @@ import {
 	  IconPlus, IconTrash, IconStar, IconCheck, IconClose, IconInfo, IconWarning,
 	  IconSingle, IconLayers, IconSplit, IconCombine, IconScheduled,
 	  IconPercent, IconClock, IconPeril, IconLimit, IconDeductible, IconCheckSquare,
+	  IconFilter,
 	} from '../ui/icons'
 import { LIMIT_STRUCTURES, DEDUCTIBLE_STRUCTURES, LIMIT_BASES } from '../../lib/insurance/vocab'
 import {
@@ -83,9 +84,17 @@ function impliedType(structure: string): OptionValueType {
 
 const parseNum = (s: string) => { const n = Number(s.replace(/[,$%\s]/g, '')); return Number.isFinite(n) ? n : 0 }
 
-interface Props { cov: WithId<Coverage>; mode: Mode; onClose: () => void }
+interface Props {
+  cov: WithId<Coverage>
+  mode: Mode
+  onClose: () => void
+  // States selected in the Coverages page filter. When non-empty, the option table shows
+  // only options available in at least one of them (an all-states option always qualifies).
+  // Display-only: save() always persists the full option set, never the filtered view.
+  filterStates?: string[]
+}
 
-export function TermOptionsDialog({ cov, mode, onClose }: Props) {
+export function TermOptionsDialog({ cov, mode, onClose, filterStates }: Props) {
 	  const { pid, product, ldTables, coverages } = useProductCtx()
 	  const { user } = useUser()
 	  const canEdit = canI(user, 'product:write')
@@ -212,6 +221,14 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
   }
 
   const options = active?.optionSet ?? []
+  // State cascade (display-only): when the Coverages page is filtered to one or more states,
+  // the option table shows only options available in at least one — an all-states option
+  // always qualifies. Save writes the full set, so filtering never drops data.
+  const stateFilterSet = new Set(filterStates ?? [])
+  const filterActive = stateFilterSet.size > 0
+  const visibleOptions = filterActive
+    ? options.filter(o => o.allStates || o.states.some(s => stateFilterSet.has(s)))
+    : options
   const pct = active ? isPercentTerm(active) : false
   const impliedActive = impliedType(active?.structure ?? (mode === 'LIMIT' ? 'SINGLE' : 'FLAT'))
   // The Range Builder only makes sense for single-number values — split limits and
@@ -380,6 +397,22 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
               </div>
             )}
 
+            {/* State cascade status — the Coverages page state filter is narrowing this table.
+                Read-only here (clear it from the page's filter chips); shows what's applied so a
+                PM knows the view is filtered and that the full set is still what saves. */}
+            {filterActive && options.length > 0 && (
+              <div className="mb-2.5 flex items-center gap-1.5 flex-wrap text-[11px]">
+                <IconFilter size={12} className="text-accent shrink-0" aria-hidden="true" />
+                <span className="text-faint">
+                  Showing <span className="tnum tabular-nums text-dim">{visibleOptions.length}</span> of{' '}
+                  <span className="tnum tabular-nums text-dim">{options.length}</span> — available in
+                </span>
+                {[...stateFilterSet].sort().map(st => (
+                  <span key={st} className="px-1.5 py-0.5 rounded-[5px] font-mono bg-accent-soft text-accent">{st}</span>
+                ))}
+              </div>
+            )}
+
             {options.length === 0 ? (
               <div className="rounded-[12px] bg-raised py-10 flex flex-col items-center gap-3 text-center"
                 style={{ border: '1px dashed var(--color-border-strong)' }}>
@@ -400,9 +433,20 @@ export function TermOptionsDialog({ cov, mode, onClose }: Props) {
                   </Button>
                 )}
               </div>
+            ) : visibleOptions.length === 0 ? (
+              <div className="rounded-[12px] bg-raised py-8 flex flex-col items-center gap-2 text-center"
+                style={{ border: '1px dashed var(--color-border-strong)' }}>
+                <p className="text-sm font-medium text-dim">
+                  No {modeLabel}s available in {[...stateFilterSet].sort().join(', ')}
+                </p>
+                <p className="text-xs text-faint max-w-[280px] leading-relaxed">
+                  All {options.length} {modeLabel}{options.length === 1 ? '' : 's'} apply to other states — adjust the state
+                  filter on the Coverages page to see them.
+                </p>
+              </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {options.map(o => (
+                {visibleOptions.map(o => (
 	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} peril={lob.perilModel} canEdit={canEdit}
                     hasError={optionIssues(o.id).some(i => i.severity === 'error')}
                     onChange={next => setOptions(options.map(x => x.id === o.id ? next : x))}

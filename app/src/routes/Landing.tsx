@@ -557,7 +557,7 @@ export default function Landing() {
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">
         <div className="flex items-center gap-2.5">
           <Logo size={30} />
-          <span className="font-semibold text-text text-[15px] tracking-tight">The Reinvention Engine</span>
+          <span className="font-semibold text-text text-[15px] tracking-tight">Product Reinvention Hub</span>
         </div>
       </header>
 
@@ -601,7 +601,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="relative z-10 flex flex-col items-center gap-1.5 py-6 text-xs text-faint" style={{ borderTop: '1px solid var(--color-border)' }}>
-        <span>The Reinvention Engine · P&amp;C Insurance Product Management · {new Date().getFullYear()}</span>
+        <span>Product Reinvention Hub · P&amp;C Insurance Product Management · {new Date().getFullYear()}</span>
         <span>© {new Date().getFullYear()} Accenture</span>
         {/* Provenance mark — decoded at render (see _P1/_P2); credit-only per RISK-013. */}
         <span className="text-[9.5px] tracking-[.04em] opacity-60 select-none text-center leading-relaxed" aria-hidden="true">
