@@ -28,8 +28,8 @@ pool:
 variables:
   # Reused from the old pipeline. Most producthub-build vars described the OLD
   # CRA app (REACT_APP_*/Cosmos) and are irrelevant to the Vite build, which
-  # needs no build-time secrets (Firebase web config is public/in-bundle). The
-  # group is linked only to keep the name stable for future build-time vars.
+  # needs no build-time secrets. The group is linked only to keep the name
+  # stable for future build-time vars.
   - group: producthub-build
 
   - name: NODE_VERSION
