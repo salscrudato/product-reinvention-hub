@@ -8,7 +8,7 @@
   "display": "standalone",
   "orientation": "any",
   "background_color": "#F7F7FA",
-  "theme_color": "#0B57D6",
+  "theme_color": "#7C3AED",
   "categories": ["business", "productivity", "finance"],
   "icons": [
     { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },

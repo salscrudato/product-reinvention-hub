@@ -132,8 +132,13 @@ export default function Home() {
   const now = useMemo(() => Date.now(), [])
 
   // Search index powers citation → entity navigation (best-effort; not a rendered panel).
+  // Drop deleted-entity tombstones: a delete UPSERTS its searchIndex row with `deleted:true`
+  // (server envelope) rather than removing it, so an unfiltered index still surfaces products
+  // that no longer exist. Filter them out so nothing old is ever pulled in here.
   useEffect(() => {
-    const unsub = adapter.db.subscribe<SearchIndexEntry>('searchIndex', d => { if (Array.isArray(d)) setIndexEntries(d) })
+    const unsub = adapter.db.subscribe<SearchIndexEntry>('searchIndex', d => {
+      if (Array.isArray(d)) setIndexEntries(d.filter(e => !(e as SearchIndexEntry & { deleted?: boolean }).deleted))
+    })
     return unsub
   }, [])
 

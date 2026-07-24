@@ -712,6 +712,20 @@ router.post('/restore', requireCapability('product:write'), requireTenant, async
 // Eliminates the N client-round-trip cascade in deleteDraft.ts for large products.
 const PRODUCT_ID_RE = /^[A-Za-z0-9._-]{1,128}$/
 
+// Bounded-concurrency map — at most `limit` calls to fn in flight at once.
+async function mapPool(items, limit, fn) {
+  let i = 0
+  const run = async () => { while (i < items.length) { const idx = i++; await fn(items[idx]) } }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run))
+}
+
+// Concurrency for the child-entity cascade. Each product-owned entity has its OWN per-path
+// audit chain (chainHead id = idFor('chn', path)), so deletes of DISTINCT paths never contend
+// on the ifMatchETag guard in commitEnvelope — they parallelize safely with the full envelope
+// (entity + audit + version + searchIndex) intact per entity. The @azure/cosmos SDK retries
+// 429s, so a modest fan-out stays within RU budget.
+const CASCADE_CONCURRENCY = 16
+
 async function cascadeDeleteProduct(tid, productId, actor) {
   const store = storeFor(tid)
   let deleted = 0
@@ -719,7 +733,7 @@ async function cascadeDeleteProduct(tid, productId, actor) {
   const pid = productId
   const pk = `${tid}|${pid}`
 
-  const del = async (path, entityType) => {
+  const del = async ({ path, entityType }) => {
     try {
       await mutateInternal(tid, { op: 'delete', path, entityType, productId: pid }, actor, '/api/db/deleteProduct')
       deleted++
@@ -728,13 +742,19 @@ async function cascadeDeleteProduct(tid, productId, actor) {
     }
   }
 
+  // Gather every CHILD entity path FIRST (the product shell is deleted last, below), then
+  // delete them with bounded concurrency. A CORE import is ~1.6k entities; the prior serial
+  // loop ran one envelope round-trip at a time (a minute-plus), which is what made the
+  // Builder's "Delete draft" appear to hang. Concurrency cuts that to a few seconds.
+  const children = []
+
   // 1) Subcollections share the product partition (pk = `${tid}|${pid}`)
   for (const [coll, entityType] of [['coverages', 'coverage'], ['rules', 'rule'], ['formRules', 'formRule'], ['ratingPrograms', 'ratingProgram']]) {
     const { resources } = await store.items.query({
       query: `SELECT c.path FROM c WHERE c.kind='entity' AND c.coll=@coll AND c.pk=@pk AND c.tenantId=@tid`,
       parameters: [{ name: '@coll', value: coll }, { name: '@pk', value: pk }, { name: '@tid', value: tid }],
     }).fetchAll()
-    for (const r of resources) await del(String(r.path || '').replace(/^ent:/, ''), entityType)
+    for (const r of resources) children.push({ path: String(r.path || '').replace(/^ent:/, ''), entityType })
   }
 
   // 2) Lifecycle tasks tagged with this product
@@ -742,7 +762,7 @@ async function cascadeDeleteProduct(tid, productId, actor) {
     query: `SELECT c.path FROM c WHERE c.kind='entity' AND c.coll='tasks' AND c.tenantId=@tid AND c.data.productId=@pid`,
     parameters: [{ name: '@tid', value: tid }, { name: '@pid', value: pid }],
   }).fetchAll()
-  for (const t of tasks) await del(String(t.path || '').replace(/^ent:/, ''), 'task')
+  for (const t of tasks) children.push({ path: String(t.path || '').replace(/^ent:/, ''), entityType: 'task' })
 
   // 3) Draft-namespaced forms. Import writes forms/${pid}__${number}; the prefix guard
   //    ensures shared library forms (other products) are never touched.
@@ -753,7 +773,7 @@ async function cascadeDeleteProduct(tid, productId, actor) {
   for (const f of forms) {
     const lp = String(f.path || '').replace(/^ent:/, '')
     if (!lp.startsWith(`forms/${pid}__`)) continue
-    await del(lp, 'form')
+    children.push({ path: lp, entityType: 'form' })
   }
 
   // 4) LD + RT tables tagged with this product (import stamps data.productId)
@@ -762,11 +782,13 @@ async function cascadeDeleteProduct(tid, productId, actor) {
       query: `SELECT c.path FROM c WHERE c.kind='entity' AND c.coll=@coll AND c.tenantId=@tid AND c.data.productId=@pid`,
       parameters: [{ name: '@coll', value: coll }, { name: '@tid', value: tid }, { name: '@pid', value: pid }],
     }).fetchAll()
-    for (const t of tables) await del(String(t.path || '').replace(/^ent:/, ''), entityType)
+    for (const t of tables) children.push({ path: String(t.path || '').replace(/^ent:/, ''), entityType })
   }
 
-  // 5) Product shell last — the recoverable handle until all children are gone
-  await del(`products/${pid}`, 'product')
+  // Delete all children concurrently, then the product shell LAST — the recoverable handle
+  // stays until every child is gone (unchanged ordering invariant).
+  await mapPool(children, CASCADE_CONCURRENCY, del)
+  await del({ path: `products/${pid}`, entityType: 'product' })
 
   return { deleted, errors }
 }

@@ -62,6 +62,8 @@ export default function Products() {
   const [query,    setQuery]    = useState('')
   const debouncedQuery = useDebounce(query, 200)
   const [seg,      setSeg]      = useState<SegmentSelection>({})
+  const [lob,      setLob]      = useState<string | null>(null)          // Line-of-business filter
+  const [rating,   setRating]   = useState<'rated' | 'unrated' | null>(null)  // Rating filter
   const [exporting, setExporting] = useState(false)
   // ALWAYS defaults to the Hierarchy view on load (per product direction);
   // ?view= (e.g. the post-promotion landing) switches it for this visit only.
@@ -134,6 +136,21 @@ export default function Products() {
   const launched = useMemo(() => products.filter(p => p.lifecycle === 'LAUNCHED'), [products])
   const retired  = useMemo(() => products.filter(p => p.lifecycle === 'RETIRED'),  [products])
 
+  // Inventory (coverages per product) powers the hierarchy AND the Rating filter, so it loads
+  // for the whole launched set whenever there are products. "Rated" = has ≥1 premium-generating
+  // coverage. Loading here (not only in the tree view) is what lets the Rating filter work in
+  // both views; the portfolio is a curated set, so the per-product coverage reads stay modest.
+  const inventory = usePortfolioInventory(launched, launched.length > 0)
+  const ratedIds = useMemo(
+    () => new Set(launched.filter(p => (inventory.byProduct.get(p.id)?.coverages ?? []).some(c => c.premiumGenerating)).map(p => p.id)),
+    [launched, inventory.byProduct],
+  )
+  // Distinct lines of business across the published portfolio (drives the LOB filter chips).
+  const lobValues = useMemo(
+    () => [...new Set(launched.map(p => p.lob?.name).filter((n): n is string => !!n))].sort((a, b) => a.localeCompare(b)),
+    [launched],
+  )
+
   // Registry-driven facet axes — drive both the search haystack and the facet-chip rows.
   const axes = useMemo(() => deriveSegmentAxes(), [])
   const facetValues = (id: SegmentAxisId) => axes.find(a => a.id === id)?.values ?? []
@@ -141,8 +158,14 @@ export default function Products() {
   const toggleSeg = (id: SegmentAxisId, v: string) =>
     setSeg(prev => ({ ...prev, [id]: prev[id] === v ? undefined : v }))
 
-  // Segment facets narrow the portfolio first; search then runs over the narrowed set.
-  const segFiltered = useMemo(() => launched.filter(p => matchesSegments(p, seg)), [launched, seg])
+  // Segment + LOB + rating facets narrow the portfolio first; search then runs over the set.
+  const segFiltered = useMemo(
+    () => launched.filter(p =>
+      matchesSegments(p, seg)
+      && (lob ? (p.lob?.name ?? '') === lob : true)
+      && (rating ? (rating === 'rated' ? ratedIds.has(p.id) : !ratedIds.has(p.id)) : true)),
+    [launched, seg, lob, rating, ratedIds],
+  )
   const searchable = useMemo(() => segFiltered.map(p => ({ p, text: searchTextFor(p, axes) })), [segFiltered, axes])
   const fuse = useMemo(() => new Fuse(searchable, { keys: ['text'], threshold: 0.4, ignoreLocation: true }), [searchable])
   const visible = useMemo(
@@ -151,7 +174,7 @@ export default function Products() {
   )
 
   // Reset the keyboard cursor whenever the result set changes shape.
-  useEffect(() => { setFocusIdx(-1) }, [debouncedQuery, seg])
+  useEffect(() => { setFocusIdx(-1) }, [debouncedQuery, seg, lob, rating])
 
   function onSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') { e.preventDefault(); setFocusIdx(i => Math.min(i + 1, visible.length - 1)) }
@@ -171,10 +194,6 @@ export default function Products() {
     launched.forEach(p => (p.states ?? []).forEach(s => states.add(s)))
     return { lines, segments, statesCovered: allStates ? 'All' as const : states.size }
   }, [launched])
-
-  // Inventory data (coverages + forms) — loaded only while the hierarchy view is active.
-  const needsInventory = view !== 'cards'
-  const inventory = usePortfolioInventory(visible, needsInventory)
 
   return (
     <div className="flex flex-col gap-5">
@@ -271,6 +290,32 @@ export default function Products() {
         </div>
       )}
 
+      {/* Line-of-business + Rating filters. LOB chips appear only when the portfolio spans
+          more than one line; Rating (has ≥1 premium-generating coverage) is always offered. */}
+      {!loading && launched.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Line of business and rating filters">
+          {lobValues.length > 1 && (
+            <>
+              <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-faint">Line of business</span>
+              {lobValues.map(v => (
+                <FacetChip key={v} active={lob === v} onClick={() => setLob(l => (l === v ? null : v))}>{v}</FacetChip>
+              ))}
+              <span className="w-px h-4 mx-0.5 shrink-0" style={{ background: 'var(--color-border)' }} aria-hidden="true" />
+            </>
+          )}
+          <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-faint">Rating</span>
+          <FacetChip active={rating === 'rated'} onClick={() => setRating(r => (r === 'rated' ? null : 'rated'))}>Rated</FacetChip>
+          <FacetChip active={rating === 'unrated'} onClick={() => setRating(r => (r === 'unrated' ? null : 'unrated'))}>Not rated</FacetChip>
+          {(lob || rating) && (
+            <button onClick={() => { setLob(null); setRating(null) }}
+              className="h-7 px-2.5 rounded-[8px] text-xs text-dim hover:text-danger transition-colors"
+              style={{ border: '1px solid var(--color-border)' }}>
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1,2,3].map(i => (
@@ -292,10 +337,10 @@ export default function Products() {
           />
         ) : (
           <EmptyState icon={<IconProduct size={32} />}
-            title={query ? `No results for "${query}"` : (activeSeg > 0 ? 'No products match these filters' : 'No published products')}
-            description={query || activeSeg > 0 ? 'Adjust your search or segment filters to see published products.' : 'Adjust your search to see published products.'}
-            action={(query || activeSeg > 0)
-              ? <Button variant="ghost" size="sm" onClick={() => { setQuery(''); setSeg({}) }}>Clear search & filters</Button>
+            title={query ? `No results for "${query}"` : (activeSeg > 0 || lob || rating ? 'No products match these filters' : 'No published products')}
+            description={query || activeSeg > 0 || lob || rating ? 'Adjust your search or filters to see published products.' : 'Adjust your search to see published products.'}
+            action={(query || activeSeg > 0 || lob || rating)
+              ? <Button variant="ghost" size="sm" onClick={() => { setQuery(''); setSeg({}); setLob(null); setRating(null) }}>Clear search & filters</Button>
               : undefined}
           />
         )

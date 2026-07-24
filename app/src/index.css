@@ -31,11 +31,11 @@
      (white in light, near-black blue in dark). The vivid `--gradient-accent` /
      `--gradient-accent-vivid` button fills carry white ink in BOTH themes (their stops
      are deep-enough electric blues, AA-legible under white either way). */
-  --color-accent:        #0B57D6;
-  --color-accent-bright: #1E86FF;
-  --color-accent-strong: #0A45C0;
-  --color-accent-soft:   rgba(11,87,214,.08);
-  --color-accent-line:   rgba(11,87,214,.22);
+  --color-accent:        #7C3AED;
+  --color-accent-bright: #9D5CF5;
+  --color-accent-strong: #6D28D9;
+  --color-accent-soft:   rgba(124,58,237,.08);
+  --color-accent-line:   rgba(124,58,237,.22);
   --color-on-accent:     #FFFFFF;
 
   /* Success green — darkened from #059669 (3.4–3.8:1, below WCAG AA on every
@@ -92,8 +92,8 @@
   --duration-base: 220ms;    /* drawers, expands, toasts */
   --duration-slow: 350ms;    /* page-level slides, hero transitions */
 
-  --shadow-card:       0 1px 2px rgba(19,19,26,.04), 0 14px 34px rgba(11,87,214,.07);
-  --shadow-card-hover: 0 2px 4px rgba(19,19,26,.06), 0 20px 48px rgba(11,87,214,.15);
+  --shadow-card:       0 1px 2px rgba(19,19,26,.04), 0 14px 34px rgba(124,58,237,.07);
+  --shadow-card-hover: 0 2px 4px rgba(19,19,26,.06), 0 20px 48px rgba(124,58,237,.15);
 
   /* ── Semantic status soft tints ─────────────────────────────────────────────
      Badge backgrounds (.10) and interactive wash (.08/.14) aligned to AA-safe
@@ -154,17 +154,17 @@
    are always emitted and usable in inline style={{}} via var(). Change here to
    restyle every gradient surface, focus glow and SVG stroke in the app. */
 :root {
-  --gradient-accent:       linear-gradient(135deg, #0C6BF0 0%, #0A45C0 100%);
-  --gradient-accent-vivid: linear-gradient(120deg, #0C6BF0 0%, #0B57D6 48%, #0A3FB5 100%);
-  --gradient-accent-soft:  linear-gradient(135deg, rgba(12,107,240,.12) 0%, rgba(11,87,214,.09) 100%);
+  --gradient-accent:       linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+  --gradient-accent-vivid: linear-gradient(120deg, #7C3AED 0%, #6D28D9 48%, #5B21B6 100%);
+  --gradient-accent-soft:  linear-gradient(135deg, rgba(139,92,246,.12) 0%, rgba(124,58,237,.09) 100%);
   /* gradient-accent-TEXT — the gradient the `.gradient-text` utility clips to type. It is
      kept SEPARATE from `--gradient-accent` (the button/badge fill) because a clipped-text
      gradient needs contrast against the *page*, whereas a fill needs white ink to read on
      *it*. In light mode both happen to be the deep violet; in dark mode the text gradient
      lightens (see below) so hero headings stay legible while fills stay vivid. */
-  --gradient-accent-text:  linear-gradient(135deg, #1E86FF 0%, #0B57D6 100%);
-  --glow-accent:  rgba(11,87,214,.30);
-  --glow-accent-strong: rgba(11,87,214,.45);
+  --gradient-accent-text:  linear-gradient(135deg, #9D5CF5 0%, #7C3AED 100%);
+  --glow-accent:  rgba(124,58,237,.30);
+  --glow-accent-strong: rgba(124,58,237,.45);
 
   /* ── Motion durations — the interactive-transition band (200–400ms) ──────────
      Standard spring-band durations so hover/press/state transitions and the theme
@@ -184,14 +184,14 @@
 
   /* Browser-chrome colour (address/status bar via <meta name=theme-color>). Read at runtime by
      lib/theme.ts so no hex lives in the TS — light keeps the brand violet, dark uses the page. */
-  --chrome-color: #0B57D6;
+  --chrome-color: #7C3AED;
 
   /* ── Aurora background fills (Landing, MustChangePassword) ─────────────────
      Three elliptical glows staggered in size; values are the brand violet
      progressively darkened so the composition reads as a single light source. */
-  --gradient-aurora-a: radial-gradient(ellipse at center, rgba(30,134,255,.5) 0%, transparent 70%);
-  --gradient-aurora-b: radial-gradient(ellipse at center, rgba(10,69,192,.42) 0%, transparent 70%);
-  --gradient-aurora-c: radial-gradient(ellipse at center, rgba(11,87,214,.4) 0%, transparent 70%);
+  --gradient-aurora-a: radial-gradient(ellipse at center, rgba(157,92,245,.5) 0%, transparent 70%);
+  --gradient-aurora-b: radial-gradient(ellipse at center, rgba(109,40,217,.42) 0%, transparent 70%);
+  --gradient-aurora-c: radial-gradient(ellipse at center, rgba(124,58,237,.4) 0%, transparent 70%);
 
   /* ── Modal / command-palette overlays ──────────────────────────────────────
      Semi-transparent dark scrim + elevated panel shadow; used by Dialog and
@@ -209,7 +209,7 @@
   /* ── Product workspace hero gradient ────────────────────────────────────────
      A subtle accent wash behind the hero header card — same hue family as the
      accent but at very low opacity so product content stays legible over it. */
-  --gradient-hero: linear-gradient(135deg, rgba(11,87,214,.08) 0%, rgba(10,69,192,.06) 100%);
+  --gradient-hero: linear-gradient(135deg, rgba(124,58,237,.08) 0%, rgba(109,40,217,.06) 100%);
 
   /* ── Tab-strip inactive-hover border ────────────────────────────────────────
      Heavier than `--color-border` (.08) but lighter than `--color-border-strong`
@@ -240,9 +240,9 @@
 
   /* ── Landing insight-graph node glows (CSS filter drop-shadow) ──────────────
      Three depth levels: leaf circle (sm), feature circle (md), PM node (lg). */
-  --shadow-node-sm: drop-shadow(0 1px 5px rgba(11,87,214,.12));
-  --shadow-node-md: drop-shadow(0 3px 12px rgba(11,87,214,.14));
-  --shadow-node-lg: drop-shadow(0 8px 26px rgba(11,87,214,.36));
+  --shadow-node-sm: drop-shadow(0 1px 5px rgba(124,58,237,.12));
+  --shadow-node-md: drop-shadow(0 3px 12px rgba(124,58,237,.14));
+  --shadow-node-lg: drop-shadow(0 8px 26px rgba(124,58,237,.36));
 
   /* ── Combobox/input focused hover border (stronger than tab-strip hover) ─── */
   --color-border-hover-strong: rgba(19,19,26,.22);
@@ -297,12 +297,12 @@ html[data-theme="dark"] {
      (6.2:1 on the lightest dark surface). Bright + strong stay saturated for
      glows/gradients. on-accent is the near-black blue ink for a solid `bg-accent`
      fill (8:1). */
-  --color-accent:        #74AEFF;
-  --color-accent-bright: #5AA2FF;
-  --color-accent-strong: #3C7DE8;
-  --color-accent-soft:   rgba(116,174,255,.14);
-  --color-accent-line:   rgba(116,174,255,.30);
-  --color-on-accent:     #05132E;
+  --color-accent:        #B794FF;
+  --color-accent-bright: #A78BFA;
+  --color-accent-strong: #8B5CF6;
+  --color-accent-soft:   rgba(183,148,255,.14);
+  --color-accent-line:   rgba(183,148,255,.30);
+  --color-on-accent:     #160B2E;
 
   /* Status — the 400-level tints (AA as body text on dark: good 9.4, warn 10.9,
      danger 7, info 7.2 on surface). Danger is lightened one step past the 400 so
@@ -358,11 +358,11 @@ html[data-theme="dark"] {
   --color-ghost:  rgba(255,255,255,.035);
 
   /* Text gradient lightens (fills keep --gradient-accent); glow/hero wash intensify. */
-  --gradient-accent-text: linear-gradient(135deg, #74AEFF 0%, #1E86FF 100%);
-  --gradient-accent-soft: linear-gradient(135deg, rgba(116,174,255,.14) 0%, rgba(60,125,232,.10) 100%);
-  --gradient-hero:        linear-gradient(135deg, rgba(116,174,255,.10) 0%, rgba(60,125,232,.08) 100%);
-  --glow-accent:          rgba(30,134,255,.45);
-  --glow-accent-strong:   rgba(30,134,255,.60);
+  --gradient-accent-text: linear-gradient(135deg, #B794FF 0%, #9D5CF5 100%);
+  --gradient-accent-soft: linear-gradient(135deg, rgba(183,148,255,.14) 0%, rgba(139,92,246,.10) 100%);
+  --gradient-hero:        linear-gradient(135deg, rgba(183,148,255,.10) 0%, rgba(139,92,246,.08) 100%);
+  --glow-accent:          rgba(157,92,245,.45);
+  --glow-accent-strong:   rgba(157,92,245,.60);
 
   /* Overlays + panels — deeper scrims, dark glass. */
   --color-overlay:       rgba(0,0,0,.65);
