@@ -1,22 +1,19 @@
 ---
 description: Verify server-side enforcement of the mutation invariant + role matrix.
-allowed-tools: Bash(pnpm test:rules:*), Bash(pnpm run test:rules:*)
+allowed-tools: Bash(pnpm test:*), Bash(pnpm run test:*)
 ---
 
 Verify the server-side half of the mutation invariant and the role matrix
 (ADR-0002 + ADR-0003).
 
-Run: `pnpm test:rules`
+Run: `pnpm test`
 
-This starts its **own** Firestore emulator via `firebase emulators:exec --only firestore`
-(port 8080) and runs `tests/rules.test.ts`: VIEWER read-only, VIEWER feedback + one-vote
-path, EDITOR domain writes, ADMIN user writes, unauthenticated rejected, and create-only
-`auditEvents` / `versions`.
+This runs the full shared + app unit suite via Vitest, including:
+- Role-gated write checks (VIEWER, EDITOR, ADMIN, SUPER_ADMIN)
+- Audit hash-chain integrity (`/api/db/audit/verify`)
+- Atomic mutation envelope (entity + auditEvent + version + searchIndex in one batch)
+- Rating canaries: PH $1,528, PA $1,002, GL $2,635, filing-import $1,281
 
-**Port note:** it needs `8080` free — do **not** run it while `pnpm spinup` / `pnpm
-emulators` is holding that port. Run it standalone.
-
-Report ✅ / ❌ per assertion; on failure, name the rule in `firestore.rules` and the case
-that broke. Scope: this command covers the **rules-enforcement** layer. The atomic batch
-composition (entity + audit + version + searchIndex + rev) is guaranteed by the single
-`adapter.db.mutate()` write path (ADR-0002) and is exercised by driving a live edit.
+Report ✅ / ❌ per test suite; on failure, name the file and the failing assertion.
+The atomic batch composition is exercised by driving a live edit against the running
+server (`node server/server.js` with `COSMOS_DB=prodhub-sal`).

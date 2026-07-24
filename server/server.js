@@ -57,15 +57,11 @@ try { require('./lib/sys-diag').init() } catch (_) { /* non-fatal; host still bo
 
 app.disable('x-powered-by')
 
-// ─── CORS (Firebase Hosting → Azure API cross-origin support) ─────────────────
-// SPA on thereinventionengine3.web.app sends Bearer tokens via Authorization header;
-// no credentials:include needed, so Allow-Credentials is intentionally omitted.
-// Add CORS_ALLOWED_ORIGINS (space- or comma-separated) in env to extend this list.
-const _corsOrigins = new Set([
-  'https://thereinventionengine3.web.app',
-  'https://thereinventionengine3.firebaseapp.com',
-  ...(process.env.CORS_ALLOWED_ORIGINS || '').split(/[\s,]+/).filter(Boolean),
-])
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+// Add CORS_ALLOWED_ORIGINS (space- or comma-separated) in App Service settings.
+const _corsOrigins = new Set(
+  (process.env.CORS_ALLOWED_ORIGINS || '').split(/[\s,]+/).filter(Boolean),
+)
 app.use((req, res, next) => {
   const origin = req.headers.origin
   if (origin && _corsOrigins.has(origin)) {
@@ -76,6 +72,17 @@ app.use((req, res, next) => {
     res.set('Access-Control-Max-Age', '86400')
   }
   if (req.method === 'OPTIONS') return res.sendStatus(204)
+  next()
+})
+
+// ─── Security headers (previously set by Firebase Hosting; now Express-owned) ──
+app.use((_req, res, next) => {
+  res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  res.set('X-Content-Type-Options', 'nosniff')
+  res.set('X-Frame-Options', 'DENY')
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  res.set('Content-Security-Policy', "frame-ancestors 'none'")
   next()
 })
 
