@@ -1,5 +1,5 @@
 'use strict'
-// storage.js — /api/storage/* : object storage on Azure Blob (replaces Firebase Storage).
+// storage.js — /api/storage/* : object storage on Azure Blob.
 //
 // Wired from AZURE_BLOB_CONNECTION (+ AZURE_BLOB_CONTAINER, default "uploads").
 // Honest 503 until configured — never a fake URL. Uses @azure/storage-blob if the

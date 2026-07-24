@@ -42,7 +42,7 @@ function systemContainer() {
 
 // ─── Relying-party identity ──────────────────────────────────────────────────
 // WebAuthn binds credentials to the PAGE origin. The SPA may be served same-origin
-// (App Service, local Vite proxy) or cross-origin (Firebase Hosting → local API via
+// (App Service, local Vite proxy) or cross-origin (an allowed origin → local API via
 // the env-gated CORS shim), so the rpID/origin derive from the request's Origin
 // header when present, else the Host header. PASSKEY_RP_ID / PASSKEY_ORIGINS env
 // vars pin them explicitly when set (recommended for a stable deployed hostname).

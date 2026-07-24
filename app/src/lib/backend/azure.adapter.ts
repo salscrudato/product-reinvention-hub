@@ -1,14 +1,13 @@
 // azure.adapter.ts — the Azure implementation of BackendAdapter.
 //
 // Talks ONLY to the same-origin Azure host API (/api/*): JWT auth, Cosmos-backed
-// data, and Foundry-Claude AI. No Firebase, no GCloud. This is the swap target
-// for src/lib/backend/index.ts. The React app is unchanged — it depends only on
-// this contract (see types.ts).
+// data, and Foundry-Claude AI. Azure-only — no other cloud SDK. This is the swap
+// target for src/lib/backend/index.ts. The React app is unchanged — it depends
+// only on this contract (see types.ts).
 //
-// Real-time: Firestore onSnapshot has no Cosmos equivalent in the browser, so
-// subscribe() degrades to SMART POLLING (see the "smart polling" block below).
-// Semantics match the Firebase adapter: string paths only, even segments =
-// document, odd = collection, degrade to null/[] + onError on failure.
+// Real-time: Cosmos has no browser push channel, so subscribe() degrades to SMART
+// POLLING (see the "smart polling" block below). Path semantics: string paths only,
+// even segments = document, odd = collection, degrade to null/[] + onError on failure.
 
 import type { Unsubscribe } from '@pf/shared'
 import type { AuditSearchEvent, AuditSearchFilters, AuthUser, BackendAdapter, DraftDedupMatch, DuckCreekExportResult, ImportRunSummary, ImportRunTrace, ManagedUser, PortalPolicy, PortalSummary, PortfolioPulse, TenantMember, TenantMembership, TenantResolveResult, TenantSummary, MutationPayload, Query, Session, TenantInfo, Tier } from './types'

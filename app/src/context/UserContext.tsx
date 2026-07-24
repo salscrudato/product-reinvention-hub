@@ -1,5 +1,5 @@
-// Auth state, Firestore profile, and sign-in/out helpers for the whole app.
-// Never import firebase/* here — everything goes through the adapter seam.
+// Auth state, user profile, and sign-in/out helpers for the whole app.
+// Never import a platform SDK here — everything goes through the adapter seam.
 import { createContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { adapter } from '../lib/backend'
 import type { AuthUser } from '../lib/backend'

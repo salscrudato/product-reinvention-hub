@@ -131,10 +131,10 @@ const GUARDRAILS = `## Binding invariants (never violate)
 
 | Invariant | Rule |
 |---|---|
-| **Adapter seam** | All app reads/writes go through \`adapter\` (\`app/src/lib/backend/\`). Never import Firebase SDK directly in components. |
-| **Atomic mutations** | Every entity write uses \`adapter.db.mutate()\`. It batches entity + auditEvent + version + searchIndex atomically. No bare Firestore writes. |
-| **Role enforcement** | \`VIEWER\` is read-only. Enforced in Firestore security rules **and** in every Function — both sides, always. |
-| **AI server-side** | All Anthropic calls live in \`functions/\`. The browser never calls the Anthropic API. |
+| **Adapter seam** | All app reads/writes go through \`adapter\` (\`app/src/lib/backend/\`). Never import a platform SDK (Cosmos etc.) directly in components. |
+| **Atomic mutations** | Every entity write uses \`adapter.db.mutate()\`. The /api host batches entity + auditEvent + version + searchIndex in one Cosmos transactional batch. No bare data-store writes. |
+| **Role enforcement** | \`VIEWER\` is read-only. Enforced in the /api host **and** the adapter — both sides, always. |
+| **AI server-side** | All Anthropic calls live in \`server/\`. The browser never calls the Anthropic API. |
 | **AI grounded + cited** | AI responses must cite their source documents. Free invention is a bug. |
 | **refId / form chips** | \`refId\` and form-number chips are load-bearing display elements. Never strip them. |
 | **HO-3 $1,528 canary** | \`shared/src/rating/evaluator.test.ts\` must produce exactly $1,528. |
