@@ -153,12 +153,32 @@ export function RatingAlgorithm({ program, pid, trace, changedStepIds, rtTables,
 }) {
   const navigate = useNavigate()
   const [covModal, setCovModal] = useState<{ step: RatingStep; covs: WithId<Coverage>[] } | null>(null)
+  const [filterGroup, setFilterGroup] = useState<string>('')
+  const [filterText,  setFilterText]  = useState<string>('')
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
   const steps = useMemo(() => [...program.steps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [program.steps])
   const traceById = useMemo(() => new Map(trace.map(t => [t.stepId, t])), [trace])
+
+  // Unique group names (coverage-name groups set by the CORE importer via D5 concept-linker).
+  const groups = useMemo(() => {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const s of steps) { if (s.groupName && !seen.has(s.groupName)) { seen.add(s.groupName); out.push(s.groupName) } }
+    return out
+  }, [steps])
+
+  const filteredSteps = useMemo(() => {
+    let s = steps
+    if (filterGroup) s = s.filter(x => x.groupName === filterGroup)
+    if (filterText.trim()) {
+      const q = filterText.trim().toLowerCase()
+      s = s.filter(x => x.label.toLowerCase().includes(q) || (x.groupName ?? '').toLowerCase().includes(q))
+    }
+    return s
+  }, [steps, filterGroup, filterText])
 
   // Reverse coverage linkage: for each step, the coverages it helps price.
   const covsByStep = useMemo(() => {
@@ -214,26 +234,70 @@ export function RatingAlgorithm({ program, pid, trace, changedStepIds, rtTables,
           </span>
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-text truncate">Rating algorithm</h2>
-            <p className="text-[11px] text-faint">{steps.length} step{steps.length === 1 ? '' : 's'}{canEdit ? ' · drag to reorder' : ''}</p>
+            <p className="text-[11px] text-faint">
+              {filteredSteps.length !== steps.length
+                ? `${filteredSteps.length} of ${steps.length} step${steps.length === 1 ? '' : 's'}`
+                : `${steps.length} step${steps.length === 1 ? '' : 's'}`}
+              {canEdit && !filterGroup && !filterText ? ' · drag to reorder' : ''}
+            </p>
           </div>
         </div>
         {canEdit && <Button variant="primary" size="sm" onClick={onAdd}><IconPlus size={14} aria-hidden="true" />Add step</Button>}
       </div>
 
+      {/* Filter bar — shown when steps have coverage groups (e.g. CORE import) or the list is long */}
+      {(groups.length > 1 || steps.length > 20) && (
+        <div className="flex gap-2 flex-wrap items-center">
+          <input
+            type="search" value={filterText} onChange={e => setFilterText(e.target.value)}
+            placeholder="Search steps…"
+            className="h-7 px-2.5 rounded-[8px] text-xs bg-raised text-text placeholder:text-faint focus:outline-2 focus:outline-accent"
+            style={{ border: '1px solid var(--color-border)', minWidth: '140px' }}
+            aria-label="Search rating steps"
+          />
+          {groups.length > 1 && (
+            <select
+              value={filterGroup}
+              onChange={e => setFilterGroup(e.target.value)}
+              className="h-7 px-2 rounded-[8px] text-xs bg-raised text-text focus:outline-2 focus:outline-accent"
+              style={{ border: '1px solid var(--color-border)' }}
+              aria-label="Filter by product group"
+            >
+              <option value="">All groups ({steps.length})</option>
+              {groups.map(g => {
+                const count = steps.filter(s => s.groupName === g).length
+                return <option key={g} value={g}>{g} ({count})</option>
+              })}
+            </select>
+          )}
+          {(filterGroup || filterText) && (
+            <button
+              onClick={() => { setFilterGroup(''); setFilterText('') }}
+              className="h-7 px-2 rounded-[8px] text-xs text-dim hover:text-text bg-raised transition-colors"
+              style={{ border: '1px solid var(--color-border)' }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={filteredSteps.map(s => s.id)} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col">
-            {steps.map((s, i) => (
+            {filteredSteps.length === 0 && (filterGroup || filterText) ? (
+              <p className="text-sm text-faint text-center py-6">No steps match this filter.</p>
+            ) : filteredSteps.map((s, i) => (
               <div key={s.id}>
                 <StepCard
                   step={s} index={i} total={traceById.get(s.id)} changed={changedStepIds.has(s.id)}
-                  canEdit={canEdit} gridEditable={!!gridEditable(s)} covCount={covsByStep.get(s.id)?.length ?? 0}
+                  canEdit={canEdit && !filterGroup && !filterText} gridEditable={!!gridEditable(s)} covCount={covsByStep.get(s.id)?.length ?? 0}
                   onEdit={() => onEdit(s)} onDelete={() => deleteStep(s)}
                   onTable={() => { const e = gridEditable(s); if (e) onEditTable(e) }}
                   onCoverages={() => setCovModal({ step: s, covs: covsByStep.get(s.id) ?? [] })}
                 />
                 {/* Connector with a slow downward pulse between steps */}
-                {i < steps.length - 1 && (
+                {i < filteredSteps.length - 1 && (
                   <div className="relative h-5 flex justify-center" aria-hidden="true">
                     <span className="w-px h-full" style={{ background: 'var(--color-border-strong)' }} />
                     <span className="algo-pulse absolute top-0 w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-accent)' }} />

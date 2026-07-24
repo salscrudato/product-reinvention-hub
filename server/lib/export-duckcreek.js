@@ -16,7 +16,7 @@
 
 const express = require('express')
 const ExcelJS = require('exceljs')
-const { requireTenant } = require('./auth')
+const { requireTenant, resolveTenantForPrincipal } = require('./auth')
 const { requireCapability } = require('./authz')
 const { mutateInternal } = require('./data')
 
@@ -234,7 +234,7 @@ router.post('/duckcreek', requireCapability('product:write'), requireTenant, asy
   if (!dc) return res.status(503).json({ error: 'export_module_unavailable', detail: 'run pnpm build:export' })
   const productId = String((req.body || {}).productId || '').trim()
   if (!productId) return res.status(400).json({ error: 'productId required' })
-  const tid = req.user.tenantId
+  const tid = resolveTenantForPrincipal(req.user)
   try {
     const input = await assembleExportInput(
       { readColl, readEntity, readFormsForProduct },

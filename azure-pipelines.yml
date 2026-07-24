@@ -19,6 +19,7 @@ trigger:
   branches:
     include:
       - main
+      - ce/*
 
 pr: none
 
@@ -87,6 +88,9 @@ steps:
   - script: pnpm test:gates
     displayName: 'Gate: enterprise security invariants (tenant isolation; grows with HITL + cost guard)'
 
+  # Deploy steps run on main only; ce/* branches validate (build + canaries + gates) but
+  # do not overwrite the dev App Service. The artifact is still assembled so the zip
+  # size and structure are verified on every branch.
   - script: |
       set -e
       DEST="$(Build.BinariesDirectory)"
@@ -118,7 +122,8 @@ steps:
       ArtifactName: drop
 
   - task: AzureWebApp@1
-    displayName: 'Deploy to $(APP_SERVICE_NAME)'
+    displayName: 'Deploy to $(APP_SERVICE_NAME) [main only]'
+    condition: eq(variables['Build.SourceBranchName'], 'main')
     inputs:
       azureSubscription: $(AZURE_SERVICE_CONNECTION)
       appType: webAppLinux
