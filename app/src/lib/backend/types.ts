@@ -301,6 +301,14 @@ export interface BackendAdapter {
      *  rejects with PromoteBlockedError carrying the blockers verbatim, a stale rev
      *  with MutationConflictError. The client renders the verdict, never computes it. */
     promoteDraft(id: string, expectedRev?: number): Promise<{ rev: number }>
+    /** Server-side cascade delete for a single product: subcollections → tasks →
+     *  forms → LD/RT tables → product shell. Every entity goes through the audit-chain
+     *  envelope (entity + audit + version + searchIndex per entity). Returns how many
+     *  entity records were deleted (for progress reporting). */
+    deleteProduct(productId: string): Promise<{ deleted: number }>
+    /** Cascade-delete EVERY product in the tenant. Requires confirm === 'CLEAR_ALL_PRODUCTS'.
+     *  Returns per-product count and total. Use only in dev/admin reset flows. */
+    clearProducts(confirm: string): Promise<{ products: number; deleted: number }>
   }
   /** Read-only portfolio surfaces (any staff role; tenant-scoped; deterministic, zero AI). */
   portfolio: {

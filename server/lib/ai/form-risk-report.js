@@ -15,6 +15,7 @@
 // schema is a miss for everyone, so old-shape blobs regenerate instead of render.
 const fleet = require('../fleet')
 const { hasCapability } = require('../authz')
+const { resolveTenantForPrincipal } = require('../auth')
 const dataRouter = require('../data')
 const { _forcedToolCall, _fetchBlobBase64, _extractPdfText } = require('./_shared')
 
@@ -66,8 +67,7 @@ const _isCacheCurrent = (row) =>
   !!(row && row.riskReport && row.riskReport.reportVersion === REPORT_VERSION && row.riskReport.plainSummary)
 
 async function formRiskReport(req, res) {
-  const tid = req.user?.tenantId
-  if (!tid) return res.status(401).json({ error: 'tenant_required' })
+  const tid = resolveTenantForPrincipal(req.user)
   const formKey = String(req.body?.formKey || '').trim()
   if (!formKey || formKey.includes('/')) return res.status(400).json({ error: 'invalid_formKey' })
 

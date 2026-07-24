@@ -135,6 +135,28 @@ function mergeStructurals(workbooks) {
   }
 }
 
+// ─── Multi-product workbook detection ────────────────────────────────────────
+// A workbook is "self-contained" (a complete product spec) when it has enough
+// distinct content sheets to stand alone. A supplementary file (e.g. a single
+// forms-only or rating-only sheet) merges with its siblings instead.
+//
+// SELF_CONTAINED_THRESHOLD: workbooks with this many total sheets are treated as
+// independent products. Calibrated at 4: the largest supplementary ISO sample
+// files have 2–3 sheets (sample-GL-forms, sample-GL-pricing, etc.) while every
+// full product spec seen in the corpus (Core, Hagerty, SECURA) has ≥ 4 sheets.
+const SELF_CONTAINED_THRESHOLD = 4
+
+function partitionWorkbooks(workbooks) {
+  if (workbooks.length <= 1) return { groups: [workbooks], isSplit: false }
+  const selfContained = workbooks.filter(wb => (wb.structural?.sheets || []).length >= SELF_CONTAINED_THRESHOLD)
+  // When ≥ 2 files are each self-contained → each is its own product run.
+  if (selfContained.length >= 2) {
+    return { groups: selfContained.map(wb => [wb]), isSplit: true }
+  }
+  // Otherwise (0 or 1 self-contained) → merge all, same as before.
+  return { groups: [workbooks], isSplit: false }
+}
+
 // ─── Run the brain over a structural model and emit the plan bundle ───────────
 
 async function runBrainToBundle({ structural, lobRefIdHint, edition, routerWarnings, budget, send, isoGrids, skippedDocuments, censuses, hiddenSheets, onStage, resume, tenantId }) {
@@ -401,33 +423,75 @@ async function unifiedImport(req, res) {
       warnings: routed.warnings,
     } })
 
-    // ── Workbook path: adaptive brain over the merged structural model ────────
+    // ── Workbook path: adaptive brain (per-product or merged) ────────────────
     if (routed.workbooks.length > 0) {
       tracer.setPath('workbook')
       if (routed.filingDocs.length > 0) {
         routed.warnings.push({ kind: 'mixed-upload', detail: `Upload mixes workbooks and PDFs; the workbook plan was produced — re-upload the ${routed.filingDocs.length} PDF(s) separately for filing extraction.` })
         send({ t: 'notice', level: 'warn', message: 'Mixed upload: workbooks imported; PDFs skipped — upload them separately.', kind: 'mixed-upload' })
       }
-      const structural = mergeStructurals(routed.workbooks)
-      const isoGrids = routed.workbooks.flatMap(w => Array.isArray(w.isoGrids) ? w.isoGrids : [])
-      // CE3 Step 1: the cell census joins the run — emit per-sheet counts so the
-      // client sees the conservation baseline before extraction begins.
-      const censuses = routed.workbooks.map(w => w.census).filter(Boolean)
-      const hiddenSheets = routed.workbooks.flatMap(w => Array.isArray(w.hiddenSheets) ? w.hiddenSheets : [])
-      try {
-        const observatory = require('./run-observatory')
-        const perSheet = censuses.flatMap(c => (c.sheets || []).map(s => ({ name: s.name, nonEmpty: s.nonEmpty, hidden: !!s.hidden, tables: (s.tables || []).length })))
-        if (perSheet.length > 0) emit(res, observatory.censusEvent(perSheet))
-      } catch { /* census telemetry is never a run blocker */ }
-      const wbBundle = await runBrainToBundle({
-        structural,
-        lobRefIdHint: body.lobRefIdHint || routed.lobRefIdHint,
-        edition:      routed.edition,
-        routerWarnings: routed.warnings,
-        skippedDocuments: routed.filingDocs.map((d) => d.name),
-        budget, send, isoGrids, censuses, hiddenSheets,
-        onStage, resume, tenantId: runTenant,
-      })
+
+      const { groups, isSplit } = partitionWorkbooks(routed.workbooks)
+
+      // Announce the routing decision so operators can see it in the SSE trace.
+      if (isSplit) {
+        send({ t: 'notice', level: 'info', kind: 'multi-product-split',
+          message: `${groups.length} self-contained product workbooks detected — running each independently. Results collected in splitProducts.` })
+      }
+
+      // Run the brain once per group (each group is either one self-contained
+      // workbook or the full merged set of supplementary files).
+      const groupBundles = []
+      for (let gi = 0; gi < groups.length; gi++) {
+        const group = groups[gi]
+        const structural  = mergeStructurals(group)
+        const isoGrids    = group.flatMap(w => Array.isArray(w.isoGrids) ? w.isoGrids : [])
+        const censuses    = group.map(w => w.census).filter(Boolean)
+        const hiddenSheets = group.flatMap(w => Array.isArray(w.hiddenSheets) ? w.hiddenSheets : [])
+
+        // CE3 Step 1: emit per-sheet census counts (only for the first group to
+        // avoid flooding the client; subsequent groups are the splitProducts path).
+        if (gi === 0) {
+          try {
+            const observatory = require('./run-observatory')
+            const perSheet = censuses.flatMap(c => (c.sheets || []).map(s => ({ name: s.name, nonEmpty: s.nonEmpty, hidden: !!s.hidden, tables: (s.tables || []).length })))
+            if (perSheet.length > 0) emit(res, observatory.censusEvent(perSheet))
+          } catch { /* census telemetry is never a run blocker */ }
+        }
+
+        if (isSplit && gi > 0) {
+          send({ t: 'notice', level: 'info', kind: 'split-product-start',
+            message: `Extracting split product ${gi + 1}/${groups.length}: ${structural.sourceName}` })
+        }
+
+        const gb = await runBrainToBundle({
+          structural,
+          lobRefIdHint: body.lobRefIdHint || routed.lobRefIdHint,
+          edition:      routed.edition,
+          routerWarnings: gi === 0 ? routed.warnings : [],
+          skippedDocuments: gi === 0 ? routed.filingDocs.map((d) => d.name) : [],
+          budget, send, isoGrids, censuses, hiddenSheets,
+          // Checkpointing + resume are keyed to the primary run id; split products
+          // use the same id with a group suffix so their stage artifacts are
+          // namespaced and resumable independently.
+          onStage: onStage && isSplit && gi > 0
+            ? (stage, artifact) => onStage(`split${gi}/${stage}`, artifact)
+            : onStage,
+          resume: gi === 0 ? resume : undefined,
+          tenantId: runTenant,
+        })
+        groupBundles.push(gb)
+      }
+
+      // Primary bundle is the first group's output. Split-product bundles are
+      // attached to bundle.splitProducts so the review UI can present them.
+      const wbBundle = groupBundles[0]
+      if (isSplit && groupBundles.length > 1) {
+        if (!Array.isArray(wbBundle.splitProducts)) wbBundle.splitProducts = []
+        for (const gb of groupBundles.slice(1)) wbBundle.splitProducts.push(gb)
+        send({ t: 'json', key: 'brain:split-products', value: { count: groupBundles.length, names: groups.map(g => g.map(w => w.name).join('+')) } })
+      }
+
       await persistIfRequested(wbBundle)
       emitSpend(send, budget)
       send({ t: 'done' }); return res.end()

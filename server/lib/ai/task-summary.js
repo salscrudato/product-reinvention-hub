@@ -9,6 +9,7 @@
 // with zero surviving citations is refused (grounded + cited, never invented).
 const fleet = require('../fleet')
 const { _forcedToolCall } = require('./_shared')
+const { resolveTenantForPrincipal } = require('../auth')
 
 const SUMMARY_TOOL = {
   name: 'emit_task_summary',
@@ -138,8 +139,7 @@ async function composeTaskSummary(tid, { degrade = false } = {}) {
 // HTTP shim — wire shapes identical to the pre-extraction handler (counts gains the
 // additive dueToday key; existing consumers read open/overdue/next7 as before).
 async function taskSummary(req, res) {
-  const tid = req.user?.tenantId
-  if (!tid) return res.status(401).json({ error: 'unauthenticated' })
+  const tid = resolveTenantForPrincipal(req.user)
 
   const g = fleet.guard()
   if (!g.allow) return res.status(429).json({ error: 'ai_budget_exceeded', detail: g.reason })

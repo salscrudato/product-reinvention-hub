@@ -558,10 +558,15 @@ function rowKind(refIdValue, dominantKind) {
   // the old /\.PROD\./ regex missed real scheme variants like "PR.PROD001",
   // "IM.PROD044" and "CORE.PRD.001", misclassifying product rows as the sheet's
   // dominant kind.
+  //
+  // Ledger F18: trust the full refId signal, not just product/lob.
+  // CORE.COV.001 → refIdSegmentKind returns 'coverage' → must extract as coverage.
+  // Without this, 'coverage' fell through to dominantKind; on a tie (product vs
+  // coverage tally 1:1) the Map-insertion-order winner (product) took all COV rows.
   const kind = typeof brainShared.refIdSegmentKind === 'function' ? brainShared.refIdSegmentKind(refIdValue) : null
-  if (kind === 'product') return 'product'
   if (kind === 'lob') return null   // registry-owned; skip row
-  return dominantKind
+  if (kind !== null) return kind    // trust specific signal: product, coverage, rule, form, rating
+  return dominantKind               // no kind signal → sheet's dominant mapped kind
 }
 
 function dominantEntityKind(colMap) {
@@ -581,7 +586,15 @@ function sheetIsDeterministic(fp, colMap) {
   const mapped = (colMap.mappings || []).filter(m => m.canonicalField !== null)
   if (mapped.length === 0) return false
   const confident = mapped.filter(m => m.confidence >= DET_MAP_CONFIDENCE)
-  return confident.length / mapped.length >= DET_SHEET_FRACTION
+  if (confident.length / mapped.length >= DET_SHEET_FRACTION) return true
+  // Force deterministic for structured kinds whose rows follow a fixed schema:
+  // form / rule / ratingStep sheets have well-defined columns; AI extraction adds
+  // latency with no quality gain (the confident anchor columns are enough).
+  // State-applicability matrices have many low-confidence columns that drag the
+  // fraction below the threshold — the deterministic path ignores low-confidence
+  // columns and uses only the ones that cleared DET_MAP_CONFIDENCE.
+  const dominant = dominantEntityKind(colMap)
+  return confident.length >= 2 && (dominant === 'form' || dominant === 'rule' || dominant === 'ratingStep')
 }
 
 function deterministicExtract(fp, colMap, headerRow, rows, sheetName, gridRows) {

@@ -65,6 +65,9 @@ DISAMBIGUATION NOTES:
   - A sheet about form ATTACHMENT RULES (e.g. "GL Optional Forms Rules") classifies as "rules" — NOT "forms".
   - A sheet named "Component Model", "Product Component Model", or "Framework" classifies as "product-framework".
   - A sheet containing mostly factor tables or territory codes classifies as "rate-tables".
+  - A sheet with columns for "ALGORITHM STEP", "CALCULATION", "RATE REFERENCE", or "RATING STEP ID" classifies as "rating-roc" even when it ALSO has a "RULE DESCRIPTION" column. The presence of "RULE DESCRIPTION" alongside "ALGORITHM STEP" is a Core-format rating sheet — NOT a "rules" sheet. A true "rules" sheet has "RULE CONDITION" / "RULE OUTCOME" columns, not calculation operators.
+  - A sheet named "Core Rating Specifications", "Rating", or similar that has a "Rating Grouping" column classifies as "rating-roc".
+  - A sheet named "Coverage", "Coverages", or "Coverage List" that contains refId-pattern values (like "CORE.COV.001", "GL.COV.002") and/or a CoverageName column classifies as "product-framework" — NOT "ignore" or "forms".
 
 GROUNDING RULE: Your rationale MUST cite at least one specific cell value you observed.
 

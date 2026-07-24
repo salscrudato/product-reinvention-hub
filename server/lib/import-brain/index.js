@@ -192,9 +192,14 @@ async function runAdaptiveImportBrain(opts) {
   // first-class census_unaccounted plan items. Vocabulary is enforced in code.
   let sweeper = { sweptFacts: [], unresolvedItems: [], perSheet: [] }
   if (accounting.size > 0) {
-    emitStage(emit, 4, 'sweep', 'start', `Sweeping unaccounted cells on ${accounting.size} censused sheet(s)`)
+    // Only sweep content sheets — ignored sheets have no extraction to fill the ledger,
+    // so all their cells are UNACCOUNTED and sweeping them burns hundreds of AI calls
+    // for zero data gain (noise classification on irrelevant cells).
+    const contentSheetNames = new Set(classifiedSheets.filter(s => s.domain !== 'ignore').map(s => s.sheetName))
+    const contentAccounting = new Map([...accounting].filter(([n]) => contentSheetNames.has(n)))
+    emitStage(emit, 4, 'sweep', 'start', `Sweeping unaccounted cells on ${contentAccounting.size} content sheet(s)`)
     try {
-      sweeper = await sweepUnaccounted({ accounting, censusBySheet, budget, review, emit })
+      sweeper = await sweepUnaccounted({ accounting: contentAccounting, censusBySheet, budget, review, emit })
     } catch (e) {
       review.push({ kind: 'sweeper-error', detail: `stage 4.5 sweeper failed: ${String(e && e.message || e).slice(0, 160)} — unaccounted residue stays visible in the accounting rollup.` })
     }

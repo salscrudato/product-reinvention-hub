@@ -58,11 +58,19 @@ const searchText = (data) => Object.values(data || {}).filter((v) => typeof v ==
 // isolation break needs BOTH the partition key AND this check to fail. The single source of the
 // read-side tenant boundary — readEntity/readChainHead both go through it (H6).
 const scopeDoc = (doc, tid) => (doc && doc.tenantId === tid ? doc : null)
+// Arrays longer than this are replaced with a count summary in diff.changed to keep audit/version
+// docs small; the full value lives in the entity doc. diff.before retains the full array so
+// reconstructStateAtRev can undo the change field-by-field (before values drive undo, not changed).
+const DIFF_ARRAY_MAX = 50
 const fieldDiff = (prev, next) => {
   const before = {}; const changed = {}
   const keys = new Set([...Object.keys(prev || {}), ...Object.keys(next || {})])
   for (const k of keys) {
-    if (JSON.stringify((prev || {})[k]) !== JSON.stringify((next || {})[k])) { before[k] = (prev || {})[k]; changed[k] = (next || {})[k] }
+    if (JSON.stringify((prev || {})[k]) !== JSON.stringify((next || {})[k])) {
+      before[k] = (prev || {})[k]
+      const v = (next || {})[k]
+      changed[k] = Array.isArray(v) && v.length > DIFF_ARRAY_MAX ? `[Array:${v.length}]` : v
+    }
   }
   return { before, changed }
 }
@@ -695,6 +703,114 @@ router.post('/restore', requireCapability('product:write'), requireTenant, async
     log.error('data', 'restore_failed', { tenantId: tid, path: String(path), targetRev, detail: String(e.message || e).slice(0, 200) })
     res.status(500).json({ error: 'restore_failed', detail: String(e.message || e) })
   }
+})
+
+// ─── Server-side product cascade delete ──────────────────────────────────────
+// Runs the full product cascade (subcollections → tasks → forms → LD/RT tables →
+// product shell) through mutateInternal so every deletion is envelope-wrapped
+// (entity + audit + version + searchIndex + chainHead) in one transaction per entity.
+// Eliminates the N client-round-trip cascade in deleteDraft.ts for large products.
+const PRODUCT_ID_RE = /^[A-Za-z0-9._-]{1,128}$/
+
+async function cascadeDeleteProduct(tid, productId, actor) {
+  const store = storeFor(tid)
+  let deleted = 0
+  const errors = []
+  const pid = productId
+  const pk = `${tid}|${pid}`
+
+  const del = async (path, entityType) => {
+    try {
+      await mutateInternal(tid, { op: 'delete', path, entityType, productId: pid }, actor, '/api/db/deleteProduct')
+      deleted++
+    } catch (e) {
+      errors.push({ path, error: String(e.message || e).slice(0, 200) })
+    }
+  }
+
+  // 1) Subcollections share the product partition (pk = `${tid}|${pid}`)
+  for (const [coll, entityType] of [['coverages', 'coverage'], ['rules', 'rule'], ['formRules', 'formRule'], ['ratingPrograms', 'ratingProgram']]) {
+    const { resources } = await store.items.query({
+      query: `SELECT c.path FROM c WHERE c.kind='entity' AND c.coll=@coll AND c.pk=@pk AND c.tenantId=@tid`,
+      parameters: [{ name: '@coll', value: coll }, { name: '@pk', value: pk }, { name: '@tid', value: tid }],
+    }).fetchAll()
+    for (const r of resources) await del(String(r.path || '').replace(/^ent:/, ''), entityType)
+  }
+
+  // 2) Lifecycle tasks tagged with this product
+  const { resources: tasks } = await store.items.query({
+    query: `SELECT c.path FROM c WHERE c.kind='entity' AND c.coll='tasks' AND c.tenantId=@tid AND c.data.productId=@pid`,
+    parameters: [{ name: '@tid', value: tid }, { name: '@pid', value: pid }],
+  }).fetchAll()
+  for (const t of tasks) await del(String(t.path || '').replace(/^ent:/, ''), 'task')
+
+  // 3) Draft-namespaced forms. Import writes forms/${pid}__${number}; the prefix guard
+  //    ensures shared library forms (other products) are never touched.
+  const { resources: forms } = await store.items.query({
+    query: `SELECT c.path FROM c WHERE c.kind='entity' AND c.coll='forms' AND c.tenantId=@tid AND ARRAY_CONTAINS(c.data.productRefIds, @pid)`,
+    parameters: [{ name: '@tid', value: tid }, { name: '@pid', value: pid }],
+  }).fetchAll()
+  for (const f of forms) {
+    const lp = String(f.path || '').replace(/^ent:/, '')
+    if (!lp.startsWith(`forms/${pid}__`)) continue
+    await del(lp, 'form')
+  }
+
+  // 4) LD + RT tables tagged with this product (import stamps data.productId)
+  for (const [coll, entityType] of [['ldTables', 'ldTable'], ['rtTables', 'rtTable']]) {
+    const { resources: tables } = await store.items.query({
+      query: `SELECT c.path FROM c WHERE c.kind='entity' AND c.coll=@coll AND c.tenantId=@tid AND c.data.productId=@pid`,
+      parameters: [{ name: '@coll', value: coll }, { name: '@tid', value: tid }, { name: '@pid', value: pid }],
+    }).fetchAll()
+    for (const t of tables) await del(String(t.path || '').replace(/^ent:/, ''), entityType)
+  }
+
+  // 5) Product shell last — the recoverable handle until all children are gone
+  await del(`products/${pid}`, 'product')
+
+  return { deleted, errors }
+}
+
+// POST /api/db/deleteProduct — cascade-delete one product by id.
+router.post('/deleteProduct', requireCapability('product:write'), requireTenant, async (req, res) => {
+  const { productId } = req.body || {}
+  if (!productId || !PRODUCT_ID_RE.test(String(productId))) return res.status(400).json({ error: 'invalid_productId' })
+  const tid = resolveTenantForPrincipal(req.user)
+  const actor = { uid: req.user.uid, name: req.user.name }
+  const product = await readEntity(tid, `products/${productId}`)
+  if (!product) return res.status(404).json({ error: 'not_found' })
+  const { deleted, errors } = await cascadeDeleteProduct(tid, productId, actor)
+  log.info('data', 'deleteProduct', { tenantId: tid, productId, deleted, errors: errors.length, actor: actor.uid })
+  res.json({ ok: true, deleted, ...(errors.length > 0 ? { errors } : {}) })
+})
+
+// POST /api/db/clearProducts — cascade-delete ALL products in the tenant.
+// Requires body.confirm === 'CLEAR_ALL_PRODUCTS' to prevent accidents.
+router.post('/clearProducts', requireCapability('product:write'), requireTenant, async (req, res) => {
+  const { confirm } = req.body || {}
+  if (confirm !== 'CLEAR_ALL_PRODUCTS') {
+    return res.status(400).json({ error: 'confirmation_required', detail: 'POST { "confirm": "CLEAR_ALL_PRODUCTS" } to wipe all products.' })
+  }
+  const tid = resolveTenantForPrincipal(req.user)
+  const actor = { uid: req.user.uid, name: req.user.name }
+  const store = storeFor(tid)
+  const { resources: productRows } = await store.items.query({
+    query: `SELECT c.path FROM c WHERE c.kind='entity' AND c.coll='products' AND c.tenantId=@tid`,
+    parameters: [{ name: '@tid', value: tid }],
+  }).fetchAll()
+  let totalDeleted = 0
+  const errs = []
+  for (const r of productRows) {
+    const lp = String(r.path || '').replace(/^ent:/, '')
+    const segments = lp.split('/').filter(Boolean)
+    if (segments[0] !== 'products' || !segments[1]) continue
+    const pid = segments[1]
+    const { deleted, errors } = await cascadeDeleteProduct(tid, pid, actor)
+    totalDeleted += deleted
+    errs.push(...errors)
+  }
+  log.info('data', 'clearProducts', { tenantId: tid, products: productRows.length, deleted: totalDeleted, errors: errs.length, actor: actor.uid })
+  res.json({ ok: true, products: productRows.length, deleted: totalDeleted, ...(errs.length > 0 ? { errors: errs } : {}) })
 })
 
 // ─── PROBE endpoint: audit documents (ADMIN + PROBE_MODE=1 only) ─────────────

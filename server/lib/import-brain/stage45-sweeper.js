@@ -25,6 +25,11 @@ const { extractJson, pMap, parseWithRetry } = require('./constants')
 
 const SWEEP_BATCH = 60
 const CONTEXT_ROWS = 2
+// Cap unaccounted cells swept per sheet via AI. Deterministic sheets (forms, rules, ratingStep)
+// can have thousands of unmapped state-matrix cells — sweeping them all burns AI calls for near-zero
+// data gain since state-applicability columns are almost always NOISE. Excess cells are marked
+// NEEDS_REVIEW immediately and appear in the review queue without AI cost.
+const SWEEP_MAX_PER_SHEET = 300
 
 /** The ALLOWED noise vocabulary — the ONLY rules a sweeper classification may use. */
 const ALLOWED_NOISE = new Set([
@@ -135,10 +140,15 @@ async function sweepUnaccounted({ accounting, censusBySheet, budget, review, emi
       return { ref: c.ref.split('!')[1] ?? c.ref, fullRef: c.ref, verbatim: c.verbatim, context }
     }
 
+    const toSweep = unaccounted.length > SWEEP_MAX_PER_SHEET ? unaccounted.slice(0, SWEEP_MAX_PER_SHEET) : unaccounted
     let swept = 0
     let reviewed = 0
+    for (const c of (unaccounted.length > SWEEP_MAX_PER_SHEET ? unaccounted.slice(SWEEP_MAX_PER_SHEET) : [])) {
+      brainShared.post(acc, c.ref, 'NEEDS_REVIEW', 'sweeper', 'sweeper-capped', null, [])
+      reviewed++
+    }
     const batches = []
-    for (let i = 0; i < unaccounted.length; i += SWEEP_BATCH) batches.push(unaccounted.slice(i, i + SWEEP_BATCH).map(toBatchCell))
+    for (let i = 0; i < toSweep.length; i += SWEEP_BATCH) batches.push(toSweep.slice(i, i + SWEEP_BATCH).map(toBatchCell))
 
     const sweepBatch = async (batch) => {
       const batchRefs = new Set(batch.map(c => c.ref))

@@ -25,6 +25,7 @@ const net        = require('net')
 const dns        = require('dns').promises
 const fleet      = require('../fleet')
 const metering   = require('../metering')
+const { resolveTenantForPrincipal } = require('../auth')
 const dataRouter = require('../data')
 const { loadTenantProfile } = require('../tenant-profile')
 
@@ -492,8 +493,7 @@ function matchToProductIds(item, products) {
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 async function refreshNews(req, res) {
-  const tid = req.user?.tenantId
-  if (!tid) return res.status(401).json({ error: 'tenant_required' })
+  const tid = resolveTenantForPrincipal(req.user)
 
   const g = fleet.guard()
   if (!g.allow) return res.status(429).json({ error: 'AI budget ceiling reached — try again shortly.' })

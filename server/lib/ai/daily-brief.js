@@ -17,6 +17,7 @@
 // {force:true} recomputes for EDITOR+ only; a VIEWER force is ignored (cached 200).
 const fleet = require('../fleet')
 const { hasCapability, CAP_PRODUCT_WRITE } = require('../authz')
+const { resolveTenantForPrincipal } = require('../auth')
 const { _forcedToolCall } = require('./_shared')
 const { composeTaskSummary, _stripUncited } = require('./task-summary')
 const { loadTenantProfile } = require('../tenant-profile')
@@ -298,8 +299,7 @@ async function headlineBlock(deployment, blocks) {
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 async function dailyBrief(req, res) {
-  const tid = req.user?.tenantId
-  if (!tid) return res.status(401).json({ error: 'unauthenticated' })
+  const tid = resolveTenantForPrincipal(req.user)
 
   // Cache BEFORE the guard: a cached read must neither burn nor be blocked by it.
   const day = utcDay()

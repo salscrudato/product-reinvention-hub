@@ -1,8 +1,9 @@
-// Cascade-delete a product and everything it owns, through the adapter mutate seam so
-// each removal is atomic (entity + audit + version + searchIndex). Children are removed
-// first so the product doc remains the recoverable "handle" until the very end.
+// Cascade-delete a product and everything it owns. Delegates to the server-side
+// POST /api/db/deleteProduct endpoint which runs every deletion through the atomic
+// mutate envelope (entity + audit + version + searchIndex per entity) in a single
+// server round-trip rather than N separate client calls.
 //
-// Two entry points share ONE cascade:
+// Two entry points:
 //   • deleteProduct      — general; deletes ANY product. Used by the Products portfolio
 //     behind a typed-name confirmation (DeleteProductDialog).
 //   • deleteDraftProduct — the Builder's draft-only path; refuses a LAUNCHED product so a
@@ -14,71 +15,13 @@ interface DeletableProduct {
   lifecycle?: string
 }
 
-// Product subcollections, paired with the entityType used when they were created.
-const SUBCOLLECTIONS: Array<{ coll: string; entityType: string }> = [
-  { coll: 'coverages',      entityType: 'coverage' },
-  { coll: 'rules',          entityType: 'rule' },
-  { coll: 'formRules',      entityType: 'formRule' },
-  { coll: 'ratingPrograms', entityType: 'ratingProgram' },
-]
-
-/** The shared cascade: subcollection entities → lifecycle tasks → draft-namespaced forms
- *  → the product shell. No lifecycle guard — the caller decides what may be deleted. */
+/** Cascade-delete a product through the server-side envelope (single round-trip).
+ *  actor is accepted for call-site compatibility but the server uses req.user. */
 export async function deleteProduct(
   product: DeletableProduct,
-  actor: { uid: string; name: string },
+  _actor: { uid: string; name: string },
 ): Promise<void> {
-  const pid = product.id
-
-  // 1) Subcollection entities (coverages, rules, form-rules, rating programs).
-  for (const { coll, entityType } of SUBCOLLECTIONS) {
-    const docs = await adapter.db.list<{ id: string }>(`products/${pid}/${coll}`)
-    for (const d of docs) {
-      // Delete is last-write-wins: cascade deletes are idempotent, so no expectedRev needed.
-      await adapter.db.mutate({ op: 'delete', path: `products/${pid}/${coll}/${d.id}`, entityType, productId: pid, actor })
-    }
-  }
-
-  // 2) Lifecycle tasks for this product (top-level `tasks` collection).
-  const tasks = await adapter.db.list<{ id: string }>('tasks', {
-    where: [{ field: 'productId', op: '==', value: pid }],
-  })
-  for (const t of tasks) {
-    // Delete is last-write-wins: cascade deletes are idempotent, so no expectedRev needed.
-    await adapter.db.mutate({ op: 'delete', path: `tasks/${t.id}`, entityType: 'task', productId: pid, actor })
-  }
-
-  // 3) Draft-namespaced forms only. Scaffolded drafts mint forms with a `${pid}__` id and
-  //    productRefIds:[pid]; the `${pid}__` guard guarantees we never touch a shared library
-  //    form that other products also reference.
-  const forms = await adapter.db.list<{ id: string; productRefIds?: string[] }>('forms', {
-    where: [{ field: 'productRefIds', op: 'array-contains', value: pid }],
-  })
-  for (const f of forms) {
-    if (!f.id.startsWith(`${pid}__`)) continue
-    // Delete is last-write-wins: cascade deletes are idempotent, so no expectedRev needed.
-    await adapter.db.mutate({ op: 'delete', path: `forms/${f.id}`, entityType: 'form', productId: pid, actor })
-  }
-
-  // 4) Global tables owned by this product. The filing importer tags ldTable/rtTable
-  //    entities with productId in their data so they can be identified and removed here.
-  //    Seed tables (PH.LD.*, GL.RT.*, etc.) have no productId tag and are never touched.
-  const ldList = await adapter.db.list<{ id: string }>('ldTables', {
-    where: [{ field: 'productId', op: '==', value: pid }],
-  })
-  for (const t of ldList) {
-    await adapter.db.mutate({ op: 'delete', path: `ldTables/${t.id}`, entityType: 'ldTable', productId: pid, actor })
-  }
-  const rtList = await adapter.db.list<{ id: string }>('rtTables', {
-    where: [{ field: 'productId', op: '==', value: pid }],
-  })
-  for (const t of rtList) {
-    await adapter.db.mutate({ op: 'delete', path: `rtTables/${t.id}`, entityType: 'rtTable', productId: pid, actor })
-  }
-
-  // 5) Finally the product shell itself.
-  // Delete is last-write-wins: product deletion is the terminal step of a cascade, so no expectedRev needed.
-  await adapter.db.mutate({ op: 'delete', path: `products/${pid}`, entityType: 'product', productId: pid, actor })
+  await adapter.db.deleteProduct(product.id)
 }
 
 /** Builder path: DRAFTS only. Refuses a LAUNCHED product, then runs the shared cascade —

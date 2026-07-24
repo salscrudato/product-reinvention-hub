@@ -6,10 +6,11 @@
 // every draft then shows. A draft can never reach Products without promotion.
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { adapter } from '../lib/backend'
 import { useUser } from '../context/useUser'
 import { usePortfolioInventory } from '../lib/usePortfolioInventory'
-import { Skeleton, EmptyState } from '../components/ui'
+import { Skeleton, EmptyState, Button } from '../components/ui'
 import {
   IconSparkle, IconUpload, IconCopy, IconPlus, IconWand, type IconType,
 } from '../components/ui/icons'
@@ -35,6 +36,21 @@ export default function Builder() {
   const [modal, setModal]       = useState<Modal>(null)
   const [promoteFor, setPromoteFor] = useState<DraftRow | null>(null)
   const [deleteFor, setDeleteFor]   = useState<DraftRow | null>(null)
+  const [clearPhase, setClearPhase] = useState<'idle' | 'confirm' | 'running'>('idle')
+
+  const handleClearAll = async () => {
+    if (clearPhase === 'idle') { setClearPhase('confirm'); return }
+    if (clearPhase !== 'confirm') return
+    setClearPhase('running')
+    try {
+      const r = await adapter.db.clearProducts('CLEAR_ALL_PRODUCTS')
+      toast.success(`Cleared ${r.products} product${r.products !== 1 ? 's' : ''} (${r.deleted} entities deleted)`)
+    } catch (e) {
+      toast.error(`Clear failed: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setClearPhase('idle')
+    }
+  }
 
   useEffect(() => {
     const unsub = adapter.db.subscribe<DraftRow>('products', d => {
@@ -103,6 +119,39 @@ export default function Builder() {
           </div>
         )}
       </div>
+
+      {/* Danger zone — clear all products (dev/admin reset) */}
+      {canEdit && (
+        <div className="mt-4 border border-[var(--color-border)] rounded-xl p-4 flex flex-col gap-2"
+          style={{ borderColor: clearPhase === 'confirm' ? 'var(--color-danger, #e53e3e)' : undefined }}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-dim">Danger zone</p>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm font-medium text-text">Delete all products</p>
+              <p className="text-xs text-dim">
+                {clearPhase === 'confirm'
+                  ? 'This will permanently delete every product and all its data. Click again to confirm.'
+                  : 'Permanently removes every product, coverage, form, rule, and rating program in this workspace. Cannot be undone.'}
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              {clearPhase === 'confirm' && (
+                <Button variant="ghost" size="sm" onClick={() => setClearPhase('idle')}>
+                  Cancel
+                </Button>
+              )}
+              <Button
+                variant={clearPhase === 'confirm' ? 'destructive' : 'default'}
+                size="sm"
+                onClick={handleClearAll}
+                disabled={clearPhase === 'running'}
+              >
+                {clearPhase === 'running' ? 'Deleting…' : clearPhase === 'confirm' ? 'Yes, delete all' : 'Delete all products'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modal === 'new'      && <NewProductModal onClose={() => setModal(null)} onCreated={openDraft} />}
       {modal === 'unified'  && <UnifiedImportModal onClose={() => setModal(null)} onImported={openDraft} />}

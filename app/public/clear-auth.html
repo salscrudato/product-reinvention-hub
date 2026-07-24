@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Clearing auth…</title></head>
+<body>
+<script>
+localStorage.removeItem('pf.azure.token');
+localStorage.removeItem('pf.azure.user');
+location.replace('/');
+</script>
+<p>Clearing auth tokens and redirecting…</p>
+</body>
+</html>

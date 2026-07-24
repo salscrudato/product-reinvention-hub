@@ -277,8 +277,16 @@ var CANONICAL_MAP = {
         role: "stored",
         type: "string | null",
         description: "Coverage traceability id; preserved verbatim. Sub-coverages carry a parent segment.",
-        examples: ["GL.COV.002", "GL.COV.001.001", "IM.COV044.00", "PR.COV001.0"],
-        aliases: ["PRODUCT FRAMEWORK ID", "FRAMEWORK ID", "ID"]
+        examples: ["GL.COV.002", "GL.COV.001.001", "IM.COV044.00", "PR.COV001.0", "CORE.COV.001"],
+        aliases: ["PRODUCT FRAMEWORK ID", "FRAMEWORK ID", "ID", "REQUIREMENT ID", "REQUIREMENTID", "COV ID", "COVERAGE ID"]
+      },
+      {
+        field: "description",
+        role: "stored",
+        type: "string | undefined",
+        description: "Plain-English description of the coverage; free text.",
+        examples: ["Covers bodily injury liability to third parties.", "Covers direct physical loss to covered property."],
+        aliases: ["DESCRIPTION", "COVERAGE DESCRIPTION"]
       },
       {
         field: "name",
@@ -655,9 +663,26 @@ var CANONICAL_MAP = {
         field: "label",
         role: "stored",
         type: "string",
-        description: "Human label for the step (from the algorithm-step / rating-rules text).",
+        description: 'Human label for the step (from the algorithm-step / rating-rules text). Present on sheets that have an "ALGORITHM STEP" column.',
         examples: ["Base Rate", "Increased Limit Factor"],
         aliases: ["ALGORITHM STEP", "RATING RULES", "RATING GROUPING"]
+      },
+      {
+        field: "description",
+        role: "stored",
+        type: "string | undefined",
+        description: 'Plain-English description of the step, from a "Rule Description" or "Description" column alongside the Algorithm Step column. Observed in Core-format rating sheets.',
+        examples: ["Apply the base rate from the territory table", "Multiply by the increased limit factor"],
+        aliases: ["RULE DESCRIPTION", "DESCRIPTION", "STEP DESCRIPTION", "ALGORITHM DESCRIPTION"]
+      },
+      {
+        field: "coverageRef",
+        role: "source",
+        type: "string | undefined",
+        mapsTo: "coverageRef",
+        description: 'Coverage name / grouping label for this step, from the "Coverage" or "Coverage Group" column in Core-format rating sheets. Groups steps by coverage (e.g. "Bodily Injury", "Property Damage").',
+        examples: ["Bodily Injury", "Property Damage", "Personal Property"],
+        aliases: ["COVERAGE", "COVERAGE NAME", "COVERAGE GROUP", "COVERAGE GROUPING"]
       },
       {
         field: "op",

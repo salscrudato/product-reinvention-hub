@@ -434,6 +434,22 @@ export const adapter: BackendAdapter = {
       pokeAll()   // reflect the lifecycle flip in every open view
       return { rev: r.rev }
     },
+
+    async deleteProduct(productId: string): Promise<{ deleted: number }> {
+      const r = await api<{ ok: true; deleted: number }>('/db/deleteProduct', {
+        method: 'POST', body: JSON.stringify({ productId }),
+      })
+      pokeAll()
+      return { deleted: r.deleted }
+    },
+
+    async clearProducts(confirm: string): Promise<{ products: number; deleted: number }> {
+      const r = await api<{ ok: true; products: number; deleted: number }>('/db/clearProducts', {
+        method: 'POST', body: JSON.stringify({ confirm }),
+      })
+      pokeAll()
+      return { products: r.products, deleted: r.deleted }
+    },
   },
 
   portfolio: {

@@ -56,6 +56,29 @@ const tenantsRateLimit = authRateLimit('tenants', 60, 60 / 3600)
 try { require('./lib/sys-diag').init() } catch (_) { /* non-fatal; host still boots */ }
 
 app.disable('x-powered-by')
+
+// ─── CORS (Firebase Hosting → Azure API cross-origin support) ─────────────────
+// SPA on thereinventionengine3.web.app sends Bearer tokens via Authorization header;
+// no credentials:include needed, so Allow-Credentials is intentionally omitted.
+// Add CORS_ALLOWED_ORIGINS (space- or comma-separated) in env to extend this list.
+const _corsOrigins = new Set([
+  'https://thereinventionengine3.web.app',
+  'https://thereinventionengine3.firebaseapp.com',
+  ...(process.env.CORS_ALLOWED_ORIGINS || '').split(/[\s,]+/).filter(Boolean),
+])
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  if (origin && _corsOrigins.has(origin)) {
+    res.set('Access-Control-Allow-Origin', origin)
+    res.set('Vary', 'Origin')
+    res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Id')
+    res.set('Access-Control-Max-Age', '86400')
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204)
+  next()
+})
+
 // Compression buffers streamed responses — SSE (text/event-stream) must bypass it
 // or stage-by-stage import/chat progress arrives as one burst at stream end.
 app.use(compression({ filter: (req, res) => {
