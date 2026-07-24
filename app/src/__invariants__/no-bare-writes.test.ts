@@ -26,8 +26,8 @@ const WRITE_RE = /\.items\.(create|upsert|batch)\s*\(|\.item\([^)]*\)\.(delete|r
 // here (and justified), and a removed write must be delisted.
 const ALLOWLIST: Record<string, { count: number; why: string }> = {
   'lib/data.js': {
-    count: 3,
-    why: 'THE atomic envelope: commitEnvelope items.batch + mutateBatch chunk items.batch + presence heartbeat upsert (separate presence container, ephemeral non-entity — DEF-0017).',
+    count: 4,
+    why: 'THE atomic envelope: commitEnvelope items.batch + mutateBatch chunk items.batch + presence heartbeat upsert (separate presence container, ephemeral non-entity — DEF-0017) + purgeDeletedChunks point-delete of the derived grounding chunk on entity delete (best-effort, post-commit, swallows 404 — derived retrieval data, same class as ai/reindex-product.js; not an entity write, no audit obligation; prevents the RAG copilot citing deleted products).',
   },
   'lib/filing.js': {
     count: 1,

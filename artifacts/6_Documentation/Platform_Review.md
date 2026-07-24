@@ -1,3 +1,8 @@
+> ⚠️ **SUPERSEDED (kept for history).** This 2026-07-15 review is superseded by the verified
+> `docs/reveng/` dossier (start at `docs/reveng/EXEC_OVERVIEW.md`) and root `DATA_MODEL.md`,
+> which reconcile this file's stale claims against the current tree. Do not treat figures here
+> (deployment counts, ledger sizes, paths like `314358_InsurancePlatformsAI`) as current.
+
 # Product Reinvention Hub — Full Platform Review
 
 **Technical Dossier · 2026-07-15**

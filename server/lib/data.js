@@ -414,9 +414,8 @@ function envelope(tid, payload, actor, source) {
     }
     // parentId validation: must resolve to an existing same-tenant entity (DEF-0003).
     // parentId is a refId (dots, e.g. "GL.COV.001") but coverage docIds are the
-    // dot->dash form of the refId (e.g. "GL-COV-001"; see migrate-to-cosmos.ts and
-    // isoImport dashId). The seed bypasses this envelope so the mismatch never bit it,
-    // but the import path runs through here — so resolve the parent trying the
+    // dot->dash form of the refId (e.g. "GL-COV-001"; see isoImport dashId). The
+    // import path runs through here — so resolve the parent trying the
     // parentId verbatim AND its dot->dash form. Additive: a genuinely missing parent
     // still fails (neither candidate resolves).
     // Belt-and-braces (BACKLOG_SEED item 1): a THIRD candidate — lowercased
@@ -504,6 +503,23 @@ function assembleEnvelope({ tid, path, entityType, op, data, actor, source, now,
   return { pk, ops, rev }
 }
 
+// Best-effort: when a mutation DELETES an entity, purge its derived grounding chunk
+// too. A chunk is a retrieval PROJECTION (coll:'groundingChunks', id 'chunk:<path>'),
+// not part of the atomic audit envelope — the delete batch removes 'ent:<path>' but the
+// entity's chunk (a DIFFERENT id) survived, so the grounded copilot kept seeing and
+// citing deleted products (the PORTFOLIO query reads live chunks). Purge runs AFTER the
+// batch commits and swallows 404 (chunk-less entity types like task/feedback, or legacy
+// entities that predate chunking), so it can NEVER fail a mutation — mirroring the
+// best-effort embedding hook. Covers single deletes AND the server-side product cascade
+// (both funnel through commitEnvelope via mutateInternal).
+async function purgeDeletedChunks(store, ops, pk) {
+  for (const o of ops) {
+    if (o?.operationType !== 'Delete' || typeof o.id !== 'string' || !o.id.startsWith('ent:')) continue
+    const chunkId = `chunk:${o.id.slice(4)}` // same sanitized path, different id prefix
+    try { await store.item(chunkId, pk).delete() } catch { /* 404 = no chunk existed; ignore */ }
+  }
+}
+
 // Commit one envelope with bounded retry on 412 (precondition failure on the
 // chainHead ifMatchETag): another writer advanced this path's chain between our
 // read and our commit — rebuild the envelope from fresh state (new rev, new
@@ -522,7 +538,7 @@ async function commitEnvelope(tid, buildEnvelope) {
       throw e
     }
     const codes = (r.result || []).map((o) => o.statusCode)
-    if (!codes.some((c) => c >= 400)) return { ok: true, rev }
+    if (!codes.some((c) => c >= 400)) { await purgeDeletedChunks(storeFor(tid), ops, pk); return { ok: true, rev } }
     lastDetail = r.result
     if (!codes.includes(412) || attempt === 2) break
   }
@@ -577,6 +593,7 @@ router.post('/mutateBatch', requireCapability('product:write'), requireTenant, a
       const r = await store.items.batch(chunk, pk)
       if (r.result?.some((o) => o.statusCode >= 400)) { const err = new Error('batch_op_failed'); err.detail = r.result.map((o) => o.statusCode); throw err }
       committedChunks++
+      await purgeDeletedChunks(store, chunk, pk) // best-effort: drop grounding chunks for any deleted entity in this batch
     }
     for (const [pk, opsList] of byPk) {
       let chunk = []

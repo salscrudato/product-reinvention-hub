@@ -15,7 +15,7 @@ This document describes the **underlying data structure** of the Product Reinven
 | Rules engine | `shared/src/rules/engine.ts` |
 | Seed reference products | `shared/src/seed/{personalHome,personalAuto,generalLiability}.ts` |
 | Storage envelope | `server/lib/data.js` |
-| Seed → Cosmos paths | `scripts/migrate-to-cosmos.ts` |
+| Clean-slate + repopulate | wipe: `scripts/ops/nuke-cosmos.mjs`; populate: Import modal (upload .xlsx — the source of truth); HTTP test seeder: `hardening/seed.mjs` |
 | Business methodology | `product_first_principles.md` |
 
 ---
@@ -336,7 +336,10 @@ Envelope keys stripped from client payloads: `tenantId`, `pk`, `kind`, `coll`, `
 
 ## 5. Seed reference portfolio
 
-Three fully wired products exercise the model end-to-end:
+Three fully wired products exercise the model end-to-end. **These live in `shared/src/seed/*.ts`
+as fixtures for the rating canary tests — they are NOT auto-loaded into Cosmos.** (The old
+`migrate-to-cosmos` seeding path was removed; live product data now comes only from workbook
+imports, so a running instance may hold entirely different products from these.)
 
 | Product | refId | Base form archetype | Rating canary |
 |---|---|---|---|

@@ -23,7 +23,7 @@ This folder is a **document library, not a code repository**. It holds curated P
 
 - **`8_Core_Product_Workstream/Product_Specifications_Core_07_13_2026.xlsx`** — master Core spec workbook, source of truth for the whole Core chain. Its `_LINKED` sibling is the canonical extraction; `Core_PersonalAuto_1_0_0_0.xml` is the Duck Creek manuscript exported from it; `Core_PersonalAuto_Mapping.md` records the mapping and known gaps.
 - **`1_Product_Frameworks/Product_Framework_All_Lines_Master.xlsm`** — gold-standard input shape for the import engine.
-- **`6_Documentation/REVERSE_ENGINEERING.md`** and **`SERVICES.md`** — the best context files for agents working on the app codebase itself.
+- For the **app codebase itself**, the canonical context is **`docs/reveng/`** (start at `EXEC_OVERVIEW.md`) plus root **`DATA_MODEL.md`** — verified against the current tree. The older `6_Documentation/REVERSE_ENGINEERING.md` / `Platform_Review.md` are kept for history but marked superseded.
 - Hagerty pairs in `2_Product_Specifications/`: populated + `_Blank_Template` versions of Forms/Rating specs are intentional (instance + authoring template), not duplicates.
 
 ## Conventions and rules for working here
