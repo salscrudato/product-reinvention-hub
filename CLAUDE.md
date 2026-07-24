@@ -44,8 +44,8 @@ contract you must not break.
 
 - Gate (must be green before any commit): `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
 - Bridge rebuilds: `pnpm build:fleet` / `pnpm build:filing` / `pnpm build:import-brain`
-  (plus `build:serff`, `build:chunk`, `build:retrieve`, `build:seed`, `build:audit-chain`,
-  `build:platform`, `build:news`; `pnpm build` runs them all then the app build)
+  (plus `build:serff`, `build:chunk`, `build:retrieve`, `build:audit-chain`,
+  `build:platform`, `build:news`, `build:export`; `pnpm build` runs them all then the app build)
 - Eval: `pnpm import:eval` (import scoring), `pnpm import:live` / `pnpm live:smoke`
   (live endpoint harnesses)
 - Dev boot: `pnpm dev` (Vite SPA; point it at a host with `VITE_API_BASE` in the

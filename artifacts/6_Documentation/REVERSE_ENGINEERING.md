@@ -1,3 +1,7 @@
+> ⚠️ **SUPERSEDED (kept for history).** This diagnostic pass (branch `feat/import-concept-linker`)
+> is superseded by `docs/reveng/INGESTION_PIPELINE.md`, verified against the current tree. Use that
+> for live import-brain behavior; this file remains for its root-cause narrative only.
+
 # Import Brain — Reverse Engineering, Root Cause, and the Path to an Intelligent Importer
 
 > Read-only diagnostic pass on branch `feat/import-concept-linker`. No source was modified.

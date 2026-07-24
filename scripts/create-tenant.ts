@@ -1,6 +1,7 @@
 // create-tenant.ts — create a new tenant + admin user in Cosmos __system__ partition.
 //
-// Run BEFORE migrate-to-cosmos.ts to set up the auth records for a new company.
+// Sets up the tenant + admin auth records for a new company. Product data is then
+// populated by uploading a workbook (.xlsx) through the app's Import modal.
 // All values are configured via env vars so no secrets are committed.
 //
 // Run:
@@ -15,7 +16,7 @@
 //
 // ADMIN_ROLE defaults to ADMIN. Valid values: VIEWER, ANALYST, EDITOR, ADMIN.
 // ADMIN_PASS defaults to ADMIN_USER value (change immediately after first login).
-// To seed the reference products after this, run migrate-to-cosmos.ts next.
+// After this, log in and upload a product workbook (.xlsx) via the Import modal.
 
 import { CosmosClient } from '@azure/cosmos'
 import type { Organization } from '../shared/src/types'
@@ -78,8 +79,8 @@ async function run() {
   await docs.items.upsert(userDoc)
   console.log(`  ✅ User "${username}" created (role: ${role}, tenant: ${tenantId})`)
   console.log()
-  console.log('Next step: seed reference products for this tenant:')
-  console.log(`  COSMOS_ENDPOINT=... COSMOS_KEY=... COSMOS_TENANT=${tenantId} NODE_PATH=server/node_modules pnpm tsx scripts/migrate-to-cosmos.ts`)
+  console.log('Next step: log in and upload a product workbook (.xlsx) via the Import modal —')
+  console.log('the uploaded workbook is the source of truth for product data.')
   console.log()
   console.log('Login credentials:')
   console.log(`  username: ${username}`)

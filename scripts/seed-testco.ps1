@@ -1,5 +1,6 @@
 # seed-testco.ps1
-# Reads Cosmos credentials from the Azure App Service config and seeds a "testco" test company.
+# Reads Cosmos credentials from the Azure App Service config and provisions a "testco" test company (tenant + admin user).
+# Product data is populated by uploading a workbook (.xlsx) through the app's Import modal — the uploaded workbook is the source of truth.
 # Run from repo root in any PowerShell terminal where `az` is authenticated.
 #
 #   .\scripts\seed-testco.ps1
@@ -44,18 +45,15 @@ $env:ADMIN_ROLE          = "ADMIN"
 $env:TENANT_NAME         = $TenantName
 
 Write-Host ""
-Write-Host "Step 1 — creating tenant '$Tenant' + admin user '$AdminUser' …"
+Write-Host "Creating tenant '$Tenant' + admin user '$AdminUser' …"
 pnpm tsx scripts/create-tenant.ts
 if ($LASTEXITCODE -ne 0) { Write-Error "create-tenant.ts failed"; exit 1 }
 
 Write-Host ""
-Write-Host "Step 2 — seeding PH/PA/GL reference products for tenant '$Tenant' …"
-$env:NODE_PATH = "server/node_modules"
-pnpm tsx scripts/migrate-to-cosmos.ts
-if ($LASTEXITCODE -ne 0) { Write-Error "migrate-to-cosmos.ts failed"; exit 1 }
-
+Write-Host "Done. Log in at the app, then upload a product workbook (.xlsx) via the Import"
+Write-Host "modal to populate products — the uploaded workbook is the source of truth for data."
 Write-Host ""
-Write-Host "Done. Log in at the app with:"
+Write-Host "Log in at the app with:"
 Write-Host "  username: $AdminUser"
 Write-Host "  password: $(if ($AdminPass) { '(what you passed as -AdminPass)' } else { $AdminUser + '  <- change this!' })"
 Write-Host "  tenant:   $Tenant"
