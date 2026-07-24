@@ -168,10 +168,15 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const replaceTarget  = useRef<string | null>(null)
 
   const proceedWithFiles = useCallback(async (docs: File[]) => {
-    // Magic-byte sniff: all XLSX/XLSM (ZIP signature PK\x03\x04) → local ISO mapper.
-    // Anything else (PDF, ZIP SERFF, mixed) → server pipeline.
+    // Magic-byte sniff (ZIP signature PK\x03\x04 = XLSX/XLSM). Routing:
+    //   • A MULTI-FILE all-XLSX set (ISO GL/IM/PR multi-workbook goldens) → the
+    //     deterministic client mapper the goldens are built for; parsed in-browser.
+    //   • A SINGLE workbook — and any PDF/SERFF/mixed upload — → the server import
+    //     brain (server-side ExcelJS parse → 6-stage adaptive extraction). A lone
+    //     Excel file gets the full AI pipeline: no browser-side parse of a large
+    //     workbook, ensemble extraction + adversarial validation, cited every field.
     const formats = await Promise.all(docs.map(sniffFormat))
-    if (formats.every(f => f === 'xlsx')) {
+    if (docs.length > 1 && formats.every(f => f === 'xlsx')) {
       setPhase('streaming')
       try {
         const grids = await readWorkbooks(docs)
