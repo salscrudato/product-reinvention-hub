@@ -2145,12 +2145,12 @@ function resolveLobByName(name) {
 }
 function kindOfToken(token) {
   const t = token.toUpperCase();
-  if (t.startsWith("PROD") || t === "PRD") return "product";
+  if (t.startsWith("PROD") || t === "PRD" || t === "PRDCT") return "product";
   if (t.startsWith("LOB")) return "lob";
-  if (t.startsWith("SUBCOV") || t.startsWith("COV")) return "coverage";
-  if (t === "RU" || t === "RL" || t.startsWith("RULE") || t === "FR") return "rule";
-  if (t.startsWith("FORM")) return "form";
-  if (t.startsWith("RAT") || t === "ROC" || t.startsWith("PROG") || t.startsWith("STEP") || t === "RT" || t === "LD") return "rating";
+  if (t.startsWith("SUBCOV") || t.startsWith("COV") || t === "CVG" || t === "CVRG") return "coverage";
+  if (t === "RU" || t === "RL" || t === "RUL" || t.startsWith("RULE") || t === "FR") return "rule";
+  if (t.startsWith("FORM") || t === "FRM") return "form";
+  if (t.startsWith("RAT") || t === "RTG" || t === "ROC" || t.startsWith("PROG") || t.startsWith("STEP") || t === "RT" || t === "LD") return "rating";
   return null;
 }
 function refIdSegmentKind(refId) {
