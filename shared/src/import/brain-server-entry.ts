@@ -34,3 +34,10 @@ export {
 // template workbooks. Stage 7 joins its registry-derived refIds/order/hierarchy
 // with the brain's cited extraction (mapper = identity, brain = provenance).
 export { mapIsoWorkbook } from '../insurance/isoImport'
+// THE placeholder-sentinel rule. A cell reading "<Intentionally Blank>", "N/A", or
+// "Intentionally left blank" is the workbook SAYING NOTHING at that level — it is not a
+// value. The deterministic mapper has always blanked these (its `clean()`); the brain had
+// no such notion, so a parent coverage row (whose SUB-COVERAGE cell holds the sentinel)
+// imported with the sentinel as its literal name. One exported predicate keeps both paths
+// on the same definition instead of two drifting copies.
+export { isPlaceholder } from '../insurance/isoImport'

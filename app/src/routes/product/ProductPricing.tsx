@@ -192,8 +192,10 @@ export default function ProductPricing() {
   const rtGetter = useMemo(() => kit.makeRtGetter(rtTables), [kit, rtTables])
   const ldGetter = useMemo(() => kit.makeLdGetter(ldTables), [kit, ldTables])
   const debouncedInputs = useDebounced(inputs, 90)
-  const needsRt = !!ratingProgram?.steps.some(s => s.source.type === 'RT' || s.source.type === 'SPP')
-  const needsLd = !!ratingProgram?.steps.some(s => s.source.type === 'LD')
+  // `s.source?.` throughout: a step persisted by an older import can lack `source` entirely,
+  // and an unguarded read here crashes the whole tab rather than showing the program.
+  const needsRt = !!ratingProgram?.steps.some(s => s.source?.type === 'RT' || s.source?.type === 'SPP')
+  const needsLd = !!ratingProgram?.steps.some(s => s.source?.type === 'LD')
   const tablesReady = (!needsRt || Object.keys(rtTables).length > 0) && (!needsLd || Object.keys(ldTables).length > 0)
 
   // Table refs a step needs that aren't loaded (a step points at a deleted/renamed table).
@@ -202,10 +204,10 @@ export default function ProductPricing() {
     if (!ratingProgram) return [] as string[]
     const miss: string[] = []
     for (const s of ratingProgram.steps) {
-      const ref = s.source.ref
+      const ref = s.source?.ref
       if (!ref) continue
-      if ((s.source.type === 'RT' || s.source.type === 'SPP') && !rtTables[ref]) miss.push(ref)
-      else if (s.source.type === 'LD' && !ldTables[ref]) miss.push(ref)
+      if ((s.source?.type === 'RT' || s.source?.type === 'SPP') && !rtTables[ref]) miss.push(ref)
+      else if (s.source?.type === 'LD' && !ldTables[ref]) miss.push(ref)
     }
     return [...new Set(miss)]
   }, [ratingProgram, rtTables, ldTables])

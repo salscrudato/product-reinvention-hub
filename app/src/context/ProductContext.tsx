@@ -6,6 +6,7 @@ import type {
   Product, Coverage, Rule, FormRule, RatingProgram,
   Form, LDTable, RTTable, Version, Comment,
 } from '@pf/shared'
+import { repairPersistedProgram } from '@pf/shared'
 
 export type WithId<T> = T & { id: string }
 
@@ -42,36 +43,50 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
   const [rtTables,      setRtTables]      = useState<Record<string, RTTable>>({})
   const [versions,      setVersions]      = useState<WithId<Version>[]>([])
   const [comments,      setComments]      = useState<WithId<Comment>[]>([])
-  const [loaded,        setLoaded]        = useState(0)   // count resolved subscriptions
+  // Which subscriptions have delivered at least once — a SET of keys, not a tally.
+  // A raw counter counted EVENTS: these are live subscriptions, so one chatty collection
+  // firing repeatedly could reach TOTAL_SUBS on its own and flip `loading` to false while
+  // coverages had not arrived yet — the "first visit shows nothing, going back shows it all"
+  // symptom. Keying by collection makes re-delivery idempotent.
+  const [resolved,      setResolved]      = useState<ReadonlySet<string>>(new Set())
   const [error,         setError]         = useState(false)
   const [reloadKey,     setReloadKey]     = useState(0)
 
-  const TOTAL_SUBS = 10
+  const SUB_KEYS = ['product', 'coverages', 'rules', 'formRules', 'ratingPrograms',
+    'forms', 'ldTables', 'rtTables', 'versions', 'comments'] as const
+  const TOTAL_SUBS = SUB_KEYS.length
 
-  function inc() { setLoaded(n => Math.min(n + 1, TOTAL_SUBS)) }
+  const inc = (key: typeof SUB_KEYS[number]) => setResolved(prev => {
+    if (prev.has(key)) return prev            // same Set → no needless re-render
+    const next = new Set(prev); next.add(key); return next
+  })
 
   useEffect(() => {
-    setLoaded(0); setError(false)
+    setResolved(new Set()); setError(false)
     const unsubs = [
       // Product document — the load-bearing subscription. A listener ERROR here (permission /
       // offline) flags `error` so the workspace shows a recoverable state instead of hanging
       // on the skeleton (a null doc, by contrast, is "not found" → the workspace redirects).
       adapter.db.subscribe<WithId<Product>>(`products/${pid}`, (d) => {
         if (!Array.isArray(d)) setProduct(d)
-        inc()
-      }, () => { setError(true); inc() }),
+        inc('product')
+      }, () => { setError(true); inc('product') }),
       // Sub-collections
       adapter.db.subscribe<WithId<Coverage>>(`products/${pid}/coverages`, (d) => {
-        if (Array.isArray(d)) { setCoverages(d.sort((a,b) => (a.order??0)-(b.order??0))); inc() }
+        if (Array.isArray(d)) { setCoverages(d.sort((a,b) => (a.order??0)-(b.order??0))); inc('coverages') }
       }),
       adapter.db.subscribe<WithId<Rule>>(`products/${pid}/rules`, (d) => {
-        if (Array.isArray(d)) { setRules(d); inc() }
+        if (Array.isArray(d)) { setRules(d); inc('rules') }
       }),
       adapter.db.subscribe<WithId<FormRule>>(`products/${pid}/formRules`, (d) => {
-        if (Array.isArray(d)) { setFormRules(d); inc() }
+        if (Array.isArray(d)) { setFormRules(d); inc('formRules') }
       }),
       adapter.db.subscribe<WithId<RatingProgram>>(`products/${pid}/ratingPrograms`, (d) => {
-        if (Array.isArray(d)) { setRatingProgram(d[0] ?? null); inc() }
+        // Repair at the boundary: a program imported before the brain emitted canonical steps
+        // persists steps with no `source`, and every downstream reader (evaluator, the grid
+        // worksheet, RatingAlgorithm, the Excel export) reads `step.source.type`. One repair
+        // here keeps them all on contract; it fixes SHAPE only and never invents a rate.
+        if (Array.isArray(d)) { setRatingProgram(repairPersistedProgram(d[0] ?? null)); inc('ratingPrograms') }
       }),
       // Forms are a shared top-level library that can grow past the list cap once several
       // large products are imported (a single CORE import adds ~1359). Filter SERVER-SIDE by
@@ -81,21 +96,21 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
         if (Array.isArray(d)) {
           // Server already scoped to this product; keep the defensive filter as a belt-and-braces.
           setForms(d.filter(f => (f.productRefIds ?? []).includes(pid)))
-          inc()
+          inc('forms')
         }
       }, undefined, { where: [{ field: 'productRefIds', op: 'array-contains', value: pid }] }),
       adapter.db.subscribe<WithId<LDTable> & { id: string }>('ldTables', (d) => {
         if (Array.isArray(d)) {
           const rec: Record<string, LDTable> = {}
           d.forEach(t => { rec[t.id] = t })
-          setLdTables(rec); inc()
+          setLdTables(rec); inc('ldTables')
         }
       }),
       adapter.db.subscribe<WithId<RTTable> & { id: string }>('rtTables', (d) => {
         if (Array.isArray(d)) {
           const rec: Record<string, RTTable> = {}
           d.forEach(t => { rec[t.id] = t })
-          setRtTables(rec); inc()
+          setRtTables(rec); inc('rtTables')
         }
       }),
       // Versions are read from the dedicated /db/versions endpoint (PCM-B) —
@@ -116,25 +131,25 @@ export function ProductProvider({ pid, children }: { pid: string; children: Reac
             const p = Date.parse(String(at)); return Number.isNaN(p) ? 0 : p
           }
           setVersions(d.filter(v => v.productId === pid).sort((a, b) => ms(b.at) - ms(a.at)))
-          inc()
+          inc('versions')
         }
       }, undefined, { where: [{ field: 'productId', op: '==', value: pid }] }),
       adapter.db.subscribe<WithId<Comment>>('comments', (d) => {
-        if (Array.isArray(d)) { setComments(d.filter(c => c.entityPath?.startsWith(`products/${pid}`))); inc() }
+        if (Array.isArray(d)) { setComments(d.filter(c => c.entityPath?.startsWith(`products/${pid}`))); inc('comments') }
       }),
     ]
-    return () => { unsubs.forEach(u => u()); setLoaded(0) }
+    return () => { unsubs.forEach(u => u()); setResolved(new Set()) }
   }, [pid, reloadKey])
 
   const value = useMemo(() => ({
     pid, product, coverages, rules, formRules, ratingProgram,
     forms, ldTables, rtTables, versions, comments,
-    loading: loaded < TOTAL_SUBS,
+    loading: resolved.size < TOTAL_SUBS,
     error,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    retry: () => { setLoaded(0); setError(false); setReloadKey(k => k + 1) },
+    retry: () => { setResolved(new Set()); setError(false); setReloadKey(k => k + 1) },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pid, product, coverages, rules, formRules, ratingProgram, forms, ldTables, rtTables, versions, comments, loaded, error])
+  }), [pid, product, coverages, rules, formRules, ratingProgram, forms, ldTables, rtTables, versions, comments, resolved, error])
 
   return (
     <Ctx value={value}>

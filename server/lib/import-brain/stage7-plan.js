@@ -18,7 +18,7 @@
 const { CONFIDENCE_DISCARD } = require('./constants')
 
 const brainShared = require('../import-brain-shared.cjs')
-const { LOB_REGISTRY, refIdToDocId } = brainShared
+const { LOB_REGISTRY, refIdToDocId, isPlaceholder } = brainShared
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -149,9 +149,19 @@ function toPlanned(entity, extraData) {
     data[f.fieldName] = f.value
   }
   if (refId && !data.refId && entity.kind !== 'form') data.refId = refId
+  // A PLACEHOLDER cell states NOTHING — drop it rather than carry it as a value. PCM
+  // workbooks fill the inapplicable level of the hierarchy with a literal sentinel
+  // ("<Intentionally Blank>", "N/A"), so a parent coverage row's SUB-COVERAGE cell is the
+  // sentinel by design. Keeping it made every parent import named "<Intentionally Blank>"
+  // (and surface that way anywhere a coverage is referenced, e.g. a form's "Where used").
+  // The deterministic mapper has always blanked these; this is the same predicate.
+  for (const [k, v] of Object.entries(data)) {
+    if (typeof v === 'string' && isPlaceholder(v.trim())) delete data[k]
+  }
   // PCM sheets carry separate product / coverage / sub-coverage name columns per
   // row; the entity's OWN name is the most specific one present (canonicalMap's
-  // coverageName/subCoverageName → name semantics).
+  // coverageName/subCoverageName → name semantics). With the sentinel dropped above, a
+  // parent row now correctly falls through subCoverageName to coverageName.
   const ownName = [data.subCoverageName, data.coverageName, data.name]
     .find(v => typeof v === 'string' && v.trim() !== '')
   if (ownName) data.name = ownName
@@ -171,6 +181,63 @@ function toPlanned(entity, extraData) {
     label: (typeof data.name === 'string' && data.name.trim()) ? data.name : entityLabel(entity),
     data,
   }
+}
+
+// ─── Rating-step normalization (extracted field bag → canonical RatingStep) ───
+// canonicalMap declares the rate reference as the DOTTED key 'source.ref', so an extracted
+// step is a flat bag — `{'source.ref': 'RT.001', op: '*'}` — with NO nested `source` object.
+// Handing that bag straight to the app as a RatingStep meant every consumer that reads
+// `step.source.type` (shared/src/rating/gridInputs.ts, evaluator.ts, the Pricing screen)
+// threw "Cannot read properties of undefined (reading 'type')" and white-screened the
+// Pricing tab for every brain-imported product. The deterministic mapper has always built a
+// well-formed source (isoImport parseRating); this brings the brain to the same contract.
+
+/** Source cell operator → canonical op. Mirrors canonicalMap's documented mapping. */
+function foldStepOp(raw) {
+  const s = String(raw ?? '').trim().toUpperCase()
+  if (s === 'SET' || s === 'MUL' || s === 'ADD' || s === 'MIN_FLOOR') return s
+  if (s === '=' ) return 'SET'
+  if (s === '*' || s === '/' || s === 'X') return 'MUL'
+  if (s === '+' || s === '-') return 'ADD'
+  return 'MUL'   // a rating step with no stated operator multiplies the running total
+}
+
+/**
+ * Coerce one extracted step bag into a canonical RatingStep. NEVER invents a rate: when the
+ * source names no table, the step becomes an INPUT keyed on its own label — the identical
+ * fallback the deterministic mapper uses — and the gap is reported, not hidden.
+ */
+function normalizeRatingStep(data, index, planWarnings) {
+  const order = Number.isFinite(data.order) ? Number(data.order) : index + 1
+  const id    = [data.id, data.stepId, data.refId].find(v => typeof v === 'string' && v.trim() !== '')
+    || `step-${order}`
+  const label = [data.label, data.description, id].find(v => typeof v === 'string' && v.trim() !== '') || id
+
+  // An already-canonical nested source (the ISO-mapper join path) is authoritative.
+  let source = null
+  if (data.source && typeof data.source === 'object' && typeof data.source.type === 'string') {
+    source = data.source
+  } else {
+    const ref = [data['source.ref'], data.rateReference, data.reference]
+      .find(v => typeof v === 'string' && v.trim() !== '')
+    source = ref ? { type: 'RT', ref: ref.trim() } : { type: 'INPUT', ref: label }
+    if (!ref && planWarnings) {
+      planWarnings.push({
+        kind: 'rating-step-source-unstated', sheet: null, row: null, field: 'source',
+        detail: `Rating step "${label}" names no rate table; staged as an INPUT keyed on its own label. No rate was assumed — point it at a table before pricing depends on it.`,
+      })
+    }
+  }
+
+  const step = { id, order, label, op: foldStepOp(data.op), source }
+  if (Number.isFinite(data.roundTo)) step.roundTo = Number(data.roundTo)
+  if (typeof data.condition === 'string' && data.condition.trim() !== '') step.condition = data.condition
+  if (typeof data.groupName === 'string' && data.groupName.trim() !== '') step.groupName = data.groupName
+  // Keep the provenance the review UI renders; it rides alongside the canonical shape.
+  if (data.citation) step.citation = data.citation
+  if (data.confidence !== undefined) step.confidence = data.confidence
+  if (typeof data.coverageRef === 'string' && data.coverageRef.trim() !== '') step.coverageRef = data.coverageRef
+  return step
 }
 
 // ─── Deterministic ISO-mapper join ────────────────────────────────────────────
@@ -479,7 +546,9 @@ function buildImportPlan(brainOutput, opts = {}) {
     }
     planWarnings.push({ kind: 'program-synthesized', sheet: null, row: null, field: 'refId', detail: `Rating steps present without a program row; synthesized ${refId}.` })
   }
-  if (ratingProgram && steps.length > 0) ratingProgram.data.steps = steps.map(s => s.data)
+  if (ratingProgram && steps.length > 0) {
+    ratingProgram.data.steps = steps.map((s, i) => normalizeRatingStep(s.data, i, planWarnings))
+  }
 
   // Canonical workflow defaults every imported entity carries (identical to the
   // deterministic ISO mapper's conventions) — these are importer-stamped review
@@ -1053,4 +1122,4 @@ function buildImportPlan(brainOutput, opts = {}) {
   return bundle
 }
 
-module.exports = { buildImportPlan }
+module.exports = { buildImportPlan, normalizeRatingStep }

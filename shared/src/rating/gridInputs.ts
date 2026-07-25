@@ -29,7 +29,12 @@ export function deriveGridInputSpec(
   const byKey = new Map<string, { label: string; values: string[] }>()
   let sawGrid = false
   for (const step of program.steps) {
-    if (step.source.type !== 'RT' || !step.source.ref) continue
+    // A step whose `source` is missing is MALFORMED, not a grid step. Imports written before
+    // the brain emitted canonical steps persist exactly that shape, and an unguarded
+    // `step.source.type` threw here — inside a useMemo, so it white-screened the whole
+    // Pricing tab instead of degrading. Skip it: a step that names no source contributes no
+    // dimension, which is the same answer this loop already gives for a non-RT step.
+    if (step?.source?.type !== 'RT' || !step.source.ref) continue
     const table = rtTables[step.source.ref]
     const dims = table?.dimensions
     if (!dims || dims.length === 0) continue
@@ -56,4 +61,49 @@ export function deriveGridInputSpec(
     if (values.length) workedExample[key] = allNumeric ? Number(values[0]) : values[0]!
   }
   return { inputSpec, workedExample }
+}
+
+// ─── Persisted-program repair (defensive read of imported data) ───────────────
+// A RatingStep persisted before the importer emitted canonical steps can carry a FLAT bag
+// ({'source.ref': 'RT.001'}) with no nested `source` at all — canonicalMap declares the rate
+// reference as the dotted key 'source.ref', and the brain wrote the bag through unchanged.
+// Every consumer reads `step.source.type`, so such a row threw inside a useMemo and
+// white-screened the whole Pricing tab. Repairing once at the load boundary keeps the ~19
+// downstream readers (evaluator, RatingAlgorithm, the Excel export, pricingLinks) on the
+// contract their types already promise, instead of each guarding independently.
+//
+// This REPAIRS SHAPE ONLY — it never invents a rate. A step naming no table becomes an INPUT
+// keyed on its own label, exactly as the deterministic mapper and the server-side importer do.
+
+/** True when a step already satisfies the RatingStep contract. */
+function hasCanonicalSource(step: unknown): boolean {
+  const s = (step as { source?: { type?: unknown } } | null)?.source
+  return !!s && typeof s.type === 'string'
+}
+
+/** Coerce one persisted step into a well-formed RatingStep. */
+function coerceStep(raw: Record<string, unknown>, index: number): RatingProgram['steps'][number] {
+  const order = typeof raw['order'] === 'number' ? raw['order'] : index + 1
+  const pick = (...ks: string[]): string | undefined =>
+    ks.map(k => raw[k]).find(v => typeof v === 'string' && v.trim() !== '') as string | undefined
+  const id    = pick('id', 'stepId', 'refId') ?? `step-${order}`
+  const label = pick('label', 'description') ?? id
+  const ref   = pick('source.ref', 'rateReference', 'reference')
+  const op    = raw['op']
+  const okOp  = op === 'SET' || op === 'MUL' || op === 'ADD' || op === 'MIN_FLOOR'
+  return {
+    ...(raw as object),
+    id, order, label,
+    op: okOp ? op : 'MUL',
+    source: ref ? { type: 'RT', ref } : { type: 'INPUT', ref: label },
+  } as RatingProgram['steps'][number]
+}
+
+/** Return the program with every step guaranteed to carry a canonical `source`. Returns the
+ *  SAME object when nothing needed repair, so React memo dependencies stay stable. */
+export function repairPersistedProgram<T extends RatingProgram>(program: T | null | undefined): T | null {
+  if (!program) return null
+  const steps = Array.isArray(program.steps) ? program.steps : []
+  if (steps.every(hasCanonicalSource)) return program
+  return { ...program, steps: steps.map((s, i) => coerceStep(s as unknown as Record<string, unknown>, i)) }
 }
