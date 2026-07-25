@@ -29,7 +29,7 @@ function coverageTokens(cov: Pick<Coverage, 'name'>): { phrase: string | null; w
 
 /** The rating steps that reference this coverage, plus the distinct tables they read. */
 export function linkCoverageToPricing(
-  cov: Pick<Coverage, 'name' | 'terms'>,
+  cov: Pick<Coverage, 'name' | 'terms'> & { refId?: string | null },
   program: Pick<RatingProgram, 'steps'> | null | undefined,
   rtTables: Record<string, RTTable>,
   ldTables: Record<string, LDTable>,
@@ -38,10 +38,38 @@ export function linkCoverageToPricing(
   const { phrase, words } = coverageTokens(cov)
   const termRefs = new Set((cov.terms ?? []).map(t => t.ldTableRef).filter((r): r is string => !!r))
 
+  // A STATED link beats every heuristic below. Core-format rating sheets name the coverage
+  // each step prices in their own column (canonicalMap's `coverageRef`, e.g. "CORE.COV.018"),
+  // and the importer now carries it onto the step. Matching on it first means a step is
+  // attributed because the SOURCE said so — not because its label happened to share a word
+  // with the coverage's name, which both over-matches ("Automotive Tools" ↔ any step
+  // mentioning tools) and under-matches (a step labelled only "Base rate" links to nothing).
+  const covRefId = (cov.refId ?? '').trim()
+  const stepCoverageRef = (s: RatingStep): string =>
+    String((s as RatingStep & { coverageRef?: unknown }).coverageRef ?? '').trim()
+  const stated = covRefId
+    ? steps.filter(s => {
+        const cr = stepCoverageRef(s)
+        // The cell may list several coverages ("CORE.COV.005; CORE.COV.007").
+        return cr !== '' && cr.split(/[;,]/).some(p => p.trim() === covRefId)
+      })
+    : []
+  if (stated.length > 0) {
+    const tables: PricingLinkTable[] = []
+    const seen = new Set<string>()
+    for (const step of stated) {
+      const ref = step.source?.ref
+      if (!ref || seen.has(ref)) continue
+      seen.add(ref)
+      tables.push({ ref, name: rtTables[ref]?.name ?? ldTables[ref]?.name ?? ref })
+    }
+    return { steps: stated, tables }
+  }
+
   const matched = steps.filter(step => {
-    const ref = step.source.ref
+    const ref = step.source?.ref
     if (ref && termRefs.has(ref)) return true                       // shares a table with the coverage
-    const haystack = `${step.label} ${(step.source.keys ?? []).join(' ')} ${ref ?? ''}`.toLowerCase()
+    const haystack = `${step.label} ${(step.source?.keys ?? []).join(' ')} ${ref ?? ''}`.toLowerCase()
     if (phrase && haystack.includes(phrase)) return true            // step names the coverage section
     const stepWords = new Set(haystack.split(/[^a-z0-9]+/))
     return words.some(w => stepWords.has(w))                        // step names a distinctive word
@@ -50,7 +78,7 @@ export function linkCoverageToPricing(
   const tables: PricingLinkTable[] = []
   const seen = new Set<string>()
   for (const step of matched) {
-    const ref = step.source.ref
+    const ref = step.source?.ref
     if (!ref || seen.has(ref)) continue
     seen.add(ref)
     tables.push({ ref, name: rtTables[ref]?.name ?? ldTables[ref]?.name ?? ref })

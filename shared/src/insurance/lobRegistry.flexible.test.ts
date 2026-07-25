@@ -32,6 +32,21 @@ describe('refIdSegmentKind — the kind token may sit anywhere', () => {
     expect(refIdSegmentKind('form_00_12')).toBe('form')           // lowercase + underscores
   })
 
+  it('accepts vowel-dropped abbreviations of the SAME words', () => {
+    expect(refIdSegmentKind('GL.CVG.001')).toBe('coverage')
+    expect(refIdSegmentKind('CVRG-12')).toBe('coverage')
+    expect(refIdSegmentKind('X.RUL.9')).toBe('rule')
+    expect(refIdSegmentKind('FRM_00_12')).toBe('form')
+    expect(refIdSegmentKind('GL.RTG.4')).toBe('rating')
+    expect(refIdSegmentKind('PRDCT-1')).toBe('product')
+  })
+
+  it('a DIFFERENT word is still not guessed at', () => {
+    // Vocabulary is a decision, not a spelling — silently mapping these would misclassify.
+    expect(refIdSegmentKind('ITEM-001')).toBeNull()
+    expect(refIdSegmentKind('SECTION.4')).toBeNull()
+  })
+
   it('still returns null when nothing names a kind', () => {
     expect(refIdSegmentKind('12345')).toBeNull()
     expect(refIdSegmentKind('')).toBeNull()

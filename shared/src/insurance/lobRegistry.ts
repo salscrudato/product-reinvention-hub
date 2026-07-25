@@ -497,12 +497,18 @@ export type RefIdSegmentKind =
 /** Classify ONE alphabetic token. Shared by both passes below so the vocabulary lives once. */
 function kindOfToken(token: string): RefIdSegmentKind | null {
   const t = token.toUpperCase()
-  if (t.startsWith('PROD') || t === 'PRD') return 'product'
+  // Vowel-dropped abbreviations (CVG, PRDCT, RL) are how sources shorten these words when a
+  // column is narrow; they carry the same meaning and cost nothing to accept. Kept to forms
+  // that are unambiguous across the six kinds — nothing here can claim a token another kind
+  // would want. A source using an entirely DIFFERENT word ("ITEM", "SECTION") still returns
+  // null by design: that is a vocabulary decision, not a spelling one, and guessing it would
+  // misclassify silently.
+  if (t.startsWith('PROD') || t === 'PRD' || t === 'PRDCT') return 'product'
   if (t.startsWith('LOB')) return 'lob'
-  if (t.startsWith('SUBCOV') || t.startsWith('COV')) return 'coverage'
-  if (t === 'RU' || t === 'RL' || t.startsWith('RULE') || t === 'FR') return 'rule'
-  if (t.startsWith('FORM')) return 'form'
-  if (t.startsWith('RAT') || t === 'ROC' || t.startsWith('PROG') || t.startsWith('STEP') || t === 'RT' || t === 'LD') return 'rating'
+  if (t.startsWith('SUBCOV') || t.startsWith('COV') || t === 'CVG' || t === 'CVRG') return 'coverage'
+  if (t === 'RU' || t === 'RL' || t === 'RUL' || t.startsWith('RULE') || t === 'FR') return 'rule'
+  if (t.startsWith('FORM') || t === 'FRM') return 'form'
+  if (t.startsWith('RAT') || t === 'RTG' || t === 'ROC' || t.startsWith('PROG') || t.startsWith('STEP') || t === 'RT' || t === 'LD') return 'rating'
   return null
 }
 
