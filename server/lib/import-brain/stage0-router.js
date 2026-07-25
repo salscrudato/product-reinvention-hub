@@ -94,6 +94,46 @@ function prefixToLobRefId(prefix) {
 
 // ─── Deterministic signal gathering ───────────────────────────────────────────
 
+// A cell that NAMES the line of business, in either layout real workbooks use:
+//   * a COLUMN header ("LINE OF BUSINESS") with the value in the rows beneath, or
+//   * a LABEL/VALUE pair on one row ("Line of Business:" | "Personal Auto").
+const LOB_LABEL = /^\s*line\s*of\s*business\s*:?\s*$/i
+// Placeholder parity with the deterministic mapper: these state nothing.
+const LOB_PLACEHOLDER = /^\s*(<.*>|n\/?a|tbd|none|not applicable)\s*$/i
+
+/** The line-of-business the workbook STATES, or ''. Evidence beats convention: a book whose
+ *  ids use a carrier-specific prefix ("CORE.COV.001") matches no registry prefix and no LOB
+ *  name signal in its sheet names, so inferLob saw nothing — even though the workbook names
+ *  "Personal Auto" outright in a LINE OF BUSINESS column. Reading it costs one scan and
+ *  removes a whole class of "LOB undetected" that had nothing to do with the id format. */
+function harvestLobName(structural) {
+  const tally = new Map()
+  for (const fp of (structural.sheets || [])) {
+    const rows = fp.cells || []
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r] || []
+      for (let c = 0; c < row.length; c++) {
+        if (typeof row[c] !== 'string' || !LOB_LABEL.test(row[c])) continue
+        // Label/value pair on the same row — the next non-empty cell to the right.
+        for (let k = c + 1; k < row.length; k++) {
+          const v = typeof row[k] === 'string' ? row[k].trim() : ''
+          if (v) { if (!LOB_PLACEHOLDER.test(v)) tally.set(v, (tally.get(v) ?? 0) + 1); break }
+        }
+        // Column header — the values beneath it, capped so a 9k-row sheet stays cheap.
+        for (let rr = r + 1; rr < Math.min(rows.length, r + 200); rr++) {
+          const v = typeof (rows[rr] || [])[c] === 'string' ? rows[rr][c].trim() : ''
+          if (!v || LOB_PLACEHOLDER.test(v)) continue
+          tally.set(v, (tally.get(v) ?? 0) + 1)
+        }
+      }
+    }
+  }
+  // The dominant stated value wins (a framework sheet repeats it on every row).
+  let best = '', bestN = 0
+  for (const [v, n] of tally) if (n > bestN) { bestN = n; best = v }
+  return best
+}
+
 function collectWorkbookSignals(structural) {
   const refIds = []
   const sheetNames = []
@@ -187,6 +227,7 @@ async function routeArtifacts(opts) {
   const docSummaries = []
   const allRefIds = []
   const allSheetNames = []
+  const allLobNames = []
   let pdfTextHead = ''
 
   for (const doc of documents) {
@@ -216,6 +257,11 @@ async function routeArtifacts(opts) {
         const sig = collectWorkbookSignals(structural)
         allRefIds.push(...sig.refIds)
         allSheetNames.push(...sig.sheetNames)
+        // Harvested HERE, not inside collectWorkbookSignals: that scanner is deliberately
+        // duplicated in workbook.js and a tripwire test holds the two byte-identical. Adding
+        // a field to its return would have broken that pairing for an unrelated concern.
+        const statedLob = harvestLobName(structural)
+        if (statedLob) allLobNames.push(statedLob)
         docSummaries.push([
           `Type: ${sniff.workbookKind} workbook, ${structural.sheets.length} visible sheet(s)`,
           `Sheets: ${sig.sheetNames.join(', ').slice(0, 400)}`,
@@ -279,7 +325,14 @@ async function routeArtifacts(opts) {
   }
 
   // ── LOB inference: deterministic first ─────────────────────────────────────
-  const lob = inferLob({ refIds: allRefIds, sheetNames: allSheetNames, productName: pdfTextHead.slice(0, 2000) || null })
+  // lobName is the workbook's OWN statement of its line; inferLob weighs it above sheet
+  // names, so a carrier-specific id prefix no longer decides whether the line is known.
+  const lob = inferLob({
+    refIds: allRefIds,
+    sheetNames: allSheetNames,
+    lobName: allLobNames[0] || null,
+    productName: pdfTextHead.slice(0, 2000) || null,
+  })
   if (lob) {
     out.lobRefIdHint = lob.refId
     out.lobSource = 'deterministic'

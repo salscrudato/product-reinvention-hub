@@ -2129,8 +2129,9 @@ var LOB_REGISTRY = {
 var DEFAULT_LOB = PH_LOB;
 function lobByPrefix(refId) {
   if (!refId) return void 0;
-  const prefix = refId.split(/[.\-_ \d]/)[0];
-  return Object.values(LOB_REGISTRY).find((l) => l.prefix === prefix);
+  const prefix = refId.trim().split(/[.\-_ \d]/)[0]?.toUpperCase() ?? "";
+  if (!prefix) return void 0;
+  return Object.values(LOB_REGISTRY).find((l) => l.prefix.toUpperCase() === prefix);
 }
 function resolveLobByRefId(refId) {
   return lobByPrefix(refId);
@@ -2142,17 +2143,30 @@ function resolveLobByName(name) {
     (l) => l.name.toLowerCase() === n || l.displayName.toLowerCase() === n || n.includes(l.name.toLowerCase()) || n.includes(l.code.toLowerCase())
   );
 }
+function kindOfToken(token) {
+  const t = token.toUpperCase();
+  if (t.startsWith("PROD") || t === "PRD") return "product";
+  if (t.startsWith("LOB")) return "lob";
+  if (t.startsWith("SUBCOV") || t.startsWith("COV")) return "coverage";
+  if (t === "RU" || t === "RL" || t.startsWith("RULE") || t === "FR") return "rule";
+  if (t.startsWith("FORM")) return "form";
+  if (t.startsWith("RAT") || t === "ROC" || t.startsWith("PROG") || t.startsWith("STEP") || t === "RT" || t === "LD") return "rating";
+  return null;
+}
 function refIdSegmentKind(refId) {
   if (typeof refId !== "string") return null;
-  const m = /^[A-Z]{1,6}[.\-_ ]([A-Z]+)/i.exec(refId.trim());
-  if (!m) return null;
-  const token = m[1].toUpperCase();
-  if (token.startsWith("PROD") || token === "PRD") return "product";
-  if (token.startsWith("LOB")) return "lob";
-  if (token.startsWith("SUBCOV") || token.startsWith("COV")) return "coverage";
-  if (token === "RU" || token === "RL" || token.startsWith("RULE") || token === "FR") return "rule";
-  if (token.startsWith("FORM")) return "form";
-  if (token.startsWith("RAT") || token === "ROC" || token.startsWith("PROG") || token.startsWith("STEP") || token === "RT" || token === "LD") return "rating";
+  const s = refId.trim();
+  if (!s) return null;
+  const m = /^[A-Z]{1,6}[.\-_ ]([A-Z]+)/i.exec(s);
+  if (m) {
+    const kind = kindOfToken(m[1]);
+    if (kind) return kind;
+  }
+  for (const token of s.split(/[^A-Za-z]+/)) {
+    if (!token) continue;
+    const kind = kindOfToken(token);
+    if (kind) return kind;
+  }
   return null;
 }
 function usableRefId(v) {
@@ -2176,7 +2190,15 @@ function inferLob(signals) {
     }
     return LOB_REGISTRY[bestRefId];
   }
-  const hay = [signals.productName, signals.lobName, ...signals.sheetNames ?? []].filter(Boolean).join("  ");
+  const stated = (signals.lobName ?? "").trim();
+  if (stated) {
+    const byName = resolveLobByName(stated);
+    if (byName) return byName;
+    for (const lob of Object.values(LOB_REGISTRY)) {
+      if (lob.refIdScheme.nameSignals.some((re) => re.test(stated))) return lob;
+    }
+  }
+  const hay = [signals.productName, ...signals.sheetNames ?? []].filter(Boolean).join("  ");
   if (hay.trim()) {
     for (const lob of Object.values(LOB_REGISTRY)) {
       if (lob.refIdScheme.nameSignals.some((re) => re.test(hay))) return lob;

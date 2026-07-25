@@ -448,8 +448,11 @@ function lobByPrefix(refId?: string | null): LobDefinition | undefined {
   if (!refId) return undefined
   // Separator-agnostic (ledger G-B): "GL.PROD.001" and "GL-PROD-001" state the
   // same line; glued forms ("PRCOV0010.0") already resolved via the digit split.
-  const prefix = refId.split(/[.\-_ \d]/)[0]
-  return Object.values(LOB_REGISTRY).find(l => l.prefix === prefix)
+  // CASE-insensitive too: a source is free to write "gl.cov.001", and an exact-case
+  // compare made the line resolvable or not on nothing but the shift key.
+  const prefix = refId.trim().split(/[.\-_ \d]/)[0]?.toUpperCase() ?? ''
+  if (!prefix) return undefined
+  return Object.values(LOB_REGISTRY).find(l => l.prefix.toUpperCase() === prefix)
 }
 
 /** Resolve a product's line-of-business definition. Matches the LOB refId exactly,
@@ -491,19 +494,41 @@ export function resolveLobByName(name?: string | null): LobDefinition | undefine
 export type RefIdSegmentKind =
   | 'product' | 'lob' | 'coverage' | 'rule' | 'form' | 'rating'
 
+/** Classify ONE alphabetic token. Shared by both passes below so the vocabulary lives once. */
+function kindOfToken(token: string): RefIdSegmentKind | null {
+  const t = token.toUpperCase()
+  if (t.startsWith('PROD') || t === 'PRD') return 'product'
+  if (t.startsWith('LOB')) return 'lob'
+  if (t.startsWith('SUBCOV') || t.startsWith('COV')) return 'coverage'
+  if (t === 'RU' || t === 'RL' || t.startsWith('RULE') || t === 'FR') return 'rule'
+  if (t.startsWith('FORM')) return 'form'
+  if (t.startsWith('RAT') || t === 'ROC' || t.startsWith('PROG') || t.startsWith('STEP') || t === 'RT' || t === 'LD') return 'rating'
+  return null
+}
+
 export function refIdSegmentKind(refId?: string | null): RefIdSegmentKind | null {
   if (typeof refId !== 'string') return null
-  // PREFIX <sep> SEGMENT…  — separator is '.', '-', '_' or a space; the segment's
-  // leading letter run is the kind token (digits may be glued: "PROD001").
-  const m = /^[A-Z]{1,6}[.\-_ ]([A-Z]+)/i.exec(refId.trim())
-  if (!m) return null
-  const token = m[1].toUpperCase()
-  if (token.startsWith('PROD') || token === 'PRD') return 'product'
-  if (token.startsWith('LOB')) return 'lob'
-  if (token.startsWith('SUBCOV') || token.startsWith('COV')) return 'coverage'
-  if (token === 'RU' || token === 'RL' || token.startsWith('RULE') || token === 'FR') return 'rule'
-  if (token.startsWith('FORM')) return 'form'
-  if (token.startsWith('RAT') || token === 'ROC' || token.startsWith('PROG') || token.startsWith('STEP') || token === 'RT' || token === 'LD') return 'rating'
+  const s = refId.trim()
+  if (!s) return null
+  // PASS 1 — PREFIX <sep> SEGMENT…: separator is '.', '-', '_' or a space; the segment's
+  // leading letter run is the kind token (digits may be glued: "PROD001"). This position is
+  // authoritative, so a line prefix that happens to spell a kind ("RU.COV.001" — an id under
+  // a "RU" prefix) still classifies on its SEGMENT, as coverage, exactly as before.
+  const m = /^[A-Z]{1,6}[.\-_ ]([A-Z]+)/i.exec(s)
+  if (m) {
+    const kind = kindOfToken(m[1])
+    if (kind) return kind
+  }
+  // PASS 2 — an id need not be PREFIX-first. Sources number their own way: "COV-001" leads
+  // with the kind, "001-COV-1" buries it, "Coverage 12" spells it out. Requiring position 2
+  // returned null for all of these, and a null kind silently falls back to the sheet's
+  // dominant guess — a format assumption deciding an entity's type. Scan every alphabetic
+  // token instead and take the first that names a kind. Additive: pass 1 still wins.
+  for (const token of s.split(/[^A-Za-z]+/)) {
+    if (!token) continue
+    const kind = kindOfToken(token)
+    if (kind) return kind
+  }
   return null
 }
 
@@ -545,8 +570,21 @@ export function inferLob(signals: LineInferenceSignals): LobDefinition | undefin
     for (const [refId, count] of tally) if (count > bestCount) { bestCount = count; bestRefId = refId }
     return LOB_REGISTRY[bestRefId]
   }
-  // 2) Name / sheet signals (order = registry order; first match wins).
-  const hay = [signals.productName, signals.lobName, ...(signals.sheetNames ?? [])]
+  // 2) An EXPLICIT statement of the line, weighed on its own before anything incidental.
+  //    `lobName` is a value the workbook printed in a LINE OF BUSINESS field — far stronger
+  //    than a substring of a sheet title, and it must not have to out-vote one. Folding it
+  //    into the combined hay below let a spurious sheet-name match for an earlier-registered
+  //    line win over the line the source actually named.
+  const stated = (signals.lobName ?? '').trim()
+  if (stated) {
+    const byName = resolveLobByName(stated)
+    if (byName) return byName
+    for (const lob of Object.values(LOB_REGISTRY)) {
+      if (lob.refIdScheme.nameSignals.some(re => re.test(stated))) return lob
+    }
+  }
+  // 3) Weaker name / sheet signals (order = registry order; first match wins).
+  const hay = [signals.productName, ...(signals.sheetNames ?? [])]
     .filter(Boolean).join('  ')
   if (hay.trim()) {
     for (const lob of Object.values(LOB_REGISTRY)) {

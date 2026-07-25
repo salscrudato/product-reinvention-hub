@@ -863,8 +863,9 @@ var LOB_REGISTRY = {
 var DEFAULT_LOB = PH_LOB;
 function lobByPrefix(refId) {
   if (!refId) return void 0;
-  const prefix = refId.split(/[.\-_ \d]/)[0];
-  return Object.values(LOB_REGISTRY).find((l) => l.prefix === prefix);
+  const prefix = refId.trim().split(/[.\-_ \d]/)[0]?.toUpperCase() ?? "";
+  if (!prefix) return void 0;
+  return Object.values(LOB_REGISTRY).find((l) => l.prefix.toUpperCase() === prefix);
 }
 function resolveLobByRefId(refId) {
   return lobByPrefix(refId);
