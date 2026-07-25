@@ -4994,6 +4994,19 @@ function detectReferenceTables(grids, consumed, ctx) {
       const optionValues = [];
       const rowLabels = [];
       const seen = /* @__PURE__ */ new Set();
+      const headerRowCells = row(grid, dataStart);
+      const headerAt = (c) => clean(headerRowCells[c] ?? null);
+      let dedCol = -1;
+      let limitHeaderSeen = false;
+      for (let c = 1; c <= 33; c++) {
+        const h = headerAt(c);
+        if (!h) continue;
+        if (dedCol < 0 && c >= 2 && /deductible/i.test(h)) dedCol = c;
+        if (c === 1 && /\blimit\b/i.test(h)) limitHeaderSeen = true;
+      }
+      const deductibleHeader = dedCol >= 0 ? headerAt(dedCol) : void 0;
+      const deductibleValues = [];
+      const dedSeen = /* @__PURE__ */ new Set();
       const valueCols = /* @__PURE__ */ new Set();
       let lostRows = 0;
       for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
@@ -5009,6 +5022,13 @@ function detectReferenceTables(grids, consumed, ctx) {
         }
         if (parseNum(rawVal) !== null) valueCols.add(1);
         if (valStr === "" && rightward !== null) lostRows++;
+        if (dedCol >= 0 && r > dataStart) {
+          const dNum = parseNum(cell(grid, r, dedCol));
+          if (dNum !== null && !dedSeen.has(String(dNum)) && deductibleValues.length < 60) {
+            dedSeen.add(String(dNum));
+            deductibleValues.push(dNum);
+          }
+        }
         if (!label && !valStr) continue;
         if (label && !rowLabels.includes(label)) rowLabels.push(label);
         if (!group) {
@@ -5056,6 +5076,11 @@ function detectReferenceTables(grids, consumed, ctx) {
         optionValues: isMatrix ? [] : optionValues,
         rowLabels,
         backLinkWas,
+        // A refused MATRIX yields no values at all — its deductible columns are part of the
+        // very ambiguity being refused, so they are withheld with the rest.
+        deductibleValues: isMatrix ? [] : deductibleValues,
+        deductibleHeader: isMatrix ? void 0 : deductibleValues.length ? deductibleHeader : void 0,
+        limitHeaderSeen,
         shape: isMatrix ? "MATRIX" : "FLAT",
         refusalReason
       });
@@ -5078,6 +5103,8 @@ function mintReferenceTables(drafts, prefix) {
       ruleRefIds: [],
       backLinkWas: d.backLinkWas || void 0,
       optionValues: d.optionValues.length ? d.optionValues : void 0,
+      ...d.deductibleValues.length ? { deductibleValues: d.deductibleValues, deductibleHeader: d.deductibleHeader } : {},
+      ...d.limitHeaderSeen ? { limitHeaderSeen: true } : {},
       mintedId: true,
       linkBasis: "derived",
       // A MATRIX draft carries no rows by design — surface WHY, so the review UI shows an
@@ -5188,7 +5215,9 @@ function deriveTermsFromReferenceTables(coverages, refTables, ctx) {
   let attached = 0;
   for (const table of refTables) {
     const data = table.data;
-    if (data.kindHint !== "LIMIT" && data.kindHint !== "DEDUCTIBLE") continue;
+    const primaryKind = data.kindHint === "LIMIT" || data.kindHint === "DEDUCTIBLE" ? data.kindHint : data.limitHeaderSeen ? "LIMIT" : null;
+    const dedValues = data.deductibleValues ?? [];
+    if (!primaryKind && dedValues.length === 0) continue;
     if (data.shape === "MATRIX") {
       const waiting = (data.coverageRefIds ?? []).length;
       if (waiting > 0) {
@@ -5208,21 +5237,39 @@ function deriveTermsFromReferenceTables(coverages, refTables, ctx) {
       const key = `${covId}|${tableRefId}`;
       if (dedup.has(key)) continue;
       dedup.add(key);
-      const term = {
-        id: tableRefId.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-        kind: data.kindHint,
-        label: data.name || tableRefId,
-        ldTableRef: tableRefId,
-        // resolves in the UI — CORE.TBL is in plan.ldTables
-        options: data.optionValues ?? (data.rows ?? []).map((r) => r.value),
-        default: data.defaultValue ?? data.rows?.[0]?.value ?? 0,
-        basis: "",
-        states: data.state ? [data.state] : [],
-        allStates: !data.state,
-        linkBasis: "derived"
-      };
-      cov.data["terms"].push(term);
-      attached++;
+      const baseId = tableRefId.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const terms = cov.data["terms"];
+      if (primaryKind) {
+        terms.push({
+          id: baseId,
+          kind: primaryKind,
+          label: data.name || tableRefId,
+          ldTableRef: tableRefId,
+          // resolves in the UI — CORE.TBL is in plan.ldTables
+          options: data.optionValues ?? (data.rows ?? []).map((r) => r.value),
+          default: data.defaultValue ?? data.rows?.[0]?.value ?? 0,
+          basis: "",
+          states: data.state ? [data.state] : [],
+          allStates: !data.state,
+          linkBasis: "derived"
+        });
+        attached++;
+      }
+      if (dedValues.length > 0 && primaryKind !== "DEDUCTIBLE") {
+        terms.push({
+          id: `${baseId}-deductible`,
+          kind: "DEDUCTIBLE",
+          label: `${data.name || tableRefId} \u2014 ${data.deductibleHeader || "Deductible"}`,
+          ldTableRef: tableRefId,
+          options: dedValues,
+          default: typeof dedValues[0] === "number" ? dedValues[0] : 0,
+          basis: "",
+          states: data.state ? [data.state] : [],
+          allStates: !data.state,
+          linkBasis: "derived"
+        });
+        attached++;
+      }
     }
   }
   return attached;
