@@ -211,7 +211,7 @@ try {
   if (!bundle) {
     console.log(`${c.yellow}[dynamic-fields]${c.reset} durable bundle not available (runId=${runId})`)
   } else {
-    const plan = (bundle as { plan?: { forms?: Array<{ data?: Record<string, unknown> }> } }).plan ?? {}
+    const plan = (bundle as { plan?: { forms?: Array<{ data?: Record<string, unknown> }>; rtTables?: Array<{ refId?: string; data?: Record<string, unknown> }> } }).plan ?? {}
     const warns = (bundle as { importWarnings?: Array<{ kind: string; detail: string }> }).importWarnings ?? []
     const forms = Array.isArray(plan.forms) ? plan.forms : []
     const withDf = forms.filter(f => Array.isArray(f.data?.dynamicFields) && (f.data!.dynamicFields as unknown[]).length > 0)
@@ -228,6 +228,19 @@ try {
       const num = sample.data!.number ?? sample.data!.refId ?? '(form)'
       const fields = (sample.data!.dynamicFields as Array<{ name: string; dataType: string; repeating?: boolean }>).slice(0, 6)
       console.log(`  ${c.dim}e.g. form ${num}:${c.reset} ${fields.map(f => `${f.name} [${f.dataType}${f.repeating ? ', repeating' : ''}]`).join('; ')}`)
+    }
+
+    // Rate-table grid readiness: how many imported RT tables carry explicit grid
+    // metadata (dimensions + valueColumn) — the shape that makes them priceable + editable.
+    const rtTables = Array.isArray(plan.rtTables) ? plan.rtTables : []
+    const withGrid = rtTables.filter(t => Array.isArray(t.data?.dimensions) && (t.data!.dimensions as unknown[]).length > 0)
+    console.log(`\n${c.bold}${c.green}RT-table grid metadata${c.reset}`)
+    console.log(`  rate tables in plan: ${rtTables.length}`)
+    console.log(`  tables with grid dimensions: ${c.bold}${withGrid.length}${c.reset}`)
+    const gsample = withGrid[0]
+    if (gsample) {
+      const dims = (gsample.data!.dimensions as Array<{ key: string; values: string[] }>)
+      console.log(`  ${c.dim}e.g. ${gsample.refId ?? gsample.data!.name}:${c.reset} value=${gsample.data!.valueColumn} · ${dims.map(d => `${d.key}(${d.values.length})`).join(' × ')}`)
     }
   }
 } catch (err) {

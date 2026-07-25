@@ -88,6 +88,21 @@ export async function importPlan(
   if (!plan.product || !plan.productId) throw new Error('Import plan has no product to create.')
   const productId = opts.productId ?? plan.productId
 
+  // Fail-safe write: coalesce every entity array IN PLACE (no reassignment, so plan.product
+  // stays narrowed) so a partial or legacy plan — e.g. a server-brain bundle that omits
+  // `ratePlaceholders` (an ISO-mapper-only field), or any future field this client predates —
+  // writes everything it CAN instead of aborting the whole import before a single row lands.
+  // Per-batch failures are already collected below and surfaced as `failed`/`errors`; this
+  // closes the "one missing array crashes it all" gap so a data issue degrades gracefully
+  // rather than losing the entire draft. Nullish assignment is a no-op when present.
+  if (!Array.isArray(plan.coverages))        plan.coverages = []
+  if (!Array.isArray(plan.forms))            plan.forms = []
+  if (!Array.isArray(plan.rules))            plan.rules = []
+  if (!Array.isArray(plan.formRules))        plan.formRules = []
+  if (!Array.isArray(plan.ldTables))         plan.ldTables = []
+  if (!Array.isArray(plan.rtTables))         plan.rtTables = []
+  if (!Array.isArray(plan.ratePlaceholders)) plan.ratePlaceholders = []
+
   const total =
     1 + plan.ldTables.length + plan.rtTables.length + plan.coverages.length +
     plan.forms.length + plan.rules.length + plan.formRules.length + (plan.ratingProgram ? 1 : 0)

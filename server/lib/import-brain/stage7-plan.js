@@ -914,6 +914,12 @@ function buildImportPlan(brainOutput, opts = {}) {
       products:  productPlanned ? [productPlanned] : [],
       coverages, forms, rules, formRules,
       ratingProgram, ldTables, rtTables,
+      // Rate-table placeholders are an ISO-mapper concept (minted when a rating step names
+      // a factor whose VALUES are absent from the source). The brain path surfaces missing
+      // rates as warnings/unresolved instead, so it mints none — but the field is a required
+      // part of the ImportPlan contract that importPlan() spreads, so it must be present
+      // (an absent array crashes the client with "ratePlaceholders is not iterable").
+      ratePlaceholders: [],
       summary: {
         productName:      productPlanned?.label ?? '',
         productRefId:     productRefId ?? '',
