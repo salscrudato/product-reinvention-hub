@@ -306,7 +306,14 @@ export function RatingAlgorithm({ program, pid, trace, changedStepIds, rtTables,
               </div>
             ))}
             {steps.length === 0 && (
-              <p className="text-sm text-faint text-center py-8">No rating steps yet.{canEdit ? ' Add the first step to build the algorithm.' : ''}</p>
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <p className="text-sm text-faint">No rating steps yet.</p>
+                {canEdit && (
+                  <Button variant="primary" size="sm" onClick={onAdd}>
+                    <IconPlus size={14} aria-hidden="true" />Add first step
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </SortableContext>

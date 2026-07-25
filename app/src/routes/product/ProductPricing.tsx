@@ -5,7 +5,7 @@
 // step opens the 1-3D grid editor; steps persist through the atomic mutate. Line-agnostic.
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { IconRefresh, IconClose, IconPricing, IconChevronLeft, IconChevronRight } from '../../components/ui/icons'
+import { IconRefresh, IconClose, IconPricing, IconChevronLeft, IconChevronRight, IconPlus } from '../../components/ui/icons'
 import { evaluate, resolveLob, resolveRatingKit, deriveGridInputSpec } from '@pf/shared'
 import type { RatingInputs, RatingInputMap, RatingStep, RTTable, LDTable, RatingProgram, Coverage, EvaluatorResult } from '@pf/shared'
 import { linkCoverageToPricing } from '../../lib/insurance/pricingLinks'
@@ -13,6 +13,7 @@ import { useProductCtx } from '../../context/useProductCtx'
 import type { WithId } from '../../context/ProductContext'
 import { useUser } from '../../context/useUser'
 import { canI } from '../../lib/canI'
+import { adapter } from '../../lib/backend'
 import { Button, Badge, Skeleton, RefChip } from '../../components/ui'
 import { HomeownersRatingPanel } from '../../components/product/HomeownersRatingPanel'
 import { GenericRatingPanel } from '../../components/product/GenericRatingPanel'
@@ -241,6 +242,20 @@ export default function ProductPricing() {
     }
   }, [result])
 
+  async function createProgramAndAddStep() {
+    const programId = crypto.randomUUID()
+    await adapter.db.mutate({
+      op: 'create', path: `products/${pid}/ratingPrograms/${programId}`,
+      entityType: 'ratingProgram', productId: pid, actor,
+      data: {
+        refId: '', name: 'Rating algorithm', minimumPremium: 0, steps: [],
+        allStates: true, states: [],
+        status: 'ACTIVE', lifecycle: 'DRAFT', reviewStatus: 'NOT_STARTED',
+      },
+    })
+    setStepDialog({ step: null })
+  }
+
   // Candidate grid dimensions / step inputs: scalar rating inputs a PM can pick.
   const candidateDimensions = useMemo(() => Object.entries(inputs)
     .filter(([, v]) => typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')
@@ -280,9 +295,14 @@ export default function ProductPricing() {
       >
         {/* Left — the editable rating algorithm */}
         {!ratingProgram ? (
-          <div className="bg-surface rounded-[14px] p-5 flex flex-col items-center justify-center gap-2 text-faint min-h-[300px]" style={{ border: '1px solid var(--color-border)' }}>
+          <div className="bg-surface rounded-[14px] p-5 flex flex-col items-center justify-center gap-3 text-faint min-h-[300px]" style={{ border: '1px solid var(--color-border)' }}>
             <IconRefresh size={24} />
-            <span className="text-sm">No rating program found</span>
+            <span className="text-sm">No rating program yet</span>
+            {canEdit && (
+              <Button variant="primary" size="sm" onClick={() => void createProgramAndAddStep()}>
+                <IconPlus size={14} aria-hidden="true" />Add first step
+              </Button>
+            )}
           </div>
         ) : (
           <RatingAlgorithm

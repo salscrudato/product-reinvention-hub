@@ -10,7 +10,7 @@ import { COVERAGE_ASPECTS as ASPECTS, useCoverageCounts, type CoverageAspect } f
 import type { Coverage } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
-export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDelete, subCount = 0, expanded = false, onToggleSubs }: {
+export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDelete, subCount = 0, expanded = false, onToggleSubs, filterStates = [] }: {
   cov: WithId<Coverage>
   parentName?: string
   canEdit: boolean
@@ -23,8 +23,10 @@ export function CoverageHubCard({ cov, parentName, canEdit, onTile, onEdit, onDe
   expanded?: boolean
   /** Toggle the sub-coverage tree. Present only when subCount > 0. */
   onToggleSubs?: () => void
+  /** Active state filter from the page — narrows the limits/deductibles count. */
+  filterStates?: string[]
 }) {
-  const counts = useCoverageCounts(cov)
+  const counts = useCoverageCounts(cov, filterStates)
   const hasSubs = subCount > 0 && !!onToggleSubs
 
   return (

@@ -37,14 +37,20 @@ export async function cloneProductToDraft(
   const draftId = newDraftId(source.refId ?? source.name)
 
   // Read the whole sub-tree first (so the total is known and writes run in order).
-  const [coverages, rules, formRules, programs, allForms] = await Promise.all([
+  // Forms use server-side array-contains queries so the result is never capped by MAX_LIST
+  // (the global 'forms' collection can grow past the client-list page size).
+  const [coverages, rules, formRules, programs, formsByDocId, formsByRefId] = await Promise.all([
     adapter.db.list<WithId<Coverage>>(`products/${source.id}/coverages`),
     adapter.db.list<WithId<Rule>>(`products/${source.id}/rules`),
     adapter.db.list<WithId<FormRule>>(`products/${source.id}/formRules`),
     adapter.db.list<WithId<RatingProgram>>(`products/${source.id}/ratingPrograms`),
-    adapter.db.list<WithId<Form>>('forms'),
+    adapter.db.list<WithId<Form>>('forms', { where: [{ field: 'productRefIds', op: 'array-contains', value: source.id }] }),
+    source.refId
+      ? adapter.db.list<WithId<Form>>('forms', { where: [{ field: 'productRefIds', op: 'array-contains', value: source.refId }] })
+      : Promise.resolve([] as WithId<Form>[]),
   ])
-  const forms = allForms.filter(f => (f.productRefIds ?? []).includes(source.id) || (source.refId != null && (f.productRefIds ?? []).includes(source.refId)))
+  const seenFormIds = new Set(formsByDocId.map(f => f.id))
+  const forms = [...formsByDocId, ...formsByRefId.filter(f => !seenFormIds.has(f.id))]
 
   const total = 1 + coverages.length + rules.length + formRules.length + programs.length + forms.length
   let written = 0

@@ -13,15 +13,16 @@ import type { WithId } from '../../context/ProductContext'
 //   depth 0 → stronger border, shadow, slightly taller label
 //   depth 1+ → lighter border, no shadow, compact
 
-function TreeCard({ cov, depth, canEdit, onTile, onEdit, onDelete }: {
+function TreeCard({ cov, depth, canEdit, onTile, onEdit, onDelete, filterStates = [] }: {
   cov: WithId<Coverage>
   depth: number
   canEdit: boolean
   onTile: (aspect: CoverageAspect, cov: WithId<Coverage>) => void
   onEdit: (cov: WithId<Coverage>) => void
   onDelete: (cov: WithId<Coverage>) => void
+  filterStates?: string[]
 }) {
-  const counts = useCoverageCounts(cov)
+  const counts = useCoverageCounts(cov, filterStates)
   const isRoot = depth === 0
   const statusColor = cov.status === 'ACTIVE' ? 'var(--color-good)' : cov.status === 'FUTURE' ? 'var(--color-accent)' : 'var(--color-faint)'
 
@@ -109,14 +110,15 @@ function TreeCard({ cov, depth, canEdit, onTile, onEdit, onDelete }: {
 
 const byOrder = (a: WithId<Coverage>, b: WithId<Coverage>) => (a.order ?? 0) - (b.order ?? 0)
 
-export function CoverageTree({ coverages, canEdit, onTile, onEdit, onDelete }: {
+export function CoverageTree({ coverages, canEdit, onTile, onEdit, onDelete, filterStates = [] }: {
   coverages: WithId<Coverage>[]
   canEdit: boolean
   onTile: (aspect: CoverageAspect, cov: WithId<Coverage>) => void
   onEdit: (cov: WithId<Coverage>) => void
   onDelete: (cov: WithId<Coverage>) => void
+  filterStates?: string[]
 }) {
-  const cardProps = { canEdit, onTile, onEdit, onDelete }
+  const cardProps = { canEdit, onTile, onEdit, onDelete, filterStates }
 
   const childrenOf = (cov: WithId<Coverage>) =>
     coverages.filter(c => c.parentId && c.parentId === cov.refId).sort(byOrder)

@@ -190,7 +190,7 @@ export default function ProductCoverages() {
     }
   }
 
-  const hubProps = (cov: WithId<Coverage>) => ({ cov, canEdit, onTile, onEdit: setEditCov, onDelete })
+  const hubProps = (cov: WithId<Coverage>) => ({ cov, canEdit, onTile, onEdit: setEditCov, onDelete, filterStates: selectedStates })
   const activeFilterCount = filters.activeChips.length
 
   if (loading && coverages.length === 0) {
@@ -333,7 +333,7 @@ export default function ProductCoverages() {
                 })}
               </div>
             ) : (
-              <CoverageTree coverages={filtered} canEdit={canEdit} onTile={onTile} onEdit={setEditCov} onDelete={onDelete} />
+              <CoverageTree coverages={filtered} canEdit={canEdit} onTile={onTile} onEdit={setEditCov} onDelete={onDelete} filterStates={selectedStates} />
             )}
           </div>
         </div>

@@ -227,7 +227,7 @@ export function TermOptionsDialog({ cov, mode, onClose, filterStates }: Props) {
   const stateFilterSet = new Set(filterStates ?? [])
   const filterActive = stateFilterSet.size > 0
   const visibleOptions = filterActive
-    ? options.filter(o => o.allStates || o.states.some(s => stateFilterSet.has(s)))
+    ? options.filter(o => o.allStates || (o.states ?? []).some(s => stateFilterSet.has(s)))
     : options
   const pct = active ? isPercentTerm(active) : false
   const impliedActive = impliedType(active?.structure ?? (mode === 'LIMIT' ? 'SINGLE' : 'FLAT'))

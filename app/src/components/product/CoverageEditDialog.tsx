@@ -99,7 +99,7 @@ export function CoverageEditDialog({ cov, onClose }: { cov: WithId<Coverage> | n
           <span className="w-11 h-11 rounded-[12px] flex items-center justify-center text-white shrink-0" style={{ background: 'var(--gradient-accent)' }}><IconCoverage size={22} /></span>
           <div>
             <h2 className="text-lg font-semibold text-text">{isNew ? 'New coverage' : 'Edit coverage'}</h2>
-            <p className="text-sm text-dim">{isNew ? 'Add a coverage to this product' : cov.name}</p>
+            <p className="text-sm text-dim">{isNew ? 'Add a coverage to this product' : 'Edit name, requirement, and governance'}</p>
           </div>
         </div>
         <button onClick={onClose} aria-label="Close" className="text-faint hover:text-text rounded-[8px] p-1.5 hover:bg-raised transition-colors"><IconClose size={18} /></button>
