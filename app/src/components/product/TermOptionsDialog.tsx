@@ -8,23 +8,23 @@
 // demonstratives (Coverage F $5,000 ⇒ Coverage E ≥ $300,000; wind/hail % ded ≥
 // all-peril ded in dollars). Legacy fields are synced back so rating + export keep
 // working, and the mutate() seam re-checks the structural invariants.
-import { useState } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { toast } from 'sonner'
 import { adapter, MutationConflictError } from '../../lib/backend'
 import { conflictToast } from '../../lib/conflict'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useUser } from '../../context/useUser'
 import { canI } from '../../lib/canI'
-import { Dialog, Button, EmptyState } from '../ui'
+import { Dialog, Button, EmptyState, Combobox } from '../ui'
 import {
-	  IconPlus, IconTrash, IconStar, IconCheck, IconClose, IconInfo, IconWarning,
+	  IconPlus, IconTrash, IconStar, IconCheck, IconClose, IconWarning,
 	  IconSingle, IconLayers, IconSplit, IconCombine, IconScheduled,
 	  IconPercent, IconClock, IconPeril, IconLimit, IconDeductible, IconCheckSquare,
 	  IconFilter,
 	} from '../ui/icons'
 import { LIMIT_STRUCTURES, DEDUCTIBLE_STRUCTURES, LIMIT_BASES } from '../../lib/insurance/vocab'
 import {
-	  resolveTermOptions, ensureOneDefault, syncLegacy, formatOption,
+	  resolveTermOptions, ensureOneDefault, syncLegacy,
 	  isPercentTerm, deriveStructure, deriveBasis, resolveLob, validateCoverageTerms,
 	  niceLadder, suggestRange, type RangeDensity,
 	} from '@pf/shared'
@@ -277,28 +277,40 @@ export function TermOptionsDialog({ cov, mode, onClose, filterStates }: Props) {
         <button onClick={onClose} aria-label="Close" className="text-faint hover:text-text rounded-[8px] p-1.5 hover:bg-raised transition-colors"><IconClose size={18} /></button>
       </div>
 
-      {/* Term tabs — visible when coverage carries more than one term of this kind */}
+      {/* Term selector — a searchable dropdown (was a per-state chip wall that grew to
+          10+ rows on a state-varied limit). One term of this kind is active at a time:
+          pick it here, Add creates another, the trash removes the active one. A lone
+          term needs no picker, so it shows as a static label. */}
       {kindTerms.length > 0 && (
-        <div className="flex items-center gap-1.5 mb-4 flex-wrap">
-          {kindTerms.map(t => (
-            <div key={t.id} className="flex items-center gap-0.5">
-              <button onClick={() => setActiveId(t.id)}
-                className={`px-2.5 py-1 rounded-[7px] text-xs font-medium transition-colors ${t.id === activeId ? 'bg-accent text-on-accent' : 'bg-raised text-dim hover:text-text'}`}>
-                {t.label}
-              </button>
-              {canEdit && kindTerms.length > 1 && t.id === activeId && (
-                <button onClick={() => deleteTerm(t.id)} aria-label={`Remove ${t.label}`}
-                  className="w-6 h-6 rounded-[6px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors">
-                  <IconClose size={12} />
-                </button>
-              )}
+        <div className="flex items-center gap-2 mb-4">
+          {kindTerms.length > 1 ? (
+            <div className="flex-1 min-w-0 max-w-sm">
+              <Combobox
+                items={kindTerms}
+                value={active ?? null}
+                onChange={t => { if (t) setActiveId(t.id) }}
+                getLabel={t => t.label}
+                getValue={t => t.id}
+                clearable={false}
+                placeholder={`Search ${kindTerms.length} ${modeLabel}s…`}
+              />
             </div>
-          ))}
-          {canEdit && (
-            <button onClick={addTerm} aria-label={`Add another ${modeLabel}`}
-              className="flex items-center gap-1 px-2 py-1 rounded-[7px] text-xs font-medium text-faint hover:text-accent hover:bg-accent-soft transition-colors">
-              <IconPlus size={12} />Add
+          ) : active ? (
+            <span className="inline-flex items-center h-9 px-3 rounded-[10px] bg-raised text-sm font-medium text-text min-w-0">
+              <span className="truncate">{active.label}</span>
+            </span>
+          ) : null}
+          {canEdit && kindTerms.length > 1 && active && (
+            <button onClick={() => deleteTerm(active.id)} aria-label={`Remove ${active.label}`}
+              className="w-9 h-9 rounded-[10px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors shrink-0"
+              style={{ border: '1px solid var(--color-border)' }}>
+              <IconTrash size={15} />
             </button>
+          )}
+          {canEdit && (
+            <Button variant="default" size="sm" onClick={addTerm}>
+              <IconPlus size={13} aria-hidden="true" />Add {modeLabel}
+            </Button>
           )}
         </div>
       )}
@@ -359,19 +371,6 @@ export function TermOptionsDialog({ cov, mode, onClose, filterStates }: Props) {
                 </Button>
               )}
             </div>
-
-            {/* Range Builder — the hero path: a PM enters a min + max and gets a logical
-                ladder of round values between them (endpoints included), tuned to the
-                coverage's existing values. Only for single-number types. */}
-            {active && showRangeBuilder && (
-              <RangeBuilder
-                key={`range-${active.id}`}
-                pct={pct} canEdit={canEdit}
-                existing={new Set(options.map(o => o.value))}
-                initial={suggestRange(mode, pct, options.filter(o => o.type !== 'SPLIT' && o.type !== 'WAITING_PERIOD').map(o => o.value))}
-                onGenerate={applyRange}
-              />
-            )}
 
             {/* Quick add — one-click presets + Excel-style paste (the fast PM path). */}
             {active && (
@@ -445,15 +444,44 @@ export function TermOptionsDialog({ cov, mode, onClose, filterStates }: Props) {
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
-                {visibleOptions.map(o => (
-	                  <OptionRow key={o.id} o={o} mode={mode} scopeStates={scopeStates} canEdit={canEdit}
-                    hasError={optionIssues(o.id).some(i => i.severity === 'error')}
-                    onChange={next => setOptions(options.map(x => x.id === o.id ? next : x))}
-                    onDefault={() => setOptions(options.map(x => ({ ...x, isDefault: x.id === o.id })))}
-                    onRemove={() => setOptions(options.filter(x => x.id !== o.id))} />
-                ))}
-              </div>
+              <ExcelGrid
+                mode={mode}
+                options={options}
+                visibleOptions={visibleOptions}
+                scopeStates={scopeStates}
+                canEdit={canEdit}
+                optionIssues={optionIssues}
+                setOptions={setOptions}
+                onAddRow={() => {
+                  if (!active) return
+                  setOptions([...options, {
+                    id: `opt-${Date.now()}`,
+                    type: impliedType(active.structure ?? (mode === 'LIMIT' ? 'SINGLE' : 'FLAT')),
+                    value: 0, allStates: true, states: [], isDefault: options.length === 0, enabled: true,
+                  }])
+                }}
+                onAddValues={addValues}
+              />
+            )}
+
+            {/* Range builder — moved to bottom, collapsed by default */}
+            {active && showRangeBuilder && (
+              <details className="mt-3 rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+                <summary className="flex items-center gap-2 px-3.5 py-2.5 cursor-pointer select-none text-[12px] font-medium text-dim hover:text-text hover:bg-raised">
+                  <IconLayers size={13} aria-hidden="true" />
+                  Build a range
+                  <span className="ml-1 text-[11px] text-faint font-normal">— generate a min/max ladder</span>
+                </summary>
+                <div className="px-3.5 pb-4 pt-1.5" style={{ borderTop: '1px solid var(--color-border)' }}>
+                  <RangeBuilder
+                    key={`range-${active.id}`}
+                    pct={pct} canEdit={canEdit}
+                    existing={new Set(options.map(o => o.value))}
+                    initial={suggestRange(mode, pct, options.filter(o => o.type !== 'SPLIT' && o.type !== 'WAITING_PERIOD').map(o => o.value))}
+                    onGenerate={applyRange}
+                  />
+                </div>
+              </details>
             )}
           </section>
 
@@ -603,6 +631,291 @@ function QuickAdd({ mode, pct, isWaiting, canEdit, existing, onAddValues }: {
   )
 }
 
+// ─── Excel grid — compact spreadsheet-like view (replaces card-stack) ────────
+// Manages all per-row editing state centrally so Fragment-based row pairs (data row
+// + optional state-expansion row) compile without TypeScript tbody-children conflicts.
+
+function ExcelGrid({
+  mode, options, visibleOptions, scopeStates, canEdit, optionIssues, setOptions, onAddRow, onAddValues,
+}: {
+  mode: Mode
+  options: StandardOption[]
+  visibleOptions: StandardOption[]
+  scopeStates: string[]
+  canEdit: boolean
+  optionIssues: (id: string) => Array<{ severity: string }>
+  setOptions: (opts: StandardOption[]) => void
+  onAddRow: () => void
+  onAddValues: (nums: number[]) => void
+}) {
+  // Controlled value strings: only entries for rows the user is actively editing.
+  const [localVals, setLocalVals] = useState<Record<string, string>>({})
+  // Which row's state-scope panel is open (null = none).
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const colCount = canEdit ? 6 : 5
+
+  // Drop stale localVals when options list changes (e.g. after a term switch or remove).
+  useEffect(() => {
+    setLocalVals(prev => {
+      const ids = new Set(options.map(o => o.id))
+      const hasStale = Object.keys(prev).some(id => !ids.has(id))
+      if (!hasStale) return prev
+      const next: Record<string, string> = {}
+      Object.entries(prev).forEach(([id, v]) => { if (ids.has(id)) next[id] = v })
+      return next
+    })
+  }, [options])
+
+  const getVal = (o: StandardOption) =>
+    o.id in localVals ? localVals[o.id] : (o.value ? String(o.value) : '')
+  const setVal = (id: string, v: string) =>
+    setLocalVals(prev => ({ ...prev, [id]: v }))
+  const commitVal = (o: StandardOption) => {
+    if (!(o.id in localVals)) return
+    const n = parseNum(localVals[o.id])
+    if (Number.isFinite(n) && n !== o.value)
+      setOptions(options.map(x => x.id === o.id ? { ...x, value: n } : x))
+    setLocalVals(prev => { const { [o.id]: _drop, ...rest } = prev; return rest })
+  }
+
+  const changeOpt = (next: StandardOption) =>
+    setOptions(options.map(x => x.id === next.id ? next : x))
+  const setDefault = (id: string) =>
+    setOptions(options.map(x => ({ ...x, isDefault: x.id === id })))
+  const removeOpt = (id: string) => {
+    if (expandedId === id) setExpandedId(null)
+    setOptions(options.filter(x => x.id !== id))
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    if (!canEdit) return
+    const text = e.clipboardData.getData('text')
+    const parsed = parsePasted(text)
+    if (parsed.length > 1) { e.preventDefault(); onAddValues(parsed) }
+  }
+
+  return (
+    <div
+      className="rounded-[10px] overflow-hidden"
+      style={{ border: '1px solid var(--color-border)' }}
+      onPaste={handlePaste}
+    >
+      <table className="w-full border-collapse text-sm" role="grid" aria-label="Options">
+        <thead>
+          <tr style={{ background: 'var(--color-raised)', borderBottom: '1px solid var(--color-border)' }}>
+            <th scope="col" className="pl-3 pr-1 py-1.5 text-left text-[10px] font-semibold uppercase tracking-[.07em] text-faint w-14">Type</th>
+            <th scope="col" className="px-1 py-1.5 text-left text-[10px] font-semibold uppercase tracking-[.07em] text-faint">Value</th>
+            <th scope="col" className="px-1 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[.07em] text-faint w-24">States</th>
+            <th scope="col" className="px-1 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[.07em] text-faint w-20">Default</th>
+            <th scope="col" className="px-1 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[.07em] text-faint w-12">On</th>
+            {canEdit && <th scope="col" className="pr-3 py-1.5 w-8" />}
+          </tr>
+        </thead>
+        <tbody>
+          {visibleOptions.map((o, rowIdx) => {
+            const valStr = getVal(o)
+            const inScope = o.states.filter(s => scopeStates.includes(s))
+            const activeStateCount = o.allStates ? scopeStates.length : inScope.length
+            const activeSet = new Set(o.allStates ? scopeStates : inScope)
+            const footprintSet = new Set(scopeStates)
+            const isExpanded = expandedId === o.id
+            const hasError = optionIssues(o.id).some(iss => iss.severity === 'error')
+            const rowBg = rowIdx % 2 === 0 ? 'var(--color-surface)' : 'var(--color-raised)'
+
+            function toggleState(st: string) {
+              if (!canEdit || o.allStates || !scopeStates.includes(st)) return
+              const on = o.states.includes(st)
+              changeOpt({ ...o, states: on ? o.states.filter(x => x !== st) : [...o.states, st] })
+            }
+
+            return (
+              <Fragment key={o.id}>
+                <tr
+                  className="group border-b last:border-b-0"
+                  style={{ borderColor: 'var(--color-border)', background: rowBg, opacity: o.enabled ? 1 : 0.5 }}
+                >
+                  {/* Type */}
+                  <td className="pl-3 pr-1 py-1 w-14">
+                    <select
+                      disabled={!canEdit}
+                      value={o.type}
+                      aria-label="Option type"
+                      onChange={e => changeOpt({ ...o, type: e.target.value as OptionValueType })}
+                      className="h-7 w-full px-1 rounded-[5px] bg-transparent text-[11px] text-dim focus:outline-none focus:ring-1 focus:ring-accent/25 cursor-pointer"
+                    >
+                      {OPTION_TYPES[mode].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                    </select>
+                  </td>
+
+                  {/* Value */}
+                  <td className="px-1 py-1">
+                    {o.type === 'SPLIT' ? (
+                      <div className="flex items-center gap-0.5">
+                        {([0, 1, 2] as const).map(i => (
+                          <input
+                            key={`${o.id}-sp-${i}`}
+                            disabled={!canEdit}
+                            defaultValue={(o.parts ?? [])[i] ?? ''}
+                            inputMode="numeric"
+                            aria-label={`Split part ${i + 1}`}
+                            placeholder={(['pp', 'pa', 'PD'] as const)[i]}
+                            onBlur={e => {
+                              const parts = [...(o.parts ?? [0, 0, 0])] as [number, number, number]
+                              parts[i] = parseNum(e.target.value)
+                              changeOpt({ ...o, parts, value: parts[0] })
+                            }}
+                            className="w-full h-7 px-1 rounded-[5px] bg-surface border border-border-strong font-mono text-[11px] text-center focus:outline-none focus:ring-1 focus:ring-accent/25"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="relative flex items-center">
+                        {o.type !== 'PERCENT' && o.type !== 'WAITING_PERIOD' && (
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-faint text-[11px] pointer-events-none select-none">$</span>
+                        )}
+                        <input
+                          disabled={!canEdit}
+                          value={valStr}
+                          inputMode="numeric"
+                          aria-label="Option value"
+                          onChange={e => setVal(o.id, e.target.value)}
+                          onBlur={() => commitVal(o)}
+                          onKeyDown={e => { if (e.key === 'Enter') { commitVal(o); (e.target as HTMLInputElement).blur() } }}
+                          className={`w-full h-7 font-mono text-sm text-text bg-transparent hover:bg-surface focus:bg-surface focus:border focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-accent/25 rounded-[5px] transition-colors ${o.type === 'PERCENT' || o.type === 'WAITING_PERIOD' ? 'px-2 pr-6' : 'pl-5 pr-2'} ${hasError ? 'text-danger ring-1 ring-danger/40' : ''}`}
+                        />
+                        {(o.type === 'PERCENT' || o.type === 'WAITING_PERIOD') && (
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-faint text-[11px] pointer-events-none select-none">
+                            {o.type === 'PERCENT' ? '%' : 'hrs'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* States */}
+                  <td className="px-1 py-1 w-24 text-center">
+                    <button
+                      disabled={!canEdit}
+                      onClick={() => setExpandedId(id => id === o.id ? null : o.id)}
+                      aria-expanded={isExpanded}
+                      className={`h-6 px-2 rounded-[5px] text-[11px] font-medium w-full transition-colors ${o.allStates ? 'text-dim hover:text-accent hover:bg-accent-soft' : activeStateCount === 0 ? 'text-danger bg-[var(--color-danger-hover)]' : 'text-accent bg-accent-soft'}`}
+                    >
+                      {o.allStates ? 'All states' : `${activeStateCount} st.`}
+                    </button>
+                  </td>
+
+                  {/* Default */}
+                  <td className="px-1 py-1 w-20 text-center">
+                    <button
+                      disabled={!canEdit}
+                      onClick={() => setDefault(o.id)}
+                      aria-pressed={o.isDefault}
+                      title={o.isDefault ? 'Default — pre-selected' : 'Set as default'}
+                      className={`h-6 px-2 rounded-[5px] flex items-center gap-1 mx-auto text-[11px] font-semibold transition-all ${o.isDefault ? 'bg-accent text-on-accent' : 'text-faint hover:text-accent hover:bg-accent-soft opacity-0 group-hover:opacity-100'}`}
+                      style={o.isDefault ? undefined : { border: '1px solid var(--color-border-strong)' }}
+                    >
+                      <IconStar size={11} className={o.isDefault ? 'fill-current' : ''} />
+                      {o.isDefault ? 'Default' : 'Set'}
+                    </button>
+                  </td>
+
+                  {/* Enabled */}
+                  <td className="px-1 py-1 w-12 text-center">
+                    <button
+                      disabled={!canEdit}
+                      onClick={() => changeOpt({ ...o, enabled: !o.enabled })}
+                      role="switch"
+                      aria-checked={o.enabled}
+                      className="w-8 h-[18px] rounded-full p-0.5 transition-colors flex items-center mx-auto"
+                      style={{ background: o.enabled ? 'var(--color-accent)' : 'var(--color-border-strong)' }}
+                    >
+                      <span className="w-[14px] h-[14px] rounded-full bg-white transition-transform" style={{ transform: o.enabled ? 'translateX(12px)' : 'translateX(0)' }} />
+                    </button>
+                  </td>
+
+                  {/* Delete */}
+                  {canEdit && (
+                    <td className="pr-3 py-1 w-8 text-center">
+                      <button
+                        onClick={() => removeOpt(o.id)}
+                        aria-label="Remove option"
+                        className="w-7 h-7 rounded-[5px] flex items-center justify-center mx-auto text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <IconTrash size={13} />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+
+                {/* State-scope expansion row */}
+                {isExpanded && (
+                  <tr style={{ background: 'var(--color-raised)' }}>
+                    <td colSpan={colCount} className="px-3 pb-3 pt-2" style={{ borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
+                      <div className="flex flex-col gap-2">
+                        <label className="flex items-center gap-2 text-xs text-dim cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="accent-accent"
+                            checked={o.allStates}
+                            disabled={!canEdit}
+                            onChange={e => changeOpt({
+                              ...o,
+                              allStates: e.target.checked,
+                              states: e.target.checked ? [] : (o.states.length ? o.states : scopeStates),
+                            })}
+                          />
+                          Available in all of this coverage's states
+                          <span className="ml-auto text-[11px] text-faint font-mono tnum">{activeStateCount} / {scopeStates.length}</span>
+                          <button onClick={() => setExpandedId(null)} className="ml-2 text-[11px] text-accent font-medium hover:underline">Done</button>
+                        </label>
+                        {scopeStates.length === 0 ? (
+                          <p className="text-xs text-faint italic">This coverage has no states in scope — set state scope on the coverage first.</p>
+                        ) : (
+                          <>
+                            <div className="rounded-[10px] bg-page p-2" style={{ border: '1px solid var(--color-border)' }}>
+                              <StateTileMap
+                                active={activeSet}
+                                footprint={footprintSet}
+                                onToggle={canEdit && !o.allStates ? toggleState : undefined}
+                                canEdit={canEdit && !o.allStates}
+                                labels={{ active: 'Option available', available: 'In coverage scope', inactive: 'Out of coverage scope' }}
+                                ariaLabel={`State applicability — ${activeStateCount} of ${scopeStates.length} states`}
+                              />
+                            </div>
+                            {!o.allStates && o.states.length === 0 && (
+                              <p className="text-[11px] text-danger">Select at least one state, or choose "All coverage states".</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            )
+          })}
+          {canEdit && (
+            <tr>
+              <td
+                colSpan={colCount}
+                className="px-3 py-2"
+                style={visibleOptions.length > 0 ? { borderTop: '1px solid var(--color-border)' } : undefined}
+              >
+                <button
+                  onClick={onAddRow}
+                  className="flex items-center gap-1 text-[12px] text-faint hover:text-accent font-medium transition-colors"
+                >
+                  <IconPlus size={12} aria-hidden="true" />Add row
+                </button>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ─── Range Builder — min + max → a logical ladder of round values ─────────────
 // The premium fast-path for defining a limit/deductible: enter two numbers and the
 // editor fills in the standard "round" values between them (endpoints included), tuned
@@ -705,199 +1018,5 @@ function RangeInput({ label, value, onChange, pct }: {
         {pct && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-faint text-xs pointer-events-none">%</span>}
       </div>
     </label>
-  )
-}
-
-// ─── One editable option row ─────────────────────────────────────────────────
-
-function OptionRow({ o, mode, scopeStates, canEdit, hasError, onChange, onDefault, onRemove }: {
-	  o: StandardOption; mode: Mode; scopeStates: string[]; canEdit: boolean; hasError: boolean
-	  onChange: (o: StandardOption) => void; onDefault: () => void; onRemove: () => void
-	}) {
-	  const [expanded, setExpanded] = useState(false)
-	  const types = OPTION_TYPES[mode]
-	  // Clip the option's stored states to the coverage scope: an option can never
-	  // apply outside its coverage's footprint, so the count is bounded by scope and
-	  // can never exceed 100% (e.g. an option set before the coverage scope shrank).
-	  const inScope = o.states.filter(s => scopeStates.includes(s))
-	  const activeStateCount = o.allStates ? scopeStates.length : inScope.length
-	  const activeSet = new Set(o.allStates ? scopeStates : inScope)
-	  const footprintSet = new Set(scopeStates)
-
-	  function handleToggleState(st: string) {
-	    if (!canEdit || o.allStates || !scopeStates.includes(st)) return
-	    const on = o.states.includes(st)
-	    const nextStates = on ? o.states.filter(x => x !== st) : [...o.states, st]
-	    onChange({ ...o, states: nextStates })
-	  }
-
-  return (
-    <div className="rounded-[10px] overflow-hidden bg-surface transition-all"
-      style={{ border: `1px solid ${o.isDefault ? 'var(--color-accent-line)' : 'var(--color-border)'}`, opacity: o.enabled ? 1 : 0.55 }}>
-
-      {/* Main row */}
-      <div className="flex items-center gap-2 p-2">
-        {/* Type */}
-        <select disabled={!canEdit} value={o.type} aria-label="Option type"
-          onChange={e => onChange({ ...o, type: e.target.value as OptionValueType })}
-          className="h-8 px-1.5 rounded-[7px] bg-raised text-xs font-medium text-dim focus:outline-none focus:ring-2 focus:ring-accent/25 shrink-0">
-          {types.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-        </select>
-
-        {/* Value */}
-        {o.type === 'SPLIT' ? (
-          <div className="flex items-center gap-1 flex-1">
-            {[0, 1, 2].map(i => (
-              <input key={`${o.id}-${i}`} disabled={!canEdit} defaultValue={o.parts?.[i] ?? ''} aria-label={`Split part ${i + 1}`}
-                placeholder={['per person', 'per acc.', 'PD'][i]}
-                onBlur={e => { const parts = [...(o.parts ?? [0, 0, 0])]; parts[i] = parseNum(e.target.value); onChange({ ...o, parts, value: parts[0] }) }}
-                className="w-full h-8 px-2 rounded-[7px] bg-surface border border-border-strong font-mono text-xs text-center focus:outline-none focus:ring-2 focus:ring-accent/25" />
-            ))}
-          </div>
-        ) : (
-          <div className="relative flex-1">
-            {o.type !== 'PERCENT' && o.type !== 'WAITING_PERIOD' && (
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-faint text-xs pointer-events-none">$</span>
-            )}
-            <input disabled={!canEdit} key={`${o.id}-val`} defaultValue={o.value || ''} inputMode="numeric" aria-label="Option value"
-              onBlur={e => onChange({ ...o, value: parseNum(e.target.value) })}
-              className={`w-full h-8 ${o.type === 'PERCENT' || o.type === 'WAITING_PERIOD' ? 'px-2' : 'pl-5 pr-2'} rounded-[7px] bg-surface border font-mono text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25 ${hasError ? 'border-danger' : 'border-border-strong'}`} />
-            {(o.type === 'PERCENT' || o.type === 'WAITING_PERIOD') && (
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-faint text-[11px] pointer-events-none">
-                {o.type === 'PERCENT' ? '%' : 'hrs'}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Label chip — shows when a display override is set */}
-        {o.label && (
-          <span className="shrink-0 px-2 py-0.5 rounded-[5px] text-[11px] text-dim bg-raised truncate max-w-[72px]" title={o.label}>
-            "{o.label}"
-          </span>
-        )}
-
-        {/* State applicability */}
-	        <button disabled={!canEdit} onClick={() => setExpanded(v => !v)} aria-expanded={expanded} aria-label="Edit state applicability"
-          className={`h-8 px-2.5 rounded-[7px] text-xs font-medium shrink-0 transition-colors
-            ${o.allStates ? 'bg-raised text-dim' : activeStateCount === 0 ? 'bg-[var(--color-danger-hover)] text-danger' : 'bg-accent-soft text-accent'}
-            hover:text-accent`}>
-          {o.allStates ? 'All states' : `${activeStateCount} state${activeStateCount === 1 ? '' : 's'}`}
-        </button>
-
-        {/* Default — an unmistakable single-choice control (exactly one is default) */}
-        <button disabled={!canEdit} onClick={onDefault} aria-pressed={o.isDefault}
-          title={o.isDefault ? 'This is the default — pre-selected for the PM' : 'Make this the default'}
-          className={`h-8 px-2.5 rounded-[7px] flex items-center gap-1 shrink-0 text-[11px] font-semibold transition-colors ${o.isDefault ? 'bg-accent text-on-accent' : 'text-faint hover:text-accent hover:bg-accent-soft'}`}
-          style={o.isDefault ? undefined : { border: '1px solid var(--color-border-strong)' }}>
-          <IconStar size={13} className={o.isDefault ? 'fill-current' : ''} />
-          Default
-        </button>
-
-        {/* Enabled toggle */}
-        <button disabled={!canEdit} onClick={() => onChange({ ...o, enabled: !o.enabled })} role="switch" aria-checked={o.enabled}
-          title={o.enabled ? 'Enabled' : 'Disabled'}
-          className="shrink-0 w-9 h-[22px] rounded-full p-0.5 transition-colors flex items-center"
-          style={{ background: o.enabled ? 'var(--color-accent)' : 'var(--color-border-strong)' }}>
-          <span className="w-[18px] h-[18px] rounded-full bg-white transition-transform"
-            style={{ transform: o.enabled ? 'translateX(14px)' : 'translateX(0)' }} />
-        </button>
-
-        {/* Remove */}
-        {canEdit && (
-          <button onClick={onRemove} aria-label="Remove option"
-            className="w-8 h-8 rounded-[7px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors shrink-0">
-            <IconTrash size={15} />
-          </button>
-        )}
-      </div>
-
-      {/* Constraint note — shown inline below main row when non-empty */}
-      {o.constraintNote && !expanded && (
-        <div className="flex items-start gap-1.5 px-3 pb-2 pt-0">
-          <IconInfo size={12} className="text-warn shrink-0 mt-0.5" />
-          <p className="text-[11px] text-dim leading-relaxed">{o.constraintNote}</p>
-        </div>
-      )}
-
-      {/* Expanded — state scope + label + constraint note editing */}
-      {expanded && (
-        <div className="px-3 pb-3 pt-2 flex flex-col gap-3" style={{ borderTop: '1px solid var(--color-border)' }}>
-          {/* State scope */}
-	          <div className="flex flex-col gap-2">
-	            <label className="flex items-center gap-2 text-xs text-dim cursor-pointer">
-	              <input
-	                type="checkbox"
-	                className="accent-accent"
-	                checked={o.allStates}
-	                disabled={!canEdit}
-	                onChange={e => onChange({
-	                  ...o,
-	                  allStates: e.target.checked,
-	                  states: e.target.checked ? [] : (o.states.length ? o.states : scopeStates),
-	                })}
-	              />
-	              Available in all of this coverage's states
-	              <span className="ml-auto text-[11px] text-faint font-mono tnum">{activeStateCount} / {scopeStates.length}</span>
-	            </label>
-	            {scopeStates.length === 0 ? (
-	              <p className="text-xs text-faint italic">
-	                This coverage has no states in scope yet — set the coverage's state scope first.
-	              </p>
-	            ) : (
-	              <>
-	                <div className="rounded-[10px] bg-page p-2" style={{ border: '1px solid var(--color-border)' }}>
-	                  <StateTileMap
-	                    active={activeSet}
-	                    footprint={footprintSet}
-		                    onToggle={canEdit && !o.allStates ? handleToggleState : undefined}
-	                    canEdit={canEdit && !o.allStates}
-	                    labels={{
-	                      active: 'Option available',
-	                      available: 'In coverage scope',
-	                      inactive: 'Out of coverage scope',
-	                    }}
-	                    ariaLabel={`State applicability for option — ${activeStateCount} of ${scopeStates.length} coverage states`}
-	                  />
-	                </div>
-	                {!o.allStates && o.states.length === 0 && (
-	                  <p className="text-[11px] text-danger">
-	                    Select at least one state, or choose "All coverage states".
-	                  </p>
-	                )}
-	              </>
-	            )}
-	          </div>
-
-          {/* Label override */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-medium text-faint uppercase tracking-[.06em]">
-              Display label <span className="normal-case font-normal">(optional — overrides derived value)</span>
-            </label>
-            <input key={`${o.id}-label`} disabled={!canEdit} defaultValue={o.label ?? ''} aria-label="Display label override"
-              placeholder={formatOption(o)}
-              onBlur={e => onChange({ ...o, label: e.target.value.trim() || undefined })}
-              className="h-8 px-3 rounded-[7px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25" />
-          </div>
-
-          {/* Constraint note — editable */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-medium text-faint uppercase tracking-[.06em]">
-              Constraint note <span className="normal-case font-normal">(optional — e.g. eligibility rule)</span>
-            </label>
-            <input key={`${o.id}-cnote`} disabled={!canEdit} defaultValue={o.constraintNote ?? ''} aria-label="Constraint note"
-              placeholder="e.g. Coverage F $5,000 only when Coverage E ≥ $300,000"
-              onBlur={e => onChange({ ...o, constraintNote: e.target.value.trim() || undefined })}
-              className="h-8 px-3 rounded-[7px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25" />
-          </div>
-
-          {/* Preview + done */}
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] text-faint font-mono">{formatOption(o)}</span>
-            <button onClick={() => setExpanded(false)} className="text-[11px] text-accent font-medium hover:underline">Done</button>
-          </div>
-        </div>
-      )}
-    </div>
   )
 }

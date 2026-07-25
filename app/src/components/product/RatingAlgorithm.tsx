@@ -68,9 +68,9 @@ function SourceToken({ step, gridEditable, onOpen }: { step: RatingStep; gridEdi
 
 // ─── One sortable step card ─────────────────────────────────────────────────────
 
-function StepCard({ step, index, total, changed, canEdit, gridEditable, covCount, onEdit, onDelete, onTable, onCoverages }: {
+function StepCard({ step, index, total, changed, canEdit, gridEditable, hasTable, covCount, onEdit, onDelete, onTable, onCoverages }: {
   step: RatingStep; index: number; total: TraceEntry | undefined; changed: boolean; canEdit: boolean
-  gridEditable: boolean; covCount: number
+  gridEditable: boolean; hasTable: boolean; covCount: number
   onEdit: () => void; onDelete: () => void; onTable: () => void; onCoverages: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.id, disabled: !canEdit })
@@ -112,6 +112,12 @@ function StepCard({ step, index, total, changed, canEdit, gridEditable, covCount
 
       {/* Per-step actions */}
       <div className="shrink-0 flex items-center gap-0.5">
+        {hasTable && (
+          <button onClick={onTable} title="Open in table mode — view its dimensions as an editable grid" aria-label={`Open ${step.label} in table mode`}
+            className="inline-flex items-center justify-center w-6 h-6 rounded-[6px] text-dim hover:text-accent hover:bg-accent-soft transition-colors">
+            <IconTable size={14} aria-hidden="true" />
+          </button>
+        )}
         {covCount > 0 && (
           <button onClick={onCoverages} title={`${covCount} coverage${covCount === 1 ? '' : 's'} priced by this step`}
             className="inline-flex items-center gap-1 h-6 px-1.5 rounded-[6px] text-[11px] text-dim hover:text-accent hover:bg-accent-soft transition-colors">
@@ -196,6 +202,17 @@ export function RatingAlgorithm({ program, pid, trace, changedStepIds, rtTables,
     const ref = s.source.ref
     const table = ref ? (rtTables[ref] as (RTTable & { id: string; rev?: number }) | undefined) : undefined
     return table && deriveGridModel(table) ? { step: s, table } : null
+  }
+
+  // Any step whose source resolves to a loaded RT table can be opened in table mode —
+  // the Excel-like grid editor (add up to 3 dimensions as rows/columns/pages) when the
+  // layout is grid-shaped, or a read-only summary otherwise. Broader than gridEditable,
+  // which gates only the fully-editable grid; this drives the step card's table icon.
+  const tableFor = (s: RatingStep): EditableStep | null => {
+    if (s.source.type !== 'RT' && s.source.type !== 'SPP') return null
+    const ref = s.source.ref
+    const table = ref ? (rtTables[ref] as (RTTable & { id: string; rev?: number }) | undefined) : undefined
+    return table ? { step: s, table } : null
   }
 
   async function persist(nextSteps: RatingStep[]) {
@@ -287,13 +304,15 @@ export function RatingAlgorithm({ program, pid, trace, changedStepIds, rtTables,
           <div className="flex flex-col">
             {filteredSteps.length === 0 && (filterGroup || filterText) ? (
               <p className="text-sm text-faint text-center py-6">No steps match this filter.</p>
-            ) : filteredSteps.map((s, i) => (
+            ) : filteredSteps.map((s, i) => {
+              const editable = tableFor(s)
+              return (
               <div key={s.id}>
                 <StepCard
                   step={s} index={i} total={traceById.get(s.id)} changed={changedStepIds.has(s.id)}
-                  canEdit={canEdit && !filterGroup && !filterText} gridEditable={!!gridEditable(s)} covCount={covsByStep.get(s.id)?.length ?? 0}
+                  canEdit={canEdit && !filterGroup && !filterText} gridEditable={!!gridEditable(s)} hasTable={!!editable} covCount={covsByStep.get(s.id)?.length ?? 0}
                   onEdit={() => onEdit(s)} onDelete={() => deleteStep(s)}
-                  onTable={() => { const e = gridEditable(s); if (e) onEditTable(e) }}
+                  onTable={() => { if (editable) onEditTable(editable) }}
                   onCoverages={() => setCovModal({ step: s, covs: covsByStep.get(s.id) ?? [] })}
                 />
                 {/* Connector with a slow downward pulse between steps */}
@@ -304,7 +323,8 @@ export function RatingAlgorithm({ program, pid, trace, changedStepIds, rtTables,
                   </div>
                 )}
               </div>
-            ))}
+              )
+            })}
             {steps.length === 0 && (
               <div className="flex flex-col items-center gap-3 py-10 text-center">
                 <p className="text-sm text-faint">No rating steps yet.</p>

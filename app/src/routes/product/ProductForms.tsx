@@ -12,8 +12,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useCapture } from '../../context/useCapture'
-import { Badge, Skeleton, EmptyState, RefChip } from '../../components/ui'
-import { IconForm, IconClose, IconSparkle, IconSpinner, IconArrowRight, IconStates, IconLink, IconFilter } from '../../components/ui/icons'
+import { Badge, Skeleton, EmptyState, RefChip, Button } from '../../components/ui'
+import { IconForm, IconClose, IconSparkle, IconSpinner, IconArrowRight, IconStates, IconLink, IconFilter, IconEdit } from '../../components/ui/icons'
 import { adapter } from '../../lib/backend'
 import { useUser } from '../../context/useUser'
 import { canI } from '../../lib/canI'
@@ -31,19 +31,44 @@ const CAT_COLOR: Record<string, 'blue' | 'purple' | 'warn' | 'danger' | 'good' |
 }
 const catLabel = (c: string) => c.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, m => m.toUpperCase())
 
-// ─── Detail panel — the selected form, read-first ───────────────────────────────
+const FORM_CATEGORIES = [
+  'BASE_COVERAGE', 'DECLARATIONS', 'ENDORSEMENT',
+  'EXCLUSION', 'AMENDATORY', 'POLICY_NOTICE',
+] as const
+
+type FormDraft = {
+  name: string; edition: string; category: string; source: string
+  dynamic: boolean; mandatoryDefault: boolean; attachmentCondition: string
+  allStates: boolean; statesStr: string; description: string
+}
+
+function makeDraft(f: WithId<Form>): FormDraft {
+  return {
+    name: f.name ?? '', edition: f.edition ?? '', category: f.category ?? '',
+    source: f.source ?? '', dynamic: f.dynamic ?? false, mandatoryDefault: f.mandatoryDefault ?? false,
+    attachmentCondition: f.attachmentCondition ?? 'NONE', allStates: f.allStates ?? true,
+    statesStr: (f.states ?? []).join(', '), description: f.description ?? '',
+  }
+}
+
+// ─── Detail panel — identity, summary, and inline editing ───────────────────────
 function FormDetail({ form, coverages, onOpenCoverage }: {
   form: WithId<Form>; coverages: WithId<Coverage>[]; onOpenCoverage: (id: string) => void
 }) {
+  const { pid } = useProductCtx()
   const { user } = useUser()
-  const canEdit  = canI(user, 'product:write')
+  const canEdit = canI(user, 'product:write')
+  const actor = { uid: user?.uid ?? '', name: user?.name ?? user?.email ?? 'Unknown' }
   const referencedBy = coverages.filter(c => c.formNumbers?.includes(form.number))
 
-  const [description, setDescription] = useState(form.description ?? '')
-  const [generating, setGenerating]   = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [saving, setSaving]     = useState(false)
+  const [draft, setDraft]       = useState<FormDraft>(() => makeDraft(form))
+  const [generating, setGenerating] = useState(false)
+  const set = <K extends keyof FormDraft>(k: K, v: FormDraft[K]) => setDraft(p => ({ ...p, [k]: v }))
 
-  // Reset the local description when the selected form changes.
-  useEffect(() => { setDescription(form.description ?? '') }, [form.id, form.description])
+  // Reset all local state when a different form is selected.
+  useEffect(() => { setDraft(makeDraft(form)); setEditMode(false) }, [form.id])
 
   async function handleGenerate() {
     setGenerating(true)
@@ -51,14 +76,40 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
       const result = await adapter.fns.call<{ formKey: string }, { description: string; cached: boolean }>(
         'describeForm', { formKey: form.id },
       )
-      setDescription(result.description)
+      set('description', result.description)
       if (!result.cached) toast.success('Description generated')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not generate description')
-    } finally {
-      setGenerating(false)
-    }
+    } finally { setGenerating(false) }
   }
+
+  async function saveEdit() {
+    if (!draft.name.trim()) { toast.error('Name is required'); return }
+    setSaving(true)
+    try {
+      const states = draft.allStates
+        ? []
+        : draft.statesStr.split(/[\s,]+/).map(s => s.trim().toUpperCase()).filter(Boolean)
+      await adapter.db.mutate({
+        op: 'update', path: `forms/${form.id}`, entityType: 'form', productId: pid, actor,
+        expectedRev: (form as { rev?: number }).rev,
+        data: {
+          name: draft.name.trim(), edition: draft.edition.trim() || null,
+          category: draft.category, source: draft.source.trim(),
+          dynamic: draft.dynamic, mandatoryDefault: draft.mandatoryDefault,
+          attachmentCondition: draft.attachmentCondition,
+          allStates: draft.allStates, states,
+          description: draft.description.trim() || null,
+        },
+      })
+      toast.success('Form saved')
+      setEditMode(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Save failed')
+    } finally { setSaving(false) }
+  }
+
+  const inp = 'w-full h-9 px-3 rounded-[8px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/25'
 
   const Section = ({ icon, title, count, children }: { icon: React.ReactNode; title: string; count?: number; children: React.ReactNode }) => (
     <div className="rounded-[14px] bg-surface p-4" style={{ border: '1px solid var(--color-border)' }}>
@@ -73,9 +124,8 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Identity header */}
-      <div className="rounded-[14px] p-4 relative overflow-hidden"
-        style={{ background: 'var(--gradient-accent-soft)', border: '1px solid var(--color-border)' }}>
+      {/* Identity header — editable in editMode */}
+      <div className="rounded-[14px] p-4" style={{ background: 'var(--gradient-accent-soft)', border: '1px solid var(--color-border)' }}>
         <div className="flex items-start gap-3">
           <span className="w-10 h-10 rounded-[11px] flex items-center justify-center text-white shrink-0" style={{ background: 'var(--gradient-accent)' }}>
             <IconForm size={20} aria-hidden="true" />
@@ -83,43 +133,93 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <RefChip id={form.number} tone="accent" />
-              <span className="text-[11px] text-faint tnum">Ed. {form.edition || '—'}</span>
+              {editMode ? (
+                <input value={draft.edition} onChange={e => set('edition', e.target.value)} placeholder="Edition (e.g. 09 20)"
+                  className="h-7 w-28 px-2 rounded-[6px] bg-surface/80 border border-border-strong font-mono text-[11px] text-text focus:outline-none focus:ring-1 focus:ring-accent/25" />
+              ) : (
+                <span className="text-[11px] text-faint tnum">Ed. {form.edition || '—'}</span>
+              )}
             </div>
-            <h2 className="text-[16px] font-bold text-text leading-snug mt-1">{form.name}</h2>
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              <Badge label={catLabel(form.category)} color={CAT_COLOR[form.category] ?? 'default'} />
-              <Badge label={form.source} color="default" />
-              {form.dynamic && <Badge label="Dynamic" color="blue" />}
-              {form.mandatoryDefault && <Badge label="Mandatory" color="purple" />}
+            {editMode ? (
+              <input value={draft.name} onChange={e => set('name', e.target.value)} placeholder="Form name" autoFocus
+                className="mt-1 w-full px-2 py-1 rounded-[7px] bg-surface/80 border border-border-strong text-[15px] font-bold text-text focus:outline-none focus:ring-2 focus:ring-accent/25" />
+            ) : (
+              <h2 className="text-[16px] font-bold text-text leading-snug mt-1">{form.name}</h2>
+            )}
+            <div className="flex flex-wrap gap-1.5 mt-2 items-center">
+              {editMode ? (
+                <>
+                  <select value={draft.category} onChange={e => set('category', e.target.value)}
+                    className="h-7 px-2 rounded-[6px] bg-surface/80 border border-border-strong text-[12px] text-text focus:outline-none focus:ring-1 focus:ring-accent/25">
+                    {FORM_CATEGORIES.map(c => <option key={c} value={c}>{catLabel(c)}</option>)}
+                  </select>
+                  <input value={draft.source} onChange={e => set('source', e.target.value)} placeholder="Source…"
+                    className="h-7 w-24 px-2 rounded-[6px] bg-surface/80 border border-border-strong text-[12px] text-text focus:outline-none focus:ring-1 focus:ring-accent/25" />
+                  <label className="flex items-center gap-1 text-[12px] text-dim cursor-pointer">
+                    <input type="checkbox" className="accent-accent" checked={draft.dynamic} onChange={e => set('dynamic', e.target.checked)} />Dynamic
+                  </label>
+                  <label className="flex items-center gap-1 text-[12px] text-dim cursor-pointer">
+                    <input type="checkbox" className="accent-accent" checked={draft.mandatoryDefault} onChange={e => set('mandatoryDefault', e.target.checked)} />Mandatory
+                  </label>
+                </>
+              ) : (
+                <>
+                  <Badge label={catLabel(form.category)} color={CAT_COLOR[form.category] ?? 'default'} />
+                  <Badge label={form.source} color="default" />
+                  {form.dynamic && <Badge label="Dynamic" color="blue" />}
+                  {form.mandatoryDefault && <Badge label="Mandatory" color="purple" />}
+                </>
+              )}
             </div>
           </div>
+          {/* Edit / Save / Cancel */}
+          {canEdit && !editMode && (
+            <button onClick={() => setEditMode(true)} aria-label="Edit form"
+              className="shrink-0 w-7 h-7 rounded-[7px] flex items-center justify-center text-faint hover:text-accent hover:bg-surface/80 transition-colors">
+              <IconEdit size={14} aria-hidden="true" />
+            </button>
+          )}
+          {editMode && (
+            <div className="shrink-0 flex items-center gap-1 mt-0.5">
+              <Button variant="ghost" size="sm" onClick={() => { setDraft(makeDraft(form)); setEditMode(false) }}>Cancel</Button>
+              <Button variant="primary" size="sm" onClick={() => void saveEdit()} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Plain-English summary */}
+      {/* Plain-English summary — directly editable in editMode */}
       <Section icon={<IconSparkle size={15} aria-hidden="true" />} title="Plain-English summary">
-        <div className="flex items-start justify-between gap-3">
-          {description ? (
-            <p className="text-sm text-dim leading-relaxed">{description}</p>
-          ) : (
-            <p className="text-sm text-faint italic">{canEdit ? 'No description yet — generate one.' : 'No plain-English description available.'}</p>
-          )}
-          {canEdit && (
-            <button onClick={handleGenerate} disabled={generating}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline disabled:opacity-50 shrink-0"
-              aria-label="Generate AI description">
-              {generating ? <IconSpinner size={12} className="animate-spin" /> : <IconSparkle size={12} />}
-              {description ? (generating ? 'Regenerating…' : 'Regenerate') : (generating ? 'Generating…' : 'Generate')}
-            </button>
-          )}
-        </div>
+        {editMode ? (
+          <textarea value={draft.description} onChange={e => set('description', e.target.value)} rows={4}
+            placeholder="Plain-English description of this form…"
+            className="w-full px-3 py-2 rounded-[8px] bg-raised border border-border-strong text-sm text-dim resize-y leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent/25" />
+        ) : (
+          <div className="flex items-start justify-between gap-3">
+            {draft.description ? (
+              <p className="text-sm text-dim leading-relaxed">{draft.description}</p>
+            ) : (
+              <p className="text-sm text-faint italic">{canEdit ? 'No description yet — generate one or click Edit.' : 'No plain-English description available.'}</p>
+            )}
+            {canEdit && (
+              <button onClick={handleGenerate} disabled={generating}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline disabled:opacity-50 shrink-0"
+                aria-label="Generate AI description">
+                {generating ? <IconSpinner size={12} className="animate-spin" /> : <IconSparkle size={12} />}
+                {draft.description ? (generating ? 'Regenerating…' : 'Regenerate') : (generating ? 'Generating…' : 'Generate')}
+              </button>
+            )}
+          </div>
+        )}
       </Section>
 
-      {/* Editions — the current edition on file (read-only). */}
-      <Section icon={<IconForm size={15} aria-hidden="true" />} title="Editions" count={form.edition ? 1 : 0}>
-        {form.edition ? (
+      {/* Editions */}
+      <Section icon={<IconForm size={15} aria-hidden="true" />} title="Editions" count={draft.edition ? 1 : 0}>
+        {editMode ? (
+          <input value={draft.edition} onChange={e => set('edition', e.target.value)} placeholder="e.g. 09 20" className={inp} />
+        ) : draft.edition ? (
           <div className="flex items-center justify-between px-3 py-2 rounded-[9px] bg-raised" style={{ border: '1px solid var(--color-border)' }}>
-            <span className="font-mono text-[13px] text-text">Ed. {form.edition}</span>
+            <span className="font-mono text-[13px] text-text">Ed. {draft.edition}</span>
             <span className="text-[11px] text-faint">Current</span>
           </div>
         ) : (
@@ -127,13 +227,33 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
         )}
       </Section>
 
-      {/* Attachment + states */}
+      {/* Attachment + states — both editable */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Section icon={<IconLink size={15} aria-hidden="true" />} title="Attachment">
-          <p className="text-sm text-dim">{form.attachmentCondition === 'NONE' ? 'Mandatory — always attached' : 'Rule-driven — see Forms rules'}</p>
+          {editMode ? (
+            <select value={draft.attachmentCondition} onChange={e => set('attachmentCondition', e.target.value)} className={inp}>
+              <option value="NONE">Mandatory — always attached</option>
+              <option value="CONDITIONAL">Rule-driven — see Forms rules</option>
+            </select>
+          ) : (
+            <p className="text-sm text-dim">{form.attachmentCondition === 'NONE' ? 'Mandatory — always attached' : 'Rule-driven — see Forms rules'}</p>
+          )}
         </Section>
         <Section icon={<IconStates size={15} aria-hidden="true" />} title="States">
-          <p className="text-sm text-dim">{form.allStates ? 'All states' : (form.states?.join(', ') || 'None')}</p>
+          {editMode ? (
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-sm text-dim cursor-pointer">
+                <input type="checkbox" className="accent-accent" checked={draft.allStates} onChange={e => set('allStates', e.target.checked)} />
+                All states
+              </label>
+              {!draft.allStates && (
+                <input value={draft.statesStr} onChange={e => set('statesStr', e.target.value)}
+                  placeholder="AK, AZ, CA, …" className={inp} />
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-dim">{form.allStates ? 'All states' : (form.states?.join(', ') || 'None')}</p>
+          )}
         </Section>
       </div>
 
@@ -154,7 +274,7 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
         )}
       </Section>
 
-      {/* Dynamic fields */}
+      {/* Dynamic fields — read-only (structure editing not supported in this panel) */}
       {form.dynamicFields?.length > 0 && (
         <Section icon={<IconForm size={15} aria-hidden="true" />} title="Dynamic fields" count={form.dynamicFields.length}>
           <div className="flex flex-col gap-1.5">
