@@ -420,6 +420,22 @@ var CANONICAL_MAP = {
         aliases: ["FORM EDITION DATE (MM YY)", "FORM EDITION DATE", "EDITION DATE", "EDITION"]
       },
       {
+        field: "effectiveDate",
+        role: "stored",
+        type: "string | undefined",
+        description: "Date the form version becomes effective.",
+        examples: ["10 25", "01 01 2024"],
+        aliases: ["FORM EFFECTIVE DATE", "EFFECTIVE DATE"]
+      },
+      {
+        field: "expirationDate",
+        role: "stored",
+        type: "string | undefined",
+        description: "Date the form version expires.",
+        examples: ["12 31 9999", "12 99"],
+        aliases: ["FORM EXPIRATION DATE", "EXPIRATION DATE"]
+      },
+      {
         field: "category",
         role: "stored",
         type: "FormCategory",
@@ -587,6 +603,22 @@ var CANONICAL_MAP = {
         description: "Free-text note on the dynamic field.",
         examples: ["", "Bound to declarations."],
         aliases: ["NOTES", "COMMENTS"]
+      },
+      {
+        field: "effectiveDate",
+        role: "stored",
+        type: "string | undefined",
+        description: "Date the dynamic field becomes active on the form.",
+        examples: ["10 25", "01 24"],
+        aliases: ["EFFECTIVE DATE OF DYNAMIC FIELD", "FIELD EFFECTIVE DATE", "EFFECTIVE DATE"]
+      },
+      {
+        field: "expirationDate",
+        role: "stored",
+        type: "string | undefined",
+        description: "Date the dynamic field expires on the form.",
+        examples: ["12 99", "12 31 9999"],
+        aliases: ["EXPIRATION DATE OF DYNAMIC FIELD", "FIELD EXPIRATION DATE", "EXPIRATION DATE"]
       }
     ]
   },
@@ -1093,6 +1125,7 @@ var STACKED_MARKER_PATTERNS = [
   /^LD\s*TABLE\s+ID\s*:/i,
   /^(LDTable)\.\d+$/i
 ];
+var TABLE_NAME_SENTINEL_PATTERN = /^TABLE\s+NAME\s*:/i;
 function rowMatchesStackedMarker(row2) {
   for (let c = 0; c < Math.min(row2.length, 3); c++) {
     const v = row2[c];
@@ -1107,6 +1140,20 @@ function hasStackedTableMarkers(cells) {
   for (const row2 of cells) {
     if (rowMatchesStackedMarker(row2)) {
       if (++count >= 2) return true;
+    }
+  }
+  return false;
+}
+function hasTableNameOnlyMarkers(cells) {
+  if (hasStackedTableMarkers(cells)) return false;
+  let count = 0;
+  for (const row2 of cells) {
+    for (let c = 0; c < Math.min(row2.length, 2); c++) {
+      const v = row2[c];
+      if (typeof v === "string" && TABLE_NAME_SENTINEL_PATTERN.test(v.trim())) {
+        if (++count >= 2) return true;
+        break;
+      }
     }
   }
   return false;
@@ -1138,7 +1185,7 @@ function hasIndentedHierarchy(cells, bestHeaderRow) {
   return total >= 4 && indented / total >= 0.2;
 }
 function detectLayoutShape(cells, bestHeaderRow) {
-  if (hasStackedTableMarkers(cells)) return "STACKED_TABLES";
+  if (hasStackedTableMarkers(cells) || hasTableNameOnlyMarkers(cells)) return "STACKED_TABLES";
   const headerRow = bestHeaderRow >= 0 ? cells[bestHeaderRow] ?? [] : [];
   if (hasWideStateColumns(headerRow)) return "WIDE_MATRIX";
   if (hasIndentedHierarchy(cells, bestHeaderRow)) return "INDENTED_HIERARCHY";
@@ -1360,10 +1407,19 @@ function parseMetaBlock(rows) {
   }
   return meta;
 }
+function rowMatchesTableNameSentinel(row2) {
+  for (let c = 0; c < Math.min(row2.length, 2); c++) {
+    const v = row2[c];
+    if (typeof v === "string" && TABLE_NAME_SENTINEL_PATTERN.test(v.trim())) return true;
+  }
+  return false;
+}
 function segmentStackedTables(cells) {
+  const hasPrimary = cells.some((r) => rowMatchesStackedMarker(r ?? []));
+  const isMarker = hasPrimary ? rowMatchesStackedMarker : rowMatchesTableNameSentinel;
   const markerRows = [];
   for (let r = 0; r < cells.length; r++) {
-    if (rowMatchesStackedMarker(cells[r] ?? [])) markerRows.push(r);
+    if (isMarker(cells[r] ?? [])) markerRows.push(r);
   }
   if (markerRows.length === 0) return [];
   const subTables = [];
@@ -1665,7 +1721,59 @@ var PH_LOB = {
   family: "Property",
   sections: PH_SECTIONS,
   peril: PH_PERIL,
-  footprintStates: ["AZ", "CA", "CO", "FL", "GA", "IL", "IN", "MI", "NC", "OH", "PA", "SC", "TN", "TX", "VA"],
+  footprintStates: [
+    "AL",
+    "AK",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "HI",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
   // canonical additive fields
   code: "PH",
   displayName: "Personal Home",
@@ -2025,6 +2133,13 @@ function lobByPrefix(refId) {
 }
 function resolveLobByRefId(refId) {
   return lobByPrefix(refId);
+}
+function resolveLobByName(name) {
+  if (!name) return void 0;
+  const n = name.trim().toLowerCase();
+  return Object.values(LOB_REGISTRY).find(
+    (l) => l.name.toLowerCase() === n || l.displayName.toLowerCase() === n || n.includes(l.name.toLowerCase()) || n.includes(l.code.toLowerCase())
+  );
 }
 function refIdSegmentKind(refId) {
   if (typeof refId !== "string") return null;
@@ -3568,7 +3683,7 @@ function countRefIdRows(grid) {
   return n;
 }
 function selectFrameworkSheet(grids, ctx) {
-  const FW_RE = /framework|product component model|component model/i;
+  const FW_RE = /framework|product component model|component model|e\+\s*framework/i;
   const candidates = grids.filter(
     (g) => FW_RE.test(g.sheet) && !IGNORE_SHEET.test(g.sheet) && !DECOY_SHEET.test(g.sheet) && !VERSION_SUFFIX.test(g.sheet)
   );
@@ -5060,17 +5175,17 @@ function mapIsoWorkbook(grids, overlay, consumedSpans) {
   const ctx = new Ctx();
   ctx.spans = consumedSpans ?? null;
   const fwGrid = selectFrameworkSheet(grids, ctx);
-  const formGrid = findSheet(grids, /forms specifications?|forms library/i, /dynamic/i);
+  const formGrid = findSheet(grids, /forms specifications?|forms library|e\+\s*form specs?/i, /dynamic/i);
   const dynGrid = findSheet(grids, /forms dynamic|dynamic data/i);
-  const ruleGrid = findSheet(grids, /rules specifications?|rules repository/i, /optional/i);
+  const ruleGrid = findSheet(grids, /rules specifications?|rules repository|rule references|e\+\s*rules?\s*specs?/i, /optional/i);
   const optGrid = findSheet(grids, /optional forms rules/i);
-  const rateGrid = findSheet(grids, /rating specifications?|property roc|^roc$/i);
-  const rtGrid = findSheet(grids, /rating tables|rate tables/i);
-  const ldGrid = findSheet(grids, /limits and deductibles|limits & deductibles/i);
+  const rateGrid = findSheet(grids, /rating specifications?|property roc|^roc$|e\+\s*rat/i);
+  const rtGrid = findSheet(grids, /rating tables|rate tables|e\+\s*rating\s*tables?/i);
+  const ldGrid = findSheet(grids, /limits and deductibles|limits & deductibles|e\+\s*limits?/i);
   const fwResults = fwGrid ? parseFramework(fwGrid, ctx, overlay) : null;
   const firstFw = fwResults?.[0] ?? null;
   const productRefId = firstFw?.productRefId ?? null;
-  const lob = resolveLobByRefId(productRefId) ?? resolveLobByRefId(firstFw?.coverages[0]?.refId ?? null) ?? DEFAULT_LOB;
+  const lob = resolveLobByRefId(productRefId) ?? resolveLobByRefId(firstFw?.coverages[0]?.refId ?? null) ?? resolveLobByName(firstFw?.lobName) ?? DEFAULT_LOB;
   const lobRefId = firstFw?.lobRefId ?? `${lob.prefix}.LOB.001`;
   const lobName = firstFw?.lobName || lob.name;
   const productId = productRefId;

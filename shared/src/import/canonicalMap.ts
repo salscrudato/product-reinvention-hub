@@ -285,6 +285,18 @@ export const CANONICAL_MAP: Record<CanonicalEntityKind, CanonicalEntityDef> = {
         aliases: ['FORM EDITION DATE (MM YY)', 'FORM EDITION DATE', 'EDITION DATE', 'EDITION'],
       },
       {
+        field: 'effectiveDate', role: 'stored', type: 'string | undefined',
+        description: 'Date the form version becomes effective.',
+        examples: ['10 25', '01 01 2024'],
+        aliases: ['FORM EFFECTIVE DATE', 'EFFECTIVE DATE'],
+      },
+      {
+        field: 'expirationDate', role: 'stored', type: 'string | undefined',
+        description: 'Date the form version expires.',
+        examples: ['12 31 9999', '12 99'],
+        aliases: ['FORM EXPIRATION DATE', 'EXPIRATION DATE'],
+      },
+      {
         field: 'category', role: 'stored', type: 'FormCategory',
         enumValues: ['BASE_COVERAGE', 'DECLARATIONS', 'ENDORSEMENT', 'EXCLUSION', 'AMENDATORY', 'POLICY_NOTICE'],
         description: 'Form category; the many GL sub-types (Other Coverage Form, Causes Of Loss Form, …) fold onto ENDORSEMENT.',
@@ -409,6 +421,18 @@ export const CANONICAL_MAP: Record<CanonicalEntityKind, CanonicalEntityDef> = {
         description: 'Free-text note on the dynamic field.',
         examples: ['', 'Bound to declarations.'],
         aliases: ['NOTES', 'COMMENTS'],
+      },
+      {
+        field: 'effectiveDate', role: 'stored', type: 'string | undefined',
+        description: 'Date the dynamic field becomes active on the form.',
+        examples: ['10 25', '01 24'],
+        aliases: ['EFFECTIVE DATE OF DYNAMIC FIELD', 'FIELD EFFECTIVE DATE', 'EFFECTIVE DATE'],
+      },
+      {
+        field: 'expirationDate', role: 'stored', type: 'string | undefined',
+        description: 'Date the dynamic field expires on the form.',
+        examples: ['12 99', '12 31 9999'],
+        aliases: ['EXPIRATION DATE OF DYNAMIC FIELD', 'FIELD EXPIRATION DATE', 'EXPIRATION DATE'],
       },
     ],
   },

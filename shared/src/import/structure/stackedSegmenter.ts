@@ -4,7 +4,7 @@
 // Fully deterministic, LLM-free.
 
 import type { NormalizedCell, SubTable, ColumnProfile } from './types'
-import { rowMatchesStackedMarker } from './layoutDetector'
+import { rowMatchesStackedMarker, TABLE_NAME_SENTINEL_PATTERN } from './layoutDetector'
 import { scoreHeaderCandidates, pickBestHeaderRow } from './headerScore'
 import { profileColumns } from './columnProfiler'
 
@@ -76,12 +76,23 @@ function parseMetaBlock(rows: NormalizedCell[][]): Record<string, string> {
   return meta
 }
 
+/** Returns true when a row's first 2 cells match the TABLE NAME: sentinel. */
+function rowMatchesTableNameSentinel(row: NormalizedCell[]): boolean {
+  for (let c = 0; c < Math.min(row.length, 2); c++) {
+    const v = row[c]
+    if (typeof v === 'string' && TABLE_NAME_SENTINEL_PATTERN.test(v.trim())) return true
+  }
+  return false
+}
+
 /** Segment a STACKED_TABLES sheet into an array of named SubTable descriptors. */
 export function segmentStackedTables(cells: NormalizedCell[][]): SubTable[] {
-  // ① Find all marker row indices
+  // ① Find all marker row indices — use TABLE NAME: sentinel when no primary markers present
+  const hasPrimary = cells.some(r => rowMatchesStackedMarker(r ?? []))
+  const isMarker = hasPrimary ? rowMatchesStackedMarker : rowMatchesTableNameSentinel
   const markerRows: number[] = []
   for (let r = 0; r < cells.length; r++) {
-    if (rowMatchesStackedMarker(cells[r] ?? [])) markerRows.push(r)
+    if (isMarker(cells[r] ?? [])) markerRows.push(r)
   }
   if (markerRows.length === 0) return []
 

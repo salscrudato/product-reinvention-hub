@@ -101,6 +101,32 @@ function foldEnums(data) {
   }
 }
 
+// Yes/No/X cell → boolean (mirrors foldEnums' BOOLEANISH handling for a raw value).
+function booleanish(v) {
+  if (typeof v === 'boolean') return v
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase()
+    return s === 'yes' || s === 'y' || s === 'true' || s === 'x'
+  }
+  return false
+}
+
+// Dynamic-field data type fold: the canonical model stores TEXT | CURRENCY | DATE |
+// LIST | PERCENT; Number / Alphanumeric / Address and anything unrecognized fold onto
+// TEXT (canonicalMap dynamicField.dataType contract). Citations keep the verbatim byte.
+const DF_TYPE_FOLD = [
+  [/^date/i, 'DATE'],
+  [/^(currency|money|dollar|amount|\$)/i, 'CURRENCY'],
+  [/^(percent|percentage|pct|%)/i, 'PERCENT'],
+  [/^(list|enum|dropdown|drop-down|select|option|picklist|choice)/i, 'LIST'],
+]
+function foldDynamicFieldType(v) {
+  if (typeof v !== 'string' || !v.trim()) return 'TEXT'
+  const s = v.trim()
+  for (const [re, canonical] of DF_TYPE_FOLD) if (re.test(s)) return canonical
+  return 'TEXT'
+}
+
 /** Convert a BrainEntity into a PlannedEntity ({docId, refId, label, data}). */
 function toPlanned(entity, extraData) {
   const refId = entityRefId(entity)
@@ -697,9 +723,76 @@ function buildImportPlan(brainOutput, opts = {}) {
     ...(brainOutput.importWarnings || []),
   ]
 
-  const dynamicFieldCount = byKind('dynamicField').length
-  if (dynamicFieldCount > 0) {
-    importWarnings.push({ kind: 'dynamic-fields-surfaced', sheet: null, row: null, field: null, detail: `${dynamicFieldCount} dynamic-field row(s) extracted; review them in provenance (not auto-attached to forms).` })
+  // ── Dynamic-field 1:many join (Forms Dynamic Data → Form.dynamicFields[]) ────
+  // Each dynamicField entity carries a formNumber (canonicalMap: role source, mapsTo
+  // form.number). Fold those rows into their parent form's dynamicFields[] so a form's
+  // fillable fields travel WITH the form (the canonical Form.dynamicFields shape) instead
+  // of floating as orphan rows. Matching uses the same case/punctuation-insensitive key
+  // as the ISO join (F11), so "CG 01 13" ≡ "CG-01-13". A form that gains fields is, by
+  // definition, dynamic. Rows whose formNumber matches no form in this plan — or that
+  // carry no field name — are surfaced for review (flag-not-invent), never silently
+  // dropped; their per-field citations remain in provenance.
+  {
+    const dynamicFieldEntities = byKind('dynamicField')
+    // Canonical shape: every form carries a dynamicFields[] array (defaulted empty).
+    for (const f of forms) if (!Array.isArray(f.data.dynamicFields)) f.data.dynamicFields = []
+
+    if (dynamicFieldEntities.length > 0) {
+      const formByNum = new Map()
+      for (const f of forms) {
+        const key = nameKey(f.data.number ?? f.refId)
+        if (key) formByNum.set(key, f)
+      }
+      let attached = 0
+      let skippedNoName = 0
+      const unmatched = new Map()
+
+      for (const e of dynamicFieldEntities) {
+        const rawName = fieldValue(e, 'name')
+        if (typeof rawName !== 'string' || !rawName.trim()) { skippedNoName++; continue }
+
+        const df = {
+          name:      rawName.trim(),
+          dataType:  foldDynamicFieldType(fieldValue(e, 'dataType')),
+          repeating: booleanish(fieldValue(e, 'repeating')),
+        }
+        const options = fieldValue(e, 'options')
+        if (Array.isArray(options)) {
+          const o = options.map(v => String(v).trim()).filter(Boolean)
+          if (o.length) df.options = o
+        } else if (typeof options === 'string' && options.trim()) {
+          const o = options.split(/[\n;,]+/).map(s => s.trim()).filter(Boolean)
+          if (o.length) df.options = o
+        }
+        const notes = fieldValue(e, 'notes'); if (typeof notes === 'string' && notes.trim()) df.notes = notes.trim()
+        const eff = fieldValue(e, 'effectiveDate'); if (typeof eff === 'string' && eff.trim()) df.effectiveDate = eff.trim()
+        const exp = fieldValue(e, 'expirationDate'); if (typeof exp === 'string' && exp.trim()) df.expirationDate = exp.trim()
+
+        const formNum = fieldValue(e, 'formNumber')
+        const host = formByNum.get(nameKey(formNum))
+        if (host) {
+          host.data.dynamicFields.push(df)
+          host.data.dynamic = true   // a form carrying fillable fields IS dynamic
+          attached++
+        } else {
+          const label = (typeof formNum === 'string' && formNum.trim()) ? formNum.trim() : '(no form number)'
+          unmatched.set(label, (unmatched.get(label) ?? 0) + 1)
+        }
+      }
+
+      if (attached > 0) {
+        const formsWithFields = forms.filter(f => f.data.dynamicFields.length > 0).length
+        importWarnings.push({ kind: 'dynamic-fields-attached', sheet: null, row: null, field: null, detail: `${attached} dynamic-field row(s) attached to ${formsWithFields} form(s) as Form.dynamicFields.` })
+      }
+      if (unmatched.size > 0) {
+        const total = [...unmatched.values()].reduce((a, b) => a + b, 0)
+        const list = [...unmatched.keys()].slice(0, 12).join(', ')
+        importWarnings.push({ kind: 'dynamic-fields-unmatched', sheet: null, row: null, field: null, detail: `${total} dynamic-field row(s) reference form number(s) not in this plan (${list}${unmatched.size > 12 ? ', …' : ''}) — surfaced in provenance, not attached.` })
+      }
+      if (skippedNoName > 0) {
+        importWarnings.push({ kind: 'dynamic-fields-unnamed', sheet: null, row: null, field: null, detail: `${skippedNoName} dynamic-field row(s) had no field name — surfaced in provenance, not attached.` })
+      }
+    }
   }
 
   // ── Plan integrity (first principles: relationships are first-class; the

@@ -23,15 +23,19 @@ export const ALL_STATES_LABELS = new Set([
 
 // Regex patterns that mark the START of a stacked sub-table block.
 // Checked against the first 3 columns of each row.
-// NOTE: TABLE NAME is intentionally absent — in real workbooks it appears on the
-// same row as the LDTable/RTTable ID (split across adjacent cells), so it is
-// metadata WITHIN a block, not a block-start marker.
+// NOTE: TABLE NAME is intentionally absent from the primary set — in GL/LD-table workbooks
+// it appears on the same row as the RATE/LD TABLE ID (meta WITHIN a block, not a start).
+// The secondary TABLE_NAME_SENTINEL_PATTERN is only used when no primary markers exist.
 const STACKED_MARKER_PATTERNS: RegExp[] = [
   /RATE\s+TABLE\s+ID\s*:/i,
   /^(RTTable)\.\d+$/i,
   /^LD\s*TABLE\s+ID\s*:/i,
   /^(LDTable)\.\d+$/i,
 ]
+
+// Secondary sentinel: TABLE NAME: rows that ARE block delimiters when no primary
+// RATE/LD markers are present (e.g. E+ Rule References format).
+export const TABLE_NAME_SENTINEL_PATTERN = /^TABLE\s+NAME\s*:/i
 
 /** Returns true when the row's first 3 cells contain a stacked-table marker. */
 export function rowMatchesStackedMarker(row: NormalizedCell[]): boolean {
@@ -50,6 +54,23 @@ export function hasStackedTableMarkers(cells: NormalizedCell[][]): boolean {
   for (const row of cells) {
     if (rowMatchesStackedMarker(row)) {
       if (++count >= 2) return true
+    }
+  }
+  return false
+}
+
+/** Returns true when ≥ 2 rows match TABLE NAME: and NO primary RATE/LD markers exist.
+ *  This detects formats like E+ Rule References where TABLE NAME: IS the block delimiter. */
+export function hasTableNameOnlyMarkers(cells: NormalizedCell[][]): boolean {
+  if (hasStackedTableMarkers(cells)) return false   // primary markers take precedence
+  let count = 0
+  for (const row of cells) {
+    for (let c = 0; c < Math.min(row.length, 2); c++) {
+      const v = row[c]
+      if (typeof v === 'string' && TABLE_NAME_SENTINEL_PATTERN.test(v.trim())) {
+        if (++count >= 2) return true
+        break
+      }
     }
   }
   return false
@@ -93,7 +114,7 @@ export function hasIndentedHierarchy(cells: NormalizedCell[][], bestHeaderRow: n
 /** Detect the layout shape of a sheet from its normalized cells.
  *  Priority: STACKED_TABLES > WIDE_MATRIX > INDENTED_HIERARCHY > FLAT_TABLE. */
 export function detectLayoutShape(cells: NormalizedCell[][], bestHeaderRow: number): LayoutShape {
-  if (hasStackedTableMarkers(cells)) return 'STACKED_TABLES'
+  if (hasStackedTableMarkers(cells) || hasTableNameOnlyMarkers(cells)) return 'STACKED_TABLES'
 
   const headerRow = bestHeaderRow >= 0 ? (cells[bestHeaderRow] ?? []) : []
   if (hasWideStateColumns(headerRow)) return 'WIDE_MATRIX'

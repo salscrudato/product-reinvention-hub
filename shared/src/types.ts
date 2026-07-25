@@ -373,17 +373,21 @@ export type AttachmentCondition = 'RULE' | 'NONE'
 export type DynamicFieldType    = 'TEXT' | 'CURRENCY' | 'DATE' | 'LIST' | 'PERCENT'
 
 export interface DynamicField {
-  name:       string
-  dataType:   DynamicFieldType
-  repeating:  boolean
-  options?:   string[]
-  notes?:     string
+  name:          string
+  dataType:      DynamicFieldType
+  repeating:     boolean
+  options?:      string[]
+  notes?:        string
+  effectiveDate?: string
+  expirationDate?: string
 }
 
 export interface Form extends GovernanceBlock, StateScope {
   number:              string
   name:                string
   edition:             string
+  effectiveDate?:      string
+  expirationDate?:     string
   category:            FormCategory
   claimsBasis:         string
   dynamic:             boolean

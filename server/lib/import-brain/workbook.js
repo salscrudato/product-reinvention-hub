@@ -63,7 +63,12 @@ function importZipLimits() {
     totalUncompressedBytes:   envInt('IMPORT_ZIP_MAX_UNCOMPRESSED_BYTES', 314572800), // 300 MB
     entryCount:               envInt('IMPORT_ZIP_MAX_ENTRIES', 2000),
     perEntryCompressionRatio: envInt('IMPORT_ZIP_MAX_ENTRY_RATIO', 400),
-    declaredCellCount:        envInt('IMPORT_ZIP_MAX_DECLARED_CELLS', 3000000),
+    // 3.5M sits deliberately between the largest legitimate workbook we import
+    // (CORE — Product Specifications _Core.xlsx — declares ~3.03M cells from 72.7MB of
+    // formatted-empty-cell sheet XML, a ~10x-corpus outlier but not a bomb) and the
+    // parser-armor declared-cell bomb (~3.93M cells / 90MB). Raising it from the original
+    // 3.0M admits CORE-class masters while still rejecting the bomb; env-tunable for ops.
+    declaredCellCount:        envInt('IMPORT_ZIP_MAX_DECLARED_CELLS', 3500000),
     parseWallClockMs:         envInt('IMPORT_PARSE_WALL_CLOCK_MS', 180000),
   }
 }

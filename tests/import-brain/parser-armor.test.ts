@@ -107,6 +107,20 @@ describe('S3 armor: zip bombs are rejected with structured IMPORT_413 (never a c
     expect(err!.reason).toBe('declaredCellCount')
   })
 
+  it('CORE-class master (~3.03M cells / 72.7MB sheet XML) passes below the ceiling', () => {
+    // Product Specifications _Core.xlsx declares 72,791,527 bytes of sheet XML →
+    // ceil(/24) = 3,032,981 cells: a formatted-empty-cell outlier ~10x the corpus worst
+    // case, but a real workbook (13,136 entities extracted end-to-end). It must pass —
+    // the declared-cell ceiling (3.5M) sits above CORE and below the 3.9M bomb above.
+    const core = fakeZip([
+      { name: 'xl/workbook.xml', comp: 2000, uncomp: 8000 },
+      { name: 'xl/worksheets/sheet1.xml', comp: 9 * MB, uncomp: 72_791_527 },
+    ])
+    const report = inspectOoxmlContainer(core)
+    expect(report.declaredCellEstimate).toBe(3_032_981)
+    expect(report.declaredCellEstimate).toBeLessThan(importZipLimits().declaredCellCount)
+  })
+
   it('ceilings are env-tunable (a lowered entry ceiling rejects a benign file)', () => {
     const benign = fakeZip([
       { name: 'xl/workbook.xml', comp: 500, uncomp: 2000 },
