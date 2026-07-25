@@ -9,6 +9,13 @@
  *   BASE_URL=https://app-prodhub-dev.azurewebsites.net tsx scripts/import-verify.mts <file.xlsx>
  *
  * Env: BASE_URL, IMPORT_USER, IMPORT_PASS, IMPORT_TENANT, IMPORT_LABEL
+ *      IMPORT_ATTACH_RUN_ID  attach to a run already in flight (skips the upload) and just
+ *                            wait for its durable result — a dropped SSE stream never costs
+ *                            a second full re-import.
+ *      IMPORT_RESULT_WAIT_MS how long to wait for the durable bundle (default 45min). The
+ *                            bundle only exists once the run COMPLETES, and a long import
+ *                            outlives its own SSE connection by many minutes, so this must
+ *                            cover the WHOLE remaining run — not just the reconnect.
  *
  * Exit: 0 = every invariant held · 1 = at least one violated · 2 = could not run
  */
@@ -21,10 +28,12 @@ const PASS     = process.env.IMPORT_PASS   || 'admin'
 const TENANT   = process.env.IMPORT_TENANT || 'import-verify'
 const LABEL    = process.env.IMPORT_LABEL  || ''
 
+const ATTACH = process.env.IMPORT_ATTACH_RUN_ID || ''
+const RESULT_WAIT_MS = Number(process.env.IMPORT_RESULT_WAIT_MS) || 2_700_000   // 45 min
 const filePath = process.argv[2]
-if (!filePath) { console.error('usage: tsx scripts/import-verify.mts <file>'); process.exit(2) }
-const abs = resolve(filePath)
-if (!existsSync(abs)) { console.error(`not found: ${abs}`); process.exit(2) }
+if (!filePath && !ATTACH) { console.error('usage: tsx scripts/import-verify.mts <file>'); process.exit(2) }
+const abs = filePath ? resolve(filePath) : ''
+if (abs && !existsSync(abs)) { console.error(`not found: ${abs}`); process.exit(2) }
 
 const tag = LABEL || abs.split(/[\\/]/).pop()!
 const log = (m: string) => process.stdout.write(`[${tag}] ${m}\n`)
@@ -39,23 +48,27 @@ const { token } = await loginRes.json() as { token: string }
 log(`authenticated → ${BASE_URL}`)
 
 // ── stream the import ────────────────────────────────────────────────────────
-const runId = `verify-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 10)}`
-const body = {
+const runId = ATTACH || `verify-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 10)}`
+// Built lazily: in ATTACH mode there is no file to read, and an eager readFileSync('')
+// would throw before the attach path ever ran.
+const buildBody = () => ({
   documents: [{
     name: abs.split(/[\\/]/).pop(),
     base64: readFileSync(abs).toString('base64'),
     mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   }],
   runId,
-}
+})
 const t0 = Date.now()
-log(`POST /api/ai/unifiedImport  (runId=${runId})`)
 let streamErr = ''
-try {
+if (ATTACH) {
+  log(`attaching to run ${ATTACH} — no re-upload`)
+} else try {
+  log(`POST /api/ai/unifiedImport  (runId=${runId})`)
   const res = await fetch(`${BASE_URL}/api/ai/unifiedImport`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
+    body: JSON.stringify(buildBody()),
   })
   if (!res.ok) { log(`HTTP ${res.status} — ${(await res.text().catch(() => '')).slice(0, 300)}`); process.exit(1) }
   const reader = res.body!.getReader()
@@ -82,16 +95,25 @@ try {
 log(`stream finished in ${Math.round((Date.now() - t0) / 1000)}s`)
 
 // ── durable bundle ───────────────────────────────────────────────────────────
+// The durable bundle only lands when the RUN finishes, which on a big workbook is many
+// minutes after its SSE connection is cut. Poll for the whole remaining run, not a
+// reconnect window — a 100s wait reported a healthy import as a failure.
 let bundle: Record<string, unknown> | null = null
-for (let i = 0; i < 20 && !bundle; i++) {
+const deadline = Date.now() + RESULT_WAIT_MS
+let waited = 0
+while (!bundle && Date.now() < deadline) {
   const rr = await fetch(`${BASE_URL}/api/ai/unifiedImportResult`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ runId }),
-  })
-  if (rr.ok) bundle = ((await rr.json()) as { bundle?: Record<string, unknown> }).bundle ?? null
-  if (!bundle) await new Promise(r => setTimeout(r, 5000))
+  }).catch(() => null)
+  if (rr?.ok) bundle = ((await rr.json().catch(() => ({}))) as { bundle?: Record<string, unknown> }).bundle ?? null
+  if (bundle) break
+  await new Promise(r => setTimeout(r, 30_000))
+  waited += 30
+  if (waited % 300 === 0) log(`  still waiting for the durable result (${waited / 60}min elapsed, run ${runId})`)
 }
-if (!bundle) { log('FAIL — no durable bundle'); process.exit(1) }
+if (!bundle) { log(`FAIL — no durable bundle after ${Math.round(RESULT_WAIT_MS / 60000)}min (run ${runId})`); process.exit(1) }
+log(`durable bundle recovered`)
 
 const plan = (bundle['plan'] ?? {}) as Record<string, unknown>
 const arr = (k: string) => (Array.isArray(plan[k]) ? plan[k] as Record<string, unknown>[] : [])
