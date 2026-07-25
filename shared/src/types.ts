@@ -358,6 +358,18 @@ export interface LDTable {
    *  number the rating engine can use — coercing them to 0 mints a priceable $0 the source
    *  never states. Preserved verbatim here so nothing is lost and a human can set the amount. */
   unpricedRows?:   { label: string; verbatim: string; constraintNote?: string }[]
+  /** Distinct values of this table's DEDUCTIBLE column, when it ships one ALONGSIDE its limit
+   *  column ("Sub-Coverage Name | Limit ($) | Deductible ($)"). `rows`/`optionValues` describe
+   *  ONE column, so a table stating both could only ever surface one of them and every
+   *  deductible in the book was read by nobody. Populated only from a column the header row
+   *  explicitly names, so it is evidence, never an inference from column position. */
+  deductibleValues?: (string | number)[]
+  /** The deductible column's header, verbatim — provenance for `deductibleValues`. */
+  deductibleHeader?: string
+  /** True when the header row explicitly names a LIMIT column at the value position. Lets a
+   *  table whose NAME says neither "limit" nor "deductible" still yield a correctly-kinded
+   *  term, instead of being dropped for want of a keyword in its title. */
+  limitHeaderSeen?: boolean
 }
 
 // rows layout is preserved as-is; lookup logic lives in the concrete getter

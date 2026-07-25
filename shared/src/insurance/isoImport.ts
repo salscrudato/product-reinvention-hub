@@ -1664,6 +1664,11 @@ interface ReferenceTableDraft {
   optionValues:(string | number)[]  // distinct option values incl. split limits ("100/300")
   rowLabels:   string[]      // every data-row col-0 label (sub-coverage-matrix name matching)
   backLinkWas: string        // the RULE ID line's value-column header
+  /** Distinct numeric values of a SEPARATE deductible column, when the header row names one. */
+  deductibleValues: (string | number)[]
+  deductibleHeader?: string
+  /** The header row explicitly labelled the parsed value column a LIMIT. */
+  limitHeaderSeen: boolean
   shape:       'FLAT' | 'MATRIX'   // MATRIX = several value columns; values deliberately unread
   refusalReason?: string     // why a MATRIX draft carries no rows
 }
@@ -1711,6 +1716,32 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
       // limit in column 1, so nothing is lost and it must keep parsing as it always has.
       // A non-numeric column-1 ("30% of the amount of insurance") is a TEXTUAL value, not an
       // absent one, so it does not qualify either.
+      // ── Header-driven column roles (the deductible read) ───────────────────
+      // The block's header row sits AT dataStart (the marker row is usually bare). Reading it
+      // is what lets a "Sub-Coverage | Limit ($) | Deductible ($)" table surface BOTH series:
+      // `rows`/`optionValues` describe column 1 only, so before this the deductible column was
+      // parsed by nobody and every coverage showed "—" for deductibles.
+      //
+      // Deliberately NARROW, so no existing table changes shape:
+      //   * the deductible must be a column the header row NAMES (evidence, not position);
+      //   * it must sit at index >= 2, i.e. BESIDE the value column the existing parse reads.
+      //     A table headed "Limit Options ($) | Deductible Options ($)" is a different beast —
+      //     a cross-product of allowed pairs whose col-0 is itself a value, not a label — and
+      //     is left exactly as it parses today rather than half-understood.
+      const headerRowCells = row(grid, dataStart)
+      const headerAt = (c: number) => clean(headerRowCells[c] ?? null)
+      let dedCol = -1
+      let limitHeaderSeen = false
+      for (let c = 1; c <= 33; c++) {
+        const h = headerAt(c)
+        if (!h) continue
+        if (dedCol < 0 && c >= 2 && /deductible/i.test(h)) dedCol = c
+        if (c === 1 && /\blimit\b/i.test(h)) limitHeaderSeen = true
+      }
+      const deductibleHeader = dedCol >= 0 ? headerAt(dedCol) : undefined
+      const deductibleValues: (string | number)[] = []
+      const dedSeen = new Set<string>()
+
       const valueCols = new Set<number>()
       let lostRows = 0
       for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
@@ -1725,6 +1756,16 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
         }
         if (parseNum(rawVal) !== null) valueCols.add(1)
         if (valStr === '' && rightward !== null) lostRows++
+        // Deductible column, read per row. `clean` blanks the placeholders these cells are
+        // full of ("N/A"), and a non-numeric deductible is NOT coerced to 0 — a waived or
+        // "refer to company" deductible is not a $0 deductible.
+        if (dedCol >= 0 && r > dataStart) {
+          const dNum = parseNum(cell(grid, r, dedCol))
+          if (dNum !== null && !dedSeen.has(String(dNum)) && deductibleValues.length < 60) {
+            dedSeen.add(String(dNum))
+            deductibleValues.push(dNum)
+          }
+        }
         if (!label && !valStr) continue
         if (label && !rowLabels.includes(label)) rowLabels.push(label)
         if (!group) { const gm = label.match(/^GROUP \d[^:]*/i); if (gm) group = gm[0]!.trim() }
@@ -1772,6 +1813,11 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
         rows: isMatrix ? [] : rows,
         optionValues: isMatrix ? [] : optionValues,
         rowLabels, backLinkWas,
+        // A refused MATRIX yields no values at all — its deductible columns are part of the
+        // very ambiguity being refused, so they are withheld with the rest.
+        deductibleValues: isMatrix ? [] : deductibleValues,
+        deductibleHeader: isMatrix ? undefined : (deductibleValues.length ? deductibleHeader : undefined),
+        limitHeaderSeen,
         shape: isMatrix ? 'MATRIX' : 'FLAT',
         refusalReason,
       })
@@ -1798,6 +1844,10 @@ function mintReferenceTables(drafts: ReferenceTableDraft[], prefix: string): Pla
       ruleRefIds: [],
       backLinkWas: d.backLinkWas || undefined,
       optionValues: d.optionValues.length ? d.optionValues : undefined,
+      ...(d.deductibleValues.length
+        ? { deductibleValues: d.deductibleValues, deductibleHeader: d.deductibleHeader }
+        : {}),
+      ...(d.limitHeaderSeen ? { limitHeaderSeen: true } : {}),
       mintedId: true,
       linkBasis: 'derived',
       // A MATRIX draft carries no rows by design — surface WHY, so the review UI shows an
@@ -1938,7 +1988,17 @@ function deriveTermsFromReferenceTables(
   let attached = 0
   for (const table of refTables) {
     const data = table.data as unknown as LDTable
-    if (data.kindHint !== 'LIMIT' && data.kindHint !== 'DEDUCTIBLE') continue   // terms only from limit/deductible tables
+    // The PRIMARY term's kind. `kindHint` reads the table's NAME, which is silent on plenty of
+    // real blocks ("AC 500 Additional Subcoverages") whose header row states the roles
+    // outright — those were dropped here for want of a keyword in the title. An explicit
+    // header is stronger evidence than a title, so it stands in when the title says nothing.
+    const primaryKind: TermKind | null =
+      (data.kindHint === 'LIMIT' || data.kindHint === 'DEDUCTIBLE') ? data.kindHint
+      : data.limitHeaderSeen ? 'LIMIT'
+      : null
+    const dedValues = data.deductibleValues ?? []
+    // Skip only when the table yields NEITHER series.
+    if (!primaryKind && dedValues.length === 0) continue
     // A refused MATRIX has no faithful single value. `default:` below would fall through to
     // 0, which prices — so withhold the term entirely and tell the reviewer how many
     // coverages are waiting on the hand-resolved matrix.
@@ -1959,20 +2019,42 @@ function deriveTermsFromReferenceTables(
       const key = `${covId}|${tableRefId}`
       if (dedup.has(key)) continue
       dedup.add(key)
-      const term: CoverageTerm = {
-        id: tableRefId.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-        kind: data.kindHint,
-        label: data.name || tableRefId,
-        ldTableRef: tableRefId,                       // resolves in the UI — CORE.TBL is in plan.ldTables
-        options: data.optionValues ?? (data.rows ?? []).map(r => r.value),
-        default: data.defaultValue ?? data.rows?.[0]?.value ?? 0,
-        basis: '',
-        states: data.state ? [data.state] : [],
-        allStates: !data.state,
-        linkBasis: 'derived',
+      const baseId = tableRefId.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      const terms = cov.data['terms'] as CoverageTerm[]
+      if (primaryKind) {
+        terms.push({
+          id: baseId,
+          kind: primaryKind,
+          label: data.name || tableRefId,
+          ldTableRef: tableRefId,                     // resolves in the UI — CORE.TBL is in plan.ldTables
+          options: data.optionValues ?? (data.rows ?? []).map(r => r.value),
+          default: data.defaultValue ?? data.rows?.[0]?.value ?? 0,
+          basis: '',
+          states: data.state ? [data.state] : [],
+          allStates: !data.state,
+          linkBasis: 'derived',
+        })
+        attached++
       }
-      ;(cov.data['terms'] as CoverageTerm[]).push(term)
-      attached++
+      // The SECOND series. A table stating both a limit and a deductible describes two terms,
+      // not one; emitting only the primary is what left every coverage showing "—" for
+      // deductibles. Suppressed when the primary already IS the deductible, so a table whose
+      // title says "Deductible" cannot yield the same series twice.
+      if (dedValues.length > 0 && primaryKind !== 'DEDUCTIBLE') {
+        terms.push({
+          id: `${baseId}-deductible`,
+          kind: 'DEDUCTIBLE',
+          label: `${data.name || tableRefId} — ${data.deductibleHeader || 'Deductible'}`,
+          ldTableRef: tableRefId,
+          options: dedValues,
+          default: typeof dedValues[0] === 'number' ? dedValues[0] : 0,
+          basis: '',
+          states: data.state ? [data.state] : [],
+          allStates: !data.state,
+          linkBasis: 'derived',
+        })
+        attached++
+      }
     }
   }
   return attached
