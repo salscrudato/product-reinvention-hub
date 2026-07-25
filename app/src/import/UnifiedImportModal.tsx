@@ -39,6 +39,7 @@ import { IconAgent } from '../components/icons'
 import { WaveformLoader } from '../components/ai/WaveformLoader'
 import { WarningsPanel, type ImportWarning } from './WarningsPanel'
 import { VirtualList } from './VirtualList'
+import { acceptedPlan, countPlan } from './acceptedPlan'
 
 // The visualizer is opt-in, so its code loads only when someone actually watches —
 // keeps the Builder/Products route chunks inside the 25 kB per-chunk budget.
@@ -101,27 +102,6 @@ function confidenceColor(c: number): string {
   return c >= 0.8 ? 'var(--color-good)' : c >= 0.5 ? 'var(--color-warn)' : 'var(--color-faint)'
 }
 
-// Count writable items for a given plan (matches importPlan()'s `total` computation).
-// ?? [] guards against a malformed server response missing an array field.
-function countPlan(p: ImportPlan): number {
-  return (p.product ? 1 : 0) + (p.coverages ?? []).length + (p.forms ?? []).length +
-    (p.rules ?? []).length + (p.formRules ?? []).length + (p.ratingProgram ? 1 : 0) +
-    (p.ldTables ?? []).length + (p.rtTables ?? []).length
-}
-
-function acceptedPlan(bundle: UnifiedProposalBundle, accepted: Set<FilingReviewSectionKey>): ImportPlan {
-  const p = bundle.plan
-  const keepTables = accepted.has('tables') || accepted.has('rating')
-  return {
-    ...p,
-    coverages:     accepted.has('coverages') ? (p.coverages ?? []) : [],
-    forms:         accepted.has('coverages') ? (p.forms ?? [])     : [],
-    rtTables:      keepTables ? (p.rtTables ?? []) : [],
-    ldTables:      keepTables ? (p.ldTables ?? []) : [],
-    rules:         accepted.has('rules')    ? (p.rules ?? [])      : [],
-    ratingProgram: accepted.has('rating')   ? p.ratingProgram : null,
-  }
-}
 
 function buildLineage(bundle: UnifiedProposalBundle, fileNames: string[], actor: { uid: string; name: string }) {
   const { detectedFormat } = bundle.fingerprint
@@ -148,6 +128,11 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const [aiAssistLoading, setAiAssistLoading] = useState(false)
   const [acceptedSuggestions, setAcceptedSuggestions] = useState<Set<string>>(new Set())
   const [accepted, setAccepted] = useState<Set<FilingReviewSectionKey>>(new Set())
+  // Per-item exclusions (docId) within kept sections — "import all of this except this row".
+  const [excluded, setExcluded] = useState<Set<string>>(new Set())
+  const toggleExclude = useCallback((docId: string) => setExcluded(prev => {
+    const n = new Set(prev); if (n.has(docId)) n.delete(docId); else n.add(docId); return n
+  }), [])
   const [cardStatus, setCardStatus] = useState<'PROPOSED' | 'APPROVED' | 'REJECTED'>('PROPOSED')
   const EMPTY_PROGRESS: ImportProgress = { done: 0, total: 0, label: '', batch: 0, batches: 0, lastRefIds: [], etaMs: null, ratePerSec: null }
   const [progress, setProgress] = useState<ImportProgress>(EMPTY_PROGRESS)
@@ -207,6 +192,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       setBundle(b)
       setCardStatus(b.formatCard?.status ?? 'PROPOSED')
       setAccepted(new Set<FilingReviewSectionKey>(['coverages', 'tables', 'rules', 'rating']))
+      setExcluded(new Set())
       setPhase('review')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed.')
@@ -292,7 +278,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       const actor   = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
       const draftId = newDraftId(bundle.plan.productId)
       const lineage = buildLineage(bundle, fileNames, actor)
-      const res = await importPlan(acceptedPlan(bundle, accepted), actor, setProgress, {
+      const res = await importPlan(acceptedPlan(bundle, accepted, excluded), actor, setProgress, {
         productId: draftId, lineage,
         contentHash: contentHashRef.current ?? undefined,
         importRunId: runIdRef.current ?? undefined,
@@ -469,6 +455,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       ) : phase === 'review' && bundle ? (
         <ReviewPane
           bundle={bundle} accepted={accepted} toggle={toggle} cardStatus={cardStatus}
+          excluded={excluded} onToggleExclude={toggleExclude}
           setCardStatus={setCardStatus} onCancel={onClose} onImport={runImport}
         />
       ) : phase === 'importing' ? (
@@ -738,14 +725,16 @@ function StreamingPane({ fileNames, stages, watchAgents, onToggleWatch, vizExpan
 
 // ─── Review pane — two-section Import Review ──────────────────────────────────
 
-function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCancel, onImport }: {
-  bundle:         UnifiedProposalBundle
-  accepted:       Set<FilingReviewSectionKey>
-  toggle:         (k: FilingReviewSectionKey) => void
-  cardStatus:     'PROPOSED' | 'APPROVED' | 'REJECTED'
-  setCardStatus:  (s: 'PROPOSED' | 'APPROVED' | 'REJECTED') => void
-  onCancel:       () => void
-  onImport:       () => void
+function ReviewPane({ bundle, accepted, toggle, excluded, onToggleExclude, cardStatus, setCardStatus, onCancel, onImport }: {
+  bundle:          UnifiedProposalBundle
+  accepted:        Set<FilingReviewSectionKey>
+  toggle:          (k: FilingReviewSectionKey) => void
+  excluded:        Set<string>
+  onToggleExclude: (docId: string) => void
+  cardStatus:      'PROPOSED' | 'APPROVED' | 'REJECTED'
+  setCardStatus:   (s: 'PROPOSED' | 'APPROVED' | 'REJECTED') => void
+  onCancel:        () => void
+  onImport:        () => void
 }) {
   // Defensive defaults: a server bundle variant (filing reconcile, fallback paths)
   // may omit optional arrays — never crash the review pane over a missing field.
@@ -764,8 +753,8 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
     setOpenSections(prev => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
 
   const importCount = useMemo(() => {
-    return countPlan(acceptedPlan(bundle, accepted))
-  }, [bundle, accepted])
+    return countPlan(acceptedPlan(bundle, accepted, excluded))
+  }, [bundle, accepted, excluded])
 
   const hasDetectedContent = SECTION_META.some(({ key }) => (review[key]?.items?.length ?? 0) > 0)
 
@@ -867,8 +856,17 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
                         rowHeight={30}
                         maxHeight={264}
                         className={on ? '' : 'opacity-40'}
-                        renderRow={(it) => (
-                          <div className="flex items-center gap-2 px-3.5 h-full min-w-0" style={{ borderTop: '1px solid var(--color-border)' }}>
+                        renderRow={(it) => {
+                          const key = it.docId ?? it.refId ?? ''
+                          const isEx = !!key && excluded.has(key)
+                          // Plain-English "why this is flagged" — confidence-derived, no jargon.
+                          const flag = it.confidence < 0.5
+                            ? 'Low confidence — verify the citation, or drop this row from the import.'
+                            : it.confidence < 0.8
+                              ? 'Medium confidence — worth a glance before importing.'
+                              : ''
+                          return (
+                          <div className={`flex items-center gap-2 px-3.5 h-full min-w-0 ${isEx ? 'opacity-45' : ''}`} style={{ borderTop: '1px solid var(--color-border)' }}>
                             {/* refId chip — load-bearing display element, never stripped */}
                             {it.refId && (
                               <span className="text-[11px] font-mono text-accent shrink-0 px-1.5 py-0.5 rounded"
@@ -876,22 +874,34 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
                                 {it.refId}
                               </span>
                             )}
-                            <span className="text-xs text-text truncate flex-1">{it.label}</span>
-                            {it.detail && (
-                              <span className="text-[11px] text-faint font-mono truncate max-w-[90px] shrink-0"
-                                title={it.detail}>{it.detail}</span>
+                            <span className={`text-xs truncate flex-1 ${isEx ? 'line-through text-faint' : 'text-text'}`}
+                              title={[it.label, flag, it.citation && `Cited: ${it.citation}`].filter(Boolean).join(' — ')}>
+                              {it.label}
+                            </span>
+                            {flag && !isEx && (
+                              <IconWarning size={11} className="shrink-0"
+                                style={{ color: it.confidence < 0.5 ? 'var(--color-warn)' : 'var(--color-faint)' }}
+                                aria-label={flag} />
                             )}
                             <span className="text-[11px] font-mono tnum shrink-0"
                               style={{ color: confidenceColor(it.confidence) }}
-                              title="Confidence">
+                              title={flag || 'Confidence'}>
                               {Math.round(it.confidence * 100)}%
                             </span>
-                            <span className="text-[10px] text-faint truncate max-w-[80px] shrink-0"
-                              title={it.citation}>
-                              {it.citation}
-                            </span>
+                            {/* Per-item confirm/reject — drop a single row without discarding the section */}
+                            {on && key && (
+                              <button type="button" onClick={() => onToggleExclude(key)}
+                                title={isEx ? 'Re-include this item in the import' : 'Exclude this item — everything else in the section still imports'}
+                                aria-pressed={isEx}
+                                className={`shrink-0 text-[10px] font-semibold px-1.5 h-[19px] rounded-[5px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+                                  isEx ? 'text-accent bg-accent-soft' : 'text-faint hover:text-danger hover:bg-[var(--color-danger-hover)]'
+                                }`}>
+                                {isEx ? 'Undo' : 'Drop'}
+                              </button>
+                            )}
                           </div>
-                        )}
+                          )
+                        }}
                       />
                     )}
                   </div>
@@ -956,6 +966,7 @@ function ReviewPane({ bundle, accepted, toggle, cardStatus, setCardStatus, onCan
         style={{ borderTop: '1px solid var(--color-border)' }}>
         <span className="text-xs text-faint">
           {importCount} item{importCount !== 1 ? 's' : ''} will be written
+          {excluded.size > 0 && <span className="text-warn"> · {excluded.size} dropped</span>}
         </span>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onCancel}>Cancel</Button>
