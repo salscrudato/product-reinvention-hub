@@ -15,7 +15,7 @@
 //   • Nothing is written to Cosmos until the reviewer clicks "Import N items."
 //   • Writes go through importPlan() → adapter.db.mutate() — the mutation invariant holds.
 //   • VIEWER sees no write action (canEdit = false → modal body is read-only text).
-import { lazy, Suspense, useCallback, useId, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type {
   UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan,
@@ -323,6 +323,32 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   }
 
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
+
+  // ── AI Assist runs on its own ───────────────────────────────────────────────
+  // A SINGLE workbook already gets the full server brain (AI at every stage, no button).
+  // Only the MULTI-FILE all-XLSX path parses deterministically in the browser, and there the
+  // mapping help sat behind a button an operator had to notice — so an import with unmapped
+  // columns silently shipped less than it could have. Fire it automatically whenever that
+  // parse leaves a gap.
+  //
+  // ACCEPTANCE STAYS MANUAL, deliberately. Each suggestion is a model PROPOSAL carrying a
+  // confidence and a citation, and `handleApplyOverlay` folds in only the ticked ones. Auto-
+  // applying them would put uncited model output into the plan without a human ever seeing
+  // it — the one thing the review gate exists to prevent.
+  const autoAssistedFor = useRef<ImportPlan | null>(null)
+  useEffect(() => {
+    if (phase !== 'xlsx-plan' || !localPlan) return
+    if (autoAssistedFor.current === localPlan) return          // once per parsed plan
+    if (aiSuggestions || aiAssistLoading) return
+    const hasGaps = localPlan.summary.unmappedColumns.length > 0
+      || localPlan.summary.sheetsSkipped.length > 0
+      || (localPlan.summary.defects ?? []).length > 0
+    if (!hasGaps) return                                       // nothing to ask about — no spend
+    autoAssistedFor.current = localPlan
+    void handleAiAssist()
+    // handleAiAssist reads the same localPlan/localGrids this effect gates on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, localPlan, aiSuggestions, aiAssistLoading])
 
   async function handleAiAssist() {
     if (!localPlan || !localGrids.length) return
@@ -1421,9 +1447,11 @@ function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading
       <div className="flex items-center justify-between gap-2 pt-1"
         style={{ borderTop: '1px solid var(--color-border)' }}>
         <div className="flex items-center gap-2">
+          {/* Kept as a RETRY affordance: the pass now fires automatically on any gap, so this
+              is the way back in when that call failed or was dismissed — not the way in. */}
           {hasUnmapped && !aiSuggestions && (
             <Button variant="ghost" onClick={onAiAssist} disabled={aiAssistLoading}>
-              {aiAssistLoading ? <><IconSpinner size={14} className="animate-spin" /> Analyzing…</> : 'AI Assist'}
+              {aiAssistLoading ? <><IconSpinner size={14} className="animate-spin" /> Analyzing…</> : 'Retry AI Assist'}
             </Button>
           )}
           <span className="text-xs text-faint">{count} item{count !== 1 ? 's' : ''} will be written</span>
