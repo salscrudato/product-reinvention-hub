@@ -70,6 +70,9 @@ function importZipLimits() {
     // 3.0M admits CORE-class masters while still rejecting the bomb; env-tunable for ops.
     declaredCellCount:        envInt('IMPORT_ZIP_MAX_DECLARED_CELLS', 3500000),
     parseWallClockMs:         envInt('IMPORT_PARSE_WALL_CLOCK_MS', 180000),
+    // Entries at least this many COMPRESSED bytes get physically verified (see
+    // verifyDeclaredSizes). Below it an entry cannot inflate to enough to matter.
+    verifyFloorCompressedBytes: envInt('IMPORT_ZIP_VERIFY_FLOOR_COMPRESSED_BYTES', 64 * 1024),
   }
 }
 
@@ -167,6 +170,8 @@ function inspectOoxmlContainer(buf, opts = {}) {
     const nameLen  = buf.readUInt16LE(p + 28)
     const extraLen = buf.readUInt16LE(p + 30)
     const cmtLen   = buf.readUInt16LE(p + 32)
+    const method   = buf.readUInt16LE(p + 10)
+    let localHeaderOffset = buf.readUInt32LE(p + 42)
     const name = buf.toString('utf8', p + 46, p + 46 + nameLen)
 
     // ZIP64 extra field (id 0x0001) carries the real sizes when saturated.
@@ -179,6 +184,7 @@ function inspectOoxmlContainer(buf, opts = {}) {
           let f = e + 4
           if (uncompressedBytes === 0xffffffff && f + 8 <= eEnd) { uncompressedBytes = readUInt64LE(buf, f); f += 8 }
           if (compressedBytes === 0xffffffff && f + 8 <= eEnd) { compressedBytes = readUInt64LE(buf, f); f += 8 }
+          if (localHeaderOffset === 0xffffffff && f + 8 <= eEnd) { localHeaderOffset = readUInt64LE(buf, f); f += 8 }
           break
         }
         e += 4 + sz
@@ -197,7 +203,7 @@ function inspectOoxmlContainer(buf, opts = {}) {
       }
     }
 
-    entries.push({ name, compressedBytes, uncompressedBytes })
+    entries.push({ name, compressedBytes, uncompressedBytes, method, localHeaderOffset })
     p += 46 + nameLen + extraLen + cmtLen
   }
 
@@ -215,6 +221,72 @@ function inspectOoxmlContainer(buf, opts = {}) {
   }
 
   return { entries, entryCount, totalUncompressedBytes, declaredCellEstimate }
+}
+
+// ─── Physical verification of the declared sizes (anti-under-declaration) ─────
+// EVERY ceiling above derives from the central directory, which the ATTACKER WRITES.
+// Under-declaring an entry's uncompressed size (say 1 KB) keeps it below
+// RATIO_FLOOR_BYTES, so the ratio guard is skipped entirely, and keeps
+// totalUncompressedBytes tiny — yet the shipped deflate stream still inflates to
+// hundreds of MB inside ExcelJS, which only notices the mismatch afterwards.
+// `compressedBytes` is the one number the attacker CANNOT fake: it is bytes actually
+// present in the upload. So each substantial entry is inflated here under a budget
+// derived from its compressed length, and anything exceeding it is rejected BEFORE
+// ExcelJS ever sees the buffer. Output is counted and discarded — memory stays flat.
+/**
+ * Inflate every entry large enough to matter and confirm it honors both its own
+ * declaration and the compression-ratio ceiling. Throws IMPORT_413 on a breach.
+ * @param {Buffer} buf
+ * @param {{entries: Array, }} inspected  the inspectOoxmlContainer result
+ * @param {object} [limits]
+ */
+async function verifyDeclaredSizes(buf, inspected, limits = importZipLimits()) {
+  const zlib = require('zlib')
+  let totalActual = 0
+  for (const e of inspected.entries) {
+    if (e.compressedBytes < limits.verifyFloorCompressedBytes) continue
+    if (e.method !== 8) continue                 // 0 = stored (cannot expand); others unsupported
+    const lho = e.localHeaderOffset
+    if (!Number.isFinite(lho) || lho < 0 || lho + 30 > buf.length) continue
+    if (buf.readUInt32LE(lho) !== 0x04034b50) continue    // not a local header — leave to ExcelJS
+    const nameLen = buf.readUInt16LE(lho + 26)
+    const extraLen = buf.readUInt16LE(lho + 28)
+    const start = lho + 30 + nameLen + extraLen
+    const end = start + e.compressedBytes
+    if (end > buf.length) continue
+    // Budget from the PHYSICAL compressed length, never from the declaration.
+    const budget = e.compressedBytes * limits.perEntryCompressionRatio
+    const actual = await inflatedByteCount(zlib, buf.subarray(start, end), budget)
+    if (actual === null) {
+      throw import413('perEntryCompressionRatio',
+        `entry "${e.name}" inflates beyond ${budget} bytes from ${e.compressedBytes} compressed (ratio ceiling ${limits.perEntryCompressionRatio}) — the central directory declared only ${e.uncompressedBytes} bytes`,
+        limits, { name: e.name, compressedBytes: e.compressedBytes, declaredUncompressedBytes: e.uncompressedBytes, budget })
+    }
+    totalActual += actual
+    if (totalActual > limits.totalUncompressedBytes) {
+      throw import413('totalUncompressedBytes',
+        `entries inflate to more than ${limits.totalUncompressedBytes} bytes (reached ${totalActual} at "${e.name}") regardless of the ${inspected.totalUncompressedBytes} bytes declared`,
+        limits, { totalActualBytes: totalActual, declaredTotal: inspected.totalUncompressedBytes })
+    }
+  }
+  return { totalActualBytes: totalActual }
+}
+
+/** Streamed raw-inflate byte count, discarding output. Returns null if it exceeds `budget`. */
+function inflatedByteCount(zlib, slice, budget) {
+  return new Promise((resolve, reject) => {
+    const inflate = zlib.createInflateRaw()
+    let n = 0
+    let settled = false
+    const done = (v) => { if (!settled) { settled = true; inflate.removeAllListeners(); inflate.destroy(); resolve(v) } }
+    inflate.on('data', (chunk) => { n += chunk.length; if (n > budget) done(null) })
+    inflate.on('end', () => done(n))
+    // A truncated / non-deflate stream is not this guard's business — the parser
+    // reports it. Only a budget breach is a rejection here.
+    inflate.on('error', () => done(n > budget ? null : n))
+    inflate.end(slice)
+    inflate.on('close', () => { if (!settled) reject(new Error('inflate closed without result')) })
+  })
 }
 
 // ─── ExcelJS → grids → StructuralModel ────────────────────────────────────────
@@ -266,7 +338,10 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
 
   // Armor BEFORE materialization: ceilings are enforced on declared central-
   // directory sizes; a breach throws IMPORT_413 and ExcelJS never runs.
-  inspectOoxmlContainer(buf)
+  const inspected = inspectOoxmlContainer(buf)
+  // …and then against PHYSICAL bytes, because every number above is attacker-written.
+  // An entry that under-declares its size to duck the ratio guard is caught here.
+  await verifyDeclaredSizes(buf, inspected)
 
   const wb = new ExcelJS.Workbook()
   // Wall-clock ceiling on the parse itself. Honest limitation: a rejection
@@ -435,7 +510,7 @@ async function readWorkbookCensus(buf, sourceName) {
   try { ExcelJS = require('exceljs') } catch {
     throw new Error('exceljs is not installed in the server host (npm install --prefix server)')
   }
-  inspectOoxmlContainer(buf)
+  await verifyDeclaredSizes(buf, inspectOoxmlContainer(buf))
   const wb = new ExcelJS.Workbook()
   await wb.xlsx.load(buf)
   const raws = collectRawCensusSheets(wb)
@@ -469,6 +544,6 @@ function collectWorkbookSignals(structural, REFID_TOKEN) {
 
 module.exports = {
   sniffContainer, readWorkbookToStructural,
-  inspectOoxmlContainer, importZipLimits, collectWorkbookSignals,
+  inspectOoxmlContainer, verifyDeclaredSizes, importZipLimits, collectWorkbookSignals,
   collectRawCensusSheets, readWorkbookCensus,
 }

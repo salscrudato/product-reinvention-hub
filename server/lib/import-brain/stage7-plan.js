@@ -60,7 +60,12 @@ function citationString(cit) {
 const ENUM_FOLD = {
   requirement: [[/^(m|mand|mandatory|required|req)$/i, 'MANDATORY'], [/^(o|opt|optional)$/i, 'OPTIONAL']],
   source:      [[/^(bureau|iso|aais|ncci|acord)$/i, 'BUREAU'], [/^(proprietary|prop|carrier)$/i, 'PROPRIETARY']],
-  status:      [[/^active$/i, 'ACTIVE'], [/^inactive$/i, 'INACTIVE'], [/^future$/i, 'FUTURE']],
+  // Leading-token match, not whole-string: real workbooks qualify the state in the same cell
+  // ("Inactive - No Longer in Use", "Active — Renewal Only"). The fully-anchored form failed to
+  // fold those, so they fell through to sourceStatus and then defaulted to ACTIVE — importing a
+  // RETIRED coverage as in-force. 'inactive' cannot be shadowed by 'active' (different first
+  // letter), and \b keeps the bare words matching.
+  status:      [[/^active\b/i, 'ACTIVE'], [/^inactive\b/i, 'INACTIVE'], [/^future\b/i, 'FUTURE']],
   claimsBasis: [[/^occ(urrence)?$/i, 'OCCURRENCE'], [/^claims[- ]?made$/i, 'CLAIMS_MADE']],
 }
 
@@ -80,18 +85,26 @@ function foldEnums(data) {
     data.sourceStatus = data.status
     delete data.status
   }
-  // Yes/No cells → booleans on boolean-shaped canonical fields.
+  // Yes/No cells → booleans on boolean-shaped canonical fields. A BLANK cell states nothing,
+  // so it stays undefined rather than folding to false — "the source did not say" and "the
+  // source said No" are different facts, and the source enum below turns on the difference.
   for (const f of BOOLEANISH_FIELDS) {
     if (typeof data[f] === 'string') {
       const v = data[f].trim().toLowerCase()
       if (v === 'yes' || v === 'y' || v === 'true' || v === 'x') data[f] = true
-      else if (v === 'no' || v === 'n' || v === 'false' || v === '') data[f] = false
+      else if (v === 'no' || v === 'n' || v === 'false') data[f] = false
+      else if (v === '') delete data[f]
     }
   }
-  // Flag aliases fold into the canonical source enum.
+  // Flag aliases fold into the canonical source enum — POSITIVE EVIDENCE ONLY. Deriving
+  // BUREAU from proprietaryFlag===false inferred a filing provenance from a negation: a row
+  // whose "Proprietary?" cell says No (or, before the blank handling above, is EMPTY) states
+  // only that it is not proprietary — it does not name ISO/AAIS/NCCI as the filing bureau.
+  // Absent positive evidence the field stays unset for a human to resolve.
   if (data.source === undefined) {
     if (data.proprietaryFlag === true) data.source = 'PROPRIETARY'
-    else if (data.proprietaryFlag === false || data.bureauFlag === true) data.source = 'BUREAU'
+    else if (data.bureauFlag === true) data.source = 'BUREAU'
+    else if (data.proprietaryFlag === false) data.sourceUnknownReason = 'row states it is not proprietary but names no bureau'
   }
   delete data.proprietaryFlag
   delete data.bureauFlag
@@ -171,7 +184,16 @@ function toPlanned(entity, extraData) {
 //   * mapper-only entities are appended (cited to the deterministic parse);
 //   * brain-only entities stay, flagged for review. Nothing is dropped silently.
 
-const ISO_IDENTITY_FIELDS = ['refId', 'parentId', 'order', 'formNumbers', 'allStates', 'states', 'status', 'lifecycle', 'reviewStatus', 'reviewer', 'terms']
+// Fields the deterministic mapper genuinely ESTABLISHES from the source structure — it is the
+// canonical oracle for these and its value wins outright.
+const ISO_ORACLE_FIELDS = ['refId', 'parentId', 'order', 'terms']
+// Fields the mapper merely STAMPS as workflow defaults (same set stampDefaults writes below):
+// importer-supplied review metadata carrying no citation. These must never overwrite a value
+// the brain read and cited from the source — a hardcoded 'ACTIVE' clobbering a cited
+// "Inactive - No Longer in Use", or an empty formNumbers:[] erasing cited endorsements, is
+// absence beating evidence. The mapper's value is used only to GAP-FILL.
+const ISO_STAMPED_FIELDS = ['formNumbers', 'allStates', 'states', 'status', 'lifecycle', 'reviewStatus', 'reviewer']
+const ISO_IDENTITY_FIELDS = [...ISO_ORACLE_FIELDS, ...ISO_STAMPED_FIELDS]
 
 function nameKey(v) {
   // Join keys need the same canonicalization discipline as value comparison:
@@ -188,8 +210,27 @@ function joinGroupWithIso(brainGroup, isoGroup, kindLabel, importWarnings, refId
 
   const adoptIdentity = (brainP, isoP) => {
     const oldRefId = brainP.refId
-    for (const f of ISO_IDENTITY_FIELDS) {
+    // The mapper is the identity ORACLE — its value wins outright.
+    for (const f of ISO_ORACLE_FIELDS) {
       if (isoP.data[f] !== undefined) brainP.data[f] = isoP.data[f]
+    }
+    // ABSENCE NEVER BEATS A CITED VALUE. For fields the mapper only STAMPS, its uncited
+    // default may fill a gap but must never overwrite what the brain read from the source.
+    for (const f of ISO_STAMPED_FIELDS) {
+      const iso = isoP.data[f]
+      if (iso === undefined) continue
+      const brain = brainP.data[f]
+      if (Array.isArray(iso)) {
+        // Arrays UNION: either side may legitimately hold form numbers the other missed, so
+        // neither an empty mapper array nor a partial brain array may truncate the other.
+        const brainArr = Array.isArray(brain) ? brain : []
+        const union = [...brainArr]
+        for (const v of iso) if (!union.some(x => String(x) === String(v))) union.push(v)
+        brainP.data[f] = union
+        continue
+      }
+      const brainHas = brain !== undefined && brain !== null && brain !== ''
+      if (!brainHas) brainP.data[f] = iso            // gap-fill only
     }
     // Gap-fill: any template field the brain did NOT extract comes from the
     // deterministic parse (requirement, claimsBasis, source, …). The brain's
@@ -444,7 +485,17 @@ function buildImportPlan(brainOutput, opts = {}) {
   // deterministic ISO mapper's conventions) — these are importer-stamped review
   // metadata, not extracted data, so they carry no citation.
   const stampDefaults = (p) => {
-    if (p.data.status === undefined)       p.data.status = 'ACTIVE'
+    // A source status the fold could NOT canonicalize is preserved under sourceStatus with
+    // `status` deleted. Silently stamping ACTIVE there presents an unread lifecycle state as a
+    // confirmed in-force one. GovernanceBlock.status is required, so a value must be written —
+    // but it is marked ASSUMED and review-flagged, never passed off as extracted.
+    if (p.data.status === undefined) {
+      p.data.status = 'ACTIVE'
+      if (typeof p.data.sourceStatus === 'string' && p.data.sourceStatus.trim() !== '') {
+        p.data.statusAssumed = true
+        p.data.needsReview = true
+      }
+    }
     if (p.data.lifecycle === undefined)    p.data.lifecycle = 'DRAFT'
     if (p.data.reviewStatus === undefined) p.data.reviewStatus = 'NOT_STARTED'
     if (p.data.reviewer === undefined)     p.data.reviewer = ''
@@ -801,15 +852,22 @@ function buildImportPlan(brainOutput, opts = {}) {
     // 1. Duplicate refIds within a group → keep the first, flag the rest (a
     //    duplicate create would fail or silently overwrite at persist time).
     for (const [label, group] of [['coverage', coverages], ['form', forms], ['rule', rules], ['formRule', formRules], ['ldTable', ldTables], ['rtTable', rtTables]]) {
-      const seen = new Set()
+      const seen = new Map()
       for (const p of group) {
         if (!p.refId) continue
-        if (seen.has(p.refId)) {
+        const n = seen.get(p.refId) ?? 0
+        if (n > 0) {
           p.data.needsReview = true
           p.data.duplicateOf = p.refId
-          importWarnings.push({ kind: 'duplicate-refId', sheet: null, row: null, field: label, detail: `Duplicate ${label} refId "${p.refId}" (${p.label}) — review which row is authoritative before persisting.` })
+          // docId is derived from refId, so duplicates COLLIDED: the review UI keys exclusions
+          // by docId (excluding one silently dropped both) and the server keys creates by it
+          // (persisting both threw 409 and failed the whole chunk). Give each copy a distinct
+          // docId so the reviewer can keep one, drop one, or keep both. refId is untouched —
+          // it is load-bearing and byte-for-byte; only the storage key is disambiguated.
+          p.docId = `${toDocId(p.refId)}--dup${n + 1}`
+          importWarnings.push({ kind: 'duplicate-refId', sheet: null, row: null, field: label, detail: `Duplicate ${label} refId "${p.refId}" (${p.label}) — review which row is authoritative before persisting; this copy is staged as "${p.docId}" so it can be resolved independently.` })
         }
-        seen.add(p.refId)
+        seen.set(p.refId, n + 1)
       }
     }
 
@@ -844,6 +902,22 @@ function buildImportPlan(brainOutput, opts = {}) {
       }
     }
 
+    // 3b. Assumed status: a source workflow string the enum fold could not canonicalize left
+    //    the lifecycle state unread. Each such entity was stamped ACTIVE (the schema requires a
+    //    Status) and marked statusAssumed — report them together so a reviewer can confirm
+    //    none of them is actually retired before they import as in-force.
+    {
+      const assumed = []
+      for (const group of [coverages, forms, rules, formRules]) {
+        for (const p of group) {
+          if (p.data.statusAssumed === true) assumed.push(`${p.refId ?? p.label} ("${p.data.sourceStatus}")`)
+        }
+      }
+      if (assumed.length > 0) {
+        importWarnings.push({ kind: 'status-assumed', sheet: null, row: null, field: 'status', detail: `${assumed.length} entit(ies) carry a source status this importer could not map to ACTIVE/INACTIVE/FUTURE; each was stamped ACTIVE and flagged, NOT read from the source (${assumed.slice(0, 8).join('; ')}${assumed.length > 8 ? ', …' : ''}). Confirm none is retired.` })
+      }
+    }
+
     // 4. Exclusion-as-coverage smell: per first principles an exclusion is NOT a
     //    coverage (no limit/deductible/premium) — it is a form/rule that removes
     //    or amends coverage. Flag for review, keep the extraction.
@@ -861,11 +935,16 @@ function buildImportPlan(brainOutput, opts = {}) {
   // Assess what this upload actually provides and tell the user what is likely
   // missing — deterministic, derived from the assembled plan itself.
   const stepsCount = ratingProgram && Array.isArray(ratingProgram.data.steps) ? ratingProgram.data.steps.length : 0
+  // A pillar means EXTRACTED content, not a nomination. Sweeper FACTs are unconfirmed cell
+  // proposals (refId null, confidence 0.5, needsReview) that join the groups for review; one
+  // of them flipping `framework` true made a forms-only upload look like it carried a product
+  // backbone, so the review UI offered "mint a NEW product" instead of "attach to existing".
+  const extracted = (group) => group.filter(p => p.data.sweeperFact !== true).length
   const pillars = {
-    framework: coverages.length > 0,
-    forms:     forms.length > 0,
-    rules:     (rules.length + formRules.length) > 0,
-    rating:    Boolean(ratingProgram) || rtTables.length > 0 || ldTables.length > 0 || stepsCount > 0,
+    framework: extracted(coverages) > 0,
+    forms:     extracted(forms) > 0,
+    rules:     (extracted(rules) + extracted(formRules)) > 0,
+    rating:    Boolean(ratingProgram) || extracted(rtTables) > 0 || extracted(ldTables) > 0 || stepsCount > 0,
   }
   const missing = []
   const anyContent = Object.values(pillars).some(Boolean)

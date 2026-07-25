@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Import Brain · Agent Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ─────────────────────────────────────────────────────── */
+:root{
+  --bg:#080E1A;--surf:#0F1929;--surf2:#16243A;--surf3:#1D2F4A;
+  --line:#1A2E4A;--line2:#0F1F35;
+  --t1:#E4EEFF;--t2:#6B8CB8;--t3:#2D4468;
+  --accent:#6366F1;--accent-s:rgba(99,102,241,.14);--accent-t:#A5B4FC;
+  --sh0:0 1px 2px rgba(0,0,0,.4);
+  --sh1:0 1px 3px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
+  --sh2:0 2px 6px rgba(0,0,0,.6),0 20px 56px rgba(0,0,0,.5);
+  --sh3:0 4px 8px rgba(0,0,0,.7),0 32px 80px rgba(0,0,0,.6);
+  --r1:6px;--r2:10px;--r3:14px;--r4:20px;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --spring:cubic-bezier(.34,1.3,.64,1);
+  /* agent palette */
+  --det:#14B8A6;--haiku:#7C3AED;--mini:#10B981;--sonnet:#A855F7;
+  --opus:#EC4899;--gpt51:#06B6D4;--pro:#3B82F6;--deep:#F97316;
+  --cohere:#94A3B8;--emb:#6B7280;
+  /* call-type chip colors */
+  --cp-bg:rgba(124,58,237,.18);--cp-t:#C4B5FD;--cp-b:rgba(124,58,237,.45);
+  --ca-bg:rgba(16,185,129,.14);--ca-t:#6EE7B7;--ca-b:rgba(16,185,129,.38);
+  --ce-bg:rgba(239,68,68,.15);--ce-t:#FCA5A5;--ce-b:rgba(239,68,68,.38);
+  --cj-bg:rgba(245,158,11,.14);--cj-t:#FCD34D;--cj-b:rgba(245,158,11,.32);
+  --cd-bg:rgba(20,184,166,.12);--cd-t:#5EEAD4;--cd-b:rgba(20,184,166,.32);
+}
+[data-theme="light"]{
+  --bg:#F1F4FA;--surf:#FFFFFF;--surf2:#F5F7FC;--surf3:#EBF0FA;
+  --line:#D8E2F0;--line2:#EBF0FA;
+  --t1:#0D1B34;--t2:#455577;--t3:#8CA0C4;
+  --accent:#4338CA;--accent-s:rgba(67,56,202,.1);--accent-t:#4338CA;
+  --sh0:0 1px 2px rgba(10,20,50,.06);
+  --sh1:0 1px 3px rgba(10,20,50,.08),0 8px 24px rgba(10,20,50,.08);
+  --sh2:0 2px 6px rgba(10,20,50,.07),0 20px 48px rgba(10,20,50,.12);
+  --sh3:0 4px 8px rgba(10,20,50,.08),0 32px 72px rgba(10,20,50,.16);
+  --cp-bg:rgba(124,58,237,.08);--cp-t:#5B21B6;--cp-b:rgba(124,58,237,.3);
+  --ca-bg:rgba(16,185,129,.08);--ca-t:#065F46;--ca-b:rgba(16,185,129,.28);
+  --ce-bg:rgba(239,68,68,.08);--ce-t:#B91C1C;--ce-b:rgba(239,68,68,.28);
+  --cj-bg:rgba(245,158,11,.08);--cj-t:#92400E;--cj-b:rgba(245,158,11,.28);
+  --cd-bg:rgba(20,184,166,.08);--cd-t:#0F766E;--cd-b:rgba(20,184,166,.28);
+}
+
+/* ── RESET ──────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:58px}
+body{font-family:'Manrope',system-ui,sans-serif;font-size:15px;line-height:1.6;
+  color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased;
+  transition:background .3s,color .3s}
+::selection{background:var(--accent-s);color:var(--accent-t)}
+a{text-decoration:none;color:inherit}
+
+/* ── TOPBAR ─────────────────────────────────────────────────────── */
+.topbar{position:fixed;inset:0 0 auto;height:56px;display:flex;align-items:center;
+  gap:16px;padding:0 24px;z-index:200;
+  background:color-mix(in srgb,var(--surf) 85%,transparent);
+  backdrop-filter:blur(20px) saturate(1.6);border-bottom:1px solid var(--line)}
+.tb-logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.tb-mark{width:30px;height:30px;border-radius:var(--r1);background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:#fff;letter-spacing:-.02em}
+.tb-name{font-size:13px;font-weight:800;color:var(--t1);letter-spacing:-.02em}
+.tb-sub{font-size:9px;font-weight:700;color:var(--t3);letter-spacing:.15em;text-transform:uppercase}
+.tb-nav{flex:1;display:flex;justify-content:center;gap:2px}
+.tb-nav a{font-size:12px;font-weight:700;color:var(--t2);padding:6px 13px;border-radius:999px;
+  transition:color .14s,background .14s;letter-spacing:.02em}
+.tb-nav a:hover{color:var(--t1);background:var(--surf2)}
+.tb-nav a.on{color:var(--accent-t);background:var(--accent-s)}
+.tb-end{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:999px;
+  font:700 12px/1 'Manrope',sans-serif;cursor:pointer;
+  border:1px solid var(--line);background:var(--surf2);color:var(--t2);
+  transition:all .18s var(--spring)}
+.btn:hover{color:var(--t1);background:var(--surf3);border-color:var(--t3);
+  box-shadow:var(--sh1);transform:translateY(-1px)}
+.btn-sq{padding:7px;width:32px;height:32px;justify-content:center;font-size:14px}
+
+/* ── PAGE ───────────────────────────────────────────────────────── */
+.wrap{padding-top:56px}
+.section{padding:64px 0}
+.cnt{max-width:1440px;margin:0 auto;padding:0 32px}
+.ey{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent-t);margin-bottom:10px}
+.sh{font-size:clamp(22px,3vw,30px);font-weight:800;letter-spacing:-.03em;line-height:1.2;
+  color:var(--t1);margin-bottom:8px}
+.ss{font-size:14px;color:var(--t2);line-height:1.65;max-width:600px}
+.hr{border:none;border-top:1px solid var(--line)}
+
+/* ── HERO ───────────────────────────────────────────────────────── */
+.hero{padding:80px 0 60px;border-bottom:1px solid var(--line)}
+.hero-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;
+  background:var(--accent-s);border:1px solid rgba(99,102,241,.28);
+  border-radius:999px;font-size:11px;font-weight:700;color:var(--accent-t);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:28px}
+.hero-pill-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);
+  animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.8)}}
+.hero h1{font-size:clamp(40px,6.5vw,72px);font-weight:800;letter-spacing:-.045em;
+  line-height:1.04;color:var(--t1);margin-bottom:22px}
+.hero h1 em{font-style:normal;color:var(--accent-t)}
+.hero-desc{font-size:16.5px;line-height:1.7;color:var(--t2);max-width:640px;margin-bottom:44px}
+.hero-stats{display:flex}
+.hstat{padding:18px 32px;border-right:1px solid var(--line)}
+.hstat:first-child{padding-left:0}
+.hstat:last-child{border-right:none}
+.hstat-v{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:600;
+  letter-spacing:-.05em;color:var(--t1);line-height:1;margin-bottom:5px}
+.hstat-l{font-size:10.5px;font-weight:700;color:var(--t3);letter-spacing:.1em;text-transform:uppercase}
+
+/* ── PIPELINE ───────────────────────────────────────────────────── */
+.pipe-scroll{overflow-x:auto;padding:4px 0 20px;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.pipe-track{display:flex;align-items:flex-start;min-width:max-content}
+.pipe-arr{width:24px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;padding-top:20px;color:var(--t3)}
+.pipe-stage{flex-shrink:0;width:140px;background:var(--surf);border:1px solid var(--line);
+  border-radius:var(--r2);padding:14px;cursor:pointer;transition:all .2s var(--spring)}
+.pipe-stage:hover{border-color:var(--accent);box-shadow:var(--sh1);transform:translateY(-2px)}
+.pipe-stage.on{border-color:var(--accent);background:var(--surf2);
+  box-shadow:0 0 0 2px var(--accent-s),var(--sh1)}
+.ps-num{font-size:9px;font-weight:800;letter-spacing:.16em;color:var(--t3);
+  text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.ps-name{font-size:11.5px;font-weight:700;color:var(--t1);line-height:1.3;margin-bottom:10px}
+.ps-dots{display:flex;gap:4px;flex-wrap:wrap}
+.ps-dot{width:8px;height:8px;border-radius:50%}
+.filing-row{display:flex;align-items:center;min-width:max-content;
+  margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+.filing-lbl{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--t3);padding-right:14px;white-space:nowrap}
+
+/* ── SWIMLANE ───────────────────────────────────────────────────── */
+.sw-outer{overflow:auto;border-radius:var(--r3);border:1px solid var(--line);
+  box-shadow:var(--sh1);max-height:72vh;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.sw-table{border-collapse:collapse;width:100%;min-width:1300px}
+
+/* Column headers (sticky top) */
+.sw-table thead th{
+  position:sticky;top:0;z-index:20;
+  background:var(--surf);border-bottom:2px solid var(--line);
+  border-right:1px solid var(--line);padding:0;cursor:pointer;
+  transition:background .14s}
+.sw-table thead th:hover{background:var(--surf2)}
+.sw-table thead th.col-on{background:var(--surf3)}
+.sw-corner{
+  position:sticky;left:0;z-index:30;
+  background:var(--surf);cursor:default!important;
+  min-width:178px;width:178px;padding:10px 14px;vertical-align:bottom}
+.sw-table thead th.col-on.sw-corner{background:var(--surf)!important}
+.sw-corner-lbl{font-size:9.5px;font-weight:700;color:var(--t3);
+  letter-spacing:.1em;text-transform:uppercase}
+
+.ch-wrap{display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:10px 8px;min-height:90px;justify-content:center}
+.ch-dot{width:10px;height:10px;border-radius:50%;margin-bottom:2px}
+.ch-abbr{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--t1)}
+.ch-role{font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.ch-count{font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px;
+  background:var(--surf2);border:1px solid var(--line);color:var(--t3);margin-top:1px}
+.sw-table thead th.col-on .ch-abbr{color:var(--t1)}
+.sw-table thead th.col-on .ch-count{background:var(--accent-s);color:var(--accent-t);border-color:rgba(99,102,241,.3)}
+
+/* Row headers (sticky left) */
+.sw-table tbody tr th{
+  position:sticky;left:0;z-index:10;
+  background:var(--surf);border-right:2px solid var(--line);
+  border-bottom:1px solid var(--line);
+  padding:12px 14px;text-align:left;cursor:pointer;
+  transition:background .14s;white-space:nowrap;
+  min-width:178px;width:178px;vertical-align:top}
+.sw-table tbody tr:hover th{background:var(--surf2)}
+.sw-table tbody tr.row-on th{background:var(--surf3)!important;border-right-color:var(--accent)}
+.rh-num{font-size:9px;font-weight:800;letter-spacing:.15em;color:var(--t3);
+  text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:2px}
+.rh-name{font-size:12px;font-weight:700;color:var(--t1);line-height:1.3;margin-bottom:5px}
+.rh-badge{display:inline-block;font-size:7.5px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 6px;border-radius:4px}
+
+/* Data cells */
+.sw-table tbody td{
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:7px;min-width:126px;vertical-align:top;
+  transition:background .12s,opacity .18s}
+.sw-table tbody tr:hover td{background:var(--surf2)}
+.sw-table tbody tr.row-on td{background:var(--surf2)!important}
+.sw-table tbody td.col-on{background:color-mix(in srgb,var(--col-accent,#6366F1) 6%,var(--surf))}
+.sw-table tbody tr.row-on td.col-on{background:color-mix(in srgb,var(--col-accent,#6366F1) 10%,var(--surf2))!important}
+.sw-table tbody td.dim{opacity:.12;pointer-events:none}
+.sw-table thead th.dim{opacity:.35}
+
+/* The chip inside a cell */
+.chip{display:block;padding:6px 7px;border-radius:var(--r1);
+  border-left:3px solid;cursor:pointer;transition:all .16s var(--spring)}
+.chip:hover{transform:translateX(2px);box-shadow:var(--sh1)}
+.chip.primary  {background:var(--cp-bg);border-color:var(--cp-b)}
+.chip.parallel {background:var(--ca-bg);border-color:var(--ca-b)}
+.chip.escalate {background:var(--ce-bg);border-color:var(--ce-b)}
+.chip.judge    {background:var(--cj-bg);border-color:var(--cj-b)}
+.chip.pure     {background:var(--cd-bg);border-color:var(--cd-b)}
+.cl{font-size:7.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.chip.primary  .cl{color:var(--cp-t)}
+.chip.parallel .cl{color:var(--ca-t)}
+.chip.escalate .cl{color:var(--ce-t)}
+.chip.judge    .cl{color:var(--cj-t)}
+.chip.pure     .cl{color:var(--cd-t)}
+.ct{font-size:10.5px;font-weight:500;color:var(--t2);line-height:1.4}
+
+/* ── LEGEND + FILTERS ───────────────────────────────────────────── */
+.leg-row{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.leg-it{display:flex;align-items:center;gap:7px}
+.leg-bar{width:11px;height:11px;border-radius:3px;border-left:3px solid;flex-shrink:0}
+.leg-bar.primary  {background:var(--cp-bg);border-color:var(--cp-b)}
+.leg-bar.parallel {background:var(--ca-bg);border-color:var(--ca-b)}
+.leg-bar.escalate {background:var(--ce-bg);border-color:var(--ce-b)}
+.leg-bar.judge    {background:var(--cj-bg);border-color:var(--cj-b)}
+.leg-bar.pure     {background:var(--cd-bg);border-color:var(--cd-b)}
+.leg-t{font-size:11.5px;font-weight:600;color:var(--t2)}
+.sep-line{width:1px;height:16px;background:var(--line)}
+
+.fbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.fc{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;
+  font-size:11.5px;font-weight:700;border:1px solid var(--line);background:var(--surf);
+  color:var(--t2);cursor:pointer;user-select:none;transition:all .18s var(--spring)}
+.fc:hover{color:var(--t1);background:var(--surf2);border-color:var(--t3)}
+.fc.on{background:var(--accent-s);border-color:rgba(99,102,241,.35);color:var(--accent-t)}
+.fc-dot{width:7px;height:7px;border-radius:50%}
+.fc-n{font-size:9px;padding:1px 5px;border-radius:999px;background:var(--surf2);
+  color:var(--t3);border:1px solid var(--line);margin-left:2px}
+.sw-info{height:18px;font-size:11.5px;color:var(--t3);margin-bottom:10px;transition:opacity .2s}
+
+/* ── AGENT CARDS ────────────────────────────────────────────────── */
+.ag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(208px,1fr));gap:14px}
+.ag-card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r3);
+  padding:18px;cursor:pointer;transition:all .2s var(--spring);
+  position:relative;overflow:hidden}
+.ag-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--ac,var(--accent));border-radius:var(--r3) var(--r3) 0 0}
+.ag-card:hover{border-color:var(--ac,var(--accent));box-shadow:var(--sh2);transform:translateY(-2px)}
+.ag-card.on{border-color:var(--ac,var(--accent));
+  background:color-mix(in srgb,var(--ac,var(--accent)) 5%,var(--surf));
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--ac,var(--accent)) 22%,transparent),var(--sh1)}
+.ag-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.ag-icon{width:34px;height:34px;border-radius:var(--r1);
+  background:color-mix(in srgb,var(--ac,var(--accent)) 16%,var(--surf2));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+  color:var(--ac,var(--accent))}
+.ag-fam{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 7px;border-radius:999px;background:var(--surf2);
+  color:var(--t3);border:1px solid var(--line)}
+.ag-role{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ac,var(--accent));margin-bottom:2px}
+.ag-model{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+  color:var(--t1);margin-bottom:7px}
+.ag-desc{font-size:11px;line-height:1.5;color:var(--t2)}
+.ag-tier{display:inline-flex;align-items:center;gap:4px;margin-top:9px;
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:999px;
+  background:var(--surf2);color:var(--t3);border:1px solid var(--line)}
+
+/* ── PRINCIPLES ─────────────────────────────────────────────────── */
+.pr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.pr-card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r3);
+  padding:24px;box-shadow:var(--sh0);transition:all .2s var(--spring);
+  border-top:3px solid var(--pc,var(--accent))}
+.pr-card:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.pr-ic{font-size:20px;margin-bottom:12px}
+.pr-h{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:7px;letter-spacing:-.01em}
+.pr-b{font-size:12.5px;line-height:1.6;color:var(--t2)}
+.pr-rule{display:inline-block;margin-top:12px;
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  background:var(--surf2);border:1px solid var(--line);
+  border-radius:var(--r1);padding:3px 9px;color:var(--t3)}
+
+/* ── ESCALATION LADDER ──────────────────────────────────────────── */
+.ld-wrap{display:flex;border-radius:var(--r3);border:1px solid var(--line);
+  overflow:hidden;box-shadow:var(--sh1)}
+.ld-rung{flex:1;background:var(--surf);padding:16px 14px;
+  position:relative;transition:all .18s var(--spring);min-width:130px}
+.ld-rung+.ld-rung{border-left:1px solid var(--line)}
+.ld-rung:hover{background:var(--surf2);transform:translateY(-2px);
+  box-shadow:var(--sh2);z-index:1}
+.ld-step{font-size:8px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:7px}
+.ld-dot{width:9px;height:9px;border-radius:50%;margin-bottom:5px}
+.ld-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+  color:var(--t1);margin-bottom:4px}
+.ld-trig{font-size:10.5px;color:var(--t2);line-height:1.45}
+.ld-badge{display:inline-flex;align-items:center;margin-top:9px;
+  font-size:8.5px;font-weight:700;padding:2px 7px;border-radius:999px;
+  background:var(--surf2);border:1px solid;text-transform:uppercase;letter-spacing:.06em}
+.ld-rung-terminal{background:color-mix(in srgb,#ef4444 7%,var(--surf))}
+
+/* ── INVARIANTS ─────────────────────────────────────────────────── */
+.iv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.iv-card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r3);
+  padding:22px;box-shadow:var(--sh0)}
+.iv-tag{display:inline-flex;align-items:center;gap:5px;font-size:8.5px;font-weight:800;
+  letter-spacing:.12em;text-transform:uppercase;padding:3px 9px;
+  border-radius:999px;border:1px solid;margin-bottom:11px}
+.iv-h{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:7px;letter-spacing:-.01em}
+.iv-b{font-size:12px;line-height:1.6;color:var(--t2)}
+.iv-code{font-family:'JetBrains Mono',monospace;font-size:10.5px;
+  background:var(--surf2);border:1px solid var(--line);border-radius:var(--r1);
+  padding:7px 11px;margin-top:11px;color:var(--t3);line-height:1.5}
+
+/* ── DETAIL PANE ────────────────────────────────────────────────── */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;
+  pointer-events:none;transition:opacity .22s;z-index:300}
+.scrim.on{opacity:1;pointer-events:auto}
+.pane{position:fixed;top:0;right:0;bottom:0;width:min(480px,96vw);
+  background:var(--surf);border-left:1px solid var(--line);
+  box-shadow:var(--sh3);transform:translateX(105%);
+  transition:transform .3s var(--spring);z-index:301;
+  display:flex;flex-direction:column;overflow:hidden}
+.pane.open{transform:translateX(0)}
+.pane-head{padding:18px 22px;border-bottom:1px solid var(--line);
+  flex-shrink:0;position:relative}
+.pane-x{position:absolute;top:12px;right:12px;width:28px;height:28px;
+  border-radius:var(--r1);background:var(--surf2);border:1px solid var(--line);
+  color:var(--t2);font-size:16px;display:flex;align-items:center;
+  justify-content:center;cursor:pointer;transition:all .14s}
+.pane-x:hover{background:var(--surf3);color:var(--t1)}
+.pane-title{font-size:15px;font-weight:800;color:var(--t1);letter-spacing:-.02em;margin-bottom:2px}
+.pane-sub{font-size:11.5px;color:var(--t2)}
+.pane-body{flex:1;overflow-y:auto;padding:20px 22px;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.pane-agent{display:flex;align-items:center;gap:10px;padding:10px 13px;
+  background:var(--surf2);border-radius:var(--r2);border:1px solid var(--line);
+  margin-bottom:14px}
+.pa-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.pa-model{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;color:var(--t1)}
+.pa-role{font-size:10px;color:var(--t3);font-weight:600}
+.pane-type{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;
+  border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.04em;
+  border:1px solid;margin-bottom:14px}
+.pane-lbl{font-size:8.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--t3);margin-bottom:4px}
+.pane-txt{font-size:13px;line-height:1.65;color:var(--t2);margin-bottom:16px}
+.pane-code{font-family:'JetBrains Mono',monospace;font-size:11px;
+  background:var(--surf2);border:1px solid var(--line);border-radius:var(--r1);
+  padding:9px 12px;color:var(--t2);line-height:1.5;word-break:break-all;margin-bottom:16px}
+.pane-file{display:inline-flex;align-items:center;gap:5px;
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  background:var(--surf2);border:1px solid var(--line);
+  border-radius:999px;padding:3px 9px;color:var(--t3)}
+.pane-hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+
+/* ── REVEAL ─────────────────────────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(12px);
+  transition:opacity .48s ease,transform .5s var(--spring)}
+.reveal.in{opacity:1;transform:none}
+
+/* ── FOOTER ─────────────────────────────────────────────────────── */
+footer{padding:28px 0;border-top:1px solid var(--line);text-align:center}
+footer p{font-size:11px;color:var(--t3)}
+
+@media(max-width:900px){
+  .tb-nav{display:none}.pr-grid{grid-template-columns:1fr}.iv-grid{grid-template-columns:1fr 1fr}
+  .ld-wrap{flex-direction:column}.ld-rung+.ld-rung{border-left:none;border-top:1px solid var(--line)}
+  .hstat{padding:12px 20px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════ TOPBAR ════════════ -->
+<nav class="topbar">
+  <div class="tb-logo">
+    <div class="tb-mark">IB</div>
+    <div>
+      <div class="tb-name">Import Brain</div>
+      <div class="tb-sub">Agent Architecture</div>
+    </div>
+  </div>
+  <nav class="tb-nav" id="tbNav">
+    <a href="#pipeline">Pipeline</a>
+    <a href="#swimlane">Swimlane</a>
+    <a href="#agents">Agents</a>
+    <a href="#principles">Principles</a>
+    <a href="#invariants">Invariants</a>
+  </nav>
+  <div class="tb-end">
+    <button class="btn btn-sq" id="themeBtn" title="Toggle light / dark">🌙</button>
+    <button class="btn" id="dlBtn">↓ Save</button>
+  </div>
+</nav>
+
+<!-- ════════════ WRAP ════════════ -->
+<div class="wrap">
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="cnt">
+    <div class="hero-pill"><div class="hero-pill-dot"></div>Multi-Agent Orchestration System</div>
+    <h1>10 stages.<br><em>9 agent roles.</em><br>Zero hallucinations.</h1>
+    <p class="hero-desc">The import brain converts semi-structured insurance workbooks and regulatory
+    filings into a governed canonical product model. Every extraction is voted on by two decorrelated
+    model families, escalated deterministically, and blocked by code — never a model — when citations
+    don't resolve.</p>
+    <div class="hero-stats">
+      <div class="hstat"><div class="hstat-v">10</div><div class="hstat-l">Pipeline stages</div></div>
+      <div class="hstat"><div class="hstat-v">9</div><div class="hstat-l">Agent roles</div></div>
+      <div class="hstat"><div class="hstat-v">3</div><div class="hstat-l">Vendor lineages</div></div>
+      <div class="hstat"><div class="hstat-v">6</div><div class="hstat-l">Cost tiers</div></div>
+    </div>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- PIPELINE -->
+<section class="section" id="pipeline">
+  <div class="cnt">
+    <div class="ey">Pipeline</div>
+    <h2 class="sh">The 10-stage import flow</h2>
+    <p class="ss">Click any stage card to jump to its swimlane row. The filing branch handles PDF
+    regulatory filings in parallel.</p>
+  </div>
+  <div class="cnt" style="margin-top:24px">
+    <div class="pipe-scroll reveal">
+      <div class="pipe-track" id="pipeRibbon"></div>
+      <div class="filing-row" id="filingRow"></div>
+    </div>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- SWIMLANE -->
+<section class="section" id="swimlane">
+  <div class="cnt reveal">
+    <div class="ey">Swimlane Matrix</div>
+    <h2 class="sh">Who does what, and when</h2>
+    <p class="ss">Click any cell for full details. Click a column header to isolate that agent.
+    Click a stage row to focus it. Filter by call type below.</p>
+  </div>
+  <div class="cnt" style="margin-top:22px">
+    <div class="leg-row reveal">
+      <div class="leg-it"><div class="leg-bar primary"></div><span class="leg-t">Primary call</span></div>
+      <div class="leg-it"><div class="leg-bar parallel"></div><span class="leg-t">Parallel vote (decorrelated pair)</span></div>
+      <div class="leg-it"><div class="leg-bar escalate"></div><span class="leg-t">Escalation target</span></div>
+      <div class="leg-it"><div class="leg-bar judge"></div><span class="leg-t">LLM Judge</span></div>
+      <div class="leg-it"><div class="leg-bar pure"></div><span class="leg-t">Pure deterministic</span></div>
+    </div>
+    <div class="fbar reveal" id="fbar"></div>
+    <div class="sw-info reveal" id="swInfo"></div>
+  </div>
+  <div class="cnt" style="max-width:100%;padding:0 16px">
+    <div class="sw-outer reveal">
+      <table class="sw-table" id="swTable"></table>
+    </div>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- AGENTS -->
+<section class="section" id="agents">
+  <div class="cnt reveal">
+    <div class="ey">Agent Fleet</div>
+    <h2 class="sh">The 9 agent roles</h2>
+    <p class="ss">Click any card to highlight that agent's participation across the swimlane.
+    Model IDs are always resolved from the fleet registry — never hardcoded.</p>
+  </div>
+  <div class="cnt" style="margin-top:22px">
+    <div class="ag-grid reveal" id="agGrid"></div>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- PRINCIPLES -->
+<section class="section" id="principles">
+  <div class="cnt reveal">
+    <div class="ey">Architecture Principles</div>
+    <h2 class="sh">Why it's designed this way</h2>
+    <p class="ss">Six load-bearing design invariants that shape every agent interaction in the pipeline.</p>
+  </div>
+  <div class="cnt" style="margin-top:28px">
+    <div class="pr-grid reveal">
+      <div class="pr-card" style="--pc:#7C3AED">
+        <div class="pr-ic">⊕</div>
+        <div class="pr-h">Adversarial decorrelation</div>
+        <div class="pr-b">Every parallel voting pair intentionally crosses model families —
+        Anthropic (haiku/opus) paired with OpenAI (gpt-mini/gpt-5.1). A shared family bias
+        cannot simultaneously corrupt both votes, raising agreement signal quality.</div>
+        <div class="pr-rule">never: two same-family models in parallel</div>
+      </div>
+      <div class="pr-card" style="--pc:#10B981">
+        <div class="pr-ic">⬆</div>
+        <div class="pr-h">Escalation-first cost control</div>
+        <div class="pr-b">The cheapest capable model always runs first. More expensive models
+        are invoked only when the cheaper rung fails to reach consensus. The vast majority of
+        rows resolve at the first rung (haiku + gpt-mini).</div>
+        <div class="pr-rule">cost = f(disagreement rate), not input size</div>
+      </div>
+      <div class="pr-card" style="--pc:#14B8A6">
+        <div class="pr-ic">⊘</div>
+        <div class="pr-h">Code-exclusive blocking authority</div>
+        <div class="pr-b">No model can block an entity from the output plan.
+        Only <code style="font-family:'JetBrains Mono',monospace;font-size:10.5px">resolveCitationsDeterministic()</code>
+        holds BLOCKING authority — three deterministic checks against fp.cells.
+        All LLM validator findings are WARN-only.</div>
+        <div class="pr-rule">BLOCKING ≡ code · WARN ≡ LLM</div>
+      </div>
+      <div class="pr-card" style="--pc:#EC4899">
+        <div class="pr-ic">≡</div>
+        <div class="pr-h">Conservation law (CE3)</div>
+        <div class="pr-b">Every cell entering the pipeline must appear in the output.
+        <code style="font-family:'JetBrains Mono',monospace;font-size:10.5px">proposed = accepted + unresolved</code>
+        is enforced at Stage 7. Cells can be accepted, blocked-to-unresolved, or
+        NOISE-classified — but none can vanish silently.</div>
+        <div class="pr-rule">proposed = accepted + unresolved (S7)</div>
+      </div>
+      <div class="pr-card" style="--pc:#F97316">
+        <div class="pr-ic">⚡</div>
+        <div class="pr-h">Import always wins</div>
+        <div class="pr-b">The cost guard enforces a $25/hr rolling ceiling.
+        Import runs under the <code style="font-family:'JetBrains Mono',monospace;font-size:10.5px">IMPORT_CONTEXT</code>
+        exemption — never denied, never degraded — but all spend is metered and
+        telemetry is never bypassed.</div>
+        <div class="pr-rule">noCap ≠ unmetered — telemetry always flows</div>
+      </div>
+      <div class="pr-card" style="--pc:#6366F1">
+        <div class="pr-ic">↻</div>
+        <div class="pr-h">Extraction cache (sha256-keyed)</div>
+        <div class="pr-b">Every Stage 4 AI call is keyed by
+        <code style="font-family:'JetBrains Mono',monospace;font-size:10.5px">sha256(deployment+promptVer+system+user)</code>.
+        An LRU in-process cache + Azure Blob persistence means a re-import of an
+        identical artifact costs zero AI spend.</div>
+        <div class="pr-rule">identical input → same output, zero cost</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- ESCALATION LADDER -->
+<section class="section" id="escalation">
+  <div class="cnt reveal">
+    <div class="ey">Escalation Ladder</div>
+    <h2 class="sh">The extraction conflict cascade</h2>
+    <p class="ss">When Vote A (haiku) and Vote B (gpt-mini) disagree on a field value after numeric
+    canonicalization, this cascade fires — cheapest first, most expensive last.</p>
+  </div>
+  <div class="cnt" style="margin-top:26px">
+    <div class="ld-wrap reveal">
+      <div class="ld-rung">
+        <div class="ld-step">Fast path</div>
+        <div class="ld-dot" style="background:var(--det)"></div>
+        <div class="ld-name">Deterministic</div>
+        <div class="ld-trig">≥60% cols ≥0.80 conf → deterministicExtract() — no AI at all</div>
+        <div class="ld-badge" style="color:var(--det);border-color:rgba(20,184,166,.3)">DET only</div>
+      </div>
+      <div class="ld-rung">
+        <div class="ld-step">Rung 0 · Base pair</div>
+        <div class="ld-dot" style="background:var(--haiku)"></div>
+        <div class="ld-name">haiku + gpt-mini</div>
+        <div class="ld-trig">Parallel vote: A=B after numeric canonicalization → accept. No cascade.</div>
+        <div class="ld-badge" style="color:var(--haiku);border-color:rgba(124,58,237,.3)">~80% of rows</div>
+      </div>
+      <div class="ld-rung">
+        <div class="ld-step">Rung 1 · Mid</div>
+        <div class="ld-dot" style="background:var(--sonnet)"></div>
+        <div class="ld-name">claude-sonnet-5</div>
+        <div class="ld-trig">Dense re-extraction of conflicted chunks (≤20 rows, 3-wide context)</div>
+        <div class="ld-badge" style="color:var(--sonnet);border-color:rgba(168,85,247,.3)">MID_REASONER</div>
+      </div>
+      <div class="ld-rung">
+        <div class="ld-step">Rung 2 · Deep</div>
+        <div class="ld-dot" style="background:var(--opus)"></div>
+        <div class="ld-name">claude-opus-4-8</div>
+        <div class="ld-trig">Mandatory citations. Last Anthropic rung before cross-family judge.</div>
+        <div class="ld-badge" style="color:var(--opus);border-color:rgba(236,72,153,.3)">GROUNDED_CITED</div>
+      </div>
+      <div class="ld-rung">
+        <div class="ld-step">Rung 3 · Judge</div>
+        <div class="ld-dot" style="background:var(--gpt51)"></div>
+        <div class="ld-name">gpt-5.1</div>
+        <div class="ld-trig">4-wide parallel. OpenAI family — adversarial vs Anthropic extractors. WARN only.</div>
+        <div class="ld-badge" style="color:var(--gpt51);border-color:rgba(6,182,212,.3)">VISION judge</div>
+      </div>
+      <div class="ld-rung">
+        <div class="ld-step">Rung 4 · 3rd lineage</div>
+        <div class="ld-dot" style="background:var(--deep)"></div>
+        <div class="ld-name">DeepSeek-V4-Pro</div>
+        <div class="ld-trig">Third vendor lineage. Fully independent of both Anthropic and OpenAI.</div>
+        <div class="ld-badge" style="color:var(--deep);border-color:rgba(249,115,22,.3)">VERIFY_DEEPSEEK</div>
+      </div>
+      <div class="ld-rung ld-rung-terminal">
+        <div class="ld-step">Terminal</div>
+        <div class="ld-dot" style="background:#ef4444"></div>
+        <div class="ld-name">needs_review</div>
+        <div class="ld-trig">All three lineages exhausted. Field enters unresolved[] in the plan.</div>
+        <div class="ld-badge" style="color:#ef4444;border-color:rgba(239,68,68,.3)">unresolved[]</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- INVARIANTS -->
+<section class="section" id="invariants">
+  <div class="cnt reveal">
+    <div class="ey">System Invariants</div>
+    <h2 class="sh">The four stability guarantees</h2>
+    <p class="ss">These properties hold for every import run. Breaking any one is a bug, not a trade-off.</p>
+  </div>
+  <div class="cnt" style="margin-top:26px">
+    <div class="iv-grid reveal">
+      <div class="iv-card">
+        <div class="iv-tag" style="background:rgba(168,85,247,.12);color:#A855F7;border-color:rgba(168,85,247,.3)">Conservation</div>
+        <div class="iv-h">proposed = accepted + unresolved</div>
+        <div class="iv-b">Every cell entering the pipeline appears in exactly one output bucket. No silent drops, no phantom entities. Enforced at Stage 7.</div>
+        <div class="iv-code">unresolved = proposed − accepted</div>
+      </div>
+      <div class="iv-card">
+        <div class="iv-tag" style="background:rgba(239,68,68,.12);color:#FCA5A5;border-color:rgba(239,68,68,.3)">Citations</div>
+        <div class="iv-h">BLOCKING on three citation failures</div>
+        <div class="iv-b">Code holds exclusive blocking authority. Three BLOCKING types: invalid-citation-pointer, fabricated-strict-id, unresolvable-relation-target.</div>
+        <div class="iv-code">blocked=true → unresolved[] (never discarded)</div>
+      </div>
+      <div class="iv-card">
+        <div class="iv-tag" style="background:rgba(245,158,11,.12);color:#FCD34D;border-color:rgba(245,158,11,.3)">Cost Guard</div>
+        <div class="iv-h">$25/hr ceiling · IMPORT_CONTEXT exempt</div>
+        <div class="iv-b">1-hour rolling window, $25 ceiling. Import runs under IMPORT_CONTEXT exemption — never denied, never degraded — but telemetry always flows.</div>
+        <div class="iv-code">IMPORT_CONTEXT = noCap (not unmetered)</div>
+      </div>
+      <div class="iv-card">
+        <div class="iv-tag" style="background:rgba(20,184,166,.12);color:#5EEAD4;border-color:rgba(20,184,166,.3)">Output</div>
+        <div class="iv-h">UnifiedProposalBundle schema</div>
+        <div class="iv-b">Stage 7 produces a single typed output: plan, unresolved[], provenance[], counts, completeness classification, ensembleDisagreements[].</div>
+        <div class="iv-code">completeness: COMPLETE|PARTIAL|PARTIAL_NO_BACKBONE|EMPTY</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="cnt">
+    <p>Import Brain · Agent Architecture · Insurance Platforms AI · Accenture 2026 · <span id="genDate"></span></p>
+  </div>
+</footer>
+
+</div><!-- /wrap -->
+
+<!-- DETAIL PANE -->
+<div class="scrim" id="scrim"></div>
+<div class="pane" id="pane">
+  <div class="pane-head">
+    <button class="pane-x" id="paneX">×</button>
+    <div class="pane-title" id="paneTitle"></div>
+    <div class="pane-sub" id="paneSub"></div>
+  </div>
+  <div class="pane-body" id="paneBody"></div>
+</div>
+
+<script>
+/* ── DATA ──────────────────────────────────────────────────────────── */
+const AGENTS = [
+  {id:'det',   role:'DET',           label:'Deterministic',  model:'Code (no model)',        family:'Code',          col:'#14B8A6',icon:'</>',tier:'N/A',     desc:'Pure code paths. Holds exclusive BLOCKING authority. Fast paths, fingerprinting, citation resolution, acceptAnswer() gate, plan assembly.'},
+  {id:'haiku', role:'BULK_VERIFY',   label:'BULK_VERIFY',    model:'claude-haiku-4-5',       family:'Anthropic',     col:'#7C3AED',icon:'H',  tier:'Cheapest', desc:'First rung on the escalation ladder. Primary extractor, sweeper Vote A, LOB classification, filing classifier. High throughput.'},
+  {id:'mini',  role:'CHEAP_GENERAL', label:'CHEAP_GENERAL',  model:'gpt-5-mini',             family:'OpenAI',        col:'#10B981',icon:'M',  tier:'Cheapest', desc:'OpenAI counterpart to haiku. Cross-family AND-gate partner for prefilter, extraction Vote B, and sweeper Vote B.'},
+  {id:'sonnet',role:'MID_REASONER',  label:'MID_REASONER',   model:'claude-sonnet-5',        family:'Anthropic',     col:'#A855F7',icon:'S',  tier:'Mid',      desc:'First escalation rung for extraction conflicts and sweeper disagreements. Filing text-path rung 2.'},
+  {id:'opus',  role:'GROUNDED_CITED',label:'GROUNDED_CITED', model:'claude-opus-4-8',        family:'Anthropic',     col:'#EC4899',icon:'O',  tier:'Expensive',desc:'Top Anthropic model. Reader A, Reasoner A + Adjudicator, header fallback, column mapping, conflict rung 2, filing.'},
+  {id:'gpt51', role:'VISION',        label:'VISION',         model:'gpt-5.1',                family:'OpenAI',        col:'#06B6D4',icon:'V',  tier:'Mid',      desc:'Reader B, Reasoner B, adversarial LLM judge, adversarial validator. OpenAI decorrelation partner to opus.'},
+  {id:'pro',   role:'DEEP_REASONER', label:'DEEP_REASONER',  model:'gpt-5.4-pro',            family:'OpenAI /responses',col:'#3B82F6',icon:'P',tier:'Premium', desc:'Synthesis judge on /responses surface. Adjudicates Reader A vs B disagreements. Rejects chat/completions.'},
+  {id:'deep',  role:'VERIFY_DEEPSEEK',label:'VERIFY_DEEPSEEK',model:'DeepSeek-V4-Pro',      family:'Azure/DeepSeek',col:'#F97316',icon:'D',  tier:'Premium',  desc:'Third vendor lineage. Last resort before needs_review. Fully independent of Anthropic and OpenAI biases.'},
+  {id:'cohere',role:'RERANK',        label:'RERANK',         model:'Cohere-rerank-v4.0-pro', family:'Cohere/Azure',  col:'#94A3B8',icon:'R',  tier:'Query-time',desc:'Re-ranks top-k semantic candidates by cross-encoder relevance at RAG query time. Not invoked at write time.'},
+  {id:'emb',   role:'EMBED',         label:'EMBED',          model:'text-embedding-3-small/large',family:'OpenAI',   col:'#6B7280',icon:'E',  tier:'Write+Query',desc:'Write-time: 3-small (bulk). Query-time: 3-large (precision). Two-model strategy balances import cost vs query recall.'},
+];
+
+const STAGES = [
+  {id:'s0',   num:'Stage 0',   name:'Artifact Router',  badge:'Mixed',   bc:'rgba(20,184,166,.15)',bt:'#5EEAD4',agents:['det','haiku','opus']},
+  {id:'s1a',  num:'Stage 1a',  name:'Structure Reader', badge:'AI-heavy',bc:'rgba(99,102,241,.15)',bt:'#A5B4FC',agents:['opus','gpt51','pro']},
+  {id:'s1',   num:'Stage 1',   name:'Sheet Classifier', badge:'AI-heavy',bc:'rgba(99,102,241,.15)',bt:'#A5B4FC',agents:['haiku','mini','opus','gpt51']},
+  {id:'s2',   num:'Stage 2',   name:'Header Finder',    badge:'Mixed',   bc:'rgba(20,184,166,.15)',bt:'#5EEAD4',agents:['det','opus']},
+  {id:'s3',   num:'Stage 3',   name:'Column Mapper',    badge:'Mixed',   bc:'rgba(20,184,166,.15)',bt:'#5EEAD4',agents:['det','opus','gpt51']},
+  {id:'s4',   num:'Stage 4',   name:'Extractor',        badge:'AI-heavy',bc:'rgba(99,102,241,.15)',bt:'#A5B4FC',agents:['det','haiku','mini','sonnet','opus','gpt51','deep']},
+  {id:'s45',  num:'Stage 4.5', name:'Sweeper',          badge:'Mixed',   bc:'rgba(20,184,166,.15)',bt:'#5EEAD4',agents:['det','haiku','mini','sonnet']},
+  {id:'s5',   num:'Stage 5',   name:'Validator',        badge:'Mixed',   bc:'rgba(20,184,166,.15)',bt:'#5EEAD4',agents:['det','gpt51']},
+  {id:'s6',   num:'Stage 6',   name:'Assembler',        badge:'Pure',    bc:'rgba(20,184,166,.12)',bt:'#5EEAD4',agents:['det']},
+  {id:'s7',   num:'Stage 7',   name:'Bundle Builder',   badge:'Mixed',   bc:'rgba(20,184,166,.15)',bt:'#5EEAD4',agents:['det','emb','cohere']},
+  {id:'filing',num:'Filing ↦',  name:'Filing Pipeline',  badge:'AI-heavy',bc:'rgba(99,102,241,.15)',bt:'#A5B4FC',agents:['haiku','sonnet','opus','det']},
+];
+
+const COLS = ['det','haiku','mini','sonnet','opus','gpt51','pro','deep','cohere','emb'];
+const ROWS = ['s0','s1a','s1','s2','s3','s4','s45','s5','s6','s7','filing'];
+
+const GRID = {
+  's0|det':    {t:'pure',    lb:'PURE DET',      tx:'Magic-byte sniff, fingerprint, LOB token scan, multi-workbook merge'},
+  's0|haiku':  {t:'primary', lb:'PRIMARY',        tx:'LOB detection — conf&lt;0.60 → escalate to opus'},
+  's0|opus':   {t:'escalate',lb:'↑ ESCALATE',     tx:'LOB escalation target when haiku conf&lt;0.60'},
+  's1a|opus':  {t:'parallel',lb:'∥ READER A',     tx:'Structural digest + window requests (max 40×40, ≤12)'},
+  's1a|gpt51': {t:'parallel',lb:'∥ READER B',     tx:'Decorrelated structure analysis (OpenAI family)'},
+  's1a|pro':   {t:'judge',   lb:'⊕ SYNTHESIS',    tx:'Synthesis judge on /responses — fires on Reader A≠B'},
+  's1|haiku':  {t:'parallel',lb:'∥ PREFILTER A',  tx:'AND-gate: both must agree to discard a sheet'},
+  's1|mini':   {t:'parallel',lb:'∥ PREFILTER B',  tx:'Cross-family AND-gate partner (OpenAI)'},
+  's1|opus':   {t:'primary', lb:'PRIMARY+ADJ',    tx:'Reasoner A: 8 domain labels · Adjudicator on A≠B'},
+  's1|gpt51':  {t:'parallel',lb:'∥ REASONER B',   tx:'Decorrelated domain classification (OpenAI)'},
+  's2|det':    {t:'pure',    lb:'PURE DET',       tx:'Fast path: fingerprint score&gt;0.80 (handles most cases)'},
+  's2|opus':   {t:'escalate',lb:'↑ FALLBACK',     tx:'AI fallback only when fingerprint score≤0.80'},
+  's3|det':    {t:'pure',    lb:'PURE DET',       tx:'51-state matrix detection + reconcileMappings()'},
+  's3|opus':   {t:'parallel',lb:'∥ REASONER A',   tx:'Column mapping — batches of 24 columns'},
+  's3|gpt51':  {t:'parallel',lb:'∥ REASONER B',   tx:'Decorrelated column mapping (OpenAI)'},
+  's4|det':    {t:'pure',    lb:'PURE DET',       tx:'High-conf fast path (≥60% cols ≥0.80) + sampleVerify'},
+  's4|haiku':  {t:'primary', lb:'VOTE A',         tx:'Primary extractor per batch (width-aware batching)'},
+  's4|mini':   {t:'parallel',lb:'∥ VOTE B',       tx:'Cross-family parallel vote (numeric canonicalization)'},
+  's4|sonnet': {t:'escalate',lb:'↑ RUNG 1',       tx:'Conflict rung 1: dense re-extraction ≤20 rows, 3-wide'},
+  's4|opus':   {t:'escalate',lb:'↑ RUNG 2',       tx:'Conflict rung 2: mandatory citations, last Anthropic rung'},
+  's4|gpt51':  {t:'judge',   lb:'⊕ JUDGE',        tx:'4-wide adversarial judge — OpenAI vs Anthropic extractors'},
+  's4|deep':   {t:'judge',   lb:'⊕ 3RD LINEAGE',  tx:'DeepSeek: last resort before consensus-failure'},
+  's45|det':   {t:'pure',    lb:'GATE',           tx:'acceptAnswer(): validates cell ref, kind, citation'},
+  's45|haiku': {t:'parallel',lb:'∥ SWEEP A',      tx:'FACT vs NOISE classification (60-cell batches)'},
+  's45|mini':  {t:'parallel',lb:'∥ SWEEP B',      tx:'Cross-family sweeper vote → acceptAnswer()'},
+  's45|sonnet':{t:'escalate',lb:'↑ ESC',          tx:'Single rung — unresolved → census_unaccounted'},
+  's5|det':    {t:'pure',    lb:'BLOCKING',       tx:'resolveCitationsDeterministic() — sole BLOCKING authority'},
+  's5|gpt51':  {t:'primary', lb:'ADVERSARIAL',    tx:'Adversarial validator 50 ent/sheet — WARN only'},
+  's6|det':    {t:'pure',    lb:'PURE DET',       tx:'reconcileOutput() — no AI, no writes, pure assembly'},
+  's7|det':    {t:'pure',    lb:'PURE DET',       tx:'Entity filter, enum fold, ISO mapper, plan integrity checks'},
+  's7|emb':    {t:'primary', lb:'EMBED',          tx:'RAG corpus — 3-small write-time, 3-large query-time'},
+  's7|cohere': {t:'pure',    lb:'RERANK',         tx:'Cohere rerank-v4.0-pro at RAG query time'},
+  'filing|haiku':  {t:'primary', lb:'CLASSIFY+A',  tx:'Classify document role + Vision Vote A + text rung 1'},
+  'filing|sonnet': {t:'escalate',lb:'↑ RUNG 2',   tx:'Text-path escalation rung 2'},
+  'filing|opus':   {t:'parallel',lb:'∥ VISION B',  tx:'Vision Vote B · text top rung · factor table schema'},
+  'filing|det':    {t:'pure',    lb:'TABLE PARSE', tx:'tableParser.ts deterministic factor row parsing + reconcileFiling()'},
+};
+
+const DETAILS = {
+  's0|det':{ti:'Artifact Router · Deterministic',su:'Always-first code path. Never skipped.',ai:'det',t:'pure',
+    de:'Three cascaded operations: (1) magic-byte sniff — MIME detection from raw bytes, (2) fingerprint parse — structural grid analysis, (3) LOB inference — regex scanning of filenames and workbook annotations for ISO refId tokens. Also handles multi-workbook merge and CE3 Step F09 grid truncation continuation. AI LOB detection only fires when all deterministic checks are inconclusive.',
+    ou:'RouterOutput { artifactType, lobHint, edition, sheets[], refIds[], mergeMap }',
+    no:'Never fails silently. If inconclusive, signals AI with best-effort candidate.',fi:'shared/src/insurance/import/stages/router.ts'},
+  's0|haiku':{ti:'Artifact Router · BULK_VERIFY',su:'LOB classification — first AI call in the pipeline',ai:'haiku',t:'primary',
+    de:'First-pass line-of-business classification from compressed metadata. The model proposes a LOB prefix string; code resolves it against the registry. Confidence &lt;0.60 escalates immediately to GROUNDED_CITED (opus). Skipped entirely when deterministic LOB token scan reaches confidence ≥0.60.',
+    th:'confidence &lt; 0.60 → escalate to GROUNDED_CITED (opus)',
+    ou:'{ lobRefIdHint, lobSource, edition, confidence }',
+    no:'Most imports skip this call — deterministic scan resolves most artifacts.',fi:'shared/src/insurance/import/stages/router.ts'},
+  's0|opus':{ti:'Artifact Router · GROUNDED_CITED',su:'LOB escalation target',ai:'opus',t:'escalate',
+    de:'Escalation target when haiku confidence &lt;0.60. Receives full artifact metadata PLUS haiku\'s proposal and rationale. Resolves to a registry-valid refId prefix with mandatory citations. Every proposed prefix must cite its source.',
+    th:'Triggered: haiku confidence &lt; 0.60',
+    ou:'{ lobRefIdPrefix, reasoning, citations[] }',
+    no:'Rare in practice — most artifacts resolve deterministically or at the haiku rung.',fi:'shared/src/insurance/import/stages/router.ts'},
+  's1a|opus':{ti:'Structure Reader · GROUNDED_CITED (Reader A)',su:'Parallel structure analysis — Anthropic side',ai:'opus',t:'parallel',
+    de:'Reader A in the decorrelated structure analysis pair. Studies a compressed structural digest plus a domain glossary. Can request bounded cell windows through the window service: max WINDOW_DIM=40×40, max 12 requests. The window service is code-enforced — the model requests; code decides. Returns: purpose candidates, table regions, header candidates, cross-sheet link hypotheses.',
+    th:'Runs parallel with gpt-5.1 Reader B. Disagreements → gpt-5.4-pro synthesis',
+    ou:'{ purpose, confidence, tableRegions[], headerCandidates[], crossSheetLinks[] }',
+    no:'Window constraints (40×40, ≤12 requests) are hard code limits. Models cannot exceed them.',fi:'shared/src/insurance/import/stages/structureReader.ts'},
+  's1a|gpt51':{ti:'Structure Reader · VISION (Reader B)',su:'Parallel structure analysis — OpenAI side',ai:'gpt51',t:'parallel',
+    de:'Reader B — same structural digest analysis as opus Reader A, but OpenAI family (decorrelated). A shared model-family bias cannot simultaneously corrupt both readers. If they disagree, gpt-5.4-pro adjudicates on the /responses surface using both full analyses.',
+    th:'Runs parallel with opus Reader A. Disagreements → gpt-5.4-pro synthesis',
+    ou:'{ purpose, confidence, tableRegions[], headerCandidates[], crossSheetLinks[] }',
+    no:'Decorrelation: Anthropic (opus) + OpenAI (gpt-5.1) — prevents shared-family bias reinforcement.',fi:'shared/src/insurance/import/stages/structureReader.ts'},
+  's1a|pro':{ti:'Structure Reader · DEEP_REASONER (Synthesis)',su:'Synthesis judge — fires on Reader A ≠ Reader B',ai:'pro',t:'judge',
+    de:'Synthesis judge activated ONLY when Reader A and Reader B disagree on sheet purpose or domain. Operates on the /responses API surface — gpt-5.4-pro rejects chat/completions with 400. Receives both reader analyses plus the full digest and adjudicates with deep multi-step reasoning.',
+    th:'Triggered: Reader A and Reader B disagree',
+    ou:'{ resolvedPurpose, rationale, confidence, winnerAnalysis }',
+    no:'Uses /openai/v1/responses surface, not /chat/completions.',fi:'shared/src/insurance/import/stages/structureReader.ts'},
+  's1|haiku':{ti:'Sheet Classifier · BULK_VERIFY (Prefilter A)',su:'AND-gate: both models must agree to skip a sheet',ai:'haiku',t:'parallel',
+    de:'Cheap binary gate: is this sheet empty, navigation/TOC, or decorative? Runs in parallel with gpt-mini Prefilter B. BOTH models must return prefilter=true for a sheet to be skipped. The AND-gate prevents either model from discarding a sheet the other considers substantive.',
+    ou:'{ prefilter: boolean, reason: string }',
+    no:'AND-gate: a single uncertain model cannot discard a sheet. Only cross-family consensus = "skip".',fi:'shared/src/insurance/import/stages/sheetClassifier.ts'},
+  's1|mini':{ti:'Sheet Classifier · CHEAP_GENERAL (Prefilter B)',su:'AND-gate: cross-family partner',ai:'mini',t:'parallel',
+    de:'Same prefilter task as haiku Prefilter A, OpenAI family. Both must agree prefilter=true for the sheet to be discarded. Cross-family consensus (Anthropic AND OpenAI) is a much stronger signal than within-family agreement.',
+    ou:'{ prefilter: boolean, reason: string }',
+    no:'Cross-family AND-gate prevents shared-family bias from silently discarding substantive sheets.',fi:'shared/src/insurance/import/stages/sheetClassifier.ts'},
+  's1|opus':{ti:'Sheet Classifier · GROUNDED_CITED (Reasoner A + Adjudicator)',su:'Two sequential roles in this stage',ai:'opus',t:'primary',
+    de:'(1) REASONER A: assigns one of 8 domain labels (product-framework, forms, rating-roc, rules, limits-deductibles, rate-tables, definitions, ignore) with confidence and rationale. Runs in parallel with gpt-5.1 Reasoner B. (2) ADJUDICATOR: when A and B disagree, receives both rationales and picks the winner. If humanFlag=true → review queue.',
+    th:'confidence &lt; 0.65 → needsReview=true',
+    ou:'{ domain, confidence, rationale, needsReview, humanFlag? }',
+    no:'The model cannot extend the domain vocabulary — all 8 domain labels are code-defined constants.',fi:'shared/src/insurance/import/stages/sheetClassifier.ts'},
+  's1|gpt51':{ti:'Sheet Classifier · VISION (Reasoner B)',su:'Decorrelated domain classification',ai:'gpt51',t:'parallel',
+    de:'Same domain classification as opus Reasoner A, OpenAI family. Disagreement between A and B triggers the adjudication step (a second opus call). Cross-family disagreement routes the sheet through a dedicated reasoning pass rather than auto-accepting either classification.',
+    ou:'{ domain, confidence, rationale }',
+    no:'Disagreement A≠B does not auto-choose either — both go to the opus Adjudicator.',fi:'shared/src/insurance/import/stages/sheetClassifier.ts'},
+  's2|det':{ti:'Header Finder · Deterministic (Fast path)',su:'Three cascaded fast paths — handles most worksheets',ai:'det',t:'pure',
+    de:'Three cascaded fast paths: (1) STACKED_TABLES layout → per-sub-table header from fingerprinter. (2) Top fingerprint candidate score &gt;0.80 → confirmed without AI. (3) Re-score via scoreHeaderCandidates(fp.cells) — if any candidate exceeds 0.80 → confirmed. AI only when all three fail.',
+    ou:'{ headerRowIndex, isConfirmed, method: "stacked"|"fingerprint"|"rescore"|"ai" }',
+    no:'Most worksheets resolve deterministically. The AI fallback is the exception.',fi:'shared/src/insurance/import/stages/headerFinder.ts'},
+  's2|opus':{ti:'Header Finder · GROUNDED_CITED (Fallback)',su:'AI fallback — fires when fingerprint score ≤ 0.80',ai:'opus',t:'escalate',
+    de:'AI fallback only when all deterministic paths fail (fingerprint score ≤0.80). Receives a window of candidate rows and returns { headerRowIndex, isConfirmed, rationale }. One targeted retry on malformed output via parseWithRetry().',
+    th:'Triggered: all fingerprint paths score ≤ 0.80',
+    ou:'{ headerRowIndex, isConfirmed, rationale, citation }',
+    no:'Exactly one retry (parseWithRetry). After retry: schema validation failure, not a third attempt.',fi:'shared/src/insurance/import/stages/headerFinder.ts'},
+  's3|det':{ti:'Column Mapper · Deterministic',su:'51-state matrix detection + reconcileMappings()',ai:'det',t:'pure',
+    de:'Two operations: (1) 51-STATE MATRIX DETECTION: identifies columns with 2-letter US state code headers and binary X/blank values — extracted by code, never sent to AI. (2) reconcileMappings(): reconciles the two reasoner outputs, applying 0.7× confidence penalty for disagreements and routing high-disagreement columns to needsReview.',
+    ou:'Reconciled ColumnMapping[] with needsReview flags per column',
+    no:'51-state matrix columns bypass AI entirely. This is a code invariant.',fi:'shared/src/insurance/import/stages/columnMapper.ts'},
+  's3|opus':{ti:'Column Mapper · GROUNDED_CITED (Reasoner A)',su:'Column → canonical field mapping, batches of 24',ai:'opus',t:'parallel',
+    de:'Maps columns to canonical product schema fields in batches of 24 per call. Returns for each column: { colIndex, canonicalField, entityKind, confidence, citation, needsReview }. Disagreement with Reasoner B → 0.7× confidence penalty + both fields recorded + routed to review.',
+    th:'confidence &lt; 0.60 → needsReview=true',
+    ou:'ColumnMapping[] with canonicalField, entityKind, confidence, citation per column',
+    no:'51-state matrix columns are pre-separated — never sent to AI.',fi:'shared/src/insurance/import/stages/columnMapper.ts'},
+  's3|gpt51':{ti:'Column Mapper · VISION (Reasoner B)',su:'Decorrelated column mapping (OpenAI)',ai:'gpt51',t:'parallel',
+    de:'Same column mapping as opus Reasoner A, different family. Disagreement with Reasoner A → 0.7× confidence penalty on BOTH mappings, both alternatives recorded, routed to review. Disagreement does not auto-choose either mapping.',
+    ou:'ColumnMapping[] — mirrors Reasoner A schema',
+    no:'Disagreement preserves both mappings with penalty + needsReview, not auto-resolution.',fi:'shared/src/insurance/import/stages/columnMapper.ts'},
+  's4|det':{ti:'Extractor · Deterministic (Fast path + sampleVerify)',su:'High-conf bypass + column map health check',ai:'det',t:'pure',
+    de:'(1) HIGH-CONFIDENCE FAST PATH: when ≥60% of mapped columns have confidence ≥0.80 AND the sheet has real data → deterministicExtract() skips the AI voting pair entirely. (2) SAMPLE VERIFY MAP: runs 2 batches through haiku+mini to verify the COLUMN MAP (not row data). Discrepancy → map-suspect review item + re-run full extraction.',
+    ou:'ExtractedEntities[] (fast path) OR sampleVerifyResult (map check)',
+    no:'sampleVerify checks the column MAP health, not row content. Map health affects all subsequent rows.',fi:'shared/src/insurance/import/stages/extractor.ts'},
+  's4|haiku':{ti:'Extractor · BULK_VERIFY (Vote A)',su:'Primary extractor — runs first per batch',ai:'haiku',t:'primary',
+    de:'Primary extractor for each row batch. Width-aware batching: rowsPerBatch = min(20, floor(480 / mappedColumns)). Truncation detection: stop_reason=max_tokens → halve batch and re-extract recursively. All outputs cached by sha256(deployment + PROMPT_VERSION + systemPrompt + userPrompt).',
+    th:'Parallel with gpt-mini Vote B. Conflict on any field → sonnet → opus → gpt-5.1 → DeepSeek',
+    ou:'ExtractedRow[] { cells[], confidence, citation, entityKind }',
+    no:'sha256-keyed cache hit = zero AI spend for identical re-imports. LRU in-process + Azure Blob.',fi:'shared/src/insurance/import/stages/extractor.ts'},
+  's4|mini':{ti:'Extractor · CHEAP_GENERAL (Vote B)',su:'Cross-family parallel vote (OpenAI)',ai:'mini',t:'parallel',
+    de:'Runs in parallel with haiku Vote A per batch. Numeric canonicalization applied before consensus check — "$1,000" and "1000" normalize to the same value, preventing false conflicts on formatting. Different model family (OpenAI vs Anthropic).',
+    th:'Conflict after normalization → escalate to sonnet (rung 1)',
+    ou:'ExtractedRow[] — mirrors Vote A schema',
+    no:'Numeric canonicalization prevents false escalations on formatting differences.',fi:'shared/src/insurance/import/stages/extractor.ts'},
+  's4|sonnet':{ti:'Extractor · MID_REASONER (Conflict rung 1)',su:'Dense re-extraction of conflicted chunks',ai:'sonnet',t:'escalate',
+    de:'First escalation rung. Dense re-extraction of conflicted row chunks (≤20 rows, 3-wide context window). Receives both Vote A and Vote B outputs along with raw cell data. Only activated on specific conflicted fields, not the whole batch.',
+    th:'Triggered: haiku Vote A and gpt-mini Vote B disagree. Unresolved → opus rung 2.',
+    ou:'ResolvedField[] OR ConflictReport for remaining disagreements',
+    no:'Batch size ≤20 rows, 3-column context. Context-rich prompt includes both voter outputs.',fi:'shared/src/insurance/import/stages/extractor.ts'},
+  's4|opus':{ti:'Extractor · GROUNDED_CITED (Conflict rung 2)',su:'Final Anthropic rung — mandatory citations',ai:'opus',t:'escalate',
+    de:'Second and final Anthropic escalation rung. Mandatory citations — every resolved value must cite a source cell. If opus still cannot reach consensus → gpt-5.1 LLM judge (adversarial, cross-family).',
+    th:'Triggered: sonnet rung 1 unresolved. Unresolved → gpt-5.1 LLM judge.',
+    ou:'ResolvedField[] with citations, OR escalation flag for judge',
+    no:'Citations validated by resolveCitationsDeterministic() in Stage 5. An unresolvable citation becomes a BLOCKING violation.',fi:'shared/src/insurance/import/stages/extractor.ts'},
+  's4|gpt51':{ti:'Extractor · VISION (LLM Judge)',su:'4-wide adversarial judge — WARN only',ai:'gpt51',t:'judge',
+    de:'Adversarial LLM judge. 4-wide parallel calls across still-unresolved fields. Intentionally OpenAI family vs Anthropic extractors — can catch errors both haiku and gpt-mini made for correlated family-level reasons. ALL judge findings WARN only. Unresolved → DeepSeek.',
+    th:'Triggered: all Anthropic rungs (sonnet + opus) unresolved. Unresolved → DeepSeek.',
+    ou:'JudgeVerdict[] — WARN only, never BLOCK',
+    no:'4-wide parallel execution. WARN-only — BLOCKING belongs exclusively to deterministic code.',fi:'shared/src/insurance/import/stages/extractor.ts'},
+  's4|deep':{ti:'Extractor · VERIFY_DEEPSEEK (3rd lineage)',su:'Last resort before consensus-failure',ai:'deep',t:'judge',
+    de:'Third and final vendor lineage. Called after the full Anthropic cascade (haiku → sonnet → opus) and the OpenAI judge (gpt-5.1) have all failed. DeepSeek-V4-Pro via Azure AI Foundry. Fully independent of both Anthropic and OpenAI. If unresolved → consensus-failure + needs_review flag.',
+    th:'Triggered: gpt-5.1 judge unresolved. Final step before needs_review.',
+    ou:'ResolvedField[] OR consensus-failure → needs_review entry in plan',
+    no:'Third lineage = true vendor independence. Exhausting all three lineages before needs_review is the design intent.',fi:'shared/src/insurance/import/stages/extractor.ts'},
+  's45|det':{ti:'Sweeper · Deterministic (acceptAnswer() gate)',su:'The ONLY code path that posts facts to the ledger',ai:'det',t:'pure',
+    de:'acceptAnswer() enforces three invariants: (1) cell ref must be in the batch — prevents off-target claims, (2) entity kind must be in the code-defined FACT_KINDS constant — prevents vocabulary expansion, (3) citation required — no uncited facts. Failures → dropped silently. NOISE vocabulary is also code-enforced.',
+    ou:'AcceptedFact[] (posted to ledger) + DroppedAnswer[] (validation failures)',
+    no:'FACT_KINDS and NOISE_KINDS are code constants. Models propose; this gate decides.',fi:'shared/src/insurance/import/stages/sweeper.ts → acceptAnswer()'},
+  's45|haiku':{ti:'Sweeper · BULK_VERIFY (Vote A)',su:'FACT vs NOISE classification — 60-cell batches',ai:'haiku',t:'parallel',
+    de:'Classifies UNACCOUNTED cells as FACT subtypes (product/coverage/form/rule/formRule/ldTable/rtTable/ratingStep) or NOISE subtypes (TOC/revision-history/contacts/log/decoration/blank-label/archive-sheet/dropdown-src). Batches of 60 cells with 2-row context per cell.',
+    th:'Agreement with Vote B → acceptAnswer(). Disagreement → sonnet escalation.',
+    ou:'CellClassification[] { cellRef, classification, kind, citation }',
+    no:'Classification must be one of code-defined FACT_KINDS or NOISE_KINDS. No new categories allowed.',fi:'shared/src/insurance/import/stages/sweeper.ts'},
+  's45|mini':{ti:'Sweeper · CHEAP_GENERAL (Vote B)',su:'Cross-family sweeper vote',ai:'mini',t:'parallel',
+    de:'Same classification as haiku Vote A, OpenAI family. When both Vote A and Vote B agree AND acceptAnswer() validates → fact posted to the ledger. Disagreement → escalate to sonnet. Cross-family consensus is the threshold for automatic acceptance.',
+    th:'Agreement with Vote A → acceptAnswer(). Disagreement → sonnet.',
+    ou:'CellClassification[] — mirrors Vote A schema',
+    no:'Agreement is necessary but not sufficient — acceptAnswer() gate still runs on agreed answers.',fi:'shared/src/insurance/import/stages/sweeper.ts'},
+  's45|sonnet':{ti:'Sweeper · MID_REASONER (Escalation)',su:'Single rung — no further escalation',ai:'sonnet',t:'escalate',
+    de:'Single escalation rung. Activated when haiku Vote A and gpt-mini Vote B disagree. If sonnet adjudicates → passes to acceptAnswer(). If sonnet cannot reach confident classification → NEEDS_REVIEW accounting entry in unresolved plan items (census_unaccounted). No further escalation beyond sonnet in the sweeper.',
+    th:'Triggered: Vote A and Vote B disagree. No further rung.',
+    ou:'AdjudicatedClassification OR needs_review entry in plan.unresolved[]',
+    no:'Unresolved sweeper items appear as census_unaccounted in UnifiedProposalBundle.unresolved[].',fi:'shared/src/insurance/import/stages/sweeper.ts'},
+  's5|det':{ti:'Validator · Deterministic (BLOCKING authority)',su:'resolveCitationsDeterministic() — sole holder of BLOCK power',ai:'det',t:'pure',
+    de:'The SOLE holder of BLOCKING authority in the entire pipeline. Resolves every citation against fp.cells (the authoritative normalized grid). Three BLOCKING types: (1) invalid-citation-pointer: cell ref doesn\'t resolve to any cell in fp.cells, (2) fabricated-strict-id: refId/formNumber/parentId not byte-for-byte in cited cell, (3) unresolvable-relation-target: parentId references an entity not found anywhere. blocked=true → entity goes to unresolved[].',
+    ou:'ValidationResult { blocked: boolean, blockingFindings[], warnFindings[], resolvedCitations[] }',
+    no:'BLOCKING findings are NEVER demoted to warnings. Code-exclusive authority.',fi:'shared/src/insurance/import/stages/validator.ts → resolveCitationsDeterministic()'},
+  's5|gpt51':{ti:'Validator · VISION (Adversarial validator)',su:'50 entities/batch — WARN only, OpenAI vs Anthropic extractors',ai:'gpt51',t:'primary',
+    de:'Adversarial quality validator. Intentionally OpenAI family while the extractors were Anthropic — adversarial decorrelation. Batches 50 entities per sheet. Checks: (1) grounding verbatim, (2) refId fidelity (byte-for-byte), (3) enum conformance, (4) tree integrity (parentId references), (5) row coverage (silent drops). ALL findings WARN only.',
+    th:'Batches of 50 entities. ALL findings: WARN only, never BLOCK.',
+    ou:'ValidationWarning[] { finding, entityId, severity: "warn" }',
+    no:'WARN-only authority. Blocking power reserved exclusively for deterministic citation resolver.',fi:'shared/src/insurance/import/stages/validator.ts'},
+  's6|det':{ti:'Assembler · Deterministic (PURE)',su:'No AI. No writes. Pure aggregation.',ai:'det',t:'pure',
+    de:'Pure aggregation stage — NO AI calls, NO writes to any store. reconcileOutput() assembles the complete BrainOutput: entities[], reviewQueue[], summaryCounts, validationDiscrepancies[], importWarnings[]. Output is a read-only data structure passed to Stage 7.',
+    ou:'BrainOutput { entities[], reviewQueue[], summaryCounts, validationDiscrepancies[], importWarnings[] }',
+    no:'PURE: no side effects, no AI, no writes. Only reads, aggregates, and passes forward.',fi:'shared/src/insurance/import/stages/assembler.ts → reconcileOutput()'},
+  's7|det':{ti:'Bundle Builder · Deterministic',su:'Entity filter, enum fold, ISO mapper, plan integrity',ai:'det',t:'pure',
+    de:'Fully deterministic: (1) entity filter — confidence &lt;0.40 → unresolved[], (2) enum fold — Y/N/X → boolean, MANDATORY/OPTIONAL → coverage obligation enum, (3) ISO mapper join — exact refId match → sequence-align, (4) refId remap graph, (5) plan integrity checks — duplicates, orphans, dangling parentIds, (6) completeness assessment → COMPLETE/PARTIAL/PARTIAL_NO_BACKBONE/EMPTY.',
+    ou:'UnifiedProposalBundle { plan, unresolved[], provenance[], counts, completeness, ensembleDisagreements[] }',
+    no:'Conservation Law enforced here: proposed = accepted + unresolved.',fi:'shared/src/insurance/import/stages/bundleBuilder.ts'},
+  's7|emb':{ti:'Bundle Builder · EMBED (RAG corpus)',su:'Write-time: 3-small · Query-time: 3-large + Cohere rerank',ai:'emb',t:'primary',
+    de:'buildBundleChunks() builds semantic chunks for portfolio chat RAG. Chunking strategy: one coherent product idea per chunk. text-embedding-3-small for write-time bulk (lower cost); text-embedding-3-large at query time for precision retrieval.',
+    ou:'EmbeddedChunk[] { content, embedding, metadata } → Azure Blob storage',
+    no:'Write-time: 3-small. Query-time: 3-large → Cohere rerank. Two-model strategy balances import cost vs query recall.',fi:'shared/src/insurance/import/stages/bundleBuilder.ts → buildBundleChunks()'},
+  's7|cohere':{ti:'Bundle Builder · RERANK (Query time only)',su:'Cohere rerank-v4.0-pro at RAG query time',ai:'cohere',t:'pure',
+    de:'Cohere rerank-v4.0-pro applied at query time (NOT write time). After text-embedding-3-large retrieves top-k semantic candidates, Cohere re-ranks them by cross-encoder relevance score before returning to the user. Via Azure AI Foundry at /providers/cohere/v2/rerank.',
+    ou:'RerankedResult[] { document, relevance_score, index }',
+    no:'Query-time only — no writes at this step. Runs after retrieval, before response generation.',fi:'server/lib/external/ → Cohere rerank client'},
+  'filing|haiku':{ti:'Filing Pipeline · BULK_VERIFY (Classify + Vote A)',su:'Document role classification + first extraction rung',ai:'haiku',t:'primary',
+    de:'(1) CLASSIFY: forces a classify_filing_document tool call to determine the document role (rateOrder/manual/policyForm/other) — documents can match multiple roles. (2) VISION PATH: haiku and opus run in parallel (haiku Vote A, opus Vote B); richer result wins. (3) TEXT PATH: haiku is rung 1 (haiku → sonnet → opus), with heavy-doc mode disabling the empty-retry.',
+    ou:'FilingClassification + ExtractedFactors[]',
+    no:'Vision vs text path determined by content type detection.',fi:'shared/src/insurance/filing/'},
+  'filing|sonnet':{ti:'Filing Pipeline · MID_REASONER (Text escalation)',su:'Text-path rung 2 of the filing ladder',ai:'sonnet',t:'escalate',
+    de:'Rung 2 of the text-path extraction ladder (haiku → sonnet → opus). Activated when haiku text extraction is insufficient. Heavy-doc mode disables haiku\'s empty-retry to force direct escalation.',
+    th:'Triggered: haiku text extraction empty or low-confidence. Unresolved → opus.',
+    ou:'ExtractedFactors[] (text path)',
+    no:'Heavy-doc mode prevents multiple low-value haiku attempts before escalation.',fi:'shared/src/insurance/filing/'},
+  'filing|opus':{ti:'Filing Pipeline · GROUNDED_CITED (Vision Vote B + Text top)',su:'Vision parallel + text-path top rung',ai:'opus',t:'parallel',
+    de:'(1) VISION PATH: parallel with haiku (Vote B) — richer result wins. (2) TEXT PATH: top of the text extraction ladder — final escalation rung. For factor tables: opus returns a SCHEMA and verbatim text region; tableParser.ts then deterministically parses the actual data rows. The model never transcribes factor table numbers.',
+    ou:'ExtractedFactors[] + schema (for table factor parsing)',
+    no:'tableParser.ts invariant: code reads factor numbers, not the model.',fi:'shared/src/insurance/filing/ → tableParser.ts'},
+  'filing|det':{ti:'Filing Pipeline · Deterministic (Table parser + reconcile)',su:'Factor table parsing is always deterministic code',ai:'det',t:'pure',
+    de:'(1) tableParser.ts: code deterministically parses factor table rows from the verbatim text region the model provides. The model NEVER transcribes factor table numbers — only code reads them (prevents hallucinated rates). (2) reconcileFiling(): pure code assembly into FilingImportPlan.',
+    ou:'FilingImportPlan { factors[], rateOrders[], forms[], reconcileWarnings[] }',
+    no:'tableParser.ts invariant: code reads the numbers, not the model.',fi:'shared/src/insurance/filing/ → tableParser.ts, reconcileFiling()'},
+};
+
+/* ── HELPERS ──────────────────────────────────────────────────────── */
+const agById = id => AGENTS.find(a=>a.id===id);
+const stById = id => STAGES.find(s=>s.id===id);
+const dispN = id => ({gpt51:'gpt-5.1',pro:'gpt-pro',deep:'DeepSeek',cohere:'Cohere',emb:'Embed'}[id]||id);
+
+/* ── PIPELINE RIBBON ──────────────────────────────────────────────── */
+function buildPipeline(){
+  const ribbon = document.getElementById('pipeRibbon');
+  const filing = document.getElementById('filingRow');
+  STAGES.filter(s=>s.id!=='filing').forEach((s,i)=>{
+    if(i>0){const a=document.createElement('div');a.className='pipe-arr';a.innerHTML='›';ribbon.appendChild(a);}
+    const p=document.createElement('div');p.className='pipe-stage';p.dataset.id=s.id;
+    p.innerHTML=`<div class="ps-num">${s.num}</div><div class="ps-name">${s.name}</div><div class="ps-dots">${s.agents.map(id=>{const a=agById(id);return`<div class="ps-dot" style="background:${a?.col||'#888'}" title="${a?.label||id}"></div>`}).join('')}</div>`;
+    p.onclick=()=>{document.getElementById('row-'+s.id)?.scrollIntoView({behavior:'smooth',block:'center'});hlRow(s.id);};
+    ribbon.appendChild(p);
+  });
+  const lbl=document.createElement('div');lbl.className='filing-lbl';lbl.textContent='PDF Filing ↦';filing.appendChild(lbl);
+  const fs=stById('filing');
+  const fp=document.createElement('div');fp.className='pipe-stage';
+  fp.innerHTML=`<div class="ps-num">${fs.num}</div><div class="ps-name">${fs.name}</div><div class="ps-dots">${fs.agents.map(id=>{const a=agById(id);return`<div class="ps-dot" style="background:${a?.col||'#888'}" title="${a?.label||id}"></div>`}).join('')}</div>`;
+  fp.onclick=()=>{document.getElementById('row-filing')?.scrollIntoView({behavior:'smooth',block:'center'});hlRow('filing');};
+  filing.appendChild(fp);
+}
+
+/* ── SWIMLANE TABLE ───────────────────────────────────────────────── */
+function buildSwimlane(){
+  const tbl = document.getElementById('swTable');
+
+  // participation count per agent
+  const pcount = {};
+  COLS.forEach(c=>{pcount[c]=ROWS.filter(r=>GRID[r+'|'+c]).length;});
+
+  // THEAD
+  const thead=document.createElement('thead');
+  const hrow=document.createElement('tr');
+  const corner=document.createElement('th');
+  corner.className='sw-corner';
+  corner.innerHTML='<div class="sw-corner-lbl">Stage ╲ Agent</div>';
+  hrow.appendChild(corner);
+  COLS.forEach(colId=>{
+    const a=agById(colId);
+    const th=document.createElement('th');
+    th.dataset.col=colId;
+    th.style.setProperty('--col-accent',a.col);
+    th.innerHTML=`<div class="ch-wrap"><div class="ch-dot" style="background:${a.col}"></div><div class="ch-abbr">${dispN(colId)}</div><div class="ch-role">${a.label}</div><div class="ch-count">${pcount[colId]} stage${pcount[colId]!==1?'s':''}</div></div>`;
+    th.onclick=()=>toggleCol(colId);
+    hrow.appendChild(th);
+  });
+  thead.appendChild(hrow);
+  tbl.appendChild(thead);
+
+  // TBODY
+  const tbody=document.createElement('tbody');
+  ROWS.forEach(rowId=>{
+    const s=stById(rowId);
+    const tr=document.createElement('tr');
+    tr.dataset.row=rowId;
+
+    const rh=document.createElement('th');
+    rh.id='row-'+rowId; rh.dataset.row=rowId;
+    rh.innerHTML=`<div class="rh-num">${s.num}</div><div class="rh-name">${s.name}</div><span class="rh-badge" style="background:${s.bc};color:${s.bt}">${s.badge}</span>`;
+    rh.onclick=()=>toggleRow(rowId);
+    tr.appendChild(rh);
+
+    COLS.forEach(colId=>{
+      const key=rowId+'|'+colId;
+      const def=GRID[key];
+      const td=document.createElement('td');
+      td.dataset.col=colId; td.dataset.row=rowId; td.dataset.type=def?def.t:'empty';
+      td.dataset.key=key;
+      if(def){
+        const chip=document.createElement('div');
+        chip.className='chip '+def.t;
+        chip.innerHTML=`<div class="cl">${def.lb}</div><div class="ct">${def.tx}</div>`;
+        chip.onclick=e=>{e.stopPropagation();openPane(key);};
+        td.appendChild(chip);
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+}
+
+/* ── FILTERS ──────────────────────────────────────────────────────── */
+const FTYPES=[
+  {id:'all',lb:'All'},
+  {id:'primary', lb:'Primary',  dot:'var(--cp-t)'},
+  {id:'parallel',lb:'Parallel', dot:'var(--ca-t)'},
+  {id:'escalate',lb:'Escalation',dot:'var(--ce-t)'},
+  {id:'judge',   lb:'LLM Judges',dot:'var(--cj-t)'},
+  {id:'pure',    lb:'Pure code', dot:'var(--cd-t)'},
+];
+let aFilt='all',aCol=null,aRow=null;
+
+function buildFilters(){
+  const bar=document.getElementById('fbar');
+  FTYPES.forEach(f=>{
+    const c=document.createElement('div');c.className='fc'+(f.id==='all'?' on':'');c.dataset.fid=f.id;
+    const n=f.id==='all'?Object.keys(GRID).length:Object.values(GRID).filter(g=>g.t===f.id).length;
+    c.innerHTML=(f.dot?`<div class="fc-dot" style="background:${f.dot}"></div>`:'')+`${f.lb}<span class="fc-n">${n}</span>`;
+    c.onclick=()=>setFilt(f.id);
+    bar.appendChild(c);
+  });
+}
+
+function setFilt(id){
+  aFilt=id;
+  document.querySelectorAll('.fc').forEach(c=>c.classList.toggle('on',c.dataset.fid===id));
+  applyDim();
+  const info=document.getElementById('swInfo');
+  if(id==='all'){info.textContent='';return;}
+  const n=Object.values(GRID).filter(g=>g.t===id).length;
+  info.textContent=`Showing ${n} ${id} cells across the matrix`;
+}
+
+function applyDim(){
+  const tbl=document.getElementById('swTable');
+  tbl.querySelectorAll('tbody td').forEach(td=>{
+    const col=td.dataset.col,row=td.dataset.row,type=td.dataset.type;
+    const dim=(aFilt!=='all'&&type!==aFilt)||(aCol&&col!==aCol)||(aRow&&row!==aRow);
+    td.classList.toggle('dim',dim);
+    td.classList.toggle('col-on',!!(aCol&&col===aCol));
+    if(aCol) td.style.setProperty('--col-accent',agById(aCol)?.col||'#6366F1');
+    else td.style.removeProperty('--col-accent');
+  });
+  // dim column headers
+  tbl.querySelectorAll('thead th[data-col]').forEach(th=>{
+    th.classList.toggle('dim',!!(aCol&&th.dataset.col!==aCol));
+    th.classList.toggle('col-on',!!(aCol&&th.dataset.col===aCol));
+  });
+}
+
+function toggleCol(colId){
+  aCol=aCol===colId?null:colId;aRow=null;
+  document.querySelectorAll('.sw-table thead th[data-col]').forEach(th=>th.classList.toggle('col-on',th.dataset.col===aCol));
+  document.querySelectorAll('.sw-table tbody tr').forEach(tr=>tr.classList.remove('row-on'));
+  document.querySelectorAll('.ag-card').forEach(c=>c.classList.toggle('on',c.dataset.id===aCol));
+  applyDim();
+  const info=document.getElementById('swInfo');
+  if(aCol){const a=agById(aCol);info.textContent=`Highlighted: ${a.model} (${a.label}) — participation across all stages`;}
+  else setFilt(aFilt);
+}
+
+function toggleRow(rowId){
+  aRow=aRow===rowId?null:rowId;aCol=null;
+  document.querySelectorAll('.sw-table tbody tr').forEach(tr=>tr.classList.toggle('row-on',tr.dataset.row===aRow));
+  document.querySelectorAll('.sw-table thead th[data-col]').forEach(th=>th.classList.remove('col-on'));
+  document.querySelectorAll('.ag-card').forEach(c=>c.classList.remove('on'));
+  applyDim();
+  if(aRow){const s=stById(aRow);document.getElementById('swInfo').textContent=`Focused: ${s.num} · ${s.name} — click any cell for details`;}
+  else setFilt(aFilt);
+}
+
+function hlRow(rowId){if(aRow!==rowId)toggleRow(rowId);}
+
+/* ── AGENT GRID ───────────────────────────────────────────────────── */
+function buildAgentGrid(){
+  const grid=document.getElementById('agGrid');
+  AGENTS.forEach(a=>{
+    const card=document.createElement('div');card.className='ag-card';card.dataset.id=a.id;
+    card.style.setProperty('--ac',a.col);
+    card.innerHTML=`<div class="ag-head"><div class="ag-icon">${a.icon}</div><div class="ag-fam">${a.family}</div></div><div class="ag-role">${a.role}</div><div class="ag-model">${a.model}</div><div class="ag-desc">${a.desc}</div><div class="ag-tier">Cost: ${a.tier}</div>`;
+    card.onclick=()=>{
+      document.getElementById('swimlane')?.scrollIntoView({behavior:'smooth',block:'start'});
+      setTimeout(()=>toggleCol(a.id),360);
+    };
+    grid.appendChild(card);
+  });
+}
+
+/* ── DETAIL PANE ──────────────────────────────────────────────────── */
+const TMETA={
+  primary:  {lb:'PRIMARY',          bg:'var(--cp-bg)',t:'var(--cp-t)',b:'var(--cp-b)'},
+  parallel: {lb:'PARALLEL VOTE',    bg:'var(--ca-bg)',t:'var(--ca-t)',b:'var(--ca-b)'},
+  escalate: {lb:'ESCALATION TARGET',bg:'var(--ce-bg)',t:'var(--ce-t)',b:'var(--ce-b)'},
+  judge:    {lb:'LLM JUDGE',        bg:'var(--cj-bg)',t:'var(--cj-t)',b:'var(--cj-b)'},
+  pure:     {lb:'PURE DETERMINISTIC',bg:'var(--cd-bg)',t:'var(--cd-t)',b:'var(--cd-b)'},
+};
+
+function openPane(key){
+  const d=DETAILS[key];if(!d)return;
+  const a=agById(d.ai),tm=TMETA[d.t]||TMETA.pure;
+  document.getElementById('paneTitle').textContent=d.ti;
+  document.getElementById('paneSub').textContent=d.su;
+  let h=`<div class="pane-agent"><div class="pa-dot" style="background:${a.col}"></div><div><div class="pa-model">${a.model}</div><div class="pa-role">${a.role} · ${a.family}</div></div></div>`;
+  h+=`<div class="pane-type" style="background:${tm.bg};color:${tm.t};border-color:${tm.b}">${tm.lb}</div>`;
+  h+=`<div class="pane-lbl">What this agent does here</div><div class="pane-txt">${d.de}</div>`;
+  if(d.th)h+=`<div class="pane-lbl">Trigger / Threshold</div><div class="pane-code">${d.th}</div>`;
+  h+=`<div class="pane-lbl">Output shape</div><div class="pane-code">${d.ou}</div>`;
+  if(d.no)h+=`<div class="pane-lbl">Design notes</div><div class="pane-txt">${d.no}</div>`;
+  h+=`<div class="pane-hr"></div><div class="pane-lbl">Source file</div><div class="pane-file">📄 ${d.fi}</div>`;
+  document.getElementById('paneBody').innerHTML=h;
+  document.getElementById('pane').classList.add('open');
+  document.getElementById('scrim').classList.add('on');
+}
+
+function closePane(){document.getElementById('pane').classList.remove('open');document.getElementById('scrim').classList.remove('on');}
+document.getElementById('paneX').onclick=closePane;
+document.getElementById('scrim').onclick=closePane;
+
+/* ── THEME ────────────────────────────────────────────────────────── */
+document.getElementById('themeBtn').onclick=function(){
+  const d=document.documentElement.dataset.theme!=='light';
+  document.documentElement.dataset.theme=d?'light':'dark';
+  this.textContent=d?'🌙':'☀️';
+};
+
+/* ── DOWNLOAD ─────────────────────────────────────────────────────── */
+document.getElementById('dlBtn').onclick=()=>{
+  const b=new Blob([document.documentElement.outerHTML],{type:'text/html'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='import-brain-agent-architecture.html';a.click();
+};
+
+/* ── NAV ACTIVE ───────────────────────────────────────────────────── */
+const navAs=document.querySelectorAll('.tb-nav a');
+const sects=[...document.querySelectorAll('[id]')].filter(el=>['pipeline','swimlane','agents','principles','escalation','invariants'].includes(el.id));
+const navObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)navAs.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));});
+},{rootMargin:'-25% 0px -65% 0px'});
+sects.forEach(s=>navObs.observe(s));
+
+/* ── REVEAL ───────────────────────────────────────────────────────── */
+const revObs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');revObs.unobserve(e.target);}}),{threshold:.06});
+document.querySelectorAll('.reveal').forEach(el=>revObs.observe(el));
+
+/* ── FOOTER ───────────────────────────────────────────────────────── */
+document.getElementById('genDate').textContent=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+/* ── INIT ─────────────────────────────────────────────────────────── */
+buildPipeline();
+buildSwimlane();
+buildFilters();
+buildAgentGrid();
+// re-observe any .reveal elements added by JS
+document.querySelectorAll('.reveal:not(.in)').forEach(el=>revObs.observe(el));
+</script>
+</body>
+</html>

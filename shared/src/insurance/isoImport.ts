@@ -1334,7 +1334,14 @@ const LD_MARKER    = /^LD ?TABLE\.\s*\w+|^LD\d+$/i  // combined — used for loo
 function parseLdTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
   if (!grid) return []
   ctx.recognized.push(grid.sheet)
-  const tables = new Map<string, { name: string; rows: { label: string; value: number; constraintNote?: string }[]; defaultValue?: number; valueHeader?: string }>()
+  const tables = new Map<string, {
+    name: string
+    rows: { label: string; value: number; constraintNote?: string }[]
+    unpricedRows: { label: string; verbatim: string; constraintNote?: string }[]
+    optionValues: (string | number)[]
+    defaultValue?: number
+    valueHeader?: string
+  }>()
   const rows = grid.cells
 
   // Detect which column holds the LD markers. GL puts them at col 0; the IM/component-model
@@ -1374,7 +1381,14 @@ function parseLdTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
     }
     if (valueCol < 0) { valueCol = markerCol + 3; commentCol = markerCol + 4; headerR = r }
 
-    const entry = tables.get(refId) ?? { name, rows: [] as { label: string; value: number; constraintNote?: string }[], defaultValue: undefined, valueHeader }
+    const entry = tables.get(refId) ?? {
+      name,
+      rows: [] as { label: string; value: number; constraintNote?: string }[],
+      unpricedRows: [] as { label: string; verbatim: string; constraintNote?: string }[],
+      optionValues: [] as (string | number)[],
+      defaultValue: undefined as number | undefined,
+      valueHeader,
+    }
     if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} (LD marker): table ${refId} appears more than once — rows merged.`)
     if (!entry.name) entry.name = name
     if (!entry.valueHeader) entry.valueHeader = valueHeader
@@ -1386,7 +1400,25 @@ function parseLdTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
       const label = clean(raw)
       if (!label || /^available|^comment|^limit$|^deductible/i.test(label)) continue
       const note = commentCol >= 0 ? clean(cell(grid, dr, commentCol)) : ''
-      const num = parseNum(raw) ?? 0
+      const num = parseNum(raw)
+      if (num === null) {
+        // A SPLIT LIMIT ("100/300", "1,000/3,000") is a well-understood limit format the
+        // numeric parse rejects, not an unknown. detectReferenceTables already preserves it
+        // as a display option; do the same here so it stays selectable instead of becoming
+        // manual-entry work.
+        if (SPLIT_LIMIT_RE.test(label)) {
+          if (!entry.optionValues.includes(label)) entry.optionValues.push(label)
+          continue
+        }
+        // Anything else textual ("Included", "Waived", "Exclude", "Refer to company") is NOT
+        // zero. `?? 0` minted a priceable $0 the source never states. Every entry in `rows`
+        // must be a real number the rating engine can use, so this one is preserved verbatim
+        // OUTSIDE it and flagged.
+        ctx.warnOnce(`ldnonnum:${refId}:${label}`,
+          `Sheet "${grid.sheet}" row ${dr + 1} (table ${refId}): limit/deductible "${label}" is not numeric — no amount was assumed (it is NOT $0); set it by hand. Code: ld_value_non_numeric.`)
+        entry.unpricedRows.push({ label, verbatim: label, constraintNote: note || undefined })
+        continue
+      }
       entry.rows.push({ label, value: num, constraintNote: note || undefined })
       if (/default/i.test(note)) entry.defaultValue = num
     }
@@ -1396,7 +1428,11 @@ function parseLdTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
 
   return [...tables.entries()].map(([refId, t]) => ({
     docId: refId, refId, label: `${refId} — ${t.name}`,
-    data: { name: t.name, defaultValue: t.defaultValue, rows: t.rows, valueHeader: t.valueHeader } satisfies Omit<LDTable, never>,
+    data: {
+      name: t.name, defaultValue: t.defaultValue, rows: t.rows, valueHeader: t.valueHeader,
+      ...(t.optionValues.length ? { optionValues: [...t.rows.map(r => r.value), ...t.optionValues] } : {}),
+      ...(t.unpricedRows.length ? { unpricedRows: t.unpricedRows, needsReview: true } : {}),
+    } satisfies Omit<LDTable, never>,
   }))
 }
 
@@ -1609,6 +1645,10 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
 // LD sheet sits in `consumed`, so this pass is a strict no-op on them — verified by the
 // offline import:eval diff (extraEntityRate === 0).
 
+// A split limit ("100/300", "1,000/3,000", "25/75") — a real limit format the numeric parse
+// rejects. Shared by the stacked-LD and reference-table paths so both preserve it identically.
+const SPLIT_LIMIT_RE = /^\d[\d.,]*\s*\/\s*\d/
+
 const TABLE_NAME_MARKER = /^TABLE NAME:/i
 const RULE_ID_MARKER    = /^RULE ID:/i
 
@@ -1624,6 +1664,8 @@ interface ReferenceTableDraft {
   optionValues:(string | number)[]  // distinct option values incl. split limits ("100/300")
   rowLabels:   string[]      // every data-row col-0 label (sub-coverage-matrix name matching)
   backLinkWas: string        // the RULE ID line's value-column header
+  shape:       'FLAT' | 'MATRIX'   // MATRIX = several value columns; values deliberately unread
+  refusalReason?: string     // why a MATRIX draft carries no rows
 }
 
 /** Scan every UNCLAIMED grid for "TABLE NAME:" reference-table blocks. Returns [] unless a
@@ -1660,10 +1702,29 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
       const optionValues: (string | number)[] = []
       const rowLabels: string[] = []
       const seen = new Set<string>()
+      // A limit MATRIX spreads one value per package column and leaves column 1 BLANK for
+      // rows the base package does not cover — so reading column 1 alone silently drops
+      // those rows' real limits and lets whatever survives become the table's default.
+      // The corruption signature is exactly that: a row whose column-1 cell is EMPTY while
+      // the row genuinely carries a value further right. Note this is NOT merely "several
+      // numeric columns" — a Limit | Deductible table also has two, but every row states its
+      // limit in column 1, so nothing is lost and it must keep parsing as it always has.
+      // A non-numeric column-1 ("30% of the amount of insurance") is a TEXTUAL value, not an
+      // absent one, so it does not qualify either.
+      const valueCols = new Set<number>()
+      let lostRows = 0
       for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
         const label = clean(cell(grid, r, 0))
         const rawVal = cell(grid, r, 1)
         const valStr = clean(rawVal)
+        // Scanned BEFORE the blank-row skip: a matrix row whose col-0 label and col-1 value
+        // are both blank still evidences the layout through its populated package columns.
+        let rightward: number | null = null
+        for (let c = 2; c <= 33; c++) {
+          if (parseNum(cell(grid, r, c)) !== null) { valueCols.add(c); if (rightward === null) rightward = c }
+        }
+        if (parseNum(rawVal) !== null) valueCols.add(1)
+        if (valStr === '' && rightward !== null) lostRows++
         if (!label && !valStr) continue
         if (label && !rowLabels.includes(label)) rowLabels.push(label)
         if (!group) { const gm = label.match(/^GROUP \d[^:]*/i); if (gm) group = gm[0]!.trim() }
@@ -1672,7 +1733,7 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
           seen.add(String(num))
           rows.push({ label: label || String(num), value: num })
           if (!optionValues.includes(num)) optionValues.push(num)
-        } else if (num === null && /^\d[\d.,]*\s*\/\s*\d/.test(valStr) && !seen.has(valStr) && optionValues.length < 60) {
+        } else if (num === null && SPLIT_LIMIT_RE.test(valStr) && !seen.has(valStr) && optionValues.length < 60) {
           // A split limit ("100/300") the numeric parse rejects — preserve the display value so
           // the derived term's option list keeps it instead of silently dropping it.
           seen.add(valStr)
@@ -1686,8 +1747,34 @@ function detectReferenceTables(grids: IsoGrid[], consumed: ReadonlySet<string>, 
       const n = (nameCount.get(displayName) ?? 0) + 1
       nameCount.set(displayName, n)
       if (n > 1) displayName = `${displayName} (v${n})`
-      ctx.consume(grid.sheet, start, Math.min(end, grid.cells.length - 1), 0, covCodes.length ? 33 : 1, `reference-table:${displayName}`)
-      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, optionValues, rowLabels, backLinkWas })
+      // REFUSE rather than flatten (flag-not-invent). `rows` holds ONE value per label and
+      // structurally cannot represent a matrix, so a table that loses rows to the column-1
+      // read ships WITHOUT values: a collapsed single column reads to the reviewer as a
+      // clean, priceable limit — and becomes `defaultValue` — that the source never states.
+      const isMatrix = lostRows > 0 && valueCols.size >= 2
+      let refusalReason: string | undefined
+      if (isMatrix) {
+        // The package headers sit on the first data row (the marker row is usually bare),
+        // so name the columns from there and fall back to the spreadsheet letter.
+        const hrow = row(grid, dataStart)
+        const cols = [...valueCols].sort((a, b) => a - b)
+          .map(c => (clean(mrow[c] ?? null) || clean(hrow[c] ?? null) || '').split('\n')[0]?.trim() || `column ${c + 1}`)
+        refusalReason = `Values span ${valueCols.size} columns (${cols.join(', ')}) and ${lostRows} row(s) state no value in the first column — a limit matrix, not a single list. Values were NOT extracted; set the per-column limits by hand.`
+        ctx.warnOnce(`refmatrix:${displayName}`,
+          `Sheet "${grid.sheet}" rows ${start + 1}-${end + 1} ("${baseName}"): ${refusalReason} Code: reference_table_matrix_refused.`)
+      }
+      // Consume the full matrix width so its package columns are accounted for, not left as
+      // residue for the sweeper to re-nominate.
+      const consumeTo = isMatrix || covCodes.length ? 33 : 1
+      ctx.consume(grid.sheet, start, Math.min(end, grid.cells.length - 1), 0, consumeTo, `reference-table:${displayName}`)
+      drafts.push({
+        baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`,
+        rows: isMatrix ? [] : rows,
+        optionValues: isMatrix ? [] : optionValues,
+        rowLabels, backLinkWas,
+        shape: isMatrix ? 'MATRIX' : 'FLAT',
+        refusalReason,
+      })
     }
   }
   return drafts
@@ -1713,6 +1800,9 @@ function mintReferenceTables(drafts: ReferenceTableDraft[], prefix: string): Pla
       optionValues: d.optionValues.length ? d.optionValues : undefined,
       mintedId: true,
       linkBasis: 'derived',
+      // A MATRIX draft carries no rows by design — surface WHY, so the review UI shows an
+      // actionable refusal instead of an empty table that looks like a parse miss.
+      ...(d.shape === 'MATRIX' ? { shape: 'MATRIX' as const, needsReview: true, refusalReason: d.refusalReason } : {}),
     }
     return { docId: refId, refId, label: `${refId} — ${d.displayName}`, data: data as unknown as Record<string, unknown> }
   })
@@ -1837,7 +1927,11 @@ function linkReferenceTables(
  *  PCM-A fold (foldLdTermsIntoCoverages), which is left untouched so its output stays
  *  byte-identical. One term per (coverage, table); state-suffixed families yield per-state
  *  terms. Returns the number of coverage↔term links attached. */
-function deriveTermsFromReferenceTables(coverages: PlannedEntity[], refTables: PlannedEntity[]): number {
+function deriveTermsFromReferenceTables(
+  coverages: PlannedEntity[],
+  refTables: PlannedEntity[],
+  ctx?: Ctx,
+): number {
   if (!refTables.length) return 0
   const covByRefId = new Map(coverages.map(c => [c.refId as string, c]))
   const dedup = new Set<string>()
@@ -1845,6 +1939,17 @@ function deriveTermsFromReferenceTables(coverages: PlannedEntity[], refTables: P
   for (const table of refTables) {
     const data = table.data as unknown as LDTable
     if (data.kindHint !== 'LIMIT' && data.kindHint !== 'DEDUCTIBLE') continue   // terms only from limit/deductible tables
+    // A refused MATRIX has no faithful single value. `default:` below would fall through to
+    // 0, which prices — so withhold the term entirely and tell the reviewer how many
+    // coverages are waiting on the hand-resolved matrix.
+    if (data.shape === 'MATRIX') {
+      const waiting = (data.coverageRefIds ?? []).length
+      if (waiting > 0) {
+        ctx?.warnOnce(`refmatrixterms:${table.refId}`,
+          `Reference table ${table.refId} ("${data.name}") is an unresolved limit matrix — ${waiting} linked coverage(s) have NO ${data.kindHint} term pending manual entry (no default was invented). Code: reference_table_matrix_terms_withheld.`)
+      }
+      continue
+    }
     const covIds = data.coverageRefIds ?? []
     if (!covIds.length) continue
     const tableRefId = table.refId as string
@@ -2133,7 +2238,13 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
   const product: PlannedEntity | null = products[0] ?? null
 
   // Flat union of all coverages across all products (ordered by product then depth).
-  const allCoverages: PlannedEntity[] = fwResults ? fwResults.flatMap(fw => fw.coverages) : []
+  // Each coverage keeps the refId of the product it was parsed under: flattening otherwise
+  // DESTROYS that association, leaving consumers to re-guess it from a refId prefix — which
+  // mis-attributes whenever two products share one (multi-product workbooks are exactly where
+  // per-product counts are displayed). Carried explicitly here because it is known here.
+  const allCoverages: PlannedEntity[] = fwResults
+    ? fwResults.flatMap(fw => fw.coverages.map(c => { c.data['productRefId'] = fw.productRefId; return c }))
+    : []
 
   // Reconstruct rule↔table↔coverage links by concept matching (D2/D7/D8). Clears the
   // transient rule reference text on every workbook; only wires links when reference tables
@@ -2149,7 +2260,7 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
 
   // Assemble coverage terms from the signature-detected reference tables (D1/D7) — separate
   // from the PCM-A fold above, gated on refTables so GL/IM/PR are untouched.
-  const derivedTerms = deriveTermsFromReferenceTables(allCoverages, refTables)
+  const derivedTerms = deriveTermsFromReferenceTables(allCoverages, refTables, ctx)
   if (derivedTerms > 0) {
     ctx.addNotice({
       code: 'reference_table_terms_derived',

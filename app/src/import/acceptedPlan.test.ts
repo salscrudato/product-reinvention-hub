@@ -68,3 +68,63 @@ describe('acceptedPlan — section + per-item gating', () => {
     expect(full - dropped).toBe(2)
   })
 })
+
+// ─── Ledger #10 ───────────────────────────────────────────────────────────────
+// Dropping a parent used to leave its KEPT children pointing at a refId no longer in the
+// plan. The server validates parentId live and throws INVALID_PARENT, which fails the whole
+// Cosmos batch — so one exclusion silently took the reviewer's kept children and every
+// unrelated valid sibling with it, surfacing only as an aggregate "skipped" count.
+
+const child = (docId: string, parentId: string | null) =>
+  ({ docId, refId: docId, label: docId, data: { parentId } })
+
+const treeBundle = {
+  plan: {
+    productId: 'P.1', product: ent('P.1'), products: [ent('P.1')],
+    coverages: [
+      ent('COV.PARENT'),
+      child('COV.CHILD.A', 'COV.PARENT'),
+      child('COV.CHILD.B', 'COV.PARENT'),
+      ent('COV.UNRELATED'),
+    ],
+    forms: [], rules: [], formRules: [], rtTables: [], ldTables: [],
+    ratingProgram: null, ratePlaceholders: [], summary: {},
+  },
+} as unknown as UnifiedProposalBundle
+
+describe('#10 excluding a parent must not strand its kept children', () => {
+  it('promotes kept children to top level instead of leaving a dangling parentId', () => {
+    const p = acceptedPlan(treeBundle, ALL, new Set(['COV.PARENT']))
+    expect(ids(p.coverages)).toEqual(['COV.CHILD.A', 'COV.CHILD.B', 'COV.UNRELATED'])
+    for (const c of p.coverages!.filter(x => x.docId!.startsWith('COV.CHILD'))) {
+      expect((c.data as Record<string, unknown>)['parentId']).toBeNull()
+      expect((c.data as Record<string, unknown>)['parentExcluded']).toBe('COV.PARENT')
+      expect((c.data as Record<string, unknown>)['needsReview']).toBe(true)
+    }
+  })
+
+  it('leaves an intact hierarchy completely untouched', () => {
+    const p = acceptedPlan(treeBundle, ALL)
+    const a = p.coverages!.find(c => c.docId === 'COV.CHILD.A')!
+    expect((a.data as Record<string, unknown>)['parentId']).toBe('COV.PARENT')
+    expect((a.data as Record<string, unknown>)['parentExcluded']).toBeUndefined()
+  })
+
+  it('no kept coverage ever references a parent absent from the written plan', () => {
+    // The invariant the server enforces, asserted directly over every exclusion choice.
+    const choices = [['COV.PARENT'], ['COV.PARENT', 'COV.CHILD.A'], ['COV.UNRELATED'], []]
+    for (const excluded of choices) {
+      const p = acceptedPlan(treeBundle, ALL, new Set(excluded))
+      const present = new Set(p.coverages!.map(c => c.refId))
+      for (const c of p.coverages!) {
+        const pid = (c.data as Record<string, unknown>)['parentId']
+        if (typeof pid === 'string' && pid !== '') expect(present.has(pid)).toBe(true)
+      }
+    }
+  })
+
+  it('dropping a whole section still yields no dangling references', () => {
+    const p = acceptedPlan(treeBundle, new Set<FilingReviewSectionKey>(['rules']))
+    expect(ids(p.coverages)).toEqual([])
+  })
+})

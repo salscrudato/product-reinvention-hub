@@ -974,3 +974,130 @@ describe('mapIsoWorkbook — AI overlay is fill-only + validated (R4)', () => {
     expect(bi.coverageRefIds).toEqual(['CORE.COV.001'])
   })
 })
+
+// ─── Ledger #2 / #13: refuse rather than invent a priceable value ────────────────
+
+describe('#2 a limit MATRIX is refused, never collapsed to one column', () => {
+  // The Core "Sub-Coverage, Endorsement, Limit Matrix" spreads one limit per package
+  // column. Column 1 (Core Policy) is blank for rows the base package does not cover, so
+  // reading col 1 alone dropped every other column: "Accidental Death" lost its real
+  // 10,000 entirely and the table collapsed to a single 250 that then became the default
+  // LIMIT term on every linked coverage — presented as clean derived data with no flag.
+  // Mirrors the real Core "Rule References" layout: the marker row is BARE and the package
+  // headers sit on the first data row, under a repeated RULE ID: value header.
+  const matrix = g('Reference Data', [
+    ['TABLE NAME: Sub-Coverage, Endorsement, Limit Matrix'],
+    ['RULE ID:', 'Form Name/Number; Stacking Limits ($)', 'Form Name/Number; Stacking Limits ($)', 'Form Name/Number; Stacking Limits ($)'],
+    ['Sub-Coverage', 'Core Policy\nAC 900', 'Motorsports\nAC 115', 'Value-Added\nAC 400'],
+    ['Accidental Death', null, 10000, 10000],       // col 1 BLANK — its real 10,000 was dropped
+    ['Car Covers', 250, null, 250],
+    ['Limited Vehicle Fraud', 1500, null, 1500],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Policy Fee', 35],
+  ])
+  const mplan = mapIsoWorkbook([matrix])
+  const table = (name: string) => mplan.ldTables.find(t => String(t.data['name']).startsWith(name))!
+
+  it('emits NO rows and NO defaultValue for the matrix (a collapsed 250 is not a fact)', () => {
+    const t = table('Sub-Coverage')
+    expect(t.data['shape']).toBe('MATRIX')
+    expect(t.data['rows']).toEqual([])
+    expect(t.data['defaultValue']).toBeUndefined()
+    expect(t.data['needsReview']).toBe(true)
+    expect(String(t.data['refusalReason'])).toMatch(/Motorsports/)
+  })
+
+  it('surfaces the refusal as a notice naming the columns it found', () => {
+    expect(mplan.summary.warnings.some(w => /reference_table_matrix_refused/.test(w))).toBe(true)
+  })
+
+  it('attaches NO limit term to the linked coverages rather than a wrong default', () => {
+    for (const c of mplan.coverages) {
+      const terms = (c.data['terms'] ?? []) as { ldTableRef?: string; default?: unknown }[]
+      const fromMatrix = terms.filter(t => t.ldTableRef === table('Sub-Coverage').refId)
+      expect(fromMatrix).toEqual([])
+    }
+  })
+
+  it('a single-value-column reference table is UNCHANGED (no over-refusal)', () => {
+    const t = table('Fees')
+    expect(t.data['shape']).not.toBe('MATRIX')
+    expect(t.data['needsReview']).toBeUndefined()
+    expect(t.data['rows']).toEqual([{ label: 'Policy Fee', value: 35 }])
+  })
+})
+
+describe('#13 a textual limit is not $0', () => {
+  const ld = g('Limits and Deductibles', [
+    ['RULES SPECIFICATIONS'],
+    ['LDTable.001', 'TABLE NAME:', 'Occurrence Limits', 'AVAILABLE LIMITS', 'COMMENTS'],
+    ['', '', '', 25000, ''],
+    ['', '', '', 'Included', ''],
+    ['', '', '', 'Waived', 'Refer to company'],
+  ])
+  const lplan = mapIsoWorkbook([ld])
+  const t = lplan.ldTables.find(x => x.refId === 'LDTable.001')!
+
+  it('keeps only real numbers in rows — never a coerced 0', () => {
+    expect(t.data['rows']).toEqual([{ label: '25000', value: 25000 }])
+    expect((t.data['rows'] as { value: number }[]).some(r => r.value === 0)).toBe(false)
+  })
+
+  it('preserves the textual entries verbatim instead of dropping them', () => {
+    expect(t.data['unpricedRows']).toEqual([
+      { label: 'Included', verbatim: 'Included' },
+      { label: 'Waived', verbatim: 'Waived', constraintNote: 'Refer to company' },
+    ])
+    expect(t.data['needsReview']).toBe(true)
+  })
+
+  it('warns that no amount was assumed', () => {
+    expect(lplan.summary.warnings.some(w => /ld_value_non_numeric/.test(w))).toBe(true)
+  })
+})
+
+describe('#2 over-refusal guard: a Limit | Deductible table still parses', () => {
+  // Two value columns, but EVERY row states its limit in column 1 — nothing is lost by
+  // reading it, so this must keep parsing exactly as before. (The real Core workbook has
+  // several of these; refusing them would destroy good data in the name of the fix.)
+  const twoQuantity = g('Reference Data', [
+    ['TABLE NAME: Motorsports Advantage Sub-Coverages'],
+    ['RULE ID:'],
+    ['Sub-Coverage Name', 'Limit ($)', 'Deductible ($)'],
+    ['Accidental Death Benefit', 10000, 'N/A'],
+    ['Loss of Use', 1500, 0],
+    ['Automotive Tools', 250, 25],
+    ['TABLE NAME: Fees'],
+    ['RULE ID:', 'Amount'],
+    ['Policy Fee', 35],
+  ])
+  const p = mapIsoWorkbook([twoQuantity])
+  const t = p.ldTables.find(x => String(x.data['name']).startsWith('Motorsports'))!
+
+  it('is NOT refused and keeps its column-1 values', () => {
+    expect(t.data['shape']).not.toBe('MATRIX')
+    expect(t.data['rows']).toEqual([
+      { label: 'Accidental Death Benefit', value: 10000 },
+      { label: 'Loss of Use', value: 1500 },
+      { label: 'Automotive Tools', value: 250 },
+    ])
+  })
+
+  it('a textual column-1 value is treated as textual, not as an absent one', () => {
+    // "30% of the amount of insurance" is a VALUE the source states in words — it must not
+    // be read as "this row's value lives in another column" and trip the matrix refusal.
+    const textual = g('Reference Data', [
+      ['TABLE NAME: AC 500 Additional Subcoverages'],
+      ['RULE ID:'],
+      ['Coverage', 'Limit ($)', 'Deductible ($)'],
+      ['Limited Mail', 1000, 'N/A'],
+      ['Newly Acquired Property', '30% of the amount of insurance, whichever is less', 100],
+      ['TABLE NAME: Fees'],
+      ['RULE ID:', 'Amount'],
+      ['Policy Fee', 35],
+    ])
+    const tt = mapIsoWorkbook([textual]).ldTables.find(x => String(x.data['name']).startsWith('AC 500'))!
+    expect(tt.data['shape']).not.toBe('MATRIX')
+  })
+})

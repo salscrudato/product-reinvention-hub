@@ -77,6 +77,11 @@ export interface SheetCensus {
   }
   tables: TableRegion[]
   cells: CellRecord[]    // every non-empty cell, row-major order
+  /** Set when the sheet's true extent was too large to materialize as a dense grid, so header
+   *  scoring and region segmentation ran over a bounded top-left window instead. `cells` is
+   *  sparse and stays COMPLETE — nothing is dropped — but regions below/right of the window
+   *  are not segmented, so the clamp is recorded rather than left to look like an empty sheet. */
+  denseClamped?: { rows: number; cols: number; reason: string }
 }
 
 export interface WorkbookCensus {

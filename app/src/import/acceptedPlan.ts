@@ -4,7 +4,28 @@
 //   • per-item exclusions by docId — "import everything here except this one row".
 // Pure + side-effect-free so the review count and the write use the identical result, and
 // so the exclusion contract (excluded data is NEVER written) is unit-testable.
-import type { UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan } from '@pf/shared'
+import type { UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan, PlannedEntity } from '@pf/shared'
+
+/** Re-parent any kept coverage whose parent did NOT survive the exclusion filter.
+ *
+ *  Excluding a parent used to leave its kept children pointing at a refId no longer in the
+ *  plan. The server validates parentId live and rejects the write with INVALID_PARENT, which
+ *  fails the ENTIRE Cosmos batch — so one dropped parent silently took the reviewer's kept
+ *  children and every unrelated valid sibling with it, reported only as an aggregate "skipped".
+ *
+ *  Children are PROMOTED to top level, not dropped: the reviewer explicitly kept them, and
+ *  promotion is already the importer's convention for an unresolvable parent (stage 7's
+ *  `orphan-promoted`). One pass suffices — promotion sets parentId to null, so it can never
+ *  strand a further child. A whole excluded chain resolves at once. */
+function cascadeParentExclusions(coverages: PlannedEntity[]): PlannedEntity[] {
+  if (coverages.length === 0) return coverages
+  const present = new Set(coverages.map(c => c.refId).filter((r): r is string => typeof r === 'string' && r !== ''))
+  return coverages.map(c => {
+    const pid = c.data?.['parentId']
+    if (typeof pid !== 'string' || pid === '' || present.has(pid)) return c
+    return { ...c, data: { ...c.data, parentId: null, parentExcluded: pid, needsReview: true } }
+  })
+}
 
 /** Writable-item count for a plan — matches importPlan()'s `total`. `?? []` guards a
  *  malformed bundle missing an array field. */
@@ -28,7 +49,7 @@ export function acceptedPlan(
     on ? (arr ?? []).filter(e => !excluded.has(e.docId ?? e.refId ?? '')) : []
   return {
     ...p,
-    coverages:     keep(p.coverages, accepted.has('coverages')),
+    coverages:     cascadeParentExclusions(keep(p.coverages, accepted.has('coverages'))),
     forms:         keep(p.forms, accepted.has('coverages')),
     rtTables:      keep(p.rtTables, keepTables),
     ldTables:      keep(p.ldTables, keepTables),

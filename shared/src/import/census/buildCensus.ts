@@ -14,6 +14,12 @@ import type { CellRecord, CensusCellType, RawCensusCell, RawCensusSheet, SheetCe
 
 export const VERBATIM_CAP = 512
 
+// Ceiling on the DENSE scratch grids (occupied / normalized) a single sheet may materialize.
+// 2M entries x 2 grids is a few tens of MB worst case; beyond that a sparse sheet with a far-
+// flung stray cell would spike RSS on the host. Never bounds `cells`, which is sparse.
+export const DENSE_CELL_CEILING = 2_000_000
+export const DENSE_MAX_COLS = 1024
+
 /** 0-based column index -> spreadsheet letters (0 -> A, 26 -> AA). */
 export function colLabel(col: number): string {
   let n = col + 1, out = ''
@@ -95,19 +101,33 @@ export function buildSheetCensus(raw: RawCensusSheet): SheetCensus {
 
   const rows = lastRow + 1
   const cols = lastCol + 1
+
+  // One stray value far from the data (a leftover at BZ20000) makes the TRUE extent enormous,
+  // and the two scratch grids below are allocated rows x cols — tens of millions of entries for
+  // a sheet holding a few hundred values. Bound them: `cells` is sparse and stays COMPLETE, so
+  // no observation is lost; only header scoring and region segmentation are windowed, and the
+  // clamp is reported so a bounded sheet never reads as a fully-segmented one.
+  const denseRows = rows * cols > DENSE_CELL_CEILING ? Math.max(1, Math.min(rows, Math.floor(DENSE_CELL_CEILING / Math.min(cols, DENSE_MAX_COLS)))) : rows
+  const denseCols = rows * cols > DENSE_CELL_CEILING ? Math.min(cols, DENSE_MAX_COLS) : cols
+  const denseClamped = denseRows !== rows || denseCols !== cols
+    ? { rows: denseRows, cols: denseCols, reason: `sheet extent ${rows}x${cols} (${rows * cols} cells) exceeds the ${DENSE_CELL_CEILING}-cell dense ceiling; header scoring and region segmentation ran over the top-left ${denseRows}x${denseCols} window. All non-empty cells are still recorded.` }
+    : undefined
+
   const cells: CellRecord[] = []
   const occupied: boolean[][] = []
   const normalized: NormalizedCell[][] = []
 
   for (let r = 0; r < rows; r++) {
-    const occRow: boolean[] = new Array(cols).fill(false)
-    const normRow: NormalizedCell[] = new Array(cols).fill(null)
+    const inDenseRow = r < denseRows
+    const occRow: boolean[] = new Array(inDenseRow ? denseCols : 0).fill(false)
+    const normRow: NormalizedCell[] = new Array(inDenseRow ? denseCols : 0).fill(null)
     for (let c = 0; c < cols; c++) {
       const rawCell: RawCensusCell | null = raw.cells[r]?.[c] ?? null
       const verbatim = verbatims[r]?.[c] ?? null
-      if (rawCell) normRow[c] = normalizeCellValue(rawCell.v)
+      const inDenseCell = inDenseRow && c < denseCols
+      if (rawCell && inDenseCell) normRow[c] = normalizeCellValue(rawCell.v)
       if (verbatim === null || rawCell === null) continue
-      occRow[c] = true
+      if (inDenseCell) occRow[c] = true
       const merge = merges.get(`${r}:${c}`)
       cells.push({
         ref: cellRef(raw.name, r, c),
@@ -130,8 +150,7 @@ export function buildSheetCensus(raw: RawCensusSheet): SheetCensus {
         hidden: raw.hidden,
       })
     }
-    occupied.push(occRow)
-    normalized.push(normRow)
+    if (inDenseRow) { occupied.push(occRow); normalized.push(normRow) }
   }
 
   // Fingerprint: best header row's squished labels + a deterministic value sample.
@@ -154,6 +173,7 @@ export function buildSheetCensus(raw: RawCensusSheet): SheetCensus {
     fingerprint: { headerSig, sampleHash },
     tables: segmentTableRegions(occupied, normalized),
     cells,
+    ...(denseClamped ? { denseClamped } : {}),
   }
 }
 

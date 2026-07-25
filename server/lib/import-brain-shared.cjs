@@ -2277,6 +2277,8 @@ function finishRegion(rowStart, rowEnd, colStart, colEnd, normalized) {
 
 // shared/src/import/census/buildCensus.ts
 var VERBATIM_CAP = 512;
+var DENSE_CELL_CEILING = 2e6;
+var DENSE_MAX_COLS = 1024;
 function colLabel(col) {
   let n = col + 1, out = "";
   while (n > 0) {
@@ -2345,18 +2347,23 @@ function buildSheetCensus(raw) {
   }
   const rows = lastRow + 1;
   const cols = lastCol + 1;
+  const denseRows = rows * cols > DENSE_CELL_CEILING ? Math.max(1, Math.min(rows, Math.floor(DENSE_CELL_CEILING / Math.min(cols, DENSE_MAX_COLS)))) : rows;
+  const denseCols = rows * cols > DENSE_CELL_CEILING ? Math.min(cols, DENSE_MAX_COLS) : cols;
+  const denseClamped = denseRows !== rows || denseCols !== cols ? { rows: denseRows, cols: denseCols, reason: `sheet extent ${rows}x${cols} (${rows * cols} cells) exceeds the ${DENSE_CELL_CEILING}-cell dense ceiling; header scoring and region segmentation ran over the top-left ${denseRows}x${denseCols} window. All non-empty cells are still recorded.` } : void 0;
   const cells = [];
   const occupied = [];
   const normalized = [];
   for (let r = 0; r < rows; r++) {
-    const occRow = new Array(cols).fill(false);
-    const normRow = new Array(cols).fill(null);
+    const inDenseRow = r < denseRows;
+    const occRow = new Array(inDenseRow ? denseCols : 0).fill(false);
+    const normRow = new Array(inDenseRow ? denseCols : 0).fill(null);
     for (let c = 0; c < cols; c++) {
       const rawCell = raw.cells[r]?.[c] ?? null;
       const verbatim = verbatims[r]?.[c] ?? null;
-      if (rawCell) normRow[c] = normalizeCellValue(rawCell.v);
+      const inDenseCell = inDenseRow && c < denseCols;
+      if (rawCell && inDenseCell) normRow[c] = normalizeCellValue(rawCell.v);
       if (verbatim === null || rawCell === null) continue;
-      occRow[c] = true;
+      if (inDenseCell) occRow[c] = true;
       const merge = merges.get(`${r}:${c}`);
       cells.push({
         ref: cellRef(raw.name, r, c),
@@ -2377,8 +2384,10 @@ function buildSheetCensus(raw) {
         hidden: raw.hidden
       });
     }
-    occupied.push(occRow);
-    normalized.push(normRow);
+    if (inDenseRow) {
+      occupied.push(occRow);
+      normalized.push(normRow);
+    }
   }
   const candidates = scoreHeaderCandidates(normalized);
   const best = pickBestHeaderRow(candidates);
@@ -2394,7 +2403,8 @@ function buildSheetCensus(raw) {
     nonEmpty: cells.length,
     fingerprint: { headerSig, sampleHash },
     tables: segmentTableRegions(occupied, normalized),
-    cells
+    cells,
+    ...denseClamped ? { denseClamped } : {}
   };
 }
 function buildWorkbookCensus(sheets, sourceName) {
@@ -2908,10 +2918,44 @@ var VALUE_COLUMN_NAMES = [
   "lcm",
   "minimumpremium"
 ];
+var VALUE_COLUMN_PATTERNS = [
+  // rate | baseRate | Rate per $100 | Rate/1000 | rate per hundred
+  /^(base)?rate((per)?\$?\d+|per[a-z]+)?$/,
+  /^losscost(multiplier)?$/,
+  /^(base|flat|min(imum)?|max(imum)?)?premium$/,
+  /^(rating|rate|dev|mod)?factor$/,
+  /^(ilf|lcm|elf)$/
+];
+function squishColumn(c) {
+  return c.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+function isValueColumnName(c) {
+  const s = squishColumn(c);
+  return VALUE_COLUMN_NAMES.includes(s) || VALUE_COLUMN_PATTERNS.some((re) => re.test(s));
+}
 function inferValueColumn(t) {
   if (t.valueColumn && t.columns.includes(t.valueColumn)) return t.valueColumn;
-  const matches = t.columns.filter((c) => VALUE_COLUMN_NAMES.includes(c.toLowerCase()));
+  const matches = t.columns.filter(isValueColumnName);
   return matches.length === 1 ? matches[0] : null;
+}
+var BAND_LOW = /^(.*?)(min|from|low(er)?|start|ge|gt)$/;
+var BAND_HIGH = /^(.*?)(max|to|high(er)?|end|le|lt)$/;
+function detectBandPairs(columns) {
+  const pairs = [];
+  for (const lo of columns) {
+    const ml = BAND_LOW.exec(squishColumn(lo));
+    if (!ml) continue;
+    const stem2 = ml[1];
+    for (const hi of columns) {
+      if (hi === lo) continue;
+      const mh = BAND_HIGH.exec(squishColumn(hi));
+      if (mh && mh[1] === stem2) {
+        pairs.push([lo, hi]);
+        break;
+      }
+    }
+  }
+  return pairs;
 }
 var SEP = "\0";
 function joinKey(values) {
@@ -2927,6 +2971,7 @@ function deriveGridModel(t) {
   const dimKeys = explicit ? explicit.map((d) => d.key) : t.columns.filter((c) => c !== valueColumn);
   if (dimKeys.length < 1 || dimKeys.length > 3) return null;
   if (!dimKeys.every((k) => t.columns.includes(k))) return null;
+  if (detectBandPairs(dimKeys).length > 0) return null;
   const dimensions = dimKeys.map((key) => {
     const seen = [];
     let numeric = true;
@@ -2945,7 +2990,7 @@ function deriveGridModel(t) {
     const coords = dimensions.map((d) => toDisplay(r[d.key]));
     if (coords.some((c) => c === "")) continue;
     const v = r[valueColumn];
-    if (typeof v === "number") cells[joinKey(coords)] = v;
+    if (typeof v === "number" && cells[joinKey(coords)] === void 0) cells[joinKey(coords)] = v;
   }
   return { valueColumn, dimensions, cells };
 }
@@ -4637,7 +4682,14 @@ function parseLdTables(grid, ctx) {
       commentCol = markerCol + 4;
       headerR = r;
     }
-    const entry = tables.get(refId) ?? { name, rows: [], defaultValue: void 0, valueHeader };
+    const entry = tables.get(refId) ?? {
+      name,
+      rows: [],
+      unpricedRows: [],
+      optionValues: [],
+      defaultValue: void 0,
+      valueHeader
+    };
     if (tables.has(refId)) ctx.warnOnce(`dupld:${refId}`, `Sheet "${grid.sheet}" row ${r + 1} (LD marker): table ${refId} appears more than once \u2014 rows merged.`);
     if (!entry.name) entry.name = name;
     if (!entry.valueHeader) entry.valueHeader = valueHeader;
@@ -4648,7 +4700,19 @@ function parseLdTables(grid, ctx) {
       const label = clean(raw);
       if (!label || /^available|^comment|^limit$|^deductible/i.test(label)) continue;
       const note = commentCol >= 0 ? clean(cell(grid, dr, commentCol)) : "";
-      const num = parseNum(raw) ?? 0;
+      const num = parseNum(raw);
+      if (num === null) {
+        if (SPLIT_LIMIT_RE.test(label)) {
+          if (!entry.optionValues.includes(label)) entry.optionValues.push(label);
+          continue;
+        }
+        ctx.warnOnce(
+          `ldnonnum:${refId}:${label}`,
+          `Sheet "${grid.sheet}" row ${dr + 1} (table ${refId}): limit/deductible "${label}" is not numeric \u2014 no amount was assumed (it is NOT $0); set it by hand. Code: ld_value_non_numeric.`
+        );
+        entry.unpricedRows.push({ label, verbatim: label, constraintNote: note || void 0 });
+        continue;
+      }
       entry.rows.push({ label, value: num, constraintNote: note || void 0 });
       if (/default/i.test(note)) entry.defaultValue = num;
     }
@@ -4659,7 +4723,14 @@ function parseLdTables(grid, ctx) {
     docId: refId,
     refId,
     label: `${refId} \u2014 ${t.name}`,
-    data: { name: t.name, defaultValue: t.defaultValue, rows: t.rows, valueHeader: t.valueHeader }
+    data: {
+      name: t.name,
+      defaultValue: t.defaultValue,
+      rows: t.rows,
+      valueHeader: t.valueHeader,
+      ...t.optionValues.length ? { optionValues: [...t.rows.map((r) => r.value), ...t.optionValues] } : {},
+      ...t.unpricedRows.length ? { unpricedRows: t.unpricedRows, needsReview: true } : {}
+    }
   }));
 }
 var RT_ID_MARKER = /^RATE TABLE ID/i;
@@ -4886,6 +4957,7 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
     }
   };
 }
+var SPLIT_LIMIT_RE = /^\d[\d.,]*\s*\/\s*\d/;
 var TABLE_NAME_MARKER = /^TABLE NAME:/i;
 var RULE_ID_MARKER = /^RULE ID:/i;
 function detectReferenceTables(grids, consumed, ctx) {
@@ -4921,10 +4993,21 @@ function detectReferenceTables(grids, consumed, ctx) {
       const optionValues = [];
       const rowLabels = [];
       const seen = /* @__PURE__ */ new Set();
+      const valueCols = /* @__PURE__ */ new Set();
+      let lostRows = 0;
       for (let r = dataStart; r <= end && r < grid.cells.length; r++) {
         const label = clean(cell(grid, r, 0));
         const rawVal = cell(grid, r, 1);
         const valStr = clean(rawVal);
+        let rightward = null;
+        for (let c = 2; c <= 33; c++) {
+          if (parseNum(cell(grid, r, c)) !== null) {
+            valueCols.add(c);
+            if (rightward === null) rightward = c;
+          }
+        }
+        if (parseNum(rawVal) !== null) valueCols.add(1);
+        if (valStr === "" && rightward !== null) lostRows++;
         if (!label && !valStr) continue;
         if (label && !rowLabels.includes(label)) rowLabels.push(label);
         if (!group) {
@@ -4936,7 +5019,7 @@ function detectReferenceTables(grids, consumed, ctx) {
           seen.add(String(num));
           rows.push({ label: label || String(num), value: num });
           if (!optionValues.includes(num)) optionValues.push(num);
-        } else if (num === null && /^\d[\d.,]*\s*\/\s*\d/.test(valStr) && !seen.has(valStr) && optionValues.length < 60) {
+        } else if (num === null && SPLIT_LIMIT_RE.test(valStr) && !seen.has(valStr) && optionValues.length < 60) {
           seen.add(valStr);
           optionValues.push(valStr);
         }
@@ -4947,8 +5030,34 @@ function detectReferenceTables(grids, consumed, ctx) {
       const n = (nameCount.get(displayName) ?? 0) + 1;
       nameCount.set(displayName, n);
       if (n > 1) displayName = `${displayName} (v${n})`;
-      ctx.consume(grid.sheet, start, Math.min(end, grid.cells.length - 1), 0, covCodes.length ? 33 : 1, `reference-table:${displayName}`);
-      drafts.push({ baseName, displayName, state, group, covCodes, kindHint, sourceRows: `${start + 1}-${end + 1}`, rows, optionValues, rowLabels, backLinkWas });
+      const isMatrix = lostRows > 0 && valueCols.size >= 2;
+      let refusalReason;
+      if (isMatrix) {
+        const hrow = row(grid, dataStart);
+        const cols = [...valueCols].sort((a, b) => a - b).map((c) => (clean(mrow[c] ?? null) || clean(hrow[c] ?? null) || "").split("\n")[0]?.trim() || `column ${c + 1}`);
+        refusalReason = `Values span ${valueCols.size} columns (${cols.join(", ")}) and ${lostRows} row(s) state no value in the first column \u2014 a limit matrix, not a single list. Values were NOT extracted; set the per-column limits by hand.`;
+        ctx.warnOnce(
+          `refmatrix:${displayName}`,
+          `Sheet "${grid.sheet}" rows ${start + 1}-${end + 1} ("${baseName}"): ${refusalReason} Code: reference_table_matrix_refused.`
+        );
+      }
+      const consumeTo = isMatrix || covCodes.length ? 33 : 1;
+      ctx.consume(grid.sheet, start, Math.min(end, grid.cells.length - 1), 0, consumeTo, `reference-table:${displayName}`);
+      drafts.push({
+        baseName,
+        displayName,
+        state,
+        group,
+        covCodes,
+        kindHint,
+        sourceRows: `${start + 1}-${end + 1}`,
+        rows: isMatrix ? [] : rows,
+        optionValues: isMatrix ? [] : optionValues,
+        rowLabels,
+        backLinkWas,
+        shape: isMatrix ? "MATRIX" : "FLAT",
+        refusalReason
+      });
     }
   }
   return drafts;
@@ -4969,7 +5078,10 @@ function mintReferenceTables(drafts, prefix) {
       backLinkWas: d.backLinkWas || void 0,
       optionValues: d.optionValues.length ? d.optionValues : void 0,
       mintedId: true,
-      linkBasis: "derived"
+      linkBasis: "derived",
+      // A MATRIX draft carries no rows by design — surface WHY, so the review UI shows an
+      // actionable refusal instead of an empty table that looks like a parse miss.
+      ...d.shape === "MATRIX" ? { shape: "MATRIX", needsReview: true, refusalReason: d.refusalReason } : {}
     };
     return { docId: refId, refId, label: `${refId} \u2014 ${d.displayName}`, data };
   });
@@ -5068,7 +5180,7 @@ function linkReferenceTables(refDrafts, refTables, coverages, rules, overlay) {
   tally.backLinked = refTables.filter((t) => t.data["ruleRefIds"].length > 0).length;
   return tally;
 }
-function deriveTermsFromReferenceTables(coverages, refTables) {
+function deriveTermsFromReferenceTables(coverages, refTables, ctx) {
   if (!refTables.length) return 0;
   const covByRefId = new Map(coverages.map((c) => [c.refId, c]));
   const dedup = /* @__PURE__ */ new Set();
@@ -5076,6 +5188,16 @@ function deriveTermsFromReferenceTables(coverages, refTables) {
   for (const table of refTables) {
     const data = table.data;
     if (data.kindHint !== "LIMIT" && data.kindHint !== "DEDUCTIBLE") continue;
+    if (data.shape === "MATRIX") {
+      const waiting = (data.coverageRefIds ?? []).length;
+      if (waiting > 0) {
+        ctx?.warnOnce(
+          `refmatrixterms:${table.refId}`,
+          `Reference table ${table.refId} ("${data.name}") is an unresolved limit matrix \u2014 ${waiting} linked coverage(s) have NO ${data.kindHint} term pending manual entry (no default was invented). Code: reference_table_matrix_terms_withheld.`
+        );
+      }
+      continue;
+    }
     const covIds = data.coverageRefIds ?? [];
     if (!covIds.length) continue;
     const tableRefId = table.refId;
@@ -5302,10 +5424,13 @@ function mapIsoWorkbook(grids, overlay, consumedSpans) {
     }
   }
   const product = products[0] ?? null;
-  const allCoverages = fwResults ? fwResults.flatMap((fw) => fw.coverages) : [];
+  const allCoverages = fwResults ? fwResults.flatMap((fw) => fw.coverages.map((c) => {
+    c.data["productRefId"] = fw.productRefId;
+    return c;
+  })) : [];
   const refLinks = linkReferenceTables(refDrafts, refTables, allCoverages, rules, overlay);
   foldLdTermsIntoCoverages(allCoverages, rules, ldTables, ctx);
-  const derivedTerms = deriveTermsFromReferenceTables(allCoverages, refTables);
+  const derivedTerms = deriveTermsFromReferenceTables(allCoverages, refTables, ctx);
   if (derivedTerms > 0) {
     ctx.addNotice({
       code: "reference_table_terms_derived",

@@ -30,6 +30,46 @@ const ESCALATE_CONFIDENCE = 0.6
 // document is treated as scanned/non-extractable and routed to native-PDF vision.
 const PDF_TEXT_MIN_CHARS = 400
 
+// ─── CSV parse (RFC 4180) ────────────────────────────────────────────────────
+// `line.split(',')` is not a CSV parser: a quoted field containing a comma
+// ("Dwelling, Fire") splits into two, shifting EVERY later cell one column left for
+// that row. Rates then land under the wrong header and cite the wrong cell — a
+// misalignment that reads as clean data downstream. Handles quoted fields, escaped
+// doubled quotes (""), and embedded newlines inside quotes (which is why the scan is
+// character-wise over the whole text rather than line-wise).
+function parseCsv(text) {
+  const rows = []
+  let row = []
+  let field = ''
+  let quoted = false
+  let sawField = false          // distinguishes a real empty field from a blank line
+  const endField = () => { row.push(field); field = ''; sawField = false }
+  const endRow = () => {
+    endField()
+    // Preserve the previous filter's intent: rows that are entirely blank are dropped.
+    if (row.some(c => c.trim() !== '')) rows.push(row)
+    row = []
+  }
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (quoted) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++ }   // escaped quote
+        else quoted = false
+      } else field += ch
+      continue
+    }
+    if (ch === '"' && !sawField) { quoted = true; sawField = true; continue }
+    if (ch === ',') { endField(); continue }
+    if (ch === '\r') { if (text[i + 1] === '\n') i++; endRow(); continue }
+    if (ch === '\n') { endRow(); continue }
+    field += ch
+    sawField = true
+  }
+  if (field !== '' || row.length > 0) endRow()
+  return rows
+}
+
 // ─── ManuScript Author XML fingerprint (P3 validation seam, XE-05) ────────────
 // String-level sniff only — no XML parse happens in stage-0. The deterministic
 // hardened reader (mapManuscriptOverlay, shared/src/insurance/manuscriptImport)
@@ -221,7 +261,7 @@ async function routeArtifacts(opts) {
         continue
       }
       // CSV / plain text → single-sheet structural model through the brain.
-      const rows = text.split(/\r?\n/).filter(l => l.trim().length > 0).map(l => l.split(','))
+      const rows = parseCsv(text)
       const structural = buildStructuralModel([{ sheet: doc.name, cells: rows }], doc.name, 'CSV')
       // A >cap CSV has its uncapped rows right here — same continuation as
       // workbooks (F09). normalizeCellValue-parity: CSV cells are plain strings,
@@ -364,4 +404,4 @@ function extendTruncatedGrids(structural, isoGrids, docName, warnings) {
   }
 }
 
-module.exports = { routeArtifacts, prefixToLobRefId, PDF_TEXT_MIN_CHARS, extendTruncatedGrids, isManuscriptXml }
+module.exports = { routeArtifacts, prefixToLobRefId, PDF_TEXT_MIN_CHARS, extendTruncatedGrids, isManuscriptXml, parseCsv }

@@ -11,7 +11,7 @@
         "refId": "CORE.PRD.001",
         "name": "Core",
         "description": "",
-        "marketSegment": "Personal Lines / Property",
+        "marketSegment": "Personal Lines / Automobile",
         "allStates": true,
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
@@ -35,7 +35,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -57,7 +58,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -76,7 +78,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -98,7 +101,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -152,7 +156,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -187,7 +192,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -231,7 +237,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -255,7 +262,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -274,7 +282,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -293,7 +302,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -318,7 +328,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -340,7 +351,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -362,7 +374,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -383,7 +396,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -415,7 +429,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -436,7 +451,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -457,7 +473,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -478,7 +495,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -499,7 +517,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -525,7 +544,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -551,7 +571,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -577,7 +598,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -603,7 +625,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -629,7 +652,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -655,7 +679,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -681,7 +706,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -706,7 +732,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -728,7 +755,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -756,7 +784,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -784,7 +813,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -806,7 +836,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -832,7 +863,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -858,7 +890,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -884,7 +917,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -910,7 +944,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -936,7 +971,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -962,7 +998,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -988,7 +1025,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1014,7 +1052,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1036,7 +1075,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1058,7 +1098,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1082,7 +1123,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1106,7 +1148,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1132,7 +1175,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1158,7 +1202,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1184,7 +1229,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1211,7 +1257,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1233,7 +1280,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1258,7 +1306,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1280,7 +1329,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1302,7 +1352,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1330,7 +1381,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1359,7 +1411,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1387,7 +1440,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1412,7 +1466,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1437,7 +1492,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1465,7 +1521,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1490,7 +1547,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1513,7 +1571,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1536,7 +1595,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1558,7 +1618,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1580,7 +1641,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1602,7 +1664,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1624,7 +1687,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1646,7 +1710,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1668,7 +1733,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1694,7 +1760,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1720,7 +1787,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1746,7 +1814,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1773,7 +1842,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1795,7 +1865,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1821,7 +1892,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1843,7 +1915,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1865,7 +1938,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1893,7 +1967,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1922,7 +1997,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1950,7 +2026,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -1975,7 +2052,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2000,7 +2078,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2028,7 +2107,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2053,7 +2133,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2076,7 +2157,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2099,7 +2181,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2121,7 +2204,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2143,7 +2227,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2165,7 +2250,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2187,7 +2273,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2209,7 +2296,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2231,7 +2319,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2253,7 +2342,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2276,7 +2366,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2299,7 +2390,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2322,7 +2414,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2345,7 +2438,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2368,7 +2462,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2391,7 +2486,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2414,7 +2510,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2437,7 +2534,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2460,7 +2558,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2483,7 +2582,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2506,7 +2606,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2529,7 +2630,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2556,7 +2658,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2584,7 +2687,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2610,7 +2714,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2635,7 +2740,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2661,7 +2767,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2683,7 +2790,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2705,7 +2813,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2727,7 +2836,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2749,7 +2859,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -2771,7 +2882,8 @@
         "status": "ACTIVE",
         "lifecycle": "DRAFT",
         "reviewStatus": "NOT_STARTED",
-        "reviewer": ""
+        "reviewer": "",
+        "productRefId": "CORE.PRD.001"
       }
     },
     {
@@ -7375,12 +7487,14 @@
       "refId": "CORE.TBL.004",
       "fields": {
         "name": "Sub-Coverage, Endorsement, Limit Matrix",
-        "defaultValue": 250,
         "valueHeader": "Form Name/Number; Stacking Limits ($)",
         "kindHint": "LIMIT",
         "backLinkWas": "Form Name/Number; Stacking Limits ($)",
         "mintedId": true,
-        "linkBasis": "derived"
+        "linkBasis": "derived",
+        "shape": "MATRIX",
+        "needsReview": true,
+        "refusalReason": "Values span 5 columns (Core Policy, Motorsports, Veh Under Constr, Legendary Ride AC 114, Traveling Collector) and 8 row(s) state no value in the first column — a limit matrix, not a single list. Values were NOT extracted; set the per-column limits by hand."
       }
     },
     {

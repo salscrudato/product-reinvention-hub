@@ -66,11 +66,23 @@ function parseSweep(raw) {
   } catch { return null }
 }
 
-/** Code-enforced acceptance: vocabulary + in-batch citation or nothing. */
-function acceptAnswer(ans, batchRefs) {
-  if (!ans || !batchRefs.has(ans.ref)) return null
+/** Case- and whitespace-insensitive form for verbatim containment. */
+function squishText(s) { return String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim() }
+
+/** Code-enforced acceptance: vocabulary + in-batch citation +, for a FACT, the name
+ *  actually appearing in the cited cell — or nothing.
+ *  @param {Map<string,string>} batchCells  in-batch ref -> that cell's verbatim */
+function acceptAnswer(ans, batchCells) {
+  if (!ans || !batchCells.has(ans.ref)) return null
   if (ans.kind === 'NOISE' && ALLOWED_NOISE.has(String(ans.rule))) return { ref: ans.ref, kind: 'NOISE', rule: String(ans.rule) }
   if (ans.kind === 'FACT' && FACT_KINDS.has(String(ans.entityKind)) && typeof ans.name === 'string' && ans.name.trim() !== '') {
+    // SWEEPER_SYSTEM requires a FACT to quote its name VERBATIM from the cell, but nothing
+    // enforced it. A model expanding an abbreviation — cell "AI" surfaced as "Additional
+    // Insured Coverage" — produced a plausible entity carrying a citation to a cell that does
+    // not contain it: invention wearing a citation. Containment is now checked in code, and a
+    // name absent from its cell is rejected exactly as if the model had not answered.
+    const cellText = squishText(batchCells.get(ans.ref))
+    if (!cellText || !cellText.includes(squishText(ans.name))) return null
     return { ref: ans.ref, kind: 'FACT', entityKind: String(ans.entityKind), name: ans.name }
   }
   if (ans.kind === 'UNKNOWN') return { ref: ans.ref, kind: 'UNKNOWN' }
@@ -151,7 +163,8 @@ async function sweepUnaccounted({ accounting, censusBySheet, budget, review, emi
     for (let i = 0; i < toSweep.length; i += SWEEP_BATCH) batches.push(toSweep.slice(i, i + SWEEP_BATCH).map(toBatchCell))
 
     const sweepBatch = async (batch) => {
-      const batchRefs = new Set(batch.map(c => c.ref))
+      // ref -> verbatim, so acceptAnswer can hold a FACT's name against its own cell.
+      const batchCells = new Map(batch.map(c => [c.ref, c.verbatim]))
       const userPrompt = batchPrompt(sheetName, batch)
       let decisions = new Map() // ref -> accepted answer
 
@@ -160,10 +173,10 @@ async function sweepUnaccounted({ accounting, censusBySheet, budget, review, emi
           parseWithRetry({ call: () => callAnthropic({ deployment: deployBulk, systemPrompt: SWEEPER_SYSTEM, userPrompt, maxTokens: 4096, budget }), parse: parseSweep, review, stage: 'stage4.5', sheetName, what: 'sweeper vote A' }),
           parseWithRetry({ call: () => callOpenAI({ deployment: deployMini, systemPrompt: SWEEPER_SYSTEM, userPrompt, maxTokens: 4096, budget }), parse: parseSweep, review, stage: 'stage4.5', sheetName, what: 'sweeper vote B' }),
         ])
-        const aBy = new Map((aRaw || []).map(x => [x.ref, acceptAnswer(x, batchRefs)]))
-        const bBy = new Map((bRaw || []).map(x => [x.ref, acceptAnswer(x, batchRefs)]))
+        const aBy = new Map((aRaw || []).map(x => [x.ref, acceptAnswer(x, batchCells)]))
+        const bBy = new Map((bRaw || []).map(x => [x.ref, acceptAnswer(x, batchCells)]))
         const conflicted = []
-        for (const ref of batchRefs) {
+        for (const ref of batchCells.keys()) {
           const agreed = agreementOf(aBy.get(ref), bBy.get(ref))
           if (agreed) decisions.set(ref, agreed)
           else if (aBy.get(ref) || bBy.get(ref)) conflicted.push(ref)
@@ -175,7 +188,7 @@ async function sweepUnaccounted({ accounting, censusBySheet, budget, review, emi
             const subset = batch.filter(c => conflicted.includes(c.ref))
             const cRaw = await parseWithRetry({ call: () => callAnthropic({ deployment: deploySonnet, systemPrompt: SWEEPER_SYSTEM, userPrompt: batchPrompt(sheetName, subset), maxTokens: 4096, budget }), parse: parseSweep, review, stage: 'stage4.5', sheetName, what: 'sweeper ladder (sonnet)' })
             for (const x of cRaw || []) {
-              const acc2 = acceptAnswer(x, batchRefs)
+              const acc2 = acceptAnswer(x, batchCells)
               if (acc2 && !decisions.has(acc2.ref)) decisions.set(acc2.ref, acc2)
             }
           } catch { /* ladder unavailable — residue goes to review */ }

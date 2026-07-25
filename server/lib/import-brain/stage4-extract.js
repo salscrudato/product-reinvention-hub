@@ -548,6 +548,34 @@ function buildExtractionPrompt(fp, colMap, headerRow, rows, startIdx, rowIdxOver
   ].join('\n')
 }
 
+// BLIND prompt for the map cross-check. buildExtractionPrompt above both STATES the
+// column map and filters each row down to the columns that map — so a voter reading it
+// cannot contradict the map, it can only echo it. That made the cross-check structurally
+// incapable of catching the confident-but-wrong map it exists to catch. This variant hands
+// over the header row and EVERY cell with no canonical mapping attached, so the model
+// assigns fields from the source alone and a genuine mis-map shows up as disagreement.
+function buildBlindExtractionPrompt(fp, headerRow, rows, startIdx, gridRows) {
+  const headerCells = (fp.cells || [])[headerRow] || []
+  const headers = headerCells
+    .map((h, ci) => { const s = String(h ?? '').trim(); return s ? `  ${colLetter(ci)} = "${s}"` : null })
+    .filter(Boolean).join('\n')
+
+  const rowLines = rows.map((cells, i) => {
+    const rowIdx = startIdx + i
+    const cellStr = cells
+      .map((cell, ci) => { const s = String(cell ?? ''); return s === '' ? null : `${colLetter(ci)}="${s}"` })
+      .filter(Boolean).join(' | ')
+    return `Row ${excelRowOf(rowIdx, headerRow, gridRows)} (0-based ${rowIdx}): ${cellStr}`
+  }).join('\n')
+
+  return [
+    `Sheet: "${fp.sheetName}" | Header row: ${headerRow + 1} (1-based)`,
+    `Column headers as they appear in the source:\n${headers || '  (no header labels)'}`,
+    '\nDecide for yourself which column holds which canonical field — no mapping is supplied.',
+    `\nRows to extract (${rows.length} rows):\n${rowLines}`,
+  ].join('\n')
+}
+
 // ─── Deterministic row extraction (code, not model) ───────────────────────────
 // Values come straight from the embedded grid: byte-perfect, cited by construction.
 // Per-row entity kind: refId shape wins (.PROD. → product, .LOB. → skip — the LOB
@@ -704,7 +732,8 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, gridRows, detEntit
 
   for (const batchStart of batches.slice(0, DET_SAMPLE_BATCHES)) {
     const batch = rows.slice(batchStart, batchStart + BATCH_ROWS)
-    const userPrompt = buildExtractionPrompt(fp, colMap, headerRow, batch, batchStart, null, gridRows)
+    // BLIND: the voters must not be handed the very map they are cross-checking.
+    const userPrompt = buildBlindExtractionPrompt(fp, headerRow, batch, batchStart, gridRows)
     const [aRes, bRes] = await Promise.all([
       callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
       callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
@@ -1052,5 +1081,5 @@ module.exports = {
   extractRows,
   // Test seams (hardening fixtures — pure helpers, no AI):
   reconcileEntities, expandMultiRefIds, resolveConflicts, rowKind, parseExtraction, synthesizeRefId,
-  deterministicExtract,
+  deterministicExtract, buildExtractionPrompt, buildBlindExtractionPrompt,
 }

@@ -14,12 +14,64 @@ const VALUE_COLUMN_NAMES = [
   'premium', 'amount', 'ilf', 'lcm', 'minimumpremium',
 ]
 
+// Real-world value headers carry units and punctuation the exact list above cannot enumerate
+// ("Rate per $100", "Loss Cost", "Rate/1000", "Base Premium"). Matching only exact names left
+// those grid-shaped tables non-editable with no UI path to fix them. Squishing to alphanumerics
+// then testing a small set of value-noun patterns keeps the match conservative — a KEY column
+// ("Territory", "Class Code", "covMin") matches none of these.
+const VALUE_COLUMN_PATTERNS = [
+  // rate | baseRate | Rate per $100 | Rate/1000 | rate per hundred
+  /^(base)?rate((per)?\$?\d+|per[a-z]+)?$/,
+  /^losscost(multiplier)?$/,
+  /^(base|flat|min(imum)?|max(imum)?)?premium$/,
+  /^(rating|rate|dev|mod)?factor$/,
+  /^(ilf|lcm|elf)$/,
+]
+
+/** Squish a column name for matching: lowercase, drop everything but letters and digits.
+ *  "Rate per $100" → "rateper100"; "Loss Cost" → "losscost". */
+function squishColumn(c: string): string {
+  return c.toLowerCase().replace(/[^a-z0-9]+/g, '')
+}
+
+/** True when a column name denotes the looked-up VALUE rather than a lookup key. */
+function isValueColumnName(c: string): boolean {
+  const s = squishColumn(c)
+  return VALUE_COLUMN_NAMES.includes(s) || VALUE_COLUMN_PATTERNS.some(re => re.test(s))
+}
+
 /** The value column of a table: explicit `valueColumn`, else the single column whose
  *  name denotes a value. Returns null when zero or many match (not grid-editable). */
 export function inferValueColumn(t: RTTable): string | null {
   if (t.valueColumn && t.columns.includes(t.valueColumn)) return t.valueColumn
-  const matches = t.columns.filter(c => VALUE_COLUMN_NAMES.includes(c.toLowerCase()))
+  const matches = t.columns.filter(isValueColumnName)
   return matches.length === 1 ? matches[0]! : null
+}
+
+// Interval/band columns: a table keyed by [covMin, covMax] describes RANGES, and a risk is
+// priced by the band that CONTAINS its value — not by an exact coordinate match. Forcing it
+// into the exact-match grid model makes every in-band risk unresolvable while the worked
+// example still happens to land on a boundary row, so the UI reports the table as priceable.
+// Detected structurally (a min/from column paired with a matching max/to column), so it fires
+// on covMin/covMax, pcMin/pcMax, ageFrom/ageTo alike.
+const BAND_LOW  = /^(.*?)(min|from|low(er)?|start|ge|gt)$/
+const BAND_HIGH = /^(.*?)(max|to|high(er)?|end|le|lt)$/
+
+/** The band column pairs in a set of key columns, as [lowColumn, highColumn] tuples. */
+export function detectBandPairs(columns: readonly string[]): [string, string][] {
+  const pairs: [string, string][] = []
+  for (const lo of columns) {
+    const ml = BAND_LOW.exec(squishColumn(lo))
+    if (!ml) continue
+    const stem = ml[1]!
+    for (const hi of columns) {
+      if (hi === lo) continue
+      const mh = BAND_HIGH.exec(squishColumn(hi))
+      // Same stem ("cov" from covMin/covMax); a bare min/max pair (empty stem) counts too.
+      if (mh && mh[1] === stem) { pairs.push([lo, hi]); break }
+    }
+  }
+  return pairs
 }
 
 export interface GridDimension {
@@ -61,6 +113,10 @@ export function deriveGridModel(t: RTTable): GridModel | null {
   const dimKeys = explicit ? explicit.map(d => d.key) : t.columns.filter(c => c !== valueColumn)
   if (dimKeys.length < 1 || dimKeys.length > 3) return null
   if (!dimKeys.every(k => t.columns.includes(k))) return null
+  // REFUSE rather than mis-model: an interval table prices by CONTAINMENT, and the grid is
+  // exact-match only. Returning null routes it to the caller's "custom layout" notice — the
+  // behavior this function's contract has always claimed but never enforced.
+  if (detectBandPairs(dimKeys).length > 0) return null
 
   const dimensions: GridDimension[] = dimKeys.map(key => {
     const seen: string[] = []
@@ -83,7 +139,10 @@ export function deriveGridModel(t: RTTable): GridModel | null {
     const coords = dimensions.map(d => toDisplay(r[d.key]))
     if (coords.some(c => c === '')) continue
     const v = r[valueColumn]
-    if (typeof v === 'number') cells[joinKey(coords)] = v
+    // FIRST-WINS on a duplicate coordinate, matching genericRtLookup's `rows.find`. Assigning
+    // unconditionally was last-wins, so a table with a repeated coordinate showed the reviewer
+    // (and round-tripped through the serializer) a factor the rating engine never uses.
+    if (typeof v === 'number' && cells[joinKey(coords)] === undefined) cells[joinKey(coords)] = v
   }
   return { valueColumn, dimensions, cells }
 }

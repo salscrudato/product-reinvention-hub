@@ -151,10 +151,16 @@ function partitionWorkbooks(workbooks) {
   const selfContained = workbooks.filter(wb => (wb.structural?.sheets || []).length >= SELF_CONTAINED_THRESHOLD)
   // When ≥ 2 files are each self-contained → each is its own product run.
   if (selfContained.length >= 2) {
-    return { groups: selfContained.map(wb => [wb]), isSplit: true }
+    // CONSERVATION: the sub-threshold files are supplementary (a rating-only or forms-only
+    // book), not noise. Returning only `selfContained` DROPPED them — not merged, not in the
+    // plan, not in skippedDocuments, no warning — so coverages priced against rate tables that
+    // were silently never read. There is no evidence saying which product they belong to, so
+    // they are not guessed into one: they are reported, and the caller surfaces them.
+    const supplementary = workbooks.filter(wb => !selfContained.includes(wb))
+    return { groups: selfContained.map(wb => [wb]), isSplit: true, supplementary }
   }
   // Otherwise (0 or 1 self-contained) → merge all, same as before.
-  return { groups: [workbooks], isSplit: false }
+  return { groups: [workbooks], isSplit: false, supplementary: [] }
 }
 
 // ─── Run the brain over a structural model and emit the plan bundle ───────────
@@ -431,12 +437,21 @@ async function unifiedImport(req, res) {
         send({ t: 'notice', level: 'warn', message: 'Mixed upload: workbooks imported; PDFs skipped — upload them separately.', kind: 'mixed-upload' })
       }
 
-      const { groups, isSplit } = partitionWorkbooks(routed.workbooks)
+      const { groups, isSplit, supplementary } = partitionWorkbooks(routed.workbooks)
 
       // Announce the routing decision so operators can see it in the SSE trace.
       if (isSplit) {
         send({ t: 'notice', level: 'info', kind: 'multi-product-split',
           message: `${groups.length} self-contained product workbooks detected — running each independently. Results collected in splitProducts.` })
+      }
+      // A supplementary book dropped by the split is a MISSING ARTIFACT, not a non-event: its
+      // rate/forms sheets are exactly what the split products' coverages reference. Warn loudly
+      // and record it as skipped so the reviewer can re-upload it against the right product.
+      if (Array.isArray(supplementary) && supplementary.length > 0) {
+        const names = supplementary.map(w => w.name)
+        routed.warnings.push({ kind: 'supplementary-workbook-skipped', detail: `${names.length} supplementary workbook(s) (${names.join(', ')}) were NOT imported: ${groups.length} self-contained product workbooks were detected, and there is no evidence establishing which product these belong to. Re-upload each against its product so its tables are read.` })
+        send({ t: 'notice', level: 'warn', kind: 'supplementary-workbook-skipped',
+          message: `${names.length} supplementary workbook(s) skipped by the multi-product split — re-upload against the intended product: ${names.join(', ')}` })
       }
 
       // Run the brain once per group (each group is either one self-contained
@@ -469,7 +484,9 @@ async function unifiedImport(req, res) {
           lobRefIdHint: body.lobRefIdHint || routed.lobRefIdHint,
           edition:      routed.edition,
           routerWarnings: gi === 0 ? routed.warnings : [],
-          skippedDocuments: gi === 0 ? routed.filingDocs.map((d) => d.name) : [],
+          skippedDocuments: gi === 0
+            ? [...routed.filingDocs.map((d) => d.name), ...(supplementary || []).map((w) => w.name)]
+            : [],
           budget, send, isoGrids, censuses, hiddenSheets,
           // Checkpointing + resume are keyed to the primary run id; split products
           // use the same id with a group suffix so their stage artifacts are
@@ -678,4 +695,4 @@ async function unifiedImportResult(req, res) {
   return res.status(404).json({ error: 'result_not_found', runId })
 }
 
-module.exports = { unifiedImport, unifiedImportResult }
+module.exports = { unifiedImport, unifiedImportResult, partitionWorkbooks }

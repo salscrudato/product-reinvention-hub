@@ -141,7 +141,9 @@ describe('CE3 Step 1: dup-cluster fold — identical folds, conflict goes to rev
 
 describe('CE3 Step 4: sweeper can NEVER invent — vocabulary + citation enforced in code', () => {
   const { acceptAnswer, agreementOf, ALLOWED_NOISE } = req('../../server/lib/import-brain/stage45-sweeper.js')
-  const refs = new Set(['B2', 'C3'])
+  // ref -> that cell's verbatim. acceptAnswer now also holds a FACT's name against the cell
+  // it cites (fidelity ledger #19), so the batch carries the text, not just the refs.
+  const refs = new Map([['B2', 'Real'], ['C3', 'Other']])
 
   it('rejects a noise rule outside the allowed vocabulary', () => {
     expect(acceptAnswer({ ref: 'B2', kind: 'NOISE', rule: 'NOISE.MADE_UP' }, refs)).toBeNull()
@@ -155,6 +157,8 @@ describe('CE3 Step 4: sweeper can NEVER invent — vocabulary + citation enforce
     expect(acceptAnswer({ ref: 'Z99', kind: 'FACT', entityKind: 'coverage', name: 'Invented' }, refs)).toBeNull()
     expect(acceptAnswer({ ref: 'B2', kind: 'FACT', entityKind: 'coverage', name: '' }, refs)).toBeNull()
     expect(acceptAnswer({ ref: 'B2', kind: 'FACT', entityKind: 'notAKind', name: 'x' }, refs)).toBeNull()
+    // …and so does a name the CITED CELL does not contain (an expanded abbreviation).
+    expect(acceptAnswer({ ref: 'B2', kind: 'FACT', entityKind: 'coverage', name: 'Really Invented' }, refs)).toBeNull()
     expect(acceptAnswer({ ref: 'B2', kind: 'FACT', entityKind: 'coverage', name: 'Real' }, refs)).toMatchObject({ kind: 'FACT' })
   })
 

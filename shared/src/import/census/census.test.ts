@@ -2,7 +2,7 @@
 // gap segmentation, and the conservation ledger math.
 import { describe, it, expect } from 'vitest'
 import { fnv1a64 } from './hash'
-import { buildSheetCensus, colLabel, cellRef, rawVerbatim, classifyCellType, VERBATIM_CAP } from './buildCensus'
+import { buildSheetCensus, colLabel, cellRef, rawVerbatim, classifyCellType, VERBATIM_CAP, DENSE_CELL_CEILING, DENSE_MAX_COLS } from './buildCensus'
 import { segmentTableRegions } from './regions'
 import { createAccounting, post, postSpan, rollupSheet, rollupWorkbook } from './accounting'
 import type { RawCensusCell, RawCensusSheet } from './types'
@@ -236,5 +236,49 @@ describe('accounting — conservation ledger math', () => {
     expect(roll.nonEmpty).toBe(11)
     expect(roll.byDisposition.FACT).toBe(10)  // 11 minus the immutable shadow
     expect(roll.substanceCoverage).toBe(1)
+  })
+})
+
+// ─── Ledger #18 ───────────────────────────────────────────────────────────────
+// The two dense scratch grids (occupied / normalized) were sized to the FURTHEST
+// occupied cell with no sparsity clamp, so one stray leftover value far from the data
+// allocated tens of millions of entries for a sheet holding a handful of values.
+
+describe('#18 a far-flung stray cell must not allocate a dense grid to match', () => {
+  // 20,001 x 2,001 = ~40M cells of extent for exactly two real values.
+  const sparseSheet = (): RawCensusSheet => {
+    const cells: (RawCensusCell | null)[][] = Array.from({ length: 20001 }, () => [])
+    cells[0] = [C('Coverage'), C('Limit')]
+    cells[1] = [C('Premises'), C(500000)]
+    const far: (RawCensusCell | null)[] = Array.from({ length: 2001 }, () => null)
+    far[2000] = C('leftover')
+    cells[20000] = far
+    return sheet(cells)
+  }
+
+  it('clamps the dense window and REPORTS it (never silently)', () => {
+    const c = buildSheetCensus(sparseSheet())
+    expect(c.dims).toEqual({ rows: 20001, cols: 2001 })   // true extent still reported
+    expect(c.denseClamped).toBeDefined()
+    expect(c.denseClamped!.cols).toBe(DENSE_MAX_COLS)
+    expect(c.denseClamped!.rows * c.denseClamped!.cols).toBeLessThanOrEqual(DENSE_CELL_CEILING)
+    expect(c.denseClamped!.reason).toMatch(/20001x2001/)
+  })
+
+  it('CONSERVATION: every substantive cell is still recorded, including the stray', () => {
+    const c = buildSheetCensus(sparseSheet())
+    expect(c.nonEmpty).toBe(5)
+    expect(c.cells.map(x => x.verbatim)).toContain('leftover')
+    expect(c.cells.find(x => x.verbatim === 'leftover')!.ref).toBe(cellRef('S', 20000, 2000))
+  })
+
+  it('an ordinary sheet is untouched — no clamp, no new field', () => {
+    const c = buildSheetCensus(sheet([
+      [C('Coverage'), C('Limit')],
+      [C('Premises'), C(500000)],
+    ]))
+    expect(c.denseClamped).toBeUndefined()
+    expect(c.dims).toEqual({ rows: 2, cols: 2 })
+    expect(c.tables.length).toBeGreaterThan(0)
   })
 })

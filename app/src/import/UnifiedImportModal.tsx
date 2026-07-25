@@ -1158,6 +1158,19 @@ function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading
 }) {
   const count = countPlan(plan)
   const products = plan.products ?? (plan.product ? [plan.product] : [])
+
+  // Per-product coverage counts, built ONCE per plan instead of re-filtering the whole
+  // coverage list inside every product card's render (O(products x coverages) each pass).
+  // Attribution reads the productRefId the importer stamps; the old 2-char refId-prefix
+  // guess double-counted whenever two products in one workbook shared a prefix.
+  const coveragesByProduct = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const c of plan.coverages ?? []) {
+      const pid = c.data?.['productRefId']
+      if (typeof pid === 'string' && pid !== '') m.set(pid, (m.get(pid) ?? 0) + 1)
+    }
+    return m
+  }, [plan.coverages])
   const defects  = (plan.summary as { defects?: ReviewDefect[] }).defects ?? []
   const notices  = (plan.summary as { notices?: ImportNotice[] }).notices ?? []
 
@@ -1212,9 +1225,7 @@ function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading
               {products.length} products detected
             </div>
             {products.map(pd => {
-              const pdCoverages = (plan.coverages ?? []).filter(c =>
-                (c.refId ?? '').toUpperCase().startsWith((pd.refId ?? '').slice(0, 2).toUpperCase()),
-              )
+              const pdCoverageCount = coveragesByProduct.get(pd.refId ?? '') ?? 0
               return (
                 <div key={pd.refId} className="flex items-center gap-3 rounded-[12px] p-3"
                   style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
@@ -1229,7 +1240,7 @@ function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading
                     <div className="text-xs text-dim flex items-center gap-1.5">
                       <span className="font-mono text-accent">{pd.refId}</span>
                       <span className="text-faint">·</span>
-                      <span className="tnum text-faint">{pdCoverages.length} coverages</span>
+                      <span className="tnum text-faint">{pdCoverageCount} coverages</span>
                     </div>
                   </div>
                 </div>

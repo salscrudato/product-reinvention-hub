@@ -2136,9 +2136,24 @@ var VALUE_COLUMN_NAMES = [
   "lcm",
   "minimumpremium"
 ];
+var VALUE_COLUMN_PATTERNS = [
+  // rate | baseRate | Rate per $100 | Rate/1000 | rate per hundred
+  /^(base)?rate((per)?\$?\d+|per[a-z]+)?$/,
+  /^losscost(multiplier)?$/,
+  /^(base|flat|min(imum)?|max(imum)?)?premium$/,
+  /^(rating|rate|dev|mod)?factor$/,
+  /^(ilf|lcm|elf)$/
+];
+function squishColumn(c) {
+  return c.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+function isValueColumnName(c) {
+  const s = squishColumn(c);
+  return VALUE_COLUMN_NAMES.includes(s) || VALUE_COLUMN_PATTERNS.some((re) => re.test(s));
+}
 function inferValueColumn(t) {
   if (t.valueColumn && t.columns.includes(t.valueColumn)) return t.valueColumn;
-  const matches = t.columns.filter((c) => VALUE_COLUMN_NAMES.includes(c.toLowerCase()));
+  const matches = t.columns.filter(isValueColumnName);
   return matches.length === 1 ? matches[0] : null;
 }
 function toDisplay(v) {

@@ -5,6 +5,11 @@
 import { describe, it, expect } from 'vitest'
 import { createRequire } from 'module'
 
+// task-summary pulls in the auth chain at require time. Set here rather than relying on
+// another test file in the same worker having set it first — that ordering is incidental,
+// and adding any test file can break it (same convention as cost-guard/daily-brief).
+process.env.AUTH_JWT_SECRET ??= 'test-secret-task-summary-tests-minimum32c'
+
 const _require = createRequire(import.meta.url)
 const ts = _require('../../server/lib/ai/task-summary') as {
   _stripUncited: (raw: string, valid: Set<string>) => { summary: string; cited: string[] }

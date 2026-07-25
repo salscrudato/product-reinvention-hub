@@ -343,6 +343,21 @@ export interface LDTable {
   /** True when this table's refId was SYNTHESIZED by the importer (never a source id). */
   mintedId?:       boolean
   linkBasis?:      LinkBasis
+  /** Recognized value layout. 'FLAT' = one value column (the flat `rows` are faithful).
+   *  'MATRIX' = the source spreads values across SEVERAL value columns (one per package /
+   *  coverage code), which `rows` structurally cannot represent. A MATRIX table carries NO
+   *  rows/defaultValue: collapsing it to a single column would invent a value the source
+   *  never states, so extraction is REFUSED and a human resolves it. */
+  shape?:          'FLAT' | 'MATRIX'
+  /** True when the importer declined to extract values and needs a human. */
+  needsReview?:    boolean
+  /** Why extraction was refused — names the columns found, so the notice is actionable. */
+  refusalReason?:  string
+  /** Source rows whose limit/deductible is TEXTUAL ("Included", "Waived", "Refer to
+   *  company"). They are deliberately kept OUT of `rows`, whose every entry must be a real
+   *  number the rating engine can use — coercing them to 0 mints a priceable $0 the source
+   *  never states. Preserved verbatim here so nothing is lost and a human can set the amount. */
+  unpricedRows?:   { label: string; verbatim: string; constraintNote?: string }[]
 }
 
 // rows layout is preserved as-is; lookup logic lives in the concrete getter

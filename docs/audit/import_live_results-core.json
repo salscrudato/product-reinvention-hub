@@ -1,0 +1,33 @@
+{
+  "runAt": "2026-07-24T22:33:24.266Z",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "tenant": "import-live-smoke",
+  "exit": {
+    "runs": 1,
+    "crashes": 0,
+    "fabrications": 0,
+    "sourceGaps": 0,
+    "formatsPassed": 1,
+    "formatsTotal": 1,
+    "roundTripOk": true,
+    "pass": true
+  },
+  "results": [
+    {
+      "id": "CORE",
+      "format": "ISO_XLSX",
+      "file": "Product_Specifications_Core_07_13_2026.xlsx",
+      "status": "pass",
+      "crashed": false,
+      "fabrication": false,
+      "planValid": true,
+      "productCount": 1,
+      "coverageCount": 112,
+      "durationMs": 1912520,
+      "notes": [
+        "local parse: 1 product, 112 coverages (93 sub), 1453 forms, 234 rules",
+        "server brain (non-fatal): fetch error: fetch failed"
+      ]
+    }
+  ]
+}

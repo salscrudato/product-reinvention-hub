@@ -109,7 +109,28 @@ function resolveCitationsDeterministic(entities, fpByName, review) {
       const cit = f.citation
       const strict = STRICT_FIELDS.has(f.fieldName)
       if (cit && DERIVED_VERBATIM.test(String(cit.verbatim ?? ''))) continue
-      if (!cit || !cit.cell) continue  // no pointer to verify (synthesis handles blank strict ids upstream)
+      // CITATIONS-OR-DISCARDED gate. A model that omits a citation does not leave `citation`
+      // undefined — stage 4's toEntityFields backfills {sheet:'',cell:'',verbatim:''} — so
+      // "no pointer" is NOT "nothing to check", it is a claim with no source. Skipping here
+      // let a FABRICATED strict id past the byte-compare below purely by omitting its cell.
+      // Every legitimate uncited value returned already: importer synthesis carries a
+      // '(synthesized)' verbatim (DERIVED_VERBATIM, above) and the deterministic extractor
+      // always emits a real cell ref. So a value reaching this point is ungrounded.
+      if (!cit || !cit.cell) {
+        const vs = String(f.value ?? '').trim()
+        if (vs && strict) {
+          const sev = blockSeverity
+          push('uncited-strict-id', sev, e, f.fieldName,
+            `strict id "${vs.slice(0, 80)}" carries no citation cell — an uncited id cannot be byte-compared against the source, so it cannot be distinguished from a fabricated one`)
+          if (sev === 'BLOCKING') blockEntity(e, `uncited strict id on ${f.fieldName}: "${vs.slice(0, 80)}"`)
+          else e.reviewFlag = true
+        } else if (vs && String(cit?.verbatim ?? '').trim() !== '') {
+          push('uncited-field', 'WARN', e, f.fieldName,
+            `verbatim "${String(cit.verbatim).slice(0, 60)}" carries no citation cell — there is nothing to ground it against`)
+          e.reviewFlag = true
+        }
+        continue
+      }
       const citFp = (cit.sheet && fpByName.get(cit.sheet)) || entityFp
       if (!citFp || !Array.isArray(citFp.cells) || citFp.cells.length === 0) continue  // legacy fingerprint — nothing authoritative to resolve against
       const ref = parseCellRef(cit.cell)
