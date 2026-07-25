@@ -2894,6 +2894,62 @@ function hiddenSheetSubstance(workbook) {
   return workbook.sheets.filter((s) => s.hidden && s.nonEmpty > 0).map((s) => ({ name: s.name, nonEmpty: s.nonEmpty }));
 }
 
+// shared/src/rating/rtGrid.ts
+var VALUE_COLUMN_NAMES = [
+  "factor",
+  "rate",
+  "charge",
+  "value",
+  "flatpremium",
+  "rateperhundred",
+  "premium",
+  "amount",
+  "ilf",
+  "lcm",
+  "minimumpremium"
+];
+function inferValueColumn(t) {
+  if (t.valueColumn && t.columns.includes(t.valueColumn)) return t.valueColumn;
+  const matches = t.columns.filter((c) => VALUE_COLUMN_NAMES.includes(c.toLowerCase()));
+  return matches.length === 1 ? matches[0] : null;
+}
+var SEP = "\0";
+function joinKey(values) {
+  return values.join(SEP);
+}
+function toDisplay(v) {
+  return v === null || v === void 0 ? "" : String(v);
+}
+function deriveGridModel(t) {
+  const valueColumn = inferValueColumn(t);
+  if (!valueColumn) return null;
+  const explicit = t.dimensions?.length ? t.dimensions : void 0;
+  const dimKeys = explicit ? explicit.map((d) => d.key) : t.columns.filter((c) => c !== valueColumn);
+  if (dimKeys.length < 1 || dimKeys.length > 3) return null;
+  if (!dimKeys.every((k) => t.columns.includes(k))) return null;
+  const dimensions = dimKeys.map((key) => {
+    const seen = [];
+    let numeric = true;
+    for (const r of t.rows) {
+      const raw = r[key];
+      const disp = toDisplay(raw);
+      if (disp !== "" && !seen.includes(disp)) seen.push(disp);
+      if (raw !== null && raw !== void 0 && typeof raw !== "number") numeric = false;
+    }
+    const meta = explicit?.find((d) => d.key === key);
+    const values = meta?.values?.length ? [...meta.values] : seen;
+    return { key, label: meta?.label ?? key, values, numeric };
+  });
+  const cells = {};
+  for (const r of t.rows) {
+    const coords = dimensions.map((d) => toDisplay(r[d.key]));
+    if (coords.some((c) => c === "")) continue;
+    const v = r[valueColumn];
+    if (typeof v === "number") cells[joinKey(coords)] = v;
+  }
+  return { valueColumn, dimensions, cells };
+}
+
 // shared/src/insurance/coverageHierarchy.ts
 function nameKey(s) {
   return s.toUpperCase().replace(/\s+/g, " ").trim();
@@ -4662,12 +4718,16 @@ function parseRtTables(grid, ctx) {
     ctx.consume(grid.sheet, r, dr - 1, 0, colIdx.length ? Math.max(...colIdx) : 0, `rt-table:${refId}`);
     tables.set(refId, entry);
   }
-  return [...tables.entries()].map(([refId, t]) => ({
-    docId: refId,
-    refId,
-    label: `${refId} \u2014 ${t.name}`,
-    data: { name: t.name, columns: t.columns, rows: t.rows }
-  }));
+  return [...tables.entries()].map(([refId, t]) => {
+    const model = deriveGridModel({ name: t.name, columns: t.columns, rows: t.rows });
+    const grid2 = model ? { valueColumn: model.valueColumn, dimensions: model.dimensions.map((d) => ({ key: d.key, label: d.label, values: [...d.values] })) } : {};
+    return {
+      docId: refId,
+      refId,
+      label: `${refId} \u2014 ${t.name}`,
+      data: { name: t.name, columns: t.columns, rows: t.rows, ...grid2 }
+    };
+  });
 }
 var RATE_FIELDS = {
   status: ["STATUS", "ACTIVE STATUS", "STEP STATUS"],

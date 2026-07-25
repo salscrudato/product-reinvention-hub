@@ -302,6 +302,14 @@ describe('mapIsoWorkbook — rules, form rules, rating, tables', () => {
     expect((t.data['rows'] as Record<string, unknown>[])[0]).toMatchObject({ COVERAGE: 'Prem/Ops', 'PER OCCURRENCE': 25 })
   })
 
+  it('a non-grid rate table (>3 key columns) is left WITHOUT grid metadata', () => {
+    // The fixture above has 5 non-value columns → not a faithful 1..3-dim grid, so the
+    // conservative detector leaves it as raw columns/rows (no forced grid). No regression.
+    const t = plan.rtTables[0]!
+    expect(t.data['dimensions']).toBeUndefined()
+    expect(t.data['valueColumn']).toBeUndefined()
+  })
+
   it('parses stacked LD tables with default detection', () => {
     expect(plan.ldTables).toHaveLength(2)
     const occ = plan.ldTables.find(t => t.refId === 'LDTable.001')!
@@ -319,6 +327,37 @@ describe('mapIsoWorkbook — rules, form rules, rating, tables', () => {
   it('mints NO rate-table placeholders on a GL workbook (its rate tables are present)', () => {
     expect(plan.ratePlaceholders).toEqual([])
     expect(plan.summary.counts['ratePlaceholders'] ?? 0).toBe(0)
+  })
+})
+
+// ─── Imported RT grid tables become priceable (dimensions on import) ──────────────
+// A genuinely grid-shaped rate table (1..3 key columns × one value column) must carry
+// explicit `dimensions` + `valueColumn` after import. Before this, imported RT tables held
+// only columns/rows, so deriveGridInputSpec (which keys off `dimensions`) produced no pricing
+// worksheet and the imported product could not be priced. The detector is deriveGridModel —
+// the same conservative one the grid editor uses — so range/multi-value tables are left as-is
+// and no seeded table (built by the seeds, never here) is affected.
+describe('mapIsoWorkbook — imported RT grid tables carry grid metadata', () => {
+  const rtGrid = g('GL Rating Tables', [
+    ['RATE TABLES'],
+    ['RATE TABLE NAME:', 'Territory Factor'],
+    ['RATE TABLE ID:', 'RTTable.777'],
+    ['', 'TERRITORY', 'CLASS', 'FACTOR'],
+    ['', 'North', 'A', 1.10],
+    ['', 'North', 'B', 1.25],
+    ['', 'South', 'A', 0.90],
+    ['', 'South', 'B', 1.05],
+  ])
+  const p = mapIsoWorkbook([framework, rtGrid])
+  const t = p.rtTables.find(x => x.refId === 'RTTable.777')
+
+  it('a 2×2 grid table gains explicit dimensions + valueColumn on import', () => {
+    expect(t).toBeTruthy()
+    expect(t!.data['valueColumn']).toBe('FACTOR')
+    const dims = t!.data['dimensions'] as Array<{ key: string; label?: string; values: string[] }>
+    expect(dims.map(d => d.key)).toEqual(['TERRITORY', 'CLASS'])   // key columns, value excluded
+    expect(dims[0]!.values).toEqual(['North', 'South'])            // distinct values, row order
+    expect(dims[1]!.values).toEqual(['A', 'B'])
   })
 })
 

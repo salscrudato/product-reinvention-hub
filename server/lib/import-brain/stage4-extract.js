@@ -603,18 +603,42 @@ function deterministicExtract(fp, colMap, headerRow, rows, sheetName, gridRows) 
   const dominant = dominantEntityKind(colMap)
   const entities = []
 
+  // Section-header forward-fill (dynamic-data continuation rows). A "Forms Dynamic Data"
+  // sheet states the FORM NUMBER once per form and leaves it blank on each continuation
+  // field-row; without carry-down those fields lose their parent-form link and orphan at
+  // the stage7 join (E+: 198/1830 rows surfaced as "no form number"). We carry the last
+  // non-blank `formNumber` down, KEEPING the original cell's citation so the value stays
+  // grounded to the header that actually stated it (faithful extraction of a section
+  // header, never invention). Only the singular `formNumber` linkage key is carried —
+  // it exists on the dynamic-data sheet alone, so per-row fields are never touched.
+  const CARRY_FIELDS = new Set(['formNumber'])
+  const carried = new Map()   // fieldName -> { value, colIndex, excelRow }
+
   for (let i = 0; i < rows.length; i++) {
     const cells = rows[i]
     const excelRow = excelRowOf(i, headerRow, gridRows)
     const fields = []
     for (const m of mapped) {
-      const v = cells[m.colIndex]
+      let v = cells[m.colIndex]
+      let citation = null
+      if (CARRY_FIELDS.has(m.canonicalField)) {
+        const blank = v === null || v === undefined || (typeof v === 'string' && v.trim() === '')
+        if (!blank) {
+          carried.set(m.canonicalField, { value: v, colIndex: m.colIndex, excelRow })
+        } else {
+          const prev = carried.get(m.canonicalField)
+          if (prev) {
+            v = prev.value
+            citation = { sheet: sheetName, cell: `${colLetter(prev.colIndex)}${prev.excelRow}`, verbatim: String(prev.value) }
+          }
+        }
+      }
       if (v === null || v === undefined) continue
       fields.push({
         fieldName:  m.canonicalField,
         value:      v,
         confidence: m.confidence,
-        citation:   { sheet: sheetName, cell: `${colLetter(m.colIndex)}${excelRow}`, verbatim: String(v) },
+        citation:   citation ?? { sheet: sheetName, cell: `${colLetter(m.colIndex)}${excelRow}`, verbatim: String(v) },
         deterministic: true,
       })
     }
@@ -1028,4 +1052,5 @@ module.exports = {
   extractRows,
   // Test seams (hardening fixtures — pure helpers, no AI):
   reconcileEntities, expandMultiRefIds, resolveConflicts, rowKind, parseExtraction, synthesizeRefId,
+  deterministicExtract,
 }

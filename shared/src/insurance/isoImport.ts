@@ -18,6 +18,7 @@ import type {
 } from '../types'
 import { resolveLobByRefId, resolveLobByName, DEFAULT_LOB } from './lobRegistry'
 import { refIdToDocId } from './refId'
+import { deriveGridModel } from '../rating/rtGrid'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
 import { conservationEligible, runConservationPass } from '../import/mapper/conserve'
 import {
@@ -1454,10 +1455,24 @@ function parseRtTables(grid: IsoGrid | undefined, ctx: Ctx): PlannedEntity[] {
     tables.set(refId, entry)
   }
 
-  return [...tables.entries()].map(([refId, t]) => ({
-    docId: refId, refId, label: `${refId} — ${t.name}`,
-    data: { name: t.name, columns: t.columns, rows: t.rows } satisfies Omit<RTTable, never>,
-  }))
+  return [...tables.entries()].map(([refId, t]) => {
+    // Attach explicit grid metadata when the table is grid-shaped (1..3 key columns × one
+    // value column). deriveGridModel is the same conservative detector the grid editor uses:
+    // it returns null for range (pcMin/pcMax) or multi-value tables, which stay as-is. Setting
+    // `dimensions` + `valueColumn` is what makes an imported rate table (a) render in the
+    // Excel-like table editor and (b) PRICEABLE — deriveGridInputSpec builds one select per
+    // dimension and genericRtLookup keys off `dimensions`, both of which no-op without it.
+    // Seeded PH/PA/GL tables are never built here (they carry no dimensions), so every rating
+    // canary is untouched.
+    const model = deriveGridModel({ name: t.name, columns: t.columns, rows: t.rows })
+    const grid = model
+      ? { valueColumn: model.valueColumn, dimensions: model.dimensions.map(d => ({ key: d.key, label: d.label, values: [...d.values] })) }
+      : {}
+    return {
+      docId: refId, refId, label: `${refId} — ${t.name}`,
+      data: { name: t.name, columns: t.columns, rows: t.rows, ...grid } satisfies Omit<RTTable, never>,
+    }
+  })
 }
 
 // ─── Rating specifications → rating program + steps ──────────────────────────────
