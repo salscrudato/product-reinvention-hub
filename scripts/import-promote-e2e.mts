@@ -114,6 +114,14 @@ const pr = await api('/db/mutate', { payload: {
 if (!pr.ok) { log(`FAIL — product create ${pr.status}: ${JSON.stringify(pr.body).slice(0, 200)}`); process.exit(1) }
 log(`product ${PID} created`)
 
+// A stage-4.5 SWEEPER NOMINATION is an unconfirmed cell proposal (confidence 0.5,
+// needsReview, no refId) — the review offers it but does not write it unless a human ticks
+// it. Persisting them here would measure a product no reviewer would ever create: the E+ run
+// offered 59 of them out of 154 "coverages", named things like "EPLS.COV.005; EPLS.COV.007".
+const isNomination = (e: Record<string, unknown>) => dataOf(e)['sweeperFact'] === true
+const kept = (k: string) => arr(k).filter(e => !isNomination(e))
+const nominated = (k: string) => arr(k).filter(isNomination).length
+
 const GROUPS: Record<string, { entityType: string; path: (id: string) => string; underProduct: boolean }> = {
   coverages:     { entityType: 'coverage',      underProduct: true,  path: id => `products/${PID}/coverages/${id}` },
   forms:         { entityType: 'form',          underProduct: false, path: id => `forms/${PID}__${id}` },
@@ -123,20 +131,47 @@ const GROUPS: Record<string, { entityType: string; path: (id: string) => string;
   rtTables:      { entityType: 'rtTable',       underProduct: false, path: id => `rtTables/${id}` },
 }
 let written = 0, failed = 0
-for (const [key, g] of Object.entries(GROUPS)) {
-  const items = arr(key)
-  for (let i = 0; i < items.length; i += 50) {
-    const payloads = items.slice(i, i + 50).map(e => {
-      const d = dataOf(e)
-      const data = g.entityType === 'form' ? { ...d, productRefIds: [PID] }
-        : (g.entityType === 'ldTable' || g.entityType === 'rtTable') ? { ...d, productId: PID } : d
-      return { op: 'create', path: g.path(String(e['docId'])), entityType: g.entityType,
-        ...(g.underProduct ? { productId: PID } : {}), actor, data }
-    })
-    const r = await api('/db/mutateBatch', { payloads })
-    if (r.ok) written += payloads.length
-    else { failed += payloads.length; if (failed <= 50) log(`  batch ${key} failed ${r.status}: ${JSON.stringify(r.body).slice(0, 160)}`) }
+const payloadFor = (g: typeof GROUPS[string], e: Record<string, unknown>) => {
+  const d = dataOf(e)
+  const data = g.entityType === 'form' ? { ...d, productRefIds: [PID] }
+    : (g.entityType === 'ldTable' || g.entityType === 'rtTable') ? { ...d, productId: PID } : d
+  return { op: 'create', path: g.path(String(e['docId'])), entityType: g.entityType,
+    ...(g.underProduct ? { productId: PID } : {}), actor, data }
+}
+const flush = async (payloads: unknown[], key: string) => {
+  if (!payloads.length) return
+  const r = await api('/db/mutateBatch', { payloads })
+  if (r.ok) written += payloads.length
+  else { failed += payloads.length; log(`  batch ${key} failed ${r.status}: ${JSON.stringify(r.body).slice(0, 160)}`) }
+}
+
+// COVERAGES — wave batching, mirroring app/src/lib/import/importProduct.ts. The server
+// validates every parentId with a live read DURING the envelope phase, before ANY op in the
+// batch commits, so a child may never share a batch with an ancestor: the ancestor does not
+// exist yet and the WHOLE batch 422s with invalid_parent (which is exactly what a naive
+// 50-chunk did here). Flush the moment a coverage's parent is still pending in this batch;
+// each flush fully commits before the next is enveloped. Correct at any nesting depth.
+{
+  const g = GROUPS['coverages']!
+  let batch: unknown[] = []
+  let pending = new Set<string>()
+  for (const e of kept('coverages')) {
+    const parentId = dataOf(e)['parentId']
+    if ((parentId != null && pending.has(String(parentId))) || batch.length >= 50) {
+      await flush(batch, 'coverages'); batch = []; pending = new Set()
+    }
+    batch.push(payloadFor(g, e))
+    const rid = e['refId']
+    if (typeof rid === 'string' && rid) pending.add(rid)
   }
+  await flush(batch, 'coverages')
+}
+
+// Everything else has no intra-collection parent dependency — free batching.
+for (const [key, g] of Object.entries(GROUPS)) {
+  if (key === 'coverages') continue
+  const items = kept(key)
+  for (let i = 0; i < items.length; i += 50) await flush(items.slice(i, i + 50).map(e => payloadFor(g, e)), key)
 }
 const prog = plan['ratingProgram'] as Record<string, unknown> | null
 if (prog) {
@@ -146,7 +181,7 @@ if (prog) {
   } })
   if (r.ok) written++; else { failed++; log(`  ratingProgram failed ${r.status}: ${JSON.stringify(r.body).slice(0, 200)}`) }
 }
-log(`persisted ${written} entities (${failed} failed)`)
+log(`persisted ${written} entities (${failed} failed; ${nominated('coverages')} sweeper nominations withheld, as the review would)`)
 
 // ── 3. promote ───────────────────────────────────────────────────────────────
 const promo = await api(`/db/drafts/${encodeURIComponent(PID)}/promote`, {})
@@ -167,7 +202,7 @@ const list = async (coll: string): Promise<Record<string, unknown>[]> => {
 const outCovs  = await list(`products/${PID}/coverages`)
 const outRules = await list(`products/${PID}/rules`)
 const outProgs = await list(`products/${PID}/ratingPrograms`)
-const outProd  = (await api('/db/get', { path: `products/${PID}` })).body?.['data'] as Record<string, unknown> | undefined
+const outProd  = (await list('products')).find(p => String(p['id'] ?? '') === PID)
 
 const PLACEHOLDER = /^<.*>$|^n\/?a$|^not applicable$|^intentionally left blank$/i
 const fails: string[] = []

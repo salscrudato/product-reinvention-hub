@@ -192,7 +192,14 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       setBundle(b)
       setCardStatus(b.formatCard?.status ?? 'PROPOSED')
       setAccepted(new Set<FilingReviewSectionKey>(['coverages', 'tables', 'rules', 'rating']))
-      setExcluded(new Set())
+      // A SWEEPER NOMINATION starts EXCLUDED. Stage 4.5 proposes leftover cells as possible
+      // entities (confidence 0.5, needsReview, no refId) so nothing is silently dropped — but
+      // they are guesses, and they defaulted to ACCEPTED, so clicking Import wrote them as
+      // peer coverages. A real E+ run offered 59 of them out of 154 "coverages", named things
+      // like "EPLS.COV.005; EPLS.COV.007" — a Forms-Specs reference cell, not a coverage.
+      // They stay visible and one tick includes them; they just are not written by default.
+      // Same contract the AI-Assist suggestions already follow: a model proposal is opt-IN.
+      setExcluded(sweeperNominations(b))
       setPhase('review')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed.')
@@ -1169,6 +1176,24 @@ function SplitProductsSection({ proposals }: { proposals: SplitProductProposal[]
 // ─── XLSX-plan review pane (ISO workbook local path) ─────────────────────────────
 // Mirrors the Section 1 entity-group layout from ImportWorkbookModal, rendered inline
 // in this modal when all uploaded files are XLSX (magic-byte routed to local mapper).
+
+/** docIds of every stage-4.5 SWEEPER NOMINATION in a bundle — unconfirmed cell proposals
+ *  (confidence 0.5, needsReview, no refId) that the review offers but must not write unless
+ *  a human ticks them. Exported for the unit test that pins the opt-in contract. */
+export function sweeperNominations(bundle: UnifiedProposalBundle): Set<string> {
+  const out = new Set<string>()
+  const plan = (bundle as unknown as { plan?: Record<string, unknown> }).plan ?? {}
+  for (const key of ['coverages', 'forms', 'rules', 'formRules', 'ldTables', 'rtTables']) {
+    const group = (plan as Record<string, unknown>)[key]
+    if (!Array.isArray(group)) continue
+    for (const e of group as { docId?: string; refId?: string; data?: Record<string, unknown> }[]) {
+      if (e?.data?.['sweeperFact'] !== true) continue
+      const key2 = e.docId ?? e.refId ?? ''
+      if (key2) out.add(key2)
+    }
+  }
+  return out
+}
 
 function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading, acceptedSuggestions, onAiAssist, onToggleSuggestion, onApplyOverlay, hasUnmapped }: {
   plan: ImportPlan
