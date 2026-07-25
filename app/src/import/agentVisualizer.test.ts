@@ -70,6 +70,8 @@ describe('buildVizModel', () => {
       tool('brain:stage4:extract', 'progress', 'batch 1/4'),
       tool('brain:stage4:extract', 'progress', 'batch 2/4'),
       tool('brain:stage4:extract', 'end', '41 entities extracted, 3 flagged'),
+      tool('brain:stage4:sweep', 'start', 'Sweeping unaccounted cells on 2 content sheet(s)'),
+      tool('brain:stage4:sweep', 'end', '18 cell(s) classified, 4 for review'),
       tool('brain:stage5:validate', 'start', 'Validating 41 entities'),
       json('brain:stage5', [
         { fieldLabel: 'Base loss cost', reason: 'value drift between extractors' },
@@ -88,10 +90,12 @@ describe('buildVizModel', () => {
 
     expect(m.family).toBe('brain')
     expect(m.stages.map(s => s.id)).toEqual(
-      ['route', 'classify', 'headerLock', 'columnMap', 'extract', 'validate', 'reconcile'])
+      ['route', 'classify', 'headerLock', 'columnMap', 'extract', 'sweep', 'validate', 'reconcile'])
     // Every stage that ended is done; route state survived the family switch.
     for (const s of m.stages) expect(s.status).toBe('done')
     expect(m.stages[0]!.detail).toBe('1 workbook')
+    // The conservation sweep is its own stage now (was silently dropped before).
+    expect(m.stages.find(s => s.id === 'sweep')!.detail).toBe('18 cell(s) classified, 4 for review')
 
     const extract = m.stages.find(s => s.id === 'extract')!
     expect(extract.notes).toEqual(['batch 1/4', 'batch 2/4'])
@@ -108,7 +112,7 @@ describe('buildVizModel', () => {
 
     // Announcements exist for starts and ends (aria-live source).
     expect(m.announcements.some(a => a.includes('Sheet classify started'))).toBe(true)
-    expect(m.announcements.some(a => a.includes('Reconcile complete'))).toBe(true)
+    expect(m.announcements.some(a => a.includes('Reconcile & plan complete'))).toBe(true)
   })
 
   it('detects the filing family from filing:* events', () => {

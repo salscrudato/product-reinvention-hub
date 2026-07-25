@@ -104,9 +104,13 @@ const BRAIN_STAGES: Omit<VizStage, 'status' | 'notes' | 'events'>[] = [
     agents: [A('bulk', 'BULK', 'claude-haiku-4-5', 'anthropic'),
              A('alt', 'BULK_ALT', 'gpt-5-mini', 'openai', 'cross-check'),
              A('ladder', 'LADDER', 'sonnet → opus', 'anthropic', 'conflicted fields only')] },
+  { id: 'sweep',     label: 'Conservation sweep', sub: 'Every unaccounted cell is swept — haiku + gpt-mini vote, ladder to sonnet on conflict',
+    agents: [A('bulk', 'BULK', 'claude-haiku-4-5', 'anthropic'),
+             A('alt', 'BULK_ALT', 'gpt-5-mini', 'openai', 'second vote'),
+             A('ladder', 'LADDER', 'sonnet', 'anthropic', 'conflicts only')] },
   { id: 'validate',  label: 'Adversarial validate', sub: 'gpt-5.1 validator — OpenAI family, decorrelated from the Anthropic extractors',
     agents: [A('val', 'VALIDATOR', 'gpt-5.1', 'openai', 'cross-provider adversarial check')] },
-  { id: 'reconcile', label: 'Reconcile',       sub: 'Pure aggregation — assembles the plan, writes nothing',
+  { id: 'reconcile', label: 'Reconcile & plan', sub: 'Deterministic ISO join + plan assembly — aggregates, writes nothing',
     agents: [A('det', 'DETERMINISTIC', 'aggregation', 'deterministic')] },
 ]
 
@@ -130,10 +134,15 @@ const FALLBACK_STAGES: Omit<VizStage, 'status' | 'notes' | 'events'>[] = [
     agents: [A('bulk', 'BULK', 'claude-haiku-4-5', 'anthropic')] },
 ]
 
-// Brain tool names → stage ids (brain:stage{N}:{name}).
+// Brain tool names → stage ids (brain:stage{N}:{name}). EVERY sub-stage the pipeline emits
+// is mapped — an unmapped tool event is silently dropped, which is exactly what used to hide
+// the long-running sweep and the final plan assembly. `digest` (sheet read/census) lands on
+// classify (both stage-1 reads); `sweep` is its own stage; `isoJoin`/`plan` (stage-7) land on
+// the reconcile-&-plan stage.
 const BRAIN_TOOL_TO_STAGE: Record<string, string> = {
-  '0:route': 'route', '1:classify': 'classify', '2:headerLock': 'headerLock',
-  '3:columnMap': 'columnMap', '4:extract': 'extract', '5:validate': 'validate', '6:reconcile': 'reconcile',
+  '0:route': 'route', '1:digest': 'classify', '1:classify': 'classify', '2:headerLock': 'headerLock',
+  '3:columnMap': 'columnMap', '4:extract': 'extract', '4:sweep': 'sweep',
+  '5:validate': 'validate', '6:reconcile': 'reconcile', '7:isoJoin': 'reconcile', '7:plan': 'reconcile',
 }
 // Filing tool names → stage ids.
 const FILING_TOOL_TO_STAGE: Record<string, string> = {
@@ -150,7 +159,11 @@ function asRecord(v: unknown): Record<string, unknown> {
   return v && typeof v === 'object' ? (v as Record<string, unknown>) : {}
 }
 
-const MAX_NOTES = 4
+// Keep a generous window of the most recent live sub-events per stage — enough to show
+// every sheet/batch the pipeline reports (a big workbook streams ~5-10 per stage), rendered
+// as a scrollable activity feed rather than a fixed 4. Bounded so a pathological run can't
+// grow the model without limit.
+const MAX_NOTES = 40
 
 /** Fold the raw SSE event list into the render model. Pure; exported for tests. */
 export function buildVizModel(events: UnifiedStageEvent[], streamError?: string): VizModel {
@@ -319,7 +332,7 @@ const PROVIDER_COLOR: Record<VizAgent['provider'], string> = {
 
 const STAGE_ICON: Record<string, typeof IconAgent> = {
   route: IconSplit, classify: IconStage, headerLock: IconTable, columnMap: IconCombine,
-  extract: IconAgent, validate: IconVerify, reconcile: IconReconcile,
+  extract: IconAgent, sweep: IconStream, validate: IconVerify, reconcile: IconReconcile,
   rateOrder: IconTable, manual: IconTable, policyForm: IconStage, coverages: IconAgent,
 }
 
@@ -379,6 +392,25 @@ function AgentChip({ agent, stageStatus }: { agent: VizAgent; stageStatus: Stage
       <span className="font-mono">{agent.label}</span>
       <span className="text-faint font-mono">{agent.deployment}</span>
     </span>
+  )
+}
+
+// Live activity feed: the real sub-events the stage has reported (per sheet / per batch),
+// scrollable and auto-pinned to the newest line while the stage is active — so a long stage
+// (the conservation sweep) shows a moving log instead of sitting silent. Real events only.
+function NotesFeed({ notes, active }: { notes: string[]; active: boolean }) {
+  const ref = useRef<HTMLUListElement>(null)
+  useEffect(() => {
+    if (active && ref.current) ref.current.scrollTop = ref.current.scrollHeight
+  }, [notes.length, active])
+  if (notes.length === 0) return null
+  return (
+    <ul ref={ref} className="mt-1 flex flex-col gap-0.5 max-h-[108px] overflow-y-auto pr-1"
+      aria-label="Live activity" aria-live={active ? 'polite' : undefined}>
+      {notes.map((n, i) => (
+        <li key={i} className="text-[10.5px] text-faint font-mono truncate leading-relaxed" title={n}>· {n}</li>
+      ))}
+    </ul>
   )
 }
 
@@ -443,13 +475,7 @@ function StageRow({ stage, isLast, now, reduced }: {
         {stage.detail && (
           <p className="text-[11px] text-dim mt-1.5 font-mono truncate" title={stage.detail}>{stage.detail}</p>
         )}
-        {stage.notes.length > 0 && (
-          <ul className="mt-1 flex flex-col gap-0.5">
-            {stage.notes.map((n, i) => (
-              <li key={i} className="text-[10.5px] text-faint font-mono truncate" title={n}>· {n}</li>
-            ))}
-          </ul>
-        )}
+        <NotesFeed notes={stage.notes} active={stage.status === 'active'} />
       </div>
     </li>
   )
@@ -716,8 +742,9 @@ export function AgentVisualizer({ events, streaming, streamError, expanded, onTo
 
       {/* Honesty footnote */}
       <p className="text-[10px] text-faint leading-relaxed">
-        Stage states, timings, counts and telemetry come from live pipeline events. The model roles shown
-        per stage are the pipeline's code configuration — per-call activity inside a stage is not streamed.
+        Stage states, timings, per-sheet/per-batch activity, counts and telemetry all come from live pipeline
+        events. The model roles shown per stage are the pipeline's code configuration; individual per-call
+        token counts aren't streamed (they're totalled at run end).
       </p>
     </div>
   )
