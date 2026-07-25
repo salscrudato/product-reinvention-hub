@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import { useProductCtx } from '../../context/useProductCtx'
 import { useCapture } from '../../context/useCapture'
 import { Badge, Skeleton, EmptyState, RefChip, Button } from '../../components/ui'
-import { IconForm, IconClose, IconSparkle, IconSpinner, IconArrowRight, IconStates, IconLink, IconFilter, IconEdit } from '../../components/ui/icons'
+import { IconForm, IconClose, IconSparkle, IconSpinner, IconArrowRight, IconStates, IconLink, IconFilter, IconEdit, IconPlus, IconTrash } from '../../components/ui/icons'
 import { adapter } from '../../lib/backend'
 import { useUser } from '../../context/useUser'
 import { canI } from '../../lib/canI'
@@ -23,7 +23,9 @@ import { CommandBar } from '../../features/search/CommandBar'
 import { ActiveFilters } from '../../features/search/ActiveFilters'
 import { formsSchema } from '../../features/forms/formsSchema'
 import type { WithId } from '../../context/ProductContext'
-import type { Form, Coverage } from '@pf/shared'
+import type { Form, Coverage, DynamicField, DynamicFieldType } from '@pf/shared'
+
+const DF_TYPES: DynamicFieldType[] = ['TEXT', 'CURRENCY', 'DATE', 'LIST', 'PERCENT']
 
 const CAT_COLOR: Record<string, 'blue' | 'purple' | 'warn' | 'danger' | 'good' | 'default'> = {
   BASE_COVERAGE: 'purple', DECLARATIONS: 'blue', ENDORSEMENT: 'good',
@@ -40,6 +42,7 @@ type FormDraft = {
   name: string; edition: string; category: string; source: string
   dynamic: boolean; mandatoryDefault: boolean; attachmentCondition: string
   allStates: boolean; statesStr: string; description: string
+  dynamicFields: DynamicField[]
 }
 
 function makeDraft(f: WithId<Form>): FormDraft {
@@ -48,6 +51,8 @@ function makeDraft(f: WithId<Form>): FormDraft {
     source: f.source ?? '', dynamic: f.dynamic ?? false, mandatoryDefault: f.mandatoryDefault ?? false,
     attachmentCondition: f.attachmentCondition ?? 'NONE', allStates: f.allStates ?? true,
     statesStr: (f.states ?? []).join(', '), description: f.description ?? '',
+    // Deep-copy so row edits never mutate the live form doc before Save.
+    dynamicFields: (f.dynamicFields ?? []).map(d => ({ ...d, options: d.options ? [...d.options] : undefined })),
   }
 }
 
@@ -66,6 +71,13 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
   const [draft, setDraft]       = useState<FormDraft>(() => makeDraft(form))
   const [generating, setGenerating] = useState(false)
   const set = <K extends keyof FormDraft>(k: K, v: FormDraft[K]) => setDraft(p => ({ ...p, [k]: v }))
+  // Dynamic-field row edits (name / type / repeating).
+  const setDf = (i: number, patch: Partial<DynamicField>) =>
+    setDraft(p => ({ ...p, dynamicFields: p.dynamicFields.map((d, j) => (j === i ? { ...d, ...patch } : d)) }))
+  const addDf = () =>
+    setDraft(p => ({ ...p, dynamicFields: [...p.dynamicFields, { name: '', dataType: 'TEXT', repeating: false }] }))
+  const removeDf = (i: number) =>
+    setDraft(p => ({ ...p, dynamicFields: p.dynamicFields.filter((_, j) => j !== i) }))
 
   // Reset all local state when a different form is selected.
   useEffect(() => { setDraft(makeDraft(form)); setEditMode(false) }, [form.id])
@@ -90,16 +102,22 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
       const states = draft.allStates
         ? []
         : draft.statesStr.split(/[\s,]+/).map(s => s.trim().toUpperCase()).filter(Boolean)
+      // Clean dynamic fields: trim names and drop nameless rows (a field needs a name to
+      // be meaningful). A form carrying fillable fields is, by definition, dynamic.
+      const dynamicFields = draft.dynamicFields
+        .map(d => ({ ...d, name: d.name.trim() }))
+        .filter(d => d.name)
       await adapter.db.mutate({
         op: 'update', path: `forms/${form.id}`, entityType: 'form', productId: pid, actor,
         expectedRev: (form as { rev?: number }).rev,
         data: {
           name: draft.name.trim(), edition: draft.edition.trim() || null,
           category: draft.category, source: draft.source.trim(),
-          dynamic: draft.dynamic, mandatoryDefault: draft.mandatoryDefault,
+          dynamic: draft.dynamic || dynamicFields.length > 0, mandatoryDefault: draft.mandatoryDefault,
           attachmentCondition: draft.attachmentCondition,
           allStates: draft.allStates, states,
           description: draft.description.trim() || null,
+          dynamicFields,
         },
       })
       toast.success('Form saved')
@@ -274,20 +292,53 @@ function FormDetail({ form, coverages, onOpenCoverage }: {
         )}
       </Section>
 
-      {/* Dynamic fields — read-only (structure editing not supported in this panel) */}
-      {form.dynamicFields?.length > 0 && (
-        <Section icon={<IconForm size={15} aria-hidden="true" />} title="Dynamic fields" count={form.dynamicFields.length}>
-          <div className="flex flex-col gap-1.5">
-            {form.dynamicFields.map(f => (
-              <div key={f.name} className="flex items-center justify-between px-3 py-2 bg-raised rounded-[9px] text-sm">
-                <span className="font-medium text-text">{f.name}</span>
-                <div className="flex items-center gap-1.5">
-                  <Badge label={f.dataType} color="default" />
-                  {f.repeating && <Badge label="repeating" color="blue" />}
+      {/* Dynamic fields — the data printed ON this form (name · type · repeats). Editable
+          in Edit mode: add, rename, retype, toggle repeating, or remove. Shown in edit mode
+          even when empty so the first field can be added. Imported options / dates / notes on
+          a field are preserved on save (they ride along untouched). */}
+      {(editMode || (form.dynamicFields?.length ?? 0) > 0) && (
+        <Section icon={<IconForm size={15} aria-hidden="true" />} title="Dynamic fields"
+          count={editMode ? draft.dynamicFields.length : (form.dynamicFields?.length ?? 0)}>
+          {editMode ? (
+            <div className="flex flex-col gap-1.5">
+              {draft.dynamicFields.map((f, i) => (
+                <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 bg-raised rounded-[9px]">
+                  <input value={f.name} onChange={e => setDf(i, { name: e.target.value })} placeholder="Field name"
+                    aria-label="Dynamic field name"
+                    className="flex-1 min-w-0 h-8 px-2 rounded-[6px] bg-surface border border-border-strong text-sm text-text focus:outline-none focus:ring-1 focus:ring-accent/25" />
+                  <select value={f.dataType} onChange={e => setDf(i, { dataType: e.target.value as DynamicFieldType })}
+                    aria-label="Data type"
+                    className="h-8 px-1.5 rounded-[6px] bg-surface border border-border-strong text-xs font-medium text-dim shrink-0 focus:outline-none focus:ring-1 focus:ring-accent/25">
+                    {DF_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <label className="flex items-center gap-1 text-[11px] text-dim cursor-pointer px-1 shrink-0" title="Repeats once per entry (e.g. per driver)">
+                    <input type="checkbox" className="accent-accent" checked={f.repeating} onChange={e => setDf(i, { repeating: e.target.checked })} />
+                    rep
+                  </label>
+                  <button onClick={() => removeDf(i)} aria-label={`Remove ${f.name || 'field'}`}
+                    className="w-7 h-7 rounded-[6px] flex items-center justify-center text-faint hover:text-danger hover:bg-[var(--color-danger-hover)] transition-colors shrink-0">
+                    <IconTrash size={13} aria-hidden="true" />
+                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+              <button onClick={addDf}
+                className="inline-flex items-center gap-1.5 self-start mt-0.5 px-2.5 h-8 rounded-[7px] text-xs font-medium text-accent hover:bg-accent-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent">
+                <IconPlus size={13} aria-hidden="true" />Add field
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {(form.dynamicFields ?? []).map((f, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2 bg-raised rounded-[9px] text-sm">
+                  <span className="font-medium text-text truncate">{f.name}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge label={f.dataType} color="default" />
+                    {f.repeating && <Badge label="repeating" color="blue" />}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Section>
       )}
     </div>
