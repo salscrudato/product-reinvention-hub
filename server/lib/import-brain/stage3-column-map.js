@@ -192,7 +192,11 @@ async function mapColumns(classified, locks, fpByName, budget, review) {
     const lock = lockMap.get(sheet.sheetName)
     const fp   = fpByName.get(sheet.sheetName)
     if (!fp || !lock) return null
-    if (sheet.sheetName.includes('::')) return null  // skip stacked sub-sheet pseudo-names
+    // (No `::` guard here. `classified` is built from structural.sheets, so every
+    // sheetName is a real worksheet name — a compound `sheet::sub` pseudo-name has
+    // never reached this list. The guard that used to sit here could not fire, and
+    // reading as if it handled the stacked case is what let the missing sheet-level
+    // lock go unnoticed. Stacked sub-table pseudo-names live only in `locks`.)
 
     const entityKinds = DOMAIN_ENTITY_KINDS[sheet.domain] || []
     const dictionary  = buildDomainDictionary(entityKinds)

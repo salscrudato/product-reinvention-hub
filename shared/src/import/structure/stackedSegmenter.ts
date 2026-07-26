@@ -203,6 +203,7 @@ export function segmentStackedTables(cells: NormalizedCell[][]): SubTable[] {
       startRow:        blockStart,
       endRow:          blockEnd,
       headerRowIndex:  subHdrRow,
+      cellsStartRow:   subHdrRow,   // cells[k] is parent-grid row subHdrRow + k
       cells:           subCells,
       columnProfiles:  colProfiles,
       metaBlock,

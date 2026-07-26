@@ -41,6 +41,8 @@ vi.mock('../../server/lib/fleet', () => ({
 const { extendTruncatedGrids } = require('../../server/lib/import-brain/stage0-router.js')
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { resolveCitationsDeterministic } = require('../../server/lib/import-brain/stage5-validate.js')
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { fingerprintGrid } = require('../../server/lib/import-brain-shared.cjs')
 
 const CAP_ROWS = 2000
 
@@ -115,21 +117,53 @@ describe('F09: truncated fingerprints upgrade to the authoritative raw grid', ()
     expect(w.detail).toMatch(/ARE extracted via column continuation/)
   })
 
-  it('STACKED_TABLES never claims continuation — its extraction ignores fp.cells', () => {
-    // Stacked extraction reads fp.subTables (segmented from the CAPPED grid at
-    // fingerprint time). An upgraded fp.cells would NOT be consumed, so claiming
-    // "IS extracted" would be a false conservation attestation (judge-found).
-    const { fp, raw } = bigFixture(2009)
-    ;(fp as { layoutShape: string }).layoutShape = 'STACKED_TABLES'
-    ;(fp as { subTables?: unknown[] }).subTables = [{ cells: fp.cells.slice(0, 50) }]
+  it('STACKED_TABLES upgrades AND re-segments — the tail is recovered, not attested away', () => {
+    // RE-BASELINED. This case used to pin the opposite: "STACKED_TABLES never claims
+    // continuation". That was honest bookkeeping of a real limitation — stacked
+    // extraction reads fp.subTables, segmented from the CAPPED grid at fingerprint
+    // time, so an upgraded fp.cells genuinely would not have been consumed, and
+    // claiming "IS extracted" would have been a false conservation attestation.
+    //
+    // The limitation is now fixed at the cause rather than reported: after the grid
+    // is upgraded, stage 0 RE-INVOKES segmentStackedTables (pure, deterministic)
+    // against the uncapped grid, so the blocks past the cap become real sub-tables
+    // and their rows really are extracted. The attestation is true now, so the test
+    // asserts the recovery. Nothing here was loosened — see the sub-table count and
+    // tail-value checks, which the old behaviour could not have satisfied.
+    // "Head" is long enough that "Tail"'s marker row falls PAST the 2000-row cap,
+    // so the capped grid cannot see the second block at all.
+    const stackedRaw: (string | null)[][] = [['TABLE NAME: Head'], ['RULE ID: GL.RU001'], ['Id', 'Name']]
+    for (let i = 0; i < 2100; i++) stackedRaw.push([`GL.A.${String(i).padStart(4, '0')}`, `A ${i}`])
+    stackedRaw.push([null])
+    const tailMarker = stackedRaw.length
+    stackedRaw.push(['TABLE NAME: Tail'], ['RULE ID: GL.RU002'], ['Id', 'Name'])
+    for (let i = 0; i < 1200; i++) stackedRaw.push([`GL.B.${String(i).padStart(4, '0')}`, `B ${i}`])
+    expect(tailMarker).toBeGreaterThan(CAP_ROWS)
+
+    const fpFull = fingerprintGrid({ sheet: 'BIG', cells: stackedRaw })
+    expect(fpFull.cellsTruncated).toBe(true)
+    // The capped grid holds only ONE marker, and both stacked detectors need >= 2 —
+    // so this genuinely stacked sheet does not even fingerprint as stacked. That is
+    // the second, independent loss the cap caused.
+    expect(fpFull.layoutShape).toBe('FLAT_TABLE')
+    expect(fpFull.subTables).toBeUndefined()
+
     const warnings: Array<{ kind: string; detail: string }> = []
-    extendTruncatedGrids({ sheets: [fp] }, [{ sheet: 'BIG', file: 'w.xlsx', cells: raw }], 'w.xlsx', warnings)
-    expect(fp.cells.length).toBe(CAP_ROWS)      // NOT upgraded
-    expect(fp.cellsTruncated).toBe(true)
+    extendTruncatedGrids({ sheets: [fpFull] }, [{ sheet: 'BIG', file: 'w.xlsx', cells: stackedRaw }], 'w.xlsx', warnings)
+
+    expect(fpFull.cells).toHaveLength(stackedRaw.length)   // upgraded
+    expect(fpFull.cellsTruncated).toBe(false)
+    expect(fpFull.layoutShape).toBe('STACKED_TABLES')      // re-detected against the full grid
+    expect(fpFull.subTables).toHaveLength(2)               // "Tail" recovered
+    expect(fpFull.subTables!.map(s => s.name)).toEqual(['Head', 'Tail'])
+    // The recovered block's last row is really present, byte-for-byte.
+    expect(fpFull.cells![stackedRaw.length - 1]![0]).toBe('GL.B.1199')
+
     const w = warnings.find(x => x.kind === 'grid-truncated')!
-    expect(w.detail).toMatch(/NOT extracted/i)
-    expect(w.detail).toMatch(/stacked/i)
-    expect(w.detail).not.toMatch(/IS extracted/)
+    expect(w.detail).toMatch(/ARE extracted via continuation/)
+    expect(w.detail).not.toMatch(/NOT extracted/)
+    expect(warnings.find(x => x.kind === 'stacked-redetected')!.detail).toMatch(/fingerprinted as FLAT_TABLE/)
+    expect(warnings.find(x => x.kind === 'stacked-resegmented')!.detail).toMatch(/0 sub-table\(s\) from the capped grid became 2/)
   })
 
   it('column-only truncation: honest wording, no phantom row loss, no false "no raw grid"', () => {

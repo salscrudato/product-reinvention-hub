@@ -13,6 +13,15 @@ export { CANONICAL_MAP, SURFACED_COLUMNS } from './canonicalMap'
 // with the real normalized cell grid embedded (SheetFingerprint.cells).
 export { buildStructuralModel, fingerprintGrid, MAX_EMBED_ROWS, MAX_EMBED_COLS } from './structure/modelBuilder'
 export { normalizeCellValue } from './structure/sentinels'
+// Stacked sub-table segmentation + layout detection. Both are pure and deterministic
+// over their cell grid, so the stage-0 router RE-INVOKES them after upgrading a
+// truncated fingerprint to the authoritative uncapped grid. Two distinct losses ride
+// on this: sub-tables segmented from the capped grid stop at the 2000-row cap (on a
+// 7,184-row sheet that leaves 197 of 237 blocks unsegmented), and a sheet whose SECOND
+// marker falls past the cap does not even register as STACKED_TABLES, because both
+// detectors require >= 2 markers to fire.
+export { segmentStackedTables } from './structure/stackedSegmenter'
+export { detectLayoutShape } from './structure/layoutDetector'
 // LOB inference for the router's line-of-business hint: refIds are DERIVED from the
 // registry (prefix match / signal inference) — never invented by a model.
 export { LOB_REGISTRY, resolveLobByRefId, inferLob, synthesizeRefId, refIdSegmentKind } from '../insurance/lobRegistry'

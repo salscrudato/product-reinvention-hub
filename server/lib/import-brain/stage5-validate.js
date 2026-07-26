@@ -99,11 +99,14 @@ function resolveCitationsDeterministic(entities, fpByName, review) {
   }
 
   for (const e of entities) {
-    // Stacked-table layouts have no absolute grid rows — row labels are approximate,
-    // so mismatches there warn instead of block.
+    // No layout gets a softer severity. The stacked exemption that used to live here
+    // ("stacked-table layouts have no absolute grid rows — row labels are approximate,
+    // so mismatches there warn instead of block") was true only because gatherRows
+    // returned gridRows:null for stacked sheets and every row label below the first
+    // sub-table was genuinely wrong. Sub-tables now carry an absolute cellsStartRow,
+    // so a stacked citation is exactly as resolvable as a flat one — and a mismatch
+    // is a real fabrication signal, not an artifact of unanchored rows.
     const entityFp = fpByName.get(e.sourceSheet)
-    const stacked = entityFp?.layoutShape === 'STACKED_TABLES'
-    const blockSeverity = stacked ? 'WARN' : 'BLOCKING'
 
     for (const f of e.fields ?? []) {
       const cit = f.citation
@@ -119,11 +122,9 @@ function resolveCitationsDeterministic(entities, fpByName, review) {
       if (!cit || !cit.cell) {
         const vs = String(f.value ?? '').trim()
         if (vs && strict) {
-          const sev = blockSeverity
-          push('uncited-strict-id', sev, e, f.fieldName,
+          push('uncited-strict-id', 'BLOCKING', e, f.fieldName,
             `strict id "${vs.slice(0, 80)}" carries no citation cell — an uncited id cannot be byte-compared against the source, so it cannot be distinguished from a fabricated one`)
-          if (sev === 'BLOCKING') blockEntity(e, `uncited strict id on ${f.fieldName}: "${vs.slice(0, 80)}"`)
-          else e.reviewFlag = true
+          blockEntity(e, `uncited strict id on ${f.fieldName}: "${vs.slice(0, 80)}"`)
         } else if (vs && String(cit?.verbatim ?? '').trim() !== '') {
           push('uncited-field', 'WARN', e, f.fieldName,
             `verbatim "${String(cit.verbatim).slice(0, 60)}" carries no citation cell — there is nothing to ground it against`)
@@ -135,7 +136,7 @@ function resolveCitationsDeterministic(entities, fpByName, review) {
       if (!citFp || !Array.isArray(citFp.cells) || citFp.cells.length === 0) continue  // legacy fingerprint — nothing authoritative to resolve against
       const ref = parseCellRef(cit.cell)
       if (!ref || ref.row < 0 || ref.row >= citFp.cells.length || ref.col < 0) {
-        const sev = strict ? blockSeverity : 'WARN'
+        const sev = strict ? 'BLOCKING' : 'WARN'
         push('invalid-citation-pointer', sev, e, f.fieldName, `citation "${cit.sheet}!${cit.cell}" does not resolve to a cell in the source grid (${citFp.cells.length} rows)`)
         if (sev === 'BLOCKING') blockEntity(e, `invalid citation pointer on ${f.fieldName} (${cit.sheet}!${cit.cell})`)
         else e.reviewFlag = true
@@ -146,10 +147,8 @@ function resolveCitationsDeterministic(entities, fpByName, review) {
       if (strict) {
         const vs = String(f.value ?? '').trim()
         if (vs && actualStr !== vs && !actualStr.includes(vs)) {
-          const sev = blockSeverity
-          push('fabricated-strict-id', sev, e, f.fieldName, `cited cell ${cit.sheet}!${cit.cell} contains "${actualStr.slice(0, 80)}", not "${vs}" — strict ids must be byte-for-byte from the source`)
-          if (sev === 'BLOCKING') blockEntity(e, `fabricated strict id on ${f.fieldName}: "${vs}" not in cited cell ${cit.sheet}!${cit.cell}`)
-          else e.reviewFlag = true
+          push('fabricated-strict-id', 'BLOCKING', e, f.fieldName, `cited cell ${cit.sheet}!${cit.cell} contains "${actualStr.slice(0, 80)}", not "${vs}" — strict ids must be byte-for-byte from the source`)
+          blockEntity(e, `fabricated strict id on ${f.fieldName}: "${vs}" not in cited cell ${cit.sheet}!${cit.cell}`)
         }
       } else if (String(cit.verbatim ?? '').trim() !== '' && actualStr !== '') {
         if (canonLoose(actualStr) !== canonLoose(cit.verbatim)) {
@@ -168,9 +167,8 @@ function resolveCitationsDeterministic(entities, fpByName, review) {
       if (!refIdSet.has(target)) {
         const fpp = (pf.citation.sheet && fpByName.get(pf.citation.sheet)) || entityFp
         if (!sheetHasToken(fpp, target)) {
-          push('unresolvable-relation-target', blockSeverity, e, 'parentId', `parentId "${target}" matches no extracted entity and appears nowhere in the source sheet — fabricated relation target`)
-          if (blockSeverity === 'BLOCKING') blockEntity(e, `unresolvable relation target parentId="${target}"`)
-          else e.reviewFlag = true
+          push('unresolvable-relation-target', 'BLOCKING', e, 'parentId', `parentId "${target}" matches no extracted entity and appears nowhere in the source sheet — fabricated relation target`)
+          blockEntity(e, `unresolvable relation target parentId="${target}"`)
         } else {
           push('unresolvable-relation-target', 'WARN', e, 'parentId', `parentId "${target}" matches no extracted entity (present in the source sheet — may resolve via the deterministic join)`)
           e.reviewFlag = true

@@ -72,6 +72,17 @@ async function lockHeaders(classified, fpByName, budget, review) {
     if (!fp) continue
 
     // STACKED_TABLES: lock per sub-table using fingerprinter sub-table data.
+    //
+    // The compound `sheet::sub` keys are descriptive only — NOTHING reads them back.
+    // Stages 3 and 4 both index locks by the plain worksheet name (the name every
+    // ClassifiedSheet carries), so a stacked sheet that published only compound keys
+    // missed its lock lookup, produced no column map, and dropped out of extraction
+    // at stage4-extract.js's `if (!fp || !lock || !colMap) return null` — silently,
+    // with no review item. Publishing the SHEET-level lock alongside is the smaller
+    // of the two available fixes: ~10 lines in this file, versus teaching stages 3,
+    // 4 and 6 to iterate compound names (three stages, a per-sub-table column-map
+    // shape, and new reconcile accounting). It also activates the stacked branch
+    // gatherRows already carries for exactly this path, which has been unreachable.
     if (fp.layoutShape === 'STACKED_TABLES' && fp.subTables && fp.subTables.length > 0) {
       for (const sub of fp.subTables) {
         locks.push({
@@ -82,6 +93,18 @@ async function lockHeaders(classified, fpByName, budget, review) {
           isConfirmed:    true,
         })
       }
+      // The lookup key the map/extract stages actually use. headerRowIndex is the
+      // FIRST sub-table's header row — a real header row on this sheet, so the cell
+      // references stage 3 builds from it point at a genuine header cell rather than
+      // at a preamble banner.
+      locks.push({
+        sheetName:      fp.sheetName,
+        headerRowIndex: fp.subTables[0].headerRowIndex,
+        layoutShape:    'STACKED_TABLES',
+        columnCount:    fp.dataColCount,
+        subTableCount:  fp.subTables.length,
+        isConfirmed:    true,
+      })
       continue
     }
 

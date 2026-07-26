@@ -397,14 +397,17 @@ function extendTruncatedGrids(structural, isoGrids, docName, warnings) {
     const rowsPastCap = Math.max(0, (fp.dataRowCount ?? 0) - embeddedRows)
     const colsPastCap = Math.max(0, (fp.dataColCount ?? 0) - embeddedWidth)
     const raw = bySheet.get(fp.sheetName)
-    // STACKED_TABLES extraction reads fp.subTables — segmented from the CAPPED
-    // grid at fingerprint time, never from fp.cells — so an upgraded grid would
-    // NOT be consumed; claiming continuation there would be a false conservation
-    // attestation. Keep the honest NOT-extracted warning for that shape.
-    const consumesCells = fp.layoutShape !== 'STACKED_TABLES' || !Array.isArray(fp.subTables) || fp.subTables.length === 0
+    // STACKED_TABLES extraction reads fp.subTables, which were segmented from the
+    // CAPPED grid at fingerprint time. That used to mean an upgraded fp.cells would
+    // not be consumed, so this function refused to extend the shape and warned
+    // honestly that the tail was lost. The refusal was the bug, not the honesty:
+    // on CORE "Rule References" (7,184 rows) segmentation saw 2,000 rows and found
+    // 40 of 237 sub-tables — 197 blocks warned about and then permanently dropped.
+    // segmentStackedTables is pure and deterministic over its grid, so the fix is to
+    // upgrade the grid like any other shape and RE-SEGMENT against it (below).
     let rowsRecovered = false
     let colsRecovered = false
-    if (consumesCells && raw && Array.isArray(raw.cells) && raw.cells.length >= embeddedRows && rowsPastCap > 0) {
+    if (raw && Array.isArray(raw.cells) && raw.cells.length >= embeddedRows && rowsPastCap > 0) {
       fp.cells = embeddedWidth > 0 ? raw.cells.map(r => (r ?? []).slice(0, embeddedWidth)) : raw.cells
       fp.cellsExtended = true
       rowsRecovered = true
@@ -413,7 +416,7 @@ function extendTruncatedGrids(structural, isoGrids, docName, warnings) {
     // continuation. The authoritative uncapped grid widens fp.cells and the extra
     // columns gain continuation columnProfiles so stage 3 maps them and stage 4
     // extracts them (a 148-column PCM loses columns 129-148 without this).
-    if (consumesCells && raw && Array.isArray(raw.cells) && colsPastCap > 0 && Array.isArray(fp.cells) && Array.isArray(fp.columnProfiles)) {
+    if (raw && Array.isArray(raw.cells) && colsPastCap > 0 && Array.isArray(fp.cells) && Array.isArray(fp.columnProfiles)) {
       const fullWidth = raw.cells.reduce((m, r) => Math.max(m, (r ?? []).length), 0)
       const priorWidth = fp.cells[0]?.length ?? 0
       if (fullWidth > priorWidth) {
@@ -443,6 +446,37 @@ function extendTruncatedGrids(structural, isoGrids, docName, warnings) {
         colsRecovered = true
       }
     }
+    // Re-detect and re-segment against the grid the sheet now actually has. Both are
+    // pure re-invocations of the SAME deterministic functions the fingerprinter ran —
+    // no second parser, no heuristic — so the recovered blocks are byte-identical to
+    // what a large-enough cap would have produced in the first place, and each carries
+    // its own absolute cellsStartRow so citations below the first sub-table resolve to
+    // the right Excel row.
+    //
+    // Re-DETECTION matters independently of re-segmentation: hasStackedTableMarkers and
+    // hasTableNameOnlyMarkers both require >= 2 markers, so a stacked sheet whose second
+    // marker sits past the cap fingerprints as FLAT_TABLE and never reaches the stacked
+    // path at all. Adding rows can only reveal markers, never hide them, so this can
+    // only promote a shape TO stacked — no other shape is ever rewritten.
+    if ((rowsRecovered || colsRecovered) && Array.isArray(fp.cells)) {
+      const wasShape = fp.layoutShape
+      if (wasShape !== 'STACKED_TABLES') {
+        const bhr = fp.bestHeaderRow ?? -1
+        if (brainShared.detectLayoutShape(fp.cells, bhr) === 'STACKED_TABLES') {
+          fp.layoutShape = 'STACKED_TABLES'
+          warnings.push({ kind: 'stacked-redetected', doc: docName, detail: `Sheet "${fp.sheetName}": the capped grid held only one sub-table marker so the sheet fingerprinted as ${wasShape}; against the uncapped grid it is STACKED_TABLES.` })
+        }
+      }
+      if (fp.layoutShape === 'STACKED_TABLES') {
+        const before = Array.isArray(fp.subTables) ? fp.subTables.length : 0
+        fp.subTables = brainShared.segmentStackedTables(fp.cells)
+        fp.subTablesResegmented = true
+        if (fp.subTables.length !== before) {
+          warnings.push({ kind: 'stacked-resegmented', doc: docName, detail: `Sheet "${fp.sheetName}": re-segmented against the uncapped grid — ${before} sub-table(s) from the capped grid became ${fp.subTables.length}; the ${fp.subTables.length - before} block(s) past the cap ARE extracted.` })
+        }
+      }
+    }
+
     if (rowsRecovered || colsRecovered) {
       fp.cellsTruncated = !(rowsRecovered || rowsPastCap === 0) || !(colsRecovered || colsPastCap === 0)
       warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}": embed caps exceeded — ${rowsPastCap > 0 ? `${rowsPastCap} row(s) past the ${brainShared.MAX_EMBED_ROWS}-row cap ${rowsRecovered ? 'ARE extracted via continuation windows' : 'are NOT extracted'}` : 'all rows covered'}; ${colsPastCap > 0 ? `${colsPastCap} column(s) past the ${brainShared.MAX_EMBED_COLS}-column cap ${colsRecovered ? 'ARE extracted via column continuation' : 'are NOT extracted'}` : 'all columns covered'}.` })
@@ -451,8 +485,10 @@ function extendTruncatedGrids(structural, isoGrids, docName, warnings) {
       // absent past the embed width): honest exact-loss wording, no phantom rows.
       warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}": ${fp.dataColCount} columns exceed the ${brainShared.MAX_EMBED_COLS}-column embed cap — ${colsPastCap} column(s) are NOT extracted; all rows are covered.` })
     } else {
-      const why = !consumesCells ? 'stacked-table layout extracts from segmented sub-tables, not the raw grid' : 'no raw grid on this path'
-      warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}" exceeds the embed cap (${fp.dataRowCount} rows${colsPastCap > 0 ? `, ${fp.dataColCount} columns` : ''}) — ${rowsPastCap} row(s)${colsPastCap > 0 ? ` and ${colsPastCap} column(s)` : ''} past the cap are NOT extracted (${why}); review the tail manually.` })
+      // Only one case still reaches here: no raw grid to upgrade from (legacy
+      // structural path, corrupt read). State the EXACT loss, never a vague
+      // "review manually" alone.
+      warnings.push({ kind: 'grid-truncated', doc: docName, detail: `Sheet "${fp.sheetName}" exceeds the embed cap (${fp.dataRowCount} rows${colsPastCap > 0 ? `, ${fp.dataColCount} columns` : ''}) — ${rowsPastCap} row(s)${colsPastCap > 0 ? ` and ${colsPastCap} column(s)` : ''} past the cap are NOT extracted (no raw grid on this path); review the tail manually.` })
     }
   }
 }

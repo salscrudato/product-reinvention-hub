@@ -774,11 +774,31 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, gridRows, detEntit
 // Returns { rows, gridRows }: gridRows[i] is row i's ABSOLUTE 0-based index in the
 // embedded grid (P0-6 / ledger F07 adjunct): blank interior rows are filtered out
 // of `rows`, so the old `i + headerRow + 2` cell references drifted below the first
-// gap — every citation after it pointed at the wrong row. gridRows is null for
-// stacked/legacy shapes where no absolute grid exists.
+// gap — every citation after it pointed at the wrong row. gridRows is null only for
+// the legacy synthetic-row fallback, where no absolute grid exists at all.
 function gatherRows(fp, headerRowIndex) {
   if (fp.layoutShape === 'STACKED_TABLES' && fp.subTables && fp.subTables.length > 0) {
-    return { rows: fp.subTables.flatMap(sub => (sub.cells || []).slice(1)), gridRows: null }  // skip sub-header row
+    // Every sub-table anchors its own rows. `sub.cells[k]` is absolute grid row
+    // `sub.cellsStartRow + k`, so concatenating sub-tables no longer destroys the
+    // row identity: previously this returned gridRows:null and excelRowOf fell back
+    // to `rowIdx + headerRow + 2`, which counts a FLAT sheet from ONE header. On a
+    // stacked sheet that formula is right only inside the first sub-table and drifts
+    // by the size of every preceding block thereafter — so every citation below the
+    // first sub-table pointed at the wrong Excel row.
+    const rows = []
+    const gridRows = []
+    for (const sub of fp.subTables) {
+      const cells = sub.cells || []
+      // Fall back to headerRowIndex for fingerprints built before cellsStartRow existed.
+      const startRow = sub.cellsStartRow ?? sub.headerRowIndex ?? 0
+      for (let k = 1; k < cells.length; k++) {          // k=0 is the sub-table's own header row
+        const row = cells[k]
+        if (!row || !row.some(c => c !== null)) continue // blank interior row, same rule as the flat path
+        rows.push(row)
+        gridRows.push(startRow + k)
+      }
+    }
+    return { rows, gridRows }
   }
   if (Array.isArray(fp.cells) && fp.cells.length > 0) {
     const start = Math.max(0, (headerRowIndex ?? fp.bestHeaderRow ?? -1) + 1)
@@ -843,11 +863,23 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
   // PRE-SYNTHESIS entities; the SYNTH pass runs afterwards over the ordered
   // results so placeholder numbering stays deterministic across runs.
   async function extractSheet(sheet) {
-    if (sheet.sheetName.includes('::')) return null
+    // (No `::` guard — see stage3-column-map.js: compound pseudo-names never enter
+    // `classified`, only `locks`.)
     const fp     = fpByName.get(sheet.sheetName)
     const lock   = lockMap.get(sheet.sheetName)
     const colMap = colMapOf.get(sheet.sheetName)
-    if (!fp || !lock || !colMap) return null
+    if (!fp || !lock || !colMap) {
+      // This bail used to be silent, which is how a whole stacked sheet could vanish
+      // from a run with nothing to show for it. A sheet that reaches extraction and
+      // produces nothing is a reportable loss, not a no-op.
+      if (fp) {
+        review.push({
+          kind: 'unmapped-sheet', sheetName: sheet.sheetName,
+          detail: `"${sheet.sheetName}" (${fp.layoutShape}) reached extraction with no ${!lock ? 'header lock' : 'column map'} — zero rows extracted from it.`,
+        })
+      }
+      return null
+    }
 
     // ── CE3 Step 7: per-sheet resume — a checkpointed sheet is NEVER re-extracted.
     if (extras.completedSheets instanceof Map && extras.completedSheets.has(sheet.sheetName)) {
@@ -1082,4 +1114,5 @@ module.exports = {
   // Test seams (hardening fixtures — pure helpers, no AI):
   reconcileEntities, expandMultiRefIds, resolveConflicts, rowKind, parseExtraction, synthesizeRefId,
   deterministicExtract, buildExtractionPrompt, buildBlindExtractionPrompt,
+  gatherRows, excelRowOf,
 }

@@ -58,7 +58,13 @@ export interface SubTable {
   startRow: number        // 0-based index in the parent cells array (first marker row)
   endRow: number          // 0-based, inclusive (last row before next marker or sheet end)
   headerRowIndex: number  // 0-based index in the parent cells array where column headers live
-  cells: NormalizedCell[][] // cells from headerRowIndex to endRow (inclusive)
+  // ABSOLUTE 0-based parent-grid row of cells[0]. This is the anchor that makes a
+  // citation from a sub-table resolvable: cells[k] is parent-grid row
+  // cellsStartRow + k, hence Excel row cellsStartRow + k + 1. It equals
+  // headerRowIndex today, and is carried explicitly so that changing WHERE `cells`
+  // begins can never silently shift every citation below the first sub-table.
+  cellsStartRow: number
+  cells: NormalizedCell[][] // cells from cellsStartRow (== headerRowIndex) to endRow (inclusive)
   columnProfiles: ColumnProfile[]
   metaBlock: Record<string, string>  // key: value pairs parsed above the column headers
 }

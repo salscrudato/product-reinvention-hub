@@ -1,0 +1,65 @@
+{
+  "what": "Before/after measurement of stacked-sheet structural recovery on the two Hagerty spec workbooks.",
+  "method": {
+    "harness": "Offline. Runs the REAL server-side path against the real workbooks: the dense grid read from workbook.js (every row 1..lastRow via getRow, hidden rows included), then brainShared.fingerprintGrid, then stage0-router.extendTruncatedGrids, then stage4-extract.gatherRows + excelRowOf.",
+    "before": "commit 5c5bc2f (marker grammar only). Where a symbol did not yet exist (gatherRows/excelRowOf were unexported), the baseline logic was inlined verbatim: rows = subTables.flatMap(sub => sub.cells.slice(1)), gridRows = null, excelRow = rowIdx + headerRow + 2.",
+    "after": "this commit.",
+    "citationRowAccuracy": "For each row handed to the extractor, resolve its Excel row and compare column A against the source grid at that row. Correct means the resolved row IS the row the value came from."
+  },
+  "eplus": {
+    "book": "Product Specifications _E+.xlsx",
+    "sheet": "E+ Rule References",
+    "sheetRows": 3651,
+    "before": {
+      "layoutShape": "STACKED_TABLES",
+      "gridRowsHeld": 2000,
+      "cellsTruncated": true,
+      "subTables": 21,
+      "rowsReachingExtractor": 1929,
+      "citationRowAccuracyOverall": 0.8372,
+      "citationRowAccuracyBelowFirstSubTable": 0.8369,
+      "citationRowsCorrectBelowFirst": "1611/1925",
+      "termBearingSubTables": 6,
+      "termBearingRows": 97,
+      "warning": "1651 row(s) past the cap are NOT extracted (stacked-table layout extracts from segmented sub-tables, not the raw grid)"
+    },
+    "after": {
+      "layoutShape": "STACKED_TABLES",
+      "gridRowsHeld": 3651,
+      "cellsTruncated": false,
+      "subTables": 40,
+      "resegmented": true,
+      "rowsReachingExtractor": 3331,
+      "citationRowAccuracyOverall": 1.0,
+      "citationRowAccuracyBelowFirstSubTable": 1.0,
+      "citationRowsCorrectBelowFirst": "3329/3329",
+      "termBearingSubTables": 19,
+      "termBearingRows": 173,
+      "warning": "1651 row(s) past the 2000-row cap ARE extracted via continuation windows; 21 sub-table(s) from the capped grid became 40"
+    },
+    "delta": {
+      "subTables": "+19 (+90.5%)",
+      "rowsReachingExtractor": "+1402 (+72.7%)",
+      "citationRowAccuracyBelowFirstSubTable": "0.8369 -> 1.0000",
+      "coverageTermSubstance": "term-bearing (LIMIT/DEDUCTIBLE) sub-tables 6 -> 19; term-bearing rows 97 -> 173 (+78.4%)"
+    }
+  },
+  "core": {
+    "book": "Product Specifications _Core.xlsx",
+    "sheet": "Rule References",
+    "sheetRows": 7203,
+    "before": { "subTables": 21, "note": "capped-grid segmentation; see citationRowAccuracyBelowFirstSubTable", "subTablesFromCappedGrid": 40, "rowsReachingExtractor": 1834, "citationRowAccuracyBelowFirstSubTable": 0.6278, "citationRowsCorrectBelowFirst": "1140/1816" },
+    "after": { "subTables": 237, "note": "re-segmented against the uncapped 7203-row grid" }
+  },
+  "coverageTermDensity": {
+    "metric": "coveragesWithTerm / coverages, the promote-e2e floor COV_TERM_FLOOR = 0.50",
+    "status": "NOT MEASURED — and deliberately not estimated.",
+    "why": "scripts/import-promote-e2e.mts computes this from coverages PERSISTED in Cosmos after a full live round-trip (brain import -> persist -> promote -> read back). It needs a running App Service host, Cosmos credentials and the Foundry fleet; stage 3 alone requires two live LLM reasoners, so no offline path can produce the number. Running it was out of scope for this change (a live import on these books takes 30-70 minutes and any redeploy destroys it mid-flight).",
+    "measuredInstead": "The offline PRECURSOR of the metric's numerator on the E+ stacked sheet: the LIMIT/DEDUCTIBLE-bearing sub-tables and rows that reach the extractor at all. That sheet is where E+ states its limits and deductibles ('Liability Limit: Available Limit(s) marked with X' x4, 'Deductible: Available Deductible(s) marked with X' x6), so it feeds term density directly. It rose from 6 sub-tables / 97 rows to 19 sub-tables / 173 rows. This is a bound on what term density CAN see, not term density itself."
+  },
+  "invariantsChecked": {
+    "hiddenRows": "Included. The grid read is dense (for r = 1..lastRow, ws.getRow(r)) and never consults row.hidden; E+ carries 2970 hidden rows of 3568 and CORE 1223 of 6583, and every one occupies its own grid index so it neither drops nor shifts the rows below it.",
+    "blankCells": "Untouched. A row the source leaves blank arrives with nulls; nothing is filled in.",
+    "refIdFidelity": "Byte-for-byte. Recovered values are the same string objects the grid holds, asserted by identity in tests/import-brain/stacked-recovery.test.ts."
+  }
+}
