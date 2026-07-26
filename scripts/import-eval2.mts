@@ -214,7 +214,15 @@ function scoreGolden(g: Golden2File, extracted: EvalEntity2[], accounted: Set<st
   // Linkage.
   const link = linkage2(extracted)
   if (link.parentWithRef > 0 && link.parentResolutionRate < T.parentResolutionRate) reds.push(`parentResolution=${link.parentResolutionRate.toFixed(3)}<1.0`)
-  if (link.ldTableRefResolutionRate != null && link.ldTableRefResolutionRate < T.ldTableRefResolutionRate) reds.push(`ldTableRef=${link.ldTableRefResolutionRate.toFixed(3)}<${T.ldTableRefResolutionRate}`)
+  // Table-reference resolution. linkage2 reports `null` when NO entity carries an ldTableRef, and
+  // the gate used to read that null as "n/a — pass". That made the threshold vacuous: at HEAD
+  // ldRefWithRef is 0 on all eight goldens, so the >=0.95 floor never once fired, including on
+  // files that extract 13 (CO_EnthusiastPlus) and 44 (CO_RV125) tables. A table nothing points at
+  // is an orphan, not an exemption: when the plan HAS tables, the effective resolution rate is 0.
+  // Only a plan with no tables at all is legitimately exempt.
+  const tablesExtracted = extracted.filter(e => /table/i.test(e.kind)).length
+  const ldRate = link.ldTableRefResolutionRate ?? (tablesExtracted > 0 ? 0 : null)
+  if (ldRate != null && ldRate < T.ldTableRefResolutionRate) reds.push(`ldTableRef=${ldRate.toFixed(3)}<${T.ldTableRefResolutionRate} (${link.ldRefResolved}/${link.ldRefWithRef} refs resolve over ${tablesExtracted} extracted table(s))`)
 
   // Hierarchy recall — a FLATTENED plan (subs promoted to top-level) must not pass vacuously.
   const goldenParentEdges: Golden2ParentEdge[] = []
@@ -265,8 +273,8 @@ function scoreGolden(g: Golden2File, extracted: EvalEntity2[], accounted: Set<st
   return {
     id: goldenName(g), coverage: g.coverage ?? 'full', pass: reds.length === 0, reds,
     metrics: {
-      accounting: acc, entityRecall: recall, numeric: { checked: numeric.checked, fidelity: numeric.fidelity }, citationResolve: citRate,
-      fabrication: fab, linkage: link, hierarchy: hier, counting, needsReview: nr, extractedByKind: countByKind, floors, censusReconcileReds,
+      accounting: acc, entityRecall: recall, numeric: { checked: numeric.checked, fidelity: numeric.fidelity, misses: numeric.misses }, citationResolve: citRate,
+      fabrication: fab, linkage: { ...link, tablesExtracted, ldTableRefResolutionRateEffective: ldRate }, hierarchy: hier, counting, needsReview: nr, extractedByKind: countByKind, floors, censusReconcileReds,
       goldenCompleteness: { rawNonEmpty, dispositioned, queued: g.agreement?.queued ?? 0, completeness: goldenCompleteness, warn: completenessWarn },
     },
   }

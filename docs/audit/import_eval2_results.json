@@ -1,5 +1,5 @@
 {
-  "runAt": "2026-07-17T02:58:27.867Z",
+  "runAt": "2026-07-26T20:03:00.160Z",
   "mode": "offline",
   "thresholds": {
     "unaccountedEntityCells": 0,
@@ -19,8 +19,8 @@
       "coverage": "sampled",
       "pass": false,
       "reds": [
-        "unaccountedEntityCells=64",
-        "substanceCoverage=0.909<0.985",
+        "unaccountedEntityCells=503",
+        "substanceCoverage=0.156<0.985",
         "numericFidelity=0.000<1.0",
         "hierarchyRecall=0.000<1.0 (127 golden edges, 0 reproduced)",
         "countingInvariants=3 (product:1<10,form:0<259,__TOTAL__:1608<2532)"
@@ -28,211 +28,211 @@
       "metrics": {
         "accounting": {
           "entityCells": 975,
-          "entityAccounted": 911,
-          "unaccountedEntityCells": 64,
+          "entityAccounted": 472,
+          "unaccountedEntityCells": 503,
           "substanceCells": 7585,
-          "substanceAccounted": 6895,
-          "substanceCoverage": 0.9090309822017139,
+          "substanceAccounted": 1182,
+          "substanceCoverage": 0.15583388266315096,
           "sampleUnaccounted": [
             {
-              "locus": "Coverage Summary!A3",
+              "locus": "Product Component Model!B6",
+              "disposition": "ENTITY",
+              "kind": "product"
+            },
+            {
+              "locus": "Product Component Model!C23",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!C24",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!E23",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!E24",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!H7",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H8",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H9",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H10",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H11",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H12",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H13",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H14",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H15",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H16",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H17",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H18",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H19",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H20",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H21",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H22",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H23",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!H24",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!G7",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!G8",
               "disposition": "ENTITY",
               "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B4",
+              "locus": "Product Component Model!G9",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B5",
+              "locus": "Product Component Model!G10",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B6",
+              "locus": "Product Component Model!G11",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "form"
             },
             {
-              "locus": "Coverage Summary!B7",
+              "locus": "Product Component Model!G12",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "form"
             },
             {
-              "locus": "Coverage Summary!B8",
+              "locus": "Product Component Model!G13",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "form"
             },
             {
-              "locus": "Coverage Summary!B9",
+              "locus": "Product Component Model!G14",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "form"
             },
             {
-              "locus": "Coverage Summary!B10",
+              "locus": "Product Component Model!G15",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B11",
+              "locus": "Product Component Model!G16",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "form"
             },
             {
-              "locus": "Coverage Summary!B12",
+              "locus": "Product Component Model!G17",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B13",
+              "locus": "Product Component Model!G18",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B14",
+              "locus": "Product Component Model!G19",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B15",
+              "locus": "Product Component Model!G20",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B16",
+              "locus": "Product Component Model!G21",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B17",
+              "locus": "Product Component Model!G22",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
+              "kind": "coverage"
             },
             {
-              "locus": "Coverage Summary!B18",
+              "locus": "Product Component Model!G23",
               "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Coverage Summary!B19",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Coverage Summary!B20",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Coverage Summary!B21",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Coverage Summary!B22",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Coverage Summary!B23",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Coverage Summary!B24",
-              "disposition": "ENTITY",
-              "kind": "subCoverage"
-            },
-            {
-              "locus": "Coverage Summary!C2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!D2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!E2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!F2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!G2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!H2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!I2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!J2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!K2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!L2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!M2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!N2",
-              "disposition": "ENTITY",
-              "kind": "product"
-            },
-            {
-              "locus": "Coverage Summary!C3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Summary!D3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Summary!E3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Summary!F3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Summary!G3",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Coverage Summary!H3",
-              "disposition": "ATTR",
-              "kind": null
+              "kind": "form"
             }
           ]
         },
@@ -445,7 +445,209 @@
         },
         "numeric": {
           "checked": 146,
-          "fidelity": 0
+          "fidelity": 0,
+          "misses": [
+            {
+              "entityRef": "CP 00 10",
+              "value": "1012",
+              "label": "Product Component Model!I7"
+            },
+            {
+              "entityRef": "PR.COV001.0",
+              "value": "1012",
+              "label": "Product Component Model!I8"
+            },
+            {
+              "entityRef": "PR.COV001.0",
+              "value": "1012",
+              "label": "Product Component Model!I9"
+            },
+            {
+              "entityRef": "PR.COV001.1",
+              "value": "1012",
+              "label": "Product Component Model!I10"
+            },
+            {
+              "entityRef": "PR.COV001.10",
+              "value": "1012",
+              "label": "Product Component Model!I11"
+            },
+            {
+              "entityRef": "PR.COV001.11",
+              "value": "1012",
+              "label": "Product Component Model!I12"
+            },
+            {
+              "entityRef": "PR.COV001.12",
+              "value": "113",
+              "label": "Product Component Model!I13"
+            },
+            {
+              "entityRef": "PR.COV001.13",
+              "value": "1012",
+              "label": "Product Component Model!I14"
+            },
+            {
+              "entityRef": "PR.COV001.14",
+              "value": "1012",
+              "label": "Product Component Model!I15"
+            },
+            {
+              "entityRef": "PR.COV001.15",
+              "value": "113",
+              "label": "Product Component Model!I16"
+            },
+            {
+              "entityRef": "PR.COV001.16",
+              "value": "113",
+              "label": "Product Component Model!I17"
+            },
+            {
+              "entityRef": "PR.COV001.17",
+              "value": "113",
+              "label": "Product Component Model!I18"
+            },
+            {
+              "entityRef": "PR.COV001.18",
+              "value": "113",
+              "label": "Product Component Model!I19"
+            },
+            {
+              "entityRef": "PR.COV001.19",
+              "value": "113",
+              "label": "Product Component Model!I20"
+            },
+            {
+              "entityRef": "PR.COV001.20",
+              "value": "1012",
+              "label": "Product Component Model!I21"
+            },
+            {
+              "entityRef": "PR.COV001.20",
+              "value": "113",
+              "label": "Product Component Model!I22"
+            },
+            {
+              "entityRef": "PR.COV001.21",
+              "value": "113",
+              "label": "Product Component Model!I23"
+            },
+            {
+              "entityRef": "PR.COV001.22",
+              "value": "113",
+              "label": "Product Component Model!I24"
+            },
+            {
+              "entityRef": "PR.COV001.23",
+              "value": "113",
+              "label": "Product Component Model!I25"
+            },
+            {
+              "entityRef": "PR.COV001.24",
+              "value": "788",
+              "label": "Product Component Model!I26"
+            },
+            {
+              "entityRef": "PR.COV001.25",
+              "value": "1120",
+              "label": "Product Component Model!I27"
+            },
+            {
+              "entityRef": "PR.COV001.26",
+              "value": "421",
+              "label": "Product Component Model!I28"
+            },
+            {
+              "entityRef": "PR.COV001.27",
+              "value": "421",
+              "label": "Product Component Model!I29"
+            },
+            {
+              "entityRef": "PR.COV001.28",
+              "value": "1000",
+              "label": "Product Component Model!I30"
+            },
+            {
+              "entityRef": "PR.COV001.29",
+              "value": "1130113",
+              "label": "Product Component Model!I31"
+            },
+            {
+              "entityRef": "PR.COV001.3",
+              "value": "10120113",
+              "label": "Product Component Model!I32"
+            },
+            {
+              "entityRef": "PR.COV001.4",
+              "value": "1012",
+              "label": "Product Component Model!I33"
+            },
+            {
+              "entityRef": "PR.COV001.5",
+              "value": "10120113",
+              "label": "Product Component Model!I34"
+            },
+            {
+              "entityRef": "PR.COV001.6",
+              "value": "1012",
+              "label": "Product Component Model!I35"
+            },
+            {
+              "entityRef": "PR.COV001.7",
+              "value": "219",
+              "label": "Product Component Model!I36"
+            },
+            {
+              "entityRef": "PR.COV001.8",
+              "value": "219",
+              "label": "Product Component Model!I37"
+            },
+            {
+              "entityRef": "PR.COV001.9",
+              "value": "1012",
+              "label": "Product Component Model!I38"
+            },
+            {
+              "entityRef": "PR.COV002.0",
+              "value": "917",
+              "label": "Product Component Model!I39"
+            },
+            {
+              "entityRef": "PR.COV002.1",
+              "value": "917",
+              "label": "Product Component Model!I40"
+            },
+            {
+              "entityRef": "PR.COV002.2",
+              "value": "917",
+              "label": "Product Component Model!I41"
+            },
+            {
+              "entityRef": "PR.COV002.3",
+              "value": "917",
+              "label": "Product Component Model!I42"
+            },
+            {
+              "entityRef": "PR.COV003.0",
+              "value": "1012",
+              "label": "Product Component Model!I43"
+            },
+            {
+              "entityRef": "PR.COV003.1",
+              "value": "1012",
+              "label": "Product Component Model!I44"
+            },
+            {
+              "entityRef": "PR.COV003.10",
+              "value": "1012",
+              "label": "Product Component Model!I45"
+            },
+            {
+              "entityRef": "PR.COV003.11",
+              "value": "113",
+              "label": "Product Component Model!I46"
+            }
+          ]
         },
         "citationResolve": null,
         "fabrication": {
@@ -462,7 +664,9 @@
           "ldRefWithRef": 0,
           "ldRefResolved": 0,
           "ldTableRefResolutionRate": null,
-          "misses": []
+          "misses": [],
+          "tablesExtracted": 0,
+          "ldTableRefResolutionRateEffective": null
         },
         "hierarchy": {
           "goldenParentEdges": 127,
@@ -693,18 +897,142 @@
       "coverage": "full",
       "pass": false,
       "reds": [
+        "unaccountedEntityCells=1",
+        "substanceCoverage=0.333<0.985",
         "entityRecall=0.429<0.98",
-        "numericFidelity=0.000<1.0"
+        "numericFidelity=0.000<1.0",
+        "ldTableRef=0.000<0.95 (0/0 refs resolve over 1 extracted table(s))"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 10,
-          "entityAccounted": 10,
-          "unaccountedEntityCells": 0,
+          "entityAccounted": 9,
+          "unaccountedEntityCells": 1,
           "substanceCells": 36,
-          "substanceAccounted": 36,
-          "substanceCoverage": 1,
-          "sampleUnaccounted": []
+          "substanceAccounted": 12,
+          "substanceCoverage": 0.3333333333333333,
+          "sampleUnaccounted": [
+            {
+              "locus": "Product Inventory!A7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!D7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!E7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!D10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A13",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A14",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A15",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A16",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A17",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A18",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A19",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A21",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A22",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!A24",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!D7",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Source Forms!AA3",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Source Forms!AB3",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Source Forms!AA4",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Source Forms!AB4",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Source Forms!AB5",
+              "disposition": "ATTR",
+              "kind": null
+            }
+          ]
         },
         "entityRecall": {
           "golden": 7,
@@ -735,7 +1063,14 @@
         },
         "numeric": {
           "checked": 1,
-          "fidelity": 0
+          "fidelity": 0,
+          "misses": [
+            {
+              "entityRef": "1",
+              "value": "0",
+              "label": "Product Inventory!E7"
+            }
+          ]
         },
         "citationResolve": null,
         "fabrication": {
@@ -752,7 +1087,9 @@
           "ldRefWithRef": 0,
           "ldRefResolved": 0,
           "ldTableRefResolutionRate": null,
-          "misses": []
+          "misses": [],
+          "tablesExtracted": 1,
+          "ldTableRefResolutionRateEffective": 0
         },
         "hierarchy": {
           "goldenParentEdges": 0,
@@ -809,6 +1146,8 @@
       "coverage": "full",
       "pass": false,
       "reds": [
+        "unaccountedEntityCells=68",
+        "substanceCoverage=0.515<0.985",
         "entityRecall=0.691<0.98",
         "numericFidelity=0.000<1.0",
         "hierarchyRecall=0.000<1.0 (78 golden edges, 0 reproduced)"
@@ -816,12 +1155,213 @@
       "metrics": {
         "accounting": {
           "entityCells": 972,
-          "entityAccounted": 972,
-          "unaccountedEntityCells": 0,
+          "entityAccounted": 904,
+          "unaccountedEntityCells": 68,
           "substanceCells": 2377,
-          "substanceAccounted": 2377,
-          "substanceCoverage": 1,
-          "sampleUnaccounted": []
+          "substanceAccounted": 1223,
+          "substanceCoverage": 0.5145140933950357,
+          "sampleUnaccounted": [
+            {
+              "locus": "GL Product Framework!G6",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G7",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G8",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G9",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G10",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G11",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G12",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G13",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G14",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!H15",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G17",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G18",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G20",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G21",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!H21",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G22",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "GL Product Framework!G23",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!G24",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D7",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D8",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D9",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D10",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D11",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D12",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D13",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D14",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D15",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D16",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D17",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D18",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D19",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D20",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D21",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D22",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D23",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!D24",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!I6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!M6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!N6",
+              "disposition": "ATTR",
+              "kind": null
+            }
+          ]
         },
         "entityRecall": {
           "golden": 194,
@@ -1032,7 +1572,209 @@
         },
         "numeric": {
           "checked": 132,
-          "fidelity": 0
+          "fidelity": 0,
+          "misses": [
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I6"
+            },
+            {
+              "entityRef": "GLCOV001.02",
+              "value": "413",
+              "label": "GL Product Framework!I7"
+            },
+            {
+              "entityRef": "GLCOV001.03",
+              "value": "413",
+              "label": "GL Product Framework!I8"
+            },
+            {
+              "entityRef": "GLCOV001.04",
+              "value": "4130113",
+              "label": "GL Product Framework!I9"
+            },
+            {
+              "entityRef": "GLCOV001.05",
+              "value": "413",
+              "label": "GL Product Framework!I10"
+            },
+            {
+              "entityRef": "GLCOV001.07",
+              "value": "413",
+              "label": "GL Product Framework!I11"
+            },
+            {
+              "entityRef": "GLCOV001.08",
+              "value": "413",
+              "label": "GL Product Framework!I12"
+            },
+            {
+              "entityRef": "GLCOV001.09",
+              "value": "413",
+              "label": "GL Product Framework!I13"
+            },
+            {
+              "entityRef": "GLCOV001.10",
+              "value": "413",
+              "label": "GL Product Framework!I14"
+            },
+            {
+              "entityRef": "CG 24 08",
+              "value": "1093",
+              "label": "GL Product Framework!I15"
+            },
+            {
+              "entityRef": "CG 24 25",
+              "value": "1204",
+              "label": "GL Product Framework!I16"
+            },
+            {
+              "entityRef": "GLCOV001.37",
+              "value": "413",
+              "label": "GL Product Framework!I17"
+            },
+            {
+              "entityRef": "GLCOV001.41",
+              "value": "413",
+              "label": "GL Product Framework!I18"
+            },
+            {
+              "entityRef": "CG 22 65",
+              "value": "999",
+              "label": "GL Product Framework!I19"
+            },
+            {
+              "entityRef": "CG 22 69",
+              "value": "1001",
+              "label": "GL Product Framework!I20"
+            },
+            {
+              "entityRef": "CG 24 50",
+              "value": "615",
+              "label": "GL Product Framework!I21"
+            },
+            {
+              "entityRef": "GLCOV002.01",
+              "value": "413",
+              "label": "GL Product Framework!I22"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I23"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I24"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I25"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I26"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I27"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I28"
+            },
+            {
+              "entityRef": "CG 03 00",
+              "value": "196",
+              "label": "GL Product Framework!I29"
+            },
+            {
+              "entityRef": "CG 24 08",
+              "value": "1093",
+              "label": "GL Product Framework!I30"
+            },
+            {
+              "entityRef": "CG 24 25",
+              "value": "1204",
+              "label": "GL Product Framework!I31"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I32"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I33"
+            },
+            {
+              "entityRef": "CG 22 65",
+              "value": "999",
+              "label": "GL Product Framework!I34"
+            },
+            {
+              "entityRef": "CG 22 69",
+              "value": "1001",
+              "label": "GL Product Framework!I35"
+            },
+            {
+              "entityRef": "GLCOV002.57",
+              "value": "615",
+              "label": "GL Product Framework!I36"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I37"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I38"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I39"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I40"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I41"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I42"
+            },
+            {
+              "entityRef": "CG 00 01",
+              "value": "413",
+              "label": "GL Product Framework!I43"
+            },
+            {
+              "entityRef": "CG 04 37",
+              "value": "514",
+              "label": "GL Product Framework!I44"
+            },
+            {
+              "entityRef": "GLCOV003.10",
+              "value": "413",
+              "label": "GL Product Framework!I45"
+            }
+          ]
         },
         "citationResolve": null,
         "fabrication": {
@@ -1049,7 +1791,9 @@
           "ldRefWithRef": 0,
           "ldRefResolved": 0,
           "ldTableRefResolutionRate": null,
-          "misses": []
+          "misses": [],
+          "tablesExtracted": 0,
+          "ldTableRefResolutionRateEffective": null
         },
         "hierarchy": {
           "goldenParentEdges": 78,
@@ -1256,6 +2000,8 @@
       "coverage": "full",
       "pass": false,
       "reds": [
+        "unaccountedEntityCells=22",
+        "substanceCoverage=0.094<0.985",
         "entityRecall=0.831<0.98",
         "numericFidelity=0.000<1.0",
         "hierarchyRecall=0.160<1.0 (94 golden edges, 15 reproduced)"
@@ -1263,12 +2009,213 @@
       "metrics": {
         "accounting": {
           "entityCells": 285,
-          "entityAccounted": 285,
-          "unaccountedEntityCells": 0,
+          "entityAccounted": 263,
+          "unaccountedEntityCells": 22,
           "substanceCells": 6194,
-          "substanceAccounted": 6194,
-          "substanceCoverage": 1,
-          "sampleUnaccounted": []
+          "substanceAccounted": 580,
+          "substanceCoverage": 0.09363900548918308,
+          "sampleUnaccounted": [
+            {
+              "locus": "GL Product Framework!D7",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "GL Product Framework!I6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!J6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!K6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!M6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!N6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!A7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!I7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!J7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!K7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!M7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!N7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!I8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!M8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!N8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!I9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!M9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!N9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!I10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!M10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!N10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!I11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!M11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!N11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!I12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!M12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!N12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!I13",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L13",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!M13",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!N13",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!I14",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!L14",
+              "disposition": "ATTR",
+              "kind": null
+            }
+          ]
         },
         "entityRecall": {
           "golden": 142,
@@ -1399,7 +2346,209 @@
         },
         "numeric": {
           "checked": 110,
-          "fidelity": 0
+          "fidelity": 0,
+          "misses": [
+            {
+              "entityRef": "GL.PROD.001",
+              "value": "413",
+              "label": "GL Product Framework!I6"
+            },
+            {
+              "entityRef": "GL.LOB.001",
+              "value": "413",
+              "label": "GL Product Framework!I7"
+            },
+            {
+              "entityRef": "GL.COV.001",
+              "value": "115",
+              "label": "GL Product Framework!I8"
+            },
+            {
+              "entityRef": "GL.COV.001.001",
+              "value": "115",
+              "label": "GL Product Framework!I9"
+            },
+            {
+              "entityRef": "GL.COV.002",
+              "value": "413",
+              "label": "GL Product Framework!I10"
+            },
+            {
+              "entityRef": "GL.COV.002.001",
+              "value": "413",
+              "label": "GL Product Framework!I11"
+            },
+            {
+              "entityRef": "GL.COV.002.002",
+              "value": "413",
+              "label": "GL Product Framework!I12"
+            },
+            {
+              "entityRef": "GL.COV.002.003",
+              "value": "413",
+              "label": "GL Product Framework!I13"
+            },
+            {
+              "entityRef": "GL.COV.002.004",
+              "value": "413",
+              "label": "GL Product Framework!I14"
+            },
+            {
+              "entityRef": "GL.COV.002.005",
+              "value": "413",
+              "label": "GL Product Framework!I15"
+            },
+            {
+              "entityRef": "GL.COV.002.006",
+              "value": "413",
+              "label": "GL Product Framework!I16"
+            },
+            {
+              "entityRef": "GL.COV.002.007",
+              "value": "1093",
+              "label": "GL Product Framework!I17"
+            },
+            {
+              "entityRef": "GL.COV.002.008",
+              "value": "413",
+              "label": "GL Product Framework!I18"
+            },
+            {
+              "entityRef": "GL.COV.002.009",
+              "value": "1204",
+              "label": "GL Product Framework!I19"
+            },
+            {
+              "entityRef": "GL.COV.002.010",
+              "value": "413",
+              "label": "GL Product Framework!I20"
+            },
+            {
+              "entityRef": "GL.COV.002.011",
+              "value": "4131210",
+              "label": "GL Product Framework!I21"
+            },
+            {
+              "entityRef": "GL.COV.002.012",
+              "value": "999",
+              "label": "GL Product Framework!I22"
+            },
+            {
+              "entityRef": "GL.COV.002.013",
+              "value": "1103031111031010",
+              "label": "GL Product Framework!I23"
+            },
+            {
+              "entityRef": "GL.COV.002.020",
+              "value": "615",
+              "label": "GL Product Framework!I24"
+            },
+            {
+              "entityRef": "GL.COV.003",
+              "value": "413",
+              "label": "GL Product Framework!I25"
+            },
+            {
+              "entityRef": "GL.COV.003.001",
+              "value": "413",
+              "label": "GL Product Framework!I26"
+            },
+            {
+              "entityRef": "GL.COV.003.002",
+              "value": "413",
+              "label": "GL Product Framework!I27"
+            },
+            {
+              "entityRef": "GL.COV.003.003",
+              "value": "413",
+              "label": "GL Product Framework!I28"
+            },
+            {
+              "entityRef": "GL.COV.003.004",
+              "value": "413",
+              "label": "GL Product Framework!I29"
+            },
+            {
+              "entityRef": "GL.COV.003.005",
+              "value": "413",
+              "label": "GL Product Framework!I30"
+            },
+            {
+              "entityRef": "GL.COV.003.006",
+              "value": "413",
+              "label": "GL Product Framework!I31"
+            },
+            {
+              "entityRef": "GL.COV.003.008",
+              "value": "1093",
+              "label": "GL Product Framework!I32"
+            },
+            {
+              "entityRef": "GL.COV.003.009",
+              "value": "1204",
+              "label": "GL Product Framework!I33"
+            },
+            {
+              "entityRef": "GL.COV.003.010",
+              "value": "413",
+              "label": "GL Product Framework!I34"
+            },
+            {
+              "entityRef": "GL.COV.003.011",
+              "value": "4131210",
+              "label": "GL Product Framework!I35"
+            },
+            {
+              "entityRef": "GL.COV.003.012",
+              "value": "999",
+              "label": "GL Product Framework!I36"
+            },
+            {
+              "entityRef": "GL.COV.003.013",
+              "value": "615",
+              "label": "GL Product Framework!I37"
+            },
+            {
+              "entityRef": "GL.COV.003.020",
+              "value": "413",
+              "label": "GL Product Framework!I38"
+            },
+            {
+              "entityRef": "GL.COV.004",
+              "value": "413",
+              "label": "GL Product Framework!I39"
+            },
+            {
+              "entityRef": "GL.COV.004.001",
+              "value": "413",
+              "label": "GL Product Framework!I40"
+            },
+            {
+              "entityRef": "GL.COV.004.002",
+              "value": "413",
+              "label": "GL Product Framework!I41"
+            },
+            {
+              "entityRef": "GL.COV.004.003",
+              "value": "413",
+              "label": "GL Product Framework!I42"
+            },
+            {
+              "entityRef": "GL.COV.004.004",
+              "value": "413",
+              "label": "GL Product Framework!I43"
+            },
+            {
+              "entityRef": "GL.COV.004.005",
+              "value": "413",
+              "label": "GL Product Framework!I44"
+            },
+            {
+              "entityRef": "GL.COV.004.006",
+              "value": "413",
+              "label": "GL Product Framework!I45"
+            }
+          ]
         },
         "citationResolve": null,
         "fabrication": {
@@ -1416,7 +2565,9 @@
           "ldRefWithRef": 0,
           "ldRefResolved": 0,
           "ldTableRefResolutionRate": null,
-          "misses": []
+          "misses": [],
+          "tablesExtracted": 0,
+          "ldTableRefResolutionRateEffective": null
         },
         "hierarchy": {
           "goldenParentEdges": 94,
@@ -1628,18 +2779,222 @@
       "coverage": "full",
       "pass": false,
       "reds": [
+        "unaccountedEntityCells=64",
+        "substanceCoverage=0.463<0.985",
         "entityRecall=0.547<0.98",
-        "numericFidelity=0.000<1.0"
+        "numericFidelity=0.000<1.0",
+        "ldTableRef=0.000<0.95 (0/0 refs resolve over 17 extracted table(s))"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 163,
-          "entityAccounted": 163,
-          "unaccountedEntityCells": 0,
+          "entityAccounted": 99,
+          "unaccountedEntityCells": 64,
           "substanceCells": 722,
-          "substanceAccounted": 722,
-          "substanceCoverage": 1,
-          "sampleUnaccounted": []
+          "substanceAccounted": 334,
+          "substanceCoverage": 0.4626038781163435,
+          "sampleUnaccounted": [
+            {
+              "locus": "Default Limits!A2",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Default Limits!A3",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Default Limits!A4",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Default Limits!A5",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Default Limits!A6",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Default Limits!A10",
+              "disposition": "ENTITY",
+              "kind": "deductible"
+            },
+            {
+              "locus": "Default Limits!B2",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Default Limits!B3",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Default Limits!B4",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Default Limits!B5",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Default Limits!B6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Default Limits!B10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Default Limits!B12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!A2",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Coverage Names & Limit!A3",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Coverage Names & Limit!A4",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Coverage Names & Limit!A5",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Coverage Names & Limit!A6",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Coverage Names & Limit!A7",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Coverage Names & Limit!A8",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Coverage Names & Limit!B2",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!B3",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!B4",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!B5",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!B6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!B7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!B8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!B10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!B26",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Names & Limit!B27",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Rules!B4",
+              "disposition": "ENTITY",
+              "kind": "rule"
+            },
+            {
+              "locus": "Coverage Rules!B5",
+              "disposition": "ENTITY",
+              "kind": "rule"
+            },
+            {
+              "locus": "Coverage Rules!B6",
+              "disposition": "ENTITY",
+              "kind": "rule"
+            },
+            {
+              "locus": "Coverage Rules!D4",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Rules!E4",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Rules!F4",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Rules!D6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Rules!E6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Rules!F6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Coverage Rules!G6",
+              "disposition": "ATTR",
+              "kind": null
+            }
+          ]
         },
         "entityRecall": {
           "golden": 106,
@@ -1850,7 +3205,64 @@
         },
         "numeric": {
           "checked": 11,
-          "fidelity": 0
+          "fidelity": 0,
+          "misses": [
+            {
+              "entityRef": "Liability PD",
+              "value": "100",
+              "label": "Default Limits!B3"
+            },
+            {
+              "entityRef": "Med Pay",
+              "value": "5000",
+              "label": "Default Limits!B4"
+            },
+            {
+              "entityRef": "Other Than Collision Deductible",
+              "value": "1000",
+              "label": "Default Limits!B9"
+            },
+            {
+              "entityRef": "Collision Deductible",
+              "value": "1000",
+              "label": "Default Limits!B10"
+            },
+            {
+              "entityRef": "Minimum Premium",
+              "value": "125",
+              "label": "Default Limits!B12"
+            },
+            {
+              "entityRef": "Spare Parts (YCA) Base Policy",
+              "value": "750",
+              "label": "Coverage Rules!F34"
+            },
+            {
+              "entityRef": "Auto Theft Prevention Authority Fee",
+              "value": "1",
+              "label": "Assessment!H2"
+            },
+            {
+              "entityRef": "Non-Sufficent Funds (NSF)",
+              "value": "25",
+              "label": "Fees!B2"
+            },
+            {
+              "entityRef": "Late Fee",
+              "value": "10",
+              "label": "Fees!B3"
+            },
+            {
+              "entityRef": "Reinstatement Fee",
+              "value": "15",
+              "label": "Fees!B4"
+            },
+            {
+              "entityRef": "Installment",
+              "value": "3.5",
+              "label": "Fees!B5"
+            }
+          ]
         },
         "citationResolve": null,
         "fabrication": {
@@ -1867,7 +3279,9 @@
           "ldRefWithRef": 0,
           "ldRefResolved": 0,
           "ldTableRefResolutionRate": null,
-          "misses": []
+          "misses": [],
+          "tablesExtracted": 17,
+          "ldTableRefResolutionRateEffective": 0
         },
         "hierarchy": {
           "goldenParentEdges": 0,
@@ -1913,18 +3327,222 @@
       "coverage": "sampled",
       "pass": false,
       "reds": [
+        "unaccountedEntityCells=284",
+        "substanceCoverage=0.263<0.985",
         "numericFidelity=0.000<1.0",
+        "ldTableRef=0.000<0.95 (0/0 refs resolve over 44 extracted table(s))",
         "hierarchyRecall=0.000<1.0 (1 golden edges, 0 reproduced)"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 384,
-          "entityAccounted": 384,
-          "unaccountedEntityCells": 0,
+          "entityAccounted": 100,
+          "unaccountedEntityCells": 284,
           "substanceCells": 4455,
-          "substanceAccounted": 4455,
-          "substanceCoverage": 1,
-          "sampleUnaccounted": []
+          "substanceAccounted": 1172,
+          "substanceCoverage": 0.2630751964085297,
+          "sampleUnaccounted": [
+            {
+              "locus": "Program Version!B1",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B3",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!E3",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!K3",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B4",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B5",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!F9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!G9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!F10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!G10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!F11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!G11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!F12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!G12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!F13",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!G13",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!J8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!J11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!J12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!J13",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!J14",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!J15",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!J16",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!J21",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B15",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!C16",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B16",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!C17",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B17",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B19",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!C19",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!B20",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!C20",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!F16",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!G16",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!F18",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!F21",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Program Version!F22",
+              "disposition": "ATTR",
+              "kind": null
+            }
+          ]
         },
         "entityRecall": {
           "golden": 85,
@@ -2135,7 +3753,209 @@
         },
         "numeric": {
           "checked": 681,
-          "fidelity": 0
+          "fidelity": 0,
+          "misses": [
+            {
+              "entityRef": "Standard Auto Program",
+              "value": "125",
+              "label": "Program Version!E3"
+            },
+            {
+              "entityRef": "Program Version Options",
+              "value": "12",
+              "label": "Program Version!J8"
+            },
+            {
+              "entityRef": "Program Version Options",
+              "value": "5",
+              "label": "Program Version!J11"
+            },
+            {
+              "entityRef": "Program Version Options",
+              "value": "0",
+              "label": "Program Version!J12"
+            },
+            {
+              "entityRef": "Program Version Options",
+              "value": "115125",
+              "label": "Program Version!J13"
+            },
+            {
+              "entityRef": "Program Version Options",
+              "value": "20",
+              "label": "Program Version!J15"
+            },
+            {
+              "entityRef": "Program Version Options",
+              "value": "-1",
+              "label": "Program Version!J21"
+            },
+            {
+              "entityRef": "Min. Pay Plan Premium",
+              "value": "300",
+              "label": "Program Version!B20"
+            },
+            {
+              "entityRef": "Comprehensive Base Rate",
+              "value": "33.9586",
+              "label": "Coverages!B3"
+            },
+            {
+              "entityRef": "Comprehensive Default Deductible",
+              "value": "0",
+              "label": "Coverages!B4"
+            },
+            {
+              "entityRef": "5",
+              "value": "6",
+              "label": "Coverages!L7"
+            },
+            {
+              "entityRef": "5",
+              "value": "1",
+              "label": "Coverages!L8"
+            },
+            {
+              "entityRef": "5",
+              "value": "0.3656",
+              "label": "Coverages!D16"
+            },
+            {
+              "entityRef": "5",
+              "value": "0.344",
+              "label": "Coverages!F16"
+            },
+            {
+              "entityRef": "5",
+              "value": "0.5806",
+              "label": "Coverages!D17"
+            },
+            {
+              "entityRef": "5",
+              "value": "0.5592",
+              "label": "Coverages!F17"
+            },
+            {
+              "entityRef": "Collision Base Rate",
+              "value": "30.5349",
+              "label": "Coverages!B23"
+            },
+            {
+              "entityRef": "Insurance Score",
+              "value": "1.75",
+              "label": "Liab BI (2)!B2"
+            },
+            {
+              "entityRef": "Insurance Score",
+              "value": "1.65",
+              "label": "Liab BI (2)!B3"
+            },
+            {
+              "entityRef": "Insurance Score",
+              "value": "1.55",
+              "label": "Liab BI (2)!B4"
+            },
+            {
+              "entityRef": "Insurance Score",
+              "value": "1.4",
+              "label": "Liab BI (2)!B5"
+            },
+            {
+              "entityRef": "Insurance Score_5",
+              "value": "1.35",
+              "label": "Liab BI (2)!B6"
+            },
+            {
+              "entityRef": "Insurance Score_6",
+              "value": "1.25",
+              "label": "Liab BI (2)!B7"
+            },
+            {
+              "entityRef": "Insurance Score_7",
+              "value": "1.15",
+              "label": "Liab BI (2)!B8"
+            },
+            {
+              "entityRef": "Insurance Score_8",
+              "value": "1.08",
+              "label": "Liab BI (2)!B9"
+            },
+            {
+              "entityRef": "Insurance Score_9",
+              "value": "1",
+              "label": "Liab BI (2)!B10"
+            },
+            {
+              "entityRef": "Insurance Score_10",
+              "value": "1",
+              "label": "Liab BI (2)!B11"
+            },
+            {
+              "entityRef": "Insurance Score_11",
+              "value": "0.98",
+              "label": "Liab BI (2)!B12"
+            },
+            {
+              "entityRef": "Insurance Score_12",
+              "value": "0.95",
+              "label": "Liab BI (2)!B13"
+            },
+            {
+              "entityRef": "Insurance Score_13",
+              "value": "0.92",
+              "label": "Liab BI (2)!B14"
+            },
+            {
+              "entityRef": "Insurance Score_14",
+              "value": "0.85",
+              "label": "Liab BI (2)!B15"
+            },
+            {
+              "entityRef": "Insurance Score_15",
+              "value": "0.8",
+              "label": "Liab BI (2)!B16"
+            },
+            {
+              "entityRef": "Insurance Score_16",
+              "value": "0.75",
+              "label": "Liab BI (2)!B17"
+            },
+            {
+              "entityRef": "Insurance Score_17",
+              "value": "0.7",
+              "label": "Liab BI (2)!B18"
+            },
+            {
+              "entityRef": "Insurance Score_18",
+              "value": "1.1",
+              "label": "Liab BI (2)!B19"
+            },
+            {
+              "entityRef": "Insurance Score_19",
+              "value": "1.3",
+              "label": "Liab BI (2)!B20"
+            },
+            {
+              "entityRef": "Insurance Score_20",
+              "value": "1",
+              "label": "Liab BI (2)!B21"
+            },
+            {
+              "entityRef": "Insurance Score_21",
+              "value": "1",
+              "label": "Liab BI (2)!B22"
+            },
+            {
+              "entityRef": "Insurance Score_22",
+              "value": "1",
+              "label": "Liab BI (2)!B23"
+            },
+            {
+              "entityRef": "Insurance Score_23",
+              "value": "1",
+              "label": "Liab BI (2)!B24"
+            }
+          ]
         },
         "citationResolve": null,
         "fabrication": {
@@ -2152,7 +3972,9 @@
           "ldRefWithRef": 0,
           "ldRefResolved": 0,
           "ldTableRefResolutionRate": null,
-          "misses": []
+          "misses": [],
+          "tablesExtracted": 44,
+          "ldTableRefResolutionRateEffective": 0
         },
         "hierarchy": {
           "goldenParentEdges": 1,
@@ -2222,17 +4044,221 @@
       "coverage": "sampled",
       "pass": false,
       "reds": [
-        "numericFidelity=0.000<1.0"
+        "unaccountedEntityCells=201",
+        "substanceCoverage=0.660<0.985",
+        "numericFidelity=0.000<1.0",
+        "ldTableRef=0.000<0.95 (0/0 refs resolve over 7 extracted table(s))"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 321,
-          "entityAccounted": 321,
-          "unaccountedEntityCells": 0,
+          "entityAccounted": 120,
+          "unaccountedEntityCells": 201,
           "substanceCells": 3110,
-          "substanceAccounted": 3110,
-          "substanceCoverage": 1,
-          "sampleUnaccounted": []
+          "substanceAccounted": 2052,
+          "substanceCoverage": 0.659807073954984,
+          "sampleUnaccounted": [
+            {
+              "locus": "Product Component Model Hacked!S67",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S68",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S69",
+              "disposition": "ENTITY",
+              "kind": "deductible"
+            },
+            {
+              "locus": "Product Component Model Hacked!S70",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S71",
+              "disposition": "ENTITY",
+              "kind": "limit"
+            },
+            {
+              "locus": "Product Component Model Hacked!S72",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S73",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S74",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S75",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S76",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S77",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S78",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S79",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S80",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S81",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S82",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S83",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S84",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S85",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S86",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S87",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S88",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S89",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!S90",
+              "disposition": "ENTITY",
+              "kind": "subCoverage"
+            },
+            {
+              "locus": "Product Component Model Hacked!O67",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!P67",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!X67",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!Y67",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!Z67",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!AA67",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!O68",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!P68",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!X68",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!Y68",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!Z68",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!AA68",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!O69",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!P69",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!X69",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model Hacked!Y69",
+              "disposition": "ATTR",
+              "kind": null
+            }
+          ]
         },
         "entityRecall": {
           "golden": 127,
@@ -2443,7 +4469,44 @@
         },
         "numeric": {
           "checked": 7,
-          "fidelity": 0
+          "fidelity": 0,
+          "misses": [
+            {
+              "entityRef": "Arkansas",
+              "value": "5000",
+              "label": "PIP States!C2"
+            },
+            {
+              "entityRef": "Maryland",
+              "value": "2500",
+              "label": "PIP States!C14"
+            },
+            {
+              "entityRef": "CSL",
+              "value": "125000",
+              "label": "Liability limits!C5"
+            },
+            {
+              "entityRef": "CSL",
+              "value": "200000",
+              "label": "Liability limits!C6"
+            },
+            {
+              "entityRef": "CSL",
+              "value": "300000",
+              "label": "Liability limits!C7"
+            },
+            {
+              "entityRef": "CSL",
+              "value": "500000",
+              "label": "Liability limits!C8"
+            },
+            {
+              "entityRef": "CSL",
+              "value": "1000000",
+              "label": "Liability limits!C9"
+            }
+          ]
         },
         "citationResolve": null,
         "fabrication": {
@@ -2460,7 +4523,9 @@
           "ldRefWithRef": 0,
           "ldRefResolved": 0,
           "ldTableRefResolutionRate": null,
-          "misses": []
+          "misses": [],
+          "tablesExtracted": 7,
+          "ldTableRefResolutionRateEffective": 0
         },
         "hierarchy": {
           "goldenParentEdges": 0,
@@ -2517,18 +4582,222 @@
       "coverage": "sampled",
       "pass": false,
       "reds": [
+        "unaccountedEntityCells=77",
+        "substanceCoverage=0.617<0.985",
         "numericFidelity=0.000<1.0",
+        "ldTableRef=0.000<0.95 (0/0 refs resolve over 5 extracted table(s))",
         "hierarchyRecall=0.000<1.0 (83 golden edges, 0 reproduced)"
       ],
       "metrics": {
         "accounting": {
           "entityCells": 851,
-          "entityAccounted": 851,
-          "unaccountedEntityCells": 0,
+          "entityAccounted": 774,
+          "unaccountedEntityCells": 77,
           "substanceCells": 3080,
-          "substanceAccounted": 3080,
-          "substanceCoverage": 1,
-          "sampleUnaccounted": []
+          "substanceAccounted": 1901,
+          "substanceCoverage": 0.6172077922077922,
+          "sampleUnaccounted": [
+            {
+              "locus": "Product Inventory!C2",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!C3",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!D7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!E7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!F7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Inventory!D10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!F6",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!F17",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!F19",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!F20",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!F21",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!F22",
+              "disposition": "ENTITY",
+              "kind": "coverage"
+            },
+            {
+              "locus": "Product Component Model!F23",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!F24",
+              "disposition": "ENTITY",
+              "kind": "form"
+            },
+            {
+              "locus": "Product Component Model!C6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!H6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!C7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!H7",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!C8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!H8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!I8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!J8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!K8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!L8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!M8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!N8",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!C9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!H9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!K9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!L9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!N9",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!C10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!H10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!K10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!L10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!N10",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!C11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!H11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!K11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!L11",
+              "disposition": "ATTR",
+              "kind": null
+            }
+          ]
         },
         "entityRecall": {
           "golden": 336,
@@ -2679,7 +4948,209 @@
         },
         "numeric": {
           "checked": 130,
-          "fidelity": 0
+          "fidelity": 0,
+          "misses": [
+            {
+              "entityRef": "1",
+              "value": "0",
+              "label": "Product Inventory!E7"
+            },
+            {
+              "entityRef": "CP 10 36",
+              "value": "1012",
+              "label": "Product Component Model!H441"
+            },
+            {
+              "entityRef": "CP 04 50",
+              "value": "788",
+              "label": "Product Component Model!H442"
+            },
+            {
+              "entityRef": "CP 04 02",
+              "value": "1012",
+              "label": "Product Component Model!H443"
+            },
+            {
+              "entityRef": "CP 04 02",
+              "value": "1012",
+              "label": "Product Component Model!H444"
+            },
+            {
+              "entityRef": "CP 00 18",
+              "value": "607",
+              "label": "Product Component Model!H445"
+            },
+            {
+              "entityRef": "CP 00 18",
+              "value": "607",
+              "label": "Product Component Model!H446"
+            },
+            {
+              "entityRef": "CP 00 18",
+              "value": "607",
+              "label": "Product Component Model!H447"
+            },
+            {
+              "entityRef": "CP 00 18",
+              "value": "607",
+              "label": "Product Component Model!H448"
+            },
+            {
+              "entityRef": "CP 00 18",
+              "value": "607",
+              "label": "Product Component Model!H449"
+            },
+            {
+              "entityRef": "CP 00 18",
+              "value": "607",
+              "label": "Product Component Model!H450"
+            },
+            {
+              "entityRef": "CP 04 40",
+              "value": "1220",
+              "label": "Product Component Model!H454"
+            },
+            {
+              "entityRef": "CP 14 40",
+              "value": "607",
+              "label": "Product Component Model!H455"
+            },
+            {
+              "entityRef": "CP 04 17",
+              "value": "1012",
+              "label": "Product Component Model!H456"
+            },
+            {
+              "entityRef": "CP 04 18",
+              "value": "1012",
+              "label": "Product Component Model!H457"
+            },
+            {
+              "entityRef": "CP 04 18",
+              "value": "1012",
+              "label": "Product Component Model!H458"
+            },
+            {
+              "entityRef": "CP 04 50",
+              "value": "788",
+              "label": "Product Component Model!H459"
+            },
+            {
+              "entityRef": "CP 0090 0788",
+              "value": "30914",
+              "label": "Property Forms Usage!F3"
+            },
+            {
+              "entityRef": "CP 0140 0706",
+              "value": "30914",
+              "label": "Property Forms Usage!F4"
+            },
+            {
+              "entityRef": "CP 1032 0808",
+              "value": "30913",
+              "label": "Property Forms Usage!F5"
+            },
+            {
+              "entityRef": "CP 1030 0607",
+              "value": "30882",
+              "label": "Property Forms Usage!F6"
+            },
+            {
+              "entityRef": "CP 0010 0607",
+              "value": "30859",
+              "label": "Property Forms Usage!F7"
+            },
+            {
+              "entityRef": "CPE 0100 2105",
+              "value": "30847",
+              "label": "Property Forms Usage!F8"
+            },
+            {
+              "entityRef": "CPE 1075 2105",
+              "value": "30847",
+              "label": "Property Forms Usage!F9"
+            },
+            {
+              "entityRef": "CPT 9000 1301",
+              "value": "27599",
+              "label": "Property Forms Usage!F10"
+            },
+            {
+              "entityRef": "CPT 9099 1301",
+              "value": "27599",
+              "label": "Property Forms Usage!F11"
+            },
+            {
+              "entityRef": "HSB 5000 1301",
+              "value": "27423",
+              "label": "Property Forms Usage!F12"
+            },
+            {
+              "entityRef": "CP 1504 0607",
+              "value": "23128",
+              "label": "Property Forms Usage!F13"
+            },
+            {
+              "entityRef": "CP 0030 0607",
+              "value": "23112",
+              "label": "Property Forms Usage!F14"
+            },
+            {
+              "entityRef": "CPE 0696 1301",
+              "value": "20241",
+              "label": "Property Forms Usage!F15"
+            },
+            {
+              "entityRef": "CPE 1555 1301",
+              "value": "18447",
+              "label": "Property Forms Usage!F16"
+            },
+            {
+              "entityRef": "CP 1556 0607",
+              "value": "14730",
+              "label": "Property Forms Usage!F17"
+            },
+            {
+              "entityRef": "CPT 5500 1301",
+              "value": "9311",
+              "label": "Property Forms Usage!F18"
+            },
+            {
+              "entityRef": "CP 0113 1002",
+              "value": "8452",
+              "label": "Property Forms Usage!F19"
+            },
+            {
+              "entityRef": "CP 1550 1185",
+              "value": "7819",
+              "label": "Property Forms Usage!F20"
+            },
+            {
+              "entityRef": "CP 1218 0607",
+              "value": "6466",
+              "label": "Property Forms Usage!F21"
+            },
+            {
+              "entityRef": "CP 0108 0520",
+              "value": "4657",
+              "label": "Property Forms Usage!F22"
+            },
+            {
+              "entityRef": "CP 0150 1000",
+              "value": "4116",
+              "label": "Property Forms Usage!F23"
+            },
+            {
+              "entityRef": "CP 0149 0607",
+              "value": "2565",
+              "label": "Property Forms Usage!F24"
+            },
+            {
+              "entityRef": "CP 0157 0918",
+              "value": "2386",
+              "label": "Property Forms Usage!F25"
+            }
+          ]
         },
         "citationResolve": null,
         "fabrication": {
@@ -2696,7 +5167,9 @@
           "ldRefWithRef": 0,
           "ldRefResolved": 0,
           "ldTableRefResolutionRate": null,
-          "misses": []
+          "misses": [],
+          "tablesExtracted": 5,
+          "ldTableRefResolutionRateEffective": 0
         },
         "hierarchy": {
           "goldenParentEdges": 83,
@@ -2869,8 +5342,8 @@
           "product": 24,
           "coverage": 467,
           "form": 1941,
-          "rule": 104,
-          "ldTable": 4,
+          "rule": 103,
+          "ldTable": 5,
           "__TOTAL__": 104
         },
         "floors": [

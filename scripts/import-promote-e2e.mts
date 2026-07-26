@@ -28,6 +28,15 @@ const ATTACH = process.env.IMPORT_ATTACH_RUN_ID || ''
 const WAIT_MS = Number(process.env.IMPORT_RESULT_WAIT_MS) || 2_700_000
 const KEEP  = process.env.IMPORT_KEEP === '1'
 
+// ── gated floors ─────────────────────────────────────────────────────────────
+// Both were informational notes, and both were being cleared by runs that had lost most of the
+// data: "at least one term survived" passed with terms on 8 of 95 coverages, and the coverageRef
+// ratio was never gated at all. Each floor is derived from what the SOURCE workbooks state, not
+// from what today's runs produce — the derivation is at each check site. Not overridable by env:
+// a floor a run can lower is not a floor.
+const COV_TERM_FLOOR     = 0.50   // coverages carrying >=1 term        (source basis 0.607 / 0.663)
+const STEP_COVREF_FLOOR  = 0.90   // rating steps carrying a coverageRef (source basis 0.999 / 0.948)
+
 const file = process.argv[2]
 if (!file && !ATTACH) { console.error('usage: tsx scripts/import-promote-e2e.mts <file>'); process.exit(2) }
 const abs = file ? resolve(file) : ''
@@ -212,15 +221,30 @@ const sentinel = outCovs.filter(c => PLACEHOLDER.test(String(c['name'] ?? '').tr
 if (sentinel.length) fails.push(`${sentinel.length}/${outCovs.length} PERSISTED coverages are placeholder-named`)
 else notes.push(`persisted coverage names: 0/${outCovs.length} placeholder-named`)
 
-let lim = 0, ded = 0, covDed = 0
+let lim = 0, ded = 0, covDed = 0, covWithTerm = 0
 for (const c of outCovs) {
   const terms = (c['terms'] ?? []) as { kind?: string }[]
   const l = terms.filter(t => t.kind === 'LIMIT').length
   const d = terms.filter(t => t.kind === 'DEDUCTIBLE').length
-  lim += l; ded += d; if (d) covDed++
+  lim += l; ded += d; if (d) covDed++; if (terms.length) covWithTerm++
 }
-notes.push(`persisted terms: ${lim} LIMIT, ${ded} DEDUCTIBLE (on ${covDed} coverages)`)
+notes.push(`persisted terms: ${lim} LIMIT, ${ded} DEDUCTIBLE (${covWithTerm} coverages carry a term; ${covDed} carry a deductible)`)
 if (outCovs.length > 0 && lim === 0 && ded === 0) fails.push('no limit or deductible term survived the round trip')
+
+// GATED FLOOR — coverages carrying at least one term.
+// "at least one term anywhere in the product" is a presence check, not a fidelity check: the
+// EPLUS-R2 run cleared it with terms on 8 of 95 coverages. The source states limits and
+// deductibles for most of its coverages — measured on the two spec workbooks these runs use,
+// 82/135 (60.7%) of Core coverage names and 63/95 (66.3%) of E+ coverage names appear inside the
+// named limit/deductible table blocks of their Rule References sheet ("Liability Limits - CO",
+// "Physical Damage Deductibles - AZ", "EP 501 Spare Parts Limits and Deductibles", ...). The floor
+// sits deliberately BELOW that measured basis — it is the minimum a correct import must clear,
+// not the expected value — and well above where today's runs land.
+const termRatio = outCovs.length > 0 ? covWithTerm / outCovs.length : 1
+notes.push(`coverages carrying >=1 term: ${covWithTerm}/${outCovs.length} = ${termRatio.toFixed(3)} (floor ${COV_TERM_FLOOR})`)
+if (outCovs.length > 0 && termRatio < COV_TERM_FLOOR) {
+  fails.push(`only ${covWithTerm}/${outCovs.length} coverages carry a term (${termRatio.toFixed(3)} < floor ${COV_TERM_FLOOR})`)
+}
 
 const steps = (outProgs[0]?.['steps'] ?? []) as Record<string, unknown>[]
 const badSteps = steps.filter(s => {
@@ -230,8 +254,20 @@ const badSteps = steps.filter(s => {
 if (steps.length && badSteps.length) fails.push(`${badSteps.length}/${steps.length} PERSISTED steps carry no source.type`)
 else notes.push(`persisted rating steps: ${steps.length}${steps.length ? ', all with source.type' : ' (none)'}`)
 
+// GATED FLOOR — rating steps carrying a coverage reference.
+// The source states the coverage a step prices in its own column: on "Core Rating
+// Specifications" 2000 of 2003 step rows (99.9%) carry a CORE.COV.* id in PRODUCT FRAMEWORK ID,
+// and on "E+ Rating Specs" 293 of 309 (94.8%) carry an EPLS.COV.* id — both sheets also carry a
+// COVERAGE NAME column (D5). A step whose coverageRef is blank has dropped a value the source
+// stated plainly, and the coverage card then shows no pricing figure. The floor is set below the
+// weaker of the two source rates to leave room for genuinely policy-level steps (fees, minimum
+// premium) that name no coverage; it is NOT set where today's runs land (90/2024 and 17/303).
 const withCovRef = steps.filter(s => String(s['coverageRef'] ?? '').trim() !== '').length
-notes.push(`steps carrying a stated coverageRef: ${withCovRef}/${steps.length}`)
+const covRefRatio = steps.length > 0 ? withCovRef / steps.length : 1
+notes.push(`steps carrying a stated coverageRef: ${withCovRef}/${steps.length} = ${covRefRatio.toFixed(3)} (floor ${STEP_COVREF_FLOOR})`)
+if (steps.length > 0 && covRefRatio < STEP_COVREF_FLOOR) {
+  fails.push(`only ${withCovRef}/${steps.length} rating steps carry a coverageRef (${covRefRatio.toFixed(3)} < floor ${STEP_COVREF_FLOOR})`)
+}
 
 if (!promoted) fails.push(`promote did not succeed (${promo.status})`)
 else {
@@ -283,7 +319,11 @@ try {
   mkdirSync(resolve('docs/audit'), { recursive: true })
   writeFileSync(resolve('docs/audit', `import_promote_e2e-${LABEL}.json`), JSON.stringify({
     label: LABEL, baseUrl: BASE, runId, productId: PID, promoted,
-    counts: { persisted: written, failed, coverages: outCovs.length, rules: outRules.length, steps: steps.length, limitTerms: lim, deductibleTerms: ded, stepsWithCoverageRef: withCovRef },
+    counts: { persisted: written, failed, coverages: outCovs.length, rules: outRules.length, steps: steps.length, limitTerms: lim, deductibleTerms: ded, stepsWithCoverageRef: withCovRef, coveragesWithTerm: covWithTerm },
+    floors: {
+      coverageTermRatio: { value: Number(termRatio.toFixed(4)), floor: COV_TERM_FLOOR, pass: !(outCovs.length > 0 && termRatio < COV_TERM_FLOOR) },
+      stepCoverageRefRatio: { value: Number(covRefRatio.toFixed(4)), floor: STEP_COVREF_FLOOR, pass: !(steps.length > 0 && covRefRatio < STEP_COVREF_FLOOR) },
+    },
     fails, notes,
   }, null, 2))
 } catch { /* best effort */ }
