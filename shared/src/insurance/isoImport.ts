@@ -157,6 +157,20 @@ function isX(v: IsoCell): boolean {
   return s === 'X' || s === '✓' || s === 'YES' || s === 'TRUE'
 }
 function isYes(v: IsoCell): boolean { return /^(y|yes|true|x)$/i.test(text(v)) }
+/** PREMIUM GENERATING — a THREE-state fact (G-D, no fabrication on silence). Yes/No are stated;
+ *  a blank cell, an unreadable value, or a sheet with no such column at all states NOTHING, and
+ *  that is `null` (the F14 origin marker the type already carries), never `false`. A manufactured
+ *  `false` is read downstream as "this coverage is explicitly not premium-bearing" and blanks the
+ *  coverage card's Pricing figure for a product whose source never said so — both Hagerty books
+ *  ship a framework sheet with NO premium-generating column, so every one of their coverages was
+ *  being stamped explicitly-unpriced. Mirrors mapRequirement's blank → UNKNOWN discipline. */
+function mapPremiumGenerating(v: IsoCell): boolean | null {
+  const s = clean(v)
+  if (s === '') return null
+  if (/^(y|yes|true|x)$/i.test(s)) return true
+  if (/^(n|no|false)$/i.test(s)) return false
+  return null
+}
 
 function parseNum(v: IsoCell): number | null {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null
@@ -644,7 +658,7 @@ function finalizeCoverages(
         refId: rc.refId, name: rc.name, parentId: rc.parentRefId, order: rc.order,
         requirement: mapRequirement(at(cells, 'requirement')),
         claimsBasis: mapClaimsBasis(at(cells, 'claimsBasis')),
-        premiumGenerating: isYes(at(cells, 'premiumGen')),
+        premiumGenerating: mapPremiumGenerating(at(cells, 'premiumGen')),
         source: mapSource(at(cells, 'bureau'), at(cells, 'proprietary')),
         formNumbers: splitList(at(cells, 'forms')),
         terms: [],

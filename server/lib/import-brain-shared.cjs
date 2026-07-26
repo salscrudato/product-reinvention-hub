@@ -3525,6 +3525,13 @@ function isX(v) {
 function isYes(v) {
   return /^(y|yes|true|x)$/i.test(text(v));
 }
+function mapPremiumGenerating(v) {
+  const s = clean(v);
+  if (s === "") return null;
+  if (/^(y|yes|true|x)$/i.test(s)) return true;
+  if (/^(n|no|false)$/i.test(s)) return false;
+  return null;
+}
 function parseNum(v) {
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
   const s = text(v).replace(/[$,%\s]/g, "");
@@ -4006,7 +4013,7 @@ function finalizeCoverages(resolved, draftByRefId, at, sheetName, ctx) {
         order: rc.order,
         requirement: mapRequirement(at(cells, "requirement")),
         claimsBasis: mapClaimsBasis(at(cells, "claimsBasis")),
-        premiumGenerating: isYes(at(cells, "premiumGen")),
+        premiumGenerating: mapPremiumGenerating(at(cells, "premiumGen")),
         source: mapSource(at(cells, "bureau"), at(cells, "proprietary")),
         formNumbers: splitList(at(cells, "forms")),
         terms: [],

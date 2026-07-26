@@ -1178,3 +1178,37 @@ describe('mapIsoWorkbook — a rating step carries the coverage its source row s
     expect(d9.summary.counts['ratingStepsWithCoverage']).toBe(5)
   })
 })
+
+// ─── G-D applied to PREMIUM GENERATING: silence is null, never "No" ──────────────
+// The blank cell was mapped through isYes(), so it produced a hard `false` — read
+// downstream as "this coverage is explicitly not premium-bearing", which blanks the
+// coverage card's Pricing figure. Both Hagerty books state nothing here (the current
+// framework sheets carry no such column at all; the frozen CORE fixture carries the
+// column with every cell empty), so all 112/135 of their coverages were being marked
+// explicitly-unpriced by the mapper. Yes/No stay exactly as before.
+describe('mapIsoWorkbook — PREMIUM GENERATING is three-state (G-D)', () => {
+  const book = (pgHeader: boolean, pgValues: string[]) => {
+    const head = ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE',
+      'SUB-COVERAGE', 'FORM NUMBER(S)', 'COVERAGE REQUIREMENT', ...(pgHeader ? ['PREMIUM GENERATING'] : []), 'ALL ACTIVE STATES']
+    const rows = pgValues.map((v, i) => ['Active', `PH.COV.00${i + 1}`, 'P', 'Personal Auto',
+      `Coverage ${String.fromCharCode(65 + i)}`, '', 'PP 00 01', 'Mandatory', ...(pgHeader ? [v] : []), 'X'])
+    return mapIsoWorkbook([g('PH Framework', [['PRODUCT FRAMEWORK'], head, ...rows])])
+  }
+  const pgOf = (p: ImportPlan) => p.coverages.map(c => c.data['premiumGenerating'])
+
+  it('a stated Yes/No is still exactly true/false', () => {
+    expect(pgOf(book(true, ['Yes', 'No']))).toEqual([true, false])
+  })
+
+  it('a BLANK cell states nothing — null, not a fabricated false', () => {
+    expect(pgOf(book(true, ['', 'Yes']))).toEqual([null, true])
+  })
+
+  it('a sheet with NO premium-generating column states nothing for every coverage', () => {
+    expect(pgOf(book(false, ['x', 'x']))).toEqual([null, null])
+  })
+
+  it('an unreadable value is not silently read as No', () => {
+    expect(pgOf(book(true, ['see rating rule 12']))).toEqual([null])
+  })
+})

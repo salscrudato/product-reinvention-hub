@@ -28,7 +28,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [],
         "allStates": true,
@@ -48,7 +47,6 @@
         "order": 2,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 103",
@@ -71,7 +69,6 @@
         "order": 3,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [],
         "allStates": true,
@@ -91,7 +88,6 @@
         "order": 4,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01 MA",
@@ -114,7 +110,6 @@
         "order": 5,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01 MA",
@@ -169,7 +164,6 @@
         "order": 6,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 002 CA",
@@ -205,7 +199,6 @@
         "order": 7,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01 MA",
@@ -250,7 +243,6 @@
         "order": 8,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 002 DC",
@@ -275,7 +267,6 @@
         "order": 9,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [],
         "allStates": true,
@@ -295,7 +286,6 @@
         "order": 10,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [],
         "allStates": true,
@@ -315,7 +305,6 @@
         "order": 11,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -341,7 +330,6 @@
         "order": 12,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 501",
@@ -364,7 +352,6 @@
         "order": 13,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -387,7 +374,6 @@
         "order": 14,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 001 ME"
@@ -409,7 +395,6 @@
         "order": 15,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01 MA",
@@ -442,7 +427,6 @@
         "order": 16,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "PP 03 63"
@@ -464,7 +448,6 @@
         "order": 17,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "PP 03 63"
@@ -486,7 +469,6 @@
         "order": 18,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 007 VA"
@@ -508,7 +490,6 @@
         "order": 19,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 005 MI"
@@ -531,7 +512,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -558,7 +538,6 @@
         "order": 2,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -585,7 +564,6 @@
         "order": 3,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -612,7 +590,6 @@
         "order": 4,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -639,7 +616,6 @@
         "order": 5,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -666,7 +642,6 @@
         "order": 6,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -693,7 +668,6 @@
         "order": 7,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -720,7 +694,6 @@
         "order": 8,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -746,7 +719,6 @@
         "order": 9,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 124"
@@ -769,7 +741,6 @@
         "order": 10,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -798,7 +769,6 @@
         "order": 11,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -827,7 +797,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 103"
@@ -850,7 +819,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -877,7 +845,6 @@
         "order": 2,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -904,7 +871,6 @@
         "order": 3,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -931,7 +897,6 @@
         "order": 4,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -958,7 +923,6 @@
         "order": 5,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -985,7 +949,6 @@
         "order": 6,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1012,7 +975,6 @@
         "order": 7,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1039,7 +1001,6 @@
         "order": 8,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1066,7 +1027,6 @@
         "order": 9,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 124"
@@ -1089,7 +1049,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 124"
@@ -1112,7 +1071,6 @@
         "order": 2,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1137,7 +1095,6 @@
         "order": 3,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 125",
@@ -1162,7 +1119,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1189,7 +1145,6 @@
         "order": 2,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1216,7 +1171,6 @@
         "order": 3,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1243,7 +1197,6 @@
         "order": 4,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1271,7 +1224,6 @@
         "order": 5,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 124"
@@ -1294,7 +1246,6 @@
         "order": 6,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 115",
@@ -1320,7 +1271,6 @@
         "order": 7,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 124"
@@ -1343,7 +1293,6 @@
         "order": 8,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 108"
@@ -1366,7 +1315,6 @@
         "order": 9,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -1395,7 +1343,6 @@
         "order": 10,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -1425,7 +1372,6 @@
         "order": 11,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -1454,7 +1400,6 @@
         "order": 12,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 115",
@@ -1480,7 +1425,6 @@
         "order": 13,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 115",
@@ -1506,7 +1450,6 @@
         "order": 14,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -1535,7 +1478,6 @@
         "order": 15,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 115",
@@ -1561,7 +1503,6 @@
         "order": 16,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 126",
@@ -1585,7 +1526,6 @@
         "order": 17,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 114",
@@ -1609,7 +1549,6 @@
         "order": 18,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 400"
@@ -1632,7 +1571,6 @@
         "order": 19,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 400"
@@ -1655,7 +1593,6 @@
         "order": 20,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 400"
@@ -1678,7 +1615,6 @@
         "order": 21,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 110"
@@ -1701,7 +1637,6 @@
         "order": 22,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 111"
@@ -1724,7 +1659,6 @@
         "order": 23,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 128"
@@ -1747,7 +1681,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1774,7 +1707,6 @@
         "order": 2,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1801,7 +1733,6 @@
         "order": 3,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1828,7 +1759,6 @@
         "order": 4,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 01",
@@ -1856,7 +1786,6 @@
         "order": 5,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 124"
@@ -1879,7 +1808,6 @@
         "order": 6,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 115",
@@ -1906,7 +1834,6 @@
         "order": 7,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 124"
@@ -1929,7 +1856,6 @@
         "order": 8,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 108"
@@ -1952,7 +1878,6 @@
         "order": 9,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -1981,7 +1906,6 @@
         "order": 10,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -2011,7 +1935,6 @@
         "order": 11,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -2040,7 +1963,6 @@
         "order": 12,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 115",
@@ -2066,7 +1988,6 @@
         "order": 13,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 115",
@@ -2092,7 +2013,6 @@
         "order": 14,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 113",
@@ -2121,7 +2041,6 @@
         "order": 15,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 115",
@@ -2147,7 +2066,6 @@
         "order": 16,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 126",
@@ -2171,7 +2089,6 @@
         "order": 17,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 114",
@@ -2195,7 +2112,6 @@
         "order": 18,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 400"
@@ -2218,7 +2134,6 @@
         "order": 19,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 400"
@@ -2241,7 +2156,6 @@
         "order": 20,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 400"
@@ -2264,7 +2178,6 @@
         "order": 21,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 110"
@@ -2287,7 +2200,6 @@
         "order": 22,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 111"
@@ -2310,7 +2222,6 @@
         "order": 23,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 128"
@@ -2333,7 +2244,6 @@
         "order": 24,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 42"
@@ -2356,7 +2266,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 501",
@@ -2380,7 +2289,6 @@
         "order": 2,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 501",
@@ -2404,7 +2312,6 @@
         "order": 3,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 501",
@@ -2428,7 +2335,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -2452,7 +2358,6 @@
         "order": 2,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -2476,7 +2381,6 @@
         "order": 3,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -2500,7 +2404,6 @@
         "order": 4,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -2524,7 +2427,6 @@
         "order": 5,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -2548,7 +2450,6 @@
         "order": 6,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -2572,7 +2473,6 @@
         "order": 7,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -2596,7 +2496,6 @@
         "order": 8,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -2620,7 +2519,6 @@
         "order": 9,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 500",
@@ -2644,7 +2542,6 @@
         "order": 1,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 004 AR",
@@ -2672,7 +2569,6 @@
         "order": 2,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 004 AR",
@@ -2701,7 +2597,6 @@
         "order": 3,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 004 MI",
@@ -2728,7 +2623,6 @@
         "order": 4,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 004 MI",
@@ -2754,7 +2648,6 @@
         "order": 5,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 004 AR",
@@ -2781,7 +2674,6 @@
         "order": 6,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 004 MI"
@@ -2804,7 +2696,6 @@
         "order": 7,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "PP 05 63"
@@ -2827,7 +2718,6 @@
         "order": 8,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 011 NY"
@@ -2850,7 +2740,6 @@
         "order": 9,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 124"
@@ -2873,7 +2762,6 @@
         "order": 10,
         "requirement": "UNKNOWN",
         "claimsBasis": "",
-        "premiumGenerating": false,
         "source": "BUREAU",
         "formNumbers": [
           "AC 00 60"
@@ -7514,6 +7402,7 @@
         "name": "AC 900",
         "defaultValue": 1500,
         "kindHint": "OPTION",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7525,6 +7414,7 @@
         "name": "Spare Parts Limit Increase via AC 900 / AC 00 01",
         "defaultValue": 750,
         "kindHint": "LIMIT",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7536,6 +7426,7 @@
         "name": "AC 103 Motorcycle Safety Apparel Coverage via Collector Motorcycle",
         "defaultValue": 3000,
         "kindHint": "OPTION",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7547,6 +7438,7 @@
         "name": "AC 108 Custom Features Coverage",
         "defaultValue": 10000,
         "kindHint": "OPTION",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7557,6 +7449,7 @@
       "fields": {
         "name": "AC 110 Foreign Coverage Endorsement",
         "kindHint": "OPTION",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7568,6 +7461,8 @@
         "name": "Legendary Ride Limits (AC 114)",
         "defaultValue": 10000,
         "kindHint": "LIMIT",
+        "deductibleHeader": "Deductible ($)",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7579,6 +7474,8 @@
         "name": "Traveling Collector Limits (AC 113)",
         "defaultValue": 10000,
         "kindHint": "LIMIT",
+        "deductibleHeader": "Deductible ($)",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7590,6 +7487,8 @@
         "name": "Motorsports Advantage Sub-Coverages (AC 115; AC 125; AC 126; AC 127)",
         "defaultValue": 10000,
         "kindHint": "OPTION",
+        "deductibleHeader": "Deductible/Subject to Additional Deductible ($)",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7612,6 +7511,7 @@
         "name": "AC 124 Collector Camper Trailer Endorsement",
         "defaultValue": 500,
         "kindHint": "OPTION",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7636,6 +7536,8 @@
         "valueHeader": "PLUS",
         "kindHint": "OPTION",
         "backLinkWas": "PLUS",
+        "deductibleHeader": "Deductible ($)",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7647,6 +7549,7 @@
         "name": "Loss of Earnings Limit Increase via AC 402",
         "defaultValue": 1000,
         "kindHint": "LIMIT",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7691,6 +7594,8 @@
         "name": "AC 500 Additional Subcoverages",
         "defaultValue": 1000,
         "kindHint": "OPTION",
+        "deductibleHeader": "Deductible ($)",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
@@ -7713,6 +7618,7 @@
         "name": "AC 501 Limited Mail Coverage via Collector Vehicle Spare Parts or Tools",
         "defaultValue": 1000,
         "kindHint": "LIMIT",
+        "limitHeaderSeen": true,
         "mintedId": true,
         "linkBasis": "derived"
       }
