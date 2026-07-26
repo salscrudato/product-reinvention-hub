@@ -50,7 +50,11 @@ export interface MergedCellRange {
 
 export interface SubTable {
   name: string
-  refId?: string
+  refId?: string          // the table's OWN id when the source states one (RTTable.001 / LDTable.001)
+  // The rule ids a "RULE ID:" / "RULE ID(s):" marker states for this block, byte-for-byte
+  // and in source order. Absent when the block states none. Distinct from refId: these
+  // name the rules the table SERVES, and a block usually names several.
+  ruleRefIds?: string[]
   startRow: number        // 0-based index in the parent cells array (first marker row)
   endRow: number          // 0-based, inclusive (last row before next marker or sheet end)
   headerRowIndex: number  // 0-based index in the parent cells array where column headers live

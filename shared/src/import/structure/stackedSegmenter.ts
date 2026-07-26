@@ -4,7 +4,10 @@
 // Fully deterministic, LLM-free.
 
 import type { NormalizedCell, SubTable, ColumnProfile } from './types'
-import { rowMatchesStackedMarker, TABLE_NAME_SENTINEL_PATTERN } from './layoutDetector'
+import {
+  rowMatchesStackedMarker, hasStackedTableMarkers, rowMatchesRuleIdMarker,
+  TABLE_NAME_SENTINEL_PATTERN, canonicalMetaKey,
+} from './layoutDetector'
 import { scoreHeaderCandidates, pickBestHeaderRow } from './headerScore'
 import { profileColumns } from './columnProfiler'
 
@@ -18,6 +21,17 @@ const REF_ID_PATTERNS: RegExp[] = [
 
 const TABLE_NAME_PATTERN = /TABLE\s+NAME\s*:\s*(.+)/i
 const META_KEY_VALUE_PATTERN = /^([^:]{1,60}):\s*(.*)$/
+
+// A rule-id marker states the ids as a ';'-separated list ("CORE.RU018; CORE.RU019; …").
+// ';' is the ONLY separator either book uses — verified over all 401 marker rows.
+const RULE_ID_SEPARATOR = ';'
+
+/** Split a rule-id marker value into its stated ids, byte-for-byte.
+ *  Whitespace around a separator is layout, not identity, so it is trimmed — nothing
+ *  else is touched (no case folding, no dot→dash, no de-duplication, no sorting). */
+function splitRuleRefIds(value: string): string[] {
+  return value.split(RULE_ID_SEPARATOR).map(s => s.trim()).filter(s => s.length > 0)
+}
 
 /** Extract a refId from a single row (scans first 3 columns). */
 function extractRefId(row: NormalizedCell[]): string | undefined {
@@ -43,7 +57,10 @@ function extractTableName(row: NormalizedCell[]): string | undefined {
   return undefined
 }
 
-/** Parse a sequence of rows into a key→value meta block. */
+/** Parse a sequence of rows into a key→value meta block.
+ *  Keys are uppercased and canonicalized, so "RULE ID:" and "RULE ID(s):" — the CORE
+ *  and E+ spellings of the same marker — both land under the single key "RULE ID".
+ *  Values are stored verbatim (trimmed only). */
 function parseMetaBlock(rows: NormalizedCell[][]): Record<string, string> {
   const meta: Record<string, string> = {}
   for (const row of rows) {
@@ -54,7 +71,7 @@ function parseMetaBlock(rows: NormalizedCell[][]): Record<string, string> {
       if (typeof v !== 'string') continue
       const m = v.trim().match(META_KEY_VALUE_PATTERN)
       if (m?.[1] && m[2]?.trim()) {
-        meta[m[1].trim().toUpperCase()] = m[2].trim()
+        meta[canonicalMetaKey(m[1].trim().toUpperCase())] = m[2].trim()
       }
     }
     // ② Split key/value across ANY adjacent cells: cell[c] = "KEY:", cell[c+1] = value.
@@ -63,7 +80,7 @@ function parseMetaBlock(rows: NormalizedCell[][]): Record<string, string> {
       const keyCell = row[c]
       if (typeof keyCell !== 'string') continue
       if (!/:\s*$/.test(keyCell.trim())) continue
-      const key = keyCell.trim().replace(/:\s*$/, '').trim().toUpperCase()
+      const key = canonicalMetaKey(keyCell.trim().replace(/:\s*$/, '').trim().toUpperCase())
       if (!key) continue
       const valCell = row[c + 1]
       if (typeof valCell === 'string' && valCell.trim()) {
@@ -87,8 +104,13 @@ function rowMatchesTableNameSentinel(row: NormalizedCell[]): boolean {
 
 /** Segment a STACKED_TABLES sheet into an array of named SubTable descriptors. */
 export function segmentStackedTables(cells: NormalizedCell[][]): SubTable[] {
-  // ① Find all marker row indices — use TABLE NAME: sentinel when no primary markers present
-  const hasPrimary = cells.some(r => rowMatchesStackedMarker(r ?? []))
+  // ① Find all marker row indices — use TABLE NAME: sentinel when no primary markers present.
+  //    The primary tier is chosen on the SAME >= 2 evidence detectLayoutShape uses
+  //    (hasStackedTableMarkers), not on a single hit. A lone stray "RATE TABLE ID:" in a
+  //    sheet delimited by 237 TABLE NAME: rows used to flip the whole sheet onto the
+  //    primary tier and collapse it to ONE sub-table — 236 tables silently lost. The
+  //    delimiter now follows what the sheet actually emits in quantity.
+  const hasPrimary = hasStackedTableMarkers(cells)
   const isMarker = hasPrimary ? rowMatchesStackedMarker : rowMatchesTableNameSentinel
   const markerRows: number[] = []
   for (let r = 0; r < cells.length; r++) {
@@ -126,6 +148,15 @@ export function segmentStackedTables(cells: NormalizedCell[][]): SubTable[] {
         continue
       }
 
+      // A rule-id marker row is meta wherever it sits in the first 3 columns — it
+      // identifies the block, it is never the block's data. Checked before the
+      // generic key/value probe, which only ever looks at column 0.
+      if (rowMatchesRuleIdMarker(row)) {
+        metaRows.push(row)
+        dataStart = r + 1
+        continue
+      }
+
       // Check if this row looks like another meta key-value entry
       const firstCell = row[0]
       if (typeof firstCell === 'string' && META_KEY_VALUE_PATTERN.test(firstCell.trim())) {
@@ -147,6 +178,14 @@ export function segmentStackedTables(cells: NormalizedCell[][]): SubTable[] {
       ?? metaBlock['RATE TABLE NAME']
       ?? metaBlock['LD TABLE NAME']
 
+    // The rule ids this block states about itself, byte-for-byte. NOT folded into
+    // `refId`: `refId` is the table's OWN id (RTTable.001 / LDTable.001), while a rule-id
+    // marker names the rules the table serves — and it usually names many (343 of 361 CORE
+    // markers and 28 of 40 E+ markers list more than one). Picking one to stand as the
+    // table's identity would be inventing an identity the source never states.
+    const ruleIdValue = metaBlock['RULE ID']
+    const ruleRefIds = ruleIdValue ? splitRuleRefIds(ruleIdValue) : []
+
     // ③ Find the column header row within the data range via scoring
     const dataSlice  = cells.slice(dataStart, blockEnd + 1)
     const candidates = scoreHeaderCandidates(dataSlice)
@@ -160,6 +199,7 @@ export function segmentStackedTables(cells: NormalizedCell[][]): SubTable[] {
     subTables.push({
       name:            (name || undefined) ?? (refId || undefined) ?? `Table ${i + 1}`,
       refId,
+      ...(ruleRefIds.length > 0 ? { ruleRefIds } : {}),
       startRow:        blockStart,
       endRow:          blockEnd,
       headerRowIndex:  subHdrRow,

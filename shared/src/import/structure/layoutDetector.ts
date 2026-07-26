@@ -26,6 +26,15 @@ export const ALL_STATES_LABELS = new Set([
 // NOTE: TABLE NAME is intentionally absent from the primary set — in GL/LD-table workbooks
 // it appears on the same row as the RATE/LD TABLE ID (meta WITHIN a block, not a start).
 // The secondary TABLE_NAME_SENTINEL_PATTERN is only used when no primary markers exist.
+//
+// WHICH BOOKS EMIT WHAT (counted over the first 3 columns of every row):
+//   samples/iso/sample-GL-pricing.xlsx  "GL Rating Tables"       RATE TABLE ID: ×7, RTTable.N ×7
+//   samples/iso/sample-GL-rules.xlsx    "Limits and Deductibles" LDTable.N ×37, TABLE NAME: ×34
+//   latest_samples/…_Core.xlsx          "Rule References"        TABLE NAME: ×237, RULE ID: ×361
+//   latest_samples/…_E+.xlsx            "E+ Rule References"     TABLE NAME: ×40,  RULE ID(s): ×40
+// The RATE/LD primaries are real — but ONLY in the ISO corpus. The two Hagerty
+// spec books emit neither, so their sheets segment on TABLE NAME and identify
+// themselves with RULE ID / RULE ID(s). Both spellings are grammar, not typos.
 const STACKED_MARKER_PATTERNS: RegExp[] = [
   /RATE\s+TABLE\s+ID\s*:/i,
   /^(RTTable)\.\d+$/i,
@@ -36,6 +45,30 @@ const STACKED_MARKER_PATTERNS: RegExp[] = [
 // Secondary sentinel: TABLE NAME: rows that ARE block delimiters when no primary
 // RATE/LD markers are present (e.g. E+ Rule References format).
 export const TABLE_NAME_SENTINEL_PATTERN = /^TABLE\s+NAME\s*:/i
+
+// The rule-id marker: the only self-identification the Hagerty spec books emit for a
+// stacked block. Singular in the CORE book ("RULE ID: CORE.RU018; …"), parenthesized
+// plural in the E+ book ("RULE ID(s): EPLS.RU019; …"). Bare-plural and possessive
+// spellings are accepted too so a third book's punctuation is not a silent data loss.
+// This marker identifies a block; it never delimits one (a block states TABLE NAME
+// first, then RULE ID — treating both as starts would split every block in two).
+export const RULE_ID_MARKER_PATTERN = /^RULE\s+ID(?:\(\s*S\s*\)|S|['’]S)?\s*:/i
+
+/** Canonical meta-block key for a rule-id marker cell, so downstream readers key on
+ *  ONE name regardless of which spelling the workbook used. Non-rule-id keys pass
+ *  through unchanged. Input is expected already trimmed + uppercased. */
+export function canonicalMetaKey(key: string): string {
+  return /^RULE\s+ID(?:\(\s*S\s*\)|S|['’]S)?$/i.test(key) ? 'RULE ID' : key
+}
+
+/** Returns true when the row's first 3 cells carry a rule-id marker (either form). */
+export function rowMatchesRuleIdMarker(row: NormalizedCell[]): boolean {
+  for (let c = 0; c < Math.min(row.length, 3); c++) {
+    const v = row[c]
+    if (typeof v === 'string' && RULE_ID_MARKER_PATTERN.test(v.trim())) return true
+  }
+  return false
+}
 
 /** Returns true when the row's first 3 cells contain a stacked-table marker. */
 export function rowMatchesStackedMarker(row: NormalizedCell[]): boolean {

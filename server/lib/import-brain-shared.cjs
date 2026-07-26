@@ -1127,6 +1127,17 @@ var STACKED_MARKER_PATTERNS = [
   /^(LDTable)\.\d+$/i
 ];
 var TABLE_NAME_SENTINEL_PATTERN = /^TABLE\s+NAME\s*:/i;
+var RULE_ID_MARKER_PATTERN = /^RULE\s+ID(?:\(\s*S\s*\)|S|['’]S)?\s*:/i;
+function canonicalMetaKey(key) {
+  return /^RULE\s+ID(?:\(\s*S\s*\)|S|['’]S)?$/i.test(key) ? "RULE ID" : key;
+}
+function rowMatchesRuleIdMarker(row2) {
+  for (let c = 0; c < Math.min(row2.length, 3); c++) {
+    const v = row2[c];
+    if (typeof v === "string" && RULE_ID_MARKER_PATTERN.test(v.trim())) return true;
+  }
+  return false;
+}
 function rowMatchesStackedMarker(row2) {
   for (let c = 0; c < Math.min(row2.length, 3); c++) {
     const v = row2[c];
@@ -1362,6 +1373,10 @@ var REF_ID_PATTERNS = [
 ];
 var TABLE_NAME_PATTERN = /TABLE\s+NAME\s*:\s*(.+)/i;
 var META_KEY_VALUE_PATTERN = /^([^:]{1,60}):\s*(.*)$/;
+var RULE_ID_SEPARATOR = ";";
+function splitRuleRefIds(value) {
+  return value.split(RULE_ID_SEPARATOR).map((s) => s.trim()).filter((s) => s.length > 0);
+}
 function extractRefId(row2) {
   for (let c = 0; c < Math.min(row2.length, 3); c++) {
     const v = row2[c];
@@ -1389,14 +1404,14 @@ function parseMetaBlock(rows) {
       if (typeof v !== "string") continue;
       const m = v.trim().match(META_KEY_VALUE_PATTERN);
       if (m?.[1] && m[2]?.trim()) {
-        meta[m[1].trim().toUpperCase()] = m[2].trim();
+        meta[canonicalMetaKey(m[1].trim().toUpperCase())] = m[2].trim();
       }
     }
     for (let c = 0; c < row2.length - 1; c++) {
       const keyCell = row2[c];
       if (typeof keyCell !== "string") continue;
       if (!/:\s*$/.test(keyCell.trim())) continue;
-      const key = keyCell.trim().replace(/:\s*$/, "").trim().toUpperCase();
+      const key = canonicalMetaKey(keyCell.trim().replace(/:\s*$/, "").trim().toUpperCase());
       if (!key) continue;
       const valCell = row2[c + 1];
       if (typeof valCell === "string" && valCell.trim()) {
@@ -1416,7 +1431,7 @@ function rowMatchesTableNameSentinel(row2) {
   return false;
 }
 function segmentStackedTables(cells) {
-  const hasPrimary = cells.some((r) => rowMatchesStackedMarker(r ?? []));
+  const hasPrimary = hasStackedTableMarkers(cells);
   const isMarker = hasPrimary ? rowMatchesStackedMarker : rowMatchesTableNameSentinel;
   const markerRows = [];
   for (let r = 0; r < cells.length; r++) {
@@ -1443,6 +1458,11 @@ function segmentStackedTables(cells) {
         dataStart = r + 1;
         continue;
       }
+      if (rowMatchesRuleIdMarker(row2)) {
+        metaRows.push(row2);
+        dataStart = r + 1;
+        continue;
+      }
       const firstCell = row2[0];
       if (typeof firstCell === "string" && META_KEY_VALUE_PATTERN.test(firstCell.trim())) {
         metaRows.push(row2);
@@ -1454,6 +1474,8 @@ function segmentStackedTables(cells) {
     }
     const metaBlock = parseMetaBlock(metaRows);
     name = name ?? metaBlock["TABLE NAME"] ?? metaBlock["RATE TABLE NAME"] ?? metaBlock["LD TABLE NAME"];
+    const ruleIdValue = metaBlock["RULE ID"];
+    const ruleRefIds = ruleIdValue ? splitRuleRefIds(ruleIdValue) : [];
     const dataSlice = cells.slice(dataStart, blockEnd + 1);
     const candidates = scoreHeaderCandidates(dataSlice);
     const subHdrOff = pickBestHeaderRow(candidates);
@@ -1463,6 +1485,7 @@ function segmentStackedTables(cells) {
     subTables.push({
       name: (name || void 0) ?? (refId || void 0) ?? `Table ${i + 1}`,
       refId,
+      ...ruleRefIds.length > 0 ? { ruleRefIds } : {},
       startRow: blockStart,
       endRow: blockEnd,
       headerRowIndex: subHdrRow,
