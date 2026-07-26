@@ -23,6 +23,7 @@ exports[`GL golden fixtures — Phase 0 baseline counts > counts snapshot (locks
   "ldTables": 37,
   "products": 1,
   "ratingSteps": 55,
+  "ratingStepsWithCoverage": 55,
   "rtTables": 4,
   "rules": 146,
 }

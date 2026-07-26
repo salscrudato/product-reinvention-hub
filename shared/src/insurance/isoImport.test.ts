@@ -1101,3 +1101,80 @@ describe('#2 over-refusal guard: a Limit | Deductible table still parses', () =>
     expect(tt.data['shape']).not.toBe('MATRIX')
   })
 })
+
+// ─── D9: the step→coverage column, kept ──────────────────────────────────────────
+// The rating sheet states the coverage each step prices in its own id column. The mapper
+// used to read that column only to mine the program refId out of it and then drop it, so
+// every step arrived priced to nothing. These lock the three source hazards the real
+// workbooks carry: vertical ditto continuation, multi-coverage cells, and a book whose
+// rating steps and coverages are numbered under DIFFERENT line tokens.
+describe('mapIsoWorkbook — a rating step carries the coverage its source row states (D9)', () => {
+  const d9Framework = g('E+ Framework', [
+    ['PRODUCT FRAMEWORK - E+'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'PRODUCT', 'LINE OF BUSINESS', 'COVERAGE', 'SUB-COVERAGE',
+     'FORM NUMBER(S)', 'ALL ACTIVE STATES'],
+    ['Active', 'EPLS.PRD.001', 'Enthusiast+', '', '', '', '', 'X'],
+    ['Active', 'EPLS.COV.001', 'Enthusiast+', 'Personal Auto', 'Bodily Injury Liability Coverage', '', 'EP 900', 'X'],
+    ['Active', 'EPLS.COV.002', 'Enthusiast+', 'Personal Auto', 'Property Damage Liability Coverage', '', 'EP 900', 'X'],
+    ['Active', 'EPLS.COV.003', 'Enthusiast+', 'Personal Auto', 'Collision Coverage', '', 'EP 901', 'X'],
+  ])
+  // Steps are numbered EP.RAT.*, coverages EPLS.COV.* — the exact prefix divergence the E+
+  // workbook ships, on which any literal `${prefix}.COV.` join fails.
+  const d9Rating = g('E+ Rating Specs', [
+    ['RATING SPECIFICATIONS - E+'],
+    ['STATUS', 'PRODUCT FRAMEWORK ID', 'RATING STEP ID', 'COVERAGE NAME', 'RATING RULES',
+     'ALGORITHM STEP', 'CALCULATION', 'ROUNDING NUMBER OF DIGITS', 'RATE REFERENCE'],
+    ['Active', 'EPLS.COV.001', 'EP.RAT.0001.01', 'Bodily Injury', '', 'Base rate', '*', '', ''],
+    ['Active', '',             'EP.RAT.0001.02', '', '', 'Driver age factor', '*', '', ''],
+    ['Active', '',             'EP.RAT.0001.03', '', '', 'Territory factor', '*', '', ''],
+    ['Active', 'EPLS.COV.002; EPLS.COV.003', 'EP.RAT.0001.04', '', '', 'Combined limit factor', '*', '', ''],
+    ['Active', 'EP.COV.003',   'EP.RAT.0001.05', '', '', 'Collision deductible factor', '*', '', ''],
+    ['Active', '',             'EP.RAT.0001.06', '', '', 'Total endorsement premium', '+', '', ''],
+    ['Active', 'EPLS.COV.404', 'EP.RAT.0001.07', '', '', 'Ghost coverage charge', '*', '', ''],
+  ])
+  const d9 = mapIsoWorkbook([d9Framework, d9Rating])
+  const d9Steps = d9.ratingProgram!.data['steps'] as { id: string; label: string; coverageRef?: string; coverageRefCitation?: string }[]
+  const byId = (id: string) => d9Steps.find(s => s.id === id)!
+
+  it('keeps the coverage the row states, byte-for-byte, with the cell that stated it', () => {
+    expect(byId('EP.RAT.0001.01').coverageRef).toBe('EPLS.COV.001')
+    expect(byId('EP.RAT.0001.01').coverageRefCitation).toBe('E+ Rating Specs!B3')
+  })
+
+  it('forward-fills the vertical ditto continuation rows the source leaves blank', () => {
+    // Rows 4 and 5 of the sheet state no id: they continue the block row 3 opened.
+    expect(byId('EP.RAT.0001.02').coverageRef).toBe('EPLS.COV.001')
+    expect(byId('EP.RAT.0001.03').coverageRef).toBe('EPLS.COV.001')
+    // The citation stays the cell that STATED the value, not the blank continuation cell.
+    expect(byId('EP.RAT.0001.03').coverageRefCitation).toBe('E+ Rating Specs!B3')
+  })
+
+  it('splits a cell that lists several coverages', () => {
+    expect(byId('EP.RAT.0001.04').coverageRef).toBe('EPLS.COV.002; EPLS.COV.003')
+  })
+
+  it('joins on segments, not on a literal prefix — the step and coverage tokens differ', () => {
+    // The row states "EP.COV.003"; the hierarchy carries "EPLS.COV.003". Same coverage.
+    expect(byId('EP.RAT.0001.05').coverageRef).toBe('EPLS.COV.003')
+  })
+
+  it('leaves a policy-level aggregation unset — it must not inherit the block above it', () => {
+    expect(byId('EP.RAT.0001.06').coverageRef).toBeUndefined()
+    expect(byId('EP.RAT.0001.06').coverageRefCitation).toBeUndefined()
+  })
+
+  it('drops an id that names no coverage and surfaces it for review — never invents one', () => {
+    expect(byId('EP.RAT.0001.07').coverageRef).toBeUndefined()
+    const defect = d9.summary.defects.find(x => x.code === 'step_coverage_ref_dangling')
+    expect(defect?.rawValue).toBe('EPLS.COV.404')
+    expect(d9.summary.notices.some(n => n.code === 'step_coverage_ref_dangling')).toBe(true)
+  })
+
+  it('every attached reference resolves to a coverage that exists in the plan', () => {
+    const covIds = new Set(d9.coverages.map(c => c.refId))
+    const attached = d9Steps.flatMap(s => (s.coverageRef ?? '').split(';').map(t => t.trim()).filter(Boolean))
+    expect(attached.length).toBeGreaterThan(0)
+    for (const refId of attached) expect(covIds.has(refId)).toBe(true)
+    expect(d9.summary.counts['ratingStepsWithCoverage']).toBe(5)
+  })
+})

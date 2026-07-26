@@ -253,7 +253,15 @@ function normalizeRatingStep(data, index, planWarnings) {
 
 // Fields the deterministic mapper genuinely ESTABLISHES from the source structure — it is the
 // canonical oracle for these and its value wins outright.
-const ISO_ORACLE_FIELDS = ['refId', 'parentId', 'order', 'terms']
+// `coverageRef` joined this set with D9: the mapper reads the coverage a rating step prices out
+// of the sheet's own coverage-id column (forward-filled across its ditto continuation rows,
+// multi-coverage cells split, resolved onto the hierarchy prefix-free). That is an established
+// structural fact, not an extraction — so a brain-guessed value never overwrites it. Declaring
+// it here is what makes the field's stage-7 behaviour DEFINED; without it the fix would land
+// non-deterministically. No entity kind carries a top-level `coverageRef` (canonicalMap declares
+// it only on ratingStep), so this addition is inert for the six joined groups and lives entirely
+// in the per-step join below.
+const ISO_ORACLE_FIELDS = ['refId', 'parentId', 'order', 'terms', 'coverageRef']
 // Fields the mapper merely STAMPS as workflow defaults (same set stampDefaults writes below):
 // importer-supplied review metadata carrying no citation. These must never overwrite a value
 // the brain read and cited from the source — a hardcoded 'ACTIVE' clobbering a cited
@@ -757,8 +765,51 @@ function buildImportPlan(brainOutput, opts = {}) {
         ratingProgram.refId = iso.ratingProgram.refId
         ratingProgram.data.refId = iso.ratingProgram.refId
       }
-      if ((!Array.isArray(ratingProgram.data.steps) || ratingProgram.data.steps.length === 0) && Array.isArray(iso.ratingProgram.data?.steps)) {
-        ratingProgram.data.steps = iso.ratingProgram.data.steps
+      // ── Rating steps: the same oracle/provenance split the six joined groups get ──────
+      // The brain's array still DEFINES the step set — its rows carry the citations and
+      // confidences the review UI renders, and the conservation count is taken from it. But a
+      // whole-array take-it-or-leave-it also threw away every field the mapper genuinely
+      // ESTABLISHED about those same rows, `coverageRef` above all: the brain reads the sparse
+      // COVERAGE NAME column (stated on 90 of 2,024 CORE rows, 17 of 303 E+ rows), the mapper
+      // reads the coverage-id column the source fills on nearly every row. Pair by step id,
+      // then by 1-based order — both sides walk the same sheet rows, so both keys are stable.
+      const isoSteps   = Array.isArray(iso.ratingProgram.data?.steps) ? iso.ratingProgram.data.steps : []
+      const brainSteps = Array.isArray(ratingProgram.data.steps) ? ratingProgram.data.steps : []
+      if (brainSteps.length === 0) {
+        if (isoSteps.length > 0) ratingProgram.data.steps = isoSteps
+      } else if (isoSteps.length > 0) {
+        const isoById = new Map()
+        const isoByOrder = new Map()
+        for (const s of isoSteps) {
+          if (!s || typeof s !== 'object') continue
+          if (typeof s.id === 'string' && s.id !== '' && !isoById.has(s.id)) isoById.set(s.id, s)
+          if (Number.isFinite(s.order) && !isoByOrder.has(Number(s.order))) isoByOrder.set(Number(s.order), s)
+        }
+        const pairedIso = new Set()
+        for (const b of brainSteps) {
+          if (!b || typeof b !== 'object') continue
+          const isoS = (typeof b.id === 'string' ? isoById.get(b.id) : undefined) ?? isoByOrder.get(Number(b.order))
+          if (!isoS) continue
+          pairedIso.add(isoS)
+          // The mapper is the ORACLE for these — its value wins outright.
+          for (const f of ISO_ORACLE_FIELDS) {
+            if (isoS[f] !== undefined) b[f] = isoS[f]
+          }
+          // Everything else the mapper established gap-fills only; the brain's cited value wins
+          // wherever both sides carry the field.
+          for (const [k, v] of Object.entries(isoS)) {
+            if (b[k] === undefined && k !== 'confidence' && k !== 'citation') b[k] = v
+          }
+        }
+        // Never silent: a mapper step with no brain counterpart is a row whose deterministic
+        // parse the plan does not carry. Report it rather than let the count quietly differ.
+        const unpaired = isoSteps.length - pairedIso.size
+        if (unpaired > 0) {
+          joinWarnings.push({
+            kind: 'rating-steps-unpaired', sheet: null, row: null, field: 'steps',
+            detail: `${unpaired} of ${isoSteps.length} deterministically parsed rating step(s) matched no extracted step by id or order — the plan carries the ${brainSteps.length} extracted step(s); the unmatched mapper rows contributed nothing. Review the rating sheet.`,
+          })
+        }
       }
     }
   }
@@ -789,9 +840,20 @@ function buildImportPlan(brainOutput, opts = {}) {
     }
     if (ratingProgram && Array.isArray(ratingProgram.data.steps)) {
       for (const s of ratingProgram.data.steps) {
-        const ref = s && s.source && s.source.ref
+        if (!s) continue
+        const ref = s.source && s.source.ref
         const to = remapTo('rtTable', ref) || remapTo('ldTable', ref)
         if (to) s.source.ref = to
+        // A step's coverage link is an edge too. The mapper's own values are already iso
+        // refIds and remap to themselves; a brain-supplied one still points at the brain's
+        // pre-adoption id, and a stale id shows the coverage card no pricing figure.
+        if (typeof s.coverageRef === 'string' && s.coverageRef !== '') {
+          s.coverageRef = s.coverageRef
+            .split(';')
+            .map(p => { const t = p.trim(); return t === '' ? t : (remapTo('coverage', t) || t) })
+            .filter(t => t !== '')
+            .join('; ')
+        }
       }
     }
   }

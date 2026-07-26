@@ -3683,6 +3683,19 @@ function refIdPrefix(refId) {
   return (refId.split(/[.\-_\d]/).filter(Boolean)[0] ?? "").toUpperCase();
 }
 var dashId2 = refIdToDocId;
+function cellRef2(sheet, r, c) {
+  let s = "";
+  for (let n = c; n >= 0; n = Math.floor(n / 26) - 1) s = String.fromCharCode(65 + n % 26) + s;
+  return `${sheet}!${s}${r + 1}`;
+}
+function refIdSegmentKey(refId) {
+  const segs2 = refId.split(/[.\-_]/).filter(Boolean);
+  if (segs2.length < 2) return "";
+  return segs2.slice(1).map((s) => /^\d+$/.test(s) ? String(Number(s)) : s.toUpperCase()).join(".");
+}
+function looksLikeRefId(s) {
+  return /[.\-_]/.test(s) && /\d/.test(s);
+}
 function extractTableRef(v) {
   const m = text(v).match(/\b((?:LD|RT)Table\.\w+)/i);
   return m ? m[1] : void 0;
@@ -4927,6 +4940,8 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
   let programRefId = null;
   let order = 0;
   let lastGroupName = "";
+  let lastCovIds = [];
+  let lastCovCite = "";
   for (let r = hr + 1; r < grid.cells.length; r++) {
     const cells = row(grid, r);
     const stepId = clean(at(cells, "stepId"));
@@ -4935,8 +4950,14 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
     const gn = clean(at(cells, "groupName"));
     if (gn) lastGroupName = gn;
     const stepGroupName = !gn && GLOBAL_STEP.test(label) ? "" : lastGroupName;
+    const statedIds = splitList(at(cells, "ids"));
+    if (statedIds.length && "ids" in col) {
+      lastCovIds = statedIds;
+      lastCovCite = cellRef2(grid.sheet, r, col["ids"]);
+    }
+    const stepCovIds = !statedIds.length && GLOBAL_STEP.test(label) ? [] : lastCovIds;
     if (!programRefId) {
-      const full = [stepId, ...splitList(at(cells, "ids"))].find((s) => /\.RAT/i.test(s));
+      const full = [stepId, ...statedIds].find((s) => /\.RAT/i.test(s));
       if (full) {
         const m = full.match(/^(.*\.RAT\.\d+)/i);
         programRefId = m ? m[1] : full;
@@ -4954,7 +4975,9 @@ function parseRating(grid, rtTables, productRefId, lobName, ctx) {
       op: mapOp(at(cells, "calc")),
       source: ref ? { type: "RT", ref } : rawRef ? { type: "RT", ref: rawRef } : { type: "INPUT", ref: label || stepId },
       ...roundTo !== void 0 ? { roundTo } : {},
-      ...stepGroupName ? { groupName: stepGroupName } : {}
+      ...stepGroupName ? { groupName: stepGroupName } : {},
+      ...stepCovIds.length ? { coverageRef: stepCovIds.join("; ") } : {},
+      ...stepCovIds.length && lastCovCite ? { coverageRefCitation: lastCovCite } : {}
     });
     scopes.push(stateScope(cells, sc));
   }
@@ -5349,6 +5372,94 @@ function enrichRatingWithGroups(ratingProgram, coverages, refTablesPresent, pref
   ratingProgram.data["ratingGroups"] = groups;
   return { groups: groups.length, matched: groups.filter((g) => g.matchBasis !== "unmatched").length, aiProposed, unmatchedNames };
 }
+function linkStepCoverages(ratingProgram, coverages, ctx) {
+  const empty = { steps: 0, linked: 0, unset: 0, dangling: [] };
+  if (!ratingProgram) return empty;
+  const steps = ratingProgram.data["steps"];
+  if (!Array.isArray(steps) || steps.length === 0) return empty;
+  if (coverages.length === 0) {
+    for (const s of steps) {
+      delete s.coverageRef;
+      delete s.coverageRefCitation;
+    }
+    return { ...empty, steps: steps.length, unset: steps.length };
+  }
+  const covRefIds = /* @__PURE__ */ new Set();
+  const bySegment = /* @__PURE__ */ new Map();
+  for (const c of coverages) {
+    const refId = c.refId;
+    if (!refId) continue;
+    covRefIds.add(refId);
+    const key = refIdSegmentKey(refId);
+    if (!key) continue;
+    const bucket = bySegment.get(key);
+    if (bucket) bucket.push(refId);
+    else bySegment.set(key, [refId]);
+  }
+  const namedCovs = coverages.map((c) => ({ refId: c.refId, name: String(c.data["name"] ?? "") }));
+  const cache = /* @__PURE__ */ new Map();
+  const resolveOne = (token) => {
+    const hit = cache.get(token);
+    if (hit !== void 0) return hit;
+    let out = null;
+    if (covRefIds.has(token)) out = token;
+    else if (looksLikeRefId(token)) {
+      const seg = bySegment.get(refIdSegmentKey(token));
+      if (seg && seg.length === 1) out = seg[0];
+    } else {
+      const named = matchCoverageByName(token, namedCovs);
+      if (named) out = named.refId;
+    }
+    cache.set(token, out);
+    return out;
+  };
+  let linked = 0;
+  let unset = 0;
+  const dangling = /* @__PURE__ */ new Map();
+  for (const step of steps) {
+    const stated = step.coverageRef ? splitList(step.coverageRef) : [];
+    if (!stated.length) {
+      delete step.coverageRef;
+      delete step.coverageRefCitation;
+      unset++;
+      continue;
+    }
+    const resolved = [];
+    for (const token of stated) {
+      const refId = resolveOne(token);
+      if (refId) {
+        if (!resolved.includes(refId)) resolved.push(refId);
+        continue;
+      }
+      if (looksLikeRefId(token) && /COV/i.test(token)) dangling.set(token, (dangling.get(token) ?? 0) + 1);
+    }
+    if (resolved.length) {
+      step.coverageRef = resolved.join("; ");
+      linked++;
+    } else {
+      delete step.coverageRef;
+      delete step.coverageRefCitation;
+      unset++;
+    }
+  }
+  if (dangling.size > 0) {
+    const names = [...dangling.keys()].sort();
+    ctx.addNotice({
+      code: "step_coverage_ref_dangling",
+      message: `${names.length} coverage id(s) named on rating rows match no coverage in the hierarchy \u2014 the rating sheet prices coverages the framework sheet does not carry: ${names.slice(0, 8).join("; ")}.`,
+      data: { count: names.length, refs: names.slice(0, 40) }
+    });
+    for (const raw of names.slice(0, 40)) ctx.addDefect({ code: "step_coverage_ref_dangling", field: "coverageRef", rawValue: raw });
+  }
+  if (unset > 0) {
+    ctx.addNotice({
+      code: "step_coverage_unset",
+      message: `${unset} of ${steps.length} rating step(s) carry no coverage reference \u2014 the source states none for them (policy-level totals, taxes and fees name no coverage). Review before pricing depends on them; no coverage was assumed.`,
+      data: { unset, steps: steps.length, linked }
+    });
+  }
+  return { steps: steps.length, linked, unset, dangling: [...dangling.keys()] };
+}
 function upgradeFormAnchors(forms, coverages, refTablesPresent) {
   if (!refTablesPresent) return 0;
   const covsByForm = buildCovsByForm(coverages);
@@ -5512,6 +5623,14 @@ function mapIsoWorkbook(grids, overlay, consumedSpans) {
     });
   }
   const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix, overlay);
+  const stepCovLinks = linkStepCoverages(ratingProgram, allCoverages, ctx);
+  if (stepCovLinks.linked > 0) {
+    ctx.addNotice({
+      code: "step_coverage_refs_linked",
+      message: `${stepCovLinks.linked} of ${stepCovLinks.steps} rating step(s) carry the coverage reference their source row states (forward-filled across ditto continuation rows; multi-coverage cells split).`,
+      data: { linked: stepCovLinks.linked, steps: stepCovLinks.steps, unset: stepCovLinks.unset }
+    });
+  }
   const formUpgrades = upgradeFormAnchors(forms, allCoverages, refTables.length > 0);
   const ratePlaceholders = mintRatePlaceholders(ratingProgram, refPrefix, refTables.length > 0);
   const excludedArtifacts = refTables.length > 0 ? rateTableArtifacts(rtGrid) : [];
@@ -5645,6 +5764,9 @@ function mapIsoWorkbook(grids, overlay, consumedSpans) {
     rules: rules.length,
     formRules: formRules.length,
     ratingSteps: stepCount,
+    // D9: how much of the algorithm is actually attributed to a coverage. Rating-program-scoped
+    // (not part of the concept-linker block below), so it appears wherever steps do.
+    ...ratingProgram ? { ratingStepsWithCoverage: stepCovLinks.linked } : {},
     rtTables: rtTables.length,
     ldTables: allLdTables.length,
     // Concept-linker counts are added ONLY under the CORE signature, so a workbook with no

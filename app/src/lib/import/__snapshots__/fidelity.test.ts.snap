@@ -22,6 +22,7 @@ exports[`fidelity — GL (4 workbooks) > counts snapshot 1`] = `
   "ldTables": 37,
   "products": 1,
   "ratingSteps": 55,
+  "ratingStepsWithCoverage": 55,
   "rtTables": 4,
   "rules": 146,
 }
@@ -83,6 +84,7 @@ exports[`fidelity — PR (2 workbooks) > counts snapshot (regression anchor) 1`]
   "ldTables": 0,
   "products": 1,
   "ratingSteps": 909,
+  "ratingStepsWithCoverage": 907,
   "rtTables": 0,
   "rules": 1608,
 }

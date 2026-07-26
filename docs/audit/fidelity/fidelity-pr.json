@@ -31,6 +31,7 @@
     "rules": 1608,
     "formRules": 0,
     "ratingSteps": 909,
+    "ratingStepsWithCoverage": 907,
     "rtTables": 0,
     "ldTables": 0
   },

@@ -120,3 +120,78 @@ describe('#21 the Pricing tab survives a program persisted without sources', () 
     expect(repairPersistedProgram(null)).toBeNull()
   })
 })
+
+// D9 — the coverage a rating step prices is ORACLE-owned.
+//
+// The brain reads the sheet's COVERAGE NAME column, which real ROCs state once per block and
+// leave blank on every continuation row beneath it (90 of 2,024 CORE rows carry it, 17 of 303
+// E+ rows). The deterministic mapper reads the coverage-ID column the same sheets fill on
+// nearly every row, forward-fills the ditto continuations, splits multi-coverage cells and
+// resolves each token onto the hierarchy. That is an established structural fact, so
+// `coverageRef` is in ISO_ORACLE_FIELDS and the mapper's value wins outright — without that
+// declaration the field's stage-7 behaviour is undefined and the fix lands non-deterministically.
+describe('D9 the mapper is the ORACLE for the coverage a rating step prices', () => {
+  const cite = (sheet: string, cell: string, verbatim: string) => ({ sheet, cell, verbatim })
+  const stepEntity = (refId: string, label: string, row: number, extra: Array<{ fieldName: string; value: unknown }>) => ({
+    kind: 'ratingStep', sourceSheet: 'Core Rating Specifications', sourceRowIndex: row,
+    overallConfidence: 0.9,
+    fields: [
+      { fieldName: 'refId', value: refId, confidence: 0.95, citation: cite('Core Rating Specifications', `C${row}`, refId) },
+      { fieldName: 'label', value: label, confidence: 0.95, citation: cite('Core Rating Specifications', `I${row}`, label) },
+      ...extra.map(f => ({ ...f, confidence: 0.9, citation: cite('Core Rating Specifications', `D${row}`, String(f.value)) })),
+    ],
+  })
+
+  const bundle = buildImportPlan({
+    entities: [
+      {
+        kind: 'ratingProgram', sourceSheet: 'Core Rating Specifications', sourceRowIndex: 5, overallConfidence: 0.9,
+        fields: [{ fieldName: 'refId', value: 'CORE.RAT.1', confidence: 0.95, citation: cite('Core Rating Specifications', 'C6', 'CORE.RAT.1') }],
+      },
+      // The brain read the sparse COVERAGE NAME column and produced a coverage NAME.
+      stepEntity('CORE.RAT.1.01', 'Base rate', 6, [
+        { fieldName: 'coverageRef', value: 'Bodily Injury' },
+        { fieldName: 'source.ref', value: 'RT.BASE' },
+      ]),
+      // A continuation row: the brain read nothing at all for the coverage.
+      stepEntity('CORE.RAT.1.02', 'Driver age factor', 7, [{ fieldName: 'source.ref', value: 'RT.AGE' }]),
+    ],
+    importWarnings: [], classifiedSheets: [], columnMaps: [],
+  }, {
+    lobRefIdHint: 'PH.LOB.001', sourceName: 'fixture.xlsx',
+    isoPlan: {
+      ratingProgram: {
+        docId: 'CORE-RAT-1', refId: 'CORE.RAT.1', label: 'CORE.RAT.1 — rating program',
+        data: {
+          refId: 'CORE.RAT.1', name: 'Imported Rating Program',
+          steps: [
+            { id: 'CORE.RAT.1.01', order: 1, label: 'Base rate', op: 'MUL', source: { type: 'RT', ref: 'RT.BASE' },
+              coverageRef: 'CORE.COV.018', coverageRefCitation: 'Core Rating Specifications!B6' },
+            { id: 'CORE.RAT.1.02', order: 2, label: 'Driver age factor', op: 'MUL', source: { type: 'RT', ref: 'RT.AGE' },
+              coverageRef: 'CORE.COV.018', coverageRefCitation: 'Core Rating Specifications!B6' },
+          ],
+        },
+      },
+    },
+  })
+  const steps = bundle.plan.ratingProgram.data.steps as Array<Record<string, unknown>>
+  const step = (id: string) => steps.find(s => s['id'] === id)!
+
+  it('a brain-supplied value never overwrites the mapper-established one', () => {
+    // The brain cited "Bodily Injury"; the mapper established CORE.COV.018 from the id column.
+    expect(step('CORE.RAT.1.01')['coverageRef']).toBe('CORE.COV.018')
+  })
+
+  it('gap-fills the steps the brain read no coverage for at all', () => {
+    expect(step('CORE.RAT.1.02')['coverageRef']).toBe('CORE.COV.018')
+  })
+
+  it('carries the citation of the cell that stated it', () => {
+    expect(step('CORE.RAT.1.01')['coverageRefCitation']).toBe('Core Rating Specifications!B6')
+  })
+
+  it('keeps the brain step set — the plan is not silently replaced by the mapper array', () => {
+    expect(steps).toHaveLength(2)
+    expect((step('CORE.RAT.1.01')['source'] as { type: string; ref: string })).toEqual({ type: 'RT', ref: 'RT.BASE' })
+  })
+})

@@ -45,8 +45,7 @@ export function linkCoverageToPricing(
   // with the coverage's name, which both over-matches ("Automotive Tools" ↔ any step
   // mentioning tools) and under-matches (a step labelled only "Base rate" links to nothing).
   const covRefId = (cov.refId ?? '').trim()
-  const stepCoverageRef = (s: RatingStep): string =>
-    String((s as RatingStep & { coverageRef?: unknown }).coverageRef ?? '').trim()
+  const stepCoverageRef = (s: RatingStep): string => (s.coverageRef ?? '').trim()
   const stated = covRefId
     ? steps.filter(s => {
         const cr = stepCoverageRef(s)

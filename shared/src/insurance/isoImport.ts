@@ -55,6 +55,7 @@ export interface UnmappedColumns { sheet: string; columns: string[] }
 export interface ReviewDefect {
   code:           'unmapped_enum' | 'forms_applicability_merged'
                   | 'rating_group_unmatched' | 'template_artifact_excluded'
+                  | 'step_coverage_ref_dangling'
   field?:         string
   rawValue?:      string
   rowRef?:        string
@@ -315,6 +316,26 @@ function refIdPrefix(refId: string): string {
 /** Firestore-safe doc id (matches the seed: dots → dashes) — the canonical mint
  *  now lives in refId.ts (BACKLOG_SEED item 1); this alias keeps call sites stable. */
 const dashId = refIdToDocId
+/** "Sheet!B412" for a 0-based (row, col) — the citation form every brain stage already
+ *  emits (server/lib/import-brain/constants.js colLetter + excel row). */
+function cellRef(sheet: string, r: number, c: number): string {
+  let s = ''
+  for (let n = c; n >= 0; n = Math.floor(n / 26) - 1) s = String.fromCharCode(65 + (n % 26)) + s
+  return `${sheet}!${s}${r + 1}`
+}
+/** A refId's dot segments AFTER the leading line/product token, with numeric segments
+ *  de-zero-padded: "EPLS.COV.001" and "EP.COV.1" both key to "COV.1". Used to join a stated
+ *  coverage id onto the hierarchy WITHOUT a literal prefix compare — a workbook may number its
+ *  rating steps under one line token and its coverages under another (E+ states steps
+ *  EP.RAT.0001.NN against coverages EPLS.COV.NNN), so any `${prefix}.COV.` join fails on
+ *  exactly that book. Returns '' when the id has no segment tail to key on. */
+function refIdSegmentKey(refId: string): string {
+  const segs = refId.split(/[.\-_]/).filter(Boolean)
+  if (segs.length < 2) return ''
+  return segs.slice(1).map(s => (/^\d+$/.test(s) ? String(Number(s)) : s.toUpperCase())).join('.')
+}
+/** An id-shaped token (a separator AND a digit) — as opposed to a coverage NAME. */
+function looksLikeRefId(s: string): boolean { return /[.\-_]/.test(s) && /\d/.test(s) }
 /** Pull an LD/RT table ref out of a free-text "rule reference" cell. */
 function extractTableRef(v: IsoCell): string | undefined {
   const m = text(v).match(/\b((?:LD|RT)Table\.\w+)/i)
@@ -1575,6 +1596,9 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
   let programRefId: string | null = null
   let order = 0
   let lastGroupName = ''
+  // D9: the coverage-id column, carried onto the step instead of being spent on the program id.
+  let lastCovIds: string[] = []
+  let lastCovCite = ''
 
   for (let r = hr + 1; r < grid.cells.length; r++) {
     const cells = row(grid, r)
@@ -1591,8 +1615,23 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
     // not forward-fill the previous group onto it, or the trailing statutory taxes/fees and the
     // final premium get falsely attributed to the last coverage (D5).
     const stepGroupName = (!gn && GLOBAL_STEP.test(label)) ? '' : lastGroupName
+    // ── D9: KEEP the step→coverage column, don't just mine the program id out of it ──
+    // The rating sheet states the coverage each step prices in its own id column, and the cell
+    // is written ONCE at the top of that coverage's block and left blank on every continuation
+    // row beneath it (vertical ditto). Forward-fill it under the SAME global-step guard the
+    // group name uses: a policy-level aggregation (final/total/minimum premium, tax, assessment,
+    // statutory fee) carries no coverage of its own and must not inherit the block above it.
+    // A cell may list several coverages ("EPLS.COV.005; EPLS.COV.006") — splitList is the one
+    // multi-value splitter the mapper uses everywhere. The tokens are captured VERBATIM here;
+    // linkStepCoverages resolves them onto the hierarchy and drops what it cannot establish.
+    const statedIds = splitList(at(cells, 'ids'))
+    if (statedIds.length && 'ids' in col) {
+      lastCovIds  = statedIds
+      lastCovCite = cellRef(grid.sheet, r, col['ids']!)
+    }
+    const stepCovIds = (!statedIds.length && GLOBAL_STEP.test(label)) ? [] : lastCovIds
     if (!programRefId) {
-      const full = [stepId, ...splitList(at(cells, 'ids'))].find(s => /\.RAT/i.test(s))
+      const full = [stepId, ...statedIds].find(s => /\.RAT/i.test(s))
       if (full) { const m = full.match(/^(.*\.RAT\.\d+)/i); programRefId = m ? m[1]! : full } // "GL.RAT.1.00" → "GL.RAT.1"
     }
     const ref = resolveRef(at(cells, 'reference'))
@@ -1610,6 +1649,8 @@ function parseRating(grid: IsoGrid, rtTables: PlannedEntity[], productRefId: str
         : (rawRef ? { type: 'RT', ref: rawRef } : { type: 'INPUT', ref: label || stepId }),
       ...(roundTo !== undefined ? { roundTo } : {}),
       ...(stepGroupName ? { groupName: stepGroupName } : {}),
+      ...(stepCovIds.length ? { coverageRef: stepCovIds.join('; ') } : {}),
+      ...(stepCovIds.length && lastCovCite ? { coverageRefCitation: lastCovCite } : {}),
     })
     scopes.push(stateScope(cells, sc))
   }
@@ -2127,6 +2168,106 @@ function enrichRatingWithGroups(
   return { groups: groups.length, matched: groups.filter(g => g.matchBasis !== 'unmatched').length, aiProposed, unmatchedNames }
 }
 
+/** Resolve the coverage id(s) each rating step's source cell STATES onto the hierarchy (D9).
+ *  parseRating captured the cell verbatim (forward-filled across its ditto continuation rows);
+ *  this pass turns those tokens into byte-faithful hierarchy refIds and DROPS anything the
+ *  source does not establish. A step whose coverage cannot be resolved is left UNSET and
+ *  surfaces as a review item — never guessed, never re-prefixed into existence.
+ *
+ *  The join is deliberately PREFIX-FREE. Three tiers, most certain first:
+ *    1. exact refId — byte-for-byte, the overwhelming majority
+ *    2. segment key — the dot segments after the leading line token with numeric segments
+ *       de-zero-padded, accepted ONLY when exactly one coverage owns that key (a workbook whose
+ *       rating steps and coverages carry different line tokens joins here; an ambiguous key
+ *       resolves to nothing rather than to a guess)
+ *    3. coverage NAME — the cell named the coverage instead of its id (matchCoverageByName,
+ *       which returns null rather than a best-effort guess)
+ *  Ids that are simply not coverage ids — the product/LOB/program id the same column carries on
+ *  some rows — resolve to nothing and are counted, not flagged: they are not dangling references.
+ *  NOT signature-gated: every one of these links is a cell the source wrote. */
+function linkStepCoverages(
+  ratingProgram: PlannedEntity | null,
+  coverages: PlannedEntity[],
+  ctx: Ctx,
+): { steps: number; linked: number; unset: number; dangling: string[] } {
+  const empty = { steps: 0, linked: 0, unset: 0, dangling: [] as string[] }
+  if (!ratingProgram) return empty
+  const steps = ratingProgram.data['steps'] as RatingStep[] | undefined
+  if (!Array.isArray(steps) || steps.length === 0) return empty
+  if (coverages.length === 0) {
+    // Nothing to resolve against — a stated token must not survive as a pseudo-refId.
+    for (const s of steps) { delete s.coverageRef; delete s.coverageRefCitation }
+    return { ...empty, steps: steps.length, unset: steps.length }
+  }
+
+  const covRefIds = new Set<string>()
+  const bySegment = new Map<string, string[]>()
+  for (const c of coverages) {
+    const refId = c.refId as string | undefined
+    if (!refId) continue
+    covRefIds.add(refId)
+    const key = refIdSegmentKey(refId)
+    if (!key) continue
+    const bucket = bySegment.get(key)
+    if (bucket) bucket.push(refId); else bySegment.set(key, [refId])
+  }
+  const namedCovs: NamedCoverage[] = coverages.map(c => ({ refId: c.refId as string, name: String(c.data['name'] ?? '') }))
+
+  const cache = new Map<string, string | null>()
+  const resolveOne = (token: string): string | null => {
+    const hit = cache.get(token)
+    if (hit !== undefined) return hit
+    let out: string | null = null
+    if (covRefIds.has(token)) out = token                              // 1. exact, byte-for-byte
+    else if (looksLikeRefId(token)) {
+      const seg = bySegment.get(refIdSegmentKey(token))                // 2. prefix-free segments
+      if (seg && seg.length === 1) out = seg[0]!
+    } else {
+      const named = matchCoverageByName(token, namedCovs)              // 3. the cell named it
+      if (named) out = named.refId
+    }
+    cache.set(token, out)
+    return out
+  }
+
+  let linked = 0
+  let unset = 0
+  const dangling = new Map<string, number>()
+  for (const step of steps) {
+    const stated = step.coverageRef ? splitList(step.coverageRef) : []
+    if (!stated.length) { delete step.coverageRef; delete step.coverageRefCitation; unset++; continue }
+    const resolved: string[] = []
+    for (const token of stated) {
+      const refId = resolveOne(token)
+      if (refId) { if (!resolved.includes(refId)) resolved.push(refId); continue }
+      // A COV-shaped id that names no coverage in the hierarchy is a dangling reference the
+      // source states and the workbook does not deliver — that is a review item. A PROD/LOB/RAT
+      // id in the same column is simply not a coverage reference; it is counted, not flagged.
+      if (looksLikeRefId(token) && /COV/i.test(token)) dangling.set(token, (dangling.get(token) ?? 0) + 1)
+    }
+    if (resolved.length) { step.coverageRef = resolved.join('; '); linked++ }
+    else { delete step.coverageRef; delete step.coverageRefCitation; unset++ }
+  }
+
+  if (dangling.size > 0) {
+    const names = [...dangling.keys()].sort()
+    ctx.addNotice({
+      code: 'step_coverage_ref_dangling',
+      message: `${names.length} coverage id(s) named on rating rows match no coverage in the hierarchy — the rating sheet prices coverages the framework sheet does not carry: ${names.slice(0, 8).join('; ')}.`,
+      data: { count: names.length, refs: names.slice(0, 40) },
+    })
+    for (const raw of names.slice(0, 40)) ctx.addDefect({ code: 'step_coverage_ref_dangling', field: 'coverageRef', rawValue: raw })
+  }
+  if (unset > 0) {
+    ctx.addNotice({
+      code: 'step_coverage_unset',
+      message: `${unset} of ${steps.length} rating step(s) carry no coverage reference — the source states none for them (policy-level totals, taxes and fees name no coverage). Review before pricing depends on them; no coverage was assumed.`,
+      data: { unset, steps: steps.length, linked },
+    })
+  }
+  return { steps: steps.length, linked, unset, dangling: [...dangling.keys()] }
+}
+
 /** Upgrade form anchors (D6): a form the source anchors only at product/line level, whose form
  *  number appears in one-or-more coverages' form-number lists, is re-anchored to those coverages
  *  — the hierarchy identifies the owning coverage the forms sheet left implicit. Forms keep
@@ -2358,6 +2499,18 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
   // each to hierarchy coverages / package forms, flag the genuinely-missing ones. CORE-gated.
   const ratingGroups = enrichRatingWithGroups(ratingProgram, allCoverages, refTables.length > 0, refPrefix, overlay)
 
+  // Resolve the coverage id(s) each step's own column STATES onto the hierarchy (D9). Runs after
+  // the group pass so both linkages are present, and over ALL coverages so a multi-product
+  // workbook resolves across the whole hierarchy. Ungated: every link is a cell the source wrote.
+  const stepCovLinks = linkStepCoverages(ratingProgram, allCoverages, ctx)
+  if (stepCovLinks.linked > 0) {
+    ctx.addNotice({
+      code: 'step_coverage_refs_linked',
+      message: `${stepCovLinks.linked} of ${stepCovLinks.steps} rating step(s) carry the coverage reference their source row states (forward-filled across ditto continuation rows; multi-coverage cells split).`,
+      data: { linked: stepCovLinks.linked, steps: stepCovLinks.steps, unset: stepCovLinks.unset },
+    })
+  }
+
   // Upgrade line-level form anchors to the coverages the hierarchy's form lists name (D6). CORE-gated.
   const formUpgrades = upgradeFormAnchors(forms, allCoverages, refTables.length > 0)
 
@@ -2513,6 +2666,9 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
     rules: rules.length,
     formRules: formRules.length,
     ratingSteps: stepCount,
+    // D9: how much of the algorithm is actually attributed to a coverage. Rating-program-scoped
+    // (not part of the concept-linker block below), so it appears wherever steps do.
+    ...(ratingProgram ? { ratingStepsWithCoverage: stepCovLinks.linked } : {}),
     rtTables: rtTables.length,
     ldTables: allLdTables.length,
     // Concept-linker counts are added ONLY under the CORE signature, so a workbook with no

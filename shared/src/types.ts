@@ -277,6 +277,19 @@ export interface RatingStep {
   groupMatchBasis?:      LinkBasis | 'unmatched'
   /** Minted rate-table placeholder this step draws its factor from (D4; PREFIX.RTB.NNN). */
   ratePlaceholderRef?:   string
+  // ── The coverage the SOURCE says this step prices (D9). ──
+  /** Hierarchy coverage refId(s) the rating sheet's coverage-id column STATES for this step,
+   *  byte-for-byte and "; "-joined when the cell lists several. Established by the deterministic
+   *  mapper from a cell the source wrote, so it is ISO-ORACLE-owned (stage7 ISO_ORACLE_FIELDS):
+   *  a brain-extracted value never overwrites it. Left UNSET when the source establishes no
+   *  coverage for the step — a policy-level total/tax/fee, or an id that names no coverage in
+   *  the hierarchy — which surfaces as a review item rather than a guess. Nested in
+   *  ratingProgram.steps → golden-invisible; read by NO evaluator code. */
+  coverageRef?:          string
+  /** The cell that STATED that reference ("Core Rating Specifications!B412"). A ditto
+   *  continuation row cites the cell that opened its block, because that is the cell the
+   *  value came from. */
+  coverageRefCitation?:  string
 }
 
 /** Concept-linker rating-group summary — one per coverage-name group in a group-enriched

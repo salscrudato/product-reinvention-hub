@@ -35,7 +35,12 @@ const KEEP  = process.env.IMPORT_KEEP === '1'
 // from what today's runs produce — the derivation is at each check site. Not overridable by env:
 // a floor a run can lower is not a floor.
 const COV_TERM_FLOOR     = 0.50   // coverages carrying >=1 term        (source basis 0.607 / 0.663)
-const STEP_COVREF_FLOOR  = 0.90   // rating steps carrying a coverageRef (source basis 0.999 / 0.948)
+// Raised 0.90 → 0.95 with D9: the mapper now carries the coverage-id column onto the step
+// (forward-filled across ditto continuations, multi-coverage cells split, resolved onto the
+// hierarchy prefix-free) and is the stage-7 ORACLE for it, so the floor can sit where the
+// SOURCE sits rather than below it. Measured on the deterministic parse of both books after
+// the fix: CORE 2012/2024 = 0.994, E+ 299/303 = 0.987 (was 90/2024 and 17/303).
+const STEP_COVREF_FLOOR  = 0.95   // rating steps carrying a coverageRef (source basis 0.999 / 0.948)
 
 const file = process.argv[2]
 if (!file && !ATTACH) { console.error('usage: tsx scripts/import-promote-e2e.mts <file>'); process.exit(2) }
