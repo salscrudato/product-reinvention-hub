@@ -5282,7 +5282,10 @@ function deriveTermsFromReferenceTables(coverages, refTables, ctx) {
           id: `${baseId}-deductible`,
           kind: "DEDUCTIBLE",
           label: `${data.name || tableRefId} \u2014 ${data.deductibleHeader || "Deductible"}`,
-          ldTableRef: tableRefId,
+          // Deliberately NO ldTableRef. resolveTermOptions unions a term's own `options`
+          // with its ldTable's `rows`, and this table's rows are the LIMIT column — so
+          // pointing at it would offer the limit amounts as selectable DEDUCTIBLES. The
+          // deductible series is self-contained in `options`; the limit term keeps the link.
           options: dedValues,
           default: typeof dedValues[0] === "number" ? dedValues[0] : 0,
           basis: "",

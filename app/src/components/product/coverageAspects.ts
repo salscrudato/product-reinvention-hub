@@ -6,7 +6,7 @@ import { IconLimit, IconDeductible, IconStates, IconForm, IconPricing, IconRule,
 import { useProductCtx } from '../../context/useProductCtx'
 import { resolveTermOptions, resolveLob } from '@pf/shared'
 import { linkCoverageToPricing } from '../../lib/insurance/pricingLinks'
-import type { Coverage } from '@pf/shared'
+import type { Coverage, RTTable, LDTable } from '@pf/shared'
 import type { WithId } from '../../context/ProductContext'
 
 export type CoverageAspect = 'limits' | 'deductibles' | 'options' | 'states' | 'forms' | 'pricing' | 'rules'
@@ -20,6 +20,25 @@ export const COVERAGE_ASPECTS: { key: CoverageAspect; label: string; Icon: typeo
   { key: 'pricing',     label: 'Pricing',     Icon: IconPricing },
   { key: 'rules',       label: 'Rules',       Icon: IconRule },
 ]
+
+/** How many rating steps price this coverage, for the card's Pricing figure.
+ *
+ *  Only an EXPLICIT `premiumGenerating: false` suppresses the count. The field is
+ *  `boolean | null`, where null/undefined means "the source never stated premium
+ *  treatment" — the norm for an imported book, since a blank cell states nothing and is
+ *  dropped rather than folded to false. Gating on truthiness therefore blanked Pricing on
+ *  EVERY imported coverage card, even where rating steps named the coverage outright. A
+ *  step that references the coverage IS the evidence it is rated; a missing flag is not
+ *  evidence against it. Exported so that rule is pinned by a test rather than by reading. */
+export function pricingStepCount(
+  cov: Pick<Coverage, 'name' | 'terms' | 'premiumGenerating'> & { refId?: string | null },
+  ratingProgram: Parameters<typeof linkCoverageToPricing>[1],
+  rtTables: Record<string, RTTable>,
+  ldTables: Record<string, LDTable>,
+): number {
+  if (cov.premiumGenerating === false) return 0
+  return linkCoverageToPricing(cov, ratingProgram, rtTables, ldTables).steps.length
+}
 
 /** Live per-aspect counts for a coverage, drawn from the product context.
  *  When `filterStates` is non-empty, every state-dimensioned aspect (limits,
@@ -83,10 +102,15 @@ export function useCoverageCounts(cov: WithId<Coverage>, filterStates: string[] 
     options:     optionsCount,
     states:      filterActive ? coverageStates.filter(s => stateFilterSet.has(s)).length : coverageStates.length,
     forms:       formsCount,
-    // Real linkage — the rating steps that actually reference this coverage, not the
-    // whole program. Non-rated coverages contribute nothing. Pricing has no state scope
-    // of its own, so the state filter does not narrow it.
-    pricing:     cov.premiumGenerating ? linkCoverageToPricing(cov, ratingProgram, rtTables, ldTables).steps.length : 0,
+    // Real linkage — the rating steps that actually reference this coverage, not the whole
+    // program. Only an EXPLICIT premiumGenerating:false suppresses the count: the field is
+    // `boolean | null` where null/undefined means "the source never stated premium
+    // treatment", which is the norm for an imported book, and treating unstated as
+    // not-rated blanked the Pricing figure on EVERY imported coverage card even when steps
+    // named the coverage outright. A step that references this coverage IS the evidence it
+    // is rated; the absence of a flag is not evidence against it.
+    // Pricing has no state scope of its own, so the state filter does not narrow it.
+    pricing:     pricingStepCount(cov, ratingProgram, rtTables, ldTables),
     rules:       rules.filter(r => cov.refId && r.coverageRefIds?.includes(cov.refId) && matchesState(r)).length,
   }
 }

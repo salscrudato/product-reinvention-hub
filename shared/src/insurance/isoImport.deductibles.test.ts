@@ -95,6 +95,10 @@ describe('the derived terms reach the coverages', () => {
     const ded = termsOf(linked[0]!.refId as string).find(t => t.kind === 'DEDUCTIBLE')!
     expect(ded.options).toEqual([25, 100])
     expect(ded.label).toContain('Deductible')
+    // NO ldTableRef: resolveTermOptions unions a term's options with its table's ROWS, and
+    // this table's rows are the LIMIT column — linking it would offer 1000/750/250 as
+    // selectable deductibles.
+    expect((ded as { ldTableRef?: string }).ldTableRef).toBeUndefined()
   })
 
   it('a deductible term never duplicates a limit term id', () => {
