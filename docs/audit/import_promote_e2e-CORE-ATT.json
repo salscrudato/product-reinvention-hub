@@ -1,0 +1,25 @@
+{
+  "label": "CORE-ATT",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "runId": "e2e-ms0xx1f0-9d7b2609",
+  "productId": "e2e-ms1u2fcv",
+  "promoted": true,
+  "counts": {
+    "persisted": 2268,
+    "failed": 0,
+    "coverages": 135,
+    "rules": 440,
+    "steps": 2024,
+    "limitTerms": 366,
+    "deductibleTerms": 217,
+    "stepsWithCoverageRef": 90
+  },
+  "fails": [],
+  "notes": [
+    "persisted coverage names: 0/135 placeholder-named",
+    "persisted terms: 366 LIMIT, 217 DEDUCTIBLE (on 58 coverages)",
+    "persisted rating steps: 2024, all with source.type",
+    "steps carrying a stated coverageRef: 90/2024",
+    "product lifecycle after promote: LAUNCHED"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "label": "EPLUS-R2",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "runId": "e2e-ms0uim2a-9e5709fb",
+  "productId": "e2e-ms0xv3ou",
+  "promoted": true,
+  "counts": {
+    "persisted": 527,
+    "failed": 0,
+    "coverages": 95,
+    "rules": 174,
+    "steps": 303,
+    "limitTerms": 59,
+    "deductibleTerms": 22,
+    "stepsWithCoverageRef": 17
+  },
+  "fails": [],
+  "notes": [
+    "persisted coverage names: 0/95 placeholder-named",
+    "persisted terms: 59 LIMIT, 22 DEDUCTIBLE (on 8 coverages)",
+    "persisted rating steps: 303, all with source.type",
+    "steps carrying a stated coverageRef: 17/303",
+    "product lifecycle after promote: LAUNCHED"
+  ]
+}

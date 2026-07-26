@@ -78,16 +78,3 @@ export function readinessFromBundle(bundle: UnifiedProposalBundle): ReadinessSum
   }
 }
 
-/** Readiness for the LOCAL all-XLSX path: no citation pipeline ever ran, so counts
- *  stay null (flag-not-invent — we do not fabricate citation numbers) and the
- *  verdict reflects only the mapper's own warnings. */
-export function readinessFromLocalXlsx(warningCount: number): ReadinessSummary {
-  return {
-    v: 1,
-    counts: null,
-    blockers: [],
-    validation: warningCount > 0 ? 'warn' : 'pass',
-    importWarnings: warningCount,
-    completeness: null,
-  }
-}

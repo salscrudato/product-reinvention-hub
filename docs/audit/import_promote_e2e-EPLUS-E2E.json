@@ -1,0 +1,27 @@
+{
+  "label": "EPLUS-E2E",
+  "baseUrl": "https://app-prodhub-dev.azurewebsites.net",
+  "runId": "e2e-ms0szu1j-12b144d9",
+  "productId": "e2e-ms0tzfxm",
+  "promoted": true,
+  "counts": {
+    "persisted": 515,
+    "failed": 100,
+    "coverages": 54,
+    "rules": 195,
+    "steps": 303,
+    "limitTerms": 0,
+    "deductibleTerms": 0,
+    "stepsWithCoverageRef": 0
+  },
+  "fails": [
+    "no limit or deductible term survived the round trip"
+  ],
+  "notes": [
+    "persisted coverage names: 0/54 placeholder-named",
+    "persisted terms: 0 LIMIT, 0 DEDUCTIBLE (on 0 coverages)",
+    "persisted rating steps: 303, all with source.type",
+    "steps carrying a stated coverageRef: 0/303",
+    "product lifecycle after promote: (unknown)"
+  ]
+}

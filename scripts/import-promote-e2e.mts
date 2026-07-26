@@ -244,9 +244,39 @@ console.log(`\n[${LABEL}] ────────── PERSISTED DATA ──�
 console.log(`[${LABEL}] product=${PID} coverages=${outCovs.length} rules=${outRules.length} programs=${outProgs.length}`)
 for (const n of notes) console.log(`[${LABEL}]   ok   ${n}`)
 for (const f of fails) console.log(`[${LABEL}]   FAIL ${f}`)
-for (const c of outCovs.slice(0, 5)) {
-  const terms = (c['terms'] ?? []) as { kind?: string; label?: string }[]
-  console.log(`[${LABEL}]   e.g. ${c['refId']} "${String(c['name']).slice(0, 44)}" terms=${terms.length} [${terms.map(t => t.kind).join(',')}]`)
+// ── 5. the COVERAGE CARD figures, computed from persisted data ───────────────
+// Mirrors coverageAspects.useCoverageCounts closely enough to answer the question the card
+// actually poses: does this coverage report real limits, deductibles, pricing and rules?
+// A card that reads "—" everywhere is the symptom; this prints the numbers behind it.
+const stepsFor = (refId: string) => steps.filter(s => {
+  const cr = String(s['coverageRef'] ?? '').trim()
+  return cr !== '' && cr.split(/[;,]/).some(x => x.trim() === refId)
+}).length
+const optCount = (t: Record<string, unknown>) => {
+  const o = t['options']
+  return Array.isArray(o) && o.length ? o.length : (typeof t['default'] === 'number' ? 1 : 0)
+}
+const cardRows = outCovs.map(c => {
+  const terms = (c['terms'] ?? []) as Record<string, unknown>[]
+  const sum = (kind: string) => terms.filter(t => t['kind'] === kind).reduce((n, t) => n + optCount(t), 0)
+  const refId = String(c['refId'] ?? '')
+  return {
+    refId, name: String(c['name'] ?? ''),
+    limits: sum('LIMIT'), deductibles: sum('DEDUCTIBLE'),
+    forms: ((c['formNumbers'] ?? []) as unknown[]).length,
+    pricing: c['premiumGenerating'] === false ? 0 : stepsFor(refId),
+    rules: outRules.filter(r => refId && ((r['coverageRefIds'] ?? []) as string[]).includes(refId)).length,
+  }
+})
+const anyDed = cardRows.filter(r => r.deductibles > 0).length
+const anyPricing = cardRows.filter(r => r.pricing > 0).length
+notes.push(`cards showing a DEDUCTIBLE figure: ${anyDed}/${cardRows.length}`)
+notes.push(`cards showing a PRICING figure: ${anyPricing}/${cardRows.length}`)
+if (steps.length > 0 && withCovRef > 0 && anyPricing === 0) fails.push('steps state a coverageRef yet no card would show a pricing figure')
+
+console.log(`[${LABEL}]   ── coverage cards, as the UI would compute them ──`)
+for (const r of cardRows.filter(r => r.limits || r.deductibles || r.pricing || r.rules).slice(0, 8)) {
+  console.log(`[${LABEL}]   ${r.refId.padEnd(18)} lim=${String(r.limits).padStart(4)} ded=${String(r.deductibles).padStart(4)} forms=${String(r.forms).padStart(3)} pricing=${String(r.pricing).padStart(3)} rules=${String(r.rules).padStart(3)}  ${r.name.slice(0, 38)}`)
 }
 
 try {

@@ -15,14 +15,12 @@
 //   • Nothing is written to Cosmos until the reviewer clicks "Import N items."
 //   • Writes go through importPlan() → adapter.db.mutate() — the mutation invariant holds.
 //   • VIEWER sees no write action (canEdit = false → modal body is read-only text).
-import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type {
-  UnifiedProposalBundle, FilingReviewSectionKey, ImportPlan,
+  UnifiedProposalBundle, FilingReviewSectionKey,
   FormatCard, FormatFingerprint, SplitProductProposal, SampledVerification, UnresolvedItem,
-  IsoGrid, AliasOverlay, ReviewDefect, ImportNotice,
 } from '@pf/shared'
-import { mapIsoWorkbook } from '@pf/shared'
 import { DisagreementHeatmap } from './DisagreementHeatmap'
 import { useUser } from '../context/useUser'
 import { Dialog } from '../components/ui/Dialog'
@@ -33,7 +31,6 @@ import {
   IconCoverage, IconRule, IconPricing, IconTable, IconArrowRight, IconClose,
   IconChevronRight,
 } from '../components/ui/icons'
-import { readWorkbooks } from '../lib/import/readWorkbook'
 import { readUploadFiles, runUnifiedImport, type UnifiedStageEvent } from './unifiedImportClient'
 import { IconAgent } from '../components/icons'
 import { WaveformLoader } from '../components/ai/WaveformLoader'
@@ -50,45 +47,11 @@ import type { DraftDedupMatch } from '../lib/backend'
 import { canI } from '../lib/canI'
 import { importPlan, type ImportProgress, type ImportResult } from '../lib/import/importProduct'
 import { newDraftId, filingLineage, importLineage } from '../lib/draft/draft'
-import { hashFiles, mintRunId, readinessFromBundle, readinessFromLocalXlsx } from '../lib/import/provenance'
+import { hashFiles, mintRunId, readinessFromBundle } from '../lib/import/provenance'
 import { deleteDraftProduct } from '../lib/product/deleteDraft'
 
 interface Props { onClose: () => void; onImported: (productId: string) => void }
-type Phase = 'select' | 'streaming' | 'duplicate' | 'review' | 'xlsx-plan' | 'importing' | 'done' | 'error'
-
-interface AISuggestions {
-  aliasOverlay:     AliasOverlay
-  enumOverlay:      Record<string, string>
-  confidences:      Record<string, number>
-  citations:        Record<string, string>
-  droppedProposals: { kind: string; index: number; item: unknown }[]
-  meta:             { proposerModel: string; validatorModel: string; columnAliases: number; enumCrosswalk: number; sheetRoleHints: number; dropped: number }
-}
-
-/** Extract first-row headers and up to 15 data rows per sheet for the proposeMapping payload. */
-function buildSheetSamples(grids: IsoGrid[]): {
-  headers: Record<string, string[]>
-  samples: Record<string, string[][]>
-} {
-  const headers: Record<string, string[]> = {}
-  const samples: Record<string, string[][]> = {}
-  for (const g of grids) {
-    const head = (g.cells[0] ?? []).map(c => c == null ? '' : String(c))
-    headers[g.sheet] = head
-    samples[g.sheet] = g.cells.slice(1, 16).map(row => row.map(c => c == null ? '' : String(c)))
-  }
-  return { headers, samples }
-}
-
-// Sniff format by magic bytes: ZIP (XLSX/XLSM) = PK\x03\x04, PDF = %PDF.
-// Extension alone is not trusted (rename-safe).
-async function sniffFormat(file: File): Promise<'xlsx' | 'pdf' | 'other'> {
-  const buf = await file.slice(0, 4).arrayBuffer()
-  const b = new Uint8Array(buf)
-  if (b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04) return 'xlsx'
-  if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) return 'pdf'
-  return 'other'
-}
+type Phase = 'select' | 'streaming' | 'duplicate' | 'review' | 'importing' | 'done' | 'error'
 
 const SECTION_META: { key: FilingReviewSectionKey; label: string; Icon: typeof IconCoverage }[] = [
   { key: 'coverages', label: 'Coverages',          Icon: IconCoverage },
@@ -122,11 +85,6 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const [fileNames, setFiles]   = useState<string[]>([])
   const [stages, setStages]     = useState<UnifiedStageEvent[]>([])
   const [bundle, setBundle]     = useState<UnifiedProposalBundle | null>(null)
-  const [localPlan, setLocalPlan] = useState<ImportPlan | null>(null)
-  const [localGrids, setLocalGrids] = useState<IsoGrid[]>([])
-  const [aiSuggestions, setAiSuggestions] = useState<AISuggestions | null>(null)
-  const [aiAssistLoading, setAiAssistLoading] = useState(false)
-  const [acceptedSuggestions, setAcceptedSuggestions] = useState<Set<string>>(new Set())
   const [accepted, setAccepted] = useState<Set<FilingReviewSectionKey>>(new Set())
   // Per-item exclusions (docId) within kept sections — "import all of this except this row".
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
@@ -153,31 +111,12 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
   const replaceTarget  = useRef<string | null>(null)
 
   const proceedWithFiles = useCallback(async (docs: File[]) => {
-    // Magic-byte sniff (ZIP signature PK\x03\x04 = XLSX/XLSM). Routing:
-    //   • A MULTI-FILE all-XLSX set (ISO GL/IM/PR multi-workbook goldens) → the
-    //     deterministic client mapper the goldens are built for; parsed in-browser.
-    //   • A SINGLE workbook — and any PDF/SERFF/mixed upload — → the server import
-    //     brain (server-side ExcelJS parse → 6-stage adaptive extraction). A lone
-    //     Excel file gets the full AI pipeline: no browser-side parse of a large
-    //     workbook, ensemble extraction + adversarial validation, cited every field.
-    const formats = await Promise.all(docs.map(sniffFormat))
-    if (docs.length > 1 && formats.every(f => f === 'xlsx')) {
-      setPhase('streaming')
-      try {
-        const grids = await readWorkbooks(docs)
-        const plan  = mapIsoWorkbook(grids)
-        setLocalGrids(grids)
-        setLocalPlan(plan)
-        setAiSuggestions(null)
-        setAcceptedSuggestions(new Set())
-        setPhase('xlsx-plan')
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to read workbook.')
-        setPhase('error')
-      }
-      return
-    }
-
+    // EVERY upload — workbooks, PDFs, SERFF, mixed — goes to the server import
+    // brain (server-side ExcelJS parse → 7-stage adaptive extraction): ensemble
+    // extraction + adversarial validation, every field cited. The former
+    // deterministic in-browser parse route for multi-file all-XLSX sets was
+    // removed; the deterministic ISO mapper still runs server-side as the
+    // stage-7 identity join.
     setPhase('streaming')
     try {
       // Minted here, echoed by the server, and persisted with the bundle blob — the
@@ -215,7 +154,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
       setPhase('error')
       return
     }
-    setFiles(docs.map(f => f.name)); setStages([]); setError(''); setLocalPlan(null); setBundle(null)
+    setFiles(docs.map(f => f.name)); setStages([]); setError(''); setBundle(null)
     contentHashRef.current = null; runIdRef.current = null; replaceTarget.current = null
 
     // Dedup at the door: hash the raw bytes while the File objects exist and interrupt
@@ -301,141 +240,7 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
     }
   }
 
-  async function runImportXlsx() {
-    if (!localPlan || !user) return
-    if (!localPlan.productId) {
-      setError('No product identified in the workbook — check the product row and try again.')
-      setPhase('error')
-      return
-    }
-    setPhase('importing')
-    setProgress({ ...EMPTY_PROGRESS, label: 'Starting…' })
-    try {
-      const actor   = { uid: user.uid, name: user.name ?? user.email ?? 'Unknown' }
-      const draftId = newDraftId(localPlan.productId)
-      const lineage = importLineage(fileNames, localPlan.product?.refId ?? null, actor)
-      const res = await importPlan(localPlan, actor, setProgress, {
-        productId: draftId, lineage,
-        contentHash: contentHashRef.current ?? undefined,
-        readiness:   readinessFromLocalXlsx((localPlan.summary.warnings ?? []).length + (localPlan.summary.defects ?? []).length),
-      })
-      await finishReplaceIfClean(res, actor)
-      setResult(res); setPhase('done')
-      if (res.failed) toast.warning(`Imported ${res.written} items, ${res.failed} skipped`)
-      else            toast.success(`Imported ${res.written} items`)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Import failed.')
-      setPhase('error')
-    }
-  }
-
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
-
-  // ── AI Assist runs on its own ───────────────────────────────────────────────
-  // A SINGLE workbook already gets the full server brain (AI at every stage, no button).
-  // Only the MULTI-FILE all-XLSX path parses deterministically in the browser, and there the
-  // mapping help sat behind a button an operator had to notice — so an import with unmapped
-  // columns silently shipped less than it could have. Fire it automatically whenever that
-  // parse leaves a gap.
-  //
-  // ACCEPTANCE STAYS MANUAL, deliberately. Each suggestion is a model PROPOSAL carrying a
-  // confidence and a citation, and `handleApplyOverlay` folds in only the ticked ones. Auto-
-  // applying them would put uncited model output into the plan without a human ever seeing
-  // it — the one thing the review gate exists to prevent.
-  const autoAssistedFor = useRef<ImportPlan | null>(null)
-  useEffect(() => {
-    if (phase !== 'xlsx-plan' || !localPlan) return
-    if (autoAssistedFor.current === localPlan) return          // once per parsed plan
-    if (aiSuggestions || aiAssistLoading) return
-    const hasGaps = localPlan.summary.unmappedColumns.length > 0
-      || localPlan.summary.sheetsSkipped.length > 0
-      || (localPlan.summary.defects ?? []).length > 0
-    if (!hasGaps) return                                       // nothing to ask about — no spend
-    autoAssistedFor.current = localPlan
-    void handleAiAssist()
-    // handleAiAssist reads the same localPlan/localGrids this effect gates on.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, localPlan, aiSuggestions, aiAssistLoading])
-
-  async function handleAiAssist() {
-    if (!localPlan || !localGrids.length) return
-    setAiAssistLoading(true)
-    setAiSuggestions(null)
-    try {
-      const { headers, samples } = buildSheetSamples(localGrids)
-      // Concept-linker tail (R4): the ambiguous links the deterministic passes left open, plus
-      // the model id sets the server validates every proposed link against.
-      const ratingGroups = ((localPlan.ratingProgram?.data as { ratingGroups?: Array<{ name: string; matchBasis: string }> })?.ratingGroups) ?? []
-      const mintedTables = localPlan.ldTables.filter(t => (t.data as { mintedId?: boolean }).mintedId)
-      const body = {
-        unmappedColumns:     localPlan.summary.unmappedColumns,
-        sheetsSkipped:       localPlan.summary.sheetsSkipped,
-        headers,
-        samples,
-        dataValidationVocab: {},
-        unmatchedGroups:     ratingGroups.filter(g => g.matchBasis === 'unmatched').map(g => g.name),
-        unlinkedTables:      mintedTables.filter(t => !((t.data as { coverageRefIds?: string[] }).coverageRefIds?.length)).map(t => ({ refId: t.refId, name: (t.data as { name?: string }).name ?? '' })),
-        unresolvedRuleRefs:  ((localPlan.summary.notices.find(n => n.code === 'unresolved_rule_refs')?.data as { refs?: string[] })?.refs) ?? [],
-        coverageRefIds:      localPlan.coverages.map(c => c.refId).filter((r): r is string => !!r),
-        tableRefIds:         mintedTables.map(t => t.refId).filter((r): r is string => !!r),
-      }
-      const data = await adapter.fns.call<typeof body, AISuggestions>('proposeMapping', body)
-      setAiSuggestions(data)
-      setAcceptedSuggestions(new Set()) // start with all suggestions unaccepted
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'AI Assist failed')
-    } finally {
-      setAiAssistLoading(false)
-    }
-  }
-
-  function handleApplyOverlay() {
-    if (!aiSuggestions || !localGrids.length) return
-    // Build overlay from accepted suggestions only.
-    const overlay: AliasOverlay = { columnAliases: {}, enumOverrides: {}, sheetRoleHints: {}, ratingGroupLinks: {}, tableCoverageLinks: {}, ruleReferenceLinks: {}, confidences: {}, citations: {} }
-    const { aliasOverlay, confidences, citations } = aiSuggestions
-    for (const [field, aliases] of Object.entries(aliasOverlay.columnAliases ?? {})) {
-      for (const alias of aliases) {
-        const key = `col:${field}:${alias}`
-        if (acceptedSuggestions.has(key)) {
-          if (!overlay.columnAliases![field]) overlay.columnAliases![field] = []
-          overlay.columnAliases![field]!.push(alias)
-          overlay.confidences![key] = confidences[key] ?? 1
-          overlay.citations![key]   = citations[key]  ?? ''
-        }
-      }
-    }
-    for (const [raw, cat] of Object.entries(aliasOverlay.enumOverrides ?? {})) {
-      const key = `enum:${raw}`
-      if (acceptedSuggestions.has(key)) {
-        overlay.enumOverrides![raw] = cat as import('@pf/shared').FormCategory
-        overlay.confidences![key] = confidences[key] ?? 1
-        overlay.citations![key]   = citations[key]  ?? ''
-      }
-    }
-    for (const [sheet, role] of Object.entries(aliasOverlay.sheetRoleHints ?? {})) {
-      const key = `sheet:${sheet}`
-      if (acceptedSuggestions.has(key)) {
-        overlay.sheetRoleHints![sheet] = role
-      }
-    }
-    // Concept links (R4): apply accepted proposals — the shared mapper validates each refId
-    // against the model and applies it fill-only (never overriding a deterministic link).
-    for (const [name, refIds] of Object.entries(aliasOverlay.ratingGroupLinks ?? {})) {
-      if (acceptedSuggestions.has(`rgl:${name}`)) overlay.ratingGroupLinks![name] = refIds as string[]
-    }
-    for (const [tid, refIds] of Object.entries(aliasOverlay.tableCoverageLinks ?? {})) {
-      if (acceptedSuggestions.has(`tcl:${tid}`)) overlay.tableCoverageLinks![tid] = refIds as string[]
-    }
-    for (const [txt, refIds] of Object.entries(aliasOverlay.ruleReferenceLinks ?? {})) {
-      if (acceptedSuggestions.has(`rrl:${txt}`)) overlay.ruleReferenceLinks![txt] = refIds as string[]
-    }
-    const newPlan = mapIsoWorkbook(localGrids, overlay)
-    setLocalPlan(newPlan)
-    setAiSuggestions(null)
-    setAcceptedSuggestions(new Set())
-    toast.success('Applied accepted suggestions — plan updated.')
-  }
 
   return (
     <Dialog open title="Import product data" onClose={onClose} width="max-w-2xl">
@@ -467,23 +272,6 @@ export function UnifiedImportModal({ onClose, onImported }: Props) {
             if (docs) void proceedWithFiles(docs)
           }}
           onCancel={onClose}
-        />
-      ) : phase === 'xlsx-plan' && localPlan ? (
-        <XlsxPlanPane
-          plan={localPlan}
-          onImport={runImportXlsx}
-          onCancel={onClose}
-          aiSuggestions={aiSuggestions}
-          aiAssistLoading={aiAssistLoading}
-          acceptedSuggestions={acceptedSuggestions}
-          onAiAssist={handleAiAssist}
-          onToggleSuggestion={key => setAcceptedSuggestions(prev => {
-            const s = new Set(prev)
-            if (s.has(key)) s.delete(key); else s.add(key)
-            return s
-          })}
-          onApplyOverlay={handleApplyOverlay}
-          hasUnmapped={localPlan.summary.unmappedColumns.length > 0 || localPlan.summary.sheetsSkipped.length > 0 || (localPlan.summary.defects ?? []).length > 0}
         />
       ) : phase === 'review' && bundle ? (
         <ReviewPane
@@ -1173,10 +961,6 @@ function SplitProductsSection({ proposals }: { proposals: SplitProductProposal[]
   )
 }
 
-// ─── XLSX-plan review pane (ISO workbook local path) ─────────────────────────────
-// Mirrors the Section 1 entity-group layout from ImportWorkbookModal, rendered inline
-// in this modal when all uploaded files are XLSX (magic-byte routed to local mapper).
-
 /** docIds of every stage-4.5 SWEEPER NOMINATION in a bundle — unconfirmed cell proposals
  *  (confidence 0.5, needsReview, no refId) that the review offers but must not write unless
  *  a human ticks them. Exported for the unit test that pins the opt-in contract. */
@@ -1193,303 +977,6 @@ export function sweeperNominations(bundle: UnifiedProposalBundle): Set<string> {
     }
   }
   return out
-}
-
-function XlsxPlanPane({ plan, onImport, onCancel, aiSuggestions, aiAssistLoading, acceptedSuggestions, onAiAssist, onToggleSuggestion, onApplyOverlay, hasUnmapped }: {
-  plan: ImportPlan
-  onImport: () => void
-  onCancel: () => void
-  aiSuggestions: AISuggestions | null
-  aiAssistLoading: boolean
-  acceptedSuggestions: Set<string>
-  onAiAssist: () => void
-  onToggleSuggestion: (key: string) => void
-  onApplyOverlay: () => void
-  hasUnmapped: boolean
-}) {
-  const count = countPlan(plan)
-  const products = plan.products ?? (plan.product ? [plan.product] : [])
-
-  // Per-product coverage counts, built ONCE per plan instead of re-filtering the whole
-  // coverage list inside every product card's render (O(products x coverages) each pass).
-  // Attribution reads the productRefId the importer stamps; the old 2-char refId-prefix
-  // guess double-counted whenever two products in one workbook shared a prefix.
-  const coveragesByProduct = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const c of plan.coverages ?? []) {
-      const pid = c.data?.['productRefId']
-      if (typeof pid === 'string' && pid !== '') m.set(pid, (m.get(pid) ?? 0) + 1)
-    }
-    return m
-  }, [plan.coverages])
-  const defects  = (plan.summary as { defects?: ReviewDefect[] }).defects ?? []
-  const notices  = (plan.summary as { notices?: ImportNotice[] }).notices ?? []
-
-  const GROUPS: { label: string; Icon: typeof IconCoverage; items: typeof plan.coverages }[] = [
-    { label: 'Coverages', Icon: IconCoverage, items: plan.coverages ?? [] },
-    { label: 'Forms',     Icon: IconFile,     items: plan.forms     ?? [] },
-    { label: 'Rules',     Icon: IconRule,     items: plan.rules     ?? [] },
-    { label: 'L&D tables',Icon: IconTable,    items: plan.ldTables  ?? [] },
-    { label: 'RT tables', Icon: IconTable,    items: plan.rtTables  ?? [] },
-  ]
-
-  // Flatten AI suggestions into keyed items for display.
-  const aiItems: { key: string; label: string; detail: string; confidence: number; citation: string }[] = []
-  if (aiSuggestions) {
-    for (const [field, aliases] of Object.entries(aiSuggestions.aliasOverlay.columnAliases ?? {})) {
-      for (const alias of aliases) {
-        const key = `col:${field}:${alias}`
-        aiItems.push({ key, label: `Column alias`, detail: `"${alias}" → ${field}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
-      }
-    }
-    for (const [raw, cat] of Object.entries(aiSuggestions.aliasOverlay.enumOverrides ?? {})) {
-      const key = `enum:${raw}`
-      aiItems.push({ key, label: `Enum crosswalk`, detail: `"${raw}" → ${cat}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
-    }
-    for (const [sheet, role] of Object.entries(aiSuggestions.aliasOverlay.sheetRoleHints ?? {})) {
-      const key = `sheet:${sheet}`
-      aiItems.push({ key, label: `Sheet role`, detail: `"${sheet}" → ${role}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
-    }
-    // Concept-link proposals (R4) — resolve the ambiguous tail the deterministic passes left open.
-    for (const [name, refIds] of Object.entries(aiSuggestions.aliasOverlay.ratingGroupLinks ?? {})) {
-      const key = `rgl:${name}`
-      aiItems.push({ key, label: `Rating-group link`, detail: `"${name}" → ${(refIds as string[]).join(', ')}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
-    }
-    for (const [tid, refIds] of Object.entries(aiSuggestions.aliasOverlay.tableCoverageLinks ?? {})) {
-      const key = `tcl:${tid}`
-      aiItems.push({ key, label: `Table → coverage`, detail: `${tid} → ${(refIds as string[]).join(', ')}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
-    }
-    for (const [txt, refIds] of Object.entries(aiSuggestions.aliasOverlay.ruleReferenceLinks ?? {})) {
-      const key = `rrl:${txt}`
-      aiItems.push({ key, label: `Rule ref → table`, detail: `"${txt}" → ${(refIds as string[]).join(', ')}`, confidence: aiSuggestions.confidences[key] ?? 1, citation: aiSuggestions.citations[key] ?? '' })
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 max-h-[56vh] overflow-y-auto -mx-1 px-1">
-
-        {/* N-product identity cards */}
-        {products.length > 1 ? (
-          <div className="flex flex-col gap-2">
-            <div className="text-[11px] font-semibold uppercase tracking-[.07em] text-dim px-0.5">
-              {products.length} products detected
-            </div>
-            {products.map(pd => {
-              const pdCoverageCount = coveragesByProduct.get(pd.refId ?? '') ?? 0
-              return (
-                <div key={pd.refId} className="flex items-center gap-3 rounded-[12px] p-3"
-                  style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
-                  <span className="flex items-center justify-center w-8 h-8 rounded-[9px] shrink-0"
-                    style={{ background: 'var(--gradient-accent)' }}>
-                    <IconFile size={15} className="text-white" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-text truncate">
-                      {pd.data['name'] as string || pd.refId}
-                    </div>
-                    <div className="text-xs text-dim flex items-center gap-1.5">
-                      <span className="font-mono text-accent">{pd.refId}</span>
-                      <span className="text-faint">·</span>
-                      <span className="tnum text-faint">{pdCoverageCount} coverages</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 rounded-[12px] p-3.5"
-            style={{ background: 'var(--color-accent-soft)', border: '1px solid var(--color-border)' }}>
-            <span className="flex items-center justify-center w-9 h-9 rounded-[10px] shrink-0"
-              style={{ background: 'var(--gradient-accent)' }}>
-              <IconFile size={18} className="text-white" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-text truncate">
-                {plan.product
-                  ? (plan.product.data['name'] as string || plan.product.refId)
-                  : 'No product detected'}
-              </div>
-              <div className="text-xs text-dim flex items-center gap-1.5 flex-wrap">
-                {plan.product?.refId && (
-                  <span className="font-mono text-accent">{plan.product.refId}</span>
-                )}
-                <span className="text-faint">·</span>
-                <span className="tnum text-faint">{count} entities</span>
-                {plan.summary.warnings.length > 0 && (
-                  <><span className="text-faint">·</span>
-                    <span className="text-warn">{plan.summary.warnings.length} warnings</span></>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Entity groups */}
-        <div className="flex flex-col gap-2">
-          {GROUPS.map(({ label, Icon, items }) => items.length > 0 && (
-            <div key={label} className="rounded-[12px] overflow-hidden"
-              style={{ border: '1px solid var(--color-border)' }}>
-              <div className="flex items-center gap-2 px-3.5 py-2 bg-raised">
-                <Icon size={13} className="text-dim" aria-hidden />
-                <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-dim">{label}</span>
-                <span className="text-[11px] text-faint tnum ml-auto">{items.length}</span>
-              </div>
-              {/* Every entity reachable — virtualized so 1,700+ rows stay at 60fps. */}
-              <VirtualList
-                items={items}
-                rowHeight={30}
-                maxHeight={210}
-                renderRow={(e) => (
-                  <div className="flex items-center gap-2 px-3.5 h-full min-w-0" style={{ borderTop: '1px solid var(--color-border)' }}>
-                    {e.refId && (
-                      <span className="text-[11px] font-mono text-accent shrink-0 px-1.5 py-0.5 rounded"
-                        style={{ background: 'var(--color-accent-soft)' }}>{e.refId}</span>
-                    )}
-                    <span className="text-xs text-text truncate">{e.label}</span>
-                  </div>
-                )}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Review defects (unmapped enums) */}
-        {defects.length > 0 && (
-          <section className="rounded-[12px] overflow-hidden"
-            style={{ border: '1px solid var(--color-warn-line, var(--color-border))' }}>
-            <div className="flex items-center gap-2 px-3.5 py-2.5"
-              style={{ background: 'var(--color-warn-soft, var(--color-raised))' }}>
-              <IconWarning size={15} className="text-warn" />
-              <h4 className="text-[12px] font-semibold uppercase tracking-[.07em] text-text flex-1">
-                Review defects
-              </h4>
-              <span className="text-[11px] text-warn tnum">{defects.length}</span>
-            </div>
-            <ul className="flex flex-col gap-1 px-3.5 py-2.5">
-              {defects.slice(0, 8).map((d, i) => (
-                <li key={i} className="text-xs text-dim flex items-start gap-1.5">
-                  <span className="shrink-0 mt-0.5 px-1 py-px rounded text-[10px] font-mono"
-                    style={{ background: 'var(--color-warn-soft)', color: 'var(--color-warn)' }}>
-                    {d.code}
-                  </span>
-                  <span>
-                    {d.field && <><span className="font-medium">{d.field}</span> · </>}
-                    {d.rawValue && <span className="font-mono">"{d.rawValue}"</span>}
-                    {d.rowRef && <span className="text-faint"> @ {d.rowRef}</span>}
-                  </span>
-                </li>
-              ))}
-              {defects.length > 8 && (
-                <li className="text-xs text-faint">+{defects.length - 8} more defects</li>
-              )}
-            </ul>
-          </section>
-        )}
-
-        {/* Notices (e.g. forms_applicability_merged) */}
-        {notices.length > 0 && (
-          <section className="rounded-[12px] p-3"
-            style={{ background: 'var(--color-raised)', border: '1px solid var(--color-border)' }}>
-            {notices.map((n, i) => (
-              <p key={i} className="text-xs text-dim">{n.message}</p>
-            ))}
-          </section>
-        )}
-
-        {/* Warnings — first-class, grouped by kind, severity-tinted, human copy */}
-        {plan.summary.warnings.length > 0 && <WarningsPanel warnings={plan.summary.warnings} />}
-
-        {/* AI Assist suggestions */}
-        {aiSuggestions && aiItems.length > 0 && (
-          <section className="rounded-[12px] overflow-hidden"
-            style={{ border: '1px solid var(--color-accent)', background: 'var(--color-accent-soft)' }}>
-            <div className="flex items-center gap-2 px-3.5 py-2.5">
-              <span className="text-[11px] font-semibold uppercase tracking-[.07em] text-accent flex-1">
-                AI suggestions ({aiItems.length}) — accept to apply
-              </span>
-              {aiSuggestions.meta.dropped > 0 && (
-                <span className="text-[10px] text-faint">{aiSuggestions.meta.dropped} dropped by validator</span>
-              )}
-            </div>
-            <ul className="flex flex-col divide-y" style={{ borderColor: 'var(--color-border)' }}>
-              {aiItems.map(item => {
-                const isAccepted = acceptedSuggestions.has(item.key)
-                const pct = Math.round(item.confidence * 100)
-                return (
-                  <li key={item.key} className="flex items-start gap-3 px-3.5 py-2.5">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-semibold uppercase tracking-[.06em] text-dim">{item.label}</span>
-                        <span className="text-[10px] px-1.5 py-px rounded font-mono"
-                          style={{
-                            background: pct >= 80 ? 'var(--color-good-soft)' : 'var(--color-warn-soft)',
-                            color:      pct >= 80 ? 'var(--color-good)'      : 'var(--color-warn)',
-                          }}>
-                          {pct}%
-                        </span>
-                      </div>
-                      <p className="text-xs text-text mt-0.5">{item.detail}</p>
-                      {item.citation && (
-                        <p className="text-[10px] text-faint font-mono mt-0.5">{item.citation}</p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onToggleSuggestion(item.key)}
-                      className="shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-[8px]"
-                      style={{
-                        background: isAccepted ? 'var(--color-accent)' : 'var(--color-raised)',
-                        color:      isAccepted ? 'white'               : 'var(--color-dim)',
-                        border:     '1px solid var(--color-border)',
-                      }}>
-                      {isAccepted ? 'Accepted' : 'Accept'}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-            {acceptedSuggestions.size > 0 && (
-              <div className="px-3.5 py-2.5 flex justify-end"
-                style={{ borderTop: '1px solid var(--color-border)' }}>
-                <Button variant="primary" onClick={onApplyOverlay}>
-                  Apply {acceptedSuggestions.size} accepted <IconArrowRight size={13} />
-                </Button>
-              </div>
-            )}
-          </section>
-        )}
-
-        {aiSuggestions && aiItems.length === 0 && (
-          <p className="text-xs text-dim px-1">
-            AI found no additional mappings — the workbook appears fully deterministic.
-          </p>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-2 pt-1"
-        style={{ borderTop: '1px solid var(--color-border)' }}>
-        <div className="flex items-center gap-2">
-          {/* Kept as a RETRY affordance: the pass now fires automatically on any gap, so this
-              is the way back in when that call failed or was dismissed — not the way in. */}
-          {hasUnmapped && !aiSuggestions && (
-            <Button variant="ghost" onClick={onAiAssist} disabled={aiAssistLoading}>
-              {aiAssistLoading ? <><IconSpinner size={14} className="animate-spin" /> Analyzing…</> : 'Retry AI Assist'}
-            </Button>
-          )}
-          <span className="text-xs text-faint">{count} item{count !== 1 ? 's' : ''} will be written</span>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-          <Button variant="primary" onClick={onImport} disabled={count === 0 || !plan.product}>
-            Import {count} item{count !== 1 ? 's' : ''} <IconArrowRight size={14} />
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 function SampledVerificationsSection({ verifications }: { verifications: SampledVerification[] }) {
