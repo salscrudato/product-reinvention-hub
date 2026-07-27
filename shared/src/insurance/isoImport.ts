@@ -21,6 +21,20 @@ import { refIdToDocId } from './refId'
 import { deriveGridModel } from '../rating/rtGrid'
 import { resolveCoverageHierarchy } from './coverageHierarchy'
 import { conservationEligible, runConservationPass } from '../import/mapper/conserve'
+
+// ─── NAMED FLAG: form-edition harvest ─────────────────────────────────────────
+// Reads the EDITION DATE a framework row states about the form it names. Default
+// ON is justified by measurement, not by argument — the gate is recorded in
+// docs/review/2026-07-27-P0-ENHANCEMENT-LOG.md: goldens unchanged (import:eval 4/4
+// F1 1.0000, extras 0), GL holdout 7/7, all four canaries exact, eval2 board delta
+// reported per file. Set IMPORT_FORM_EDITION_HARVEST=0 to restore the old path.
+// `globalThis.process` guard: this module is bundled into the browser SPA too.
+const FORM_EDITION_HARVEST: boolean = (() => {
+  try {
+    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    return env?.['IMPORT_FORM_EDITION_HARVEST'] !== '0'
+  } catch { return true }
+})()
 import {
   matchCoverageByName, matchRuleReferenceToTables, resolveCoverageCode,
   physicalDamageCoverages, matchGroup, formTokens, FORM_TOKEN,
@@ -2632,6 +2646,12 @@ export function mapIsoWorkbook(grids: IsoGrid[], overlay?: AliasOverlay | null, 
       frameworkCoverageCount: allCoverages.length,
       frameworkSheet: fwGrid?.sheet ?? null,
       refPrefix,
+      // NAMED FLAG (IMPORT_FORM_EDITION_HARVEST). Off → the pre-fix path, byte for
+      // byte. On → a harvested form carries the EDITION DATE its own row states.
+      // Form identity is (number, edition) per canonicalMap.ts L267, and the
+      // framework sheet's edition column is currently claimed by mapColumns and
+      // read by nobody (docs/review/2026-07-26-NUMERIC-FIDELITY-VERDICT.md §3.1).
+      harvestFormEditions: FORM_EDITION_HARVEST,
     })
     products.push(...conserved.products)
     allCoverages.push(...conserved.coverages)

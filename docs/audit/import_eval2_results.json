@@ -1,5 +1,5 @@
 {
-  "runAt": "2026-07-27T06:28:12.615Z",
+  "runAt": "2026-07-27T10:32:47.139Z",
   "mode": "offline",
   "thresholds": {
     "unaccountedEntityCells": 0,
@@ -1147,9 +1147,9 @@
       "pass": false,
       "reds": [
         "unaccountedEntityCells=68",
-        "substanceCoverage=0.515<0.985",
+        "substanceCoverage=0.536<0.985",
         "entityRecall=0.691<0.98",
-        "numericFidelity=0.000<1.0",
+        "numericFidelity=0.394<1.0",
         "hierarchyRecall=0.000<1.0 (78 golden edges, 0 reproduced)"
       ],
       "metrics": {
@@ -1158,8 +1158,8 @@
           "entityAccounted": 904,
           "unaccountedEntityCells": 68,
           "substanceCells": 2377,
-          "substanceAccounted": 1223,
-          "substanceCoverage": 0.5145140933950357,
+          "substanceAccounted": 1275,
+          "substanceCoverage": 0.5363904080774085,
           "sampleUnaccounted": [
             {
               "locus": "GL Product Framework!G6",
@@ -1342,11 +1342,6 @@
               "kind": "coverage"
             },
             {
-              "locus": "GL Product Framework!I6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
               "locus": "GL Product Framework!L6",
               "disposition": "ATTR",
               "kind": null
@@ -1358,6 +1353,11 @@
             },
             {
               "locus": "GL Product Framework!N6",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "GL Product Framework!I7",
               "disposition": "ATTR",
               "kind": null
             }
@@ -1572,13 +1572,8 @@
         },
         "numeric": {
           "checked": 132,
-          "fidelity": 0,
+          "fidelity": 0.3939393939393939,
           "misses": [
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I6"
-            },
             {
               "entityRef": "GLCOV001.02",
               "value": "413",
@@ -1620,16 +1615,6 @@
               "label": "GL Product Framework!I14"
             },
             {
-              "entityRef": "CG 24 08",
-              "value": "1093",
-              "label": "GL Product Framework!I15"
-            },
-            {
-              "entityRef": "CG 24 25",
-              "value": "1204",
-              "label": "GL Product Framework!I16"
-            },
-            {
               "entityRef": "GLCOV001.37",
               "value": "413",
               "label": "GL Product Framework!I17"
@@ -1640,89 +1625,9 @@
               "label": "GL Product Framework!I18"
             },
             {
-              "entityRef": "CG 22 65",
-              "value": "999",
-              "label": "GL Product Framework!I19"
-            },
-            {
-              "entityRef": "CG 22 69",
-              "value": "1001",
-              "label": "GL Product Framework!I20"
-            },
-            {
-              "entityRef": "CG 24 50",
-              "value": "615",
-              "label": "GL Product Framework!I21"
-            },
-            {
               "entityRef": "GLCOV002.01",
               "value": "413",
               "label": "GL Product Framework!I22"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I23"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I24"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I25"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I26"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I27"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I28"
-            },
-            {
-              "entityRef": "CG 03 00",
-              "value": "196",
-              "label": "GL Product Framework!I29"
-            },
-            {
-              "entityRef": "CG 24 08",
-              "value": "1093",
-              "label": "GL Product Framework!I30"
-            },
-            {
-              "entityRef": "CG 24 25",
-              "value": "1204",
-              "label": "GL Product Framework!I31"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I32"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I33"
-            },
-            {
-              "entityRef": "CG 22 65",
-              "value": "999",
-              "label": "GL Product Framework!I34"
-            },
-            {
-              "entityRef": "CG 22 69",
-              "value": "1001",
-              "label": "GL Product Framework!I35"
             },
             {
               "entityRef": "GLCOV002.57",
@@ -1730,49 +1635,144 @@
               "label": "GL Product Framework!I36"
             },
             {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I37"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I38"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I39"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I40"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I41"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I42"
-            },
-            {
-              "entityRef": "CG 00 01",
-              "value": "413",
-              "label": "GL Product Framework!I43"
-            },
-            {
-              "entityRef": "CG 04 37",
-              "value": "514",
-              "label": "GL Product Framework!I44"
-            },
-            {
               "entityRef": "GLCOV003.10",
               "value": "413",
               "label": "GL Product Framework!I45"
+            },
+            {
+              "entityRef": "GLCOV003.11",
+              "value": "1207",
+              "label": "GL Product Framework!I46"
+            },
+            {
+              "entityRef": "GLCOV003.12",
+              "value": "1204",
+              "label": "GL Product Framework!I47"
+            },
+            {
+              "entityRef": "GLCOV003.21",
+              "value": "413",
+              "label": "GL Product Framework!I48"
+            },
+            {
+              "entityRef": "GLCOV003.26",
+              "value": "999",
+              "label": "GL Product Framework!I49"
+            },
+            {
+              "entityRef": "GLCOV003.27",
+              "value": "1001",
+              "label": "GL Product Framework!I50"
+            },
+            {
+              "entityRef": "GLCOV003.31",
+              "value": "1185",
+              "label": "GL Product Framework!I51"
+            },
+            {
+              "entityRef": "GLCOV003.32",
+              "value": "1185",
+              "label": "GL Product Framework!I52"
+            },
+            {
+              "entityRef": "GLCOV003.33",
+              "value": "615",
+              "label": "GL Product Framework!I53"
+            },
+            {
+              "entityRef": "GLCOV004.01",
+              "value": "413",
+              "label": "GL Product Framework!I54"
+            },
+            {
+              "entityRef": "GLCOV004.02",
+              "value": "413",
+              "label": "GL Product Framework!I55"
+            },
+            {
+              "entityRef": "GLCOV004.04",
+              "value": "413",
+              "label": "GL Product Framework!I56"
+            },
+            {
+              "entityRef": "GLCOV004.05",
+              "value": "413",
+              "label": "GL Product Framework!I57"
+            },
+            {
+              "entityRef": "GLCOV004.06",
+              "value": "413",
+              "label": "GL Product Framework!I58"
+            },
+            {
+              "entityRef": "GLCOV004.07",
+              "value": "413",
+              "label": "GL Product Framework!I59"
+            },
+            {
+              "entityRef": "GLCOV004.08",
+              "value": "413",
+              "label": "GL Product Framework!I60"
+            },
+            {
+              "entityRef": "GLCOV004.11",
+              "value": "196",
+              "label": "GL Product Framework!I61"
+            },
+            {
+              "entityRef": "GLCOV004.12",
+              "value": "1093",
+              "label": "GL Product Framework!I62"
+            },
+            {
+              "entityRef": "GLCOV004.13",
+              "value": "1207",
+              "label": "GL Product Framework!I63"
+            },
+            {
+              "entityRef": "GLCOV004.16",
+              "value": "1204",
+              "label": "GL Product Framework!I64"
+            },
+            {
+              "entityRef": "GLCOV004.31",
+              "value": "413",
+              "label": "GL Product Framework!I65"
+            },
+            {
+              "entityRef": "GLCOV004.32",
+              "value": "514",
+              "label": "GL Product Framework!I66"
+            },
+            {
+              "entityRef": "GLCOV004.38",
+              "value": "1001",
+              "label": "GL Product Framework!I68"
+            },
+            {
+              "entityRef": "GLCOV004.42",
+              "value": "1185",
+              "label": "GL Product Framework!I69"
+            },
+            {
+              "entityRef": "GLCOV004.43",
+              "value": "1185",
+              "label": "GL Product Framework!I70"
+            },
+            {
+              "entityRef": "GLCOV004.44",
+              "value": "999",
+              "label": "GL Product Framework!I71"
+            },
+            {
+              "entityRef": "GLCOV004.45",
+              "value": "999",
+              "label": "GL Product Framework!I72"
+            },
+            {
+              "entityRef": "GLCOV004.46",
+              "value": "999",
+              "label": "GL Product Framework!I73"
             }
           ]
         },
@@ -2001,9 +2001,9 @@
       "pass": false,
       "reds": [
         "unaccountedEntityCells=22",
-        "substanceCoverage=0.094<0.985",
+        "substanceCoverage=0.096<0.985",
         "entityRecall=0.831<0.98",
-        "numericFidelity=0.000<1.0",
+        "numericFidelity=0.127<1.0",
         "hierarchyRecall=0.160<1.0 (94 golden edges, 15 reproduced)"
       ],
       "metrics": {
@@ -2012,8 +2012,8 @@
           "entityAccounted": 263,
           "unaccountedEntityCells": 22,
           "substanceCells": 6194,
-          "substanceAccounted": 580,
-          "substanceCoverage": 0.09363900548918308,
+          "substanceAccounted": 594,
+          "substanceCoverage": 0.09589925734581853,
           "sampleUnaccounted": [
             {
               "locus": "GL Product Framework!D7",
@@ -2346,7 +2346,7 @@
         },
         "numeric": {
           "checked": 110,
-          "fidelity": 0,
+          "fidelity": 0.12727272727272726,
           "misses": [
             {
               "entityRef": "GL.PROD.001",
@@ -4583,8 +4583,8 @@
       "pass": false,
       "reds": [
         "unaccountedEntityCells=77",
-        "substanceCoverage=0.617<0.985",
-        "numericFidelity=0.000<1.0",
+        "substanceCoverage=0.633<0.985",
+        "numericFidelity=0.069<1.0",
         "ldTableRef=0.000<0.95 (0/0 refs resolve over 5 extracted table(s))",
         "hierarchyRecall=0.000<1.0 (83 golden edges, 0 reproduced)"
       ],
@@ -4594,8 +4594,8 @@
           "entityAccounted": 774,
           "unaccountedEntityCells": 77,
           "substanceCells": 3080,
-          "substanceAccounted": 1901,
-          "substanceCoverage": 0.6172077922077922,
+          "substanceAccounted": 1949,
+          "substanceCoverage": 0.6327922077922078,
           "sampleUnaccounted": [
             {
               "locus": "Product Inventory!C2",
@@ -4673,27 +4673,12 @@
               "kind": null
             },
             {
-              "locus": "Product Component Model!H6",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
               "locus": "Product Component Model!C7",
               "disposition": "ATTR",
               "kind": null
             },
             {
-              "locus": "Product Component Model!H7",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
               "locus": "Product Component Model!C8",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model!H8",
               "disposition": "ATTR",
               "kind": null
             },
@@ -4733,11 +4718,6 @@
               "kind": null
             },
             {
-              "locus": "Product Component Model!H9",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
               "locus": "Product Component Model!K9",
               "disposition": "ATTR",
               "kind": null
@@ -4754,11 +4734,6 @@
             },
             {
               "locus": "Product Component Model!C10",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
-              "locus": "Product Component Model!H10",
               "disposition": "ATTR",
               "kind": null
             },
@@ -4783,17 +4758,42 @@
               "kind": null
             },
             {
-              "locus": "Product Component Model!H11",
-              "disposition": "ATTR",
-              "kind": null
-            },
-            {
               "locus": "Product Component Model!K11",
               "disposition": "ATTR",
               "kind": null
             },
             {
               "locus": "Product Component Model!L11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!N11",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!C12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!K12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!L12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!N12",
+              "disposition": "ATTR",
+              "kind": null
+            },
+            {
+              "locus": "Product Component Model!C13",
               "disposition": "ATTR",
               "kind": null
             }
@@ -4948,17 +4948,12 @@
         },
         "numeric": {
           "checked": 130,
-          "fidelity": 0,
+          "fidelity": 0.06923076923076923,
           "misses": [
             {
               "entityRef": "1",
               "value": "0",
               "label": "Product Inventory!E7"
-            },
-            {
-              "entityRef": "CP 10 36",
-              "value": "1012",
-              "label": "Product Component Model!H441"
             },
             {
               "entityRef": "CP 04 50",
@@ -4976,36 +4971,6 @@
               "label": "Product Component Model!H444"
             },
             {
-              "entityRef": "CP 00 18",
-              "value": "607",
-              "label": "Product Component Model!H445"
-            },
-            {
-              "entityRef": "CP 00 18",
-              "value": "607",
-              "label": "Product Component Model!H446"
-            },
-            {
-              "entityRef": "CP 00 18",
-              "value": "607",
-              "label": "Product Component Model!H447"
-            },
-            {
-              "entityRef": "CP 00 18",
-              "value": "607",
-              "label": "Product Component Model!H448"
-            },
-            {
-              "entityRef": "CP 00 18",
-              "value": "607",
-              "label": "Product Component Model!H449"
-            },
-            {
-              "entityRef": "CP 00 18",
-              "value": "607",
-              "label": "Product Component Model!H450"
-            },
-            {
               "entityRef": "CP 04 40",
               "value": "1220",
               "label": "Product Component Model!H454"
@@ -5019,16 +4984,6 @@
               "entityRef": "CP 04 17",
               "value": "1012",
               "label": "Product Component Model!H456"
-            },
-            {
-              "entityRef": "CP 04 18",
-              "value": "1012",
-              "label": "Product Component Model!H457"
-            },
-            {
-              "entityRef": "CP 04 18",
-              "value": "1012",
-              "label": "Product Component Model!H458"
             },
             {
               "entityRef": "CP 04 50",
@@ -5149,6 +5104,51 @@
               "entityRef": "CP 0157 0918",
               "value": "2386",
               "label": "Property Forms Usage!F25"
+            },
+            {
+              "entityRef": "CP 0128 0700",
+              "value": "2331",
+              "label": "Property Forms Usage!F26"
+            },
+            {
+              "entityRef": "CP 1270 0996",
+              "value": "2327",
+              "label": "Property Forms Usage!F27"
+            },
+            {
+              "entityRef": "CPE 1036 1305",
+              "value": "2278",
+              "label": "Property Forms Usage!F28"
+            },
+            {
+              "entityRef": "CP 0166 0900",
+              "value": "2253",
+              "label": "Property Forms Usage!F29"
+            },
+            {
+              "entityRef": "CP 1040 0899",
+              "value": "2248",
+              "label": "Property Forms Usage!F30"
+            },
+            {
+              "entityRef": "CP 0132 0120",
+              "value": "2223",
+              "label": "Property Forms Usage!F31"
+            },
+            {
+              "entityRef": "CP 0146 0894",
+              "value": "2195",
+              "label": "Property Forms Usage!F32"
+            },
+            {
+              "entityRef": "CPE 0200 1301",
+              "value": "2193",
+              "label": "Property Forms Usage!F33"
+            },
+            {
+              "entityRef": "CPT 7999 1301",
+              "value": "1962",
+              "label": "Property Forms Usage!F34"
             }
           ]
         },

@@ -3182,6 +3182,38 @@ function cellRefOf(sheet, r, c) {
 var REFID_RE = /\b[A-Za-z]{2,12}(?:[.\-_][A-Za-z]{1,8})?[.\-_]\d{1,6}\b/g;
 var FORM_RE = /\b[A-Z]{2,4}[ \-]?\d{2}(?:[ \-]?\d{2}){1,4}\b/g;
 var SYNTH_MARK = /(^|\.)SYNTH(?:[^A-Za-z]|$)/i;
+var EDITION_HEADER_ALIASES = [
+  "EDITION DATE",
+  "FORM EDITION DATE",
+  "FORM EDITION DATE (MM YY)",
+  "FORM EDITION",
+  "EDITION",
+  "EFFECTIVE DATE",
+  "VERSION DATE"
+];
+function squishHeader(v) {
+  return String(v ?? "").toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+}
+var EDITION_HEADER_SET = new Set(EDITION_HEADER_ALIASES.map(squishHeader));
+function editionColumnOf(grid, scanRows = 20) {
+  const limit = Math.min(scanRows, grid.cells.length);
+  for (let r = 0; r < limit; r++) {
+    const row2 = grid.cells[r] ?? [];
+    for (let c = 0; c < row2.length; c++) {
+      const v = row2[c];
+      if (typeof v !== "string") continue;
+      if (EDITION_HEADER_SET.has(squishHeader(v))) return c;
+    }
+  }
+  return -1;
+}
+function editionAt(grid, r, editionCol) {
+  if (editionCol < 0) return null;
+  const v = (grid.cells[r] ?? [])[editionCol];
+  if (v === null || v === void 0) return null;
+  const s = String(v).trim();
+  return s === "" ? null : s;
+}
 function sheetNameClass(name) {
   const n = name.trim().toLowerCase();
   if (/(^|\b)(table of contents|toc)(\b|$)/.test(n)) return "noise";
@@ -3329,7 +3361,9 @@ function runConservationPass(input) {
     }
   }
   const formTokens2 = /* @__PURE__ */ new Set();
+  const harvestEditions = input.harvestFormEditions === true;
   for (const g of input.grids) {
+    const editionCol = harvestEditions ? editionColumnOf(g) : -1;
     for (let r = 0; r < g.cells.length; r++) {
       const row2 = g.cells[r] ?? [];
       for (let c = 0; c < row2.length; c++) {
@@ -3343,9 +3377,19 @@ function runConservationPass(input) {
           if (formTokens2.has(key) || seenRefIds.has(key)) continue;
           formTokens2.add(key);
           seenRefIds.add(key);
-          res.forms.push(entity(tok, tok, cellRefOf(g.sheet, r, c), "form-token", { formNumber: tok }));
+          const edition = editionAt(g, r, editionCol);
+          const extra = { formNumber: tok };
+          if (edition !== null) {
+            extra["edition"] = edition;
+            extra["editionCitation"] = cellRefOf(g.sheet, r, editionCol);
+            bump("form.token.edition");
+          }
+          res.forms.push(entity(tok, tok, cellRefOf(g.sheet, r, c), "form-token", extra));
           bump("form.token");
           res.consumed.push({ sheet: g.sheet, rowStart: r, rowEnd: r, colStart: c, colEnd: c, reason: "conserve:form-token" });
+          if (edition !== null) {
+            res.consumed.push({ sheet: g.sheet, rowStart: r, rowEnd: r, colStart: editionCol, colEnd: editionCol, reason: "conserve:form-edition" });
+          }
         }
       }
     }
@@ -3537,6 +3581,14 @@ function regionTitle(g, rg) {
 }
 
 // shared/src/insurance/isoImport.ts
+var FORM_EDITION_HARVEST = (() => {
+  try {
+    const env = globalThis.process?.env;
+    return env?.["IMPORT_FORM_EDITION_HARVEST"] !== "0";
+  } catch {
+    return true;
+  }
+})();
 function text(v) {
   if (v == null) return "";
   if (typeof v === "string") return v.trim();
@@ -5767,7 +5819,13 @@ function mapIsoWorkbook(grids, overlay, consumedSpans) {
       existingCoverageNames: new Set(allCoverages.map((c) => String(c.data["name"] ?? "").toLowerCase()).filter(Boolean)),
       frameworkCoverageCount: allCoverages.length,
       frameworkSheet: fwGrid?.sheet ?? null,
-      refPrefix
+      refPrefix,
+      // NAMED FLAG (IMPORT_FORM_EDITION_HARVEST). Off → the pre-fix path, byte for
+      // byte. On → a harvested form carries the EDITION DATE its own row states.
+      // Form identity is (number, edition) per canonicalMap.ts L267, and the
+      // framework sheet's edition column is currently claimed by mapColumns and
+      // read by nobody (docs/review/2026-07-26-NUMERIC-FIDELITY-VERDICT.md §3.1).
+      harvestFormEditions: FORM_EDITION_HARVEST
     });
     products.push(...conserved.products);
     allCoverages.push(...conserved.coverages);

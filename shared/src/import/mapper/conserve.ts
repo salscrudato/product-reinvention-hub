@@ -86,6 +86,63 @@ const REFID_RE = /\b[A-Za-z]{2,12}(?:[.\-_][A-Za-z]{1,8})?[.\-_]\d{1,6}\b/g
 const FORM_RE = /\b[A-Z]{2,4}[ \-]?\d{2}(?:[ \-]?\d{2}){1,4}\b/g
 const SYNTH_MARK = /(^|\.)SYNTH(?:[^A-Za-z]|$)/i
 
+// ─── EDITION DATE: the column that is mapped and then read by nobody ──────────
+// A framework sheet states a form number and its EDITION DATE side by side
+// ("GL Product Framework!H6 = CG 00 01", "!I6 = 04 13"). isoImport's FW_FIELDS
+// DECLARES an `edition` alias group, so mapColumns claims the column and it never
+// even appears in the unmapped list — but grepping the whole mapper for
+// `at(cells,'edition')` returns exactly ONE consumer, inside parseForms, which
+// reads FORM_FIELDS off the Forms Specifications sheet. On the framework sheet the
+// column is claimed and then read by nothing.
+//
+// Measured (docs/review/2026-07-26-NUMERIC-FIDELITY-VERDICT.md §3.1): 296 of the
+// eval2 corpus's 1218 numeric claims — 24.3%, the single largest class — are this
+// column, and `GL Product Framework!I` is populated on 110 of 110 data rows. The
+// form number survives byte-for-byte; its edition does not, and per canonicalMap.ts
+// L267 form identity IS (number, edition): "CG 00 01" and "CG 00 01 04 13" are
+// legally distinct filings.
+//
+// The harvest below reads the edition from the SAME ROW the form token was found
+// on, byte-for-byte, cited to its own cell. When the row states no edition, none is
+// attached — flag-not-invent, never a default.
+
+const EDITION_HEADER_ALIASES = [
+  'EDITION DATE', 'FORM EDITION DATE', 'FORM EDITION DATE (MM YY)',
+  'FORM EDITION', 'EDITION', 'EFFECTIVE DATE', 'VERSION DATE',
+]
+/** Whitespace/punctuation-insensitive compare, matching isoImport's squishStr discipline. */
+function squishHeader(v: unknown): string {
+  return String(v ?? '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim()
+}
+const EDITION_HEADER_SET = new Set(EDITION_HEADER_ALIASES.map(squishHeader))
+
+/** Column index of this grid's EDITION-DATE column, or -1. Scans the leading rows
+ *  (a framework sheet carries banner/group bands above its true header) and takes
+ *  the FIRST exact alias hit — the same alias vocabulary isoImport declares, so the
+ *  two agree on what an edition column is. */
+export function editionColumnOf(grid: IsoGrid, scanRows = 20): number {
+  const limit = Math.min(scanRows, grid.cells.length)
+  for (let r = 0; r < limit; r++) {
+    const row = grid.cells[r] ?? []
+    for (let c = 0; c < row.length; c++) {
+      const v = row[c]
+      if (typeof v !== 'string') continue
+      if (EDITION_HEADER_SET.has(squishHeader(v))) return c
+    }
+  }
+  return -1
+}
+
+/** The edition this row states, or null. Byte-for-byte apart from trimming — an
+ *  edition is an identifier half, so nothing else is normalized. */
+function editionAt(grid: IsoGrid, r: number, editionCol: number): string | null {
+  if (editionCol < 0) return null
+  const v = (grid.cells[r] ?? [])[editionCol]
+  if (v === null || v === undefined) return null
+  const s = String(v).trim()
+  return s === '' ? null : s
+}
+
 /** Deterministic sheet-name classification — MIRROR of cell-enum.mts classifySheet().
  *  Returns a non-null class for sheets whose whole disposition is decided by NAME
  *  (noise/log/schema): those sheets are never entity-harvested (their cells are not
@@ -214,6 +271,11 @@ export interface ConservationInput {
   frameworkSheet: string | null
   /** SYNTH prefix, e.g. 'GL' (falls back to 'WB'). */
   refPrefix: string
+  /** NAMED FLAG — form-edition harvest (see EDITION_HEADER_ALIASES above).
+   *  Off leaves the pre-fix path byte-identical: a form token mints a form with
+   *  `formNumber` and nothing else. On, a form token whose row also states an
+   *  EDITION DATE carries that edition, cited to its own cell. */
+  harvestFormEditions?: boolean
 }
 
 // ─── The pass ─────────────────────────────────────────────────────────────────
@@ -285,7 +347,10 @@ export function runConservationPass(input: ConservationInput): ConservationResul
   // (2) WHOLE-WORKBOOK FORM-TOKEN HARVEST — ISO form numbers ("CG 00 01"), normalized the
   // way the floor counts them; one form entity per distinct token.
   const formTokens = new Set<string>()
+  const harvestEditions = input.harvestFormEditions === true
   for (const g of input.grids) {
+    // One header scan per grid, not per cell — the column is a property of the sheet.
+    const editionCol = harvestEditions ? editionColumnOf(g) : -1
     for (let r = 0; r < g.cells.length; r++) {
       const row = g.cells[r] ?? []
       for (let c = 0; c < row.length; c++) {
@@ -299,9 +364,23 @@ export function runConservationPass(input: ConservationInput): ConservationResul
           if (formTokens.has(key) || seenRefIds.has(key)) continue
           formTokens.add(key)
           seenRefIds.add(key)
-          res.forms.push(entity(tok, tok, cellRefOf(g.sheet, r, c), 'form-token', { formNumber: tok }))
+          // The edition this row states about this form. Absent → nothing is
+          // attached; the source not stating an edition is a fact, not a gap to fill.
+          const edition = editionAt(g, r, editionCol)
+          const extra: Record<string, unknown> = { formNumber: tok }
+          if (edition !== null) {
+            extra['edition'] = edition
+            extra['editionCitation'] = cellRefOf(g.sheet, r, editionCol)
+            bump('form.token.edition')
+          }
+          res.forms.push(entity(tok, tok, cellRefOf(g.sheet, r, c), 'form-token', extra))
           bump('form.token')
           res.consumed.push({ sheet: g.sheet, rowStart: r, rowEnd: r, colStart: c, colEnd: c, reason: 'conserve:form-token' })
+          // The edition cell is CONSUMED by this form — without the span it stays
+          // UNACCOUNTED and the sweeper re-classifies a cell we just read.
+          if (edition !== null) {
+            res.consumed.push({ sheet: g.sheet, rowStart: r, rowEnd: r, colStart: editionCol, colEnd: editionCol, reason: 'conserve:form-edition' })
+          }
         }
       }
     }
