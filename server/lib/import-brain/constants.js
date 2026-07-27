@@ -159,6 +159,37 @@ function colLetter(idx) {
   return result
 }
 
+// ─── Cell-reference + value comparators ────────────────────────────────────────
+// The citation resolver (stage 5) and the conservation-ledger FACT verifier
+// (stage 4) must decide "does this cited cell actually say this?" the SAME way —
+// two drifting copies of the comparison is how a claim passes one gate and fails
+// the other. They live here, on the leaf module both stages already require.
+
+/** "C7" → { row: 6, col: 2 } (0-based). null when the ref is not an A1 address. */
+function parseCellRef(cell) {
+  const m = /^([A-Za-z]{1,3})([0-9]{1,7})$/.exec(String(cell ?? '').trim())
+  if (!m) return null
+  let col = 0
+  for (const ch of m[1].toUpperCase()) col = col * 26 + (ch.charCodeAt(0) - 64)
+  return { row: Number(m[2]) - 1, col: col - 1 }
+}
+
+/** Loose canon for non-strict comparisons: numeric formatting and case fold away. */
+function canonLoose(v) {
+  if (v === null || v === undefined) return ''
+  const s = String(v).trim()
+  const numericish = s.replace(/[$,\s]/g, '')
+  if (numericish !== '' && /^-?\d+(\.\d+)?$/.test(numericish)) return String(Number(numericish))
+  return s.toLowerCase()
+}
+
+/** Whitespace-collapsed, case-folded form for containment tests. */
+function squishText(s) { return String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim() }
+
+/** An importer-derived verbatim — '(synthesized)', '(derived from row context)',
+ *  '(deterministic ISO-family parse)' — has no source cell to resolve against. */
+const DERIVED_VERBATIM = /^\(.*\)$/
+
 // ─── Bounded parallel map ──────────────────────────────────────────────────────
 // Runs fn over items with at most `concurrency` in flight; results keep item order.
 // Brain stages use this to overlap independent AI calls (per sheet / per batch)
@@ -191,6 +222,10 @@ module.exports = {
   splitMultiRefId,
   extractJson,
   colLetter,
+  parseCellRef,
+  canonLoose,
+  squishText,
+  DERIVED_VERBATIM,
   parseWithRetry,
   recordVote,
   sanitizeEntities,

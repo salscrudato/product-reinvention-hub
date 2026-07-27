@@ -208,10 +208,18 @@ async function runAdaptiveImportBrain(opts) {
   // first-class census_unaccounted plan items. Vocabulary is enforced in code.
   let sweeper = { sweptFacts: [], unresolvedItems: [], perSheet: [] }
   if (accounting.size > 0) {
-    // Only sweep content sheets — ignored sheets have no extraction to fill the ledger,
-    // so all their cells are UNACCOUNTED and sweeping them burns hundreds of AI calls
-    // for zero data gain (noise classification on irrelevant cells).
-    const contentSheetNames = new Set(classifiedSheets.filter(s => s.domain !== 'ignore').map(s => s.sheetName))
+    // Sweep content sheets — REASONED-ignore sheets have no extraction to fill the
+    // ledger, so all their cells are UNACCOUNTED and sweeping them burns hundreds of
+    // AI calls for zero data gain (noise classification on irrelevant cells).
+    //
+    // PREFILTER-skipped sheets are the exception and go back IN. Nothing reasoned
+    // about them at all: two 1024-token bulk voters agreed to drop the sheet before
+    // any classifier saw it, and excluding them from the sweep as well meant a
+    // whole sheet could leave the pipeline with no entity, no review item, and no
+    // cell disposition. Their census already exists, and SWEEP_MAX_PER_SHEET bounds
+    // the cost at 300 cells — the price of never dropping a sheet in silence.
+    const sweepable = (s) => s.domain !== 'ignore' || s.prefilterSkipped === true
+    const contentSheetNames = new Set(classifiedSheets.filter(sweepable).map(s => s.sheetName))
     const contentAccounting = new Map([...accounting].filter(([n]) => contentSheetNames.has(n)))
     emitStage(emit, 4, 'sweep', 'start', `Sweeping unaccounted cells on ${contentAccounting.size} content sheet(s)`)
     try {

@@ -191,11 +191,25 @@ async function classifySheets(sheets, budget, review) {
     const bothIgnore = (pA?.prefilter === true) && (pB?.prefilter === true)
 
     if (bothIgnore) {
+      // BREADCRUMB, not a silent drop. This was the pipeline's only 100%-silent
+      // whole-sheet drop: a domain of 'ignore' at confidence 1.0, no review item,
+      // and the sheet excluded from the stage-4.5 conservation sweep too — decided
+      // by the two most token-starved models in the fleet. The verdict stands (a
+      // cheap prefilter that cannot skip anything is not a prefilter), but it is
+      // now NAMED: both voters, both reasons, and the sheet stays in sweep scope
+      // so its cells still get a disposition. `prefilterSkipped` is what the
+      // orchestrator reads to keep it there.
+      review.push({
+        kind: 'prefilter-skip', sheetName: fp.sheetName,
+        detail: `"${fp.sheetName}" (${fp.layoutShape}, ${fp.dataRowCount} data row(s) × ${fp.dataColCount} column(s)) was skipped before classification: BULK/anthropic said "${pA.reason}", BULK_ALT/openai said "${pB.reason}". Both cheap voters agreed it is non-content, so no reasoner ever read it. Its cells still go to the conservation sweep — confirm nothing real was skipped.`,
+      })
       return {
         sheetName:       fp.sheetName,
         domain:          'ignore',
         confidence:      1.0,
         rationale:       `Both bulk models agree: ${pA.reason}.`,
+        prefilterSkipped: true,
+        prefilterReasons: { anthropic: pA.reason, openai: pB.reason },
         disagreed:       false,
         humanFlagNeeded: false,
       }
@@ -297,7 +311,25 @@ async function classifySheets(sheets, budget, review) {
     }
   }
 
-  return pMap(sheets, classifyOne, 4)
+  const classified = await pMap(sheets, classifyOne, 4)
+
+  // Every dropped sheet leaves a breadcrumb. `ignore` means "extract nothing from
+  // this whole sheet" — the largest single decision the pipeline makes — and the
+  // reasoner-agreed path reached it with a rationale that lived only in the stage-1
+  // JSON payload, never in the review queue. The prefilter path emits its own,
+  // richer item above; every other route to `ignore` gets this one. Volume is
+  // bounded by the sheet count (a handful per workbook), so this cannot become a
+  // noise floor.
+  for (const c of classified) {
+    if (c.domain !== 'ignore' || c.prefilterSkipped) continue
+    if (c.humanFlagNeeded) continue            // already carries a `disagreement` item
+    review.push({
+      kind: 'sheet-ignored', sheetName: c.sheetName,
+      detail: `"${c.sheetName}" was classified as non-content (confidence ${Number(c.confidence ?? 0).toFixed(2)}) and nothing was extracted from it: ${c.rationale || 'no rationale recorded'}`,
+    })
+  }
+
+  return classified
 }
 
 module.exports = { classifySheets }

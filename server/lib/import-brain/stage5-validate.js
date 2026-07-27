@@ -20,7 +20,10 @@
 const fleet = require('../fleet')
 const { callOpenAI, resolveOpenAI } = require('./ai-call')
 const { STAGE5_VALIDATE_SYSTEM } = require('./prompts')
-const { extractJson, pMap, parseWithRetry, colLetter } = require('./constants')
+const {
+  extractJson, pMap, parseWithRetry, colLetter,
+  parseCellRef, canonLoose, DERIVED_VERBATIM,
+} = require('./constants')
 
 const MAX_ENTITIES_PER_CALL = 50
 
@@ -42,25 +45,11 @@ const VALID_KINDS = new Set([
 // semantics-only. Importer-derived citations ('(synthesized)', '(derived from row
 // context)', '(deterministic ISO-family parse)') have no source cell — skipped.
 
+// parseCellRef / canonLoose / DERIVED_VERBATIM moved to constants.js: stage 4's
+// conservation-ledger FACT verifier must ask "does this cited cell actually say
+// this?" with the SAME comparator this resolver uses. Two drifting copies is how
+// a claim passes one gate and fails the other.
 const STRICT_FIELDS = new Set(['refId', 'number', 'parentId'])
-const DERIVED_VERBATIM = /^\(.*\)$/
-
-function parseCellRef(cell) {
-  const m = /^([A-Za-z]{1,3})([0-9]{1,7})$/.exec(String(cell ?? '').trim())
-  if (!m) return null
-  let col = 0
-  for (const ch of m[1].toUpperCase()) col = col * 26 + (ch.charCodeAt(0) - 64)
-  return { row: Number(m[2]) - 1, col: col - 1 }
-}
-
-// Loose canon for non-strict comparisons: numeric formatting and case fold away.
-function canonLoose(v) {
-  if (v === null || v === undefined) return ''
-  const s = String(v).trim()
-  const numericish = s.replace(/[$,\s]/g, '')
-  if (numericish !== '' && /^-?\d+(\.\d+)?$/.test(numericish)) return String(Number(numericish))
-  return s.toLowerCase()
-}
 
 function blockEntity(entity, reason) {
   entity.blocked = true

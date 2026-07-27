@@ -30,6 +30,7 @@ const {
   extractJson, colLetter,
   BLANK_REFID, splitMultiRefId, CONFIDENCE_REVIEW, pMap,
   parseWithRetry, sanitizeEntities, recordVote,
+  parseCellRef, canonLoose, DERIVED_VERBATIM,
   TRUNCATED_STOP_REASONS, REFUSAL_STOP_REASONS,
 } = require('./constants')
 
@@ -845,8 +846,27 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, gridRows, detEntit
   if (rows.length > 0) batches.push(0)
   if (rows.length > BATCH_ROWS * 2) batches.push(Math.floor(rows.length / (2 * BATCH_ROWS)) * BATCH_ROWS)
   const detByRow = new Map(detEntities.map(e => [e.sourceRowIndex, e]))
-  const disagreeByField = new Map()
+
+  // JOIN BY COLUMN CITATION, not by field name. Joining by field name could only
+  // ever see "the map and the blind reader disagree about the VALUE of field F" —
+  // but the failure this check exists to catch is the map pointing field F at the
+  // WRONG COLUMN, and under a field-name join a reassignment is invisible: the
+  // blind reader's `name` (read from column C) is compared against the map's
+  // `name` (read from column B) and they simply differ, or the field is absent on
+  // one side and skipped. Anchoring on the cited column makes the actual wrong-map
+  // signature — "the map says column D is `requirement`, the blind reader reading
+  // column D calls it `claimsBasis`" — a first-class, countable observation.
+  const mappedByCol = new Map()
+  for (const m of colMap.mappings || []) if (m.canonicalField !== null) mappedByCol.set(m.colIndex, m)
+  const perCol = new Map()   // colIndex -> { seen, reassigned, disagreed, sawField }
+  const bump = (col, key, value) => {
+    const s = perCol.get(col) ?? { seen: 0, reassigned: 0, disagreed: 0, sawField: null }
+    s[key] += 1
+    if (value !== undefined && s.sawField === null) s.sawField = value
+    perCol.set(col, s)
+  }
   let checkedRows = 0
+  let joinedFields = 0
 
   // Cross-check legs are votes too — a leg that stops voting must show in
   // telemetry. Terminal outcomes only: a truncation that HALVES successfully
@@ -873,11 +893,22 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, gridRows, detEntit
       if (!det) continue
       checkedRows++
       for (const f of toEntityFields(rawEnt)) {
-        const detField = det.fields.find(d => d.fieldName === f.fieldName)
-        if (!detField) continue
-        if (!valuesAgree(detField.value, f.value)) {
-          disagreeByField.set(f.fieldName, (disagreeByField.get(f.fieldName) ?? 0) + 1)
+        const ref = parseCellRef(f.citation && f.citation.cell)
+        if (!ref) continue                                   // uncited read — nothing to anchor on
+        const mapped = mappedByCol.get(ref.col)
+        if (!mapped) continue                                // column the map never claimed
+        joinedFields++
+        bump(ref.col, 'seen')
+        if (f.fieldName !== mapped.canonicalField) {
+          // REASSIGNMENT: the map and the blind reader disagree about what this
+          // column IS. Comparing their values would be comparing two different
+          // fields, so the value check is skipped — the indictment is the point.
+          bump(ref.col, 'reassigned', f.fieldName)
+          continue
         }
+        const detField = det.fields.find(d => d.fieldName === mapped.canonicalField)
+        if (!detField) continue
+        if (!valuesAgree(detField.value, f.value)) bump(ref.col, 'disagreed')
       }
     }
   }
@@ -909,15 +940,78 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, gridRows, detEntit
     await sampleBatch(rows.slice(batchStart, batchStart + sampleRows), batchStart)
   }
 
-  for (const [fieldName, n] of disagreeByField) {
-    if (checkedRows > 0 && n / checkedRows > 0.3) {
-      review.push({ kind: 'map-suspect', sheetName: fp.sheetName, fieldPath: fieldName, detail: `AI cross-check disagreed with the deterministic column map on "${fieldName}" in ${n}/${checkedRows} sampled row-reads — verify the column mapping.` })
-      for (const e of detEntities) {
-        const f = e.fields.find(x => x.fieldName === fieldName)
-        if (f) { f.confidence = Math.min(f.confidence, 0.6); e.reviewFlag = true }
-      }
+  // A DEAD CHECKER IS NOT A CLEAN CHECK. Every leg here swallows its errors to
+  // null, so when both voters die `checkedRows` stayed 0, the indictment loop
+  // below could not fire, and the sheet reported exactly what a verified-clean
+  // sheet reports. The deterministic path's ONLY AI check was therefore
+  // indistinguishable from no check at all. One retry (the legs are independent
+  // calls, so a transport blip is genuinely recoverable), then a named item.
+  if (checkedRows === 0 && batches.length > 0 && rows.length > 0) {
+    const retryStart = batches[0]
+    await sampleBatch(rows.slice(retryStart, retryStart + charAwareRowCount(rows, retryStart)), retryStart)
+  }
+  if (checkedRows === 0 || joinedFields === 0) {
+    review.push({
+      kind: 'map-unverified', sheetName: fp.sheetName,
+      detail: checkedRows === 0
+        ? `The blind cross-check of "${fp.sheetName}" produced ZERO usable row-reads across ${batches.length} sampled batch(es) plus one retry — both voters failed, so the column map behind ${detEntities.length} code-extracted entit(y|ies) is UNVERIFIED. This is not a clean check; it is an absent one.`
+        : `The blind cross-check of "${fp.sheetName}" read ${checkedRows} row(s) but none of its field reads carried a resolvable source cell, so nothing could be joined to a mapped column — the column map is UNVERIFIED.`,
+    })
+    return
+  }
+
+  // Indict COLUMNS (the deterministic VALUES are byte-perfect by construction —
+  // only the map can be wrong).
+  for (const [col, s] of perCol) {
+    const wrong = s.reassigned + s.disagreed
+    if (s.seen === 0 || wrong / s.seen <= 0.3) continue
+    const mapped = mappedByCol.get(col)
+    const what = s.reassigned >= s.disagreed
+      ? `read column ${colLetter(col)} as "${s.sawField}" where the map says "${mapped.canonicalField}" (${s.reassigned} reassignment(s), ${s.disagreed} value disagreement(s))`
+      : `disagreed with the value the map's "${mapped.canonicalField}" produced from column ${colLetter(col)} (${s.disagreed} value disagreement(s), ${s.reassigned} reassignment(s))`
+    review.push({
+      kind: 'map-suspect', sheetName: fp.sheetName, colIndex: col, colLabel: mapped.headerLabel ?? null,
+      fieldPath: mapped.canonicalField,
+      detail: `Blind AI cross-check ${what} in ${wrong}/${s.seen} sampled reads of that column — verify the column mapping.`,
+    })
+    for (const e of detEntities) {
+      const f = e.fields.find(x => x.fieldName === mapped.canonicalField)
+      if (f) { f.confidence = Math.min(f.confidence, 0.6); e.reviewFlag = true }
     }
   }
+}
+
+// ─── Cited-cell verification (conservation-ledger gate) ───────────────────────
+// Resolve a citation against the AUTHORITATIVE grid and decide whether the cell
+// actually carries what was claimed. Returns:
+//   { ok: true }            — verified, or unverifiable for a legitimate reason
+//                             (importer-derived verbatim, legacy fingerprint with
+//                             no grid, empty claim) — absence of evidence is not
+//                             evidence of mis-citation.
+//   { ok: false, actual }   — the cell resolves and contradicts the claim.
+// Containment, both directions, on the loose canon: a multi-refId cell legitimately
+// CONTAINS each id, and a normalized number ("$1,528.00" → 1528) is faithful.
+
+function verifyCitedCell(cit, value, fpByName) {
+  if (!cit || !cit.cell) return { ok: true }
+  if (DERIVED_VERBATIM.test(String(cit.verbatim ?? ''))) return { ok: true }
+  const fp = fpByName && typeof fpByName.get === 'function' ? fpByName.get(cit.sheet) : null
+  if (!fp || !Array.isArray(fp.cells) || fp.cells.length === 0) return { ok: true }
+  const ref = parseCellRef(cit.cell)
+  if (!ref || ref.row < 0 || ref.row >= fp.cells.length || ref.col < 0) {
+    return { ok: false, actual: '(citation does not resolve to a cell in the grid)' }
+  }
+  const raw = fp.cells[ref.row]?.[ref.col]
+  const actual = raw === null || raw === undefined ? '' : String(raw)
+  const cell = canonLoose(actual)
+  const claims = [cit.verbatim, value]
+    .map(v => (Array.isArray(v) ? v.join(' ') : v))
+    .map(canonLoose)
+    .filter(s => s !== '')
+  if (claims.length === 0) return { ok: true }            // nothing claimed → nothing to contradict
+  if (cell === '') return { ok: false, actual }           // a claim against an empty cell IS a mis-citation
+  for (const c of claims) if (cell.includes(c) || c.includes(cell)) return { ok: true }
+  return { ok: false, actual }
 }
 
 // ─── Gather rows from SheetFingerprint ────────────────────────────────────────
@@ -1343,8 +1437,20 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
   // Every extraction result — the deterministic CODE fast path AND the AI vote
   // paths — accounts the exact cells its citations name. UNACCOUNTED residue is
   // the stage-4.5 sweeper's work queue; conservation is measured, never assumed.
+  // A FACT is posted only when the CITED CELL ACTUALLY SAYS IT. The ledger used to
+  // accept whatever cell a model named, unverified — so a mis-citation did double
+  // damage: it marked an innocent cell accounted (it never was), and it left the
+  // cell the value truly came from sitting in the UNACCOUNTED residue where the
+  // sweeper would re-classify it from scratch. The honesty ledger was being written
+  // from unaudited claims. Containment (not equality) is the test, for the same
+  // reason stage 5 uses it: a multi-refId cell legitimately contains each id, and a
+  // faithful type normalization ("$1,528.00" → 1528) is not a mis-citation. Code
+  // citations are constructed from the grid and pass by construction; this bites
+  // model citations, which is where the risk is.
   const accounting = extras.accounting instanceof Map ? extras.accounting : null
   if (accounting && typeof brainShared.post === 'function') {
+    let miscited = 0
+    const miscitedSample = []
     for (const e of allEntities) {
       const factRef = `${e.kind}:${e.sourceSheet}:${e.sourceRowIndex}:${e.occurrence ?? 0}`
       for (const f of e.fields || []) {
@@ -1352,8 +1458,22 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
         if (!cit || !cit.sheet || !cit.cell) continue
         const acc = accounting.get(cit.sheet)
         if (!acc) continue
+        const verdict = verifyCitedCell(cit, f.value, fpByName)
+        if (verdict.ok === false) {
+          miscited++
+          if (miscitedSample.length < 8) miscitedSample.push(`${cit.sheet}!${cit.cell} (${e.kind}.${f.fieldName}): cited "${String(cit.verbatim).slice(0, 40)}" / value ${JSON.stringify(f.value)} vs cell "${verdict.actual.slice(0, 40)}"`)
+          review.push({
+            kind: 'miscited-field', sheetName: e.sourceSheet, rowIndex: e.sourceRowIndex, fieldPath: f.fieldName,
+            detail: `${e.kind}.${f.fieldName} cites ${cit.sheet}!${cit.cell}, but that cell reads "${verdict.actual.slice(0, 60)}" — neither the cited verbatim "${String(cit.verbatim ?? '').slice(0, 60)}" nor the extracted value ${JSON.stringify(f.value)} appears in it. NOT posted to the conservation ledger: a mis-citation would mark this cell accounted and hide the cell the value really came from.`,
+          })
+          e.reviewFlag = true
+          continue
+        }
         brainShared.post(acc, `${cit.sheet}!${String(cit.cell).toUpperCase()}`, 'FACT', f.deterministic ? 'code' : 'model', 'stage4-extract', factRef, [])
       }
+    }
+    if (miscited > 0) {
+      console.log(`[import-brain] conservation ledger: ${miscited} mis-cited field(s) refused a FACT post — ${miscitedSample.join(' | ')}`)
     }
   }
 
@@ -1365,5 +1485,5 @@ module.exports = {
   // Test seams (hardening fixtures — pure helpers, no AI):
   reconcileEntities, expandMultiRefIds, resolveConflicts, rowKind, parseExtraction, synthesizeRefId,
   deterministicExtract, buildExtractionPrompt, buildBlindExtractionPrompt,
-  gatherRows, excelRowOf, widthAwareRowCount,
+  gatherRows, excelRowOf, widthAwareRowCount, verifyCitedCell, sampleVerifyMap,
 }
