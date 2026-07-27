@@ -20,7 +20,7 @@
 const fleet = require('../fleet')
 const { callOpenAI, resolveOpenAI } = require('./ai-call')
 const { STAGE5_VALIDATE_SYSTEM } = require('./prompts')
-const { extractJson, pMap, parseWithRetry } = require('./constants')
+const { extractJson, pMap, parseWithRetry, colLetter } = require('./constants')
 
 const MAX_ENTITIES_PER_CALL = 50
 
@@ -29,6 +29,7 @@ const MAX_ENTITIES_PER_CALL = 50
 const VALID_KINDS = new Set([
   'ungrounded-field', 'refId-mismatch', 'enum-out-of-range',
   'orphan-coverage', 'dropped-row', 'form-number-mismatch',
+  'cited-vs-actual-mismatch',
 ])
 
 // ─── Deterministic citation resolver (P0-6 / ledger F07 + F08) ─────────────────
@@ -194,13 +195,64 @@ function parseValidatorResponse(raw) {
 }
 
 // ─── Build validator user prompt ───────────────────────────────────────────────
+// The validator's grounding check is only as real as the evidence it is handed.
+// The pre-fix prompt shipped each field's value + claimed verbatim and NOTHING
+// from the source — so "does the value match its cited verbatim" was the model
+// comparing the extractor's claim against itself, and an internally consistent
+// mis-extraction with a fabricated matching verbatim passed with zero
+// discrepancies. Every citation now RESOLVES against the authoritative grids
+// (already in scope) and the actual cell content rides beside the claim, plus
+// one row of source context per entity — capped so a 50-entity batch stays
+// well inside the input window.
 
-function buildValidatorPrompt(sheetName, entities, sourceRowCount) {
+const ACTUAL_CELL_CAP = 80    // chars of actual cell content per field line
+const CONTEXT_ROW_CAP = 320   // chars of the one source-row context line per entity
+const CONTEXT_CELL_CAP = 40   // chars per cell inside the context line
+
+function buildValidatorPrompt(sheetName, entities, sourceRowCount, fpByName) {
+  const gridOf = (sheet) => {
+    const fp = fpByName && typeof fpByName.get === 'function' ? fpByName.get(sheet) : null
+    return fp && Array.isArray(fp.cells) && fp.cells.length > 0 ? fp.cells : null
+  }
+  const resolveActual = (sheet, cellRef) => {
+    const grid = gridOf(sheet)
+    if (!grid) return null
+    const ref = parseCellRef(cellRef)
+    if (!ref || ref.row < 0 || ref.row >= grid.length || ref.col < 0) return null
+    const v = grid[ref.row]?.[ref.col]
+    return v === null || v === undefined ? '' : String(v)
+  }
+
   const entitySummary = entities.map((e, idx) => {
-    const fields = e.fields.map(f =>
-      `    ${f.fieldName}: ${JSON.stringify(f.value)} | confidence ${f.confidence.toFixed(2)} | cited "${f.citation.verbatim}" at ${f.citation.sheet}!${f.citation.cell}`,
-    ).join('\n')
-    return `  Entity ${idx} (${e.kind}, row ${e.sourceRowIndex}${e.reviewFlag ? ', FLAGGED' : ''}):\n${fields}`
+    const fields = e.fields.map(f => {
+      const base = `    ${f.fieldName}: ${JSON.stringify(f.value)} | confidence ${f.confidence.toFixed(2)} | cited "${f.citation.verbatim}" at ${f.citation.sheet}!${f.citation.cell}`
+      if (!f.citation.cell || DERIVED_VERBATIM.test(String(f.citation.verbatim ?? ''))) return base
+      const actual = resolveActual(f.citation.sheet || e.sourceSheet, f.citation.cell)
+      if (actual === null) return base
+      return `${base} | ACTUAL cell content: ${JSON.stringify(actual.slice(0, ACTUAL_CELL_CAP))}`
+    }).join('\n')
+
+    // One row of source context per entity: the first resolvable cited row.
+    let contextLine = ''
+    const anchor = e.fields.find(f => f.citation && f.citation.cell && !DERIVED_VERBATIM.test(String(f.citation.verbatim ?? '')))
+    if (anchor) {
+      const sheet = anchor.citation.sheet || e.sourceSheet
+      const grid = gridOf(sheet)
+      const ref = grid ? parseCellRef(anchor.citation.cell) : null
+      if (grid && ref && ref.row >= 0 && ref.row < grid.length) {
+        const pieces = []
+        let used = 0
+        for (const [c, v] of (grid[ref.row] ?? []).entries()) {
+          if (v === null || v === undefined || String(v) === '') continue
+          const piece = `${colLetter(c)}${ref.row + 1}=${JSON.stringify(String(v).slice(0, CONTEXT_CELL_CAP))}`
+          if (used + piece.length > CONTEXT_ROW_CAP) { pieces.push('…'); break }
+          pieces.push(piece)
+          used += piece.length + 3
+        }
+        if (pieces.length > 0) contextLine = `\n    SOURCE ROW (${sheet}): ${pieces.join(' | ')}`
+      }
+    }
+    return `  Entity ${idx} (${e.kind}, row ${e.sourceRowIndex}${e.reviewFlag ? ', FLAGGED' : ''}):\n${fields}${contextLine}`
   }).join('\n\n')
 
   const allRefIds = entities.flatMap(e =>
@@ -212,7 +264,7 @@ function buildValidatorPrompt(sheetName, entities, sourceRowCount) {
     `Source rows available: ${sourceRowCount}`,
     `Entities extracted: ${entities.length}`,
     `All refIds in this extraction: ${allRefIds.join(', ') || '(none)'}`,
-    `\nEntity details:\n${entitySummary}`,
+    `\nEntity details ("ACTUAL cell content" lines are resolved by CODE from the authoritative source grid — they are the ground truth to check claims against):\n${entitySummary}`,
   ].join('\n')
 }
 
@@ -271,7 +323,7 @@ async function validateEntities(entities, classified, budget, review, fpByName) 
     for (let start = 0; start < sheetEntities.length; start += MAX_ENTITIES_PER_CALL) {
       const batch      = sheetEntities.slice(start, start + MAX_ENTITIES_PER_CALL)
       const sourceRows = rowCounts.get(sheetName) ?? batch.length
-      const userPrompt = buildValidatorPrompt(sheetName, batch, sourceRows)
+      const userPrompt = buildValidatorPrompt(sheetName, batch, sourceRows, fpByName)
 
       const parsed = await parseWithRetry({
         call: () => callOpenAI({
@@ -321,4 +373,4 @@ async function validateEntities(entities, classified, budget, review, fpByName) 
   return allDiscrepancies
 }
 
-module.exports = { validateEntities, resolveCitationsDeterministic }
+module.exports = { validateEntities, resolveCitationsDeterministic, buildValidatorPrompt }

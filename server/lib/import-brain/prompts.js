@@ -194,13 +194,17 @@ RESPOND with valid JSON — no prose, no markdown fences:
 const STAGE5_VALIDATE_SYSTEM = `\
 You are an adversarial validator for insurance product data extraction. Your job is to find errors — not to re-extract data.
 
+Field lines may carry "ACTUAL cell content" — the authoritative text of the cited cell, resolved by CODE from the source grid — plus a SOURCE ROW context line per entity. Those are ground truth: the extractor's claims must be checked AGAINST them, never against each other alone.
+
 For each produced entity, check ALL of the following:
 
 1. GROUNDING: Does every field value match its cited verbatim text? If a field's "verbatim" and "value" are inconsistent, flag as ungrounded-field.
 
-2. REFID FIDELITY: Is every refId / form number field BYTE-IDENTICAL to the verbatim source cell? Any deviation in spacing, punctuation, capitalization, or extra characters is a refId-mismatch.
+2. CITED vs ACTUAL: Where an "ACTUAL cell content" is provided, does the claimed verbatim (and the value it supports) match the ACTUAL content of the cited cell? Benign formatting differences ("1,528" vs "1528", case) are fine. A verbatim that matches the value but NOT the actual cell is a fabricated citation; a value the actual cell does not support is a mis-extraction. Flag either as cited-vs-actual-mismatch, putting the ACTUAL content in "expected" and the claim in "found".
 
-3. ENUM CONFORMANCE: Is every enum field value in the allowed set?
+3. REFID FIDELITY: Is every refId / form number field BYTE-IDENTICAL to the verbatim source cell? Any deviation in spacing, punctuation, capitalization, or extra characters is a refId-mismatch.
+
+4. ENUM CONFORMANCE: Is every enum field value in the allowed set?
    - status: ACTIVE | INACTIVE | FUTURE
    - lifecycle: DRAFT | IN_REVIEW | APPROVED | LAUNCHED
    - source: BUREAU | PROPRIETARY
@@ -210,15 +214,15 @@ For each produced entity, check ALL of the following:
    - coverage.requirement: MANDATORY | OPTIONAL | UNKNOWN (UNKNOWN = the source does not establish it)
    If a value is outside the set, flag as enum-out-of-range.
 
-4. TREE INTEGRITY: Every entity with a non-null parentId must have a matching parent entity (with that refId) in the same extraction. Flag orphans as orphan-coverage.
+5. TREE INTEGRITY: Every entity with a non-null parentId must have a matching parent entity (with that refId) in the same extraction. Flag orphans as orphan-coverage.
 
-5. ROW COVERAGE: Were any source rows silently skipped? If sourceRowCount > number of entities produced, flag missing rows as dropped-row.
+6. ROW COVERAGE: Were any source rows silently skipped? If sourceRowCount > number of entities produced, flag missing rows as dropped-row.
 
 RESPOND with valid JSON — no prose, no markdown fences:
 {
   "discrepancies": [
     {
-      "kind": "ungrounded-field" | "refId-mismatch" | "enum-out-of-range" | "orphan-coverage" | "dropped-row" | "form-number-mismatch",
+      "kind": "ungrounded-field" | "cited-vs-actual-mismatch" | "refId-mismatch" | "enum-out-of-range" | "orphan-coverage" | "dropped-row" | "form-number-mismatch",
       "entityIndex": <number or null>,
       "fieldName": "<field name or null>",
       "expected": "<what was in source or null>",
