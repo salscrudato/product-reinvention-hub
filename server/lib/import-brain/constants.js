@@ -94,8 +94,12 @@ async function parseWithRetry({ call, parse, review, stage, sheetName, what, onT
   let res
   try { res = await call() } catch { res = { raw: '' } }
   if (res && TRUNCATED_STOP_REASONS.has(res.stopReason)) {
-    tally('truncated')
+    // Participation counts VOTES, not raw calls: a truncation with a recovery
+    // strategy (stage-4 batch halving) is superseded by its halves, whose
+    // terminal outcomes get tallied — only a truncation that actually COSTS a
+    // vote is a missing vote.
     if (typeof onTruncation === 'function') return onTruncation(res)
+    tally('truncated')
     if (Array.isArray(review)) review.push({ kind: 'truncated-model-output', sheetName, detail: `${stage}: ${what} — model output hit the token ceiling (${res.stopReason}); treated as a missing vote (an identical retry would re-truncate).` })
     return null
   }

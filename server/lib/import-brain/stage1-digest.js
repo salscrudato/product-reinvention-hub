@@ -113,7 +113,40 @@ function parseReader(raw) {
     const j = extractJson(raw)
     if (!j || typeof j !== 'object') return null
     return j
-  } catch { return null }
+  } catch { /* fall through to prose armor */ }
+  // Prose armor: both reader families were measured opening with narration
+  // ("Looking at this digest, I have strong signal…") before the JSON — a
+  // whole reading lost to preamble. Extract the FIRST balanced top-level JSON
+  // object from mixed prose; string-aware so braces inside values don't
+  // truncate the scan. The reading itself is still schema-checked by
+  // normalizeUnderstanding downstream.
+  const s = String(raw ?? '')
+  const start = s.indexOf('{')
+  if (start < 0) return null
+  let depth = 0
+  let inString = false
+  let escaped = false
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (ch === '\\') escaped = true
+      else if (ch === '"') inString = false
+      continue
+    }
+    if (ch === '"') { inString = true; continue }
+    if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) {
+        try {
+          const j = JSON.parse(s.slice(start, i + 1))
+          return j && typeof j === 'object' ? j : null
+        } catch { return null }
+      }
+    }
+  }
+  return null
 }
 
 async function readerLoop({ label, call, digestPrompt, fpByName, review, budget, vote }) {

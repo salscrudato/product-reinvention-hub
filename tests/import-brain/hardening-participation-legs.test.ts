@@ -41,6 +41,8 @@ const { widthAwareRowCount, extractRows } = require('../../server/lib/import-bra
 const { mapColumns } = require('../../server/lib/import-brain/stage3-column-map.js')
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { readerLoop } = require('../../server/lib/import-brain/stage1-digest.js')
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { parseWithRetry } = require('../../server/lib/import-brain/constants.js')
 
 describe('(a) the blind cross-check sizes its samples by cells, not a fixed 20 rows', () => {
   it('widthAwareRowCount budgets 480 cells', () => {
@@ -131,6 +133,99 @@ describe('(b) parseMappings unwraps an object-enveloped mapping array', () => {
     const maps = await mapColumns(classified, locks, fpByName, { noCap: true }, review)
     expect(maps[0].mappings.find((m: { colIndex: number }) => m.colIndex === 0)?.canonicalField ?? null).toBeNull()
     expect(review.some(r => r.kind === 'malformed-model-output')).toBe(true)
+  })
+})
+
+describe('(a2) round 2: character-budget sizing + halving, and recovered truncations are not missing votes', () => {
+  it('a truncating cross-check sample halves until it fits; only unrecoverable truncation counts', async () => {
+    // Long-content rows: cell-count sizing said "fits", characters say otherwise.
+    const COLS = 12
+    const LONG = 'Step 4: Multiply the base loss cost by the territory factor from RT.TERR.01 when eligibility rule R-406.C is satisfied. '.repeat(3)
+    const N = 24
+    const header = Array.from({ length: COLS }, (_, c) => (c === 0 ? 'PRODUCT FRAMEWORK ID' : c === 1 ? 'COVERAGE' : `RULE TEXT ${c}`))
+    const cells: (string | null)[][] = [header]
+    for (let i = 0; i < N; i++) cells.push(Array.from({ length: COLS }, (_, c) => (c === 0 ? `GL.COV.${String(i).padStart(3, '0')}` : LONG)))
+    const fp = { sheetName: 'FW', layoutShape: 'SINGLE_TABLE', cells, dataRowCount: N, columnProfiles: [] }
+    const colMaps = [{ sheetName: 'FW', mappings: [
+      { colIndex: 0, canonicalField: 'refId', entityKind: 'coverage', confidence: 0.95 },
+      { colIndex: 1, canonicalField: 'name', entityKind: 'coverage', confidence: 0.95 },
+    ], unmappedIndices: [] }]
+
+    // Stub: any sample with MORE than 1 row truncates; a 1-row sample casts.
+    const respond = (userPrompt: string, family: 'anthropic' | 'openai') => {
+      const m = /Rows to extract \((\d+) rows\)/.exec(userPrompt)
+      const n = m ? Number(m[1]) : 0
+      const truncated = n > 1
+      const body = truncated ? '{"entities":[' : JSON.stringify({ entities: [] })
+      if (family === 'anthropic') return { content: [{ type: 'text', text: body }], stop_reason: truncated ? 'max_tokens' : 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }
+      return { choices: [{ message: { content: body, tool_calls: null }, finish_reason: truncated ? 'length' : 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } }
+    }
+    vi.stubGlobal('fetch', async (url: string, init: { body: string }) => {
+      const req = JSON.parse(init.body)
+      if (String(url).includes('anthropic')) {
+        return { ok: true, status: 200, headers: { get: () => null }, json: async () => respond(String(req.messages?.[0]?.content ?? ''), 'anthropic') }
+      }
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => respond(String(req.messages?.find((mm: { role: string }) => mm.role === 'user')?.content ?? ''), 'openai') }
+    })
+
+    const budget: { noCap: boolean; votes?: Record<string, Record<string, { attempted: number; cast: number; truncated: number }>> } = { noCap: true }
+    const entities = await extractRows(
+      [{ sheetName: 'FW', domain: 'framework' }], [{ sheetName: 'FW', headerRowIndex: 0 }],
+      colMaps, new Map([['FW', fp]]), budget, [], 'GL.LOB.001',
+    )
+    expect(entities.length).toBe(N)
+    const site = budget.votes?.['stage4-crosscheck']
+    // Halving reached 1-row samples that cast; the recovered parent truncations
+    // never counted, so participation is 1.0 on both families.
+    expect(site?.anthropic.cast).toBeGreaterThan(0)
+    expect(site?.anthropic.truncated).toBe(0)
+    expect(site?.anthropic.cast).toBe(site?.anthropic.attempted)
+    expect(site?.openai.truncated).toBe(0)
+    expect(site?.openai.cast).toBe(site?.openai.attempted)
+  })
+
+  it('parseWithRetry: a truncation WITH a recovery strategy tallies nothing; without one it is a missing vote', async () => {
+    const budget: { votes?: Record<string, Record<string, { attempted: number; truncated: number }>> } = {}
+    const SENTINEL = { t: true }
+    const out = await parseWithRetry({
+      call: async () => ({ raw: '{"x":', stopReason: 'max_tokens' }),
+      parse: JSON.parse, review: [], stage: 'stage4', sheetName: 'FW', what: 'w',
+      onTruncation: () => SENTINEL,
+      vote: { budget, site: 'stage4-extract', family: 'anthropic' },
+    })
+    expect(out).toBe(SENTINEL)
+    expect(budget.votes?.['stage4-extract']).toBeUndefined()
+
+    await parseWithRetry({
+      call: async () => ({ raw: '{"x":', stopReason: 'max_tokens' }),
+      parse: JSON.parse, review: [], stage: 'stage3', sheetName: 'FW', what: 'w',
+      vote: { budget, site: 'stage3-map', family: 'anthropic' },
+    })
+    expect(budget.votes?.['stage3-map']?.anthropic).toMatchObject({ attempted: 1, truncated: 1 })
+  })
+})
+
+describe('(c2) round 2: the digest reader survives a prose-wrapped reading', () => {
+  it('narration before the JSON still parses (both families measured doing this)', async () => {
+    const understanding = { documentType: 'workbook', perSheet: [], crossSheetLinks: [], citations: [] }
+    const prose = `Looking at this digest, I have strong signal across sheets. Let me summarize.\n\n${JSON.stringify(understanding)}\n\nThat is my reading.`
+    const budget: { votes?: Record<string, Record<string, { cast: number; retries: number }>> } = {}
+    const out = await readerLoop({
+      label: 'reader-A(test)', digestPrompt: 'DIGEST', fpByName: new Map(), review: [], budget,
+      vote: { budget, site: 'stage1-digest', family: 'anthropic' },
+      call: async () => ({ raw: prose, stopReason: 'end_turn' }),
+    })
+    expect(out?.understanding?.documentType).toBe('workbook')
+    expect(budget.votes?.['stage1-digest']?.anthropic).toMatchObject({ cast: 1, retries: 0 })
+  })
+
+  it('braces inside string values do not truncate the armor scan', async () => {
+    const understanding = { documentType: 'workbook {with braces}', perSheet: [], crossSheetLinks: [], citations: ['Sheet!A1 has "{q}" text'] }
+    const out = await readerLoop({
+      label: 'reader-A(test)', digestPrompt: 'DIGEST', fpByName: new Map(), review: [], budget: {},
+      call: async () => ({ raw: `Preamble.\n${JSON.stringify(understanding)}`, stopReason: 'end_turn' }),
+    })
+    expect(out?.understanding?.citations?.[0]).toContain('"{q}"')
   })
 })
 

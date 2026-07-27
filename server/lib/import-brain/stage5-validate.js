@@ -330,7 +330,11 @@ async function validateEntities(entities, classified, budget, review, fpByName) 
           deployment:   deployGpt,
           systemPrompt: STAGE5_VALIDATE_SYSTEM,
           userPrompt,
-          maxTokens:    4096,
+          // 8192 (was 4096): arming the prompt with actual cells + context rows
+          // grew the input, and the o-series validator spends completion budget
+          // on reasoning scaled to it — a 50-entity batch measurably truncated
+          // at 4096 on the Core book. Output stays discrepancies-only.
+          maxTokens:    8192,
           budget,
         }),
         parse: parseValidatorResponse, review, stage: 'stage5', sheetName, what: `validator batch @${start}`,

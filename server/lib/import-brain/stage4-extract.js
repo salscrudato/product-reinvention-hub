@@ -53,6 +53,37 @@ function widthAwareRowCount(rows, startIdx, cellsPerRowFloor) {
   return Math.max(1, Math.min(BATCH_ROWS, Math.floor(CELL_BUDGET / avg)))
 }
 
+// Character-aware sizing for the BLIND cross-check: it emits every non-empty
+// cell VERBATIM and the extraction response roughly doubles that content
+// (value + citation verbatim), so the budget unit is characters, not cells —
+// a 10-row sample of long rating-formula text still blew 8192 output tokens
+// after cell-count sizing (second instrumented Core run: 17/20 samples
+// truncated). ~24 chars/cell of JSON envelope is charged on top of content.
+const CROSSCHECK_CHAR_BUDGET = 10_000
+const CELL_JSON_OVERHEAD = 24
+
+function rowContentChars(row) {
+  let n = 0
+  for (const c of row ?? []) {
+    if (c === null || c === undefined) continue
+    const s = String(c)
+    if (s === '') continue
+    n += s.length + CELL_JSON_OVERHEAD
+  }
+  return n
+}
+
+function charAwareRowCount(rows, startIdx) {
+  let used = 0
+  let count = 0
+  for (let i = startIdx; i < rows.length && count < BATCH_ROWS; i++) {
+    used += rowContentChars(rows[i])
+    if (count > 0 && used > CROSSCHECK_CHAR_BUDGET) break
+    count++
+  }
+  return Math.max(1, count)
+}
+
 // Judge completion budget. Both judges (gpt-5.1 + the DeepSeek tail) are
 // OpenAI-family reasoning-class models: reasoning spends completion budget
 // before the verdict is emitted, and a starved judge is a silently absent
@@ -790,43 +821,65 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, gridRows, detEntit
   const disagreeByField = new Map()
   let checkedRows = 0
 
-  for (const batchStart of batches.slice(0, DET_SAMPLE_BATCHES)) {
-    // Width-aware: the blind prompt hands over EVERY non-empty cell, so the
-    // sample must budget by cells or a wide sheet truncates every vote.
-    const sampleRows = widthAwareRowCount(rows, batchStart, 1)
-    const batch = rows.slice(batchStart, batchStart + sampleRows)
-    // BLIND: the voters must not be handed the very map they are cross-checking.
+  // Cross-check legs are votes too — a leg that stops voting must show in
+  // telemetry. Terminal outcomes only: a truncation that HALVES successfully
+  // is superseded by its halves (same participation semantics as the main
+  // path); only an unrecoverable truncation (1-row batch) is a missing vote.
+  const crossVote = (res, family, recoverable) => {
+    const site = 'stage4-crosscheck'
+    if (!res) { recordVote(budget, site, family, 'empty'); return null }
+    if (TRUNCATED_STOP_REASONS.has(res.stopReason)) {
+      if (!recoverable) recordVote(budget, site, family, 'truncated')
+      return 'TRUNCATED'
+    }
+    if (REFUSAL_STOP_REASONS.has(res.stopReason)) { recordVote(budget, site, family, 'refused'); return null }
+    if (!res.raw) { recordVote(budget, site, family, 'empty'); return null }
+    const parsed = parseExtraction(res.raw)
+    recordVote(budget, site, family, parsed ? 'cast' : 'malformed')
+    return parsed
+  }
+
+  const scorePayload = (payload) => {
+    if (!payload || payload === 'TRUNCATED') return
+    for (const rawEnt of payload.entities) {
+      const det = detByRow.get(rawEnt.sourceRowIndex)
+      if (!det) continue
+      checkedRows++
+      for (const f of toEntityFields(rawEnt)) {
+        const detField = det.fields.find(d => d.fieldName === f.fieldName)
+        if (!detField) continue
+        if (!valuesAgree(detField.value, f.value)) {
+          disagreeByField.set(f.fieldName, (disagreeByField.get(f.fieldName) ?? 0) + 1)
+        }
+      }
+    }
+  }
+
+  // Sized by CHARACTERS and halved on truncation (F10, both mechanisms):
+  // sizing alone under-estimated on long-formula rating sheets.
+  const sampleBatch = async (batch, batchStart) => {
+    const recoverable = batch.length > 1
     const userPrompt = buildBlindExtractionPrompt(fp, headerRow, batch, batchStart, gridRows)
     const [aRes, bRes] = await Promise.all([
       callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => null),
       callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => null),
     ])
-    // Cross-check legs are votes too — a leg that stops voting must show in telemetry.
-    const crossVote = (res, family) => {
-      const site = 'stage4-crosscheck'
-      if (!res) { recordVote(budget, site, family, 'empty'); return null }
-      if (TRUNCATED_STOP_REASONS.has(res.stopReason)) { recordVote(budget, site, family, 'truncated'); return null }
-      if (REFUSAL_STOP_REASONS.has(res.stopReason)) { recordVote(budget, site, family, 'refused'); return null }
-      if (!res.raw) { recordVote(budget, site, family, 'empty'); return null }
-      const parsed = parseExtraction(res.raw)
-      recordVote(budget, site, family, parsed ? 'cast' : 'malformed')
-      return parsed
+    const a = crossVote(aRes, 'anthropic', recoverable)
+    const b = crossVote(bRes, 'openai', recoverable)
+    if ((a === 'TRUNCATED' || b === 'TRUNCATED') && recoverable) {
+      const mid = Math.ceil(batch.length / 2)
+      await sampleBatch(batch.slice(0, mid), batchStart)
+      await sampleBatch(batch.slice(mid), batchStart + mid)
+      return
     }
-    for (const payload of [crossVote(aRes, 'anthropic'), crossVote(bRes, 'openai')]) {
-      if (!payload) continue
-      for (const rawEnt of payload.entities) {
-        const det = detByRow.get(rawEnt.sourceRowIndex)
-        if (!det) continue
-        checkedRows++
-        for (const f of toEntityFields(rawEnt)) {
-          const detField = det.fields.find(d => d.fieldName === f.fieldName)
-          if (!detField) continue
-          if (!valuesAgree(detField.value, f.value)) {
-            disagreeByField.set(f.fieldName, (disagreeByField.get(f.fieldName) ?? 0) + 1)
-          }
-        }
-      }
-    }
+    scorePayload(a)
+    scorePayload(b)
+  }
+
+  for (const batchStart of batches.slice(0, DET_SAMPLE_BATCHES)) {
+    const sampleRows = charAwareRowCount(rows, batchStart)
+    // BLIND: the voters must not be handed the very map they are cross-checking.
+    await sampleBatch(rows.slice(batchStart, batchStart + sampleRows), batchStart)
   }
 
   for (const [fieldName, n] of disagreeByField) {
