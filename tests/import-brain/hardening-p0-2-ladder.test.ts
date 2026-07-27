@@ -49,18 +49,27 @@ function rawEntity(row: number, kind: string, refId: string) {
 
 beforeEach(() => {
   // Anthropic (ladder rungs) → unparseable-for-extraction text so the ladder adds no
-  // candidates; OpenAI (judge) → verdict 'd' picking the 4th candidate.
-  vi.stubGlobal('fetch', async (url: string) => {
+  // candidates; OpenAI (judge) → verdict 'd' picking the 4th candidate. The judge is
+  // a FORCED TOOL now, so the verdict rides tool_calls (as real responses do).
+  const verdict = '{"verdict":"d","value":"D-VALUE","confidence":0.95,"rationale":"cell A2 grounds candidate d"}'
+  vi.stubGlobal('fetch', async (url: string, init: { body: string }) => {
     if (String(url).includes('anthropic')) {
       return {
         ok: true, status: 200, headers: { get: () => null },
         json: async () => ({ content: [{ type: 'text', text: '{}' }], usage: { input_tokens: 1, output_tokens: 1 } }),
       }
     }
+    const req = JSON.parse(init.body)
+    const forced = req.tool_choice?.function?.name
     return {
       ok: true, status: 200, headers: { get: () => null },
       json: async () => ({
-        choices: [{ message: { content: '{"verdict":"d","value":"D-VALUE","confidence":0.95,"rationale":"cell A2 grounds candidate d"}', tool_calls: null } }],
+        choices: [{
+          message: forced
+            ? { content: null, tool_calls: [{ type: 'function', function: { name: forced, arguments: verdict } }] }
+            : { content: verdict, tool_calls: null },
+          finish_reason: forced ? 'tool_calls' : 'stop',
+        }],
         usage: { prompt_tokens: 1, completion_tokens: 1 },
       }),
     }

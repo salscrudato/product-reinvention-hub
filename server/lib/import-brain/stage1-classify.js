@@ -32,6 +32,46 @@ const {
 const PREFILTER_MAX_TOKENS = 1024
 const CLASSIFY_MAX_TOKENS  = 2048
 
+// ─── Forced tools (schema-bounded verdicts) ───────────────────────────────────
+// Classification and adjudication sit on the conflict-resolution path — the
+// decisions confidence can only ratchet upward from. Free-text JSON left the
+// domain to prose luck; a forced tool with an enum-constrained domain makes an
+// out-of-vocabulary answer unrepresentable at the schema layer, and the parse
+// helpers below still validate membership (belt and suspenders, both families
+// probe-verified on this Foundry surface: tool_use / tool_calls with valid
+// enum values on opus, gpt-5.1, gpt-5-mini and DeepSeek-V4-Pro, 2026-07-27).
+// Declared Anthropic-shape; callOpenAI converts to function-calling on the fly
+// (the filing pipeline proves the pattern under the same plumbing).
+
+const CLASSIFY_TOOL = {
+  name: 'classify_sheet',
+  description: 'Classify the sheet into exactly one canonical domain. Call this tool exactly once.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      domain:     { type: 'string', enum: SHEET_DOMAINS },
+      confidence: { type: 'number', minimum: 0, maximum: 1 },
+      rationale:  { type: 'string', description: 'One sentence citing the specific cell content.' },
+    },
+    required: ['domain', 'confidence', 'rationale'],
+  },
+}
+
+const ADJUDICATE_TOOL = {
+  name: 'adjudicate_sheet',
+  description: 'Resolve the classifier disagreement into one domain, or flag for a human. Call this tool exactly once.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      domain:     { type: 'string', enum: SHEET_DOMAINS },
+      confidence: { type: 'number', minimum: 0, maximum: 1 },
+      rationale:  { type: 'string', description: 'One sentence citing the specific cell content.' },
+      humanFlag:  { type: 'boolean', description: 'true when neither rationale is convincing.' },
+    },
+    required: ['domain', 'confidence', 'rationale', 'humanFlag'],
+  },
+}
+
 // ─── Serialise sheet metadata for the model ────────────────────────────────────
 // Compact, grounding-safe representation of a SheetFingerprint.
 
@@ -164,8 +204,8 @@ async function classifySheets(sheets, budget, review) {
     // ── Step b: REASONER_A (opus) + REASONER_B (gpt-5.1) classify in parallel.
     // Malformed output = telemetry + one targeted retry per side (P0-7/F16). ──
     const [rA, rB] = await Promise.all([
-      parseWithRetry({ call: () => callAnthropic({ deployment: deployOpus, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: CLASSIFY_MAX_TOKENS, budget }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_A classify', vote: { budget, site: 'stage1-classify', family: 'anthropic' } }),
-      parseWithRetry({ call: () => callOpenAI({ deployment: deployGpt, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: CLASSIFY_MAX_TOKENS, budget }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_B classify', vote: { budget, site: 'stage1-classify', family: 'openai' } }),
+      parseWithRetry({ call: () => callAnthropic({ deployment: deployOpus, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: CLASSIFY_MAX_TOKENS, budget, tools: [CLASSIFY_TOOL], toolName: CLASSIFY_TOOL.name }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_A classify', vote: { budget, site: 'stage1-classify', family: 'anthropic' } }),
+      parseWithRetry({ call: () => callOpenAI({ deployment: deployGpt, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: CLASSIFY_MAX_TOKENS, budget, tools: [CLASSIFY_TOOL], toolName: CLASSIFY_TOOL.name }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_B classify', vote: { budget, site: 'stage1-classify', family: 'openai' } }),
     ])
 
     // Parse failure on both → human flag
@@ -220,6 +260,7 @@ async function classifySheets(sheets, budget, review) {
     const adj = await parseWithRetry({
       call: () => callAnthropic({
         deployment: deployOpus, systemPrompt: STAGE1_ADJUDICATE_SYSTEM, userPrompt: adjUser, maxTokens: 256, budget,
+        tools: [ADJUDICATE_TOOL], toolName: ADJUDICATE_TOOL.name,
       }),
       parse: parseAdjudicate, review, stage: 'stage1', sheetName: fp.sheetName, what: 'adjudication',
       vote: { budget, site: 'stage1-adjudicate', family: 'anthropic' },

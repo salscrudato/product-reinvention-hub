@@ -94,7 +94,29 @@ beforeEach(() => {
         }),
       }
     }
-    // Generic Anthropic JSON response (prefilter, classify, header, map, extract, validate)
+    // Stage-1 classify/adjudicate are FORCED TOOLS now — same payloads the old
+    // text stubs returned, delivered the way real responses deliver them.
+    if (toolName === 'classify_sheet' || toolName === 'adjudicate_sheet') {
+      return {
+        ok: true,
+        json: async () => ({
+          content: [{ type: 'tool_use', input: { domain: 'coverages', confidence: 0.9, rationale: 'stub', humanFlag: false } }],
+          stop_reason: 'tool_use',
+          usage: { input_tokens: 10, output_tokens: 10 },
+        }),
+      }
+    }
+    const openaiForced = body?.tool_choice?.function?.name ?? ''
+    if (openaiForced === 'classify_sheet') {
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: null, tool_calls: [{ type: 'function', function: { name: openaiForced, arguments: '{"domain":"ignore","confidence":0.9,"rationale":"stub"}' } }] }, finish_reason: 'tool_calls' }],
+          usage: { prompt_tokens: 10, completion_tokens: 10 },
+        }),
+      }
+    }
+    // Generic Anthropic JSON response (prefilter, header, map, extract, validate)
     if (String(url).includes('/anthropic')) {
       return {
         ok: true,

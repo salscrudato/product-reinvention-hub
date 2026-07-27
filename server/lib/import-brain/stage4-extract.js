@@ -364,33 +364,65 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
   // ── LLM judge (gpt-5.1, decorrelated family) for still-unresolved fields ─────
   // Judge calls are independent per field — 4-wide (was sequential; 118 unresolved
   // fields at ~1.5 s each is 3 minutes of avoidable serialization).
+  //
+  // SCHEMA-FORCED VERDICTS: the verdict comes back through a forced tool whose
+  // `verdict` field is enum-constrained to exactly the candidate letters that
+  // exist (+ "none") — probe-verified on gpt-5.1 AND DeepSeek-V4-Pro
+  // (finish_reason tool_calls, 2026-07-27). Selection is by VALIDATED
+  // MEMBERSHIP, never first-character arithmetic: pre-fix, a verdict reading
+  // "candidate b" silently selected candidate c via charCodeAt(0)-97 whenever
+  // three or more candidates existed — on the one path where confidence can
+  // only ratchet upward. A non-member now burns the single targeted retry,
+  // then falls through to the next lineage.
+  const judgeToolFor = (letters) => ({
+    name: 'judge_verdict',
+    description: 'Pick the winning candidate letter exactly as listed, or "none" when no candidate is grounded in the source cells. Call this tool exactly once.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        verdict:    { type: 'string', enum: [...letters, 'none'] },
+        value:      { description: 'The chosen value, verbatim from the source, or null.' },
+        confidence: { type: 'number', minimum: 0, maximum: 1 },
+        rationale:  { type: 'string', description: 'One sentence citing the source cell that grounds the choice.' },
+      },
+      required: ['verdict', 'confidence', 'rationale'],
+    },
+  })
+  const parseJudgeFor = (letters) => (raw) => {
+    try {
+      const j = extractJson(raw)
+      if (!j || typeof j.verdict !== 'string') return null
+      const v = j.verdict.trim().toLowerCase()
+      if (v !== 'none' && !letters.includes(v)) return null
+      return { ...j, verdict: v }
+    } catch { return null }
+  }
+
   const rowByIdx = new Map(rowSlice.map(r => [r.idx, r]))
   await pMap(conflicts.filter(c => !c.resolved), async (conflict) => {
     const row = rowByIdx.get(conflict.rowIdx)
     const rowCells = row ? row.cells.map((c, i) => `${colLetter(i)}${excelRowOf(conflict.rowIdx, headerRow, gridRows)}="${String(c ?? '')}"`).join(' | ') : '(row unavailable)'
     // EVERY live candidate reaches the judge (P0-2 / ledger F03) — the ladder can
     // produce up to four (a=BULK, b=BULK_ALT, c=sonnet, d=opus).
+    const letters = conflict.candidates.map((_, i) => String.fromCharCode(97 + i))
     const candLines = conflict.candidates.map((c, i) =>
-      `Candidate ${String.fromCharCode(97 + i)} (${c.source}, confidence ${Number(c.confidence).toFixed(2)}): ${JSON.stringify(c.value)}`).join('\n')
+      `Candidate ${letters[i]} (${c.source}, confidence ${Number(c.confidence).toFixed(2)}): ${JSON.stringify(c.value)}`).join('\n')
     const judgeUser = [
       `Sheet: "${sheetName}" | Field: "${conflict.fieldName}" | Row (0-based data index ${conflict.rowIdx})`,
       `Source cells: ${rowCells}`,
       candLines,
     ].join('\n')
 
-    const parseJudge = (raw) => {
-      try { const j = extractJson(raw); return j && typeof j.verdict === 'string' ? j : null } catch { return null }
-    }
+    const judgeTool = judgeToolFor(letters)
+    const parseJudge = parseJudgeFor(letters)
     const judged = await parseWithRetry({
-      call: () => callOpenAI({ deployment: deployJudge, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: JUDGE_MAX_TOKENS, budget }),
+      call: () => callOpenAI({ deployment: deployJudge, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: JUDGE_MAX_TOKENS, budget, tools: [judgeTool], toolName: judgeTool.name }),
       parse: parseJudge, review, stage: 'stage4', sheetName, what: `judge verdict for "${conflict.fieldName}" row ${conflict.rowIdx}`,
       vote: { budget, site: 'stage4-judge', family: 'openai' },
     })
 
-    if (judged && judged.verdict && judged.verdict !== 'none') {
-      // Any candidate letter is reachable (P0-2/F03) — not just a/b/c.
-      const letterIdx = String(judged.verdict).trim().toLowerCase().charCodeAt(0) - 97
-      const pick = (letterIdx >= 0 && letterIdx < conflict.candidates.length) ? conflict.candidates[letterIdx] : null
+    if (judged && judged.verdict !== 'none') {
+      const pick = conflict.candidates[letters.indexOf(judged.verdict)] ?? null
       if (pick) {
         conflict.resolved = { ...pick, confidence: Math.min(Number(judged.confidence ?? pick.confidence), 1), method: 'judge' }
         return
@@ -408,13 +440,12 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
       const dsDeployment = ext && ext.VERIFY_DEEPSEEK && ext.VERIFY_DEEPSEEK.deploymentName
       if (dsDeployment) {
         const dsJudged = await parseWithRetry({
-          call: () => callOpenAI({ deployment: dsDeployment, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: JUDGE_MAX_TOKENS, budget }),
+          call: () => callOpenAI({ deployment: dsDeployment, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: JUDGE_MAX_TOKENS, budget, tools: [judgeTool], toolName: judgeTool.name }),
           parse: parseJudge, review, stage: 'stage4', sheetName, what: `deepseek tail verdict for "${conflict.fieldName}" row ${conflict.rowIdx}`,
           vote: { budget, site: 'stage4-judge-tail', family: 'openai' },
         })
-        if (dsJudged && dsJudged.verdict && dsJudged.verdict !== 'none') {
-          const letterIdx = String(dsJudged.verdict).trim().toLowerCase().charCodeAt(0) - 97
-          const pick = (letterIdx >= 0 && letterIdx < conflict.candidates.length) ? conflict.candidates[letterIdx] : null
+        if (dsJudged && dsJudged.verdict !== 'none') {
+          const pick = conflict.candidates[letters.indexOf(dsJudged.verdict)] ?? null
           if (pick) {
             conflict.resolved = { ...pick, confidence: Math.min(Number(dsJudged.confidence ?? pick.confidence), 1), method: 'judge-deepseek' }
             return

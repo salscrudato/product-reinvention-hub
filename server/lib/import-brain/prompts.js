@@ -71,12 +71,7 @@ DISAMBIGUATION NOTES:
 
 GROUNDING RULE: Your rationale MUST cite at least one specific cell value you observed.
 
-RESPOND with valid JSON only — no prose, no markdown fences:
-{
-  "domain": "<one of the eight values above>",
-  "confidence": <0.0–1.0>,
-  "rationale": "<one sentence citing the specific cell content that led to this classification>"
-}`
+Answer by calling the forced classify_sheet tool exactly once — domain (one of the eight values above), confidence (0.0-1.0), and a one-sentence rationale citing the specific cell content that led to this classification.`
 
 // ─── Stage 1 — REASONER adjudication ─────────────────────────────────────────
 
@@ -87,13 +82,7 @@ Choose the more likely correct domain based on the cell content evidence. If nei
 
 GROUNDING RULE: Your rationale MUST cite at least one specific cell value from the provided sheet metadata.
 
-RESPOND with valid JSON only — no prose, no markdown fences:
-{
-  "domain": "<one of the eight canonical domain values>",
-  "confidence": <0.0–1.0>,
-  "rationale": "<one sentence citing the specific cell content>",
-  "humanFlag": true | false
-}`
+Answer by calling the forced adjudicate_sheet tool exactly once — domain (one of the eight canonical values), confidence (0.0-1.0), a one-sentence rationale citing the specific cell content, and humanFlag.`
 
 // ─── Stage 2 — Header lock ────────────────────────────────────────────────────
 
@@ -292,13 +281,7 @@ Decide which candidate (if any) is correct by checking each against the SOURCE C
   - Numbers: "1,528", "1528", and 1528 are the same value; 1528 and 1529 are not.
   - refIds and form numbers must match the source BYTE-FOR-BYTE.
 
-RESPOND with valid JSON only — no prose, no markdown fences:
-{
-  "verdict": "<the letter of the winning candidate exactly as listed above (a, b, c, d, ...)>" | "none",
-  "value": <the chosen value, verbatim from the source, or null>,
-  "confidence": <0.0-1.0>,
-  "rationale": "<one sentence citing the source cell that grounds the choice>"
-}`
+Answer by calling the forced judge_verdict tool exactly once — verdict is the single letter of the winning candidate exactly as listed above (a, b, c, d, ...) or "none"; value is the chosen value verbatim from the source (or null); confidence 0.0-1.0; rationale cites the source cell that grounds the choice.`
 
 module.exports = {
   FIRST_PRINCIPLES,
