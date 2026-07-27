@@ -367,6 +367,13 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
   const grids = []
   const hiddenGrids = []
   const skippedHiddenSheets = []
+  // Sentinel exclusion census. A cell reading "<Intentionally Blank>" is the
+  // workbook saying NOTHING at that position, and normalizing it to null removes
+  // it from the census, the extraction windows, the sweep cap and the review
+  // queue. That is a large, invisible change to what the run sees — so it is
+  // COUNTED here, per sheet, at the one place raw cells become normalized ones.
+  const sentinelBySheet = {}
+  let sentinelCells = 0
 
   for (const ws of wb.worksheets) {
     const hidden = ws.state === 'hidden' || ws.state === 'veryHidden'
@@ -391,7 +398,23 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
       // {result}, richText) fail its state-scope X-marker tests — 137 CORE rules
       // came back allStates:false on the server while the same file parsed
       // allStates:true locally from flattened grids.
-      for (let c = 1; c <= lastCol; c++) arr[c - 1] = brainShared.normalizeCellValue(rowObj.getCell(c).value)
+      for (let c = 1; c <= lastCol; c++) {
+        const raw = rowObj.getCell(c).value
+        const norm = brainShared.normalizeCellValue(raw)
+        // Count only cells the sentinel rule silenced — a genuinely empty cell was
+        // never going to cost anything, and counting it would inflate the figure.
+        if (norm === null && raw !== null && raw !== undefined) {
+          const text = typeof raw === 'string' ? raw
+            : (raw && typeof raw === 'object' && typeof raw.result === 'string') ? raw.result
+            : (raw && typeof raw === 'object' && typeof raw.text === 'string') ? raw.text
+            : ''
+          if (text !== '' && brainShared.isSentinelText(text)) {
+            sentinelCells++
+            sentinelBySheet[ws.name] = (sentinelBySheet[ws.name] ?? 0) + 1
+          }
+        }
+        arr[c - 1] = norm
+      }
       cells.push(arr)
     }
 
@@ -435,7 +458,16 @@ async function readWorkbookToStructural(buf, sourceName, kind) {
     census = { sourceName, sheets: [], censusError: String(e && e.message || e).slice(0, 200) }
   }
 
-  return { structural, skippedHiddenSheets, hiddenSheets: skippedHiddenSheets, isoGrids, census }
+  // The exclusion is measured, not assumed: how many occupied cells the sentinel
+  // rule silenced, and where. Rides the structural model so the orchestrator can
+  // report it on brain:input without a second parse.
+  structural.sentinelCells = sentinelCells
+  structural.sentinelBySheet = sentinelBySheet
+  if (sentinelCells > 0) {
+    console.log(`[import-brain] sentinel exclusion: ${sentinelCells} placeholder cell(s) normalized to null in "${sourceName}"`, JSON.stringify(sentinelBySheet))
+  }
+
+  return { structural, skippedHiddenSheets, hiddenSheets: skippedHiddenSheets, isoGrids, census, sentinelCells, sentinelBySheet }
 }
 
 // ─── Cell-census feeding (CE1-S4) ─────────────────────────────────────────────

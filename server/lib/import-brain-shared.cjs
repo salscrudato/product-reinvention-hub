@@ -41,6 +41,7 @@ __export(brain_server_entry_exports, {
   idColumnProfile: () => idColumnProfile,
   inferLob: () => inferLob,
   isPlaceholder: () => isPlaceholder,
+  isSentinelText: () => isSentinelText,
   mapIsoWorkbook: () => mapIsoWorkbook,
   nearDuplicateSheetClusters: () => nearDuplicateSheetClusters,
   normalizeCellValue: () => normalizeCellValue,
@@ -1026,6 +1027,12 @@ var CANONICAL_ENTITY_KINDS = Object.keys(CANONICAL_MAP);
 var NULL_STRINGS = /* @__PURE__ */ new Set([
   "<placeholder>",
   "<intentionally left blank>",
+  // THE string these workbooks actually use — 1,154 cells across the two sample
+  // books (564 Core / 590 E+), appearing as *data* in key and state columns. It
+  // was absent from this list purely because the list guessed at the wording, so
+  // every one of those cells burned stage-4 extraction tokens, a stage-4.5 sweep
+  // cap slot, and reviewer attention, in every run, forever.
+  "<intentionally blank>",
   "n/a",
   "na",
   "tbd",
@@ -1035,6 +1042,13 @@ var NULL_STRINGS = /* @__PURE__ */ new Set([
   "--",
   ""
 ]);
+var BRACKETED_PLACEHOLDER = /^<[^<>]*>$/;
+function isSentinelText(text2) {
+  const t = text2.trim();
+  if (t === "") return false;
+  const lower = t.toLowerCase();
+  return NULL_STRINGS.has(lower) || BRACKETED_PLACEHOLDER.test(t);
+}
 function normalizeCellValue(value) {
   if (value === null || value === void 0) return null;
   if (value instanceof Date) {
@@ -1044,7 +1058,7 @@ function normalizeCellValue(value) {
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (trimmed === "9999-12-31") return "NO_EXPIRY";
-    if (NULL_STRINGS.has(trimmed.toLowerCase())) return null;
+    if (NULL_STRINGS.has(trimmed.toLowerCase()) || BRACKETED_PLACEHOLDER.test(trimmed)) return null;
     return trimmed || null;
   }
   if (typeof value === "number" || typeof value === "boolean") return value;
@@ -5872,6 +5886,7 @@ function mapIsoWorkbook(grids, overlay, consumedSpans) {
   idColumnProfile,
   inferLob,
   isPlaceholder,
+  isSentinelText,
   mapIsoWorkbook,
   nearDuplicateSheetClusters,
   normalizeCellValue,

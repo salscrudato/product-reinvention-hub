@@ -341,8 +341,22 @@ async function routeArtifacts(opts) {
   // ── AI assist for LOB/edition when deterministic is inconclusive ───────────
   // Under the P3 validation flag the run is deterministic END TO END: the
   // round-trip harness never invokes a model (its seam is validation-only).
-  if (opts.enableManuscriptXml !== true
-      && (!out.lobRefIdHint || out.workbooks.length + out.filingDocs.length > 0) && docSummaries.length > 0) {
+  //
+  // GATED ON INCONCLUSIVE. The old condition was
+  // `!out.lobRefIdHint || out.workbooks.length + out.filingDocs.length > 0`,
+  // and the right-hand side is true for every upload that has any document at
+  // all — so the `||` made the guard unconditional and the assist fired on EVERY
+  // run, including the ones where inferLob had already resolved the line from the
+  // source's own refId prefixes and stated LINE OF BUSINESS cells. That is 1–2
+  // model calls per import spent to re-derive an answer code already had, plus an
+  // opus escalation whenever the model came back unsure.
+  //
+  // Edition detection rides the same call, so gating it means a workbook whose
+  // LOB resolves deterministically no longer gets a model-proposed edition. That
+  // is the correct trade under flag-not-invent: the router's own prompt says
+  // "never guess an edition", the field is optional, and an absent edition is a
+  // notice, not a fabrication.
+  if (opts.enableManuscriptXml !== true && !out.lobRefIdHint && docSummaries.length > 0) {
     const assist = await aiRoutingAssist(docSummaries, budget).catch(() => null)
     if (assist) {
       if (!out.lobRefIdHint && assist.lobPrefix) {

@@ -12,7 +12,7 @@ export { CANONICAL_MAP, SURFACED_COLUMNS } from './canonicalMap'
 // Server-side structural fingerprinting (stage 0 router): grid → StructuralModel
 // with the real normalized cell grid embedded (SheetFingerprint.cells).
 export { buildStructuralModel, fingerprintGrid, MAX_EMBED_ROWS, MAX_EMBED_COLS } from './structure/modelBuilder'
-export { normalizeCellValue } from './structure/sentinels'
+export { normalizeCellValue, isSentinelText } from './structure/sentinels'
 // Stacked sub-table segmentation + layout detection. Both are pure and deterministic
 // over their cell grid, so the stage-0 router RE-INVOKES them after upgrading a
 // truncated fingerprint to the authoritative uncapped grid. Two distinct losses ride

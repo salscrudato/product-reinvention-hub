@@ -8,6 +8,12 @@ import type { NormalizedCell } from './types'
 const NULL_STRINGS = new Set([
   '<placeholder>',
   '<intentionally left blank>',
+  // THE string these workbooks actually use — 1,154 cells across the two sample
+  // books (564 Core / 590 E+), appearing as *data* in key and state columns. It
+  // was absent from this list purely because the list guessed at the wording, so
+  // every one of those cells burned stage-4 extraction tokens, a stage-4.5 sweep
+  // cap slot, and reviewer attention, in every run, forever.
+  '<intentionally blank>',
   'n/a',
   'na',
   'tbd',
@@ -17,6 +23,23 @@ const NULL_STRINGS = new Set([
   '--',
   '',
 ])
+
+// General bracketed placeholder: <anything>. These workbooks use angle brackets
+// as their placeholder convention exclusively — a cell whose ENTIRE content is
+// bracketed is the sheet saying nothing at that position, never a value. Listing
+// wordings one at a time is how the list missed the one string that mattered.
+const BRACKETED_PLACEHOLDER = /^<[^<>]*>$/
+
+/** True when a cell's own text is a placeholder sentinel — the workbook SAYING
+ *  NOTHING at that cell. Distinct from an EMPTY cell: a sentinel occupies a cell,
+ *  costs extraction tokens and sweep slots, and is worth counting. Exported so the
+ *  reader can record how many cells the exclusion removed instead of assuming. */
+export function isSentinelText(text: string): boolean {
+  const t = text.trim()
+  if (t === '') return false                      // empty is not a sentinel — it is empty
+  const lower = t.toLowerCase()
+  return NULL_STRINGS.has(lower) || BRACKETED_PLACEHOLDER.test(t)
+}
 
 /** Normalize a raw cell value coming out of ExcelJS (or any source reader).
  *  Sentinels are mapped to null or 'NO_EXPIRY'; complex ExcelJS shapes
@@ -34,7 +57,7 @@ export function normalizeCellValue(value: unknown): NormalizedCell {
     const trimmed = value.trim()
     // Exact date sentinel (also captured as Date above, but handle string form)
     if (trimmed === '9999-12-31') return 'NO_EXPIRY'
-    if (NULL_STRINGS.has(trimmed.toLowerCase())) return null
+    if (NULL_STRINGS.has(trimmed.toLowerCase()) || BRACKETED_PLACEHOLDER.test(trimmed)) return null
     return trimmed || null
   }
 

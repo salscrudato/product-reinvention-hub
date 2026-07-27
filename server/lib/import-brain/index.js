@@ -30,6 +30,28 @@ const { reconcileOutput }   = require('./stage6-reconcile')
 const { createBudget }      = require('./ai-call')
 const brainShared           = require('../import-brain-shared.cjs')
 
+// ─── Digest → classify vocabulary crosswalk ───────────────────────────────────
+// The stage-1a digest and the stage-1 classifier read in DIFFERENT vocabularies
+// (stage1-digest.js KNOWN_DOMAINS vs constants.js SHEET_DOMAINS). Each entry maps
+// a digest reading to every classify domain that means the same thing; anything
+// outside its list is a real disagreement. `UNKNOWN` never reaches here (the
+// caller skips it) and `ignore` is a classify-only outcome with no digest twin.
+const DIGEST_TO_CLASSIFY = {
+  framework:     ['product-framework'],
+  forms:         ['forms'],
+  rules:         ['rules'],
+  // The digest does not split ROC programs from factor tables; stage 1 does.
+  rating:        ['rating-roc', 'rate-tables'],
+  definitions:   ['definitions'],
+  // Dynamic fields are a property OF forms — the classifier has no separate domain.
+  dynamicFields: ['forms'],
+  // Form rules live in either vocabulary's rules domain; some books file them
+  // under the forms sheet family.
+  formRules:     ['rules', 'forms'],
+  // A bare "tables" reading covers both factor-table families.
+  tables:        ['rate-tables', 'limits-deductibles'],
+}
+
 // ─── SSE helper ───────────────────────────────────────────────────────────────
 
 function emitStage(emit, stage, name, phase, detail) {
@@ -88,6 +110,10 @@ async function runAdaptiveImportBrain(opts) {
     sourceType: structural.sourceType,
     sheetCount: (structural.sheets || []).length,
     sheetNames: (structural.sheets || []).map(s => s.sheetName),
+    // Placeholder cells the sentinel rule silenced at read time — recorded, so
+    // "we stopped spending on 1,154 cells" is a number, not a claim.
+    sentinelCells: structural.sentinelCells ?? 0,
+    sentinelBySheet: structural.sentinelBySheet ?? {},
   } })
 
   // ── CE3 Step 7: resume — completed stage artifacts skip their stage entirely.
@@ -122,13 +148,36 @@ async function runAdaptiveImportBrain(opts) {
     : await classifySheets(structural.sheets || [], budget, review)
 
   // Digest-vs-classify disagreements are review items (visible, never silent).
+  //
+  // They are compared through a CROSSWALK because the two vocabularies are
+  // different by design and can never be literally equal: the digest reads in
+  // {framework, forms, rules, rating, definitions, dynamicFields, formRules,
+  // tables} (stage1-digest.js KNOWN_DOMAINS) and stage 1 classifies into
+  // {product-framework, forms, rating-roc, rules, limits-deductibles,
+  // rate-tables, definitions, ignore} (SHEET_DOMAINS). A literal `!==` therefore
+  // fired on every CORRECTLY-read framework, rating and rate-table sheet, in
+  // every import — a guaranteed floor of spurious items on the most common sheet
+  // types in the corpus. Reviewer attention is the scarcest resource here (2,000+
+  // entities on a large run), and a fixed noise floor directly raises wrong-accept
+  // probability while drowning the real flags.
+  //
+  // The crosswalk is deliberately tight: it maps each digest reading onto the
+  // classify domains that MEAN THE SAME THING, and nothing else. A genuine
+  // disagreement (digest says forms, stage 1 says rating-roc) still fires.
   if (workbookUnderstanding) {
     const digestDomain = new Map(workbookUnderstanding.perSheet.map(s => [s.sheet, s.domain]))
     for (const c of classifiedSheets) {
       const dd = digestDomain.get(c.sheetName)
-      if (dd && dd !== 'UNKNOWN' && c.domain !== 'ignore' && dd !== c.domain) {
-        review.push({ kind: 'digest-classify-disagreement', sheetName: c.sheetName, detail: `digest read "${c.sheetName}" as ${dd}; stage-1 classified ${c.domain} — review which is right.` })
+      if (!dd || dd === 'UNKNOWN' || c.domain === 'ignore') continue
+      const agrees = DIGEST_TO_CLASSIFY[dd]
+      // An unmapped digest reading is a vocabulary drift bug, not a sheet
+      // disagreement — say so instead of blaming the sheet.
+      if (!agrees) {
+        review.push({ kind: 'digest-vocabulary-unmapped', sheetName: c.sheetName, detail: `workbook digest returned domain "${dd}", which has no entry in the digest→classify crosswalk — the vocabularies have drifted apart; the comparison for "${c.sheetName}" could not be made.` })
+        continue
       }
+      if (agrees.includes(c.domain)) continue
+      review.push({ kind: 'digest-classify-disagreement', sheetName: c.sheetName, detail: `digest read "${c.sheetName}" as ${dd} (≡ ${agrees.join(' or ')}); stage-1 classified ${c.domain} — review which is right.` })
     }
   }
 
