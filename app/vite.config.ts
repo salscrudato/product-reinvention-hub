@@ -70,6 +70,15 @@ export default defineConfig(({ mode }) => {
           if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) {
             return 'vendor-react'
           }
+          // exceljs must stay a STANDALONE lazy chunk (the one budget-excepted
+          // heavy lib — check-bundle-budget.mjs asserts a chunk named exceljs*).
+          // It is only reached from dynamic import() sites (excel.ts /
+          // historyExcel.ts), so this chunk loads on export click, never on
+          // first paint. Without the pin it fused into the excel feature chunk
+          // and read as a 250KB route-chunk regression.
+          if (/[\\/]node_modules[\\/]exceljs[\\/]/.test(id)) {
+            return 'exceljs'
+          }
         },
       },
     },

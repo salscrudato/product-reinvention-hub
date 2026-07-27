@@ -22,7 +22,10 @@ import { ProductCard } from '../components/product/ProductCard'
 import { RetireProductDialog } from '../components/product/RetireProductDialog'
 import { PageHero } from '../components/ui/PageHero'
 import { ProductHierarchy } from '../components/product/ProductHierarchy'
-import { exportPortfolioExcel, type ProductExport } from '../lib/export/excel'
+// exceljs is heavy — the excel module is dynamic-imported at click time so it
+// stays a lazy chunk (same pattern as HistoryDrawer/historyExcel); only the
+// type rides the static graph.
+import type { ProductExport } from '../lib/export/excel'
 import {
   deriveSegmentAxes, matchesSegments,
   type Product, type Coverage, type Rule, type Form, type LDTable, type RTTable, type RatingProgram,
@@ -112,6 +115,7 @@ export default function Products() {
         ])
         return { product: p, coverages, rules, forms: forms.filter(f => (f.productRefIds ?? []).includes(p.id)), ldTables, rtTables, ratingProgram: programs[0] ?? null }
       }))
+      const { exportPortfolioExcel } = await import('../lib/export/excel')
       await exportPortfolioExcel(items)
       toast.success('Portfolio exported')
     } catch {

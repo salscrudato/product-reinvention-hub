@@ -4,7 +4,10 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { IconDownload, IconFileSpreadsheet, IconFileCode, IconChevronDown } from '../ui/icons'
 import { Button } from '../ui'
-import { exportProductExcel, type ProductExport } from '../../lib/export/excel'
+// exceljs is heavy — the excel module is dynamic-imported at click time so it
+// stays a lazy chunk (same pattern as HistoryDrawer/historyExcel); only the
+// type rides the static graph.
+import type { ProductExport } from '../../lib/export/excel'
 
 const DuckCreekExportPanel = lazy(() => import('./DuckCreekExportPanel'))
 
@@ -22,7 +25,11 @@ export function ExportMenu({ data }: { data: ProductExport }) {
 
   async function toExcel() {
     setBusy(true)
-    try { await exportProductExcel(data); toast.success('Workbook exported') }
+    try {
+      const { exportProductExcel } = await import('../../lib/export/excel')
+      await exportProductExcel(data)
+      toast.success('Workbook exported')
+    }
     catch { toast.error('Export failed') }
     finally { setBusy(false); setOpen(false) }
   }
