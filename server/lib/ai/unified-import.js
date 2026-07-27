@@ -304,7 +304,7 @@ async function unifiedImport(req, res) {
           status: 'ok',
           fileNames: runFileNames,
           metrics,
-          spend: { byDeployment: (budget && budget.byDeployment) || {}, spendUsd: Math.round(((budget && budget.spendUsd) || 0) * 1e4) / 1e4, calls: (budget && budget.calls) || 0 },
+          spend: { byDeployment: (budget && budget.byDeployment) || {}, spendUsd: Math.round(((budget && budget.spendUsd) || 0) * 1e4) / 1e4, calls: (budget && budget.calls) || 0, votes: (budget && budget.votes) || {} },
           checkpointRefs: [],
         },
       })

@@ -181,12 +181,21 @@ async function callOpenAI({ deployment, systemPrompt, userPrompt, maxTokens, too
   const json = await upstream.json()
   recordSpend(budget, deployment, json.usage?.prompt_tokens, json.usage?.completion_tokens)
   // finish_reason 'length' is the openai-family truncation signal (ledger F10).
-  const stopReason = json.choices?.[0]?.finish_reason ?? null
+  const choice = json.choices?.[0]
+  // A refusal is an explicit vote class, not an empty raw: OpenAI surfaces safety
+  // declines in message.refusal (content stays null) and/or finish_reason
+  // 'content_filter'. Normalize the field form to stopReason 'refusal' so
+  // parseWithRetry names it in telemetry instead of misreading silence.
+  const refusalText = choice?.message?.refusal
+  if (typeof refusalText === 'string' && refusalText.trim() !== '') {
+    return { raw: '', usage: json.usage, stopReason: 'refusal' }
+  }
+  const stopReason = choice?.finish_reason ?? null
   if (tools && toolName) {
-    const tc = json.choices?.[0]?.message?.tool_calls?.[0]
+    const tc = choice?.message?.tool_calls?.[0]
     return { raw: tc?.function?.arguments ?? '{}', usage: json.usage, stopReason }
   }
-  const text = json.choices?.[0]?.message?.content ?? ''
+  const text = choice?.message?.content ?? ''
   return { raw: text, usage: json.usage, stopReason }
 }
 

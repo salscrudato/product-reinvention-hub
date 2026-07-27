@@ -22,7 +22,7 @@
 const fleet = require('../fleet')
 const brainShared = require('../import-brain-shared.cjs')
 const { callAnthropic, callOpenAI, callResponses, resolveAnthropic, resolveOpenAI } = require('./ai-call')
-const { extractJson, colLetter } = require('./constants')
+const { extractJson, colLetter, recordVote, TRUNCATED_STOP_REASONS, REFUSAL_STOP_REASONS } = require('./constants')
 
 const WINDOW_DIM = 40
 const WINDOW_REQUESTS = 12
@@ -116,17 +116,27 @@ function parseReader(raw) {
   } catch { return null }
 }
 
-async function readerLoop({ label, call, digestPrompt, fpByName, review, budget }) {
+async function readerLoop({ label, call, digestPrompt, fpByName, review, budget, vote }) {
+  // One reader = one VOTE: window-request rounds are part of a single attempt,
+  // so only the loop's terminal outcome is recorded (never per-round).
+  const tally = (outcome) => { if (vote) recordVote(vote.budget, vote.site, vote.family, outcome) }
   let served = 0
   let prompt = digestPrompt
   for (let round = 0; round < 3; round++) {
     let res
     try { res = await call(prompt) } catch (e) {
       review.push({ kind: 'digest-reader-error', detail: `${label}: ${String(e && e.message || e).slice(0, 120)}` })
+      tally('empty')
       return null
     }
     const j = parseReader(res && res.raw)
-    if (!j) return null
+    if (!j) {
+      if (res && TRUNCATED_STOP_REASONS.has(res.stopReason)) tally('truncated')
+      else if (res && REFUSAL_STOP_REASONS.has(res.stopReason)) tally('refused')
+      else if (!res || !res.raw) tally('empty')
+      else tally('malformed')
+      return null
+    }
     if (Array.isArray(j.windowRequests) && j.windowRequests.length > 0 && round < 2) {
       const allowed = j.windowRequests.slice(0, Math.max(0, WINDOW_REQUESTS - served))
       served += allowed.length
@@ -134,8 +144,10 @@ async function readerLoop({ label, call, digestPrompt, fpByName, review, budget 
       prompt = `${digestPrompt}\n\nREQUESTED WINDOWS (${served}/${WINDOW_REQUESTS} used — no more will be served):\n${JSON.stringify(windows).slice(0, 60_000)}\n\nNow respond with the FINAL JSON understanding only.`
       continue
     }
+    tally('cast')
     return { understanding: j, windowsServed: served }
   }
+  tally('malformed')
   return null
 }
 
@@ -182,10 +194,12 @@ async function digestWorkbook({ censuses, structural, budget, review, emit }) {
   const [a, b] = await Promise.all([
     deployOpus ? readerLoop({
       label: 'digest-reader-A(opus)', digestPrompt, fpByName, review, budget,
+      vote: { budget, site: 'stage1-digest', family: 'anthropic' },
       call: (p) => callAnthropic({ deployment: deployOpus, systemPrompt: READER_SYSTEM, userPrompt: p, maxTokens: 8192, budget }),
     }) : null,
     deployGpt ? readerLoop({
       label: 'digest-reader-B(gpt)', digestPrompt, fpByName, review, budget,
+      vote: { budget, site: 'stage1-digest', family: 'openai' },
       call: (p) => callOpenAI({ deployment: deployGpt, systemPrompt: READER_SYSTEM, userPrompt: p, maxTokens: 8192, budget }),
     }) : null,
   ])

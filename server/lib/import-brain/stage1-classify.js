@@ -18,7 +18,19 @@ const { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI } = require('
 const {
   STAGE1_PREFILTER_SYSTEM, STAGE1_CLASSIFY_SYSTEM, STAGE1_ADJUDICATE_SYSTEM,
 } = require('./prompts')
-const { extractJson, SHEET_DOMAINS, pMap, parseWithRetry } = require('./constants')
+const {
+  extractJson, SHEET_DOMAINS, pMap, parseWithRetry, recordVote,
+  TRUNCATED_STOP_REASONS, REFUSAL_STOP_REASONS,
+} = require('./constants')
+
+// Completion budgets. The bulk prefilter and both reasoner classifiers run on
+// reasoning-class models on the OpenAI leg (gpt-5-mini / gpt-5.1) which spend
+// completion budget on internal reasoning BEFORE emitting the vote — the
+// 2026-07-27 live probe measured gpt-5-mini at 128 tokens returning
+// finish_reason 'length' with ZERO content in 2/3 trials (all 128 tokens burned
+// as reasoning). Output stays schema-bounded; only reasoning headroom grows.
+const PREFILTER_MAX_TOKENS = 1024
+const CLASSIFY_MAX_TOKENS  = 2048
 
 // ─── Serialise sheet metadata for the model ────────────────────────────────────
 // Compact, grounding-safe representation of a SheetFingerprint.
@@ -117,13 +129,25 @@ async function classifySheets(sheets, budget, review) {
     const meta = serialiseSheet(fp)
 
     // ── Step a: BULK + BULK_ALT prefilter (parallel) ────────────────────────
+    // A failed leg is a MISSING VOTE, counted per family/outcome — a starved or
+    // refusing leg must be visible in brain:spend, never an indistinguishable ''.
     const [pfA, pfB] = await Promise.all([
-      callAnthropic({ deployment: deployBulk, systemPrompt: STAGE1_PREFILTER_SYSTEM, userPrompt: meta, maxTokens: 128, budget }).catch(() => ({ raw: '' })),
-      callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE1_PREFILTER_SYSTEM, userPrompt: meta, maxTokens: 128, budget }).catch(() => ({ raw: '' })),
+      callAnthropic({ deployment: deployBulk, systemPrompt: STAGE1_PREFILTER_SYSTEM, userPrompt: meta, maxTokens: PREFILTER_MAX_TOKENS, budget }).catch(() => null),
+      callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE1_PREFILTER_SYSTEM, userPrompt: meta, maxTokens: PREFILTER_MAX_TOKENS, budget }).catch(() => null),
     ])
 
-    const pA = parsePrefilter(pfA.raw)
-    const pB = parsePrefilter(pfB.raw)
+    const prefilterVote = (res, family) => {
+      const site = 'stage1-prefilter'
+      if (!res) { recordVote(budget, site, family, 'empty'); return null }
+      if (TRUNCATED_STOP_REASONS.has(res.stopReason)) { recordVote(budget, site, family, 'truncated'); return null }
+      if (REFUSAL_STOP_REASONS.has(res.stopReason)) { recordVote(budget, site, family, 'refused'); return null }
+      if (!res.raw) { recordVote(budget, site, family, 'empty'); return null }
+      const parsed = parsePrefilter(res.raw)
+      recordVote(budget, site, family, parsed ? 'cast' : 'malformed')
+      return parsed
+    }
+    const pA = prefilterVote(pfA, 'anthropic')
+    const pB = prefilterVote(pfB, 'openai')
     const bothIgnore = (pA?.prefilter === true) && (pB?.prefilter === true)
 
     if (bothIgnore) {
@@ -140,8 +164,8 @@ async function classifySheets(sheets, budget, review) {
     // ── Step b: REASONER_A (opus) + REASONER_B (gpt-5.1) classify in parallel.
     // Malformed output = telemetry + one targeted retry per side (P0-7/F16). ──
     const [rA, rB] = await Promise.all([
-      parseWithRetry({ call: () => callAnthropic({ deployment: deployOpus, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256, budget }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_A classify' }),
-      parseWithRetry({ call: () => callOpenAI({ deployment: deployGpt, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: 256, budget }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_B classify' }),
+      parseWithRetry({ call: () => callAnthropic({ deployment: deployOpus, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: CLASSIFY_MAX_TOKENS, budget }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_A classify', vote: { budget, site: 'stage1-classify', family: 'anthropic' } }),
+      parseWithRetry({ call: () => callOpenAI({ deployment: deployGpt, systemPrompt: STAGE1_CLASSIFY_SYSTEM, userPrompt: meta, maxTokens: CLASSIFY_MAX_TOKENS, budget }), parse: parseClassify, review, stage: 'stage1', sheetName: fp.sheetName, what: 'REASONER_B classify', vote: { budget, site: 'stage1-classify', family: 'openai' } }),
     ])
 
     // Parse failure on both → human flag
@@ -198,6 +222,7 @@ async function classifySheets(sheets, budget, review) {
         deployment: deployOpus, systemPrompt: STAGE1_ADJUDICATE_SYSTEM, userPrompt: adjUser, maxTokens: 256, budget,
       }),
       parse: parseAdjudicate, review, stage: 'stage1', sheetName: fp.sheetName, what: 'adjudication',
+      vote: { budget, site: 'stage1-adjudicate', family: 'anthropic' },
     })
 
     // ── Step e: Adjudicator failed or flagged human ──────────────────────────

@@ -29,10 +29,18 @@ const { STAGE4_EXTRACT_SYSTEM, STAGE4_JUDGE_SYSTEM } = require('./prompts')
 const {
   extractJson, colLetter,
   BLANK_REFID, splitMultiRefId, CONFIDENCE_REVIEW, pMap,
-  parseWithRetry, sanitizeEntities,
+  parseWithRetry, sanitizeEntities, recordVote,
+  TRUNCATED_STOP_REASONS, REFUSAL_STOP_REASONS,
 } = require('./constants')
 
 const BATCH_ROWS = 20
+
+// Judge completion budget. Both judges (gpt-5.1 + the DeepSeek tail) are
+// OpenAI-family reasoning-class models: reasoning spends completion budget
+// before the verdict is emitted, and a starved judge is a silently absent
+// conflict-resolution leg. Verdict output stays schema-bounded; only reasoning
+// headroom grows (was 400).
+const JUDGE_MAX_TOKENS = 2048
 
 // Deterministic fast path: when the locked column map is confident and the REAL
 // grid is embedded, rows are extracted by CODE (byte-perfect values, guaranteed
@@ -301,6 +309,7 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
       const payload = await parseWithRetry({
         call: () => callAnthropic({ deployment, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt: escUser, maxTokens: 4096, budget }),
         parse: parseExtraction, review, stage: 'stage4', sheetName, what: `${role} conflict re-extraction`,
+        vote: { budget, site: 'stage4-ladder', family: 'anthropic' },
       })
       if (!payload) continue
 
@@ -355,8 +364,9 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
       try { const j = extractJson(raw); return j && typeof j.verdict === 'string' ? j : null } catch { return null }
     }
     const judged = await parseWithRetry({
-      call: () => callOpenAI({ deployment: deployJudge, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: 400, budget }),
+      call: () => callOpenAI({ deployment: deployJudge, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: JUDGE_MAX_TOKENS, budget }),
       parse: parseJudge, review, stage: 'stage4', sheetName, what: `judge verdict for "${conflict.fieldName}" row ${conflict.rowIdx}`,
+      vote: { budget, site: 'stage4-judge', family: 'openai' },
     })
 
     if (judged && judged.verdict && judged.verdict !== 'none') {
@@ -380,8 +390,9 @@ async function resolveConflicts({ conflicts, entities, fp, colMap, headerRow, ro
       const dsDeployment = ext && ext.VERIFY_DEEPSEEK && ext.VERIFY_DEEPSEEK.deploymentName
       if (dsDeployment) {
         const dsJudged = await parseWithRetry({
-          call: () => callOpenAI({ deployment: dsDeployment, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: 400, budget }),
+          call: () => callOpenAI({ deployment: dsDeployment, systemPrompt: STAGE4_JUDGE_SYSTEM, userPrompt: judgeUser, maxTokens: JUDGE_MAX_TOKENS, budget }),
           parse: parseJudge, review, stage: 'stage4', sheetName, what: `deepseek tail verdict for "${conflict.fieldName}" row ${conflict.rowIdx}`,
+          vote: { budget, site: 'stage4-judge-tail', family: 'openai' },
         })
         if (dsJudged && dsJudged.verdict && dsJudged.verdict !== 'none') {
           const letterIdx = String(dsJudged.verdict).trim().toLowerCase().charCodeAt(0) - 97
@@ -735,10 +746,21 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, gridRows, detEntit
     // BLIND: the voters must not be handed the very map they are cross-checking.
     const userPrompt = buildBlindExtractionPrompt(fp, headerRow, batch, batchStart, gridRows)
     const [aRes, bRes] = await Promise.all([
-      callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
-      callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => ({ raw: '' })),
+      callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => null),
+      callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }).catch(() => null),
     ])
-    for (const payload of [parseExtraction(aRes.raw), parseExtraction(bRes.raw)]) {
+    // Cross-check legs are votes too — a leg that stops voting must show in telemetry.
+    const crossVote = (res, family) => {
+      const site = 'stage4-crosscheck'
+      if (!res) { recordVote(budget, site, family, 'empty'); return null }
+      if (TRUNCATED_STOP_REASONS.has(res.stopReason)) { recordVote(budget, site, family, 'truncated'); return null }
+      if (REFUSAL_STOP_REASONS.has(res.stopReason)) { recordVote(budget, site, family, 'refused'); return null }
+      if (!res.raw) { recordVote(budget, site, family, 'empty'); return null }
+      const parsed = parseExtraction(res.raw)
+      recordVote(budget, site, family, parsed ? 'cast' : 'malformed')
+      return parsed
+    }
+    for (const payload of [crossVote(aRes, 'anthropic'), crossVote(bRes, 'openai')]) {
       if (!payload) continue
       for (const rawEnt of payload.entities) {
         const det = detByRow.get(rawEnt.sourceRowIndex)
@@ -961,8 +983,8 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
         promptVersion: PROMPT_VERSION, budget, tenantId: extras.tenantId, call,
       })
       const [aVote, bVote] = await Promise.all([
-        parseWithRetry({ call: () => cached(deployBulk, () => callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget })), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK extraction ${rowsWhat}`, onTruncation }),
-        parseWithRetry({ call: () => cached(deployGptMini, () => callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget })), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK_ALT extraction ${rowsWhat}`, onTruncation }),
+        parseWithRetry({ call: () => cached(deployBulk, () => callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget })), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK extraction ${rowsWhat}`, onTruncation, vote: { budget, site: 'stage4-extract', family: 'anthropic' } }),
+        parseWithRetry({ call: () => cached(deployGptMini, () => callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget })), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK_ALT extraction ${rowsWhat}`, onTruncation, vote: { budget, site: 'stage4-extract', family: 'openai' } }),
       ])
 
       if ((aVote === TRUNCATED || bVote === TRUNCATED) && batch.length > 1) {

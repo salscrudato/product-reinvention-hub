@@ -282,6 +282,7 @@ async function validateEntities(entities, classified, budget, review, fpByName) 
           budget,
         }),
         parse: parseValidatorResponse, review, stage: 'stage5', sheetName, what: `validator batch @${start}`,
+        vote: { budget, site: 'stage5-validate', family: 'openai' },
       })
       if (!parsed) {
         review.push({ kind: 'validator-discrepancy', sheetName, detail: 'Validator returned an unparseable response (after one retry); manual review recommended.' })

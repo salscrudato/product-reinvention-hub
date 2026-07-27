@@ -248,6 +248,9 @@ async function runAdaptiveImportBrain(opts) {
     cacheHits:    budget.cacheHits || 0,
     cacheMisses:  budget.cacheMisses || 0,
     byDeployment: budget.byDeployment || {},
+    // Per-site, per-family vote participation (cast/attempted + failure classes):
+    // a run whose OpenAI legs silently stopped voting is measurable, not invisible.
+    votes:        budget.votes || {},
   }
   console.log(`[import-brain] run spend: $${spend.spendUsd} across ${spend.calls} call(s)`, JSON.stringify(spend.byDeployment))
   emit({ t: 'json', key: 'brain:spend', value: spend })

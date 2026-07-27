@@ -168,6 +168,7 @@ async function lockHeaders(classified, fpByName, budget, review) {
         budget,
       }),
       parse: parseHeaderResponse, review, stage: 'stage2', sheetName: fp.sheetName, what: 'AI header pick',
+      vote: { budget, site: 'stage2-header', family: 'anthropic' },
     })
 
     if (!parsed || parsed.headerRowIndex < 0) {

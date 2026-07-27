@@ -264,8 +264,8 @@ async function mapColumns(classified, locks, fpByName, budget, review) {
       // (P0-7 / ledger F16).
       const chunkWhat = `column-map batch cols ${start}-${start + chunk.length - 1}`
       const [aParsed, bParsed] = await Promise.all([
-        parseWithRetry({ call: () => callAnthropic({ deployment: deployOpus, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseMappings, review, stage: 'stage3', sheetName: fp.sheetName, what: `REASONER_A ${chunkWhat}` }),
-        parseWithRetry({ call: () => callOpenAI({ deployment: deployGpt, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseMappings, review, stage: 'stage3', sheetName: fp.sheetName, what: `REASONER_B ${chunkWhat}` }),
+        parseWithRetry({ call: () => callAnthropic({ deployment: deployOpus, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseMappings, review, stage: 'stage3', sheetName: fp.sheetName, what: `REASONER_A ${chunkWhat}`, vote: { budget, site: 'stage3-map', family: 'anthropic' } }),
+        parseWithRetry({ call: () => callOpenAI({ deployment: deployGpt, systemPrompt: STAGE3_MAP_SYSTEM, userPrompt, maxTokens: 8192, budget }), parse: parseMappings, review, stage: 'stage3', sheetName: fp.sheetName, what: `REASONER_B ${chunkWhat}`, vote: { budget, site: 'stage3-map', family: 'openai' } }),
       ])
       for (const [side, parsed] of [['REASONER_A', aParsed], ['REASONER_B', bParsed]]) {
         if (parsed && parsed.dropped > 0) {

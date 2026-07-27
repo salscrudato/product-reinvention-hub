@@ -67,21 +67,52 @@ function extractJson(raw) {
 // batch halving) pass onTruncation; everyone else gets named telemetry + null.
 const TRUNCATED_STOP_REASONS = new Set(['max_tokens', 'length', 'model_context_window_exceeded'])
 
-async function parseWithRetry({ call, parse, review, stage, sheetName, what, onTruncation }) {
+// Stop reasons that mean "the model declined to answer" — anthropic 'refusal'
+// and the openai content-filter finish (callOpenAI also normalizes a non-empty
+// message.refusal field to 'refusal'). A refusal is its own vote class: like
+// truncation it never burns the retry (an identical retry re-refuses), but it
+// is named in telemetry instead of falling through as an empty raw.
+const REFUSAL_STOP_REASONS = new Set(['refusal', 'content_filter'])
+
+// Per-family vote-participation counters on the budget (surfaced via
+// brain:spend). A dual-family site whose OpenAI leg silently stops voting is
+// otherwise indistinguishable from a healthy run — these counters make a
+// degraded run measurable: participation = cast / attempted per family.
+// 'retry' increments the retry counter only (the retry is not a new attempt).
+function recordVote(budget, site, family, outcome) {
+  if (!budget || !site || !family) return
+  if (!budget.votes) budget.votes = {}
+  const s = budget.votes[site] || (budget.votes[site] = {})
+  const f = s[family] || (s[family] = { attempted: 0, cast: 0, truncated: 0, refused: 0, empty: 0, malformed: 0, retries: 0 })
+  if (outcome === 'retry') { f.retries += 1; return }
+  f.attempted += 1
+  if (typeof f[outcome] === 'number') f[outcome] += 1
+}
+
+async function parseWithRetry({ call, parse, review, stage, sheetName, what, onTruncation, vote }) {
+  const tally = (outcome) => { if (vote) recordVote(vote.budget, vote.site, vote.family, outcome) }
   let res
   try { res = await call() } catch { res = { raw: '' } }
   if (res && TRUNCATED_STOP_REASONS.has(res.stopReason)) {
+    tally('truncated')
     if (typeof onTruncation === 'function') return onTruncation(res)
     if (Array.isArray(review)) review.push({ kind: 'truncated-model-output', sheetName, detail: `${stage}: ${what} — model output hit the token ceiling (${res.stopReason}); treated as a missing vote (an identical retry would re-truncate).` })
     return null
   }
+  if (res && REFUSAL_STOP_REASONS.has(res.stopReason)) {
+    tally('refused')
+    if (Array.isArray(review)) review.push({ kind: 'refused-model-output', sheetName, detail: `${stage}: ${what} — model refused to answer (${res.stopReason}); treated as a missing vote (an identical retry would re-refuse).` })
+    return null
+  }
   let parsed = res && res.raw ? parse(res.raw) : null
-  if (parsed != null) return parsed
-  if (!res || !res.raw) return null
+  if (parsed != null) { tally('cast'); return parsed }
+  if (!res || !res.raw) { tally('empty'); return null }
   if (Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — model returned unparseable/malformed output; retrying once.` })
-  try { res = await call() } catch { return null }
+  tally('retry')
+  try { res = await call() } catch { tally('malformed'); return null }
   parsed = res && res.raw ? parse(res.raw) : null
   if (parsed == null && Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — retry also malformed; treated as a missing vote (never silent).` })
+  tally(parsed == null ? 'malformed' : 'cast')
   return parsed
 }
 
@@ -150,6 +181,8 @@ module.exports = {
   extractJson,
   colLetter,
   parseWithRetry,
+  recordVote,
   sanitizeEntities,
   TRUNCATED_STOP_REASONS,
+  REFUSAL_STOP_REASONS,
 }

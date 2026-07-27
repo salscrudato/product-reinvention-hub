@@ -170,8 +170,8 @@ async function sweepUnaccounted({ accounting, censusBySheet, budget, review, emi
 
       if (deployBulk && deployMini) {
         const [aRaw, bRaw] = await Promise.all([
-          parseWithRetry({ call: () => callAnthropic({ deployment: deployBulk, systemPrompt: SWEEPER_SYSTEM, userPrompt, maxTokens: 4096, budget }), parse: parseSweep, review, stage: 'stage4.5', sheetName, what: 'sweeper vote A' }),
-          parseWithRetry({ call: () => callOpenAI({ deployment: deployMini, systemPrompt: SWEEPER_SYSTEM, userPrompt, maxTokens: 4096, budget }), parse: parseSweep, review, stage: 'stage4.5', sheetName, what: 'sweeper vote B' }),
+          parseWithRetry({ call: () => callAnthropic({ deployment: deployBulk, systemPrompt: SWEEPER_SYSTEM, userPrompt, maxTokens: 4096, budget }), parse: parseSweep, review, stage: 'stage4.5', sheetName, what: 'sweeper vote A', vote: { budget, site: 'stage45-sweeper', family: 'anthropic' } }),
+          parseWithRetry({ call: () => callOpenAI({ deployment: deployMini, systemPrompt: SWEEPER_SYSTEM, userPrompt, maxTokens: 4096, budget }), parse: parseSweep, review, stage: 'stage4.5', sheetName, what: 'sweeper vote B', vote: { budget, site: 'stage45-sweeper', family: 'openai' } }),
         ])
         const aBy = new Map((aRaw || []).map(x => [x.ref, acceptAnswer(x, batchCells)]))
         const bBy = new Map((bRaw || []).map(x => [x.ref, acceptAnswer(x, batchCells)]))
