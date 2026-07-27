@@ -140,6 +140,23 @@ function stableStringify(v: unknown): string {
     return val
   })
 }
+// EQUAL asserts CONTENT invariance across layout mutations. Location pointers
+// (citation cell refs, region spans) legitimately TRACK the mutation — a moved
+// preamble moves every cell a citation names, so demanding the pristine pointer
+// would demand a FABRICATED one. They are dropped from this diff only (the
+// snapshots keep them; citation RESOLUTION is eval2's job, not the holdout's).
+// sourceValues (harvested row residue) is content, but its ORDER follows column
+// order — compared as a sorted multiset so a column shuffle cannot false-red
+// while injected banner text still fails loudly.
+const LOCATION_KEYS = new Set(['citation', 'region'])
+function contentData(data: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(data)) {
+    if (LOCATION_KEYS.has(k)) continue
+    out[k] = (k === 'sourceValues' && Array.isArray(v)) ? [...v].map(String).sort() : v
+  }
+  return out
+}
 function diffEntities(exp: Entity[], got: Entity[]): string[] {
   const key = (e: Entity) => `${e.kind}|${e.refId}|${e.docId}`
   const em = new Map(exp.map(e => [key(e), e])); const gm = new Map(got.map(e => [key(e), e]))
@@ -147,9 +164,10 @@ function diffEntities(exp: Entity[], got: Entity[]): string[] {
   for (const [k, e] of em) {
     const g = gm.get(k)
     if (!g) { out.push(`MISSING ${k}`); continue }
-    if (stableStringify(e.data) !== stableStringify(g.data)) {
-      for (const f of new Set([...Object.keys(e.data), ...Object.keys(g.data)])) {
-        if (stableStringify(e.data[f]) !== stableStringify(g.data[f])) out.push(`FIELD ${k}.${f}: expected ${JSON.stringify(e.data[f])?.slice(0, 80)} got ${JSON.stringify(g.data[f])?.slice(0, 80)}`)
+    const ed = contentData(e.data); const gd = contentData(g.data)
+    if (stableStringify(ed) !== stableStringify(gd)) {
+      for (const f of new Set([...Object.keys(ed), ...Object.keys(gd)])) {
+        if (stableStringify(ed[f]) !== stableStringify(gd[f])) out.push(`FIELD ${k}.${f}: expected ${JSON.stringify(ed[f])?.slice(0, 80)} got ${JSON.stringify(gd[f])?.slice(0, 80)}`)
       }
     }
   }
