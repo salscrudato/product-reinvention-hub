@@ -205,8 +205,17 @@ app.use(async (req, res, next) => {
 })
 
 // ─── health ─────────────────────────────────────────────────────────────────
+// Carries the import drain signal so a deploy pipeline can gate on it: a restart
+// destroys an in-flight import (~$70 / ~110 min) with no warning, and this is the
+// probe that lets the pipeline wait instead. Counts only — no tenant identifiers,
+// so it stays safe unauthenticated.
 app.get('/api/health', (_req, res) => {
-  res.set('Cache-Control', 'no-store').json({ status: 'ok' })
+  let drain = null
+  try { drain = require('./lib/ai/drain').drainStatus() } catch { /* health never depends on it */ }
+  res.set('Cache-Control', 'no-store').json({
+    status: drain && drain.draining ? 'draining' : 'ok',
+    ...(drain ? { draining: drain.draining, activeImports: drain.activeImports, oldestImportMs: drain.oldestImportMs, atRiskSpendUsd: drain.atRiskSpendUsd } : {}),
+  })
 })
 
 // ─── auth ─────────────────────────────────────────────────────────────────
@@ -415,6 +424,12 @@ app.use(function (err, req, res, next) {
 })
 
 if (require.main === module) {
+  // Drain guard: SIGTERM stops accepting new imports and waits (bounded) for the
+  // in-flight ones, naming any run the restart destroys. Without it a redeploy
+  // kills a ~$70 / ~110-minute import in silence.
+  try { require('./lib/ai/drain').installDrainGuard() } catch (err) {
+    console.warn('[prodhub-host] import drain guard NOT installed:', err.message)
+  }
   app.listen(PORT, () => console.log(`[prodhub-host] listening on :${PORT} -- serving ${PUBLIC}`))
 }
 module.exports = { app }

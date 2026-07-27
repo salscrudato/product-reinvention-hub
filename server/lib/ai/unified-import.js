@@ -22,8 +22,60 @@ const fleet = require('../fleet')
 const { sse, emit, _forcedToolCall, _extractPdfText, _findSampleFile, getImportBrain, getStageFiling } = require('./_shared')
 const { persistRunResult, fetchRunResult, sanitizeRunId } = require('./run-results')
 const { createRunTrace } = require('./run-trace')
+const { isDraining } = require('./drain')
 const observatory = require('./run-observatory')
 const fs = require('fs')
+const crypto = require('crypto')
+
+// ─── Source content hash (resume guard) ───────────────────────────────────────
+// Resume used to trust the run id ALONE. A run id is a client-minted string, not
+// a statement about the input: resuming a run id after swapping the file replayed
+// stage-1..3 artifacts — classifications, header locks, column maps — built from
+// the OLD grids against the NEW ones. Nothing detected it; the mismatch just
+// produced a plausible, wrong import.
+//
+// Every checkpoint now carries a hash of the bytes it was derived from, and a
+// resume whose artifacts do not all match the current input is REFUSED. Name and
+// content both ride the hash: same content under a different filename is a
+// different import (sourceName travels into entity provenance), and same filename
+// with different content is the exact swap this exists to catch.
+function contentHashOfDocuments(documents) {
+  const parts = (Array.isArray(documents) ? documents : [])
+    .map(d => {
+      const body = typeof (d && d.base64) === 'string' ? d.base64 : (typeof (d && d.text) === 'string' ? d.text : '')
+      return `${String((d && d.name) || '')}:${crypto.createHash('sha256').update(body).digest('hex')}`
+    })
+    .sort()                                   // upload ORDER is not part of the input's identity
+  if (parts.length === 0) return null
+  return crypto.createHash('sha256').update(parts.join('\n')).digest('hex')
+}
+
+/** Decide whether a set of checkpoint payloads may be replayed against `sourceHash`.
+ *  An UNSTAMPED payload is refused too: it predates the guard, so it cannot be
+ *  shown to match — and "cannot be shown to match" is precisely the condition the
+ *  guard exists for. Returns { ok, reason }. */
+function checkpointsMatchSource(payloads, sourceHash) {
+  const list = (Array.isArray(payloads) ? payloads : []).filter(Boolean)
+  if (list.length === 0) return { ok: true, reason: 'no checkpoints' }
+  if (!sourceHash) return { ok: false, reason: 'the current upload has no content hash, so no checkpoint can be shown to belong to it' }
+  const unstamped = list.filter(p => typeof p.sourceHash !== 'string' || p.sourceHash === '')
+  if (unstamped.length > 0) {
+    return { ok: false, reason: `${unstamped.length} of ${list.length} checkpoint(s) predate the content-hash guard and cannot be shown to belong to this upload` }
+  }
+  const mismatched = list.filter(p => p.sourceHash !== sourceHash)
+  if (mismatched.length > 0) {
+    return { ok: false, reason: `${mismatched.length} of ${list.length} checkpoint(s) were built from different bytes (checkpoint ${String(mismatched[0].sourceHash).slice(0, 12)}… vs upload ${String(sourceHash).slice(0, 12)}…) — the file changed since that run` }
+  }
+  return { ok: true, reason: `${list.length} checkpoint(s) match the upload` }
+}
+
+/** Server-minted run id — durability is default-ON. Opt-in durability meant the
+ *  most expensive operation in the product lost its safety net whenever a caller
+ *  simply did not think to supply an id. Shaped for sanitizeRunId (8-64 chars,
+ *  conservative charset) since it becomes a blob path segment. */
+function mintRunId() {
+  return `run-${Date.now().toString(36)}-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
+}
 
 const HAIKU_OVERRIDE = process.env.AZURE_FOUNDRY_HAIKU_DEPLOYMENT || ''
 
@@ -259,13 +311,29 @@ async function unifiedImport(req, res) {
   }
 
   const body = req.body || {}
+
+  // Do not start a ~$70 / ~110-minute run inside a container that is shutting
+  // down: it would be destroyed within the grace window with nothing to show.
+  // Refused BEFORE the SSE handshake so the client sees a real status code.
+  if (isDraining()) {
+    return res.status(503).set('Retry-After', '120').json({
+      error: 'draining',
+      detail: 'This host is shutting down for a deployment and is not accepting new imports. Retry in a couple of minutes.',
+    })
+  }
+
   sse(res)
 
-  // F23: a client-supplied run id makes the finished bundle DURABLE — persisted
-  // server-side at completion (run-results.js) so a severed stream costs a
-  // reconnect, not a $70 re-run. Opt-in: no run id, no persistence.
-  const runId = sanitizeRunId(body.runId)
+  // F23: a run id makes the finished bundle DURABLE — persisted server-side at
+  // completion (run-results.js) so a severed stream costs a reconnect, not a $70
+  // re-run. Durability is now DEFAULT-ON: an absent or malformed client id is
+  // replaced with a server-minted one rather than silently disabling the safety
+  // net on the most expensive operation in the product. The id is streamed back
+  // (run:id) so the client can reconnect or resume with it either way.
+  const runId = sanitizeRunId(body.runId) || mintRunId()
   const runTenant = resolveTenantForPrincipal(req.user)
+  // Bytes the checkpoints of THIS run are derived from (resume guard).
+  const sourceHash = contentHashOfDocuments(body.documents)
 
   const runStartedAt = new Date().toISOString()
   const runFileNames = (Array.isArray(body.documents) ? body.documents : []).map(d => String((d && d.name) || '')).filter(Boolean).slice(0, 20)
@@ -322,9 +390,12 @@ async function unifiedImport(req, res) {
   const onStage = runId ? async (stage, artifact) => {
     // Per-sheet stage-4 checkpoints encode the sheet into a slash-free slug; the
     // artifact body carries the true sheetName (resume reads bodies, never slugs).
+    // EVERY artifact is stamped with the hash of the bytes it came from — that
+    // stamp is what makes a resume verifiable instead of merely hopeful.
     const isSheet = typeof stage === 'string' && stage.startsWith('stage4/')
     const stageKey = isSheet ? observatory.sheetStageSlug(stage.slice(7)) : stage
-    const r = await observatory.persistStageArtifact({ tenantId: runTenant, runId, stage: stageKey, artifact })
+    const stamped = { ...(artifact && typeof artifact === 'object' ? artifact : { value: artifact }), sourceHash }
+    const r = await observatory.persistStageArtifact({ tenantId: runTenant, runId, stage: stageKey, artifact: stamped })
     if (r && r.ok) emit(res, observatory.checkpointEvent(stageKey, isSheet ? stage.slice(7) : null, `${runId}/${stageKey}`))
   } : undefined
   let resume
@@ -334,21 +405,37 @@ async function unifiedImport(req, res) {
     try {
       const list = await observatory.listStageArtifacts({ tenantId: runTenant, runId: resumeRunId })
       const stages = (list && list.status === 'ok' && Array.isArray(list.stages)) ? list.stages : []
+      const payloads = []
+      const staged = []
       for (const stage of stages) {
         const got = await observatory.getStageArtifact({ tenantId: runTenant, runId: resumeRunId, stage })
         if (!got || got.status !== 'ok' || !got.artifact) continue
         const payload = got.artifact.artifact // wrapper {runId, stage, at, artifact}
         if (!payload) continue
-        if (stage.startsWith('stage4.')) {
-          if (payload.sheetName && Array.isArray(payload.entities)) resume.stage4.sheets[payload.sheetName] = payload.entities
-        } else if (/^stage[1-9]/.test(stage)) {
-          resume[stage] = payload
-        }
+        payloads.push(payload)
+        staged.push({ stage, payload })
       }
-      const restoredSheets = Object.keys(resume.stage4.sheets).length
-      const restoredStages = Object.keys(resume).filter(k => k !== 'stage4').length
-      if (restoredSheets + restoredStages === 0) resume = undefined
-      emit(res, { t: 'notice', level: 'info', kind: 'resume', message: resume ? `Resuming run ${resumeRunId}: restored ${restoredStages} stage checkpoint(s) + ${restoredSheets} extracted sheet(s).` : `Resume from ${resumeRunId}: no checkpoints found — running from the start.` })
+      // THE GUARD. Checkpoints are replayed only when every one of them is proven
+      // to come from the bytes in front of us. A mismatch means the file changed
+      // since that run, and replaying stage-1..3 artifacts against new grids is
+      // a wrong import that looks exactly like a right one.
+      const verdict = checkpointsMatchSource(payloads, sourceHash)
+      if (!verdict.ok) {
+        emit(res, { t: 'notice', level: 'warn', kind: 'resume-refused', message: `Resume from ${resumeRunId} REFUSED: ${verdict.reason}. Running from the start — a stale checkpoint replayed against different bytes produces a wrong import that looks like a correct one.` })
+        resume = undefined
+      } else {
+        for (const { stage, payload } of staged) {
+          if (stage.startsWith('stage4.')) {
+            if (payload.sheetName && Array.isArray(payload.entities)) resume.stage4.sheets[payload.sheetName] = payload.entities
+          } else if (/^stage[1-9]/.test(stage)) {
+            resume[stage] = payload
+          }
+        }
+        const restoredSheets = Object.keys(resume.stage4.sheets).length
+        const restoredStages = Object.keys(resume).filter(k => k !== 'stage4').length
+        if (restoredSheets + restoredStages === 0) resume = undefined
+        emit(res, { t: 'notice', level: 'info', kind: 'resume', message: resume ? `Resuming run ${resumeRunId}: restored ${restoredStages} stage checkpoint(s) + ${restoredSheets} extracted sheet(s); ${verdict.reason}.` : `Resume from ${resumeRunId}: no checkpoints found — running from the start.` })
+      }
     } catch (e) {
       emit(res, { t: 'notice', level: 'warn', kind: 'resume', message: `Resume from ${resumeRunId} unavailable (${String(e && e.message).slice(0, 80)}) — running from the start.` })
       resume = undefined
@@ -695,4 +782,8 @@ async function unifiedImportResult(req, res) {
   return res.status(404).json({ error: 'result_not_found', runId })
 }
 
-module.exports = { unifiedImport, unifiedImportResult, partitionWorkbooks }
+module.exports = {
+  unifiedImport, unifiedImportResult, partitionWorkbooks,
+  // Durability seams (pure — unit-tested directly):
+  contentHashOfDocuments, checkpointsMatchSource, mintRunId,
+}

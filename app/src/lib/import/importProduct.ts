@@ -177,12 +177,19 @@ export async function importPlan(
       kind === 'form'    ? { ...e.data, productRefIds: [productId] } :
       kind === 'ldTable' || kind === 'rtTable' ? { ...e.data, productId } :
       e.data
+    // A sweeper NOMINATION reaching this point survived the review's default
+    // exclusion — the reviewer deliberately ticked a model's cell proposal back
+    // in. The server refuses to write one without this flag (422
+    // nomination_unconfirmed), so the client-side filter is now a convenience on
+    // top of a server invariant rather than the only thing holding the line.
+    const isNomination = (data as { sweeperFact?: unknown }).sweeperFact === true
     return {
       label: e.label,
       refId: e.refId ?? undefined,
       payload: {
         op: 'create', path: g.path(e.docId, productId), entityType: g.entityType,
         ...(g.underProduct ? { productId } : {}), actor, data,
+        ...(isNomination ? { confirmNomination: true } : {}),
       } as MutationPayload,
     }
   }

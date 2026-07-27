@@ -338,6 +338,26 @@ async function listRunTraces({ limit = 50, tenantId = null } = {}) {
     .slice(0, limit)
 }
 
+/** In-flight runs, synchronously. A RUNNING trace lives ONLY in the in-memory ring
+ *  (mid-run persists are checkpoints of a still-running doc), so this needs no I/O
+ *  and cannot fail — which is what makes it usable from a SIGTERM handler, where
+ *  awaiting Cosmos is not an option. This is the drain guard's input: a redeploy
+ *  that restarts the container silently destroys a ~$70 / ~110-minute import, and
+ *  the pipeline had no way to ask whether one was in flight. */
+function activeRuns() {
+  const out = []
+  for (const t of _ring.values()) {
+    if (t.status !== 'running') continue
+    out.push({
+      runId: t.runId, tenantId: t.tenantId, sourceName: t.sourceName,
+      startedAt: t.startedAt, elapsedMs: Date.now() - Date.parse(t.startedAt),
+      spendUsd: t.spend ? t.spend.spendUsd : null,
+      stage: t.steps.length > 0 ? t.steps[t.steps.length - 1].name : null,
+    })
+  }
+  return out
+}
+
 /** Full trace for one run: memory first (running runs live only there), then store. */
 async function getRunTrace(runId) {
   const rid = String(runId || '')
@@ -361,4 +381,4 @@ async function getRunTrace(runId) {
 function __clearForTests() { _ring.clear() }
 function __setDocsForTests(docs) { _docsOverride = docs }
 
-module.exports = { createRunTrace, listRunTraces, getRunTrace, storageMode, __clearForTests, __setDocsForTests }
+module.exports = { createRunTrace, listRunTraces, getRunTrace, activeRuns, storageMode, __clearForTests, __setDocsForTests }

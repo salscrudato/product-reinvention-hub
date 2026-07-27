@@ -177,6 +177,14 @@ export interface FilingReviewItem {
   citation:   string
   /** For rating steps: the resolved op + source ref, for at-a-glance auditing. */
   detail?:    string
+  /** True for a stage-4.5 SWEEPER NOMINATION: a model's proposal about an
+   *  unaccounted cell, not an extracted entity. Nominations render in their own
+   *  review section — inside the coverage group a bulk-accept would persist cell
+   *  fragments as governed coverages — and the server refuses to write one
+   *  without an explicit confirmation flag. */
+  nomination?: boolean
+  /** Sheet the nominated cell was found on (nominations only). */
+  sheet?:      string | null
 }
 
 export type FilingReviewSectionKey = 'product' | 'coverages' | 'tables' | 'rules' | 'rating'

@@ -340,7 +340,27 @@ function joinGroupWithIso(brainGroup, isoGroup, kindLabel, importWarnings, refId
     const key = nameKey(isoP.data?.name ?? isoP.label)
     // An empty canonical key ('---', '###', …) must never join — two unnamed
     // entities matching on '' would be a false merge.
-    const idx = key === '' ? -1 : brainQueue.findIndex(b => nameKey(b.data?.name) === key)
+    //
+    // AMBIGUITY IS REFUSED, not resolved by queue order. `findIndex` took the
+    // FIRST brain entity whose normalized name matched, so when two entities share
+    // a name — duplicate sub-coverage names are real in these books — the winner
+    // was decided by array position, and one wrong adoption propagates through
+    // refIdRemap into parentIds, terms, rules and step sources. A silent wrong
+    // graft becomes a visible flag: neither candidate is adopted, the mapper entity
+    // is appended on its own deterministic citation, and the brain entities stay as
+    // review-flagged leftovers. (The structural fix is deleting this name join
+    // outright; this is the interim that stops it corrupting identity meanwhile.)
+    const matches = key === '' ? [] : brainQueue.reduce((acc, b, i) => {
+      if (nameKey(b.data?.name) === key) acc.push(i)
+      return acc
+    }, [])
+    if (matches.length > 1) {
+      importWarnings.push({
+        kind: 'ambiguous-identity', sheet: null, row: null, field: kindLabel,
+        detail: `The deterministic mapper's ${kindLabel} "${isoP.data?.name ?? isoP.label}" (${isoP.refId}) matches ${matches.length} extracted ${kindLabel} entities by name — identity was NOT adopted, because picking one by position is how a refId, its parent, its terms and every rule pointing at it get grafted onto the wrong entity. Disambiguate the source names or the ids.`,
+      })
+    }
+    const idx = matches.length === 1 ? matches[0] : -1
     if (idx >= 0) {
       const brainP = brainQueue.splice(idx, 1)[0]
       adoptIdentity(brainP, isoP)
@@ -1112,9 +1132,13 @@ function buildImportPlan(brainOutput, opts = {}) {
     unresolved: unresolved.length,
   }
 
+  // Sweeper nominations are MARKED on the review item so the UI can render them in
+  // their own section instead of mixing model cell-proposals into the coverage
+  // group, where a bulk-accept would persist them as governed coverages.
   const reviewItem = (p, section) => ({
     section, label: p.label, refId: p.refId, docId: p.docId,
     confidence: Number(p.data.confidence ?? 0), citation: String(p.data.citation ?? ''),
+    ...(p.data.sweeperFact === true ? { nomination: true, sheet: p.data.sourceSheet ?? null } : {}),
   })
 
   const bundle = {

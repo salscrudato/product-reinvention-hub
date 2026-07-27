@@ -379,6 +379,19 @@ function envelope(tid, payload, actor, source) {
   if (requiresCitation(payload.provenance) && !hasResolvableCitation(payload.provenance)) {
     const e = new Error('citation_required'); e.code = 'CITATION_REQUIRED'; throw e
   }
+  // SWEEPER-NOMINATION QUARANTINE. A stage-4.5 sweeper FACT is a MODEL PROPOSAL
+  // about an unaccounted cell — refId null, confidence 0.5, needsReview — not an
+  // extracted entity. It rides the review bundle so a human can see it, and it must
+  // stay opt-in. That contract lived only in the client's default-exclude filter,
+  // which means it was a UI convention, not an invariant: any other caller, a
+  // replayed payload, or a bulk-accept that lost the filter would persist model
+  // guesses as governed coverages. Enforced HERE, at the single write choke point
+  // (/mutate, /mutateBatch, /restore, /drafts/:id/promote all pass through), so
+  // writing a nomination requires SAYING SO — `confirmNomination: true` on the
+  // payload, which is a reviewer's explicit act, not a default.
+  if (payload.data && payload.data.sweeperFact === true && payload.confirmNomination !== true) {
+    const e = new Error('nomination_unconfirmed'); e.code = 'NOMINATION_UNCONFIRMED'; throw e
+  }
   const data = { ...(payload.data || {}) }
   for (const k of RESERVED_ENVELOPE_KEYS) delete data[k]
   const now = new Date().toISOString()
@@ -565,6 +578,7 @@ router.post('/mutate', requireCapability('product:write'), requireTenant, async 
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
     if (e.code === 'NOT_PROMOTABLE') return res.status(409).json({ error: 'not_promotable', blockers: e.blockers || [] })
     if (e.code === 'READINESS_IMMUTABLE') return res.status(422).json({ error: 'readiness_immutable', detail: 'the import readiness summary is write-once — it is stamped at import-apply and can never be altered' })
+    if (e.code === 'NOMINATION_UNCONFIRMED') return res.status(422).json({ error: 'nomination_unconfirmed', detail: 'a stage-4.5 sweeper nomination is a model proposal, not an extracted entity — it is written only with an explicit confirmNomination:true on the payload' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
     if (e.code === 'CITATION_REQUIRED') { log.warn('data', 'hitl_citation_required', { tenantId: tid, path: payload && payload.path, source: '/api/db/mutate' }); return res.status(422).json({ error: 'citation_required', detail: 'an AI/voice-authored governed change must cite a resolvable source' }) }
     if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base' })
@@ -608,6 +622,7 @@ router.post('/mutateBatch', requireCapability('product:write'), requireTenant, a
     if (e.code === 'CONFLICT') return res.status(409).json({ error: 'conflict' })
     if (e.code === 'NOT_PROMOTABLE') return res.status(409).json({ error: 'not_promotable', blockers: e.blockers || [] })
     if (e.code === 'READINESS_IMMUTABLE') return res.status(422).json({ error: 'readiness_immutable', detail: 'the import readiness summary is write-once — it is stamped at import-apply and can never be altered' })
+    if (e.code === 'NOMINATION_UNCONFIRMED') return res.status(422).json({ error: 'nomination_unconfirmed', detail: 'a stage-4.5 sweeper nomination is a model proposal, not an extracted entity — it is written only with an explicit confirmNomination:true on the payload' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
     if (e.code === 'CITATION_REQUIRED') { log.warn('data', 'hitl_citation_required', { tenantId: tid, source: '/api/db/mutateBatch', count: payloads.length }); return res.status(422).json({ error: 'citation_required', detail: 'an AI/voice-authored governed change must cite a resolvable source' }) }
     if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable (create-only via /api/filing/generate); the mutation envelope cannot write into this base' })
@@ -715,6 +730,7 @@ router.post('/restore', requireCapability('product:write'), requireTenant, async
     // never an opaque 500. Deliberately NOT exempted in envelope(): /mutate accepts
     // client-supplied op values, so an exemption would be a laundering channel.
     if (e.code === 'NOT_PROMOTABLE') return res.status(409).json({ error: 'not_promotable', blockers: e.blockers || [] })
+    if (e.code === 'NOMINATION_UNCONFIRMED') return res.status(422).json({ error: 'nomination_unconfirmed', detail: 'a stage-4.5 sweeper nomination is a model proposal, not an extracted entity — it is written only with an explicit confirmNomination:true on the payload' })
     if (e.code === 'INVALID_PARENT') return res.status(422).json({ error: e.message })
     if (e.code === 'RESERVED_BASE') return res.status(403).json({ error: 'reserved_base', detail: 'filings records are immutable' })
     log.error('data', 'restore_failed', { tenantId: tid, path: String(path), targetRev, detail: String(e.message || e).slice(0, 200) })

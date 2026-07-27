@@ -183,11 +183,30 @@ describe('F23: unifiedImport persists the finished bundle', () => {
     expect(f.envelope.bundle).toBeTruthy()
   }, 90_000)
 
-  it('no run id → no persistence (opt-in), and the run still completes', async () => {
+  // CONTRACT CHANGE (durability is default-ON). This case previously asserted
+  // "no run id → no persistence (opt-in)". Opt-in durability meant the most
+  // expensive operation in the product lost its safety net whenever a caller
+  // simply did not think to supply an id — a $70 / 110-minute run discarded for
+  // a missing string. The server now MINTS a run id when the client omits one and
+  // streams it back, so the bundle is always recoverable. Everything the original
+  // case really guarded — the run completes, the stream is intact — still holds.
+  it('no client run id → the server mints one, streams it, and persistence still happens', async () => {
     const events = await runImport({})
     expect(events.some(e => e.t === 'json' && e.key === 'bundle')).toBe(true)
-    expect(fake.blobs.size).toBe(0)
+    const minted = events.find(e => e.t === 'json' && e.key === 'run:id')?.value as { runId?: string } | undefined
+    expect(minted?.runId).toMatch(/^run-[a-z0-9]+-[a-f0-9]{12}$/)
+    const persisted = events.find(e => e.t === 'json' && e.key === 'run:persisted')?.value as { ok?: boolean } | undefined
+    expect(persisted?.ok).toBe(true)
+    const f = await rr.fetchRunResult({ tenantId: 'accenture-test', runId: minted!.runId! })
+    expect(f.status).toBe('ok')
+    expect(f.envelope.bundle).toBeTruthy()
   }, 90_000)
+
+  it('a server-minted id survives sanitizeRunId (it becomes a blob path segment)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mintRunId } = require('../../server/lib/ai/unified-import.js')
+    for (let i = 0; i < 20; i++) expect(rr.sanitizeRunId(mintRunId())).not.toBeNull()
+  })
 })
 
 describe('F23: unifiedImportResult endpoint', () => {

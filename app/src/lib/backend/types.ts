@@ -205,6 +205,12 @@ export interface MutationPayload {
   productId?: string
   actor: { uid: string; name: string }
   expectedRev?: number   // absent = no optimistic lock
+  /** Explicit acknowledgement that this payload writes a stage-4.5 SWEEPER
+   *  NOMINATION (`data.sweeperFact === true`) — a model's proposal about an
+   *  unaccounted cell, not an extracted entity. The server refuses such a write
+   *  without it (422 nomination_unconfirmed), so a nomination can only reach the
+   *  database through a reviewer's deliberate act. Never set it by default. */
+  confirmNomination?: boolean
 }
 
 export class PromoteBlockedError extends Error {

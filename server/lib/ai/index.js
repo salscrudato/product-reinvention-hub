@@ -33,6 +33,15 @@ registerReindexRoute(router)
 // are GET routes (no AI, no metering) so they sit ahead of the POST /:name
 // dispatcher and never collide with it.
 function tenantOf(req) { return resolveTenantForPrincipal(req.user) }
+// In-flight imports + drain state. The unauthenticated /api/health carries the
+// COUNTS for a deploy pipeline to gate on; this is the tenant-scoped detail —
+// which runs are at risk, how long they have been going, what they have spent.
+// Declared before /importRun/:runId so the literal path is not swallowed by it.
+router.get('/importRuns/active', requireCapability('product:read'), requireTenant, (req, res) => {
+  const drain = require('./drain')
+  const tid = tenantOf(req)
+  return res.json({ ...drain.drainStatus(), runs: drain.activeImports().filter(r => r.tenantId === tid) })
+})
 router.get('/importRuns', requireCapability('product:read'), requireTenant, async (req, res) => {
   const r = await observatory.listImportRuns({ tenantId: tenantOf(req), limit: req.query.limit })
   if (r.status === 'storage_not_configured') return res.status(503).json({ error: 'storage_not_configured', detail: 'Set AZURE_BLOB_CONNECTION to enable the import-run observatory.' })

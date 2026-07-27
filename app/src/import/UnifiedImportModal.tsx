@@ -18,7 +18,7 @@
 import { lazy, Suspense, useCallback, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type {
-  UnifiedProposalBundle, FilingReviewSectionKey,
+  UnifiedProposalBundle, FilingReviewSectionKey, FilingReviewItem,
   FormatCard, FormatFingerprint, SplitProductProposal, SampledVerification, UnresolvedItem,
 } from '@pf/shared'
 import { DisagreementHeatmap } from './DisagreementHeatmap'
@@ -577,10 +577,30 @@ function ReviewPane({ bundle, accepted, toggle, excluded, onToggleExclude, cardS
     return countPlan(acceptedPlan(bundle, accepted, excluded))
   }, [bundle, accepted, excluded])
 
-  const hasDetectedContent = SECTION_META.some(({ key }) => (review[key]?.items?.length ?? 0) > 0)
+  // Stage-4.5 sweeper NOMINATIONS are pulled OUT of the detected sections. They
+  // are model proposals about unaccounted cells, not extracted entities, and
+  // sitting inside the coverage group meant one bulk-accept persisted dozens of
+  // cell fragments as governed coverages. They render in their own opt-in section
+  // under Review & confirm; the server refuses to write one without an explicit
+  // confirmation flag, so this is presentation over an invariant, not the invariant.
+  const nominations = useMemo<FilingReviewItem[]>(() => {
+    const out: FilingReviewItem[] = []
+    for (const { key } of SECTION_META) {
+      for (const it of review[key]?.items ?? []) if (it.nomination) out.push(it)
+    }
+    return out
+  }, [review])
+  const detectedItems = useMemo(() => {
+    const m = new Map<FilingReviewSectionKey, FilingReviewItem[]>()
+    for (const { key } of SECTION_META) m.set(key, (review[key]?.items ?? []).filter(it => !it.nomination))
+    return m
+  }, [review])
+
+  const hasDetectedContent = SECTION_META.some(({ key }) => (detectedItems.get(key)?.length ?? 0) > 0)
 
   const hasReviewItems =
     unresolved.length > 0 ||
+    nominations.length > 0 ||
     (ensembleDisagreements && ensembleDisagreements.length > 0) ||
     sampledVerifications.length > 0 ||
     splitProducts.length > 1 ||
@@ -635,7 +655,7 @@ function ReviewPane({ bundle, accepted, toggle, excluded, onToggleExclude, cardS
           ) : (
             <div className="flex flex-col gap-2.5">
               {SECTION_META.map(({ key, label, Icon }) => {
-                const section = review[key] ?? { items: [] }
+                const section = { ...(review[key] ?? { items: [] }), items: detectedItems.get(key) ?? [] }
                 if (!section.items?.length && !section.note) return null
                 const on = accepted.has(key)
                 const isOpen = openSections.has(key)
@@ -752,6 +772,11 @@ function ReviewPane({ bundle, accepted, toggle, excluded, onToggleExclude, cardS
             <div className="flex flex-col gap-2.5">
               {/* Unresolved — shown, not written */}
               {unresolved.length > 0 && <UnresolvedSection unresolved={unresolved} />}
+
+              {/* Sweeper nominations — opt-in, never bulk-accepted */}
+              {nominations.length > 0 && (
+                <NominationsSection nominations={nominations} excluded={excluded} onToggleExclude={onToggleExclude} />
+              )}
 
               {/* Inter-model disagreement heatmap */}
               {ensembleDisagreements && ensembleDisagreements.length > 0 && (
@@ -977,6 +1002,59 @@ export function sweeperNominations(bundle: UnifiedProposalBundle): Set<string> {
     }
   }
   return out
+}
+
+/** Stage-4.5 SWEEPER NOMINATIONS — the conservation sweeper's proposals about cells
+ *  no extractor accounted for. A nomination is a MODEL GUESS carrying a verbatim cell
+ *  quote, not an extracted entity: refId null, confidence 0.5, review-flagged. It gets
+ *  its own section, excluded by default, because inside the coverage group a single
+ *  bulk-accept persisted cell fragments as governed coverages. Ticking one is a
+ *  deliberate act, and the server refuses the write without the confirmation flag it
+ *  produces. */
+function NominationsSection({ nominations, excluded, onToggleExclude }: {
+  nominations:     FilingReviewItem[]
+  excluded:        Set<string>
+  onToggleExclude: (docId: string) => void
+}) {
+  const included = nominations.filter(n => !excluded.has(n.docId ?? n.refId ?? '')).length
+  return (
+    <section className="rounded-[12px] overflow-hidden"
+      style={{ border: '1px solid var(--color-border)' }}>
+      <div className="flex items-center gap-2 px-3.5 py-2.5 bg-raised">
+        <IconWarning size={14} className="text-warn shrink-0" aria-hidden />
+        <h4 className="text-[12px] font-semibold uppercase tracking-[.07em] text-dim flex-1">
+          Sweeper nominations
+        </h4>
+        <span className="text-[11px] text-faint tnum">{included}/{nominations.length} included</span>
+      </div>
+      <p className="text-xs text-dim px-3.5 pt-2.5">
+        Cells no extractor accounted for. A model proposed what each one might be, quoting the
+        cell verbatim — these are <strong className="text-text">suggestions, not extractions</strong>,
+        and none is imported unless you tick it here.
+      </p>
+      <div className="flex flex-col gap-1.5 px-3.5 py-2.5">
+        {nominations.map((n, i) => {
+          const key = n.docId ?? n.refId ?? ''
+          const on = !!key && !excluded.has(key)
+          return (
+            <div key={key || i} className="flex items-center gap-2 text-xs min-w-0">
+              <input type="checkbox" checked={on} disabled={!key}
+                onChange={() => key && onToggleExclude(key)}
+                className="w-3.5 h-3.5 accent-[var(--color-accent)] shrink-0 cursor-pointer"
+                aria-label={`Import the nominated "${n.label}"`} />
+              <span className={`truncate flex-1 ${on ? 'text-text' : 'text-faint'}`} title={n.label}>
+                {n.label}
+              </span>
+              {n.sheet && <span className="text-faint shrink-0 hidden sm:inline">{n.sheet}</span>}
+              <span className="font-mono text-[11px] text-faint shrink-0" title="Cited source cell">
+                {n.citation}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
 }
 
 function SampledVerificationsSection({ verifications }: { verifications: SampledVerification[] }) {
