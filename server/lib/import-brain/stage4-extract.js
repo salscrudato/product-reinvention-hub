@@ -35,6 +35,24 @@ const {
 
 const BATCH_ROWS = 20
 
+// Width-aware batch sizing (ledger F10): a batch's OUTPUT scales with cells,
+// not rows — budget cells so wide sheets never discover the token ceiling the
+// hard way. Shared by the main extraction path AND the blind map cross-check:
+// the first participation-instrumented Core run measured the cross-check at
+// 0/10 cast on BOTH families — every sample truncated, because it sampled a
+// fixed 20 rows x EVERY column on 40+-column sheets. The map verification had
+// been silently absent on wide books; batches are now sized by their actual
+// cell payload everywhere.
+const CELL_BUDGET = 480
+
+function widthAwareRowCount(rows, startIdx, cellsPerRowFloor) {
+  const probe = rows.slice(startIdx, startIdx + BATCH_ROWS)
+  if (probe.length === 0) return 1
+  const totalCells = probe.reduce((n, r) => n + (r ?? []).filter(c => c !== null && c !== undefined && String(c) !== '').length, 0)
+  const avg = Math.max(cellsPerRowFloor || 1, Math.round(totalCells / probe.length))
+  return Math.max(1, Math.min(BATCH_ROWS, Math.floor(CELL_BUDGET / avg)))
+}
+
 // Judge completion budget. Both judges (gpt-5.1 + the DeepSeek tail) are
 // OpenAI-family reasoning-class models: reasoning spends completion budget
 // before the verdict is emitted, and a starved judge is a silently absent
@@ -742,7 +760,10 @@ async function sampleVerifyMap({ fp, colMap, headerRow, rows, gridRows, detEntit
   let checkedRows = 0
 
   for (const batchStart of batches.slice(0, DET_SAMPLE_BATCHES)) {
-    const batch = rows.slice(batchStart, batchStart + BATCH_ROWS)
+    // Width-aware: the blind prompt hands over EVERY non-empty cell, so the
+    // sample must budget by cells or a wide sheet truncates every vote.
+    const sampleRows = widthAwareRowCount(rows, batchStart, 1)
+    const batch = rows.slice(batchStart, batchStart + sampleRows)
     // BLIND: the voters must not be handed the very map they are cross-checking.
     const userPrompt = buildBlindExtractionPrompt(fp, headerRow, batch, batchStart, gridRows)
     const [aRes, bRes] = await Promise.all([
@@ -957,7 +978,6 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     // wide sheets (state matrices, forms libraries) start small instead of
     // discovering the token ceiling the hard way. Typical sheets (≤24 mapped
     // columns) keep the historical 20-row batches.
-    const CELL_BUDGET   = 480
     const rowsPerBatch  = Math.max(1, Math.min(BATCH_ROWS, Math.floor(CELL_BUDGET / Math.max(1, mappedColumnCount))))
 
     // Truncation sentinel: a vote whose output hit the token ceiling is not a
@@ -1143,5 +1163,5 @@ module.exports = {
   // Test seams (hardening fixtures — pure helpers, no AI):
   reconcileEntities, expandMultiRefIds, resolveConflicts, rowKind, parseExtraction, synthesizeRefId,
   deterministicExtract, buildExtractionPrompt, buildBlindExtractionPrompt,
-  gatherRows, excelRowOf,
+  gatherRows, excelRowOf, widthAwareRowCount,
 }

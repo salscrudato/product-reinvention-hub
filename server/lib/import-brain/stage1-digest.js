@@ -122,6 +122,7 @@ async function readerLoop({ label, call, digestPrompt, fpByName, review, budget,
   const tally = (outcome) => { if (vote) recordVote(vote.budget, vote.site, vote.family, outcome) }
   let served = 0
   let prompt = digestPrompt
+  let retried = false
   for (let round = 0; round < 3; round++) {
     let res
     try { res = await call(prompt) } catch (e) {
@@ -129,13 +130,22 @@ async function readerLoop({ label, call, digestPrompt, fpByName, review, budget,
       tally('empty')
       return null
     }
-    const j = parseReader(res && res.raw)
+    let j = parseReader(res && res.raw)
     if (!j) {
-      if (res && TRUNCATED_STOP_REASONS.has(res.stopReason)) tally('truncated')
-      else if (res && REFUSAL_STOP_REASONS.has(res.stopReason)) tally('refused')
-      else if (!res || !res.raw) tally('empty')
-      else tally('malformed')
-      return null
+      if (res && TRUNCATED_STOP_REASONS.has(res.stopReason)) { tally('truncated'); return null }
+      if (res && REFUSAL_STOP_REASONS.has(res.stopReason)) { tally('refused'); return null }
+      if (!res || !res.raw) { tally('empty'); return null }
+      // Malformed with a clean stop gets the house policy every other site
+      // already has (P0-7): named telemetry + exactly ONE targeted retry —
+      // the first instrumented Core run lost the whole gpt digest reading to a
+      // single unretried parse failure.
+      if (retried) { tally('malformed'); return null }
+      retried = true
+      review.push({ kind: 'digest-reader-malformed', detail: `${label}: unparseable reading; retrying once. Raw head: "${String(res.raw).replace(/\s+/g, ' ').slice(0, 160)}"` })
+      tally('retry')
+      try { res = await call(prompt) } catch { tally('empty'); return null }
+      j = parseReader(res && res.raw)
+      if (!j) { tally('malformed'); return null }
     }
     if (Array.isArray(j.windowRequests) && j.windowRequests.length > 0 && round < 2) {
       const allowed = j.windowRequests.slice(0, Math.max(0, WINDOW_REQUESTS - served))

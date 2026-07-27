@@ -64,7 +64,16 @@ function serialiseColumns(fp, headerRow) {
 
 function parseMappings(raw) {
   try {
-    const arr = extractJson(raw)
+    const parsed = extractJson(raw)
+    // Parse armor: the schema asks for a bare array, but a reasoner
+    // occasionally wraps it ({"mappings":[...]}, {"columns":[...]}) — the
+    // first participation-instrumented Core run lost an entire opus map chunk
+    // (retry included) to exactly this shape. An object whose SOLE array value
+    // is the mapping list is the same answer in a different envelope; per-item
+    // shape validation below is unchanged.
+    const arr = Array.isArray(parsed)
+      ? parsed
+      : (parsed && typeof parsed === 'object' ? Object.values(parsed).find(Array.isArray) ?? null : null)
     if (!Array.isArray(arr)) return null
     const entries = []
     let dropped = 0

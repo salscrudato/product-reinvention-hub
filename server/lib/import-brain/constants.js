@@ -107,14 +107,18 @@ async function parseWithRetry({ call, parse, review, stage, sheetName, what, onT
   let parsed = res && res.raw ? parse(res.raw) : null
   if (parsed != null) { tally('cast'); return parsed }
   if (!res || !res.raw) { tally('empty'); return null }
-  if (Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — model returned unparseable/malformed output; retrying once.` })
+  // The raw head rides the telemetry: "malformed" with no evidence is
+  // undiagnosable after the fact (the first instrumented Core run lost a map
+  // chunk to a shape nobody could reconstruct).
+  const rawHead = String(res.raw).replace(/\s+/g, ' ').slice(0, 160)
+  if (Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — model returned unparseable/malformed output; retrying once. Raw head: "${rawHead}"` })
   tally('retry')
   // The retry must NEVER replay the bytes it is retrying: cache-wrapped thunks
   // honor bypassCache and go straight to the model (a fresh good result then
   // overwrites the entry). Plain thunks ignore the argument.
   try { res = await call({ bypassCache: true }) } catch { tally('malformed'); return null }
   parsed = res && res.raw ? parse(res.raw) : null
-  if (parsed == null && Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — retry also malformed; treated as a missing vote (never silent).` })
+  if (parsed == null && Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — retry also malformed; treated as a missing vote (never silent). Raw head: "${String(res && res.raw || '').replace(/\s+/g, ' ').slice(0, 160)}"` })
   tally(parsed == null ? 'malformed' : 'cast')
   return parsed
 }
