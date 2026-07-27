@@ -170,10 +170,11 @@ async function runAdaptiveImportBrain(opts) {
   for (const [name, entities] of Object.entries((resume.stage4 && resume.stage4.sheets) || {})) {
     if (Array.isArray(entities)) completedSheets.set(name, entities)
   }
+  const columnCoverage = []
   const entities = await extractRows(classifiedSheets, headerLocks, columnMaps, fpMap, budget, review, lobRefIdHint,
     (detail) => emitStage(emit, 4, 'extract', 'progress', detail),
     {
-      censusBySheet, accounting, tenantId: opts.tenantId, completedSheets,
+      censusBySheet, accounting, tenantId: opts.tenantId, completedSheets, columnCoverage,
       onSheetComplete: onStage ? (sheetName, sheetEntities) => onStage(`stage4/${sheetName}`, { sheetName, entities: sheetEntities }) : undefined,
     })
 
@@ -181,6 +182,21 @@ async function runAdaptiveImportBrain(opts) {
   emitStage(emit, 4, 'extract', 'end', `${entities.length} entities extracted, ${flagged} flagged`)
   emit({ t: 'json', key: 'brain:stage4', value: { entityCount: entities.length, flagged } })
   await checkpoint('stage4', { entityCount: entities.length, flagged })
+
+  // Column-coverage rollup: `belowReadThreshold` is the count of mapped columns the
+  // deterministic reader would have skipped (the pre-fix "unread" number);
+  // `unread` is what survived the recovery pass. Both ride the output and the SSE
+  // stream so the before/after is a measured per-run figure, never an inference.
+  const columnRollup = columnCoverage.reduce((acc, c) => ({
+    sheets: acc.sheets + 1,
+    mappedColumns: acc.mappedColumns + c.mappedColumns,
+    belowReadThreshold: acc.belowReadThreshold + c.belowReadThreshold,
+    recovered: acc.recovered + c.recovered,
+    unread: acc.unread + c.unread,
+    empty: acc.empty + c.empty,
+  }), { sheets: 0, mappedColumns: 0, belowReadThreshold: 0, recovered: 0, unread: 0, empty: 0 })
+  emit({ t: 'json', key: 'brain:columns', value: { ...columnRollup, perSheet: columnCoverage } })
+  console.log(`[import-brain] column coverage: ${columnRollup.mappedColumns} mapped, ${columnRollup.belowReadThreshold} below the deterministic read floor, ${columnRollup.recovered} recovered by the AI path, ${columnRollup.unread} still unread, ${columnRollup.empty} empty`)
 
   if (budget.degraded) {
     emit({ t: 'notice', level: 'warn', message: 'Token budget soft ceiling reached during extraction. Some calls used cheaper models. Review extraction quality.', kind: 'degrade' })
@@ -238,6 +254,7 @@ async function runAdaptiveImportBrain(opts) {
     output.sweeper = { facts: sweeper.sweptFacts, unresolvedItems: sweeper.unresolvedItems, perSheet: sweeper.perSheet }
   }
   if (workbookUnderstanding) output.workbookUnderstanding = workbookUnderstanding
+  output.columnCoverage = { ...columnRollup, perSheet: columnCoverage }
 
   // Per-run spend telemetry — the no-cap import switch removes the CAP, never the
   // TELEMETRY. Logged server-side and streamed so operators see true import cost.

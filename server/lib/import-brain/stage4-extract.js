@@ -100,6 +100,33 @@ const DET_MAP_CONFIDENCE = 0.80   // per-column floor for deterministic extracti
 const DET_SHEET_FRACTION = 0.60   // fraction of mapped columns that must clear the floor
 const DET_SAMPLE_BATCHES = 2      // AI cross-check batches per deterministic sheet
 
+// SUB-THRESHOLD RECOVERY. The two constants above are not the same threshold: a
+// sheet QUALIFIES for the code path at DET_SHEET_FRACTION confident columns, but
+// the code reader only READS columns at DET_MAP_CONFIDENCE — so up to 40% of a
+// qualifying sheet's MAPPED columns used to be read by nothing at all. No entity,
+// no review item, no ledger entry: a whole real column could vanish while the run
+// reported success. Stage 3 multiplies confidence by 0.7 on mapper disagreement,
+// which puts every DISPUTED column under the read floor by construction — and the
+// disputed columns are precisely the drift columns between the two sample books
+// (shifted rating columns, swapped dynamic-data keys, duplicate headers).
+//
+// The fix routes those columns through the AI extraction path instead of skipping
+// them (rather than raising qualification to 100%, which would send the WHOLE
+// sheet — confident columns included — to the models: strictly more expensive than
+// this, and a fidelity regression, since it replaces byte-perfect code reads with
+// model transcription on the columns that were never in doubt).
+//
+// A column that still yields nothing after the recovery pass, and that actually
+// has content in the grid, becomes a named `unread-column` review item.
+
+function columnHasContent(rows, colIndex) {
+  for (const r of rows) {
+    const v = (r ?? [])[colIndex]
+    if (v !== null && v !== undefined && String(v).trim() !== '') return true
+  }
+  return false
+}
+
 // ─── Parse extraction response ─────────────────────────────────────────────────
 
 function parseExtraction(raw) {
@@ -978,6 +1005,11 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
   // CE3 Step 3: census table regions + the accounting ledger ride in via extras
   // ({ censusBySheet?: Map, accounting?: Map<sheet, SheetAccounting>, tenantId? }).
   const censusBySheet = extras.censusBySheet instanceof Map ? extras.censusBySheet : new Map()
+  // Per-sheet column-coverage ledger (mapped / below-read-threshold / recovered /
+  // unread / empty). The orchestrator supplies the array and reports the rollup:
+  // "how many mapped columns did nothing read this run" becomes a measured number
+  // instead of an assumption.
+  const coverageSink = Array.isArray(extras.columnCoverage) ? extras.columnCoverage : null
 
   const deployBulk    = resolveAnthropic('BULK_VERIFY', budget)
   const deployGptMini = resolveOpenAI(fleet.DEPLOY_GPT_MINI, budget)  // BULK_ALT
@@ -1043,18 +1075,11 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     // A sheet with ZERO mapped columns cannot be extracted meaningfully — skip it
     // with an importWarning instead of asking models to extract from nothing
     // (which produces junk entities that all discard).
-    const mappedColumnCount = (colMap.mappings || []).filter(m => m.canonicalField !== null).length
+    const mappedColumns = (colMap.mappings || []).filter(m => m.canonicalField !== null)
+    const mappedColumnCount = mappedColumns.length
     if (mappedColumnCount === 0) {
       review.push({ kind: 'unmapped-sheet', sheetName: fp.sheetName, detail: `No columns could be mapped on "${fp.sheetName}" (${(colMap.mappings || []).length} columns examined) — sheet skipped; map the columns manually or check the canonical dictionary.` })
       return null
-    }
-
-    // ── Deterministic fast path: confident map + real grid → code extracts ────
-    if (sheetIsDeterministic(fp, colMap)) {
-      progress(`${fp.sheetName}: deterministic extraction (${rows.length} rows)`)
-      const detEntities = deterministicExtract(fp, colMap, lock.headerRowIndex, rows, fp.sheetName, gridRows)
-      await sampleVerifyMap({ fp, colMap, headerRow: lock.headerRowIndex, rows, gridRows, detEntities, deployBulk, deployGptMini, budget, review })
-      return { fp, entities: [detEntities] }
     }
 
     // Width-aware batch size (ledger F10): the prompt embeds one line per row ×
@@ -1069,14 +1094,18 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
     // re-extract (recursion floor: 1 row); rows are never dropped for size.
     const TRUNCATED = Symbol('stage4-truncated')
 
-    async function extractBatch(batch, batchStart) {
-      const userPrompt = buildExtractionPrompt(fp, colMap, lock.headerRowIndex, batch, batchStart, null, gridRows)
+    // `view` narrows the column map the prompt states (sub-threshold recovery
+    // asks for ONLY the columns the code reader skipped); `tag` names the pass in
+    // telemetry so a recovery vote is never mistaken for a main-path vote.
+    async function extractBatch(batch, batchStart, view, tag) {
+      const mapView = view || colMap
+      const userPrompt = buildExtractionPrompt(fp, mapView, lock.headerRowIndex, batch, batchStart, null, gridRows)
 
       // Two decorrelated extraction votes in parallel: BULK (haiku) + BULK_ALT
       // (gpt-mini). Malformed output = structured telemetry + one targeted retry
       // per side (P0-7 / ledger F16) — never a silent missing vote. Truncation
       // short-circuits to the sentinel (no identical retry — it re-truncates).
-      const rowsWhat = `rows ${batchStart}-${batchStart + batch.length - 1}`
+      const rowsWhat = `${tag ? `${tag} ` : ''}rows ${batchStart}-${batchStart + batch.length - 1}`
       const onTruncation = () => TRUNCATED
       // CE3 Step 3(d) — extraction cache (backlog item 8): keyed by deployment +
       // prompt version + an EXPLICIT content hash of the window cells (belt and
@@ -1102,8 +1131,8 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
         review.push({ kind: 'truncated-batch-split', sheetName: fp.sheetName, detail: `${rowsWhat}: model output hit the token ceiling — batch split in half and re-extracted (no rows dropped).` })
         const mid = Math.ceil(batch.length / 2)
         const [left, right] = await Promise.all([
-          extractBatch(batch.slice(0, mid), batchStart),
-          extractBatch(batch.slice(mid), batchStart + mid),
+          extractBatch(batch.slice(0, mid), batchStart, view, tag),
+          extractBatch(batch.slice(mid), batchStart + mid, view, tag),
         ])
         return { entities: [...left.entities, ...right.entities], conflicts: [...left.conflicts, ...right.conflicts] }
       }
@@ -1147,6 +1176,72 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
       return { entities, conflicts }
     }
 
+    // ── Deterministic fast path: confident map + real grid → code extracts ────
+    // Columns BELOW the read floor do not vanish here any more: they are routed
+    // through the AI extraction path over the same rows, and whatever it reads is
+    // merged onto the code-extracted entities (code wins on any field both
+    // produced — a confident column's byte-perfect value is never overwritten).
+    if (sheetIsDeterministic(fp, colMap)) {
+      progress(`${fp.sheetName}: deterministic extraction (${rows.length} rows)`)
+      const detEntities = deterministicExtract(fp, colMap, lock.headerRowIndex, rows, fp.sheetName, gridRows)
+      await sampleVerifyMap({ fp, colMap, headerRow: lock.headerRowIndex, rows, gridRows, detEntities, deployBulk, deployGptMini, budget, review })
+
+      const subThreshold = mappedColumns.filter(m => m.confidence < DET_MAP_CONFIDENCE)
+      const coverage = {
+        sheet: fp.sheetName, path: 'deterministic', mappedColumns: mappedColumnCount,
+        belowReadThreshold: subThreshold.length, recovered: 0, unread: 0, empty: 0,
+      }
+      if (subThreshold.length > 0) {
+        progress(`${fp.sheetName}: recovering ${subThreshold.length} sub-threshold mapped column(s) via the AI path`)
+        const view = { ...colMap, mappings: subThreshold, stateColumns: [], allStatesColIndex: null }
+        const perBatch = Math.max(1, Math.min(BATCH_ROWS, Math.floor(CELL_BUDGET / Math.max(1, subThreshold.length))))
+        const starts = []
+        for (let b = 0; b < rows.length; b += perBatch) starts.push(b)
+        const recResults = await pMap(starts, (s) =>
+          extractBatch(rows.slice(s, s + perBatch), s, view, 'sub-threshold recovery'), 3)
+        const recEntities  = recResults.flatMap(r => r.entities)
+        const recConflicts = recResults.flatMap(r => r.conflicts)
+        if (recConflicts.length > 0) {
+          await resolveConflicts({
+            conflicts: recConflicts, entities: recEntities, fp, colMap: view,
+            headerRow: lock.headerRowIndex, rows, gridRows, batchStart: 0,
+            sheetName: fp.sheetName, budget, review, deployJudge,
+          })
+        }
+        // Merge: only the fields the recovery pass was ASKED for, only where the
+        // code reader produced nothing. Recovered fields keep their own (model)
+        // confidence and are marked, so provenance stays honest downstream.
+        const wanted  = new Set(subThreshold.map(m => m.canonicalField))
+        const detByRow = new Map(detEntities.map(e => [e.sourceRowIndex, e]))
+        const readFields = new Set()
+        for (const rec of recEntities) {
+          const det = detByRow.get(rec.sourceRowIndex)
+          if (!det) continue
+          const have = new Set(det.fields.map(f => f.fieldName))
+          for (const f of rec.fields || []) {
+            if (!wanted.has(f.fieldName) || have.has(f.fieldName)) continue
+            if (f.value === null || f.value === undefined || String(f.value).trim() === '') continue
+            det.fields.push({ ...f, recoveredColumn: true })
+            have.add(f.fieldName)
+            readFields.add(f.fieldName)
+          }
+        }
+        for (const m of subThreshold) {
+          if (readFields.has(m.canonicalField)) { coverage.recovered++; continue }
+          // A column with no content in any row is EMPTY, not unread — flagging it
+          // would be a manufactured finding.
+          if (!columnHasContent(rows, m.colIndex)) { coverage.empty++; continue }
+          coverage.unread++
+          review.push({
+            kind: 'unread-column', sheetName: fp.sheetName, colIndex: m.colIndex, colLabel: m.headerLabel ?? null,
+            detail: `Column ${colLetter(m.colIndex)} ("${m.headerLabel ?? ''}") maps to ${m.entityKind ?? '?'}.${m.canonicalField} at confidence ${m.confidence.toFixed(2)} — below the ${DET_MAP_CONFIDENCE.toFixed(2)} deterministic read floor, and the AI recovery pass returned no value for it on any of ${rows.length} row(s). The column has content and was NOT read.`,
+          })
+        }
+      }
+      if (coverageSink) coverageSink.push(coverage)
+      return { fp, entities: [detEntities] }
+    }
+
     // Batches extract independently — up to 3 in flight (pMap keeps batch order;
     // synthesis/flagging runs after collection so SYNTH numbering stays stable).
     const batchStarts = []
@@ -1166,6 +1261,29 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
         headerRow: lock.headerRowIndex, rows, gridRows, batchStart: 0,
         sheetName: fp.sheetName, budget, review, deployJudge,
       })
+    }
+
+    // Column coverage on the AI path: every mapped column IS stated in the prompt,
+    // so nothing is skipped by construction — but a column the extractors never
+    // returned a value for, on a column that has content, is still an unread
+    // column and gets the same named review item.
+    if (coverageSink) {
+      const produced = new Set()
+      for (const e of sheetEntities) for (const f of e.fields || []) produced.add(f.fieldName)
+      const coverage = {
+        sheet: fp.sheetName, path: 'ai', mappedColumns: mappedColumnCount,
+        belowReadThreshold: 0, recovered: 0, unread: 0, empty: 0,
+      }
+      for (const m of mappedColumns) {
+        if (produced.has(m.canonicalField)) continue
+        if (!columnHasContent(rows, m.colIndex)) { coverage.empty++; continue }
+        coverage.unread++
+        review.push({
+          kind: 'unread-column', sheetName: fp.sheetName, colIndex: m.colIndex, colLabel: m.headerLabel ?? null,
+          detail: `Column ${colLetter(m.colIndex)} ("${m.headerLabel ?? ''}") maps to ${m.entityKind ?? '?'}.${m.canonicalField} at confidence ${m.confidence.toFixed(2)} and has content, but no extractor returned a value for it on any of ${rows.length} row(s). The column was NOT read.`,
+        })
+      }
+      coverageSink.push(coverage)
     }
 
     return { fp, entities: batchResults.map(r => r.entities) }
