@@ -247,6 +247,7 @@ async function runAdaptiveImportBrain(opts) {
     noCap:        Boolean(budget.noCap),
     cacheHits:    budget.cacheHits || 0,
     cacheMisses:  budget.cacheMisses || 0,
+    cacheBypasses: budget.cacheBypasses || 0,
     byDeployment: budget.byDeployment || {},
     // Per-site, per-family vote participation (cast/attempted + failure classes):
     // a run whose OpenAI legs silently stopped voting is measurable, not invisible.

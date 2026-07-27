@@ -109,7 +109,10 @@ async function parseWithRetry({ call, parse, review, stage, sheetName, what, onT
   if (!res || !res.raw) { tally('empty'); return null }
   if (Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — model returned unparseable/malformed output; retrying once.` })
   tally('retry')
-  try { res = await call() } catch { tally('malformed'); return null }
+  // The retry must NEVER replay the bytes it is retrying: cache-wrapped thunks
+  // honor bypassCache and go straight to the model (a fresh good result then
+  // overwrites the entry). Plain thunks ignore the argument.
+  try { res = await call({ bypassCache: true }) } catch { tally('malformed'); return null }
   parsed = res && res.raw ? parse(res.raw) : null
   if (parsed == null && Array.isArray(review)) review.push({ kind: 'malformed-model-output', sheetName, detail: `${stage}: ${what} — retry also malformed; treated as a missing vote (never silent).` })
   tally(parsed == null ? 'malformed' : 'cast')

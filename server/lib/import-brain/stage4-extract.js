@@ -24,7 +24,7 @@
 const fleet = require('../fleet')
 const brainShared = require('../import-brain-shared.cjs')
 const { callAnthropic, callOpenAI, resolveAnthropic, resolveOpenAI } = require('./ai-call')
-const { cachedCall, PROMPT_VERSION } = require('./extract-cache')
+const { cachedCall, PROMPT_VERSION, contentHashOf } = require('./extract-cache')
 const { STAGE4_EXTRACT_SYSTEM, STAGE4_JUDGE_SYSTEM } = require('./prompts')
 const {
   extractJson, colLetter,
@@ -974,17 +974,24 @@ async function extractRows(classified, locks, colMaps, fpByName, budget, review,
       // short-circuits to the sentinel (no identical retry — it re-truncates).
       const rowsWhat = `rows ${batchStart}-${batchStart + batch.length - 1}`
       const onTruncation = () => TRUNCATED
-      // CE3 Step 3(d) — extraction cache (backlog item 8): the window's verbatim
-      // content is inside userPrompt, so the sha256 key IS the contentHash + prompt
-      // version + deployment. A hit returns the raw output byte-for-byte (parsing,
-      // consensus and ledger posting run identically; only the model call is skipped).
-      const cached = (deployment, call) => cachedCall({
+      // CE3 Step 3(d) — extraction cache (backlog item 8): keyed by deployment +
+      // prompt version + an EXPLICIT content hash of the window cells (belt and
+      // suspenders beside the verbatim window inside userPrompt). A hit returns
+      // {raw, stopReason} byte-for-byte — parsing, consensus, truncation
+      // detection and ledger posting run identically; only the model call is
+      // skipped. Writes are gated on parse success + a clean stop reason, and
+      // parseWithRetry's targeted retry passes bypassCache so it can never
+      // replay the bytes it is retrying.
+      const windowHash = contentHashOf(batch)
+      const cached = (deployment, call, callOpts) => cachedCall({
         deployment, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt,
-        promptVersion: PROMPT_VERSION, budget, tenantId: extras.tenantId, call,
-      })
+        promptVersion: PROMPT_VERSION, contentHash: windowHash,
+        budget, tenantId: extras.tenantId, call,
+        validate: (raw) => parseExtraction(raw) != null,
+      }, callOpts)
       const [aVote, bVote] = await Promise.all([
-        parseWithRetry({ call: () => cached(deployBulk, () => callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget })), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK extraction ${rowsWhat}`, onTruncation, vote: { budget, site: 'stage4-extract', family: 'anthropic' } }),
-        parseWithRetry({ call: () => cached(deployGptMini, () => callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget })), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK_ALT extraction ${rowsWhat}`, onTruncation, vote: { budget, site: 'stage4-extract', family: 'openai' } }),
+        parseWithRetry({ call: (callOpts) => cached(deployBulk, () => callAnthropic({ deployment: deployBulk, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), callOpts), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK extraction ${rowsWhat}`, onTruncation, vote: { budget, site: 'stage4-extract', family: 'anthropic' } }),
+        parseWithRetry({ call: (callOpts) => cached(deployGptMini, () => callOpenAI({ deployment: deployGptMini, systemPrompt: STAGE4_EXTRACT_SYSTEM, userPrompt, maxTokens: 8192, budget }), callOpts), parse: parseExtraction, review, stage: 'stage4', sheetName: fp.sheetName, what: `BULK_ALT extraction ${rowsWhat}`, onTruncation, vote: { budget, site: 'stage4-extract', family: 'openai' } }),
       ])
 
       if ((aVote === TRUNCATED || bVote === TRUNCATED) && batch.length > 1) {

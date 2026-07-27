@@ -206,7 +206,7 @@ describe('CE3 Step 3d: extraction cache — hit skips the call, key is content-e
     const budget: Record<string, number> = {}
     const mk = (userPrompt: string) => cachedCall({
       deployment: 'stub-haiku', systemPrompt: 'S', userPrompt, promptVersion: 'stage4/v1',
-      budget, tenantId: 'testco', call: async () => { calls++; return { raw: `out-${calls}` } },
+      budget, tenantId: 'testco', call: async () => { calls++; return { raw: `out-${calls}`, stopReason: 'end_turn' } },
     })
     const r1 = await mk('window A')
     const r2 = await mk('window A')
